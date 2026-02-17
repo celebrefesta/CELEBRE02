@@ -1,0 +1,81 @@
+.pag-nova-locacao-v3 { background: #f0f4f8; min-height: 100vh; font-family: sans-serif; }
+.header-v3 { background: white; padding: 15px 30px; border-bottom: 1px solid #ddd; display: flex; align-items: center; gap: 20px; }
+.btn-voltar-v3 { border: none; background: none; font-weight: bold; cursor: pointer; color: #64748b; }
+
+.grid-v3 { display: grid; grid-template-columns: 1fr 360px; gap: 25px; padding: 25px; max-width: 1600px; margin: 0 auto; align-items: start; }
+.card-v3 { background: white; border-radius: 12px; padding: 20px; box-shadow: 0 2px 8px rgba(0,0,0,0.05); margin-bottom: 25px; }
+.card-v3 h3 { margin-top: 0; color: #0f3460; font-size: 14px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 20px; }
+
+.form-row-v3 { display: flex; gap: 15px; }
+.input-group-v3 { display: flex; flex-direction: column; gap: 5px; flex: 1; }
+.input-group-v3.flex-2 { flex: 2; }
+.input-group-v3 input, .input-group-v3 select { padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; }
+
+.topo-itens-v3 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.btn-abrir-modal-v3 { background: #0f3460; color: white; border: none; padding: 8px 16px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+.tabela-itens-v3 { width: 100%; border-collapse: collapse; }
+.tabela-itens-v3 th { text-align: left; font-size: 11px; color: #94a3b8; border-bottom: 2px solid #f1f5f9; padding: 10px; }
+.tabela-itens-v3 td { padding: 12px 10px; border-bottom: 1px solid #f8fafc; font-size: 14px; }
+
+.qty-control-v3 { display: flex; align-items: center; background: #f1f5f9; border-radius: 6px; padding: 4px; }
+.qty-control-v3 button { border: none; background: none; padding: 0 8px; cursor: pointer; font-weight: bold; }
+.btn-remover-v3 { border: none; background: none; color: #ef4444; font-size: 20px; cursor: pointer; }
+
+.lin-resumo-v3 { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-size: 14px; }
+.lin-resumo-v3 input { width: 80px; text-align: right; padding: 5px; border: 1px solid #ddd; border-radius: 4px; }
+.total-destaque-v3 { font-size: 28px; color: #10b981; font-weight: bold; text-align: right; margin-top: 20px; border-top: 1px dashed #ddd; padding-top: 15px; }
+
+.btn-confirmar-v3 { width: 100%; background: #0f3460; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; margin-top: 20px; cursor: pointer; }
+.btn-orcamento-v3 { width: 100%; background: white; color: #0f3460; border: 1px solid #0f3460; padding: 10px; border-radius: 8px; font-weight: bold; margin-top: 10px; cursor: pointer; }
+
+.centro { text-align: center; }
+.direita { text-align: right; }
+
+/* MODAL */
+.modal-overlay-v3 { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-content-v3 { background: white; width: 800px; height: 80vh; border-radius: 16px; padding: 25px; display: flex; flex-direction: column; }
+.modal-header-v3 { display: flex; justify-content: space-between; margin-bottom: 20px; }
+.modal-busca-v3 { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #ddd; margin-bottom: 20px; }
+.modal-grid-v3 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; overflow-y: auto; }
+.item-modal-card-v3 { border: 1px solid #eee; padding: 10px; border-radius: 8px; text-align: center; cursor: pointer; }
+.item-modal-card-v3:hover { border-color: #0f3460; background: #f8fafc; }
+.item-modal-card-v3 img, .no-img-v3 { width: 100%; height: 100px; object-fit: cover; border-radius: 6px; margin-bottom: 8px; }
+
+.modal-categorias-v3 {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.btn-cat-v3 {
+  padding: 8px 16px;
+  border-radius: 20px;
+  border: 1px solid #ddd;
+  background: white;
+  white-space: nowrap;
+  cursor: pointer;
+  font-size: 13px;
+  transition: 0.2s;
+}
+
+.btn-cat-v3.ativo {
+  background: #0f3460;
+  color: white;
+  border-color: #0f3460;
+}
+
+.info-item-v3 {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.info-item-v3 small {
+  color: #94a3b8;
+  font-size: 10px;
+  text-transform: uppercase;
+}

@@ -1,0 +1,181 @@
+.pagina-logistica { padding: 30px; background: #f8fafc; min-height: 100vh; }
+.cabecalho-logistica { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 2px solid #e2e8f0; padding-bottom: 20px; }
+.filtros-periodo { display: flex; background: #e2e8f0; padding: 5px; border-radius: 10px; gap: 5px; }
+.filtros-periodo button { border: none; padding: 8px 15px; border-radius: 6px; cursor: pointer; font-weight: bold; color: #64748b; background: transparent; }
+.filtros-periodo button.ativo { background: white; color: #0f3460; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+
+.card-rota { background: white; border-radius: 12px; padding: 20px; display: flex; align-items: center; gap: 20px; margin-bottom: 15px; border-left: 10px solid #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.card-rota.saiu { border-left-color: #3b82f6; background: #f0f7ff; }
+.card-rota.concluido { border-left-color: #10b981; opacity: 0.7; }
+
+.info-cliente { flex: 1; }
+.info-cliente h3 { margin: 0; color: #0f3460; }
+.local { font-size: 13px; color: #64748b; margin-top: 5px; }
+
+.acoes-fluxo { display: flex; flex-direction: column; align-items: flex-end; gap: 10px; }
+.btn-fase { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; min-width: 200px; color: white; }
+.btn-fase.entrega { background: #0f3460; }
+.btn-fase.devolucao { background: #f59e0b; }
+.btn-voltar { background: none; border: 1px dashed #64748b; color: #64748b; padding: 5px 10px; border-radius: 4px; font-size: 11px; cursor: pointer; }
+.tag-finalizado { background: #dcfce7; color: #15803d; padding: 10px 20px; border-radius: 8px; font-weight: bold; }
+
+/* ... (Mantenha as cores que já definimos antes) ... */
+
+.btn-ver-itens {
+  background: none;
+  border: none;
+  color: #3b82f6;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 0;
+  margin-top: 10px;
+  text-decoration: underline;
+}
+
+.lista-conferencia {
+  background: #f8fafc;
+  padding: 10px;
+  border-radius: 8px;
+  margin-top: 10px;
+  list-style: none;
+  font-size: 13px;
+  color: #1e293b;
+  border: 1px solid #e2e8f0;
+}
+
+.grupo-acoes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.btn-voltar {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-voltar:hover { background: #f1f5f9; color: #0f3460; }
+
+.pagina-logistica { padding: 30px; background: #f8fafc; min-height: 100vh; }
+.cabecalho-logistica { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+
+.card-rota { 
+  background: white; border-radius: 12px; padding: 20px; 
+  display: flex; align-items: center; gap: 20px; 
+  margin-bottom: 15px; border-left: 10px solid #cbd5e1; 
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
+}
+
+/* Ajuste de espaçamento do texto da data */
+.info-data { min-width: 100px; display: flex; flex-direction: column; gap: 4px; }
+.info-data .tipo-tag { font-size: 10px; font-weight: bold; color: #64748b; }
+
+.card-rota.saiu { border-left-color: #3b82f6; background: #f0f7ff; }
+.card-rota.concluido { border-left-color: #10b981; opacity: 0.7; }
+
+.btn-fase { padding: 12px 20px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; min-width: 200px; color: white; }
+.btn-fase.entrega { background: #0f3460; }
+.btn-fase.devolucao { background: #f59e0b; } /* Laranja do seu print */
+
+.btn-voltar { background: white; border: 1px solid #cbd5e1; color: #64748b; padding: 5px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 5px; }
+.tag-finalizado { background: #dcfce7; color: #15803d; padding: 10px 20px; border-radius: 8px; font-weight: bold; }
+
+.btn-ver-itens { background: none; border: none; color: #3b82f6; font-size: 12px; font-weight: bold; cursor: pointer; margin-top: 10px; text-decoration: underline; text-align: left; }
+.lista-conferencia { background: #f8fafc; padding: 10px; border-radius: 8px; margin-top: 10px; list-style: none; font-size: 13px; border: 1px solid #e2e8f0; }
+
+.pagina-logistica { padding: 30px; background: #f8fafc; min-height: 100vh; font-family: sans-serif; }
+.cabecalho-logistica { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; border-bottom: 1px solid #eee; padding-bottom: 15px; }
+
+/* Correção do espaçamento da data */
+.info-data { min-width: 120px; display: flex; flex-direction: column; gap: 5px; border-right: 1px solid #f0f0f0; padding-right: 15px; }
+.info-data .dia { font-weight: bold; font-size: 1.1rem; color: #333; }
+.info-data .tipo-tag { font-size: 0.7rem; font-weight: bold; color: #666; text-transform: uppercase; }
+
+.grid-logistica { display: flex; flex-direction: column; gap: 15px; }
+
+.card-rota { 
+  background: white; border-radius: 12px; padding: 20px; 
+  display: flex; align-items: center; gap: 25px; 
+  border-left: 10px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.05); 
+}
+
+/* Cores de progresso */
+.card-rota.saiu { border-left-color: #3b82f6; background: #f0f7ff; }
+.card-rota.concluido { border-left-color: #10b981; opacity: 0.8; background: #f9f9f9; }
+
+.info-cliente { flex: 1; }
+.info-cliente h3 { margin: 0; color: #0f3460; text-transform: capitalize; }
+.pedido-n { font-size: 0.8rem; color: #999; margin: 5px 0; }
+.local { font-size: 0.85rem; color: #555; font-weight: 500; }
+
+.acoes-fluxo { display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+
+.btn-fase { padding: 12px 24px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; min-width: 210px; color: white; transition: 0.2s; }
+.btn-fase.entrega { background: #0f3460; }
+.btn-fase.devolucao { background: #f59e0b; } /* Cor amarela/laranja conforme o print */
+
+.btn-voltar { background: white; border: 1px solid #ccc; color: #777; padding: 6px 12px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; }
+.tag-finalizado { background: #dcfce7; color: #15803d; padding: 10px 24px; border-radius: 8px; font-weight: bold; font-size: 0.9rem; }
+
+.btn-ver-itens { background: none; border: none; color: #3b82f6; font-size: 0.8rem; font-weight: bold; cursor: pointer; margin-top: 12px; text-decoration: underline; padding: 0; }
+.lista-conferencia { background: #fdfdfd; padding: 12px; border-radius: 8px; margin-top: 10px; list-style: none; font-size: 0.85rem; border: 1px solid #eee; box-shadow: inset 0 1px 3px rgba(0,0,0,0.02); }
+
+.pagina-logistica { padding: 20px 40px; background: #f8fafc; min-height: 100vh; }
+
+.cabecalho-logistica { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 30px; 
+  background: white;
+  padding: 20px;
+  border-radius: 15px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+/* ESTILO DOS CONTADORES */
+.resumo-logistica { display: flex; gap: 20px; }
+.card-mini-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 10px 20px;
+  border-radius: 10px;
+  min-width: 120px;
+}
+.card-mini-status.saidas { background: #eef2ff; color: #4338ca; border: 1px solid #c7d2fe; }
+.card-mini-status.rua { background: #fffbeb; color: #b45309; border: 1px solid #fde68a; }
+.card-mini-status .valor { font-size: 24px; font-weight: bold; }
+.card-mini-status .legenda { font-size: 11px; font-weight: bold; text-transform: uppercase; }
+
+/* AJUSTE DATA */
+.info-data { min-width: 110px; display: flex; flex-direction: column; gap: 5px; border-right: 2px solid #f1f5f9; }
+.info-data .dia { font-weight: 800; font-size: 1.2rem; color: #1e293b; }
+.info-data .tipo-tag { font-size: 10px; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; width: fit-content; }
+
+/* CARDS */
+.card-rota { 
+  background: white; border-radius: 15px; padding: 20px; 
+  display: flex; align-items: center; gap: 30px; 
+  margin-bottom: 15px; border-left: 12px solid #cbd5e1; 
+  transition: 0.3s;
+}
+.card-rota.saiu { border-left-color: #3b82f6; background: #f0f9ff; }
+.card-rota.concluido { border-left-color: #10b981; opacity: 0.7; }
+
+.btn-fase { padding: 14px 24px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; min-width: 220px; color: white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+.btn-fase.entrega { background: #0f3460; }
+.btn-fase.devolucao { background: #f59e0b; }
+
+.btn-voltar { background: none; border: 1px solid #cbd5e1; color: #94a3b8; padding: 6px 12px; border-radius: 6px; font-size: 11px; cursor: pointer; margin-top: 5px; }
+.btn-voltar:hover { background: #f1f5f9; color: #1e293b; }
+
+.tag-finalizado { background: #dcfce7; color: #15803d; padding: 12px 24px; border-radius: 10px; font-weight: bold; }

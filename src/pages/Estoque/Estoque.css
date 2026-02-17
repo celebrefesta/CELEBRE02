@@ -1,0 +1,178 @@
+/* --- FUNDO GERAL --- */
+.estoque-premium { 
+  padding: 40px; background: #f0f4f8; min-height: 100vh; font-family: 'Inter', sans-serif; color: #102a43; 
+}
+
+/* --- HEADER & CARDS --- */
+.header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+.titulo-bloco h1 { font-size: 26px; font-weight: 800; color: #0f3460; margin: 0; }
+.titulo-bloco p { color: #627d98; font-size: 14px; margin-top: 5px; }
+
+.btn-dark-blue { background: #0f3460; color: white; border: none; padding: 10px 24px; border-radius: 6px; font-weight: 600; cursor: pointer; box-shadow: 0 4px 6px rgba(15, 52, 96, 0.2); }
+
+.stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
+.card-stat { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04); position: relative; overflow: hidden; }
+.label-stat { font-size: 11px; font-weight: 700; color: #829ab1; text-transform: uppercase; letter-spacing: 0.5px; }
+.value-stat { font-size: 28px; font-weight: 800; color: #102a43; margin-top: 8px; }
+.value-stat.text-orange { color: #f59e0b; } .value-stat.text-green { color: #10b981; }
+.icon-stat { position: absolute; right: 20px; top: 25px; font-size: 24px; opacity: 0.2; }
+
+/* --- FILTRO & TABELA --- */
+.filter-wrapper { background: white; padding: 15px 20px; border-radius: 8px 8px 0 0; border: 1px solid #d9e2ec; border-bottom: none; display: flex; justify-content: space-between; align-items: center; }
+.search-input { width: 350px; padding: 10px 15px; border: 1px solid #d9e2ec; border-radius: 6px; outline: none; color: #334e68; }
+.btn-filter { background: #f0f4f8; border: 1px solid #d9e2ec; padding: 10px 15px; border-radius: 6px; color: #334e68; font-weight: 600; cursor: pointer; }
+
+.table-container { background: white; border-radius: 0 0 8px 8px; border: 1px solid #d9e2ec; overflow: hidden; }
+.table-pro { width: 100%; border-collapse: collapse; }
+.table-pro th { background: #f7f9fa; padding: 15px 20px; text-align: left; font-size: 11px; color: #829ab1; font-weight: 700; text-transform: uppercase; }
+.table-pro td { padding: 15px 20px; border-top: 1px solid #f0f4f8; vertical-align: middle; }
+.thumb-img { width: 45px; height: 45px; border-radius: 6px; object-fit: cover; border: 1px solid #e1e7ef; }
+.no-thumb { width: 45px; height: 45px; border-radius: 6px; background: #f0f4f8; display: flex; align-items: center; justify-content: center; color: #bcccdc; }
+.prod-detail { display: flex; align-items: center; gap: 12px; }
+.sub-text { display: block; font-size: 12px; color: #829ab1; margin-top: 3px; }
+.tag-loc { background: #e3f2fd; color: #0f3460; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; border: 1px solid #bbdefb; }
+.stock-info { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+.text-red { color: #e12d39; } .text-bold { font-weight: 700; color: #102a43; }
+.alert-badge { background: #fff1f0; color: #e12d39; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 700; border: 1px solid #ffa39e; }
+.status-pill { padding: 5px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; }
+.status-pill.disponivel { background: #dcfce7; color: #166534; } .status-pill.manutencao { background: #fef3c7; color: #92400e; }
+.action-icon { background: none; border: none; font-size: 16px; cursor: pointer; padding: 5px; opacity: 0.7; }
+
+/* --- MODAL FLUTUANTE --- */
+.modal-overlay-blur { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(16, 42, 67, 0.7); backdrop-filter: blur(4px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.modal-card.wide-modern { background: white; width: 1100px; max-width: 95%; max-height: 90vh; border-radius: 16px; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); animation: slideUp 0.3s ease-out; overflow: hidden; }
+@keyframes slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+.modal-header-clean { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center; background: white; }
+.modal-header-clean h3 { margin: 0; font-size: 20px; font-weight: 800; color: #0f3460; }
+.close-btn-modern { background: none; border: none; font-size: 28px; color: #cbd5e1; cursor: pointer; line-height: 1; }
+.close-btn-modern:hover { color: #0f3460; }
+
+/* --- LAYOUT DUAS COLUNAS (O SEGREDO PARA NÃO ESTOURAR) --- */
+.form-content-grid { 
+  display: grid; 
+  grid-template-columns: 320px 1fr; /* Coluna da foto fixa | Coluna de dados flexível */
+  gap: 30px; 
+  padding: 30px; 
+  overflow-y: auto; 
+  max-height: calc(90vh - 140px); 
+}
+
+/* FOTOS (CARRETEL) */
+.left-column-photo { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 15px; 
+  width: 100%; /* Garante que respeite os 320px da grid */
+}
+
+.main-photo-display { 
+  width: 100%; 
+  aspect-ratio: 1/1; 
+  background: #f8fafc; 
+  border: 2px solid #e2e8f0; 
+  border-radius: 12px; 
+  overflow: hidden; 
+  display: flex; 
+  align-items: center; 
+  justify-content: center; 
+  position: relative;
+}
+
+.main-photo-preview { 
+  max-width: 100%; 
+  max-height: 100%; 
+  object-fit: contain; /* O SEGREDO: Faz a imagem caber sem esticar */
+  display: block;
+}
+
+.photo-placeholder-box { display: flex; flex-direction: column; align-items: center; color: #cbd5e1; }
+
+.photo-thumbnails-row { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 5px; }
+.thumb-item { width: 60px; height: 60px; border-radius: 8px; border: 2px solid transparent; overflow: hidden; cursor: pointer; position: relative; flex-shrink: 0; }
+.thumb-item img { width: 100%; height: 100%; object-fit: cover; }
+.thumb-item.active { border-color: #0f3460; }
+.btn-remove-thumb { position: absolute; top: 0; right: 0; background: rgba(220,38,38,0.9); color: white; border: none; font-size: 12px; width: 18px; height: 18px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+.thumb-upload-btn { width: 60px; height: 60px; border: 2px dashed #cbd5e1; border-radius: 8px; display: flex; align-items: center; justify-content: center; color: #94a3b8; font-size: 24px; cursor: pointer; flex-shrink: 0; }
+.thumb-upload-btn:hover { background: #f0f4f8; border-color: #64748b; }
+.photo-helper { font-size: 11px; color: #829ab1; text-align: center; margin: 0; }
+
+/* DADOS (INPUTS) */
+.right-column-data { flex: 1; }
+.section-divider { border-bottom: 1px solid #e2e8f0; margin-bottom: 20px; padding-bottom: 5px; margin-top: 25px; }
+.section-divider:first-child { margin-top: 0; }
+.section-title { font-size: 13px; font-weight: 800; color: #0f3460; text-transform: uppercase; letter-spacing: 0.5px; }
+
+.form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+.three-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+.four-cols { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+
+.input-group-modern { flex: 1; display: flex; flex-direction: column; }
+.input-group-modern label { font-size: 12px; font-weight: 700; color: #486581; margin-bottom: 6px; }
+.input-group-modern input, .input-group-modern select { padding: 10px 12px; border: 1px solid #d9e2ec; border-radius: 8px; font-size: 14px; color: #102a43; outline: none; background: white; width: 100%; box-sizing: border-box; }
+.input-group-modern input:focus, .input-group-modern select:focus { border-color: #0f3460; box-shadow: 0 0 0 2px rgba(15, 52, 96, 0.1); }
+.input-readonly { background: #f0f4f8; color: #829ab1; cursor: not-allowed; }
+.textarea-modern { width: 100%; padding: 12px; border: 1px solid #d9e2ec; border-radius: 8px; font-family: inherit; font-size: 14px; box-sizing: border-box; resize: vertical; outline: none; }
+.textarea-modern:focus { border-color: #0f3460; }
+.highlight input { background-color: #f0f9ff; border-color: #bae6fd; font-weight: 600; color: #0284c7; }
+
+/* TOGGLE SWITCH */
+.toggle-switch { width: 100%; background: #f0f4f8; border: 1px solid #d9e2ec; padding: 10px; border-radius: 8px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #486581; user-select: none; transition: all 0.2s; }
+.toggle-switch.active { background: #dcfce7; color: #166534; border-color: #86efac; }
+.switch-knob { width: 10px; height: 10px; background: currentColor; border-radius: 50%; }
+
+/* FOOTER */
+.modal-footer-modern { padding: 20px 30px; border-top: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: flex-end; gap: 15px; }
+.btn-ghost { background: white; border: 1px solid #d9e2ec; color: #486581; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+.btn-secundario { background: #e3f2fd; color: #0f3460; border: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; }
+
+/* ... (MANTENHA TODO O CSS ANTERIOR AQUI) ... */
+
+/* --- THUMBNAIL CLICÁVEL --- */
+.clickable-thumb {
+  cursor: zoom-in;
+  transition: transform 0.2s, border-color 0.2s;
+}
+.clickable-thumb:hover {
+  transform: scale(1.1);
+  border-color: #0f3460;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+/* --- MODAL DE ZOOM (OVERLAY) --- */
+.image-zoom-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.9); /* Fundo bem escuro para destaque */
+  z-index: 10000; /* Acima de tudo, inclusive do modal de edição */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-out;
+  animation: fadeIn 0.2s;
+}
+
+.image-zoom-content {
+  max-width: 90%;
+  max-height: 85vh;
+  border-radius: 8px;
+  box-shadow: 0 0 30px rgba(0,0,0,0.5);
+  animation: zoomIn 0.3s;
+  object-fit: contain;
+}
+
+.zoom-caption {
+  color: #cbd5e1;
+  margin-top: 15px;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+}
+
+/* Animações Suaves */
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }

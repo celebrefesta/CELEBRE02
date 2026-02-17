@@ -1,0 +1,85 @@
+/* Container */
+.relatorios-page {
+    width: 100%; animation: fadeIn 0.4s ease-out; padding-bottom: 50px;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Header */
+.header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; }
+.page-title h1 { font-size: 1.6rem; color: #0f233a; margin-bottom: 4px; font-weight: 700; }
+.page-title p { color: #64748b; font-size: 0.95rem; }
+
+.header-actions { display: flex; gap: 10px; }
+.period-select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #1e293b; font-family: 'Poppins', sans-serif; cursor: pointer; }
+.btn-outline { background: white; border: 1px solid #cbd5e1; color: #64748b; padding: 8px 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; }
+.btn-outline:hover { border-color: #0f233a; color: #0f233a; }
+
+/* 1. Resumo Financeiro */
+.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
+.summary-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; transition: 0.2s; }
+.summary-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
+.summary-card.highlight { background: linear-gradient(135deg, #0f233a 0%, #1e3a5a 100%); color: white; }
+
+.sc-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
+.income { background: #dcfce7; color: #166534; }
+.expense { background: #fee2e2; color: #991b1b; }
+.events { background: #f3f4f6; color: #4b5563; }
+.profit { background: rgba(255,255,255,0.2); color: #c5a059; }
+
+.sc-info { display: flex; flex-direction: column; }
+.sc-info span { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; opacity: 0.7; }
+.sc-info h3 { font-size: 1.4rem; font-weight: 700; margin: 2px 0; }
+.sc-info small { font-size: 0.75rem; color: #64748b; }
+.highlight .sc-info small { color: rgba(255,255,255,0.8); }
+.positive { color: #10b981; }
+
+/* 2. Gráficos */
+.charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+.chart-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.chart-header { margin-bottom: 1.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+.chart-header h3 { font-size: 1.1rem; color: #0f233a; display: flex; align-items: center; gap: 8px; }
+
+/* Gráfico de Barras CSS */
+.bar-chart-container { display: flex; align-items: flex-end; justify-content: space-around; height: 200px; padding-top: 20px; }
+.bar-group { display: flex; flex-direction: column; align-items: center; height: 100%; width: 100%; justify-content: flex-end; }
+.bar { width: 30px; background: #e2e8f0; border-radius: 4px 4px 0 0; transition: height 1s ease-out; position: relative; cursor: pointer; }
+.bar:hover { background: #c5a059; }
+.bar.active { background: #0f233a; }
+/* Tooltip simples */
+.bar:hover::after { content: attr(data-value); position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; white-space: nowrap; }
+.bar-label { margin-top: 8px; font-size: 0.8rem; color: #64748b; font-weight: 600; }
+
+/* Lista Top Temas */
+.top-list { display: flex; flex-direction: column; gap: 1.2rem; }
+.top-item { display: flex; flex-direction: column; gap: 5px; }
+.top-info { display: flex; justify-content: space-between; font-size: 0.9rem; color: #1e293b; }
+.progress-bg { width: 100%; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
+.progress-fill { height: 100%; background: #0f233a; border-radius: 4px; }
+
+/* 3. Métricas Secundárias */
+.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+.metric-box { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+.metric-box h4 { font-size: 0.95rem; color: #0f233a; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
+
+.metric-list { list-style: none; padding: 0; }
+.metric-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #f1f5f9; font-size: 0.9rem; color: #475569; }
+.metric-list li i { width: 20px; }
+.metric-list li span { font-weight: 700; color: #1e293b; }
+.metric-list.danger li span { color: #ef4444; }
+
+/* Círculo de Conversão */
+.conversion-circle { width: 120px; height: 120px; margin: 0 auto; position: relative; }
+.circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; }
+.circle-bg { fill: none; stroke: #f1f5f9; stroke-width: 3.8; }
+.circle { fill: none; stroke-width: 2.8; stroke-linecap: round; stroke: #10b981; animation: progress 1s ease-out forwards; }
+.circle-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
+.circle-content strong { display: block; font-size: 1.4rem; color: #1e293b; }
+.circle-content small { font-size: 0.7rem; color: #64748b; text-transform: uppercase; }
+
+@keyframes progress { 0% { stroke-dasharray: 0 100; } }
+
+@media (max-width: 1000px) {
+    .summary-grid { grid-template-columns: 1fr 1fr; }
+    .charts-grid { grid-template-columns: 1fr; }
+    .metrics-grid { grid-template-columns: 1fr; }
+}

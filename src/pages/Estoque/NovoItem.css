@@ -1,0 +1,70 @@
+/* Container da Página */
+.novo-item-page {
+    width: 100%;
+    padding: 2rem 3rem;
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Formulário Card */
+.form-container {
+    background: white;
+    padding: 2.5rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+    max-width: 900px;
+}
+
+/* Seções */
+.form-section { margin-bottom: 2.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 1.5rem; }
+.form-section:last-child { border-bottom: none; }
+.form-section h3 {
+    font-size: 1.1rem; color: #0f233a; margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 10px;
+}
+.form-section h3 i { color: #c5a059; }
+
+/* Grid do Formulário */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+}
+.span-2 { grid-column: span 2; } /* Faz o campo ocupar 2 espaços */
+
+/* Inputs */
+.form-group { display: flex; flex-direction: column; }
+.form-group label { font-size: 0.85rem; font-weight: 600; color: #64748b; margin-bottom: 0.5rem; }
+.form-group input, .form-group select {
+    padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;
+    font-size: 0.95rem; font-family: 'Poppins', sans-serif;
+    transition: 0.2s;
+}
+.form-group input:focus, .form-group select:focus {
+    outline: none; border-color: #c5a059; box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
+}
+.form-group small { font-size: 0.75rem; color: #94a3b8; margin-top: 5px; }
+
+/* Destaque para o preço de aluguel */
+.highlight label { color: #0f233a; }
+.highlight input { border-color: #c5a059; background-color: #fffbf0; font-weight: bold; color: #0f233a; }
+
+/* Upload de Imagem */
+.image-upload-area { width: 100%; display: flex; justify-content: flex-start; }
+.upload-label { cursor: pointer; display: block; }
+.upload-placeholder {
+    width: 150px; height: 150px; border: 2px dashed #cbd5e1; border-radius: 12px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    color: #94a3b8; gap: 10px; transition: 0.2s; background: #f8fafc;
+}
+.upload-placeholder:hover { border-color: #c5a059; color: #c5a059; background: #fffbf0; }
+.preview-img { width: 150px; height: 150px; object-fit: cover; border-radius: 12px; border: 2px solid #e2e8f0; }
+
+/* Botões */
+.form-actions { display: flex; justify-content: flex-end; gap: 1rem; margin-top: 2rem; }
+.btn-outline {
+    background: white; border: 1px solid #e2e8f0; padding: 12px 24px;
+    border-radius: 8px; color: #64748b; font-weight: 600;
+}
+.btn-outline:hover { background: #f1f5f9; color: #0f233a; }

@@ -1,0 +1,47 @@
+/* src/index.css - Estilo Global e Reset */
+
+:root {
+  /* AQUI ESTÁ A MUDANÇA: Usando a fonte Poppins */
+  font-family: 'Poppins', sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  
+  /* Nossas Cores da Marca */
+  --primary: #0f233a;  /* Azul Naval */
+  --accent: #c5a059;   /* Dourado */
+  --bg-body: #f4f7fa;  /* Fundo Cinza Claro */
+}
+
+/* Reset básico (Zerar margens) */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background-color: var(--bg-body);
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased; /* Deixa a fonte mais nítida */
+}
+
+/* Links e Botões */
+a { text-decoration: none; color: inherit; }
+button { cursor: pointer; font-family: 'Poppins', sans-serif; }
+
+/* --- AJUSTE GLOBAL PARA O MENU LATERAL --- */
+/* Isso empurra o conteúdo para a direita para não ficar embaixo do menu */
+.container {
+    margin-left: 260px !important; /* Largura do menu */
+    width: calc(100% - 260px) !important;
+    max-width: 100% !important;
+    padding: 2rem 3rem;
+}
+
+/* Responsividade (Para celulares futuros) */
+@media (max-width: 768px) {
+    .container { margin-left: 0 !important; width: 100% !important; padding: 1rem; }
+}

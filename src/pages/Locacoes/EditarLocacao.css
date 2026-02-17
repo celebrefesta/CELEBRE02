@@ -1,0 +1,45 @@
+.page-editar-locacao { background: #f0f4f8; min-height: 100vh; padding-bottom: 50px; }
+
+.header-edit { background: white; padding: 15px 30px; border-bottom: 1px solid #ddd; }
+.titulo-edit button { border: none; background: none; font-weight: bold; cursor: pointer; color: #666; margin-right: 15px; }
+.titulo-edit h2 { display: inline; margin: 0; font-size: 20px; color: #333; }
+
+/* GRID SEGURO (IGUAL NOVA LOCAÇÃO) */
+.grid-edit { 
+    display: grid; 
+    grid-template-columns: 1fr 350px; 
+    gap: 25px; 
+    padding: 30px; 
+    max-width: 1400px; 
+    margin: 0 auto; 
+    align-items: start;
+}
+
+.card-edit { background: white; padding: 25px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+.card-edit h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #0f3460; }
+
+.row-dates { display: flex; gap: 15px; margin-top: 15px; }
+input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+
+.top-itens { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+.top-itens button { background: #0f3460; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }
+
+.row-item-edit { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid #f9f9f9; }
+.ctrl-qtd button { width: 25px; height: 25px; cursor: pointer; background: #eee; border: none; border-radius: 4px; }
+.ctrl-qtd span { margin: 0 10px; font-weight: bold; }
+.del-btn { color: red; background: none; border: none; font-weight: bold; cursor: pointer; font-size: 18px; }
+
+.line-res { display: flex; justify-content: space-between; margin-bottom: 10px; align-items: center; }
+.line-res input { width: 90px; text-align: right; }
+.total-big-edit { font-size: 26px; color: #10b981; font-weight: bold; text-align: right; margin: 20px 0; border-top: 1px dashed #ccc; padding-top: 15px; }
+
+.btn-save-edit { width: 100%; background: #2563eb; color: white; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+.btn-back-orc { width: 100%; background: white; color: #666; padding: 10px; border: 1px solid #ccc; border-radius: 8px; font-weight: bold; cursor: pointer; }
+
+/* MODAL */
+.modal-overlay-edit { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 999; }
+.modal-box-edit { background: white; width: 600px; height: 80vh; padding: 25px; border-radius: 10px; display: flex; flex-direction: column; }
+.modal-h { display: flex; justify-content: space-between; margin-bottom: 15px; }
+.grid-prods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; margin-top: 15px; }
+.prod-card { border: 1px solid #eee; padding: 10px; text-align: center; cursor: pointer; border-radius: 8px; }
+.prod-card:hover { background: #f0f9ff; border-color: #2563eb; }

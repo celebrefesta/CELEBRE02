@@ -1,0 +1,93 @@
+.modelos-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  font-family: 'Inter', sans-serif;
+  background-color: #f8fafc;
+  min-height: 100vh;
+}
+
+.modelos-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.modelos-header h1 {
+  font-size: 32px;
+  color: #0f172a;
+  margin-bottom: 10px;
+}
+
+/* Ajuste do Grid para não ficar "vazio" */
+.modelos-grid {
+  display: grid;
+  grid-template-columns: 450px 1fr; /* Lado esquerdo fixo, direito expande */
+  gap: 40px;
+  align-items: start;
+}
+
+.modelo-form-card {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  border-top: 6px solid #c5a059;
+}
+
+.form-group { margin-bottom: 20px; }
+
+.form-group label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+.form-input {
+  width: 100%;
+  padding: 12px;
+  border: 2px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  font-family: inherit;
+}
+
+.form-input.area { min-height: 300px; resize: none; }
+
+.btn-save-modelo {
+  width: 100%;
+  background: #0f172a;
+  color: white;
+  padding: 15px;
+  border-radius: 12px;
+  border: none;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.btn-save-modelo:hover { transform: translateY(-2px); }
+
+/* Estilo da Lista de Modelos */
+.modelos-lista {
+  background: white;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+
+.modelo-item-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 12px;
+  margin-bottom: 15px;
+  border: 1px solid #f1f5f9;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.modelo-item-card:hover { border-color: #c5a059; box-shadow: 0 4px 12px rgba(197, 160, 89, 0.1); }

@@ -1,0 +1,130 @@
+/* Container Principal */
+.clientes-container {
+  padding: 30px;
+  max-width: 1200px;
+  margin: 0 auto;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Cabeçalho (Título e Botão Novo) */
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+}
+
+.page-title {
+  color: #0f233a;
+  font-size: 1.8rem;
+  font-weight: 700;
+}
+
+.btn-novo {
+  background-color: #c5a059; /* Dourado */
+  color: white;
+  padding: 12px 25px;
+  border-radius: 8px;
+  border: none;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 0.2s;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.btn-novo:hover {
+  background-color: #b08d4b;
+  transform: translateY(-2px);
+}
+
+/* Card da Tabela */
+.table-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+  overflow: hidden; /* Para arredondar a tabela */
+}
+
+/* Estilo da Tabela */
+.clientes-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.clientes-table th {
+  background-color: #f8fafc;
+  color: #64748b;
+  font-weight: 600;
+  text-align: left;
+  padding: 15px 20px;
+  font-size: 0.9rem;
+  border-bottom: 2px solid #e2e8f0;
+}
+
+.clientes-table td {
+  padding: 15px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.clientes-table tr:hover {
+  background-color: #f8fafc; /* Efeito ao passar o mouse */
+}
+
+/* Coluna da Foto (Avatar) */
+.col-avatar {
+  width: 60px;
+  text-align: center;
+}
+
+.avatar-img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+}
+
+.avatar-placeholder {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  background-color: #e2e8f0;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.2rem;
+  font-weight: bold;
+}
+
+/* Coluna de Ações (Botões) */
+.actions-cell {
+  display: flex;
+  gap: 10px;
+}
+
+.action-btn {
+  width: 35px;
+  height: 35px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: 0.2s;
+  font-size: 1rem;
+}
+
+.btn-view { background-color: #e0f2fe; color: #0284c7; } /* Azul */
+.btn-view:hover { background-color: #bae6fd; }
+
+.btn-edit { background-color: #fef3c7; color: #d97706; } /* Amarelo */
+.btn-edit:hover { background-color: #fde68a; }
+
+.btn-delete { background-color: #fee2e2; color: #dc2626; } /* Vermelho */
+.btn-delete:hover { background-color: #fecaca; }
