@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 import html2canvas from 'html2canvas'; 
 import './Moodboard.css';
 
@@ -30,6 +32,8 @@ const Moodboard = () => {
   const fileInputRef = useRef(null);
   const canvasRef = useRef(null);
 
+  const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
+
   const interactionMode = useRef('none');
   const activeItemId = useRef(null);
   const resizeDir = useRef('');
@@ -46,8 +50,28 @@ const Moodboard = () => {
   ];
 
   useEffect(() => {
-    const dadosSalvos = localStorage.getItem('celebre_estoque');
-    if (dadosSalvos) setEstoqueReal(JSON.parse(dadosSalvos));
+    const carregar = async () => {
+      try {
+        const q = query(collection(db, 'estoque'), orderBy('criadoEm', 'desc'));
+        const snap = await getDocs(q);
+        const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        if (lista && lista.length) {
+          const norm = lista.map(i => ({ ...i, imagem: i.foto || i.imagem || (i.fotos && i.fotos.length ? i.fotos[0] : '') }));
+          setEstoqueReal(norm);
+          return;
+        }
+      } catch (err) {
+        // se Firestore falhar, cairemos para localStorage
+        console.debug('Moodboard: erro ao buscar estoque no Firestore, usando localStorage', err);
+      }
+
+      const dadosLocal = JSON.parse(localStorage.getItem('estoque')) || [];
+      const dadosAntigos = JSON.parse(localStorage.getItem('celebre_estoque')) || [];
+      const origem = dadosLocal.length ? dadosLocal : dadosAntigos;
+      const normalizados = origem.map(i => ({ ...i, imagem: i.foto || i.imagem || (i.fotos && i.fotos.length ? i.fotos[0] : '') }));
+      setEstoqueReal(normalizados);
+    };
+    carregar();
   }, []);
 
   const adicionarAoCanvas = (item) => {
@@ -79,6 +103,42 @@ const Moodboard = () => {
     e.stopPropagation(); setSelecionadoId(id);
     if (type === 'text') setAbaAtiva('texto');
     if (id !== editingTextId) { interactionMode.current = 'drag'; activeItemId.current = id; }
+  };
+
+  const handleContextMenu = (e, id) => {
+    e.preventDefault(); e.stopPropagation();
+    setSelecionadoId(id);
+    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id });
+  };
+
+  const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
+
+  const bringToFront = (id) => {
+    setItensCanvas(prev => {
+      const idx = prev.findIndex(i => i.uniqueId === id);
+      if (idx === -1) return prev;
+      const item = prev[idx];
+      const rest = prev.filter((_, i) => i !== idx);
+      return [...rest, item];
+    });
+    closeContextMenu();
+  };
+
+  const sendToBack = (id) => {
+    setItensCanvas(prev => {
+      const idx = prev.findIndex(i => i.uniqueId === id);
+      if (idx === -1) return prev;
+      const item = prev[idx];
+      const rest = prev.filter((_, i) => i !== idx);
+      return [item, ...rest];
+    });
+    closeContextMenu();
+  };
+
+  const deleteItem = (id) => {
+    setItensCanvas(prev => prev.filter(i => i.uniqueId !== id));
+    setSelecionadoId(null);
+    closeContextMenu();
   };
 
   const handleResizeMouseDown = (e, id, dir) => { e.stopPropagation(); interactionMode.current = 'resize'; resizeDir.current = dir; activeItemId.current = id; };
@@ -123,7 +183,12 @@ const Moodboard = () => {
       <div className="studio-panel" onClick={e => e.stopPropagation()}>
         {abaAtiva === 'acervo' && (
             <div className="acervo-list-scroll">
-                {estoqueReal.map(item => (<div key={item.id} className="acervo-item-row" onClick={() => adicionarAoCanvas(item)}><div className="item-thumb"><img src={item.imagem} /></div><strong>{item.nome}</strong></div>))}
+                {estoqueReal.map(item => (
+                  <div key={item.id} className="acervo-item-row" onClick={() => adicionarAoCanvas(item)}>
+                    <div className="item-thumb"><img src={item.imagem || 'https://via.placeholder.com/120?text=Sem+Imagem'} alt={item.nome} /></div>
+                    <strong>{item.nome}</strong>
+                  </div>
+                ))}
             </div>
         )}
         {abaAtiva === 'texto' && (
@@ -149,7 +214,7 @@ const Moodboard = () => {
         {itensCanvas.map((item, index) => (
           <div key={item.uniqueId} className={`canvas-object ${selecionadoId === item.uniqueId ? 'selected' : ''}`}
             style={{ left: item.x, top: item.y, width: item.width, height: item.height, zIndex: index, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-            onMouseDown={e => handleItemMouseDown(e, item.uniqueId, item.type)} onDoubleClick={() => item.type === 'text' && setEditingTextId(item.uniqueId)}>
+            onMouseDown={e => handleItemMouseDown(e, item.uniqueId, item.type)} onClick={e => e.stopPropagation()} onDoubleClick={(e) => { e.stopPropagation(); if (item.type === 'text') setEditingTextId(item.uniqueId); }} onContextMenu={e => handleContextMenu(e, item.uniqueId)}>
             {item.type === 'text' ? (
                 editingTextId === item.uniqueId ? <textarea className="text-editor-input" value={item.content} onChange={e => atualizarItem(item.uniqueId, {content: e.target.value})} autoFocus onBlur={() => setEditingTextId(null)} style={{fontSize: `${item.fontSize}px`, color: item.color, background: 'transparent', border: 'none', textAlign: 'center'}} />
                 : <div style={{ fontSize: `${item.fontSize}px`, color: item.color, fontFamily: item.fontFamily }}>{item.content}</div>
@@ -157,6 +222,14 @@ const Moodboard = () => {
             {selecionadoId === item.uniqueId && !editingTextId && <><div className="resize-handle se" onMouseDown={e => handleResizeMouseDown(e, item.uniqueId, 'se')} /><div className="selection-border" /></>}
           </div>
         ))}
+        {contextMenu.visible && (
+          <div style={{ position: 'fixed', left: contextMenu.x, top: contextMenu.y, background: '#fff', border: '1px solid #ddd', borderRadius: 6, boxShadow: '0 6px 18px rgba(0,0,0,0.08)', zIndex: 9999 }} onClick={e => e.stopPropagation()}>
+            <div style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => bringToFront(contextMenu.itemId)}>Trazer para frente</div>
+            <div style={{ padding: '8px 12px', cursor: 'pointer' }} onClick={() => sendToBack(contextMenu.itemId)}>Enviar para trás</div>
+            <div style={{ height: '1px', background: '#eee', margin: '4px 0' }} />
+            <div style={{ padding: '8px 12px', cursor: 'pointer', color: '#c92a2a' }} onClick={() => deleteItem(contextMenu.itemId)}>Excluir</div>
+          </div>
+        )}
       </div>
     </div>
   );
