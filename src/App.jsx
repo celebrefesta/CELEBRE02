@@ -30,7 +30,7 @@ import Logistica from './pages/Logistica/Logistica';
 import Contratos from './pages/Contratos/Contratos';
 import NovoContrato from "./pages/Contratos/NovoContrato";
 import EditarContrato from "./pages/Contratos/EditarContrato";
-import Assinatura from './pages/Contratos/Assinatura';
+import AssinaturaContrato from "./pages/Contratos/AssinaturaContrato";
 import ModelosContrato from "./pages/Contratos/ModelosContrato";
 
 // --- GESTÃO ---
@@ -84,7 +84,7 @@ const AppContent = () => {
           <Route path="/novo-contrato" element={<NovoContrato />} />
           <Route path="/modelos-contrato" element={<ModelosContrato />} />
           <Route path="/editar-contrato/:id" element={<EditarContrato />} />
-          <Route path="/assinatura" element={<Assinatura />} />
+          <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
 
           {/* GESTÃO */}
           <Route path="/relatorios" element={<Relatorios />} />

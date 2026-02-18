@@ -1,192 +1,172 @@
-/* --- CONTAINER PRINCIPAL --- */
 .contratos-container {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 30px;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  color: #334155;
+  padding: 20px;
   background-color: #f8fafc;
   min-height: 100vh;
+  font-family: 'Inter', sans-serif;
 }
 
-/* --- HEADER (CORREÇÃO DO BOTÃO GIGANTE) --- */
 .header-top {
   display: flex;
-  justify-content: space-between; /* Título de um lado, botão do outro */
-  align-items: flex-end;
-  margin-bottom: 40px;
-  gap: 20px;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  background: white;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
 }
 
-.header-top h1 {
-  margin: 0;
-  font-size: 32px;
-  font-weight: 800;
-  color: #0f172a;
-  letter-spacing: -0.02em;
-}
+.header-top h1 { margin: 0; color: #0f172a; font-size: 24px; }
+.header-top p { margin: 5px 0 0; color: #64748b; font-size: 14px; }
 
-.header-top p {
-  margin: 8px 0 0;
-  color: #64748b;
-  font-size: 16px;
-}
+/* Botões do Topo */
+.header-actions { display: flex; gap: 12px; }
 
-.header-actions {
-  display: flex;
-  gap: 15px;
-  flex-shrink: 0; /* Impede que o grupo de botões seja esmagado */
-}
-
-/* Botão Principal Dourado (TAMANHO CONSERTADO) */
 .btn-primary {
-  background: linear-gradient(135deg, #c5a059 0%, #b48a3c 100%);
+  background-color: #c5a059; /* Dourado */
   color: white;
   border: none;
-  padding: 12px 24px; /* Padding reduzido para diminuir o tamanho */
-  border-radius: 10px;
+  padding: 12px 24px;
+  border-radius: 8px;
   font-weight: 700;
-  font-size: 14px;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 6px -1px rgba(197, 160, 89, 0.3);
-  
-  /* Ajustes de dimensão */
-  width: auto; 
-  min-width: 160px; 
-  white-space: nowrap; 
+  transition: 0.2s;
 }
+.btn-primary:hover { background-color: #b48a3c; }
 
-.btn-primary:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 15px -3px rgba(197, 160, 89, 0.4);
+.btn-secondary {
+  background-color: white;
+  color: #64748b;
+  border: 1px solid #cbd5e1;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 0.2s;
 }
+.btn-secondary:hover { background-color: #f1f5f9; color: #0f172a; }
 
-/* --- LISTA (ESTILO CARD) --- */
+/* Tabela */
 .lista-container {
   background: white;
-  border-radius: 20px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+  border-radius: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.5);
-  min-height: 300px;
 }
 
-/* --- TABELA MODERNA --- */
-.tabela-contratos {
-  width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
-}
-
+.tabela-contratos { width: 100%; border-collapse: collapse; }
 .tabela-contratos th {
-  background: #f1f5f9;
-  padding: 20px;
-  text-align: left;
-  font-size: 11px;
+  background-color: #f8fafc;
   color: #64748b;
+  font-size: 11px;
   text-transform: uppercase;
-  font-weight: 700;
-  border-bottom: 2px solid #e2e8f0;
+  padding: 15px;
+  text-align: left;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .tabela-contratos td {
-  padding: 20px;
+  padding: 15px;
   border-bottom: 1px solid #f1f5f9;
   color: #334155;
-  font-size: 15px;
-  vertical-align: middle;
-}
-
-/* Badges e Ícones */
-.status-badge {
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 700;
-  text-transform: uppercase;
-}
-.status-badge.em-aberto { background: #fff7ed; color: #b45309; }
-.status-badge.assinado { background: #ecfdf5; color: #047857; }
-
-.btn-icon {
-  background: white;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  width: 40px;
-  height: 40px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-icon.pdf { color: #c5a059; border-color: #eaddc5; }
-.btn-icon.pdf:hover { background: #c5a059; color: white; }
-
-/* --- MODAL --- */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(6px);
-  display: flex; justify-content: center; align-items: center; z-index: 1000;
-}
-
-.modal-content {
-  background: white;
-  width: 550px;
-  max-height: 90vh;
-  border-radius: 24px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  display: flex; flex-direction: column;
-}
-
-.form-input {
-  width: 100%;
-  padding: 14px 16px;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  background: #f8fafc;
-  transition: all 0.3s ease;
-}
-
-.form-input:focus {
-  border-color: #c5a059;
-  outline: none;
-  background: white;
-}
-
-.btn-save {
-  flex: 2; background: #0f172a; color: white; border: none; padding: 14px;
-  border-radius: 12px; cursor: pointer; font-weight: 700;
-}
-
-/* Botão Secundário (Modelos) */
-.btn-secondary {
-  background: white;
-  color: #64748b;
-  border: 2px solid #e2e8f0;
-  padding: 12px 24px;
-  border-radius: 10px;
-  font-weight: 700;
   font-size: 14px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  gap: 8px;
 }
 
-.btn-secondary:hover {
-  background: #f8fafc;
-  border-color: #cbd5e1;
+/* Badges de Status */
+.status-badge {
+  padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700;
+}
+.status-badge.em-aberto { background: #fff7ed; color: #c2410c; }
+.status-badge.assinado { background: #f0fdf4; color: #15803d; }
+.status-badge.finalizado { background: #f1f5f9; color: #475569; }
+
+/* Ações */
+.action-buttons { display: flex; justify-content: center; gap: 8px; }
+.btn-icon {
+  background: #f1f5f9; border: none; width: 32px; height: 32px;
+  border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+.btn-icon:hover { background: #e2e8f0; }
+.btn-icon.pdf:hover { background: #dbeafe; } /* Azulzinho pro PDF */
+.btn-icon.delete:hover { background: #fee2e2; } /* Vermelho pra excluir */
+
+.empty-state-list { padding: 40px; text-align: center; color: #94a3b8; }
+
+/* ... Mantenha o seu CSS atual e adicione o seguinte: ... */
+
+/* Botão de Três Pontinhos */
+.btn-more {
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0 10px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.btn-more:hover {
+  background-color: #f1f5f9;
   color: #0f172a;
 }
 
-/* Mantendo o header-actions organizado */
-.header-actions {
+/* O Menu Suspenso (Dropdown) */
+.dropdown-menu {
+  position: absolute;
+  right: 10px; /* Alinha à direita, para não sair da tela */
+  top: 35px;   /* Logo abaixo do botão */
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e2e8f0;
+  width: 150px;
+  z-index: 100; /* Garante que fique por cima de outros elementos */
+  overflow: hidden;
+  text-align: left;
+  animation: fadeIn 0.1s ease-out;
+}
+
+.dropdown-menu button {
   display: flex;
-  gap: 12px;
   align-items: center;
+  gap: 8px; /* Espaço entre ícone e texto */
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 10px 15px;
+  font-size: 13px;
+  color: #334155;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.dropdown-menu button:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+/* Linha divisória */
+.dropdown-menu hr {
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  margin: 0;
+}
+
+/* Botão de Excluir (Vermelho) */
+.dropdown-menu button.danger {
+  color: #ef4444;
+}
+
+.dropdown-menu button.danger:hover {
+  background-color: #fef2f2;
+}
+
+/* Animação suave de entrada */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
 }

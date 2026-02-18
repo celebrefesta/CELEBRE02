@@ -10,7 +10,6 @@ const ModelosContrato = () => {
   const [editandoId, setEditandoId] = useState(null);
   const navigate = useNavigate();
 
-  // Busca os modelos do banco de dados Ágape
   useEffect(() => {
     const q = query(collection(db, "modelosContrato"));
     const unsub = onSnapshot(q, (snap) => {
@@ -18,6 +17,43 @@ const ModelosContrato = () => {
     });
     return () => unsub();
   }, []);
+
+  // --- TEXTOS PADRÃO (A MÁGICA ACONTECE AQUI) ---
+  const templates = {
+    pegueMonte: {
+      titulo: "CONTRATO PEGUE E MONTE",
+      texto: `CLÁUSULAS - PEGUE E MONTE:
+
+1. DO TRANSPORTE: O LOCATÁRIO é totalmente responsável pelo transporte das peças, devendo garantir veículo adequado para que não haja danos.
+2. DA MONTAGEM: A ÁGAPE DECORAÇÕES não realiza montagem neste modelo. O cliente retira, monta e devolve.
+3. DA DEVOLUÇÃO: As peças devem ser devolvidas limpas e embaladas da mesma forma que foram entregues.
+4. DANOS E AVARIAS: Em caso de quebra, rasgo ou mancha, será cobrado o valor de reposição da peça (preço de mercado) no ato da devolução.
+5. ATRASOS: A não devolução na data estipulada gera multa de 20% do valor do contrato por dia de atraso.`
+    },
+    decoracao: {
+      titulo: "CONTRATO DE DECORAÇÃO COMPLETA",
+      texto: `CLÁUSULAS - DECORAÇÃO COMPLETA:
+
+1. DA PRESTAÇÃO DE SERVIÇO: A ÁGAPE DECORAÇÕES se compromete a realizar a montagem e desmontagem completa do cenário contratado.
+2. DO ACESSO: O local deve estar liberado para a equipe de montagem pelo menos 2 horas antes do início do evento.
+3. DA ESTRUTURA: A contratada não se responsabiliza por falhas na estrutura do local (tomadas, goteiras, piso irregular) que impeçam a montagem.
+4. ALTERAÇÕES: Mudanças no layout só poderão ser feitas se solicitadas com 7 dias de antecedência.
+5. SEGURANÇA: O LOCATÁRIO é responsável pela integridade das peças durante o evento.`
+    },
+    pecas: {
+      titulo: "CONTRATO DE PEÇAS AVULSAS",
+      texto: `CLÁUSULAS - LOCAÇÃO DE PEÇAS INDIVIDUAIS:
+
+1. OBJETO: Locação apenas dos itens descritos, sem serviços de frete ou montagem inclusos.
+2. CONFERÊNCIA: O cliente deve conferir as peças no ato da retirada. Reclamações posteriores não serão aceitas.
+3. REPOSIÇÃO: Peças de cerâmica, vidro ou tecido que forem danificadas deverão ser pagas integralmente na devolução.
+4. LIMPEZA: As peças devem retornar higienizadas, sob pena de cobrança de taxa de limpeza de R$ 50,00.`
+    }
+  };
+
+  const carregarTemplate = (tipo) => {
+    setNovo(templates[tipo]);
+  };
 
   const handleSalvar = async (e) => {
     e.preventDefault();
@@ -30,7 +66,7 @@ const ModelosContrato = () => {
       }
       setNovo({ titulo: "", texto: "" });
       alert("Modelo salvo com sucesso!");
-    } catch (err) { alert("Erro ao salvar: " + err.message); }
+    } catch (err) { alert("Erro: " + err.message); }
   };
 
   const prepararEdicao = (m) => {
@@ -43,54 +79,77 @@ const ModelosContrato = () => {
       <header className="modelos-header">
         <button className="btn-back" onClick={() => navigate("/contratos")}>← Voltar para Contratos</button>
         <h1>Modelos de Contrato 📝</h1>
-        <p>Configure as cláusulas padrão da Ágape Decorações.</p>
+        <p>Crie ou escolha um padrão para usar nos seus documentos.</p>
       </header>
 
       <div className="modelos-grid">
+        {/* LADO ESQUERDO: FORMULÁRIO */}
         <div className="modelo-form-card">
-          <h3>{editandoId ? "Editar Modelo" : "Criar Novo Modelo"}</h3>
+          <h3>{editandoId ? "Editando Modelo" : "Criar Novo Modelo"}</h3>
+          
+          {/* BOTÕES DE ATALHO */}
+          {!editandoId && (
+            <div className="atalhos-templates">
+              <p>Preencher rápido com:</p>
+              <div className="btn-group-templates">
+                <button type="button" onClick={() => carregarTemplate('pegueMonte')}>📦 Pegue e Monte</button>
+                <button type="button" onClick={() => carregarTemplate('decoracao')}>✨ Decoração</button>
+                <button type="button" onClick={() => carregarTemplate('pecas')}>🧩 Peças Avulsas</button>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSalvar}>
             <div className="form-group">
-              <label>TÍTULO (Ex: Pegue e Monte)</label>
+              <label>TÍTULO DO MODELO</label>
               <input 
                 className="form-input" 
+                placeholder="Ex: Contrato Padrão 2026"
                 value={novo.titulo} 
                 onChange={e => setNovo({...novo, titulo: e.target.value})} 
                 required 
               />
             </div>
             <div className="form-group">
-              <label>CONTEÚDO DO CONTRATO</label>
+              <label>CLÁUSULAS E TERMOS</label>
               <textarea 
                 className="form-input area" 
-                rows="12" 
+                rows="15" 
+                placeholder="O texto do contrato aparecerá aqui..."
                 value={novo.texto}
                 onChange={e => setNovo({...novo, texto: e.target.value})}
                 required
               ></textarea>
             </div>
             <button type="submit" className="btn-save-modelo">
-              {editandoId ? "ATUALIZAR MODELO" : "SALVAR MODELO"}
+              {editandoId ? "ATUALIZAR MODELO" : "SALVAR MODELO NO BANCO"}
             </button>
+            {editandoId && <button type="button" className="btn-cancel-edit" onClick={() => {setEditandoId(null); setNovo({titulo:"", texto:""})}}>Cancelar Edição</button>}
           </form>
         </div>
 
+        {/* LADO DIREITO: LISTA */}
         <div className="modelos-lista">
           <h3>Modelos Salvos</h3>
-          {modelos.length === 0 ? <p>Nenhum modelo cadastrado.</p> : 
+          {modelos.length === 0 ? (
+            <div className="empty-models">
+              <p>Nenhum modelo cadastrado.</p>
+              <small>Use os botões ao lado para criar os primeiros!</small>
+            </div>
+          ) : (
             modelos.map(m => (
               <div key={m.id} className="modelo-item-card">
                 <div className="modelo-info">
                   <h4>{m.titulo}</h4>
-                  <p>{m.texto.substring(0, 60)}...</p>
+                  <p>{m.texto.substring(0, 80)}...</p>
                 </div>
                 <div className="modelo-actions">
-                  <button onClick={() => prepararEdicao(m)}>✏️</button>
-                  <button onClick={() => deleteDoc(doc(db, "modelosContrato", m.id))}>🗑️</button>
+                  <button className="btn-icon-small" onClick={() => prepararEdicao(m)} title="Editar">✏️</button>
+                  <button className="btn-icon-small delete" onClick={() => deleteDoc(doc(db, "modelosContrato", m.id))} title="Excluir">🗑️</button>
                 </div>
               </div>
             ))
-          }
+          )}
         </div>
       </div>
     </div>
