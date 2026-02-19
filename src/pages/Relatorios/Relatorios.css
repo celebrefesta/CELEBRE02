@@ -1,85 +1,148 @@
-/* Container */
-.relatorios-page {
-    width: 100%; animation: fadeIn 0.4s ease-out; padding-bottom: 50px;
+/* --- FUNDO E ESPAÇAMENTO --- */
+.tab-content {
+    font-family: 'Inter', sans-serif;
+    color: #1e293b;
+    max-width: 1200px;
+    margin: 0 auto;
+    /* CORREÇÃO DO ESPAÇO: Margem maior para desgrudar das abas */
+    margin-top: 60px !important; 
+    padding-bottom: 50px;
+    animation: fadeIn 0.5s ease-in-out;
 }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Header */
-.header-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 2rem; }
-.page-title h1 { font-size: 1.6rem; color: #0f233a; margin-bottom: 4px; font-weight: 700; }
-.page-title p { color: #64748b; font-size: 0.95rem; }
-
-.header-actions { display: flex; gap: 10px; }
-.period-select { padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #1e293b; font-family: 'Poppins', sans-serif; cursor: pointer; }
-.btn-outline { background: white; border: 1px solid #cbd5e1; color: #64748b; padding: 8px 15px; border-radius: 6px; cursor: pointer; display: flex; align-items: center; gap: 8px; font-weight: 600; }
-.btn-outline:hover { border-color: #0f233a; color: #0f233a; }
-
-/* 1. Resumo Financeiro */
-.summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.5rem; margin-bottom: 2rem; }
-.summary-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 15px; transition: 0.2s; }
-.summary-card:hover { transform: translateY(-3px); box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
-.summary-card.highlight { background: linear-gradient(135deg, #0f233a 0%, #1e3a5a 100%); color: white; }
-
-.sc-icon { width: 50px; height: 50px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.2rem; flex-shrink: 0; }
-.income { background: #dcfce7; color: #166534; }
-.expense { background: #fee2e2; color: #991b1b; }
-.events { background: #f3f4f6; color: #4b5563; }
-.profit { background: rgba(255,255,255,0.2); color: #c5a059; }
-
-.sc-info { display: flex; flex-direction: column; }
-.sc-info span { font-size: 0.8rem; font-weight: 600; text-transform: uppercase; opacity: 0.7; }
-.sc-info h3 { font-size: 1.4rem; font-weight: 700; margin: 2px 0; }
-.sc-info small { font-size: 0.75rem; color: #64748b; }
-.highlight .sc-info small { color: rgba(255,255,255,0.8); }
-.positive { color: #10b981; }
-
-/* 2. Gráficos */
-.charts-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
-.chart-card { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.chart-header { margin-bottom: 1.5rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
-.chart-header h3 { font-size: 1.1rem; color: #0f233a; display: flex; align-items: center; gap: 8px; }
-
-/* Gráfico de Barras CSS */
-.bar-chart-container { display: flex; align-items: flex-end; justify-content: space-around; height: 200px; padding-top: 20px; }
-.bar-group { display: flex; flex-direction: column; align-items: center; height: 100%; width: 100%; justify-content: flex-end; }
-.bar { width: 30px; background: #e2e8f0; border-radius: 4px 4px 0 0; transition: height 1s ease-out; position: relative; cursor: pointer; }
-.bar:hover { background: #c5a059; }
-.bar.active { background: #0f233a; }
-/* Tooltip simples */
-.bar:hover::after { content: attr(data-value); position: absolute; top: -25px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; white-space: nowrap; }
-.bar-label { margin-top: 8px; font-size: 0.8rem; color: #64748b; font-weight: 600; }
-
-/* Lista Top Temas */
-.top-list { display: flex; flex-direction: column; gap: 1.2rem; }
-.top-item { display: flex; flex-direction: column; gap: 5px; }
-.top-info { display: flex; justify-content: space-between; font-size: 0.9rem; color: #1e293b; }
-.progress-bg { width: 100%; height: 8px; background: #f1f5f9; border-radius: 4px; overflow: hidden; }
-.progress-fill { height: 100%; background: #0f233a; border-radius: 4px; }
-
-/* 3. Métricas Secundárias */
-.metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
-.metric-box { background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-.metric-box h4 { font-size: 0.95rem; color: #0f233a; margin-bottom: 1rem; border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; }
-
-.metric-list { list-style: none; padding: 0; }
-.metric-list li { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px dashed #f1f5f9; font-size: 0.9rem; color: #475569; }
-.metric-list li i { width: 20px; }
-.metric-list li span { font-weight: 700; color: #1e293b; }
-.metric-list.danger li span { color: #ef4444; }
-
-/* Círculo de Conversão */
-.conversion-circle { width: 120px; height: 120px; margin: 0 auto; position: relative; }
-.circular-chart { display: block; margin: 0 auto; max-width: 100%; max-height: 100%; }
-.circle-bg { fill: none; stroke: #f1f5f9; stroke-width: 3.8; }
-.circle { fill: none; stroke-width: 2.8; stroke-linecap: round; stroke: #10b981; animation: progress 1s ease-out forwards; }
-.circle-content { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); text-align: center; }
-.circle-content strong { display: block; font-size: 1.4rem; color: #1e293b; }
-.circle-content small { font-size: 0.7rem; color: #64748b; text-transform: uppercase; }
-
-@keyframes progress { 0% { stroke-dasharray: 0 100; } }
-
-@media (max-width: 1000px) {
-    .summary-grid { grid-template-columns: 1fr 1fr; }
-    .charts-grid { grid-template-columns: 1fr; }
-    .metrics-grid { grid-template-columns: 1fr; }
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
+
+/* --- BANNER DE KPI (O TOPO) --- */
+.kpi-banner {
+    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); /* Azul Escuro Premium */
+    color: white;
+    padding: 35px 45px;
+    border-radius: 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.5); /* Sombra difusa */
+    margin-bottom: 50px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    position: relative;
+    overflow: hidden;
+}
+
+/* Efeito de brilho no fundo do banner */
+.kpi-banner::after {
+    content: '';
+    position: absolute;
+    top: 0; right: 0; bottom: 0; left: 0;
+    background: radial-gradient(circle at top right, rgba(255,255,255,0.05), transparent 40%);
+    pointer-events: none;
+}
+
+.kpi-content {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.kpi-label {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 2.5px;
+    color: #94a3b8;
+    font-weight: 700;
+}
+
+.kpi-value {
+    font-size: 64px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1;
+    letter-spacing: -2px;
+    background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+/* Botão PDF Melhorado */
+.btn-download {
+    position: relative;
+    z-index: 2;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    padding: 16px 32px;
+    border-radius: 14px;
+    font-weight: 700;
+    font-size: 14px;
+    cursor: pointer;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.btn-download:hover {
+    background: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 15px -3px rgba(37, 99, 235, 0.4);
+}
+
+.btn-download:active { transform: translateY(0); }
+
+/* --- TÍTULOS --- */
+.section-header { margin-bottom: 30px; padding-left: 15px; border-left: 5px solid #3b82f6; }
+.section-header h3 { font-size: 22px; font-weight: 800; color: #0f172a; margin: 0; letter-spacing: -0.5px; }
+.section-header p { font-size: 15px; color: #64748b; margin: 6px 0 0 0; }
+.mt-40 { margin-top: 60px; }
+
+/* --- GRIDS --- */
+.comparison-grid { display: grid; grid-template-columns: 1.5fr 1fr; gap: 30px; }
+@media (max-width: 1000px) { .comparison-grid { grid-template-columns: 1fr; } }
+
+/* --- CARDS BRANCOS --- */
+.card-box {
+    background: white; border-radius: 20px; padding: 30px;
+    border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.02);
+}
+.card-title { font-size: 18px; font-weight: 700; color: #334155; margin-bottom: 25px; display: flex; align-items: center; gap: 10px; }
+
+/* --- OPPORTUNITY BOX (Lateral) --- */
+.opportunity-box { background: #f8fafc; border: 1px dashed #cbd5e1; }
+.box-desc { font-size: 14px; color: #64748b; margin-bottom: 25px; line-height: 1.6; }
+.list-container { display: flex; flex-direction: column; gap: 12px; }
+
+.list-item {
+    display: flex; justify-content: space-between; align-items: center;
+    background: white; padding: 16px 20px; border-radius: 12px;
+    border: 1px solid #e2e8f0; box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+}
+.item-name { font-weight: 600; color: #334155; font-size: 14px; }
+.item-badge { background: #f1f5f9; color: #64748b; font-size: 12px; font-weight: 700; padding: 6px 14px; border-radius: 99px; }
+.item-badge.orange { background: #fff7ed; color: #c2410c; border: 1px solid #ffedd5; }
+
+/* --- RANKING ITENS --- */
+.itens-ranking-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 24px; }
+.rank-card {
+    background: white; padding: 30px 20px; border-radius: 20px;
+    border: 1px solid #f1f5f9; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.02);
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+.rank-card:hover { transform: translateY(-8px); box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.08); border-color: #e2e8f0; }
+
+.rank-pos { font-size: 32px; font-weight: 900; margin-bottom: 15px; opacity: 0.25; line-height: 1; }
+.pos-1 { color: #f59e0b; opacity: 1; font-size: 42px; text-shadow: 0 4px 15px rgba(245,158,11,0.3); }
+.pos-2 { color: #64748b; opacity: 0.7; }
+.pos-3 { color: #b45309; opacity: 0.6; }
+
+.rank-details .r-name { display: block; font-weight: 700; color: #0f172a; font-size: 16px; margin-bottom: 8px; }
+.rank-details .r-val { color: #2563eb; font-weight: 800; font-size: 22px; }
+.rank-details small { font-size: 13px; color: #94a3b8; font-weight: 600; margin-left: 5px; }
+
+/* Mensagem de Vazio */
+.empty-txt { color: #94a3b8; font-style: italic; text-align: center; margin-top: 10px; font-size: 14px; }

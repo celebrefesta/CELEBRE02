@@ -4,30 +4,23 @@ import { db } from '../../firebaseConfig';
 import html2canvas from 'html2canvas'; 
 import './Moodboard.css';
 
-// --- ÍCONES ---
+// --- CORREÇÃO 1: Ícones agora aceitam props (cor, tamanho, style) ---
 const Icons = {
-  Crown: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>,
-  Couch: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h20v8H2zm0 0l2-6h16l2 6M6 16v4m12-4v4"/></svg>,
-  Type: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>,
-  Layers: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>,
-  Magic: () => <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>,
-  
-  // Ícones de Ação
-  Save: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>,
-  Folder: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>,
-  Trash: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18m-2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
-  Download: () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
-  
-  // Ícones de Edição
-  Lock: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
-  Unlock: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>,
-  Rotate: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>,
-  Flip: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12l-4-4m4 4l-4 4m4-4H9m-4 0l4-4m-4 4l4 4m-4-4h10"/></svg>,
-  Bold: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>,
-  Italic: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>,
-  AlignLeft: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="17" y1="10" x2="3" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="17" y1="18" x2="3" y2="18"></line></svg>,
-  AlignCenter: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="10" x2="6" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="18" y1="18" x2="6" y2="18"></line></svg>,
-  AlignRight: () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="21" y1="10" x2="7" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="21" y1="18" x2="7" y2="18"></line></svg>,
+  Crown: (props) => <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>,
+  Couch: (props) => <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h20v8H2zm0 0l2-6h16l2 6M6 16v4m12-4v4"/></svg>,
+  Type: (props) => <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>,
+  Layers: (props) => <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>,
+  Magic: (props) => <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>,
+  Save: (props) => <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>,
+  Folder: (props) => <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>,
+  Trash: (props) => <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18m-2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
+  Download: (props) => <svg {...props} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+  Lock: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
+  Unlock: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>,
+  Rotate: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>,
+  Flip: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12l-4-4m4 4l-4 4m4-4H9m-4 0l4-4m-4 4l4 4m-4-4h10"/></svg>,
+  Bold: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>,
+  Italic: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>,
 };
 
 const Moodboard = () => {
@@ -92,7 +85,6 @@ const Moodboard = () => {
 
   const salvarProjeto = async () => {
     if (!nomeProjeto.trim()) return alert("Digite um nome para o projeto!");
-    
     try {
         await addDoc(collection(db, "projetos_moodboard"), {
             nome: nomeProjeto,
@@ -142,7 +134,7 @@ const Moodboard = () => {
     }
   };
 
-  // --- ACTIONS EXISTENTES ---
+  // --- ACTIONS ---
   const handleContextMenu = (e, id) => { e.preventDefault(); setSelecionadoId(id); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id }); };
   const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
   const bringToFront = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => { const idx = prev.findIndex(i => i.uniqueId === contextMenu.itemId); if(idx < 0) return prev; const item = prev[idx]; const rest = prev.filter(i => i.uniqueId !== contextMenu.itemId); return [...rest, item]; }); closeContextMenu(); };
@@ -159,7 +151,7 @@ const Moodboard = () => {
 
   const adicionarTexto = () => {
     const idUnico = `txt_${Date.now()}`;
-    const itemTexto = { type: 'text', content: "Texto", color: "#1e293b", fontSize: 32, fontFamily: "'Poppins', sans-serif", uniqueId: idUnico, x: 300, y: 250, width: 250, height: 60, rotation: 0, locked: false, opacity: 100, shadow: 0 };
+    const itemTexto = { type: 'text', content: "Novo Texto", color: "#1e293b", fontSize: 32, fontFamily: "'Poppins', sans-serif", uniqueId: idUnico, x: 300, y: 250, width: 250, height: 60, rotation: 0, locked: false, opacity: 100, shadow: 0 };
     setItensCanvas(prev => [...prev, itemTexto]); setSelecionadoId(idUnico); setEditingTextId(idUnico);
   };
 
@@ -176,10 +168,28 @@ const Moodboard = () => {
   
   const handleExportImage = async () => { if (!canvasRef.current) return; setSelecionadoId(null); setTimeout(async () => { const canvas = await html2canvas(canvasRef.current, { useCORS: true, allowTaint: true, ignoreElements: (el) => el.classList.contains('canvas-header-overlay') }); const link = document.createElement('a'); link.download = `Projeto.png`; link.href = canvas.toDataURL(); link.click(); }, 200); };
 
-  const handleItemMouseDown = (e, id, type) => { e.stopPropagation(); setSelecionadoId(id); if (type === 'text') setAbaAtiva('texto'); else setAbaAtiva('efeitos'); const item = itensCanvas.find(i => i.uniqueId === id); if (id !== editingTextId && !item?.locked) { interactionMode.current = 'drag'; activeItemId.current = id; } };
+  // --- LÓGICA DE INTERAÇÃO (DRAG AND DROP) ---
+  const handleItemMouseDown = (e, id, type) => { 
+    e.stopPropagation(); 
+    setSelecionadoId(id); 
+    if (type === 'text') setAbaAtiva('texto'); else setAbaAtiva('efeitos'); 
+    
+    const item = itensCanvas.find(i => i.uniqueId === id); 
+    // Só permite arrastar se NÃO estiver editando texto e se o item NÃO estiver bloqueado
+    if (id !== editingTextId && !item?.locked) { 
+        interactionMode.current = 'drag'; 
+        activeItemId.current = id; 
+    } 
+  };
+
   const handleResizeMouseDown = (e, id, dir) => { e.stopPropagation(); interactionMode.current = 'resize'; resizeDir.current = dir; activeItemId.current = id; };
+  
   const handleMouseMove = (e) => {
     if (interactionMode.current === 'none' || !activeItemId.current) return;
+    
+    // Evita selecionar texto da página enquanto arrasta
+    e.preventDefault();
+
     setItensCanvas(prev => prev.map(item => {
       if (item.uniqueId === activeItemId.current && !item.locked) {
         if (interactionMode.current === 'drag') return { ...item, x: item.x + e.movementX, y: item.y + e.movementY };
@@ -192,7 +202,16 @@ const Moodboard = () => {
       } return item;
     }));
   };
+
   const handleMouseUp = () => { interactionMode.current = 'none'; activeItemId.current = null; };
+  
+  // CORREÇÃO 2: Limpar modo de edição ao clicar fora
+  const handleCanvasClick = () => {
+      setSelecionadoId(null);
+      setEditingTextId(null); // Importante: sai do modo de edição
+      closeContextMenu();
+  };
+
   const atualizarItem = (id, alt) => setItensCanvas(prev => prev.map(i => i.uniqueId === id ? { ...i, ...alt } : i));
   const deleteItem = (id) => { setItensCanvas(prev => prev.filter(i => i.uniqueId !== id)); setSelecionadoId(null); };
 
@@ -200,7 +219,7 @@ const Moodboard = () => {
   const getStyle = (valor) => (!valor ? { background: '#fff' } : valor.startsWith('url') ? { backgroundImage: valor, backgroundSize: 'cover', backgroundPosition: 'center' } : { backgroundColor: valor });
 
   return (
-    <div className="studio-page" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onClick={() => { setSelecionadoId(null); closeContextMenu(); }}>
+    <div className="studio-page" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onClick={handleCanvasClick}>
       
       <div className="studio-toolbar" onClick={e => e.stopPropagation()}>
         <div className="tool-logo"><Icons.Crown /></div>
@@ -224,7 +243,7 @@ const Moodboard = () => {
                      <div className="acervo-grid">
                        {grouped[cat].map(item => (
                          <div key={item.id} className="acervo-card" onClick={() => adicionarAoCanvas(item)}>
-                           <div className="card-thumb"><img src={item.imagem || 'https://via.placeholder.com/120'} crossOrigin="anonymous" /></div>
+                           <div className="card-thumb"><img src={item.imagem || 'https://via.placeholder.com/120'} crossOrigin="anonymous" alt={item.nome} /></div>
                            <div className="card-name">{item.nome}</div>
                          </div>
                        ))}
@@ -251,8 +270,8 @@ const Moodboard = () => {
                         <div className="slider-group"><label>Opacidade ({itemSelecionado.opacity}%)</label><input type="range" min="10" max="100" value={itemSelecionado.opacity || 100} onChange={e => atualizarItem(selecionadoId, {opacity: Number(e.target.value)})} /></div>
                         <div className="slider-group"><label>Sombra ({itemSelecionado.shadow}px) {itemSelecionado.shadow === 0 && <small>(Off)</small>}</label><input type="range" min="0" max="50" value={itemSelecionado.shadow || 0} onChange={e => atualizarItem(selecionadoId, {shadow: Number(e.target.value)})} /></div>
                         <div className="action-buttons-grid">
-                            <button className={`btn-secondary ${itemSelecionado.locked ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {locked: !itemSelecionado.locked})}>{itemSelecionado.locked ? <><Icons.Lock /> Bloqueado</> : <><Icons.Unlock /> Bloquear</>}</button>
-                            <button className="btn-secondary" onClick={() => atualizarItem(selecionadoId, {flipH: !itemSelecionado.flipH})}><Icons.Flip /> Virar</button>
+                            <button className={`btn-secondary ${itemSelecionado.locked ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {locked: !itemSelecionado.locked})}>{itemSelecionado.locked ? <><Icons.Lock width={14} /> Bloqueado</> : <><Icons.Unlock width={14} /> Bloquear</>}</button>
+                            <button className="btn-secondary" onClick={() => atualizarItem(selecionadoId, {flipH: !itemSelecionado.flipH})}><Icons.Flip width={14} /> Virar</button>
                         </div>
                         <button className="btn-danger-action" onClick={() => deleteItem(selecionadoId)}>Remover Item</button>
                     </div>
@@ -301,7 +320,6 @@ const Moodboard = () => {
             <div className="layer-floor" style={getStyle(floorBackground)}></div>
         </div>
         
-        {/* --- BOTÕES DO TOPO (SALVAR, ABRIR, LIMPAR, BAIXAR) --- */}
         <div className="canvas-header-overlay">
              <button className="btn-header-action" onClick={handleAbrirListaProjetos} title="Meus Projetos"><Icons.Folder /> Abrir</button>
              <button className="btn-header-action" onClick={handleAbrirModalSalvar} title="Salvar Projeto"><Icons.Save /> Salvar</button>
@@ -317,19 +335,20 @@ const Moodboard = () => {
                 transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1})`,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 filter: `brightness(${item.brightness}%) contrast(${item.contrast}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`,
-                opacity: item.opacity / 100, cursor: item.locked ? 'not-allowed' : 'grab'
+                opacity: item.opacity / 100, cursor: item.locked ? 'not-allowed' : 'grab',
+                userSelect: 'none' /* Importante para não selecionar texto ao arrastar */
             }}
             onMouseDown={e => handleItemMouseDown(e, item.uniqueId, item.type)} onClick={e => e.stopPropagation()} onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}>
             
             {item.type === 'text' ? (
                 <div style={{ width:'100%', fontSize: `${item.fontSize}px`, color: item.color, fontFamily: item.fontFamily, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textAlign: item.textAlign }}>{item.content}</div>
-            ) : <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain' }} crossOrigin="anonymous" />}
+            ) : <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain' }} crossOrigin="anonymous" alt="" />}
             
             {selecionadoId === item.uniqueId && !item.locked && !editingTextId && (
                 <><div className="resize-handle se" onMouseDown={e => handleResizeMouseDown(e, item.uniqueId, 'se')} /><div className="selection-border" /></>
             )}
             {item.locked && selecionadoId === item.uniqueId && (
-                <div style={{position:'absolute', top:-15, right:-15, background:'#ef4444', color:'white', borderRadius:'50%', padding:2}}><Icons.Lock /></div>
+                <div style={{position:'absolute', top:-15, right:-15, background:'#ef4444', color:'white', borderRadius:'50%', padding:2}}><Icons.Lock width={16} /></div>
             )}
           </div>
         ))}
@@ -345,25 +364,24 @@ const Moodboard = () => {
             </div>
         )}
 
-        {/* --- MODAL SALVAR --- */}
+        {/* --- MODAIS --- */}
         {modalSalvarAberto && (
             <div className="modal-overlay">
                 <div className="modal-content">
                     <h3>Salvar Projeto</h3>
-                    <input type="text" placeholder="Nome do Projeto (ex: Casamento Ana)" value={nomeProjeto} onChange={(e) => setNomeProjeto(e.target.value)} autoFocus />
+                    <input type="text" placeholder="Nome do Projeto" value={nomeProjeto} onChange={(e) => setNomeProjeto(e.target.value)} autoFocus />
                     <div className="modal-actions">
                         <button className="btn-cancel" onClick={() => setModalSalvarAberto(false)}>Cancelar</button>
-                        <button className="btn-confirm" onClick={salvarProjeto}>Salvar Agora</button>
+                        <button className="btn-confirm" onClick={salvarProjeto}>Salvar</button>
                     </div>
                 </div>
             </div>
         )}
 
-        {/* --- MODAL ABRIR PROJETOS --- */}
         {modalAbrirAberto && (
             <div className="modal-overlay">
                 <div className="modal-content large">
-                    <h3>Meus Projetos Salvos</h3>
+                    <h3>Projetos Salvos</h3>
                     <div className="projects-list">
                         {projetosSalvos.length === 0 ? <p>Nenhum projeto salvo.</p> : projetosSalvos.map(proj => (
                             <div key={proj.id} className="project-item-row">
@@ -376,7 +394,6 @@ const Moodboard = () => {
                 </div>
             </div>
         )}
-
       </div>
     </div>
   );

@@ -117,7 +117,7 @@ const NovaLocacao = () => {
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
                 </select>
               </div>
-              <div className="input-group-v3"><label>Retirada</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} /></div>
+              <div className="input-g roup-v3"><label>Retirada</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} /></div>
               <div className="input-group-v3"><label>Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} /></div>
             </div>
           </div>

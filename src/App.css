@@ -40,10 +40,28 @@
 .read-the-docs {
   color: #888;
 
-  /* Ajuste para todas as páginas */
+  /* AJUSTE PARA TODAS AS PAGINAS  */ 
+
+
 main, .dashboard-page, .relatorios-page, .contratos-page {
     margin-left: 260px; /* Espaço do menu lateral */
     margin-top: 70px;  /* Espaço do cabeçalho do topo */
     padding: 30px;
 }
+}
+
+/* Classe para o "corpo" de qualquer página que tenha menu lateral */
+.conteudo-painel {
+  margin-left: 260px; /* Espaço para o menu */
+  width: calc(100% - 260px); /* Ocupa o resto da tela */
+  min-height: 100vh;
+  background-color: #f1f5f9; /* Cor de fundo padrão do painel */
+}
+
+/* Em telas de celular, removemos a margem */
+@media (max-width: 1000px) {
+  .conteudo-painel {
+    margin-left: 0;
+    width: 100%;
+  }
 }
