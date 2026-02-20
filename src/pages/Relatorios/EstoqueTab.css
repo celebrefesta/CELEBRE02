@@ -1,15 +1,15 @@
-.pedidos table {
+.estoque table {
   width: 100%;
   border-collapse: collapse;
 }
 
-.pedidos th {
+.estoque th {
   background: #ff4da6;
   color: white;
   padding: 10px;
 }
 
-.pedidos td {
+.estoque td {
   padding: 10px;
   border-bottom: 1px solid #ddd;
 }

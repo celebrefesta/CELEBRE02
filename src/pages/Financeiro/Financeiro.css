@@ -1,154 +1,203 @@
-.relatorios-page {
-  padding: 30px;
-  background-color: #f8fafc;
-  min-height: 100vh;
-  font-family: 'Inter', sans-serif;
-  color: #334155;
+/* --- PROTEÇÃO DE ESCOPO --- */
+.pag-financeiro-main, 
+.pag-financeiro-main * {
+  box-sizing: border-box;
 }
 
-/* HEADER E ABAS */
-.relatorios-header {
+.pag-financeiro-main {
+  background-color: #f1f5f9; /* Cor padrão que combinamos */
+  min-height: 100vh;
+  width: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #1e293b;
+  
+  /* --- O AJUSTE ESTÁ AQUI --- */
+  padding: 30px; /* Isso vai empurrar o conteúdo para baixo e dar respiro nas laterais */
+}
+
+/* Remova também o max-width para manter a largura perfeita que você conseguiu */
+.financeiro-content {
+  width: 100%;
+  margin: 0;
+}
+
+.financeiro-content {
+  /* max-width: 1200px;  <-- APAGUE OU COMENTE ESTA LINHA */
+  width: 100%;           /* Garante que ocupe toda a largura disponível */
+  margin: 0;             /* Remove a centralização para encostar no menu */      /*LARGURA DA PAGINA TODA, SEM CENTRALIZAÇÃO */
+  padding: 30px;       /* Mantém apenas um respiro nas bordas internas */
+}
+
+/* --- HEADER --- */
+.fin-header-modern {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  flex-wrap: wrap;
-  gap: 20px;
 }
 
-.relatorios-header h1 { margin: 0; color: #0f172a; font-size: 24px; }
-.relatorios-header p { margin: 5px 0 0 0; color: #64748b; font-size: 14px; }
-
-.tabs-container {
-  display: flex;
-  background: white;
-  padding: 5px;
-  border-radius: 10px;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+.fin-title-area h1 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
 }
 
-.tab-btn {
-  padding: 10px 20px;
-  border: none;
-  background: transparent;
-  font-weight: 600;
+.fin-title-area p {
+  margin: 4px 0 0 0;
   color: #64748b;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: 0.2s;
   font-size: 14px;
 }
 
-.tab-btn:hover { background: #f1f5f9; color: #0f172a; }
-
-.tab-btn.active {
-  background: #0f172a;
-  color: #c5a059; /* Dourado da marca */
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* --- BOTÃO NOVO LANÇAMENTO ÚNICO --- */
+.fin-action-buttons {
+  display: flex;
+  gap: 12px;
 }
 
-/* GRIDS E CARDS */
-.kpi-grid {
+.btn-novo-lancamento-unico {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  color: white;
+  background-color: #0f172a; /* Azul Escuro Premium combinando com seu menu */
+  transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
+  box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);
+}
+
+.btn-novo-lancamento-unico:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.3);
+}
+
+/* --- CARDS KPI (IGUAL A FOTO) --- */
+.fin-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(3, 1fr);
   gap: 20px;
   margin-bottom: 30px;
 }
 
 .kpi-card {
   background: white;
-  padding: 25px;
+  padding: 24px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  overflow: hidden;
 }
 
-.kpi-card span {
-  display: block; font-size: 11px; font-weight: 700; color: #94a3b8; margin-bottom: 10px; letter-spacing: 0.5px;
+/* Linhas coloridas no topo de cada card */
+.card-entradas::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #10b981; }
+.card-saidas::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #ef4444; }
+.card-saldo::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #0f172a; }
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
-.kpi-card h3 { margin: 0; font-size: 28px; color: #0f172a; }
-.kpi-card h3.verde { color: #10b981; }
-.kpi-card h3.azul { color: #3b82f6; }
-.kpi-card h3.dourado { color: #d97706; }
+.kpi-header span {
+  font-size: 11px;
+  font-weight: 700;
+  color: #64748b;
+  letter-spacing: 0.5px;
+}
 
-/* CONTAINERS DE GRÁFICOS */
-.chart-box {
+.kpi-icon {
+  font-size: 20px;
+  opacity: 0.5;
+}
+
+.kpi-card h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 800;
+}
+
+.card-entradas h2 { color: #10b981; }
+.card-saidas h2 { color: #ef4444; }
+.card-saldo h2 { color: #0f172a; }
+
+.kpi-subtitle {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #94a3b8;
+}
+
+/* --- TABELA MODERNA --- */
+.fin-table-container {
   background: white;
-  padding: 25px;
   border-radius: 12px;
-  border: 1px solid #e2e8f0;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
-  margin-bottom: 20px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  overflow: hidden;
 }
 
-.chart-box h3 { margin-top: 0; color: #0f172a; font-size: 16px; margin-bottom: 20px; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; }
-.subtext { color: #64748b; font-size: 13px; margin-top: -15px; margin-bottom: 20px; }
-
-/* RANKING DE CLIENTES */
-.ranking-list { display: flex; flex-direction: column; gap: 10px; }
-
-.ranking-row {
-  display: flex; align-items: center; padding: 12px;
-  background: #f8fafc; border-radius: 8px; border: 1px solid #f1f5f9;
+.fin-table-modern {
+  width: 100%;
+  border-collapse: collapse;
 }
 
-.rank-pos {
-  font-size: 18px; font-weight: 800; color: #cbd5e1; width: 40px;
+.fin-table-modern th {
+  text-align: left;
+  padding: 18px 20px;
+  font-size: 11px;
+  color: #64748b;
+  font-weight: 700;
+  border-bottom: 2px solid #f1f5f9;
 }
-.rank-pos:first-child { color: #fbbf24; } /* Ouro para o primeiro */
 
-.rank-info { flex: 1; }
-.rank-info strong { display: block; color: #334155; font-size: 14px; }
-.rank-info span { font-size: 12px; color: #94a3b8; }
-
-.rank-value { font-weight: 700; color: #059669; }
-
-/* GRIDS ESPECÍFICOS */
-.chart-grid-cols {
-  display: grid; grid-template-columns: 2fr 1fr; gap: 20px;
+.fin-table-modern td {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  vertical-align: middle;
 }
-@media (max-width: 900px) { .chart-grid-cols { grid-template-columns: 1fr; } }
 
-.info-box p { font-size: 14px; color: #475569; line-height: 1.6; }
+.fin-table-modern tr:last-child td { border-bottom: none; }
+.fin-table-modern tr:hover { background: #f8fafc; }
 
-/* ANIMAÇÃO */
-.fade-in { animation: fadeIn 0.3s ease-in-out; }
-@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+.col-data { font-size: 13px !important; font-weight: 500; }
+.col-desc strong { color: #0f172a; font-weight: 600; }
+.col-valor { font-weight: 700; font-size: 15px !important; }
 
-.loading-screen { height: 80vh; display: flex; align-items: center; justify-content: center; color: #64748b; font-weight: 600; }
-
-/* ... (Mantenha o CSS base anterior) ... */
-
-/* GRID DE 3 COLUNAS PARA OS KPIS */
-.kpi-row.three-cols {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 20px;
+/* Badges de Categoria */
+.badge-categoria {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  display: inline-block;
 }
-@media (max-width: 900px) { .kpi-row.three-cols { grid-template-columns: 1fr; } }
+.badge-categoria.entrada { background: #dcfce7; color: #15803d; }
+.badge-categoria.saida { background: #fee2e2; color: #b91c1c; }
 
-/* TABELA DRE DE ACERVO */
-.dre-box { padding: 0; overflow: hidden; } /* Remove padding pra tabela encostar */
-.header-dre { padding: 20px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #f1f5f9; }
-.badge-total { background: #f1f5f9; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; color: #64748b; }
+.txt-verde { color: #10b981; }
+.txt-vermelho { color: #ef4444; }
 
-.dre-table { width: 100%; border-collapse: collapse; }
-.dre-table th { text-align: left; font-size: 11px; color: #94a3b8; text-transform: uppercase; padding: 12px 20px; font-weight: 700; background: #fdfdfd; }
-.dre-table td { padding: 12px 20px; border-bottom: 1px solid #f8fafc; font-size: 13px; color: #334155; }
-.dre-table tr:last-child td { border-bottom: none; }
+.direita { text-align: right; }
+.centro { text-align: center; }
 
-/* Coluna de Item com Imagem */
-.item-row-img { display: flex; align-items: center; gap: 10px; }
-.item-row-img img { width: 30px; height: 30px; border-radius: 4px; object-fit: cover; background: #eee; }
+.btn-icon-excluir {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  opacity: 0.5;
+  transition: opacity 0.2s, transform 0.2s;
+}
+.btn-icon-excluir:hover { opacity: 1; transform: scale(1.1); }
 
-/* Tags e Status */
-.tag-cat { background: #eef2ff; color: #4f46e5; padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
-.status-badge { padding: 3px 8px; border-radius: 12px; font-size: 10px; font-weight: 700; text-transform: uppercase; }
-.status-badge.disp { background: #dcfce7; color: #166534; }
-.status-badge.manu { background: #fee2e2; color: #991b1b; }
-
-.text-right { text-align: right; }
-.val-col { font-family: monospace; font-weight: 600; font-size: 14px; color: #0f172a; }
-
-.insight-mini { margin-top: 15px; padding: 15px; background: #fffbeb; border-radius: 8px; border: 1px solid #fcd34d; color: #92400e; font-size: 12px; }
+.fin-empty { text-align: center; padding: 40px !important; color: #94a3b8 !important; }

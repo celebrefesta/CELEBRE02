@@ -10,30 +10,49 @@ const Navbar = () => {
       </div>
 
       <nav className="sidebar-nav">
-        {/* GRUPO ESTRATÉGICO */}
+        {/* --- INÍCIO --- */}
         <NavLink to="/" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-          <i className="fas fa-th-large"></i> <span>Painel</span>
+          <i className="fas fa-th-large"></i> <span>Início</span>
         </NavLink>
 
-        <NavLink to="/relatorios" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-          <i className="fas fa-chart-line"></i> <span>Relatórios</span>
-        </NavLink>
-
-        <NavLink to="/moodboard" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-          <i className="fas fa-palette"></i> <span>Moodboard</span>
-        </NavLink>
-
+        {/* LINHA ADICIONADA AQUI (Conforme seu desenho) */}
         <div className="sidebar-divider"></div>
 
-        {/* GRUPO OPERACIONAL */}
+        {/* --- GRUPO 1: ATENDIMENTO & VENDAS --- */}
         <NavLink to="/agenda" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
           <i className="fas fa-calendar-alt"></i> <span>Agenda</span>
+        </NavLink>
+
+        <NavLink to="/clientes" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <i className="fas fa-users"></i> <span>Clientes</span>
         </NavLink>
 
         <NavLink to="/locacoes" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
           <i className="fas fa-hand-holding-heart"></i> <span>Locações</span>
         </NavLink>
 
+        <NavLink to="/estoque" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <i className="fas fa-boxes"></i> <span>Estoque</span>
+        </NavLink>
+
+        <div className="sidebar-divider"></div>
+
+        {/* --- GRUPO 2: GESTÃO & FINANÇAS --- */}
+        <NavLink to="/compras" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <i className="fas fa-shopping-cart"></i> <span>Compras</span>
+        </NavLink>
+
+        <NavLink to="/financeiro" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <i className="fas fa-money-bill-wave"></i> <span>Financeiro</span>
+        </NavLink>
+
+        <NavLink to="/relatorios" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <i className="fas fa-chart-line"></i> <span>Relatórios</span>
+        </NavLink>
+
+        <div className="sidebar-divider"></div>
+
+        {/* --- GRUPO 3: OPERAÇÃO & CRIAÇÃO --- */}
         <NavLink to="/logistica" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
           <i className="fas fa-truck"></i> <span>Logística</span>
         </NavLink>
@@ -42,21 +61,8 @@ const Navbar = () => {
           <i className="fas fa-file-contract"></i> <span>Contratos</span>
         </NavLink>
 
-        <NavLink to="/estoque" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-          <i className="fas fa-boxes"></i> <span>Acervo</span>
-        </NavLink>
-
-        <NavLink to="/clientes" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-          <i className="fas fa-users"></i> <span>Clientes</span>
-        </NavLink>
-
-        {/* --- NOVO BOTÃO DE COMPRAS --- */}
-        <NavLink to="/compras" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-          <i className="fas fa-shopping-cart"></i> <span>Compras</span>
-        </NavLink>
-
-        <NavLink to="/financeiro" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-          <i className="fas fa-money-bill-wave"></i> <span>Financeiro</span>
+        <NavLink to="/moodboard" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <i className="fas fa-palette"></i> <span>Moodboard</span>
         </NavLink>
 
         <div className="sidebar-divider"></div>

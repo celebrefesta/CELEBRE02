@@ -1,0 +1,86 @@
+.pag-novo-lancamento, .pag-novo-lancamento * { box-sizing: border-box; }
+
+.pag-novo-lancamento {
+  background: #f4f7f9;
+  min-height: 100vh;
+  width: 100%;
+  font-family: 'Inter', system-ui, sans-serif;
+  color: #1e293b;
+}
+
+.header-nl {
+  background: white;
+  padding: 15px 40px;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  position: sticky; top: 0; z-index: 50;
+}
+
+.header-nl h2 { margin: 0; font-size: 20px; color: #0f172a; }
+
+.btn-voltar-nl {
+  border: none; background: #f8fafc; padding: 8px 16px;
+  border-radius: 6px; font-weight: 600; cursor: pointer; color: #64748b;
+}
+.btn-voltar-nl:hover { background: #e2e8f0; color: #0f172a; }
+
+.nl-container { padding: 40px 20px; display: flex; justify-content: center; }
+
+.nl-card {
+  background: white; width: 100%; max-width: 600px;
+  border-radius: 16px; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+/* Toggle Entrada/Saída */
+.nl-tipo-selector { display: flex; border-bottom: 1px solid #f1f5f9; }
+.nl-tipo-btn {
+  flex: 1; padding: 20px; border: none; background: #f8fafc;
+  font-size: 14px; font-weight: 800; color: #94a3b8; cursor: pointer;
+  transition: all 0.2s;
+}
+.nl-tipo-btn.ativo-entrada { background: white; color: #10b981; border-bottom: 3px solid #10b981; }
+.nl-tipo-btn.ativo-saida { background: white; color: #ef4444; border-bottom: 3px solid #ef4444; }
+
+/* Formulário */
+.nl-form { padding: 30px; display: flex; flex-direction: column; gap: 20px; }
+.nl-row { display: flex; gap: 20px; }
+@media(max-width: 600px) { .nl-row { flex-direction: column; gap: 20px; } }
+
+.nl-group { display: flex; flex-direction: column; gap: 8px; flex: 1; }
+.nl-group label { font-size: 12px; font-weight: 700; color: #64748b; text-transform: uppercase; }
+
+.nl-group input, .nl-group select {
+  padding: 14px; border: 1px solid #cbd5e1; border-radius: 10px;
+  font-size: 15px; outline: none; background: #fff; transition: 0.2s;
+}
+.nl-group input:focus, .nl-group select:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59,130,246,0.1); }
+
+/* Input de Valor Gigante */
+.nl-input-valor { font-size: 24px !important; font-weight: 800; }
+.nl-input-valor.entrada { color: #10b981; }
+.nl-input-valor.saida { color: #ef4444; }
+
+/* Botões de Status (Radio customizado) */
+.nl-status-options { display: flex; gap: 10px; }
+.status-radio {
+  flex: 1; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px;
+  text-align: center; font-weight: 700; cursor: pointer; color: #64748b;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.status-radio input { display: none; }
+.status-radio.selecionado { border-color: #10b981; background: #ecfdf5; color: #059669; }
+.status-radio.pendente.selecionado { border-color: #eab308; background: #fefce8; color: #a16207; }
+
+/* Botões Finais */
+.nl-actions { display: flex; justify-content: flex-end; gap: 15px; margin-top: 20px; padding-top: 25px; border-top: 1px solid #f1f5f9; }
+.btn-cancelar { padding: 14px 24px; border: none; background: transparent; color: #64748b; font-weight: 700; cursor: pointer; }
+.btn-cancelar:hover { background: #f1f5f9; border-radius: 8px; }
+
+.btn-salvar { padding: 14px 30px; border: none; border-radius: 10px; color: white; font-weight: 800; font-size: 15px; cursor: pointer; transition: 0.2s; }
+.btn-salvar.entrada { background: #10b981; box-shadow: 0 4px 10px rgba(16,185,129,0.3); }
+.btn-salvar.saida { background: #ef4444; box-shadow: 0 4px 10px rgba(239,68,68,0.3); }
+.btn-salvar:hover { transform: translateY(-2px); opacity: 0.9; }
+.btn-salvar:disabled { opacity: 0.5; cursor: not-allowed; }

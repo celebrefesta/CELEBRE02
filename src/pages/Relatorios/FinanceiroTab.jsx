@@ -1,127 +1,60 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, getDocs } from "firebase/firestore";
-import "./FinanceiroTab.css";
+import { collection, query, onSnapshot } from "firebase/firestore";
 
 const FinanceiroTab = () => {
-  const [loading, setLoading] = useState(true);
-  const [transacoes, setTransacoes] = useState([]);
-  const [resumo, setResumo] = useState({ saldo: 0, entradas: 0, saidas: 0 });
+  const [metricas, setMetricas] = useState({ faturamento: 0, despesas: 0, lucro: 0, pendente: 0 });
 
   useEffect(() => {
-    const carregarDadosFinanceiros = async () => {
-      try {
-        // Busca dados das duas coleções simultaneamente
-        const [snapLocacoes, snapCompras] = await Promise.all([
-          getDocs(collection(db, "locacoes")),
-          getDocs(collection(db, "compras"))
-        ]);
+    const q = query(collection(db, "financeiro_lancamentos"));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const lista = snapshot.docs.map(doc => ({ ...doc.data() }));
+      
+      const faturamento = lista.filter(t => t.tipo === 'entrada').reduce((acc, t) => acc + Number(t.valor), 0);
+      const despesas = lista.filter(t => t.tipo === 'saida').reduce((acc, t) => acc + Number(t.valor), 0);
+      const pendente = lista.filter(t => t.status === 'pendente').reduce((acc, t) => acc + Number(t.valor), 0);
 
-        let ent = 0;
-        let sai = 0;
-        const lista = [];
-
-        // 1. Processar Entradas (LOCACOES)
-        snapLocacoes.docs.forEach(doc => {
-          const d = doc.data();
-          const valor = Number(d.valorTotal || d.valor || 0);
-          ent += valor;
-
-          lista.push({
-            id: doc.id,
-            data: d.dataEvento?.toDate ? d.dataEvento.toDate() : new Date(d.dataEvento || d.data || Date.now()),
-            descricao: `Locação: ${d.clienteNome || d.cliente || 'Cliente'}`,
-            categoria: "Locação",
-            valor: valor,
-            tipo: "entrada"
-          });
-        });
-
-        // 2. Processar Saídas (COMPRAS)
-        snapCompras.docs.forEach(doc => {
-          const d = doc.data();
-          const valor = Number(d.valorTotal || d.valor || d.preco || 0);
-          sai += valor;
-
-          lista.push({
-            id: doc.id,
-            data: d.dataCompra?.toDate ? d.dataCompra.toDate() : new Date(d.dataCompra || d.data || Date.now()),
-            descricao: d.descricao || d.item || "Compra de Materiais",
-            categoria: d.categoria || "Suprimentos",
-            valor: valor,
-            tipo: "saida"
-          });
-        });
-
-        // Atualiza os estados
-        setResumo({ saldo: ent - sai, entradas: ent, saidas: sai });
-        setTransacoes(lista.sort((a, b) => b.data - a.data)); // Ordena pela data mais recente
-
-      } catch (error) {
-        console.error("Erro ao buscar dados financeiros:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    carregarDadosFinanceiros();
+      setMetricas({ faturamento, despesas, lucro: faturamento - despesas, pendente });
+    });
+    return () => unsubscribe();
   }, []);
 
-  if (loading) return <div className="loading-screen">Calculando extrato real...</div>;
-
   return (
-    <div className="tab-content" style={{ marginTop: '60px' }}>
-      {/* Banner Financeiro */}
-      <div className="fin-banner">
-        <div className="fin-kpi-group">
-           <div className="fin-kpi-item">
-              <label>Saldo em Caixa</label>
-              <h2>R$ {resumo.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
-           </div>
-           <div className="fin-kpi-item">
-              <label>Entradas (Locações)</label>
-              <h2 className="fin-verde">↑ {resumo.entradas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
-           </div>
-           <div className="fin-kpi-item">
-              <label>Saídas (Compras)</label>
-              <h2 className="fin-vermelho">↓ {resumo.saidas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</h2>
-           </div>
+    <div className="tab-financeiro-v3">
+      <div className="rel-grid-topo">
+        <div className="card-rel faturamento">
+          <label>Faturamento Total</label>
+          <h2>{metricas.faturamento.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h2>
+          <p className="verde">Total recebido</p>
+        </div>
+        <div className="card-rel despesas">
+          <label>Total Despesas</label>
+          <h2>{metricas.despesas.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h2>
+          <p className="vermelho">{metricas.pendente.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} pendentes</p>
+        </div>
+        <div className="card-rel lucro">
+          <label>Lucro Líquido</label>
+          <h2 className={metricas.lucro >= 0 ? "verde" : "vermelho"}>
+            {metricas.lucro.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+          </h2>
+          <p>Resultado acumulado</p>
         </div>
       </div>
 
-      {/* Tabela de Extrato Unificado */}
-      <div className="fin-table-container">
-        <table className="fin-table">
-            <thead>
-                <tr>
-                  <th>Data</th>
-                  <th>Descrição</th>
-                  <th>Categoria</th>
-                  <th>Valor</th>
-                  <th>Tipo</th>
-                </tr>
-            </thead>
-            <tbody>
-                {transacoes.map((t) => (
-                  <tr key={t.id}>
-                      <td>{t.data.toLocaleDateString('pt-BR')}</td>
-                      <td><strong>{t.descricao}</strong></td>
-                      <td>{t.categoria}</td>
-                      <td className={t.tipo === 'saida' ? 'fin-vermelho' : ''}>
-                        {t.tipo === 'saida' ? '-' : ''} R$ {t.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </td>
-                      <td>
-                        <span className={`fin-badge ${t.tipo === 'entrada' ? 'entrada' : 'saida'}`}>
-                          {t.tipo === 'entrada' ? 'RECEBIDO' : 'PAGO'}
-                        </span>
-                      </td>
-                  </tr>
-                ))}
-                {transacoes.length === 0 && (
-                  <tr><td colSpan="5" style={{ textAlign: 'center', padding: '30px' }}>Nenhum dado encontrado em Locações ou Compras.</td></tr>
-                )}
-            </tbody>
-        </table>
+      <div className="rel-section-v3">
+        <h3>📊 Saúde do Fluxo de Caixa</h3>
+        <div className="grafico-barra-simples">
+          <div className="label-graf">
+             <span>Entradas vs Saídas</span>
+             <span>{Math.round((metricas.faturamento / (metricas.faturamento + metricas.despesas || 1)) * 100)}%</span>
+          </div>
+          <div className="barra-fundo">
+            <div 
+              className="barra-preenchimento" 
+              style={{ width: `${(metricas.faturamento / (metricas.faturamento + metricas.despesas || 1)) * 100}%` }}
+            ></div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -1,169 +1,169 @@
 import React, { useState, useEffect } from 'react';
+import { db } from '../../firebaseConfig';
+import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import './Configuracoes.css';
 
 const Configuracoes = () => {
-  // Estado para armazenar os dados
-  const [empresa, setEmpresa] = useState({
-    nome: 'CELEBRE DECORAÇÕES E EVENTOS',
-    cnpj: '00.000.000/0001-00',
-    telefone: '(11) 99999-9999',
-    email: 'contato@celebre.com.br',
-    endereco: 'Rua das Flores, 123 - Centro',
-    cidade: 'São Paulo - SP',
-    corSistema: '#0f233a', // Cor padrão (Azul Escuro)
-    logo: null
+  const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
+  const [config, setConfig] = useState({
+    categorias: [],
+    subcategorias: {},
+    localizacoes: [],
+    tamanhos: []
   });
+  const [loading, setLoading] = useState(true);
 
-  // Carrega dados salvos ao abrir a tela
+  // Estados independentes para cada campo de busca/adição
+  const [inputCat, setInputCat] = useState('');
+  const [inputSub, setInputSub] = useState('');
+  const [inputLoc, setInputLoc] = useState('');
+  const [inputTam, setInputTam] = useState('');
+  
+  const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
+
   useEffect(() => {
-    const dadosSalvos = localStorage.getItem('celebre_config');
-    if (dadosSalvos) {
-      setEmpresa(JSON.parse(dadosSalvos));
-    }
-  }, []);
+    document.documentElement.setAttribute('data-theme', theme);
+    localStorage.setItem('theme', theme);
+    buscarConfiguracoes();
+  }, [theme]);
 
-  // Função para salvar
-  const handleSalvar = (e) => {
-    e.preventDefault();
-    localStorage.setItem('celebre_config', JSON.stringify(empresa));
-    
-    // Aplica a cor nova no sistema inteiro (CSS Variable)
-    document.documentElement.style.setProperty('--primary-color', empresa.corSistema);
-    
-    alert('Configurações salvas com sucesso!');
+  const buscarConfiguracoes = async () => {
+    setLoading(true);
+    try {
+      const docRef = doc(db, "sistema", "parametros");
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        setConfig(docSnap.data());
+      } else {
+        // Se o documento não existir no Firebase, criamos ele vazio
+        await setDoc(docRef, { categorias: [], subcategorias: {}, localizacoes: [], tamanhos: [] });
+      }
+    } catch (e) { console.error("Erro ao buscar configs:", e); }
+    setLoading(false);
   };
 
-  const handleChange = (e) => {
-    setEmpresa({ ...empresa, [e.target.name]: e.target.value });
+  const adicionarItem = async (campo, valor, subPath = null) => {
+    if (!valor) return;
+    const docRef = doc(db, "sistema", "parametros");
+    try {
+      if (subPath) {
+        const novasSub = { ...config.subcategorias };
+        if (!novasSub[subPath]) novasSub[subPath] = [];
+        novasSub[subPath].push(valor);
+        await updateDoc(docRef, { subcategorias: novasSub });
+        setInputSub(''); // Limpa apenas o campo de subcategoria
+      } else {
+        await updateDoc(docRef, { [campo]: arrayUnion(valor) });
+        // Limpa o campo específico que foi preenchido
+        if(campo === 'categorias') setInputCat('');
+        if(campo === 'localizacoes') setInputLoc('');
+        if(campo === 'tamanhos') setInputTam('');
+      }
+      buscarConfiguracoes(); // Recarrega a lista do Firebase
+    } catch (e) { alert("Erro ao adicionar."); }
   };
+
+  const removerItem = async (campo, valor, subPath = null) => {
+    if (!window.confirm(`Remover "${valor}"?`)) return;
+    const docRef = doc(db, "sistema", "parametros");
+    try {
+      if (subPath) {
+        const novasSub = { ...config.subcategorias };
+        novasSub[subPath] = novasSub[subPath].filter(i => i !== valor);
+        await updateDoc(docRef, { subcategorias: novasSub });
+      } else {
+        await updateDoc(docRef, { [campo]: arrayRemove(valor) });
+      }
+      buscarConfiguracoes();
+    } catch (e) { alert("Erro ao remover."); }
+  };
+
+  if (loading) return <div className="loading-config">Sincronizando com o Firebase...</div>;
 
   return (
-    <div className="config-page">
-      
-      <div className="page-header-simple">
-        <h1>Configurações do Sistema</h1>
-        <p>Personalize os dados da sua empresa e a aparência do painel.</p>
+    <div className="dashboard-container">
+      <div className="dashboard-header">
+        <div className="header-text">
+          <h1>CONFIGURAÇÕES DO SISTEMA</h1>
+          <p>Gerencie as listas que aparecem no cadastro de itens e a aparência do Celebre.</p>
+        </div>
       </div>
 
-      <form className="config-container" onSubmit={handleSalvar}>
-        
-        {/* Coluna da Esquerda: Dados da Empresa */}
-        <div className="config-column">
-            
-            <div className="config-card">
-                <h3><i className="fas fa-building"></i> Dados da Empresa</h3>
-                <p className="card-desc">Essas informações aparecerão no cabeçalho dos contratos e orçamentos.</p>
-                
-                <div className="input-group">
-                    <label>Nome Fantasia / Razão Social</label>
-                    <input type="text" name="nome" value={empresa.nome} onChange={handleChange} />
-                </div>
+      {/* --- PERSONALIZAÇÃO --- */}
+      <div className="main-card theme-section">
+        <h3>🎨 Aparência</h3>
+        <div className="theme-switch-container">
+          <button className={`theme-btn ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')}>☀️ Modo Diurno</button>
+          <button className={`theme-btn ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')}>🌙 Modo Noturno</button>
+        </div>
+      </div>
 
-                <div className="row-group">
-                    <div className="input-group">
-                        <label>CNPJ ou CPF</label>
-                        <input type="text" name="cnpj" value={empresa.cnpj} onChange={handleChange} />
-                    </div>
-                    <div className="input-group">
-                        <label>Telefone / WhatsApp</label>
-                        <input type="text" name="telefone" value={empresa.telefone} onChange={handleChange} />
-                    </div>
-                </div>
-
-                <div className="input-group">
-                    <label>E-mail de Contato</label>
-                    <input type="email" name="email" value={empresa.email} onChange={handleChange} />
-                </div>
-            </div>
-
-            <div className="config-card">
-                <h3><i className="fas fa-map-marker-alt"></i> Endereço</h3>
-                <div className="input-group">
-                    <label>Logradouro (Rua, Av, Nº)</label>
-                    <input type="text" name="endereco" value={empresa.endereco} onChange={handleChange} />
-                </div>
-                <div className="input-group">
-                    <label>Cidade e Estado</label>
-                    <input type="text" name="cidade" value={empresa.cidade} onChange={handleChange} />
-                </div>
-            </div>
-
+      <div className="config-grid">
+        {/* CATEGORIAS */}
+        <div className="main-card config-section">
+          <h3>📦 Categorias</h3>
+          <div className="add-item-box">
+            <input type="text" placeholder="Nova categoria..." value={inputCat} onChange={(e) => setInputCat(e.target.value)} />
+            <button className="btn-add" onClick={() => adicionarItem('categorias', inputCat)}>Add</button>
+          </div>
+          <ul className="config-list">
+            {config.categorias?.map(cat => (
+              <li key={cat} onClick={() => setCategoriaSelecionada(cat)} className={categoriaSelecionada === cat ? 'active' : ''}>
+                {cat} <span className="del-icon" onClick={(e) => {e.stopPropagation(); removerItem('categorias', cat)}}>🗑️</span>
+              </li>
+            ))}
+          </ul>
         </div>
 
-        {/* Coluna da Direita: Aparência e Sistema */}
-        <div className="config-column">
-            
-            <div className="config-card">
-                <h3><i className="fas fa-paint-brush"></i> Personalização Visual</h3>
-                
-                <div className="color-picker-section">
-                    <label>Cor Principal do Sistema</label>
-                    <div className="color-options">
-                        {/* Opções de Cores Predefinidas */}
-                        <div 
-                            className={`color-circle ${empresa.corSistema === '#0f233a' ? 'selected' : ''}`} 
-                            style={{background: '#0f233a'}}
-                            onClick={() => setEmpresa({...empresa, corSistema: '#0f233a'})}
-                            title="Azul Celebre (Padrão)"
-                        ></div>
-                        <div 
-                            className={`color-circle ${empresa.corSistema === '#4c1d95' ? 'selected' : ''}`} 
-                            style={{background: '#4c1d95'}}
-                            onClick={() => setEmpresa({...empresa, corSistema: '#4c1d95'})}
-                            title="Roxo Real"
-                        ></div>
-                        <div 
-                            className={`color-circle ${empresa.corSistema === '#be123c' ? 'selected' : ''}`} 
-                            style={{background: '#be123c'}}
-                            onClick={() => setEmpresa({...empresa, corSistema: '#be123c'})}
-                            title="Vinho Elegante"
-                        ></div>
-                         <div 
-                            className={`color-circle ${empresa.corSistema === '#047857' ? 'selected' : ''}`} 
-                            style={{background: '#047857'}}
-                            onClick={() => setEmpresa({...empresa, corSistema: '#047857'})}
-                            title="Verde Esmeralda"
-                        ></div>
-                         <div 
-                            className={`color-circle ${empresa.corSistema === '#000000' ? 'selected' : ''}`} 
-                            style={{background: '#000000'}}
-                            onClick={() => setEmpresa({...empresa, corSistema: '#000000'})}
-                            title="Preto Luxo"
-                        ></div>
-                    </div>
-                    
-                    {/* Input manual de cor */}
-                    <div className="manual-color">
-                        <span>Ou escolha:</span>
-                        <input type="color" name="corSistema" value={empresa.corSistema} onChange={handleChange} />
-                    </div>
-                </div>
-
-                <div className="logo-upload">
-                    <label>Logo da Empresa</label>
-                    <div className="upload-box">
-                        <i className="fas fa-cloud-upload-alt"></i>
-                        <p>Clique para enviar sua logo (PNG ou JPG)</p>
-                    </div>
-                </div>
-            </div>
-
-            <div className="config-card">
-                <h3><i className="fas fa-file-contract"></i> Texto Padrão de Rodapé</h3>
-                <div className="input-group">
-                    <label>Mensagem final dos contratos</label>
-                    <textarea rows="3" placeholder="Ex: Agradecemos a preferência!"></textarea>
-                </div>
-            </div>
-
-            <button type="submit" className="btn-save-all">
-                <i className="fas fa-save"></i> Salvar Alterações
-            </button>
-
+        {/* SUBCATEGORIAS */}
+        <div className="main-card config-section">
+          <h3>📂 Subcategorias {categoriaSelecionada && `de ${categoriaSelecionada}`}</h3>
+          {!categoriaSelecionada ? (
+            <div className="empty-state">Selecione uma categoria para gerenciar suas subcategorias.</div>
+          ) : (
+            <>
+              <div className="add-item-box">
+                <input type="text" placeholder="Nova sub..." value={inputSub} onChange={(e) => setInputSub(e.target.value)} />
+                <button className="btn-add" onClick={() => adicionarItem('subcategorias', inputSub, categoriaSelecionada)}>Add</button>
+              </div>
+              <ul className="config-list">
+                {config.subcategorias[categoriaSelecionada]?.map(sub => (
+                  <li key={sub}>{sub} <span className="del-icon" onClick={() => removerItem('subcategorias', sub, categoriaSelecionada)}>🗑️</span></li>
+                ))}
+              </ul>
+            </>
+          )}
         </div>
 
-      </form>
+        {/* LOCALIZAÇÕES */}
+        <div className="main-card config-section">
+          <h3>📍 Localizações</h3>
+          <div className="add-item-box">
+            <input type="text" placeholder="Ex: Galpão A, Prateleira 2..." value={inputLoc} onChange={(e) => setInputLoc(e.target.value)} />
+            <button className="btn-add" onClick={() => adicionarItem('localizacoes', inputLoc)}>Add</button>
+          </div>
+          <ul className="config-list">
+            {config.localizacoes?.map(loc => (
+              <li key={loc}>{loc} <span className="del-icon" onClick={() => removerItem('localizacoes', loc)}>🗑️</span></li>
+            ))}
+          </ul>
+        </div>
 
+        {/* TAMANHOS */}
+        <div className="main-card config-section">
+          <h3>📏 Tamanhos</h3>
+          <div className="add-item-box">
+            <input type="text" placeholder="Ex: P, M, G, 2x2m..." value={inputTam} onChange={(e) => setInputTam(e.target.value)} />
+            <button className="btn-add" onClick={() => adicionarItem('tamanhos', inputTam)}>Add</button>
+          </div>
+          <ul className="config-list">
+            {config.tamanhos?.map(tam => (
+              <li key={tam}>{tam} <span className="del-icon" onClick={() => removerItem('tamanhos', tam)}>🗑️</span></li>
+            ))}
+          </ul>
+        </div>
+      </div>
     </div>
   );
 };

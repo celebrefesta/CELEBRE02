@@ -1,67 +1,82 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+/* --- DNA DO SISTEMA CELEBRE --- */
+:root {
+  --azul-escuro: #0f172a;
+  --dourado: #c5a059;
+  --fundo-cinza: #f1f5f9;
+  --branco: #ffffff;
+  --largura-menu: 0px; /* Espaço do seu Navbar lateral */
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* --- RESET DE SEGURANÇA --- */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+body {
+  background-color: var(--fundo-cinza);
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
-}
-
-.card {
-  padding: 2em;
-}
-
-.read-the-docs {
-  color: #888;
-
-  /* AJUSTE PARA TODAS AS PAGINAS  */ 
-
-
-main, .dashboard-page, .relatorios-page, .contratos-page {
-    margin-left: 260px; /* Espaço do menu lateral */
-    margin-top: 70px;  /* Espaço do cabeçalho do topo */
-    padding: 30px;
-}
-}
-
-/* Classe para o "corpo" de qualquer página que tenha menu lateral */
-.conteudo-painel {
-  margin-left: 260px; /* Espaço para o menu */
-  width: calc(100% - 260px); /* Ocupa o resto da tela */
+/* --- ESTRUTURA BASE (Para o conteúdo não sumir) --- */
+.App {
+  display: flex;
   min-height: 100vh;
-  background-color: #f1f5f9; /* Cor de fundo padrão do painel */
+  width: 100%;
 }
 
-/* Em telas de celular, removemos a margem */
-@media (max-width: 1000px) {
-  .conteudo-painel {
-    margin-left: 0;
-    width: 100%;
-  }
+/* Esta classe GARANTE que o conteúdo apareça ao lado do menu lateral */
+main, .main-content, .page-layout {
+  flex: 1;
+  margin-left: var(--largura-menu); /* Abre espaço para o menu lateral */
+  padding: 3px;
+  background-color: var(--fundo-cinza);
+  min-height: 100vh;
+  display: block !important; /* Força a renderização se algo estiver oculto */
+}
+
+/* Ajuste para páginas de tela cheia (como a Assinatura) */
+.no-navbar main, .no-navbar .main-content, .no-navbar .page-layout {
+  margin-left: 0 !important;
+}
+
+/* --- CLASSES CURINGAS (O seu Style Guide) --- */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+}
+
+.page-title {
+  color: var(--azul-escuro);
+  font-size: 24px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+/* Use esta classe para criar o cartão branco que ocupa a tela toda */
+.content-card, .main-card, .form-widescreen {
+  background: var(--branco);
+  border-radius: 12px;
+  padding: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  width: 100%; /* Ocupa toda a largura como na página de Locações */
+}
+
+/* Botão Padrão Celebre */
+.btn-primary-celebre, .btn-salvar, .btn-novo-cliente {
+  background-color: var(--azul-escuro) !important;
+  color: white !important;
+  padding: 10px 24px;
+  border-radius: 8px;
+  font-weight: 700;
+  border: none;
+  cursor: pointer;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
 }

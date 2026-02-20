@@ -1,70 +1,90 @@
-/* --- AVATAR DO CLIENTE --- */
-.cliente-avatar-wrapper { display: flex; align-items: center; gap: 12px; }
-
-.cliente-avatar {
-    width: 40px; height: 40px; 
-    background: linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%);
-    color: #0284c7;
-    border-radius: 50%; 
-    display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 14px; 
-    border: 2px solid white;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+.tab-clientes-premium {
+    animation: fadeIn 0.5s ease-in-out;
 }
 
-.cliente-nome { font-weight: 600; color: #0f172a; }
-
-/* --- BADGES DE STATUS (Exclusivo de Clientes) --- */
-.status-badge {
-    padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 700;
-    display: inline-flex; align-items: center; gap: 6px;
-}
-.status-badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
-
-.status-badge.novo { background: #f0f9ff; color: #0284c7; }
-.status-badge.novo::before { background: #0ea5e9; }
-
-.status-badge.ativo { background: #f0fdf4; color: #166534; }
-.status-badge.ativo::before { background: #22c55e; }
-
-.status-badge.morno { background: #fffbeb; color: #b45309; }
-.status-badge.morno::before { background: #f59e0b; }
-
-.status-badge.inativo { background: #f1f5f9; color: #64748b; }
-.status-badge.inativo::before { background: #94a3b8; }
-
-/* --- DICA INTELIGENTE (Exclusivo de Clientes) --- */
-.dica-box-modern {
-    display: flex; gap: 16px; position: relative; overflow: hidden;
-    padding: 24px; border-radius: 16px;
-}
-/* Círculo decorativo */
-.dica-box-modern::after {
-    content: ''; position: absolute; top: -20px; right: -20px;
-    width: 100px; height: 100px; border-radius: 50%; opacity: 0.15;
+/* CARDS KPI COM ÍCONES */
+.card-kpi {
+    background: white;
+    padding: 20px;
+    border-radius: 16px;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+    border: 1px solid #f1f5f9;
 }
 
-.dica-icon { font-size: 32px; z-index: 1; }
-.dica-content { z-index: 1; }
-.dica-content h3 { margin: 0 0 8px 0; font-size: 16px; font-weight: 700; }
-.dica-content p { font-size: 14px; line-height: 1.5; margin-bottom: 16px; }
-
-.dica-verde { background: #ecfdf5; color: #065f46; }
-.dica-verde::after { background: #34d399; }
-.btn-dica-modern {
-    border: none; padding: 10px 20px; border-radius: 8px;
-    font-weight: 600; cursor: pointer; font-size: 13px;
-    background: #059669; color: white; 
-    box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2);
-    transition: transform 0.2s;
+.kpi-icon {
+    width: 50px;
+    height: 50px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
 }
 
-.dica-amarelo { background: #fffbeb; color: #92400e; }
-.dica-amarelo::after { background: #fbbf24; }
-.dica-amarelo .btn-dica-modern { background: #d97706; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.2); }
+.blue .kpi-icon { background: #e0f2fe; color: #0ea5e9; }
+.green .kpi-icon { background: #dcfce7; color: #10b981; }
+.red .kpi-icon { background: #fee2e2; color: #ef4444; }
 
-.dica-vermelho { background: #fff1f2; color: #991b1b; }
-.dica-vermelho::after { background: #fb7185; }
-.dica-vermelho .btn-dica-modern { background: #e11d48; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.2); }
+.kpi-info label {
+    font-size: 12px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    display: block;
+}
 
-.btn-dica-modern:hover { transform: translateY(-2px); }
+.kpi-info h2 {
+    margin: 0;
+    font-size: 24px;
+    color: #1e293b;
+}
+
+/* SEÇÃO DE RANKING COM BARRAS */
+.rel-section-main {
+    background: white;
+    margin-top: 30px;
+    padding: 30px;
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+}
+
+.ranking-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 25px;
+}
+
+.icon-title { color: #c5a059; font-size: 20px; }
+
+.ranking-row {
+    margin-bottom: 20px;
+}
+
+.row-label {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.cidade-nome { color: #475569; }
+.cidade-valor { color: #0f172a; }
+
+.progress-bg {
+    width: 100%;
+    height: 8px;
+    background: #f1f5f9;
+    border-radius: 10px;
+}
+
+.progress-fill-premium {
+    height: 100%;
+    background: linear-gradient(90deg, #c5a059, #e5c07b);
+    border-radius: 10px;
+    transition: width 1s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+}

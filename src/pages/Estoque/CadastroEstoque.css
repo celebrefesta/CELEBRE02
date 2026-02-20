@@ -1,0 +1,207 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
+
+/* Reutilizando as classes padrão da sua página de Clientes */
+.page-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 30px !important;
+  background-color: #f1f5f9;
+  min-height: 100vh;
+  box-sizing: border-box;
+}
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 20px;
+  border-bottom: 2px solid #cbd5e1 !important; 
+  padding-bottom: 20px !important; 
+  margin-bottom: 30px !important;
+}
+
+.page-title {
+  color: #0f172a;
+  font-size: 24px;
+  font-weight: 800;
+  text-transform: uppercase;
+  margin: 0;
+  font-family: 'Montserrat', sans-serif;
+  letter-spacing: -0.5px;
+}
+
+.form-widescreen {
+  background: white;
+  padding: 35px;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* --- DIVISÃO DA TELA (ESQUERDA FOTO / DIREITA DADOS) --- */
+.estoque-form-layout {
+  display: flex;
+  gap: 40px;
+}
+
+.left-photo-col {
+  width: 320px;
+  flex-shrink: 0;
+}
+
+.right-data-col {
+  flex-grow: 1;
+}
+
+/* Responsividade para telas menores */
+@media (max-width: 1000px) {
+  .estoque-form-layout { flex-direction: column; }
+  .left-photo-col { width: 100%; }
+}
+
+/* --- CLASSES DE FOTOS --- */
+.main-photo-display {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 15px;
+  overflow: hidden;
+}
+
+.main-photo-preview { width: 100%; height: 100%; object-fit: cover; }
+.photo-placeholder-box { display: flex; flex-direction: column; align-items: center; }
+
+.photo-thumbnails-row {
+  display: flex; gap: 10px; flex-wrap: wrap;
+}
+
+.thumb-item {
+  width: 60px; height: 60px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  cursor: pointer;
+  position: relative;
+}
+.thumb-item.active { border-color: #c5a059; }
+.thumb-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+
+.btn-remove-thumb {
+  position: absolute; top: -5px; right: -5px;
+  background: #ef4444; color: white;
+  border: none; border-radius: 50%;
+  width: 18px; height: 18px; font-size: 10px; cursor: pointer;
+}
+
+.thumb-upload-btn {
+  width: 60px; height: 60px;
+  border-radius: 6px; border: 1px dashed #cbd5e1;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; color: #94a3b8; font-size: 24px; transition: 0.2s;
+}
+.thumb-upload-btn:hover { border-color: #0f172a; color: #0f172a; }
+
+/* --- REUTILIZANDO GRIDS DO SEU CLIENTES.CSS --- */
+.section-divider {
+  font-size: 12px; color: #64748b; font-weight: 800;
+  text-transform: uppercase; letter-spacing: 1px;
+  margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;
+}
+
+.mt-compact { margin-top: 25px; }
+
+.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
+.span-1 { grid-column: span 1; } .span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; }
+
+.form-group { display: flex; flex-direction: column; gap: 4px; }
+.form-group label { font-size: 11px; font-weight: 700; color: #64748b; }
+
+.form-group input, .form-group select, .form-group textarea {
+  padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px;
+  font-size: 13px; color: #1e293b; background-color: #fcfcfc;
+  transition: all 0.2s; font-family: inherit;
+}
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+  outline: none; border-color: #c5a059; background-color: white;
+}
+
+.form-actions {
+  display: flex; justify-content: flex-end; gap: 15px;
+  padding-top: 20px; border-top: 1px solid #e2e8f0;
+}
+
+.btn-voltar {
+  padding: 10px 20px; background-color: white; color: #64748b;
+  border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none;
+  font-weight: 700; font-size: 13px; transition: 0.2s;
+}
+.btn-voltar:hover { background-color: #f8fafc; color: #0f172a; }
+
+.btn-salvar {
+  padding: 10px 24px; background-color: #0f172a; color: white;
+  border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;
+}
+.btn-salvar:hover { background-color: #1e293b; }
+
+/* =========================================
+   CSS: TOGGLE SWITCH PREMIUM (CATÁLOGO)
+   ========================================= */
+.custom-toggle-container {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  user-select: none;
+  margin-top: 15px; /* Para alinhar com a caixa do lado */
+}
+
+.hidden-checkbox {
+  display: none; /* Esconde o quadradinho feio */
+}
+
+.toggle-slider {
+  width: 48px;
+  height: 26px;
+  background-color: #cbd5e1;
+  border-radius: 26px;
+  position: relative;
+  transition: background-color 0.3s ease;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.toggle-slider.active {
+  background-color: #10b981; /* Verde Esmeralda Celebre */
+}
+
+.toggle-knob {
+  width: 20px;
+  height: 20px;
+  background-color: white;
+  border-radius: 50%;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.toggle-slider.active .toggle-knob {
+  transform: translateX(22px);
+}
+
+.toggle-label {
+  font-size: 13px;
+  font-weight: 800;
+  transition: color 0.3s ease;
+  letter-spacing: 0.5px;
+}
+
+.toggle-label.active-text { color: #10b981; }
+.toggle-label.inactive-text { color: #64748b; }

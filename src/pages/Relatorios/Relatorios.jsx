@@ -1,39 +1,34 @@
 import React, { useState } from "react";
 import "./Relatorios.css";
 
-// Importando as partes separadas (Crie esses arquivos na mesma pasta!)
 import FinanceiroTab from "./FinanceiroTab";
-import AcervoTab from "./AcervoTab";
 import ClientesTab from "./ClientesTab";
+import EstoqueTab from "./EstoqueTab";
 import PedidosTab from "./PedidosTab";
 
-const Relatorios = () => {
-  const [abaAtiva, setAbaAtiva] = useState('financeiro');
+function Relatorios() {
+  const [activeTab, setActiveTab] = useState("financeiro");
 
   return (
-    <div className="relatorios-page">
-      <header className="rel-header">
-        <div>
-            <h1>Relatórios Estratégicos🚀</h1>
-            <p>Tudo aqui atualiza automaticamente!</p>
-        </div>
-        <div className="tabs">
-            <button className={abaAtiva === 'financeiro' ? 'active' : ''} onClick={() => setAbaAtiva('financeiro')}>💰 Financeiro</button>
-            <button className={abaAtiva === 'clientes' ? 'active' : ''} onClick={() => setAbaAtiva('clientes')}>👥 Clientes</button>
-            <button className={abaAtiva === 'acervo' ? 'active' : ''} onClick={() => setAbaAtiva('acervo')}>📦 Acervo</button>
-            <button className={abaAtiva === 'pedidos' ? 'active' : ''} onClick={() => setAbaAtiva('pedidos')}>📝 Pedidos</button>
+    <div className="relatorios-container">
+      <header className="rel-header-v3">
+        <h1>📊 Relatórios Estratégicos</h1>
+        <div className="tabs-v3">
+          <button className={activeTab === "financeiro" ? "active" : ""} onClick={() => setActiveTab("financeiro")}>Financeiro</button>
+          <button className={activeTab === "clientes" ? "active" : ""} onClick={() => setActiveTab("clientes")}>Clientes</button>
+          <button className={activeTab === "estoque" ? "active" : ""} onClick={() => setActiveTab("estoque")}>Estoque</button>
+          <button className={activeTab === "pedidos" ? "active" : ""} onClick={() => setActiveTab("pedidos")}>Pedidos</button>
         </div>
       </header>
 
-      {/* Renderização Condicional Limpa */}
-      <div className="tab-content fade-in">
-        {abaAtiva === 'financeiro' && <FinanceiroTab />}
-        {abaAtiva === 'acervo' && <AcervoTab />}
-        {abaAtiva === 'clientes' && <ClientesTab />}
-        {abaAtiva === 'pedidos' && <PedidosTab />}
+      <div className="tab-content-v3">
+        {activeTab === "financeiro" && <FinanceiroTab />}
+        {activeTab === "clientes" && <ClientesTab />}
+        {activeTab === "estoque" && <EstoqueTab />}
+        {activeTab === "pedidos" && <PedidosTab />}
       </div>
     </div>
   );
-};
+}
 
 export default Relatorios;
