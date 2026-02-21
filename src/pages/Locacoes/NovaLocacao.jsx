@@ -18,9 +18,22 @@ const NovaLocacao = () => {
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
   
   const [clienteSelecionado, setClienteSelecionado] = useState('');
+  const [temaFesta, setTemaFesta] = useState('');
+  const [tipoServico, setTipoServico] = useState('PEGUE E MONTE'); // <-- NOVO ESTADO AQUI
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
-  const [logistica, setLogistica] = useState({ tipo: 'retirada', endereco: '', cidade: '', frete: 0 });
+  
+  const [logistica, setLogistica] = useState({ 
+    tipo: 'retirada', // Mudei o padrão inicial para combinar com Pegue e Monte
+    cep: '', 
+    rua: '', 
+    numero: '', 
+    bairro: '', 
+    cidade: '', 
+    frete: '', 
+    obsTransporte: '' 
+  });
   const [desconto, setDesconto] = useState(0);
+  const [obsInternas, setObsInternas] = useState('');
 
   // --- CARREGAR DADOS ---
   useEffect(() => {
@@ -41,8 +54,6 @@ const NovaLocacao = () => {
     carregarDados();
   }, []);
 
-  // --- LÓGICA DE CATEGORIAS ---
-  // Extrai todas as categorias únicas do estoque
   const categoriasUnicas = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
 
   const addCarrinho = (item) => {
@@ -55,14 +66,60 @@ const NovaLocacao = () => {
     }
   };
 
+  const getFreteNumerico = () => {
+    if (!logistica.frete) return 0;
+    return Number(logistica.frete.toString().replace(/\./g, "").replace(",", "."));
+  };
+
   const calcularTotal = () => {
     const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
-    const total = subtotal + Number(logistica.frete) - Number(desconto);
+    const total = subtotal + getFreteNumerico() - Number(desconto);
     return { subtotal, total };
   };
 
+  // --- BUSCA DE CEP AUTOMÁTICA ---
+  const handleCepChange = async (e) => {
+    let value = e.target.value.replace(/\D/g, ""); 
+    let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
+    
+    setLogistica(prev => ({ ...prev, cep: cepFormatado }));
+
+    if (value.length === 8) {
+      try {
+        const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
+        const dados = await res.json();
+        
+        if (!dados.erro) {
+          setLogistica(prev => ({
+            ...prev, 
+            cep: cepFormatado, 
+            rua: dados.logradouro || '',
+            bairro: dados.bairro || '',
+            cidade: `${dados.localidade || ''} - ${dados.uf || ''}`
+          }));
+          setTimeout(() => document.getElementById('numeroInput').focus(), 100);
+        } else {
+          alert("CEP não encontrado.");
+        }
+      } catch (e) { console.error("Erro ao buscar CEP"); }
+    }
+  };
+
+  const handleFreteChange = (e) => {
+    let v = e.target.value.replace(/\D/g, ""); 
+    if (!v) {
+      setLogistica({ ...logistica, frete: "" });
+      return;
+    }
+    v = (v / 100).toFixed(2) + ""; 
+    v = v.replace(".", ","); 
+    v = v.replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,"); 
+    v = v.replace(/(\d)(\d{3}),/g, "$1.$2,");
+    setLogistica({ ...logistica, frete: v });
+  };
+
   const handleSalvar = async (status) => {
-    if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data!");
+    if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data de retirada!");
     try {
       const coll = collection(db, "locacoes");
       const snap = await getCountFromServer(coll);
@@ -70,14 +127,23 @@ const NovaLocacao = () => {
       const codigo = `${new Date().getFullYear()}-${count.toString().padStart(3, '0')}`;
       const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente';
 
+      const logisticaParaSalvar = {
+        ...logistica,
+        frete: getFreteNumerico()
+      };
+
+      // SALVANDO O tipoServico NO BANCO DE DADOS
       await addDoc(coll, {
         numeroPedido: codigo,
         clienteId: clienteSelecionado,
         clienteNome: nomeCliente,
+        temaFesta,
+        tipoServico, // <-- NOVO CAMPO SALVO
         dataRetirada: datas.retirada,
         dataDevolucao: datas.devolucao,
         itens: carrinho,
-        logistica,
+        logistica: logisticaParaSalvar,
+        obsInternas,
         desconto: Number(desconto),
         valorTotal: calcularTotal().total,
         status,
@@ -88,7 +154,6 @@ const NovaLocacao = () => {
     } catch (e) { alert("Erro ao salvar."); }
   };
 
-  // --- FILTRO DO CATÁLOGO ---
   const itensFiltrados = estoque.filter(item => {
     const matchesBusca = (item.nome || '').toLowerCase().includes(busca.toLowerCase());
     const matchesCategoria = filtroCategoria === 'Todos' || item.categoria === filtroCategoria;
@@ -106,53 +171,146 @@ const NovaLocacao = () => {
 
       <div className="grid-v3">
         <div className="col-principal-v3">
-          {/* DADOS E LOGÍSTICA */}
+          
           <div className="card-v3">
-            <h3>👤 Cliente e Datas</h3>
-            <div className="form-row-v3">
+            <h3>👤 Dados do Evento</h3>
+            
+            {/* SELETOR DE TIPO DE SERVIÇO */}
+            <div className="form-row-v3" style={{ marginBottom: '20px' }}>
+               <div className="input-group-v3 flex-1" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                 <label>Modalidade de Serviço *</label>
+                 <div style={{ display: 'flex', gap: '10px' }}>
+                   <button 
+                     type="button" 
+                     onClick={() => {
+                       setTipoServico('PEGUE E MONTE');
+                       setLogistica({...logistica, tipo: 'retirada', frete: ''}); // Muda logística auto
+                     }}
+                     style={{
+                       flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontWeight: '700', cursor: 'pointer',
+                       backgroundColor: tipoServico === 'PEGUE E MONTE' ? '#fef3c7' : '#fff',
+                       color: tipoServico === 'PEGUE E MONTE' ? '#b45309' : '#64748b',
+                       borderColor: tipoServico === 'PEGUE E MONTE' ? '#fde68a' : '#e2e8f0',
+                       transition: 'all 0.2s'
+                     }}>
+                     📦 PEGUE E MONTE
+                   </button>
+                   <button 
+                     type="button" 
+                     onClick={() => {
+                       setTipoServico('DECORACAO COMPLETA');
+                       setLogistica({...logistica, tipo: 'entrega'}); // Muda logística auto
+                     }}
+                     style={{
+                       flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontWeight: '700', cursor: 'pointer',
+                       backgroundColor: tipoServico === 'DECORACAO COMPLETA' ? '#0f172a' : '#fff',
+                       color: tipoServico === 'DECORACAO COMPLETA' ? '#fff' : '#64748b',
+                       borderColor: tipoServico === 'DECORACAO COMPLETA' ? '#0f172a' : '#e2e8f0',
+                       transition: 'all 0.2s'
+                     }}>
+                     ✨ DECORAÇÃO COMPLETA
+                   </button>
+                 </div>
+               </div>
+            </div>
+
+            <div className="form-row-v3" style={{ marginBottom: '15px' }}>
               <div className="input-group-v3 flex-2">
-                <label>Cliente</label>
+                <label>Cliente *</label>
                 <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)}>
                   <option value="">Selecione...</option>
-                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia}</option>)}
                 </select>
               </div>
-              <div className="input-g roup-v3"><label>Retirada</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} /></div>
-              <div className="input-group-v3"><label>Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} /></div>
+              <div className="input-group-v3 flex-2">
+                <label>Tema da Festa</label>
+                <input type="text" placeholder="Ex: Safari, Casamento..." value={temaFesta} onChange={e => setTemaFesta(e.target.value)} />
+              </div>
             </div>
-          </div>
-
-          <div className="card-v3">
-            <h3>🚚 Logística</h3>
             <div className="form-row-v3">
-              <div className="input-group-v3">
-                <label>Tipo</label>
-                <select value={logistica.tipo} onChange={e => setLogistica({...logistica, tipo: e.target.value, frete: e.target.value === 'retirada' ? 0 : logistica.frete})}>
-                  <option value="retirada">Retirada na Loja</option>
-                  <option value="entrega">Entrega (Frete)</option>
-                </select>
-              </div>
-              {logistica.tipo === 'entrega' && (
-                <>
-                  <div className="input-group-v3 flex-2"><label>Endereço</label><input type="text" value={logistica.endereco} onChange={e => setLogistica({...logistica, endereco: e.target.value})} /></div>
-                  <div className="input-group-v3"><label>Valor Frete</label><input type="number" value={logistica.frete} onChange={e => setLogistica({...logistica, frete: e.target.value})} /></div>
-                </>
-              )}
+              <div className="input-group-v3 flex-1"><label>Data de Retirada / Evento *</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} /></div>
+              <div className="input-group-v3 flex-1"><label>Data de Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} /></div>
             </div>
           </div>
 
-          {/* TABELA DE ITENS */}
+          <div className="card-v3 logistica-card">
+            <div className="header-logistica">
+              <h3>🚚 Logística & Entrega</h3>
+              <div className="logistica-toggle">
+                <button type="button" className={logistica.tipo === 'entrega' ? 'active' : ''} onClick={() => setLogistica({...logistica, tipo: 'entrega'})}>Com Frete</button>
+                <button type="button" className={logistica.tipo === 'retirada' ? 'active' : ''} onClick={() => setLogistica({...logistica, tipo: 'retirada', frete: ''})}>Retirada na Loja</button>
+              </div>
+            </div>
+
+            {logistica.tipo === 'entrega' && (
+              <>
+                <div className="form-row-v3" style={{ marginBottom: '15px' }}>
+                  
+                  <div className="input-group-v3 flex-1">
+                    <label>CEP</label>
+                    <input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} />
+                  </div>
+                  
+                  <div className="input-group-v3 flex-2">
+                    <label>Cidade / UF</label>
+                    <input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} />
+                  </div>
+
+                  <div className="input-group-v3 flex-1">
+                    <label>Taxa de Entrega (R$)</label>
+                    <input type="text" placeholder="0,00" value={logistica.frete} onChange={handleFreteChange} />
+                  </div>
+                </div>
+
+                <div className="form-row-v3" style={{ marginBottom: '15px' }}>
+                  <div className="input-group-v3 flex-2">
+                    <label>Rua / Logradouro</label>
+                    <input type="text" placeholder="Ex: Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} />
+                  </div>
+                  <div className="input-group-v3 flex-1">
+                    <label>Número</label>
+                    <input type="text" id="numeroInput" placeholder="Ex: 123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} />
+                  </div>
+                  <div className="input-group-v3 flex-1">
+                    <label>Bairro</label>
+                    <input type="text" placeholder="Ex: Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} />
+                  </div>
+                </div>
+                
+                <div className="form-row-v3">
+                  <div className="input-group-v3 flex-2">
+                    <label>Observações de Transporte</label>
+                    <textarea rows="2" placeholder="Ex: Casa de esquina, portão branco, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})}></textarea>
+                  </div>
+                </div>
+              </>
+            )}
+            {logistica.tipo === 'retirada' && (
+              <p style={{ color: '#64748b', fontSize: '14px', fontStyle: 'italic', padding: '10px 0' }}>O cliente fará a retirada dos itens diretamente no nosso galpão/loja.</p>
+            )}
+          </div>
+
           <div className="card-v3">
             <div className="topo-itens-v3">
               <h3>📦 Itens do Pedido</h3>
               <button className="btn-abrir-modal-v3" onClick={() => setModalAberto(true)}>+ SELECIONAR PEÇAS</button>
             </div>
             <table className="tabela-itens-v3">
-              <thead><tr><th>Produto</th><th className="centro">Qtd</th><th className="direita">Total</th><th></th></tr></thead>
+              <thead><tr><th width="60">FOTO</th><th>PRODUTO</th><th className="centro">QTD</th><th className="direita">TOTAL</th><th></th></tr></thead>
               <tbody>
                 {carrinho.map(item => (
                   <tr key={item.id}>
-                    <td>{item.nome}</td>
+                    <td>
+                      {item.foto ? (
+                        <img src={item.foto} alt="Peça" style={{ width: '45px', height: '45px', borderRadius: '6px', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '45px', height: '45px', background: '#e2e8f0', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>📷</div>
+                      )}
+                    </td>
+                    <td>
+                      <strong>{item.nome}</strong>
+                      <div style={{ fontSize: '12px', color: '#94a3b8' }}>R$ {Number(item.preco).toFixed(2)} un</div>
+                    </td>
                     <td className="centro">
                       <div className="qty-control-v3">
                         <button onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
@@ -160,30 +318,44 @@ const NovaLocacao = () => {
                         <button onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i))}>+</button>
                       </div>
                     </td>
-                    <td className="direita">R$ {(item.preco * item.qtd).toFixed(2)}</td>
+                    <td className="direita"><strong>R$ {(item.preco * item.qtd).toFixed(2)}</strong></td>
                     <td className="centro"><button className="btn-remover-v3" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))}>×</button></td>
                   </tr>
                 ))}
+                {carrinho.length === 0 && (
+                  <tr><td colSpan="5" style={{ textAlign: 'center', color: '#94a3b8', padding: '30px' }}>Nenhuma peça adicionada ao pedido ainda.</td></tr>
+                )}
               </tbody>
             </table>
           </div>
+
+          <div className="card-v3">
+            <h3>🔒 Observações Internas</h3>
+            <div className="input-group-v3">
+              <textarea 
+                rows="3" 
+                placeholder="Anotações visíveis apenas para a equipe (ex: Cliente chorou desconto, verificar estado da peça XYZ no retorno...)" 
+                value={obsInternas} 
+                onChange={e => setObsInternas(e.target.value)}
+              ></textarea>
+            </div>
+          </div>
+
         </div>
 
-        {/* FINANCEIRO LATERAL */}
         <aside className="col-lateral-v3">
           <div className="card-v3 sticky-v3">
             <h3>💰 Financeiro</h3>
             <div className="lin-resumo-v3"><span>Subtotal Itens</span> <span>R$ {calcularTotal().subtotal.toFixed(2)}</span></div>
-            <div className="lin-resumo-v3"><span>Frete</span> <span>+ R$ {Number(logistica.frete).toFixed(2)}</span></div>
+            <div className="lin-resumo-v3"><span>Frete</span> <span>+ R$ {getFreteNumerico().toFixed(2)}</span></div>
             <div className="lin-resumo-v3"><span>Desconto</span> <input type="number" value={desconto} onChange={e => setDesconto(e.target.value)} /></div>
             <div className="total-destaque-v3">R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
-            <button className="btn-confirmar-v3" onClick={() => handleSalvar('confirmado')}>✔ CONFIRMAR</button>
-            <button className="btn-orcamento-v3" onClick={() => handleSalvar('orcamento')}>💾 ORÇAMENTO</button>
+            <button className="btn-confirmar-v3" onClick={() => handleSalvar('confirmado')}>✔ CONFIRMAR PEDIDO</button>
+            <button className="btn-orcamento-v3" onClick={() => handleSalvar('orcamento')}>💾 SALVAR ORÇAMENTO</button>
           </div>
         </aside>
       </div>
 
-      {/* MODAL COM CATEGORIAS */}
       {modalAberto && (
         <div className="modal-overlay-v3">
           <div className="modal-content-v3">
@@ -192,9 +364,8 @@ const NovaLocacao = () => {
               <button onClick={() => setModalAberto(false)}>X</button>
             </div>
             
-            <input className="modal-busca-v3" placeholder="Pesquisar..." value={busca} onChange={e => setBusca(e.target.value)} />
+            <input className="modal-busca-v3" placeholder="Pesquisar por nome..." value={busca} onChange={e => setBusca(e.target.value)} />
             
-            {/* BARRA DE CATEGORIAS */}
             <div className="modal-categorias-v3">
               {categoriasUnicas.map(cat => (
                 <button 

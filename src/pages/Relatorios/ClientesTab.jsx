@@ -1,98 +1,288 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, query, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { jsPDF } from 'jspdf';
+import autoTable from 'jspdf-autotable'; 
+import './ClientesTab.css'; 
 
 const ClientesTab = () => {
-  const [metricas, setMetricas] = useState({ total: 0, inativos: 0, ticketMedio: 0 });
+  const [loading, setLoading] = useState(true);
+  const [metricas, setMetricas] = useState({ 
+    total: 0, 
+    novosMes: 0, 
+    inativos: 0, 
+    ticketMedio: 0,
+    clientesFieis: 0,
+    taxaRetorno: 0 
+  });
   const [rankingCidades, setRankingCidades] = useState([]);
+  const [topClientes, setTopClientes] = useState([]);
+  const [todosClientesData, setTodosClientesData] = useState([]);
+  
+  // --- NOVO: Estado para guardar os dados da Empresa (Logo e Nome) ---
+  const [dadosEmpresa, setDadosEmpresa] = useState({
+    nomeEmpresa: 'Ágape Decorações',
+    logotipo: ''
+  });
 
   useEffect(() => {
-    const qLocacoes = query(collection(db, "locacoes"));
-    const unsubscribe = onSnapshot(qLocacoes, (snapshot) => {
-      const locacoes = snapshot.docs.map(doc => doc.data());
-      const cidadesCount = {};
-      const clientesUltimaLocacao = {};
-      let somaTotal = 0;
+    const buscarDadosClientesEConfigs = async () => {
+      try {
+        // Busca Clientes, Locações e as Configurações da Empresa ao mesmo tempo
+        const [snapClientes, snapLocacoes, snapConfig] = await Promise.all([
+          getDocs(collection(db, "clientes")),
+          getDocs(collection(db, "locacoes")),
+          getDoc(doc(db, "sistema", "parametros"))
+        ]);
 
-      locacoes.forEach(loc => {
-        const cidade = loc.logistica?.cidade || "Retirada na Loja";
-        cidadesCount[cidade] = (cidadesCount[cidade] || 0) + 1;
-        somaTotal += Number(loc.valorTotal || 0);
-
-        const dataLoc = new Date(loc.dataRetirada);
-        if (!clientesUltimaLocacao[loc.clienteId] || dataLoc > clientesUltimaLocacao[loc.clienteId]) {
-          clientesUltimaLocacao[loc.clienteId] = dataLoc;
+        // Carrega Configurações da Empresa (para o PDF)
+        if (snapConfig.exists()) {
+          const configData = snapConfig.data();
+          setDadosEmpresa({
+            nomeEmpresa: configData.nomeEmpresa || 'Ágape Decorações',
+            logotipo: configData.logotipo || ''
+          });
         }
-      });
 
-      const seisMesesAtras = new Date();
-      seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
-      const inativos = Object.values(clientesUltimaLocacao).filter(d => d < seisMesesAtras).length;
+        const clientes = snapClientes.docs.map(d => ({ id: d.id, ...d.data() }));
+        const locacoes = snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() }));
 
-      setMetricas({
-        total: Object.keys(clientesUltimaLocacao).length,
-        inativos,
-        ticketMedio: locacoes.length > 0 ? (somaTotal / locacoes.length) : 0
-      });
+        const totalClientes = clientes.length;
+        const hoje = new Date();
+        const novosMes = clientes.filter(c => {
+          if (!c.criadoEm) return false;
+          const d = c.criadoEm.toDate ? c.criadoEm.toDate() : new Date(c.criadoEm);
+          return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
+        }).length;
 
-      setRankingCidades(Object.entries(cidadesCount).sort((a, b) => b[1] - a[1]).slice(0, 5));
-    });
+        let somaTotal = 0;
+        const cidadesCount = {};
+        const clientesStats = {}; 
 
-    return () => unsubscribe();
+        locacoes.forEach(loc => {
+          const valor = Number(loc.valorTotal) || 0;
+          somaTotal += valor;
+          const cidade = loc.logistica?.cidade || "Retirada na Loja";
+          cidadesCount[cidade] = (cidadesCount[cidade] || 0) + 1;
+
+          const cid = loc.clienteId;
+          if (cid) {
+            if (!clientesStats[cid]) {
+              clientesStats[cid] = { nome: loc.clienteNome, qtdLocacoes: 0, gastoTotal: 0, ultimaLocacao: new Date(0) };
+            }
+            clientesStats[cid].qtdLocacoes += 1;
+            clientesStats[cid].gastoTotal += valor;
+            let dataLoc = loc.dataRetirada ? new Date(loc.dataRetirada) : (loc.criadoEm?.toDate ? loc.criadoEm.toDate() : new Date(0));
+            if (dataLoc > clientesStats[cid].ultimaLocacao) clientesStats[cid].ultimaLocacao = dataLoc;
+          }
+        });
+
+        const ticketMedio = locacoes.length > 0 ? (somaTotal / locacoes.length) : 0;
+        const seisMesesAtras = new Date();
+        seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
+
+        // --- CÁLCULOS DE FIDELIZAÇÃO ---
+        const listaStats = Object.values(clientesStats);
+        const clientesFieis = listaStats.filter(c => c.qtdLocacoes > 1).length;
+        const taxaRetorno = totalClientes > 0 ? (clientesFieis / totalClientes) * 100 : 0;
+
+        let inativosCount = 0;
+        const clientesFormatadosRelatorio = clientes.map(c => {
+          const stat = clientesStats[c.id] || { qtdLocacoes: 0, gastoTotal: 0, ultimaLocacao: null };
+          let isInativo = false;
+          if (!stat.ultimaLocacao) {
+            const criacao = c.criadoEm?.toDate ? c.criadoEm.toDate() : new Date(c.criadoEm || 0);
+            if (criacao < seisMesesAtras) isInativo = true;
+          } else if (stat.ultimaLocacao < seisMesesAtras) {
+            isInativo = true;
+          }
+          if (isInativo) inativosCount++;
+
+          return {
+            nome: c.nome || c.nomeFantasia || "Sem Nome",
+            cidade: c.cidade || "Não inf.",
+            festas: stat.qtdLocacoes,
+            totalGasto: stat.gastoTotal,
+            status: isInativo ? "Inativo" : "Ativo"
+          };
+        });
+
+        setMetricas({ 
+          total: totalClientes, 
+          novosMes, 
+          inativos: inativosCount, 
+          ticketMedio,
+          clientesFieis,
+          taxaRetorno
+        });
+        setRankingCidades(Object.entries(cidadesCount).sort((a, b) => b[1] - a[1]).slice(0, 5));
+        setTopClientes(listaStats.sort((a, b) => b.gastoTotal - a.gastoTotal).slice(0, 8));
+        setTodosClientesData(clientesFormatadosRelatorio);
+
+      } catch (error) { console.error(error); } finally { setLoading(false); }
+    };
+    
+    buscarDadosClientesEConfigs();
   }, []);
 
+  const exportarRelatorioGeral = () => {
+    try {
+      const doc = new jsPDF();
+      let startY = 25; // Posição inicial da tabela (vai descer se tiver logo)
+
+      // Se houver logotipo cadastrado, adiciona no PDF
+      if (dadosEmpresa.logotipo) {
+        // Tenta adicionar a logo (ajuste x, y, width, height conforme necessidade)
+        // x=14, y=10, largura=30, altura=30
+        doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+        
+        // Ajusta os textos para o lado da logo
+        doc.setFontSize(20);
+        doc.setTextColor(15, 23, 42);
+        doc.text(dadosEmpresa.nomeEmpresa, 48, 22);
+        
+        doc.setFontSize(12);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Relatório Geral de Clientes", 48, 30);
+        
+        startY = 45; // Empurra a tabela mais para baixo
+      } else {
+        // Se não tiver logo, segue o padrão normal, mas com o nome dinâmico
+        doc.setFontSize(18);
+        doc.setTextColor(15, 23, 42); 
+        doc.text(`Relatório de Clientes - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
+      }
+
+      autoTable(doc, {
+        head: [["Nome do Cliente", "Cidade", "Festas", "Gasto Total (R$)", "Status"]],
+        body: todosClientesData.sort((a,b) => b.totalGasto - a.totalGasto).map(c => [
+          c.nome, 
+          c.cidade, 
+          c.festas, 
+          `R$ ${c.totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,
+          c.status
+        ]),
+        startY: startY,
+        theme: 'grid',
+        headStyles: { fillColor: [15, 23, 42] }
+      });
+
+      doc.save(`Relatorio_Clientes_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
+    } catch (e) { alert("Erro ao gerar PDF"); }
+  };
+
+  if (loading) return <div className="loading-v3">Analisando carteira de clientes...</div>;
+
   return (
-    <div className="tab-clientes-premium">
-      {/* --- CARDS DE MÉTRICAS --- */}
-      <div className="rel-grid-topo">
-        <div className="card-kpi blue">
-          <div className="kpi-icon"><i className="fas fa-user-friends"></i></div>
-          <div className="kpi-info">
-            <label>Total de Clientes</label>
-            <h2>{metricas.total}</h2>
-          </div>
+    <div className="fade-in">
+      {/* KPI GRID */}
+      <div className="kpi-grid">
+        <div className="kpi-card card-destaque">
+          <span>CLIENTES TOTAIS</span>
+          <h2>{metricas.total}</h2>
+          <small className="text-verde">+{metricas.novosMes} novos este mês</small>
         </div>
-
-        <div className="card-kpi green">
-          <div className="kpi-icon"><i className="fas fa-chart-line"></i></div>
-          <div className="kpi-info">
-            <label>Ciclo de Vida (LTV)</label>
-            <h2>{metricas.ticketMedio.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h2>
-          </div>
+        <div className="kpi-card card-verde">
+          <span>TICKET MÉDIO (LTV)</span>
+          <h2>R$ {metricas.ticketMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h2>
+          <small>Valor por contrato</small>
         </div>
-
-        <div className="card-kpi red">
-          <div className="kpi-icon"><i className="fas fa-user-clock"></i></div>
-          <div className="kpi-info">
-            <label>Inativos (+6 meses)</label>
-            <h2>{metricas.inativos}</h2>
-          </div>
+        <div className="kpi-card card-vermelho">
+          <span>CLIENTES INATIVOS</span>
+          <h2>{metricas.inativos}</h2>
+          <small>Sem alugar há +6 meses</small>
         </div>
       </div>
 
-      {/* --- SEÇÃO DE RANKING VISUAL --- */}
-      <div className="rel-section-main">
-        <div className="ranking-header">
-          <i className="fas fa-map-marker-alt icon-title"></i>
-          <h3>Concentração por Região (Bairros/Cidades)</h3>
-        </div>
-        
-        <div className="ranking-bars-container">
-          {rankingCidades.map(([cidade, total], i) => (
-            <div key={i} className="ranking-row">
-              <div className="row-label">
-                <span className="cidade-nome">{cidade}</span>
-                <span className="cidade-valor">{total} locações</span>
+      <div className="clientes-layout-split mt-20">
+        <div className="col-esquerda">
+          {/* QUADRO REGIONAL */}
+          <div className="main-card-premium">
+            <div className="card-header-flex">
+              <h3>📍 Concentração Regional</h3>
+            </div>
+            <div className="ranking-visual-container">
+              {rankingCidades.map(([cidade, total], i) => (
+                <div key={i} className="rank-item-v4">
+                  <div className="rank-info-v4">
+                    <strong>{cidade}</strong>
+                    <span>{total} locações</span>
+                  </div>
+                  <div className="rank-bar-bg-v4">
+                    <div 
+                      className="rank-bar-fill-v4" 
+                      style={{ width: `${(total/rankingCidades[0][1])*100}%` }}
+                    ></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* QUADRO FIDELIDADE REESTILIZADO */}
+          <div className="main-card-premium card-fidelidade-v6 mt-20">
+            <div className="card-header-flex">
+              <h3>✨ Fidelização {dadosEmpresa.nomeEmpresa.split(' ')[0]}</h3>
+            </div>
+            <div className="fidelidade-content-v6">
+              <div className="fid-item-v6">
+                <div className="fid-icon-v6">👥</div>
+                <div className="fid-txt-v6">
+                  <label>Clientes Recorrentes</label>
+                  <strong>{metricas.clientesFieis} clientes</strong>
+                </div>
               </div>
-              <div className="progress-bg">
-                <div 
-                  className="progress-fill-premium" 
-                  style={{ width: `${(total / rankingCidades[0][1]) * 100}%` }}
-                ></div>
+
+              <div className="fid-item-v6">
+                <div className="fid-icon-v6">🔄</div>
+                <div className="fid-txt-v6">
+                  <label>Taxa de Retorno</label>
+                  <div className="fid-progress-wrapper-v6">
+                    <span className="fid-percentage-v6">{metricas.taxaRetorno.toFixed(0)}%</span>
+                    <div className="fid-bar-bg-v6">
+                      <div 
+                        className="fid-bar-fill-v6" 
+                        style={{ width: `${metricas.taxaRetorno}%` }}
+                      ></div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          ))}
-          {rankingCidades.length === 0 && <p className="empty">Nenhum dado geográfico disponível.</p>}
+          </div>
+        </div>
+
+        {/* TABELA VIP */}
+        <div className="main-card-premium col-tabela">
+          <div className="card-header-flex">
+            <h3>🏆 Clientes VIP (Top 8)</h3>
+            <button className="btn-export-pdf-clientes" onClick={exportarRelatorioGeral}>📄 Baixar Relatório Completo</button>
+          </div>
+          <table className="table-vip-v4">
+            <thead>
+              <tr>
+                <th>CLIENTE</th>
+                <th className="centro">FESTAS</th>
+                <th className="direita">TOTAL GASTO</th>
+              </tr>
+            </thead>
+            <tbody>
+              {topClientes.map((c, i) => (
+                <tr key={i}>
+                  <td>
+                    <div className="vip-cell">
+                      <span className={`vip-rank rank-${i+1}`}>{i+1}</span>
+                      <span className="vip-name">{c.nome}</span>
+                    </div>
+                  </td>
+                  <td className="centro">{c.qtdLocacoes}</td>
+                  <td className="direita bold text-verde">
+                    R$ {c.gastoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

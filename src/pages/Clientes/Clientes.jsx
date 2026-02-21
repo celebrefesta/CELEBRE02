@@ -144,8 +144,9 @@ const Clientes = () => {
                 <tr>
                   <th width="35%">CLIENTE / EMPRESA</th>
                   <th>CONTATO</th>
-                  <th style={{ textAlign: 'center' }}>SITUAÇÃO</th>
+                  {/* INVERTIDO AQUI: LOCALIZAÇÃO VEM ANTES DA SITUAÇÃO */}
                   <th>LOCALIZAÇÃO</th>
+                  <th style={{ textAlign: 'center' }}>SITUAÇÃO</th>
                   <th style={{ textAlign: 'right' }}>AÇÕES</th>
                 </tr>
               </thead>
@@ -195,7 +196,12 @@ const Clientes = () => {
                       </div>
                     </td>
 
-                    {/* COLUNA 3: SITUAÇÃO FINANCEIRA */}
+                    {/* COLUNA 3: LOCALIZAÇÃO (MOVIDA PARA CÁ) */}
+                    <td className="local-text" style={{color: '#475569', fontSize: '13px', fontWeight: '500'}}>
+                      📍 {c.cidade ? `${c.cidade}/${c.uf}` : 'Não informada'}
+                    </td>
+
+                    {/* COLUNA 4: SITUAÇÃO FINANCEIRA (MOVIDA PARA CÁ) */}
                     <td style={{ textAlign: 'center' }}>
                       <span 
                         onClick={() => alternarSituacaoFinanceira(c)}
@@ -216,11 +222,6 @@ const Clientes = () => {
                       >
                         {isAdimplente ? '✅ ADIMPLENTE' : '⚠️ INADIMPLENTE'}
                       </span>
-                    </td>
-
-                    {/* COLUNA 4: LOCALIZAÇÃO */}
-                    <td className="local-text" style={{color: '#475569', fontSize: '13px', fontWeight: '500'}}>
-                      📍 {c.cidade ? `${c.cidade}/${c.uf}` : 'Não informada'}
                     </td>
 
                     {/* COLUNA 5: AÇÕES */}

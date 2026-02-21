@@ -1,9 +1,12 @@
-/* Layout Base */
+/* =========================================
+   LAYOUT BASE E CABEÇALHO (DINÂMICO)
+   ========================================= */
 .novo-contrato-layout {
-  background-color: #f8fafc;
+  background-color: var(--fundo-cinza);
   min-height: 100vh;
   padding: 40px 20px;
   font-family: 'Inter', sans-serif;
+  transition: 0.3s;
 }
 
 .container-form {
@@ -11,81 +14,223 @@
   margin: 0 auto;
 }
 
-/* Cabeçalho */
 .form-header { margin-bottom: 30px; }
+
 .btn-voltar-link {
-  background: none; border: none; color: #64748b; font-weight: 600; cursor: pointer; margin-bottom: 10px; display: block;
+  background: none; 
+  border: none; 
+  color: var(--texto-secundario); 
+  font-weight: 600; 
+  cursor: pointer; 
+  margin-bottom: 10px; 
+  display: block;
 }
+.btn-voltar-link:hover { color: var(--texto-principal); }
+
 .header-title-row { display: flex; justify-content: space-between; align-items: center; }
-.header-title-row h1 { font-size: 28px; color: #0f172a; margin: 0; }
+.header-title-row h1 { font-size: 28px; color: var(--texto-principal); margin: 0; }
 
 .btn-import-acao {
-  background: white; color: #c5a059; border: 1px solid #c5a059;
-  padding: 10px 24px; border-radius: 50px; font-weight: 700; cursor: pointer;
-  transition: all 0.2s; box-shadow: 0 2px 5px rgba(197, 160, 89, 0.1);
+  background: var(--branco); 
+  color: var(--dourado); 
+  border: 1px solid var(--dourado);
+  padding: 10px 24px; 
+  border-radius: 50px; 
+  font-weight: 700; 
+  cursor: pointer;
+  transition: all 0.2s; 
+  box-shadow: 0 2px 5px rgba(197, 160, 89, 0.1);
 }
-.btn-import-acao:hover { background: #c5a059; color: white; transform: translateY(-2px); }
+.btn-import-acao:hover { 
+  background: var(--dourado); 
+  color: white; 
+  transform: translateY(-2px); 
+}
 
-/* Cartões */
+/* =========================================
+   CARTÕES DO FORMULÁRIO
+   ========================================= */
 .form-section-card {
-  background: white; padding: 30px; border-radius: 16px;
-  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); margin-bottom: 25px; border: 1px solid #e2e8f0;
-}
-.section-title {
-  font-size: 13px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.1em;
-  border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; margin-bottom: 20px; font-weight: 700;
+  background: var(--branco); 
+  padding: 30px; 
+  border-radius: 16px;
+  box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); 
+  margin-bottom: 25px; 
+  border: 1px solid var(--borda);
+  transition: 0.3s;
 }
 
-/* Inputs */
+.section-title {
+  font-size: 13px; 
+  color: var(--texto-secundario); 
+  text-transform: uppercase; 
+  letter-spacing: 0.1em;
+  border-bottom: 1px solid var(--borda); 
+  padding-bottom: 10px; 
+  margin-bottom: 20px; 
+  font-weight: 700;
+}
+
+/* =========================================
+   INPUTS E CAMPOS DE TEXTO
+   ========================================= */
 .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .grid-inputs.three-cols { grid-template-columns: 1fr 1fr 1fr; }
 .input-field.full { grid-column: 1 / -1; }
 
-.input-field label { display: block; font-size: 12px; font-weight: 700; color: #64748b; margin-bottom: 6px; }
-.input-field input, .input-field select, .input-field textarea {
-  width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;
-  background: #fff; box-sizing: border-box; font-family: inherit; font-size: 14px;
+.input-field label { 
+  display: block; 
+  font-size: 12px; 
+  font-weight: 700; 
+  color: var(--texto-secundario); 
+  margin-bottom: 6px; 
 }
-.input-field input:focus, .input-field textarea:focus { outline: none; border-color: #c5a059; box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1); }
-.input-valor { font-weight: 700; color: #059669 !important; }
 
-/* Seletor de Modelo */
-.header-section-modelos { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 10px; }
+.input-field input, .input-field select, .input-field textarea {
+  width: 100%; 
+  padding: 12px; 
+  border: 1px solid var(--borda); 
+  border-radius: 8px;
+  background: var(--branco); 
+  color: var(--texto-principal);
+  box-sizing: border-box; 
+  font-family: inherit; 
+  font-size: 14px;
+  transition: 0.2s;
+}
+
+.input-field input:focus, .input-field textarea:focus, .input-field select:focus { 
+  outline: none; 
+  border-color: var(--dourado); 
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1); 
+}
+
+/* Valor em Verde (Clareia no Modo Noturno) */
+.input-valor { font-weight: 700; color: #059669 !important; }
+[data-theme='dark'] .input-valor { color: #10b981 !important; }
+
+/* =========================================
+   SELETOR DE MODELO DE CONTRATO
+   ========================================= */
+.header-section-modelos { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  margin-bottom: 15px; 
+  border-bottom: 1px solid var(--borda); 
+  padding-bottom: 10px; 
+}
 .header-section-modelos .section-title { border: none; margin: 0; padding: 0; }
 
 .select-modelo-clean {
-  padding: 8px 12px; border: 1px solid #e2e8f0; border-radius: 6px;
-  background-color: #f8fafc; color: #475569; font-size: 13px; cursor: pointer; outline: none;
+  padding: 8px 12px; 
+  border: 1px solid var(--borda); 
+  border-radius: 6px;
+  background-color: var(--fundo-cinza); 
+  color: var(--texto-principal); 
+  font-size: 13px; 
+  cursor: pointer; 
+  outline: none;
+  transition: 0.2s;
 }
-.select-modelo-clean:hover { border-color: #c5a059; color: #c5a059; background: white; }
+.select-modelo-clean:hover { 
+  border-color: var(--dourado); 
+  color: var(--dourado); 
+  background: var(--branco); 
+}
 
-/* Botão Salvar */
+/* =========================================
+   BOTÃO DE FINALIZAR
+   ========================================= */
 .btn-finalizar-tudo {
-  width: 100%; background: #0f172a; color: white; padding: 18px; border: none;
-  border-radius: 12px; font-weight: 700; cursor: pointer; font-size: 16px; margin-top: 10px;
+  width: 100%; 
+  background: #0f172a; 
+  color: white; 
+  padding: 18px; 
+  border: none;
+  border-radius: 12px; 
+  font-weight: 700; 
+  cursor: pointer; 
+  font-size: 16px; 
+  margin-top: 10px;
+  transition: 0.2s;
 }
 .btn-finalizar-tudo:hover { background: #1e293b; transform: translateY(-2px); }
 
-/* --- CORREÇÃO DO MODAL DE IMPORTAÇÃO --- */
+/* Ajuste no modo escuro para o botão não sumir */
+[data-theme='dark'] .btn-finalizar-tudo {
+  background: var(--dourado);
+  color: white;
+}
+[data-theme='dark'] .btn-finalizar-tudo:hover {
+  background: #b48a3c;
+}
+
+/* =========================================
+   MODAL DE IMPORTAÇÃO DE LOCAÇÃO
+   ========================================= */
 .modal-import-overlay {
   position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background-color: rgba(15, 23, 42, 0.6); backdrop-filter: blur(4px);
+  background-color: rgba(15, 23, 42, 0.7); 
+  backdrop-filter: blur(4px);
   display: flex; justify-content: center; align-items: center; z-index: 9999;
 }
-.modal-import-box {
-  background: white; width: 90%; max-width: 450px; border-radius: 16px; padding: 25px;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #e2e8f0;
-}
-.modal-import-box h3 { text-align: center; margin-top: 0; border-bottom: 1px solid #f1f5f9; padding-bottom: 15px; color: #0f172a; }
 
-.import-scroll-list { max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 15px; }
-.import-card-item {
-  padding: 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; display: flex; justify-content: space-between; align-items: center;
+.modal-import-box {
+  background: var(--branco); 
+  width: 90%; 
+  max-width: 450px; 
+  border-radius: 16px; 
+  padding: 25px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); 
+  border: 1px solid var(--borda);
 }
+
+.modal-import-box h3 { 
+  text-align: center; 
+  margin-top: 0; 
+  border-bottom: 1px solid var(--borda); 
+  padding-bottom: 15px; 
+  color: var(--texto-principal); 
+}
+
+.import-scroll-list { 
+  max-height: 300px; 
+  overflow-y: auto; 
+  border: 1px solid var(--borda); 
+  border-radius: 8px; 
+  margin-bottom: 15px; 
+}
+
+.import-card-item {
+  padding: 15px; 
+  border-bottom: 1px solid var(--borda); 
+  cursor: pointer; 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center;
+  color: var(--texto-principal);
+  transition: 0.2s;
+}
+
 .import-card-item:hover { background-color: #f0fdf4; }
+[data-theme='dark'] .import-card-item:hover { background-color: rgba(16, 185, 129, 0.1); }
+
 .valor-verde { font-weight: 700; color: #059669; }
+[data-theme='dark'] .valor-verde { color: #10b981; }
 
 .btn-fechar-modal {
-  width: 100%; padding: 12px; background: white; border: 1px solid #cbd5e1; border-radius: 8px; color: #64748b; font-weight: 600; cursor: pointer;
+  width: 100%; 
+  padding: 12px; 
+  background: var(--branco); 
+  border: 1px solid var(--borda); 
+  border-radius: 8px; 
+  color: var(--texto-secundario); 
+  font-weight: 600; 
+  cursor: pointer;
+  transition: 0.2s;
 }
-.btn-fechar-modal:hover { background: #f1f5f9; color: #0f172a; }
+.btn-fechar-modal:hover { 
+  background: var(--fundo-cinza); 
+  color: var(--texto-principal); 
+}

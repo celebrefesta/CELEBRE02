@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Locacoes.css';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; // Adicionamos updateDoc e addDoc
+import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
 
 const Locacoes = () => {
   const navigate = useNavigate();
@@ -21,10 +21,23 @@ const Locacoes = () => {
     const carregarLocacoes = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "locacoes"));
-        const dados = querySnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const dados = querySnapshot.docs.map(doc => {
+          const data = doc.data();
+          
+          // INTELIGÊNCIA: Define o tipo de serviço para aparecer na lista
+          let tipoServico = "DECORAÇÃO";
+          if (data.tipoServico || data.tipoDaFesta || data.modalidade) {
+             tipoServico = String(data.tipoServico || data.tipoDaFesta || data.modalidade).toUpperCase();
+          } else if (data.logistica && String(data.logistica.tipoFrete || data.logistica.frete).toUpperCase().includes('RETIRADA')) {
+             tipoServico = "PEGUE E MONTE";
+          }
+
+          return {
+            id: doc.id,
+            ...data,
+            tipoServicoFormatado: tipoServico // Salvamos para usar na tabela
+          };
+        });
 
         const ordenado = dados.sort((a, b) => {
           const numA = a.numeroPedido || '';
@@ -61,7 +74,7 @@ const Locacoes = () => {
     setModalPagamento(true);
   };
 
-  // --- REGISTRAR PAGAMENTO (A MÁGICA ACONTECE AQUI) ---
+  // --- REGISTRAR PAGAMENTO ---
   const registrarPagamento = async (e) => {
     e.preventDefault();
     if (!pagamento.valor || Number(pagamento.valor) <= 0) return alert("Insira um valor válido.");
@@ -72,13 +85,9 @@ const Locacoes = () => {
       const valorJaPago = Number(pedidoSelecionado.valorPago || 0);
       const novoValorPago = valorJaPago + valorPagoNum;
 
-      // 1. Atualizar o valor pago dentro do Pedido (Locação)
       const pedidoRef = doc(db, "locacoes", pedidoSelecionado.id);
-      await updateDoc(pedidoRef, {
-        valorPago: novoValorPago
-      });
+      await updateDoc(pedidoRef, { valorPago: novoValorPago });
 
-      // 2. Lançar o valor lá no Financeiro automaticamente!
       await addDoc(collection(db, "financeiro_lancamentos"), {
         tipo: 'entrada',
         categoria: 'Locação',
@@ -92,11 +101,8 @@ const Locacoes = () => {
 
       alert("Pagamento registrado com sucesso no Caixa!");
       
-      // Atualizar a lista localmente para mostrar o novo saldo na hora
       setLista(lista.map(item => 
-        item.id === pedidoSelecionado.id 
-          ? { ...item, valorPago: novoValorPago } 
-          : item
+        item.id === pedidoSelecionado.id ? { ...item, valorPago: novoValorPago } : item
       ));
 
       setModalPagamento(false);
@@ -130,11 +136,11 @@ const Locacoes = () => {
       <div className="resumo-topo-v2">
         <div className="card-resumo-v2">
           <span>Confirmados</span>
-          <strong>{lista.filter(i => i.status === 'confirmado').length}</strong>
+          <strong>{lista.filter(i => (i.status || '').toLowerCase() !== 'orcamento').length}</strong>
         </div>
         <div className="card-resumo-v2">
           <span>Orçamentos</span>
-          <strong>{lista.filter(i => i.status === 'orcamento').length}</strong>
+          <strong>{lista.filter(i => (i.status || '').toLowerCase() === 'orcamento').length}</strong>
         </div>
         <div className="card-resumo-v2">
           <span>Total Pedidos</span>
@@ -155,7 +161,7 @@ const Locacoes = () => {
           <thead>
             <tr>
               <th>PEDIDO</th>
-              <th>CLIENTE</th>
+              <th>CLIENTE / TIPO</th>
               <th>DATA EVENTO</th>
               <th>VALOR TOTAL</th>
               <th>FALTA RECEBER</th>
@@ -165,61 +171,58 @@ const Locacoes = () => {
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan="7" className="centro">Carregando locações...</td></tr>
+              <tr><td colSpan="7" className="centro" style={{padding: '30px', color: '#64748b'}}>Carregando locações...</td></tr>
             ) : (
               filtrados.map((item) => {
                 const valorTotal = Number(item.valorTotal || 0);
                 const valorPago = Number(item.valorPago || 0);
                 const saldoDevedor = valorTotal - valorPago;
+                const isOrcamento = (item.status || '').toLowerCase().includes('orcam') || (item.status || '').toLowerCase().includes('orçam');
+                const isPegueMonte = item.tipoServicoFormatado.includes('PEGUE');
 
                 return (
                   <tr key={item.id}>
                     <td className="destaque-azul">
                       {item.numeroPedido ? `#${item.numeroPedido}` : <span className="tag-antigo">Antigo</span>}
                     </td>
-                    <td><strong>{item.clienteNome}</strong></td>
                     <td>
-                      {item.dataRetirada ? new Date(item.dataRetirada + 'T00:00:00').toLocaleDateString('pt-BR') : '-'}
+                      <strong>{item.clienteNome}</strong><br/>
+                      {/* ETIQUETA VISUAL DO TIPO DE SERVIÇO */}
+                      <span style={{
+                        fontSize: '9px', fontWeight: '800', padding: '3px 8px', borderRadius: '4px', marginTop: '4px', display: 'inline-block',
+                        backgroundColor: isPegueMonte ? '#fef3c7' : '#f1f5f9',
+                        color: isPegueMonte ? '#b45309' : '#0f172a',
+                        border: `1px solid ${isPegueMonte ? '#fde68a' : '#e2e8f0'}`
+                      }}>
+                        {isPegueMonte ? '📦 PEGUE E MONTE' : '✨ DECORAÇÃO'}
+                      </span>
+                    </td>
+                    <td>
+                      {item.dataRetirada ? new Date(item.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
                     </td>
                     
                     <td>R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
                     
-                    {/* COLUNA NOVA DE SALDO */}
                     <td className={saldoDevedor > 0 ? "txt-vermelho" : "txt-verde"}>
                       {saldoDevedor > 0 ? `R$ ${saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '✅ Pago'}
                     </td>
                     
                     <td>
-                      <span className={`status-pill ${item.status}`}>
-                        {item.status === 'confirmado' ? 'CONFIRMADO' : 'ORÇAMENTO'}
+                      <span className={`status-pill ${isOrcamento ? 'orcamento' : 'confirmado'}`}>
+                        {isOrcamento ? 'ORÇAMENTO' : 'CONFIRMADO'}
                       </span>
                     </td>
                     <td className="centro col-acoes">
                       
-                      {/* NOVO BOTÃO DE PAGAMENTO */}
-                      <button 
-                        className="btn-acao pagamento" 
-                        title="Registrar Pagamento / Sinal" 
-                        onClick={() => handleAbrirPagamento(item)}
-                        disabled={saldoDevedor <= 0} // Desabilita se já estiver pago
-                        style={{ opacity: saldoDevedor <= 0 ? 0.3 : 1 }}
-                      >
+                      <button className="btn-acao pagamento" title="Registrar Pagamento" onClick={() => handleAbrirPagamento(item)} disabled={saldoDevedor <= 0} style={{ opacity: saldoDevedor <= 0 ? 0.3 : 1 }}>
                         💰
                       </button>
 
-                      <button 
-                        className="btn-acao editar" 
-                        title="Editar" 
-                        onClick={() => navigate(`/locacoes/editar/${item.id}`)}
-                      >
+                      <button className="btn-acao editar" title="Editar" onClick={() => navigate(`/locacoes/editar/${item.id}`)}>
                         ✏️
                       </button>
 
-                      <button 
-                        className="btn-acao excluir" 
-                        title="Excluir" 
-                        onClick={() => handleExcluir(item.id)}
-                      >
+                      <button className="btn-acao excluir" title="Excluir" onClick={() => handleExcluir(item.id)}>
                         🗑️
                       </button>
                     </td>
@@ -249,10 +252,7 @@ const Locacoes = () => {
             <form onSubmit={registrarPagamento} className="form-pagamento">
               <div className="form-group-pag">
                 <label>Valor Recebido (R$)</label>
-                <input 
-                  type="number" step="0.01" required autoFocus
-                  value={pagamento.valor} onChange={e => setPagamento({...pagamento, valor: e.target.value})} 
-                />
+                <input type="number" step="0.01" required autoFocus value={pagamento.valor} onChange={e => setPagamento({...pagamento, valor: e.target.value})} />
               </div>
               <div className="form-group-pag">
                 <label>Forma de Pagamento</label>
@@ -266,10 +266,7 @@ const Locacoes = () => {
               </div>
               <div className="form-group-pag">
                 <label>Data do Recebimento</label>
-                <input 
-                  type="date" required 
-                  value={pagamento.data} onChange={e => setPagamento({...pagamento, data: e.target.value})} 
-                />
+                <input type="date" required value={pagamento.data} onChange={e => setPagamento({...pagamento, data: e.target.value})} />
               </div>
 
               <div className="modal-actions">

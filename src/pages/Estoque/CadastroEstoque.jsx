@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroEstoque.css';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, query } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, getDoc, query } from 'firebase/firestore';
 
 const CadastroEstoque = () => {
   const navigate = useNavigate();
@@ -11,6 +11,14 @@ const CadastroEstoque = () => {
 
   const [salvando, setSalvando] = useState(false);
   const [itensExistentes, setItensExistentes] = useState([]);
+
+  // --- ESTADOS DAS LISTAS DINÂMICAS DO SISTEMA (VINDAS DO FIREBASE) ---
+  const [listasSistema, setListasSistema] = useState({
+    categorias: [],
+    subcategorias: {},
+    localizacoes: [],
+    tamanhos: []
+  });
 
   // --- FOTOS E ENQUADRAMENTO (DRAG) ---
   const [fotos, setFotos] = useState([]);
@@ -22,7 +30,7 @@ const CadastroEstoque = () => {
   // Dados Básicos
   const [nome, setNome] = useState('');
   const [codigo, setCodigo] = useState('');
-  const [categoria, setCategoria] = useState('Móveis');
+  const [categoria, setCategoria] = useState('');
   const [subCategoria, setSubCategoria] = useState('');
   const [quantidade, setQuantidade] = useState(1);
   const [estoqueMinimo, setEstoqueMinimo] = useState(1);
@@ -30,7 +38,7 @@ const CadastroEstoque = () => {
   const [fornecedor, setFornecedor] = useState('');
   const [linkFornecedor, setLinkFornecedor] = useState('');
   const [status, setStatus] = useState('ok');
-  const [localizacao, setLocalizacao] = useState('Galpão Principal');
+  const [localizacao, setLocalizacao] = useState('');
 
   // Financeiro e Especificações
   const [valorCompra, setValorCompra] = useState('');
@@ -51,25 +59,11 @@ const CadastroEstoque = () => {
   const [voltagem, setVoltagem] = useState('Bivolt');
   const [observacoes, setObservacoes] = useState('');
 
-  // Listas de Opções
-  const categorias = ["Móveis", "Painéis", "Vasos", "Boleiras", "Bandejas", "Personagens", "Estruturas", "Iluminação", "Tapetes", "Outros"];
-  const locaisArmazenamento = ["Galpão Principal", "Prateleira A", "Prateleira B", "Setor de Vidros", "Setor de Móveis", "Vitrine", "Escritório", "Externo"];
-  const mapSubcategorias = {
-    "Móveis": ["Cilindros", "Mesas", "Cômodas", "Aparadores", "Poltronas / Cadeiras", "Carrinhos", "Outros"],
-    "Painéis": ["Painel Romano", "Painel Redondo", "Painel Retangular", "Painel Vazado", "Painel Sublimado", "Trio de Painéis", "Outros"],
-    "Vasos": ["Vaso de Cerâmica", "Vaso de Vidro", "Vaso de Metal", "Vaso de Pedraria", "Outros"],
-    "Boleiras": ["Boleira Alta", "Boleira Média", "Boleira Baixa", "Trio de Boleiras", "Outros"],
-    "Bandejas": ["Bandeja Espelhada", "Bandeja Cerâmica", "Bandeja MDF/Madeira", "Bandeja de Metal", "Doceira", "Outros"],
-    "Personagens": ["Pelúcia", "Feltro", "Resina / Fibra", "MDF", "Outros"],
-    "Estruturas": ["Estrutura de Ferro", "Estrutura de Madeira/MDF", "Muro Inglês", "Telas / Grades", "Outros"],
-    "Iluminação": ["Refletores", "Fitas de LED", "Letreiros Neon", "Luminárias / Abajures", "Outros"],
-    "Tapetes": ["Tapete Redondo", "Tapete Retangular", "Passadeira", "Piso Sublimado", "Outros"],
-    "Outros": ["Diversos"]
-  };
-  const tamanhos = ["P", "M", "G", "GG", "Único", "Padrão"];
+  // Lista Fixa de Unidades (Não muda muito)
   const unidades = ["Unidade", "Par", "Metro", "Jogo", "Kit", "Peça"];
 
   useEffect(() => {
+    // 1. Busca os itens existentes para gerar o código SKU
     const fetchItens = async () => {
       const q = query(collection(db, "estoque"));
       const snap = await getDocs(q);
@@ -77,13 +71,44 @@ const CadastroEstoque = () => {
     };
     fetchItens();
 
+    // 2. Busca as listas dinâmicas das configurações
+    const fetchConfiguracoes = async () => {
+      try {
+        const docRef = doc(db, "sistema", "parametros");
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists()) {
+          const dados = docSnap.data();
+          setListasSistema({
+            categorias: dados.categorias || [],
+            subcategorias: dados.subcategorias || {},
+            localizacoes: dados.localizacoes || [],
+            tamanhos: dados.tamanhos || []
+          });
+
+          // Se for um NOVO item, pré-seleciona os primeiros valores da lista dinâmica
+          if (!itemEditando) {
+            if (dados.categorias?.length > 0) {
+              setCategoria(dados.categorias[0]);
+              if (dados.subcategorias?.[dados.categorias[0]]?.length > 0) {
+                setSubCategoria(dados.subcategorias[dados.categorias[0]][0]);
+              }
+            }
+            if (dados.localizacoes?.length > 0) setLocalizacao(dados.localizacoes[0]);
+          }
+        }
+      } catch (e) { console.error("Erro ao buscar listas do sistema:", e); }
+    };
+    fetchConfiguracoes();
+
+    // 3. Preenche formulário se for modo de EDIÇÃO
     if (itemEditando) {
       setNome(itemEditando.nome || ''); setCodigo(itemEditando.codigo || '');
-      setCategoria(itemEditando.categoria || 'Móveis'); setSubCategoria(itemEditando.subCategoria || '');
+      setCategoria(itemEditando.categoria || ''); setSubCategoria(itemEditando.subCategoria || '');
       setQuantidade(itemEditando.quantidade || 1); setEstoqueMinimo(itemEditando.estoqueMinimo || 1);
       setAlertaEstoque(itemEditando.configuracao?.alertaEstoque || 'NaoAvisar'); 
       setFornecedor(itemEditando.fornecedor || ''); setLinkFornecedor(itemEditando.linkFornecedor || '');
-      setLocalizacao(itemEditando.localizacao || 'Galpão Principal'); setStatus(itemEditando.status || 'ok');
+      setLocalizacao(itemEditando.localizacao || ''); setStatus(itemEditando.status || 'ok');
       setValorCompra(itemEditando.financeiro?.valorCompra?.toFixed(2).replace('.', ',') || '');
       setValorAluguel(itemEditando.financeiro?.valorAluguel?.toFixed(2).replace('.', ',') || '');
       setValorReposicao(itemEditando.financeiro?.valorReposicao?.toFixed(2).replace('.', ',') || '');
@@ -100,26 +125,31 @@ const CadastroEstoque = () => {
       
       if (itemEditando.fotos && itemEditando.fotos.length > 0) setFotos(itemEditando.fotos);
       else if (itemEditando.foto) setFotos([itemEditando.foto]);
-    } else {
-      setSubCategoria(mapSubcategorias['Móveis'][0]);
     }
   }, [itemEditando]);
 
   const gerarSKU = (cat) => {
+    if (!cat) return '';
     const prefixo = cat.substring(0, 3).toUpperCase();
     const total = itensExistentes.filter(i => i.categoria === cat).length;
     return `${prefixo}-${String(total + 1).padStart(3, '0')}`;
   };
 
   useEffect(() => {
-    if (!itemEditando && itensExistentes.length > 0 && !codigo) setCodigo(gerarSKU(categoria));
+    if (!itemEditando && itensExistentes.length > 0 && !codigo && categoria) setCodigo(gerarSKU(categoria));
   }, [itensExistentes, categoria]);
 
   const handleCategoriaChange = (e) => {
     const novaCat = e.target.value;
     setCategoria(novaCat);
     if (!itemEditando) setCodigo(gerarSKU(novaCat));
-    if (mapSubcategorias[novaCat]) setSubCategoria(mapSubcategorias[novaCat][0]); else setSubCategoria('');
+    
+    // Atualiza subcategoria automaticamente com a primeira da lista (se existir)
+    if (listasSistema.subcategorias[novaCat] && listasSistema.subcategorias[novaCat].length > 0) {
+      setSubCategoria(listasSistema.subcategorias[novaCat][0]);
+    } else {
+      setSubCategoria('');
+    }
   };
 
   const formatarMoedaBlur = (setter) => (e) => {
@@ -274,14 +304,18 @@ const CadastroEstoque = () => {
               <div className="form-group span-3"><label>NOME DO PRODUTO *</label><input value={nome} onChange={handleTextChange(setNome)} required /></div>
               <div className="form-group span-1"><label>CÓDIGO SKU</label><input value={codigo} readOnly style={{backgroundColor: '#e2e8f0'}} /></div>
               
-              <div className="form-group span-1"><label>CATEGORIA</label>
+              <div className="form-group span-1">
+                <label>CATEGORIA</label>
                 <select value={categoria} onChange={handleCategoriaChange}>
-                  {categorias.map(c => <option key={c} value={c}>{c}</option>)}
+                  <option value="">Selecione...</option>
+                  {listasSistema.categorias.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
               </div>
-              <div className="form-group span-1"><label>SUBCATEGORIA</label>
+              <div className="form-group span-1">
+                <label>SUBCATEGORIA</label>
                 <select value={subCategoria} onChange={e => setSubCategoria(e.target.value)}>
-                  {mapSubcategorias[categoria] ? mapSubcategorias[categoria].map(s => <option key={s} value={s}>{s}</option>) : <option value="">Selecione...</option>}
+                  <option value="">Selecione...</option>
+                  {listasSistema.subcategorias[categoria]?.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="form-group span-2">
@@ -324,18 +358,24 @@ const CadastroEstoque = () => {
               <div className="form-group span-1">
                 <label>LOCALIZAÇÃO</label>
                 <select value={localizacao} onChange={e => setLocalizacao(e.target.value)}>
-                  {locaisArmazenamento.map(l => <option key={l} value={l}>{l}</option>)}
+                  <option value="">Selecione...</option>
+                  {listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
               </div>
             </div>
 
             <h3 className="section-divider mt-compact">ESPECIFICAÇÕES TÉCNICAS</h3>
             <div className="form-grid-4">
-              <div className="form-group span-1"><label>TAMANHO</label>
-                <select value={tamanho} onChange={e => setTamanho(e.target.value)}><option value="">Selecione...</option>{tamanhos.map(t => <option key={t} value={t}>{t}</option>)}</select>
+              <div className="form-group span-1">
+                <label>TAMANHO</label>
+                <select value={tamanho} onChange={e => setTamanho(e.target.value)}>
+                  <option value="">Selecione...</option>
+                  {listasSistema.tamanhos.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
               </div>
               <div className="form-group span-1"><label>COR</label><input value={cor} onChange={handleTextChange(setCor)} /></div>
-              <div className="form-group span-1"><label>UNIDADE</label>
+              <div className="form-group span-1">
+                <label>UNIDADE</label>
                 <select value={unidadeMedida} onChange={e => setUnidadeMedida(e.target.value)}>{unidades.map(u => <option key={u} value={u}>{u}</option>)}</select>
               </div>
               

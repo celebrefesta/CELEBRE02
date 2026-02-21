@@ -1,14 +1,17 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
 
-/* Reutilizando as classes padrão da sua página de Clientes */
+/* =========================================
+   ESTRUTURA BASE E CABEÇALHO (DINÂMICOS)
+   ========================================= */
 .page-container {
   width: 100% !important;
   max-width: 100% !important;
   margin: 0 !important;
   padding: 30px !important;
-  background-color: #f1f5f9;
+  background-color: var(--fundo-cinza);
   min-height: 100vh;
   box-sizing: border-box;
+  transition: 0.3s;
 }
 
 .page-header {
@@ -16,13 +19,13 @@
   justify-content: space-between;
   align-items: center;
   margin-top: 20px;
-  border-bottom: 2px solid #cbd5e1 !important; 
+  border-bottom: 2px solid var(--borda) !important; 
   padding-bottom: 20px !important; 
   margin-bottom: 30px !important;
 }
 
 .page-title {
-  color: #0f172a;
+  color: var(--texto-principal);
   font-size: 24px;
   font-weight: 800;
   text-transform: uppercase;
@@ -32,15 +35,19 @@
 }
 
 .form-widescreen {
-  background: white;
+  background: var(--branco);
   padding: 35px;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   width: 100%;
   box-sizing: border-box;
+  border: 1px solid var(--borda);
+  transition: 0.3s;
 }
 
-/* --- DIVISÃO DA TELA (ESQUERDA FOTO / DIREITA DADOS) --- */
+/* =========================================
+   DIVISÃO DA TELA (ESQUERDA FOTO / DIREITA DADOS)
+   ========================================= */
 .estoque-form-layout {
   display: flex;
   gap: 40px;
@@ -61,13 +68,15 @@
   .left-photo-col { width: 100%; }
 }
 
-/* --- CLASSES DE FOTOS --- */
+/* =========================================
+   ÁREA DE FOTOS E UPLOADS
+   ========================================= */
 .main-photo-display {
   width: 100%;
   aspect-ratio: 1;
   border-radius: 8px;
-  background: #f8fafc;
-  border: 2px dashed #cbd5e1;
+  background: var(--fundo-cinza);
+  border: 2px dashed var(--borda);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -76,7 +85,7 @@
 }
 
 .main-photo-preview { width: 100%; height: 100%; object-fit: cover; }
-.photo-placeholder-box { display: flex; flex-direction: column; align-items: center; }
+.photo-placeholder-box { display: flex; flex-direction: column; align-items: center; color: var(--texto-secundario); }
 
 .photo-thumbnails-row {
   display: flex; gap: 10px; flex-wrap: wrap;
@@ -89,7 +98,7 @@
   cursor: pointer;
   position: relative;
 }
-.thumb-item.active { border-color: #c5a059; }
+.thumb-item.active { border-color: var(--dourado); }
 .thumb-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
 
 .btn-remove-thumb {
@@ -101,17 +110,19 @@
 
 .thumb-upload-btn {
   width: 60px; height: 60px;
-  border-radius: 6px; border: 1px dashed #cbd5e1;
+  border-radius: 6px; border: 1px dashed var(--borda);
   display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: #94a3b8; font-size: 24px; transition: 0.2s;
+  cursor: pointer; color: var(--texto-secundario); font-size: 24px; transition: 0.2s;
 }
-.thumb-upload-btn:hover { border-color: #0f172a; color: #0f172a; }
+.thumb-upload-btn:hover { border-color: var(--texto-principal); color: var(--texto-principal); }
 
-/* --- REUTILIZANDO GRIDS DO SEU CLIENTES.CSS --- */
+/* =========================================
+   GRIDS, INPUTS E DIVISORES
+   ========================================= */
 .section-divider {
-  font-size: 12px; color: #64748b; font-weight: 800;
+  font-size: 12px; color: var(--texto-secundario); font-weight: 800;
   text-transform: uppercase; letter-spacing: 1px;
-  margin-bottom: 15px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px;
+  margin-bottom: 15px; border-bottom: 1px solid var(--borda); padding-bottom: 6px;
 }
 
 .mt-compact { margin-top: 25px; }
@@ -121,37 +132,44 @@
 .span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; }
 
 .form-group { display: flex; flex-direction: column; gap: 4px; }
-.form-group label { font-size: 11px; font-weight: 700; color: #64748b; }
+.form-group label { font-size: 11px; font-weight: 700; color: var(--texto-secundario); }
 
 .form-group input, .form-group select, .form-group textarea {
-  padding: 10px 12px; border: 1px solid #cbd5e1; border-radius: 6px;
-  font-size: 13px; color: #1e293b; background-color: #fcfcfc;
-  transition: all 0.2s; font-family: inherit;
+  padding: 10px 12px; border: 1px solid var(--borda); border-radius: 6px;
+  font-size: 13px; color: var(--texto-principal); background-color: var(--fundo-cinza);
+  transition: all 0.2s; font-family: inherit; outline: none;
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-  outline: none; border-color: #c5a059; background-color: white;
+  border-color: var(--dourado); background-color: var(--branco); box-shadow: 0 0 0 2px rgba(197, 160, 89, 0.1);
 }
 
+/* =========================================
+   BOTÕES DE AÇÃO DO FORMULÁRIO
+   ========================================= */
 .form-actions {
   display: flex; justify-content: flex-end; gap: 15px;
-  padding-top: 20px; border-top: 1px solid #e2e8f0;
+  padding-top: 20px; border-top: 1px solid var(--borda);
 }
 
 .btn-voltar {
-  padding: 10px 20px; background-color: white; color: #64748b;
-  border: 1px solid #cbd5e1; border-radius: 6px; text-decoration: none;
+  padding: 10px 20px; background-color: var(--branco); color: var(--texto-secundario);
+  border: 1px solid var(--borda); border-radius: 6px; text-decoration: none;
   font-weight: 700; font-size: 13px; transition: 0.2s;
 }
-.btn-voltar:hover { background-color: #f8fafc; color: #0f172a; }
+.btn-voltar:hover { background-color: var(--fundo-cinza); color: var(--texto-principal); }
 
 .btn-salvar {
   padding: 10px 24px; background-color: #0f172a; color: white;
-  border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer;
+  border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.2s;
 }
 .btn-salvar:hover { background-color: #1e293b; }
 
+/* No escuro, o botão escuro não funciona. Trocamos para dourado! */
+[data-theme='dark'] .btn-salvar { background-color: var(--dourado); color: white; }
+[data-theme='dark'] .btn-salvar:hover { background-color: #b48a3c; }
+
 /* =========================================
-   CSS: TOGGLE SWITCH PREMIUM (CATÁLOGO)
+   TOGGLE SWITCH PREMIUM (CATÁLOGO)
    ========================================= */
 .custom-toggle-container {
   display: flex;
@@ -159,17 +177,17 @@
   gap: 12px;
   cursor: pointer;
   user-select: none;
-  margin-top: 15px; /* Para alinhar com a caixa do lado */
+  margin-top: 15px; 
 }
 
 .hidden-checkbox {
-  display: none; /* Esconde o quadradinho feio */
+  display: none; 
 }
 
 .toggle-slider {
   width: 48px;
   height: 26px;
-  background-color: #cbd5e1;
+  background-color: var(--borda); /* Cinza padrão da borda */
   border-radius: 26px;
   position: relative;
   transition: background-color 0.3s ease;
@@ -177,7 +195,10 @@
 }
 
 .toggle-slider.active {
-  background-color: #10b981; /* Verde Esmeralda Celebre */
+  background-color: #10b981; 
+}
+[data-theme='dark'] .toggle-slider.active {
+  background-color: #059669; /* Verde levemente ajustado pro escuro */
 }
 
 .toggle-knob {
@@ -204,4 +225,5 @@
 }
 
 .toggle-label.active-text { color: #10b981; }
-.toggle-label.inactive-text { color: #64748b; }
+.toggle-label.inactive-text { color: var(--texto-secundario); }
+[data-theme='dark'] .toggle-label.active-text { color: #34d399; }

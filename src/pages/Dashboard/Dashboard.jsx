@@ -11,74 +11,97 @@ const Dashboard = () => {
   const [estatisticas, setEstatisticas] = useState({
     acervo: 0, ativas: 0, eventos: 0, manutencao: 0
   });
-  const [queridinhos, setQueridinhos] = useState([]);
   const [alertas, setAlertas] = useState([]);
   const [atividades, setAtividades] = useState([]);
-  const [categoriasData, setCategoriasData] = useState([]);
   const [faturamentoData, setFaturamentoData] = useState([0, 0, 0, 0]);
+  const [proximosEventos, setProximosEventos] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const hojeStr = new Date().toLocaleDateString('en-CA');
+        const hojeISO = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+        const mesAtual = hojeISO.substring(0, 7); // YYYY-MM
 
         // 1. BUSCAR ACERVO
         const estSnap = await getDocs(collection(db, "estoque"));
         const itens = estSnap.docs.map(d => d.data());
         
-        // Agrupar categorias para o gráfico de Pizza
-        const cats = {};
-        itens.forEach(i => cats[i.categoria || 'Outros'] = (cats[i.categoria || 'Outros'] || 0) + 1);
-        const catsArray = Object.entries(cats).map(([name, value]) => ({ name, value }));
-
         // 2. BUSCAR LOCAÇÕES
         const locSnap = await getDocs(collection(db, "locacoes"));
-        const locs = locSnap.docs.map(d => d.data());
+        const locs = locSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const confirmadas = locs.filter(l => l.status === 'confirmado');
 
-        // Simulação de faturamento semanal (distribuição visual)
+        // 3. FATURAMENTO REAL (Semanas do Mês Atual)
         const fatSemanal = [0, 0, 0, 0];
         confirmadas.forEach(l => {
-            // Distribui aleatoriamente nas 4 semanas para efeito visual
-            const semana = Math.floor(Math.random() * 4); 
-            fatSemanal[semana] += Number(l.valorTotal || 0);
+            if (l.dataRetirada && l.dataRetirada.startsWith(mesAtual)) {
+                const dia = parseInt(l.dataRetirada.split('-')[2]);
+                const valor = Number(l.valorTotal) || 0;
+                
+                if (dia <= 7) fatSemanal[0] += valor;
+                else if (dia <= 14) fatSemanal[1] += valor;
+                else if (dia <= 21) fatSemanal[2] += valor;
+                else fatSemanal[3] += valor;
+            }
         });
 
-        // 3. RANKING (Top 5 Itens)
-        const rankCount = {};
-        locs.forEach(l => l.itens?.forEach(i => rankCount[i.nome] = (rankCount[i.nome] || 0) + i.qtd));
-        const top5 = Object.entries(rankCount).sort((a,b) => b[1]-a[1]).slice(0,5);
+        // 4. ATIVIDADES RECENTES (Últimas Locações Feitas)
+        const recents = locs
+            .sort((a, b) => {
+                const dataA = a.criadoEm?.seconds ? a.criadoEm.seconds : 0;
+                const dataB = b.criadoEm?.seconds ? b.criadoEm.seconds : 0;
+                return dataB - dataA; 
+            })
+            .slice(0, 5)
+            .map(l => ({ 
+                txt: `${l.clienteNome || 'Cliente Não Informado'}`, 
+                valor: l.valorTotal ? `R$ ${Number(l.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : ''
+            }));
 
-        // 4. ATIVIDADES RECENTES
-        const recents = locs.slice(-4).reverse().map(l => ({ 
-            txt: `Nova locação: ${l.clienteNome || 'Cliente'}`, time: 'Recente' 
-        }));
+        // 5. PRÓXIMAS ENTREGAS / EVENTOS 
+        const proximos = confirmadas
+            .filter(l => l.dataRetirada && l.dataRetirada >= hojeISO)
+            .sort((a, b) => a.dataRetirada.localeCompare(b.dataRetirada))
+            .slice(0, 5)
+            .map(l => ({
+                id: l.id,
+                cliente: l.clienteNome || 'Cliente',
+                data: l.dataRetirada.split('-').reverse().join('/'),
+                cidade: l.logistica?.cidade || 'Retirada na Loja'
+            }));
 
         // ATUALIZAR ESTADOS
         setEstatisticas({
             acervo: estSnap.size,
             ativas: confirmadas.length,
-            eventos: confirmadas.filter(l => l.dataRetirada >= hojeStr).length,
+            eventos: confirmadas.filter(l => l.dataRetirada >= hojeISO).length,
             manutencao: itens.filter(i => i.status === 'manutencao').length
         });
-        setCategoriasData(catsArray);
+        
         setFaturamentoData(fatSemanal);
-        setQueridinhos(top5);
         setAtividades(recents);
-        setAlertas(locs.filter(l => l.status === 'confirmado' && l.dataDevolucao < hojeStr));
+        setProximosEventos(proximos);
+        
+        // ALERTAS REAIS: Confirmadas com devolução atrasada
+        setAlertas(locs.filter(l => l.status === 'confirmado' && l.dataDevolucao && l.dataDevolucao < hojeISO));
 
-      } catch (e) { console.error("Erro dashboard:", e); }
+      } catch (e) { 
+        console.error("Erro dashboard:", e); 
+      } finally {
+        setLoading(false);
+      }
     };
     carregarDados();
   }, []);
 
-  // Cores do Gráfico de Pizza
-  const CORES = ['#0f3460', '#e94560', '#16213e', '#533483', '#00bbf9'];
+  if (loading) return <div className="loading-v3">Atualizando seu painel...</div>;
+
+  const maxFat = Math.max(...faturamentoData, 1); 
 
   return (
-    <div className="dash-wide-container">
+    <div className="dash-wide-container fade-in">
       
-      {/* 1. CABEÇALHO + BOTÕES CORRIGIDOS */}
       <header className="dash-wide-header">
         <div className="header-titles">
           <h1>Olá, Camila!</h1>
@@ -94,7 +117,6 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* 2. LINHA DE INDICADORES */}
       <div className="stats-wide-row">
         <div className="stat-card-wide border-gold"><span>ACERVO TOTAL</span><strong>{estatisticas.acervo}</strong></div>
         <div className="stat-card-wide border-blue"><span>LOCAÇÕES ATIVAS</span><strong>{estatisticas.ativas}</strong></div>
@@ -102,80 +124,77 @@ const Dashboard = () => {
         <div className="stat-card-wide border-red"><span>EM MANUTENÇÃO</span><strong>{estatisticas.manutencao}</strong></div>
       </div>
 
-      {/* 3. GRÁFICO DE BARRAS E RANKING */}
-      <div className="dash-main-grid-wide">
+      {alertas.length > 0 && (
+        <div className="dash-alertas-banner">
+          <div className="alertas-header">
+            <h3>⚠️ AVISO: DEVOLUÇÕES EM ATRASO</h3>
+            <span>{alertas.length} pendência(s)</span>
+          </div>
+          <div className="alertas-grid">
+            {alertas.map((a, i) => (
+              /* 🚨 ROTA CORRIGIDA PARA "/locacoes/editar/ID" 🚨 */
+              <div key={i} className="alerta-item" onClick={() => navigate(`/locacoes/editar/${a.id}`)}>
+                <strong>{a.clienteNome}</strong>
+                <span>Previsto para: {a.dataDevolucao.split('-').reverse().join('/')}</span>
+                <button>Resolver Pendência</button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="dash-main-grid-wide" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
         
-        {/* GRÁFICO DE BARRAS */}
+        {/* QUADRO 1: FATURAMENTO */}
         <section className="dash-card-wide chart-card">
-          <h3>💸 Faturamento Mensal (Previsão)</h3>
-          <div className="css-bar-chart">
+          <h3>💸 Faturamento do Mês</h3>
+          <div className="compact-chart">
             {faturamentoData.map((val, idx) => (
-              <div key={idx} className="bar-group">
-                <div className="bar" style={{height: `${Math.min((val/1000)*100, 100)}%`}}></div>
-                <span>Sem {idx+1}</span>
-                <small>R$ {val}</small>
+              <div key={idx} className="compact-bar-group">
+                <span className="compact-bar-label">Sem {idx+1}</span>
+                <div className="compact-bar-track">
+                  <div className="compact-bar-fill" style={{width: `${(val / maxFat) * 100}%`}}></div>
+                </div>
+                <span className="compact-bar-value">R$ {val.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
               </div>
             ))}
           </div>
         </section>
 
-        {/* TOP 5 */}
-        <section className="dash-card-wide ranking-card">
-          <h3>🏆 Top 5 Itens</h3>
-          <div className="ranking-list">
-            {queridinhos.length > 0 ? queridinhos.map(([nome, qtd], i) => (
-              <div key={i} className="rank-item">
-                <div className="rank-pos">{i+1}</div>
-                <div className="rank-info"><b>{nome}</b><span>{qtd} aluguéis</span></div>
+        {/* QUADRO 2: PRÓXIMAS ENTREGAS */}
+        <section className="dash-card-wide agenda-card">
+          <h3>🚚 Próximas Entregas</h3>
+          <div className="activity-feed">
+            {proximosEventos.length > 0 ? proximosEventos.map((ev, i) => (
+              /* 🚨 ROTA CORRIGIDA AQUI TAMBÉM 🚨 */
+              <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${ev.id}`)} style={{cursor: 'pointer'}}>
+                <div className="feed-icon box-green">📅</div>
+                <div className="feed-info">
+                  <p>{ev.cliente}</p>
+                  <span className="feed-sub">📍 {ev.cidade} • <strong>{ev.data}</strong></span>
+                </div>
               </div>
-            )) : <p style={{textAlign:'center', color:'#ccc', marginTop: 20}}>Sem dados ainda.</p>}
+            )) : <p style={{color:'#94a3b8', textAlign: 'center', marginTop: '20px'}}>Sua agenda está livre!</p>}
           </div>
         </section>
-      </div>
 
-      {/* 4. PIZZA, ALERTAS E ATIVIDADES */}
-      <div className="dash-bottom-grid-wide">
-        
-        {/* GRÁFICO DE PIZZA */}
+        {/* QUADRO 3: ÚLTIMAS LOCAÇÕES FEITAS */}
         <section className="dash-card-wide">
-            <h3>📦 Distribuição do Acervo</h3>
-            <div className="pie-wrapper">
-                <div className="pie-chart" style={{
-                    background: categoriasData.length > 0 ? `conic-gradient(
-                        ${categoriasData.map((c, i, arr) => {
-                            const start = (arr.slice(0, i).reduce((a, b) => a + b.value, 0) / estatisticas.acervo) * 100;
-                            const end = start + (c.value / estatisticas.acervo) * 100;
-                            return `${CORES[i % CORES.length]} ${start}% ${end}%`;
-                        }).join(', ')}
-                    )` : '#eee'
-                }}></div>
-                <div className="pie-legend">
-                    {categoriasData.slice(0,4).map((c, i) => (
-                        <div key={i}><span style={{background: CORES[i%CORES.length]}}></span>{c.name} ({c.value})</div>
-                    ))}
+          <h3>🛒 Últimas Vendas</h3>
+          <div className="activity-feed">
+            {atividades.length > 0 ? atividades.map((a, i) => (
+              <div key={i} className="feed-row-moderno">
+                <div className="feed-icon box-blue">🛍️</div>
+                <div className="feed-info">
+                  <p>{a.txt}</p>
+                  {a.valor && <span className="feed-valor">{a.valor}</span>}
                 </div>
-            </div>
+              </div>
+            )) : <p style={{color:'#94a3b8', textAlign: 'center', marginTop: '20px'}}>Nenhuma venda recente.</p>}
+          </div>
         </section>
 
-        {/* PENDÊNCIAS */}
-        <section className="dash-card-wide alert-card">
-            <h3>⚠️ Pendências</h3>
-            {alertas.length > 0 ? alertas.map((a, i) => (
-                <div key={i} className="alert-row">Atraso: {a.clienteNome}</div>
-            )) : <div className="ok-state">Nenhum atraso hoje!</div>}
-        </section>
-
-        {/* ATIVIDADES */}
-        <section className="dash-card-wide">
-            <h3>🕒 Últimas Atividades</h3>
-            <div className="activity-feed">
-                {atividades.length > 0 ? atividades.map((a, i) => (
-                    <div key={i} className="feed-row"><span>●</span> {a.txt}</div>
-                )) : <p style={{color:'#ccc'}}>Nenhuma atividade recente.</p>}
-            </div>
-        </section>
       </div>
-
     </div>
   );
 };

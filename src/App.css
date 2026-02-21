@@ -1,10 +1,25 @@
 /* --- DNA DO SISTEMA CELEBRE --- */
 :root {
+  /* Cores para o Modo Diurno (Padrão) */
   --azul-escuro: #0f172a;
   --dourado: #c5a059;
   --fundo-cinza: #f1f5f9;
   --branco: #ffffff;
-  --largura-menu: 0px; /* Espaço do seu Navbar lateral */
+  --texto-principal: #0f172a;
+  --texto-secundario: #64748b;
+  --borda: #e2e8f0;
+  --largura-menu: 0px; 
+}
+
+/* --- ATIVAÇÃO DO MODO NOTURNO --- */
+[data-theme='dark'] {
+  --azul-escuro: #f1f5f9; /* Inverte para o texto ficar claro */
+  --dourado: #c5a059;    /* Mantém o dourado da Ágape */
+  --fundo-cinza: #0f172a; /* Fundo agora é o azul escuro */
+  --branco: #1e293b;      /* Cards ficam em um azul petróleo */
+  --texto-principal: #f1f5f9;
+  --texto-secundario: #94a3b8;
+  --borda: #334155;
 }
 
 /* --- RESET DE SEGURANÇA --- */
@@ -12,71 +27,80 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  transition: background-color 0.3s ease, color 0.3s ease; /* Transição suave entre temas */
 }
 
 body {
   background-color: var(--fundo-cinza);
+  color: var(--texto-principal);
   font-family: 'Inter', sans-serif;
   overflow-x: hidden;
 }
 
-/* --- ESTRUTURA BASE (Para o conteúdo não sumir) --- */
+/* --- ESTRUTURA BASE --- */
 .App {
   display: flex;
   min-height: 100vh;
   width: 100%;
 }
 
-/* Esta classe GARANTE que o conteúdo apareça ao lado do menu lateral */
 main, .main-content, .page-layout {
   flex: 1;
-  margin-left: var(--largura-menu); /* Abre espaço para o menu lateral */
-  padding: 3px;
+  margin-left: var(--largura-menu); 
+  padding: 20px;
   background-color: var(--fundo-cinza);
   min-height: 100vh;
-  display: block !important; /* Força a renderização se algo estiver oculto */
 }
 
-/* Ajuste para páginas de tela cheia (como a Assinatura) */
-.no-navbar main, .no-navbar .main-content, .no-navbar .page-layout {
-  margin-left: 0 !important;
-}
-
-/* --- CLASSES CURINGAS (O seu Style Guide) --- */
-
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 25px;
-}
+/* --- CLASSES CURINGAS (Style Guide) --- */
 
 .page-title {
-  color: var(--azul-escuro);
+  color: var(--texto-principal);
   font-size: 24px;
   font-weight: 800;
   text-transform: uppercase;
 }
 
-/* Use esta classe para criar o cartão branco que ocupa a tela toda */
 .content-card, .main-card, .form-widescreen {
   background: var(--branco);
   border-radius: 12px;
   padding: 30px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  width: 100%; /* Ocupa toda a largura como na página de Locações */
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  border: 1px solid var(--borda);
+}
+
+/* Ajuste nos inputs para respeitarem o tema */
+input, select, textarea {
+  background-color: var(--branco);
+  color: var(--texto-principal);
+  border: 1px solid var(--borda);
 }
 
 /* Botão Padrão Celebre */
 .btn-primary-celebre, .btn-salvar, .btn-novo-cliente {
-  background-color: var(--azul-escuro) !important;
+  background-color: #0f172a !important; /* Mantém o azul escuro fixo em botões se preferir */
   color: white !important;
   padding: 10px 24px;
   border-radius: 8px;
   font-weight: 700;
   border: none;
   cursor: pointer;
-  text-decoration: none;
   display: inline-flex;
   align-items: center;
+}
+/* =========================================
+   ACESSIBILIDADE DE LEITURA (ZOOM)
+   ========================================= */
+html[data-font-size="ampliado"] body {
+  zoom: 1.08; /* Aumenta toda a interface em 8% de forma proporcional */
+}
+
+/* Para navegadores Firefox (que lidam com zoom de forma diferente) */
+@-moz-document url-prefix() {
+  html[data-font-size="ampliado"] body {
+    transform: scale(1.08);
+    transform-origin: top left;
+    width: 92.5%; /* Compensa o aumento da escala para não gerar rolagem horizontal */
+  }
 }

@@ -1,34 +1,30 @@
-/* --- PROTEÇÃO DE ESCOPO --- */
+/* =========================================
+   PROTEÇÃO DE ESCOPO E LAYOUT BASE
+   ========================================= */
 .pag-financeiro-main, 
 .pag-financeiro-main * {
   box-sizing: border-box;
 }
 
 .pag-financeiro-main {
-  background-color: #f1f5f9; /* Cor padrão que combinamos */
+  background-color: var(--fundo-cinza); 
   min-height: 100vh;
   width: 100%;
   font-family: 'Inter', system-ui, sans-serif;
-  color: #1e293b;
-  
-  /* --- O AJUSTE ESTÁ AQUI --- */
-  padding: 30px; /* Isso vai empurrar o conteúdo para baixo e dar respiro nas laterais */
-}
-
-/* Remova também o max-width para manter a largura perfeita que você conseguiu */
-.financeiro-content {
-  width: 100%;
-  margin: 0;
+  color: var(--texto-principal);
+  padding: 30px; 
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 .financeiro-content {
-  /* max-width: 1200px;  <-- APAGUE OU COMENTE ESTA LINHA */
-  width: 100%;           /* Garante que ocupe toda a largura disponível */
-  margin: 0;             /* Remove a centralização para encostar no menu */      /*LARGURA DA PAGINA TODA, SEM CENTRALIZAÇÃO */
-  padding: 30px;       /* Mantém apenas um respiro nas bordas internas */
+  width: 100%; 
+  margin: 0; 
+  padding: 30px; 
 }
 
-/* --- HEADER --- */
+/* =========================================
+   HEADER DA PÁGINA
+   ========================================= */
 .fin-header-modern {
   display: flex;
   justify-content: space-between;
@@ -40,16 +36,18 @@
   margin: 0;
   font-size: 24px;
   font-weight: 800;
-  color: #0f172a;
+  color: var(--texto-principal);
 }
 
 .fin-title-area p {
   margin: 4px 0 0 0;
-  color: #64748b;
+  color: var(--texto-secundario);
   font-size: 14px;
 }
 
-/* --- BOTÃO NOVO LANÇAMENTO ÚNICO --- */
+/* =========================================
+   BOTÃO NOVO LANÇAMENTO
+   ========================================= */
 .fin-action-buttons {
   display: flex;
   gap: 12px;
@@ -66,7 +64,7 @@
   border: none;
   cursor: pointer;
   color: white;
-  background-color: #0f172a; /* Azul Escuro Premium combinando com seu menu */
+  background-color: #0f172a; 
   transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);
 }
@@ -77,7 +75,15 @@
   box-shadow: 0 10px 15px -3px rgba(15, 23, 42, 0.3);
 }
 
-/* --- CARDS KPI (IGUAL A FOTO) --- */
+/* No modo dark, o botão escuro some no fundo escuro. Vamos dar destaque dourado. */
+[data-theme='dark'] .btn-novo-lancamento-unico {
+  background-color: var(--dourado);
+  box-shadow: 0 4px 6px -1px rgba(197, 160, 89, 0.2);
+}
+
+/* =========================================
+   CARDS KPI (RESUMO DO CAIXA)
+   ========================================= */
 .fin-kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -86,7 +92,7 @@
 }
 
 .kpi-card {
-  background: white;
+  background: var(--branco);
   padding: 24px;
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
@@ -94,12 +100,14 @@
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  border: 1px solid var(--borda);
+  transition: 0.3s;
 }
 
-/* Linhas coloridas no topo de cada card */
+/* Linhas coloridas no rodapé dos cards */
 .card-entradas::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #10b981; }
 .card-saidas::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #ef4444; }
-.card-saldo::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: #0f172a; }
+.card-saldo::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 4px; background: var(--texto-principal); }
 
 .kpi-header {
   display: flex;
@@ -111,7 +119,7 @@
 .kpi-header span {
   font-size: 11px;
   font-weight: 700;
-  color: #64748b;
+  color: var(--texto-secundario);
   letter-spacing: 0.5px;
 }
 
@@ -128,19 +136,26 @@
 
 .card-entradas h2 { color: #10b981; }
 .card-saidas h2 { color: #ef4444; }
-.card-saldo h2 { color: #0f172a; }
+.card-saldo h2 { color: var(--texto-principal); }
+
+/* Ajuste do Verde e Vermelho para brilharem mais no escuro */
+[data-theme='dark'] .card-entradas h2 { color: #4ade80; }
+[data-theme='dark'] .card-saidas h2 { color: #f87171; }
 
 .kpi-subtitle {
   margin: 8px 0 0 0;
   font-size: 12px;
-  color: #94a3b8;
+  color: var(--texto-secundario);
 }
 
-/* --- TABELA MODERNA --- */
+/* =========================================
+   TABELA DE LANÇAMENTOS
+   ========================================= */
 .fin-table-container {
-  background: white;
+  background: var(--branco);
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--borda);
   overflow: hidden;
 }
 
@@ -153,27 +168,29 @@
   text-align: left;
   padding: 18px 20px;
   font-size: 11px;
-  color: #64748b;
+  color: var(--texto-secundario);
   font-weight: 700;
-  border-bottom: 2px solid #f1f5f9;
+  border-bottom: 2px solid var(--borda);
 }
 
 .fin-table-modern td {
   padding: 16px 20px;
   font-size: 14px;
-  color: #334155;
-  border-bottom: 1px solid #f1f5f9;
+  color: var(--texto-principal);
+  border-bottom: 1px solid var(--borda);
   vertical-align: middle;
 }
 
 .fin-table-modern tr:last-child td { border-bottom: none; }
-.fin-table-modern tr:hover { background: #f8fafc; }
+.fin-table-modern tr:hover { background: var(--fundo-cinza); }
 
 .col-data { font-size: 13px !important; font-weight: 500; }
-.col-desc strong { color: #0f172a; font-weight: 600; }
+.col-desc strong { color: var(--texto-principal); font-weight: 600; }
 .col-valor { font-weight: 700; font-size: 15px !important; }
 
-/* Badges de Categoria */
+/* =========================================
+   BADGES DE CATEGORIA E STATUS (INTELIGENTES)
+   ========================================= */
 .badge-categoria {
   padding: 6px 12px;
   border-radius: 20px;
@@ -181,15 +198,27 @@
   font-weight: 700;
   display: inline-block;
 }
-.badge-categoria.entrada { background: #dcfce7; color: #15803d; }
-.badge-categoria.saida { background: #fee2e2; color: #b91c1c; }
+
+/* Usando rgba para criar um fundo suave que funciona no claro e no escuro */
+.badge-categoria.entrada { background: rgba(21, 128, 61, 0.1); color: #15803d; border: 1px solid #bbf7d0; }
+.badge-categoria.saida { background: rgba(185, 28, 28, 0.1); color: #b91c1c; border: 1px solid #fecaca; }
+
+/* No escuro, clareamos o texto e removemos a borda rígida */
+[data-theme='dark'] .badge-categoria.entrada { color: #4ade80; border-color: transparent; }
+[data-theme='dark'] .badge-categoria.saida { color: #f87171; border-color: transparent; }
 
 .txt-verde { color: #10b981; }
 .txt-vermelho { color: #ef4444; }
 
+[data-theme='dark'] .txt-verde { color: #4ade80; }
+[data-theme='dark'] .txt-vermelho { color: #f87171; }
+
 .direita { text-align: right; }
 .centro { text-align: center; }
 
+/* =========================================
+   AÇÕES DA TABELA
+   ========================================= */
 .btn-icon-excluir {
   background: none;
   border: none;
@@ -197,7 +226,8 @@
   font-size: 16px;
   opacity: 0.5;
   transition: opacity 0.2s, transform 0.2s;
+  color: var(--texto-principal);
 }
-.btn-icon-excluir:hover { opacity: 1; transform: scale(1.1); }
+.btn-icon-excluir:hover { opacity: 1; transform: scale(1.1); color: #ef4444; }
 
-.fin-empty { text-align: center; padding: 40px !important; color: #94a3b8 !important; }
+.fin-empty { text-align: center; padding: 40px !important; color: var(--texto-secundario) !important; }

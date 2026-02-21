@@ -26,7 +26,6 @@ const Compras = () => {
       const hoje = new Date().toISOString().split('T')[0];
 
       lista.forEach(item => {
-        // CÁLCULO CORRIGIDO: Multiplica Quantidade pelo Valor Unitário
         const qtd = Number(item.quantidade) || 1;
         const valorUnit = Number(item.valorEstimado) || 0;
         const subtotal = qtd * valorUnit;
@@ -35,7 +34,6 @@ const Compras = () => {
           r += subtotal;
         } else {
           p += subtotal;
-          // Se for pendente e a data já passou ou é hoje, conta como urgente
           if (item.prazo && item.prazo <= hoje) u++;
         }
       });
@@ -76,17 +74,16 @@ const Compras = () => {
   });
 
   return (
-    <div className="compras-container">
+    <div className="compras-container dashboard-container">
       
-      {/* HEADER PRINCIPAL */}
-      <div className="header-top">
-        <div>
-          <h1>Lista de Compras</h1>
+      {/* --- CABEÇALHO PADRÃO CELEBRE --- */}
+      <div className="dashboard-header">
+        <div className="header-text">
+          <h1>LISTA DE COMPRAS</h1>
           <p>Gerencie aquisições vinculadas aos pedidos e ao acervo da Ágape Decorações.</p>
         </div>
-        {/* Navega para a página de formulário */}
-        <button className="btn-add" onClick={() => navigate("/compras/nova")}>
-          <span>+</span> Adicionar Item
+        <button className="btn-novo-cliente" onClick={() => navigate("/compras/nova")}>
+          + Adicionar Item
         </button>
       </div>
 
