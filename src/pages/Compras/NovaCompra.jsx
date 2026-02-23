@@ -52,39 +52,30 @@ const NovaCompra = () => {
     setForm({ ...form, valorEstimado: maskCurrency(e.target.value) });
   };
 
-  // --- BUSCA INTELIGENTE SEM CÓDIGOS FEIOS ---
-  const abrirBusca = async (modo) => {
-    setModoVinculo(modo);
-    const colecao = modo === 'pedido' ? "locacoes" : "clientes";
-    const snap = await getDocs(collection(db, colecao));
+  const abrirBuscaPedidos = async () => {
+    setModoVinculo('pedido');
+    const snap = await getDocs(collection(db, "locacoes"));
     
     setListaBusca(snap.docs.map(d => {
       const data = d.data();
       let displayNome = "Sem Nome";
 
-      if (modo === 'cliente') {
-        displayNome = data.nome || data.nomeFantasia || "Cliente não identificado";
-      } else if (modo === 'pedido') {
-        const temaFesta = data.tema || data.evento || data.tipoEvento || data.titulo || "";
-        const clienteFesta = data.clienteNome || data.nomeCliente || data.cliente || data.nome || "";
-        const dataFesta = data.dataEvento || data.dataInicio || data.data || "";
+      const temaFesta = data.tema || data.evento || data.tipoEvento || data.titulo || "";
+      const clienteFesta = data.clienteNome || data.nomeCliente || data.cliente || data.nome || "";
+      const dataFesta = data.dataRetirada || data.dataEvento || data.dataInicio || data.data || "";
 
-        // Montagem limpa e elegante do nome
-        if (temaFesta && clienteFesta) {
-          displayNome = `${temaFesta} - ${clienteFesta}`;
-        } else if (temaFesta) {
-          displayNome = temaFesta;
-        } else if (clienteFesta) {
-          displayNome = `Pedido de ${clienteFesta}`;
-        } else {
-          // Só usa o código se não tiver NOME nem TEMA
-          displayNome = `Pedido #${d.id.substring(0,5).toUpperCase()}`; 
-        }
+      if (temaFesta && clienteFesta) {
+        displayNome = `${temaFesta} - ${clienteFesta}`;
+      } else if (temaFesta) {
+        displayNome = temaFesta;
+      } else if (clienteFesta) {
+        displayNome = `Pedido de ${clienteFesta}`;
+      } else {
+        displayNome = `Pedido #${data.numeroPedido || d.id.substring(0,5).toUpperCase()}`; 
+      }
 
-        // Se tiver data, coloca no final
-        if (dataFesta) {
-          displayNome += ` (${dataFesta})`;
-        }
+      if (dataFesta) {
+        displayNome += ` (${dataFesta.split('-').reverse().join('/')})`;
       }
 
       return { id: d.id, nome: displayNome };
@@ -186,37 +177,32 @@ const NovaCompra = () => {
             
             <h3 className="section-divider" style={{marginTop: 0}}>🔗 DESTINO DA COMPRA</h3>
             
-            <div className="tabs-container" style={{ marginBottom: '20px', borderBottom: '2px solid #f1f5f9' }}>
+            <div className="tabs-container" style={{ marginBottom: '20px', borderBottom: '2px solid #f1f5f9', display: 'flex', gap: '10px' }}>
               <button 
                 type="button" 
                 className={`tab-btn ${modoVinculo === 'estoque' ? 'active' : ''}`}
-                onClick={() => {setModoVinculo('estoque'); setForm({...form, vinculoTexto: ""})}}
+                onClick={() => {setModoVinculo('estoque'); setForm({...form, vinculoTexto: "", vinculoId: ""})}}
+                style={{ flex: 1, padding: '12px', fontWeight: 'bold' }}
               >
-                📦 Estoque Geral
+                📦 P/ Estoque Geral
               </button>
               <button 
                 type="button" 
                 className={`tab-btn ${modoVinculo === 'pedido' ? 'active' : ''}`}
-                onClick={() => abrirBusca('pedido')}
+                onClick={abrirBuscaPedidos}
+                style={{ flex: 1, padding: '12px', fontWeight: 'bold' }}
               >
-                🎉 Buscar Pedido
-              </button>
-              <button 
-                type="button" 
-                className={`tab-btn ${modoVinculo === 'cliente' ? 'active' : ''}`}
-                onClick={() => abrirBusca('cliente')}
-              >
-                👤 Buscar Cliente
+                🎉 P/ Pedido Específico
               </button>
             </div>
 
-            {form.vinculoTexto && (
-              <div className="vinculo-selecionado">
-                ✅ Selecionado: <strong>{form.vinculoTexto}</strong>
+            {form.vinculoTexto && modoVinculo === 'pedido' && (
+              <div className="vinculo-selecionado" style={{ backgroundColor: '#f0fdf4', border: '1px solid #bbf7d0', color: '#166534', padding: '12px', borderRadius: '8px', marginBottom: '20px' }}>
+                ✅ Vinculado ao: <strong>{form.vinculoTexto}</strong>
               </div>
             )}
 
-            <h3 className="section-divider" style={{ marginTop: '30px' }}>📅 PRAZOS E FORNECEDOR</h3>
+            <h3 className="section-divider" style={{ marginTop: '20px' }}>📅 PRAZOS E FORNECEDOR</h3>
             
             <div className="form-grid-4">
               <div className="form-group span-2">
@@ -256,17 +242,50 @@ const NovaCompra = () => {
 
       {modalBusca && (
         <div className="modal-overlay">
-          <div className="modal-box">
-            <h3>Selecione um {modoVinculo === 'pedido' ? 'Pedido' : 'Cliente'}</h3>
-            <div className="modal-list">
+          <div className="modal-box" style={{ maxWidth: '600px', width: '90%' }}>
+            <h3>Selecione o Pedido / Evento</h3>
+            <p style={{color: '#64748b', fontSize: '0.85rem', marginTop: '-10px', marginBottom: '15px'}}>Escolha para qual festa este item está sendo comprado.</p>
+            
+            <div className="modal-list" style={{ maxHeight: '400px', overflowY: 'auto' }}>
                 {listaBusca.map(item => (
-                <div key={item.id} className="modal-item" onClick={() => {setForm({...form, vinculoId: item.id, vinculoTexto: item.nome}); setModalBusca(false)}}>
-                    {item.nome}
+                <div 
+                  key={item.id} 
+                  className="modal-item" 
+                  style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px', borderBottom: '1px solid #f1f5f9' }}
+                >
+                    <div 
+                      onClick={() => {setForm({...form, vinculoId: item.id, vinculoTexto: item.nome}); setModalBusca(false)}} 
+                      style={{ flex: 1, cursor: 'pointer', fontWeight: '600', color: '#0f172a' }}
+                    >
+                      {item.nome}
+                    </div>
+
+                    <button 
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation(); 
+                        // 🌟 MUDANÇA AQUI: Navega na mesma tela, mas avisa para não perder dados à toa 🌟
+                        if(window.confirm("Sair dessa tela para conferir o pedido fará você perder os dados não salvos desta compra. Deseja continuar?")) {
+                           navigate(`/locacoes/editar/${item.id}`);
+                        }
+                      }}
+                      style={{
+                        background: '#f8fafc', color: '#3b82f6', border: '1px solid #cbd5e1', 
+                        padding: '6px 12px', borderRadius: '6px', fontSize: '0.75rem', 
+                        fontWeight: 'bold', cursor: 'pointer', marginLeft: '15px',
+                        display: 'flex', alignItems: 'center', gap: '5px', transition: '0.2s'
+                      }}
+                      onMouseOver={(e) => e.currentTarget.style.background = '#eff6ff'}
+                      onMouseOut={(e) => e.currentTarget.style.background = '#f8fafc'}
+                      title="Navegar para os detalhes do pedido"
+                    >
+                      👁️ Conferir Pedido
+                    </button>
                 </div>
                 ))}
-                {listaBusca.length === 0 && <p style={{textAlign:'center', color: '#94a3b8', padding: '20px'}}>Nenhum registro encontrado.</p>}
+                {listaBusca.length === 0 && <p style={{textAlign:'center', color: '#94a3b8', padding: '20px'}}>Nenhum pedido encontrado.</p>}
             </div>
-            <button className="btn-voltar" onClick={() => setModalBusca(false)} style={{width: '100%', marginTop: '15px'}}>Fechar</button>
+            <button className="btn-voltar" onClick={() => setModalBusca(false)} style={{width: '100%', marginTop: '15px', padding: '12px'}}>Cancelar e Fechar</button>
           </div>
         </div>
       )}

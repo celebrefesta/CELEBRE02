@@ -137,15 +137,16 @@ const Compras = () => {
         </div>
 
         <div className="tabela-wrapper">
-          <table>
+          <table style={{ width: '100%', tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{width: '50px'}}></th>
-                <th>ITEM & VÍNCULO</th>
-                <th>QTD.</th>
-                <th>VALOR TOTAL</th>
-                <th>STATUS</th>
-                <th style={{textAlign: 'center'}}>AÇÕES</th>
+                <th style={{ width: '30%' }}>ITEM & VÍNCULO</th>
+                <th style={{ width: '10%' }}>QTD.</th>
+                <th style={{ width: '15%' }}>VALOR TOTAL</th>
+                <th style={{ width: '15%' }}>STATUS</th>
+                <th style={{ width: '15%' }}>PRAZO LIMITE</th>
+                {/* 🌟 AJUSTE: Mudei para Center e tirei o Padding 🌟 */}
+                <th style={{ width: '15%', textAlign: 'center' }}>AÇÕES</th>
               </tr>
             </thead>
             <tbody>
@@ -156,24 +157,16 @@ const Compras = () => {
               ) : (
                 itensFiltrados.map((item) => {
                   const hojeStr = new Date().toISOString().split('T')[0];
-                  const isUrgente = item.status === 'pendente' && item.prazo <= hojeStr;
+                  const isUrgente = item.status === 'pendente' && item.prazo && item.prazo <= hojeStr;
                   const subtotal = (Number(item.quantidade) || 1) * (Number(item.valorEstimado) || 0);
 
                   return (
                     <tr key={item.id} style={{ opacity: item.status === 'comprado' ? 0.6 : 1 }}>
-                      <td>
-                        <div 
-                          className={`item-check ${item.status === 'comprado' ? 'checked' : ''}`}
-                          onClick={() => toggleCheck(item)}
-                        >
-                          ✓
-                        </div>
-                      </td>
-                      <td>
-                        <span className="nome-produto" style={{ textDecoration: item.status === 'comprado' ? 'line-through' : 'none' }}>
+                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <span className="nome-produto" style={{ textDecoration: item.status === 'comprado' ? 'line-through' : 'none', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {item.nome}
                         </span>
-                        <div className="vinculo-tag">
+                        <div className="vinculo-tag" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           🔗 {item.vinculo || "Estoque Geral"}
                         </div>
                       </td>
@@ -191,8 +184,63 @@ const Compras = () => {
                           {item.status === 'pendente' ? 'Pendente' : 'Comprado'}
                         </span>
                       </td>
-                      <td style={{textAlign: 'center'}}>
-                        <div style={{display: 'flex', gap: '8px', justifyContent: 'center'}}>
+
+                      <td>
+                        {item.prazo ? (
+                          <span style={{ 
+                            fontSize: '0.95rem', 
+                            fontWeight: '700', 
+                            color: isUrgente ? '#ef4444' : '#334155',
+                            backgroundColor: isUrgente ? '#fef2f2' : '#f8fafc',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            border: isUrgente ? '1px solid #fecaca' : '1px solid #e2e8f0',
+                            whiteSpace: 'nowrap'
+                          }}>
+                            📅 {item.prazo.split('-').reverse().join('/')}
+                            {isUrgente && <span title="Prazo esgotado!">🚨</span>}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: '0.95rem', color: '#94a3b8', fontStyle: 'italic' }}>Sem prazo</span>
+                        )}
+                      </td>
+
+                      {/* 🌟 AJUSTE: Tirei o padding e coloquei o justifyContent no centro 🌟 */}
+                      <td>
+                        <div style={{display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center'}}>
+                          <button 
+                            onClick={() => toggleCheck(item)}
+                            style={{
+                              padding: '8px 12px',
+                              borderRadius: '6px',
+                              border: item.status === 'pendente' ? 'none' : '1px solid #cbd5e1',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '5px',
+                              backgroundColor: item.status === 'pendente' ? '#10b981' : '#f8fafc',
+                              color: item.status === 'pendente' ? '#fff' : '#64748b',
+                              boxShadow: item.status === 'pendente' ? '0 2px 4px rgba(16, 185, 129, 0.3)' : 'none',
+                              transition: 'all 0.2s',
+                              fontSize: '0.85rem',
+                              whiteSpace: 'nowrap'
+                            }}
+                            onMouseOver={(e) => {
+                              if(item.status === 'pendente') e.currentTarget.style.backgroundColor = '#059669';
+                              else e.currentTarget.style.backgroundColor = '#f1f5f9';
+                            }}
+                            onMouseOut={(e) => {
+                              if(item.status === 'pendente') e.currentTarget.style.backgroundColor = '#10b981';
+                              else e.currentTarget.style.backgroundColor = '#f8fafc';
+                            }}
+                          >
+                            {item.status === 'pendente' ? '✅ Já Comprei' : '↩ Desfazer'}
+                          </button>
+
                           <button className="btn-action edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar">
                             ✏️
                           </button>

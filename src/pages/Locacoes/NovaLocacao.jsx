@@ -2,13 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NovaLocacao.css'; 
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, addDoc, getCountFromServer } from 'firebase/firestore'; 
+import { collection, getDocs, addDoc, getCountFromServer, serverTimestamp } from 'firebase/firestore'; 
 
 const NovaLocacao = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
-  // --- ESTADOS ---
+  // --- ESTADOS DO PEDIDO ---
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
   const [carrinho, setCarrinho] = useState([]);
@@ -19,11 +19,11 @@ const NovaLocacao = () => {
   
   const [clienteSelecionado, setClienteSelecionado] = useState('');
   const [temaFesta, setTemaFesta] = useState('');
-  const [tipoServico, setTipoServico] = useState('PEGUE E MONTE'); // <-- NOVO ESTADO AQUI
+  const [tipoServico, setTipoServico] = useState('PEGUE E MONTE');
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
   
   const [logistica, setLogistica] = useState({ 
-    tipo: 'retirada', // Mudei o padrão inicial para combinar com Pegue e Monte
+    tipo: 'retirada', 
     cep: '', 
     rua: '', 
     numero: '', 
@@ -34,6 +34,14 @@ const NovaLocacao = () => {
   });
   const [desconto, setDesconto] = useState(0);
   const [obsInternas, setObsInternas] = useState('');
+
+  // 🌟 ESTADOS DO MODAL DE COMPRA RÁPIDA 🌟
+  const [modalCompraAberto, setModalCompraAberto] = useState(false);
+  const [formCompra, setFormCompra] = useState({
+    nome: "", quantidade: 1, valorEstimado: "", categoria: "material", prazo: "", obs: ""
+  });
+  const [salvandoCompra, setSalvandoCompra] = useState(false);
+  const [acaoSalvar, setAcaoSalvar] = useState('fechar'); // 'fechar' ou 'continuar'
 
   // --- CARREGAR DADOS ---
   useEffect(() => {
@@ -77,7 +85,6 @@ const NovaLocacao = () => {
     return { subtotal, total };
   };
 
-  // --- BUSCA DE CEP AUTOMÁTICA ---
   const handleCepChange = async (e) => {
     let value = e.target.value.replace(/\D/g, ""); 
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
@@ -132,13 +139,12 @@ const NovaLocacao = () => {
         frete: getFreteNumerico()
       };
 
-      // SALVANDO O tipoServico NO BANCO DE DADOS
       await addDoc(coll, {
         numeroPedido: codigo,
         clienteId: clienteSelecionado,
         clienteNome: nomeCliente,
         temaFesta,
-        tipoServico, // <-- NOVO CAMPO SALVO
+        tipoServico, 
         dataRetirada: datas.retirada,
         dataDevolucao: datas.devolucao,
         itens: carrinho,
@@ -160,6 +166,72 @@ const NovaLocacao = () => {
     return matchesBusca && matchesCategoria;
   });
 
+  // 🌟 FUNÇÕES DA COMPRA RÁPIDA ATUALIZADA 🌟
+  const abrirModalCompra = () => {
+    if (!clienteSelecionado) {
+      alert("Selecione um cliente primeiro para podermos vincular as compras ao pedido dele!");
+      return;
+    }
+    setModalCompraAberto(true);
+  };
+
+  const maskCurrency = (value) => {
+    let v = value.replace(/\D/g, ""); 
+    if (!v) return "";
+    v = (v / 100).toFixed(2) + ""; 
+    v = v.replace(".", ","); 
+    v = v.replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,"); 
+    v = v.replace(/(\d)(\d{3}),/g, "$1.$2,");
+    return v;
+  };
+
+  const handleSalvarCompraRapida = async (e) => {
+    e.preventDefault();
+    setSalvandoCompra(true);
+
+    try {
+      const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente Atual';
+      const nomeVinculo = temaFesta ? `${temaFesta} - ${nomeCliente}` : `Pedido em Criação de ${nomeCliente}`;
+      
+      let valorNumerico = 0;
+      if (formCompra.valorEstimado) {
+        valorNumerico = Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", "."));
+      }
+
+      await addDoc(collection(db, "lista_compras"), {
+        nome: formCompra.nome,
+        quantidade: Number(formCompra.quantidade),
+        valorEstimado: valorNumerico,
+        categoria: formCompra.categoria,
+        prazo: formCompra.prazo || datas.retirada || "",
+        obs: formCompra.obs,
+        vinculoTipo: "pedido",
+        vinculoId: "pendente_salvamento", 
+        vinculo: nomeVinculo,
+        status: "pendente",
+        createdAt: serverTimestamp()
+      });
+
+      // Limpa os campos para o próximo item
+      setFormCompra({ nome: "", quantidade: 1, valorEstimado: "", categoria: "material", prazo: "", obs: "" });
+
+      // Decide se fecha a tela ou não com base no botão clicado
+      if (acaoSalvar === 'fechar') {
+        alert("Item adicionado à lista de Compras com sucesso!");
+        setModalCompraAberto(false);
+      } else {
+        alert("✅ Item salvo na lista! Pode digitar o próximo produto.");
+        document.getElementById('compraNomeInput').focus(); // Foca no campo de nome de novo automaticamente
+      }
+
+    } catch (err) {
+      alert("Erro ao salvar compra.");
+      console.error(err);
+    } finally {
+      setSalvandoCompra(false);
+    }
+  };
+
   if (loading) return <div className="loading-v3">Carregando...</div>;
 
   return (
@@ -175,7 +247,6 @@ const NovaLocacao = () => {
           <div className="card-v3">
             <h3>👤 Dados do Evento</h3>
             
-            {/* SELETOR DE TIPO DE SERVIÇO */}
             <div className="form-row-v3" style={{ marginBottom: '20px' }}>
                <div className="input-group-v3 flex-1" style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                  <label>Modalidade de Serviço *</label>
@@ -184,7 +255,7 @@ const NovaLocacao = () => {
                      type="button" 
                      onClick={() => {
                        setTipoServico('PEGUE E MONTE');
-                       setLogistica({...logistica, tipo: 'retirada', frete: ''}); // Muda logística auto
+                       setLogistica({...logistica, tipo: 'retirada', frete: ''});
                      }}
                      style={{
                        flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontWeight: '700', cursor: 'pointer',
@@ -199,7 +270,7 @@ const NovaLocacao = () => {
                      type="button" 
                      onClick={() => {
                        setTipoServico('DECORACAO COMPLETA');
-                       setLogistica({...logistica, tipo: 'entrega'}); // Muda logística auto
+                       setLogistica({...logistica, tipo: 'entrega'});
                      }}
                      style={{
                        flex: 1, padding: '12px', borderRadius: '8px', border: '1px solid #e2e8f0', fontWeight: '700', cursor: 'pointer',
@@ -291,9 +362,14 @@ const NovaLocacao = () => {
           </div>
 
           <div className="card-v3">
-            <div className="topo-itens-v3">
+            <div className="topo-itens-v3" style={{ flexWrap: 'wrap', gap: '10px' }}>
               <h3>📦 Itens do Pedido</h3>
-              <button className="btn-abrir-modal-v3" onClick={() => setModalAberto(true)}>+ SELECIONAR PEÇAS</button>
+              <div style={{display: 'flex', gap: '10px'}}>
+                <button className="btn-abrir-modal-v3" onClick={abrirModalCompra} style={{background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a'}}>
+                  🛒 Faltou algo? (Comprar)
+                </button>
+                <button className="btn-abrir-modal-v3" onClick={() => setModalAberto(true)}>+ SELECIONAR PEÇAS</button>
+              </div>
             </div>
             <table className="tabela-itens-v3">
               <thead><tr><th width="60">FOTO</th><th>PRODUTO</th><th className="centro">QTD</th><th className="direita">TOTAL</th><th></th></tr></thead>
@@ -356,6 +432,7 @@ const NovaLocacao = () => {
         </aside>
       </div>
 
+      {/* MODAL DE PEÇAS */}
       {modalAberto && (
         <div className="modal-overlay-v3">
           <div className="modal-content-v3">
@@ -393,6 +470,72 @@ const NovaLocacao = () => {
           </div>
         </div>
       )}
+
+      {/* 🌟 MODAL: COMPRA RÁPIDA (COM BOTÕES DUPLOS) 🌟 */}
+      {modalCompraAberto && (
+        <div className="modal-overlay-v3" style={{zIndex: 9999}}>
+          <div className="modal-content-v3" style={{maxWidth: '550px'}}>
+            <div className="modal-header-v3" style={{borderBottom: 'none'}}>
+              <div>
+                <h3 style={{color: '#b45309', margin: 0, display: 'flex', alignItems: 'center', gap: '8px'}}>🛒 Adicionar à Lista de Compras</h3>
+                <p style={{fontSize: '0.8rem', color: '#64748b', margin: '4px 0 0 0'}}>Item será vinculado a este pedido automaticamente.</p>
+              </div>
+              <button onClick={() => setModalCompraAberto(false)}>X</button>
+            </div>
+            
+            <form onSubmit={handleSalvarCompraRapida} style={{padding: '0 20px 20px 20px'}}>
+              <div className="form-row-v3" style={{marginBottom: '15px'}}>
+                <div className="input-group-v3 flex-1">
+                  <label>O que precisa comprar? *</label>
+                  <input id="compraNomeInput" type="text" placeholder="Ex: Bexiga Neon N9" value={formCompra.nome} onChange={e => setFormCompra({...formCompra, nome: e.target.value})} required autoFocus />
+                </div>
+              </div>
+
+              <div className="form-row-v3" style={{marginBottom: '15px'}}>
+                <div className="input-group-v3" style={{width: '80px'}}>
+                  <label>Qtd *</label>
+                  <input type="number" min="1" value={formCompra.quantidade} onChange={e => setFormCompra({...formCompra, quantidade: e.target.value})} required />
+                </div>
+                <div className="input-group-v3 flex-1">
+                  <label>Valor Unit. Estimado (R$)</label>
+                  <input type="text" placeholder="0,00" value={formCompra.valorEstimado} onChange={e => setFormCompra({...formCompra, valorEstimado: maskCurrency(e.target.value)})} />
+                </div>
+              </div>
+
+              <div className="form-row-v3" style={{marginBottom: '15px'}}>
+                <div className="input-group-v3 flex-1">
+                  <label>Categoria da Compra</label>
+                  <select value={formCompra.categoria} onChange={e => setFormCompra({...formCompra, categoria: e.target.value})}>
+                    <option value="material">Material de Consumo (Bexiga, Fita...)</option>
+                    <option value="acervo">Peça de Acervo (Vaso, Móvel...)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="form-row-v3" style={{marginBottom: '20px'}}>
+                <div className="input-group-v3 flex-1">
+                  <label>Observação (Onde comprar, cor...)</label>
+                  <textarea rows="2" value={formCompra.obs} onChange={e => setFormCompra({...formCompra, obs: e.target.value})}></textarea>
+                </div>
+              </div>
+
+              {/* 🌟 BOTÕES DE SALVAMENTO INTELIGENTES 🌟 */}
+              <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                <button type="button" onClick={() => setModalCompraAberto(false)} style={{flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: '#475569', cursor: 'pointer'}}>
+                  Cancelar
+                </button>
+                <button type="submit" onClick={() => setAcaoSalvar('continuar')} disabled={salvandoCompra} style={{flex: 1, padding: '12px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '8px', fontWeight: 'bold', color: '#b45309', cursor: 'pointer', transition: '0.2s'}}>
+                  {salvandoCompra && acaoSalvar === 'continuar' ? 'Salvando...' : '+ Salvar e Novo'}
+                </button>
+                <button type="submit" onClick={() => setAcaoSalvar('fechar')} disabled={salvandoCompra} style={{flex: 1, padding: '12px', background: '#0f172a', border: 'none', borderRadius: '8px', fontWeight: 'bold', color: '#fff', cursor: 'pointer', transition: '0.2s'}}>
+                  {salvandoCompra && acaoSalvar === 'fechar' ? 'Salvando...' : 'Salvar e Fechar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

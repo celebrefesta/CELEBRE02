@@ -203,3 +203,46 @@
 }
 .btn-icon-small:hover { background: #e2e8f0; }
 .btn-icon-small.delete:hover { background: #fee2e2; color: #ef4444; }
+
+/* =========================================
+   ABAS DA PÁGINA DE CONFIGURAÇÃO DE TEXTOS
+   ========================================= */
+.abas-config-textos {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+  border-bottom: 2px solid #e2e8f0;
+  padding-bottom: 0;
+}
+
+.aba-btn {
+  background: transparent;
+  border: none;
+  padding: 10px 20px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #64748b;
+  cursor: pointer;
+  border-bottom: 3px solid transparent;
+  transition: all 0.2s ease;
+  margin-bottom: -2px; /* Sobrepõe a borda da caixa para efeito de aba colada */
+}
+
+.aba-btn:hover {
+  color: #0f172a;
+  background: rgba(241, 245, 249, 0.5);
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+}
+
+.aba-btn.ativa {
+  color: #0f172a;
+  border-bottom: 3px solid #3b82f6;
+  background: transparent;
+}
+
+/* Opcional: Se a aba for do tipo perigo (Logística), muda a cor do hover e do ativo */
+.aba-btn:nth-child(2).ativa {
+  border-bottom-color: #dc2626;
+  color: #dc2626;
+}

@@ -160,7 +160,7 @@
 
 .tag-antigo { background: var(--fundo-cinza); color: var(--texto-secundario); padding: 4px 8px; border-radius: 4px; font-size: 11px; border: 1px solid var(--borda); }
 
-/* Status da Locação (Com fundo translúcido para o modo escuro) */
+/* Status da Locação */
 .status-pill {
   padding: 6px 12px;
   border-radius: 20px;
@@ -183,10 +183,16 @@
 [data-theme='dark'] .txt-vermelho { color: #f87171; }
 
 /* =========================================
-   AÇÕES DA TABELA (BOTÕES)
+   🚨 CORREÇÃO: AÇÕES DA TABELA (BOTÕES) 🚨
    ========================================= */
 .centro { text-align: center; }
-.col-acoes { display: flex; gap: 8px; justify-content: center; }
+
+/* Removemos o display:flex daqui para a borda da tabela não quebrar */
+.col-acoes { 
+  text-align: center; 
+  vertical-align: middle;
+  white-space: nowrap; /* Impede que os botões caiam de linha */
+}
 
 .btn-acao {
   background: var(--fundo-cinza);
@@ -194,12 +200,15 @@
   width: 32px;
   height: 32px;
   border-radius: 6px;
-  display: flex;
+  /* Mudado para inline-flex para alinhar os ícones dentro do botão, mas respeitar a tabela */
+  display: inline-flex; 
   align-items: center;
   justify-content: center;
   cursor: pointer;
   font-size: 14px;
   transition: all 0.2s;
+  margin: 0 4px; /* Substitui o gap que usamos antes */
+  vertical-align: middle;
 }
 
 .btn-acao:hover { transform: scale(1.1); background: var(--branco); border-color: var(--dourado); }
@@ -260,3 +269,140 @@
 .btn-confirm { padding: 12px 24px; border: none; background: #10b981; color: white; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; box-shadow: 0 4px 6px rgba(16, 185, 129, 0.2);}
 .btn-confirm:hover { background: #059669; transform: translateY(-1px); }
 .btn-confirm:disabled { opacity: 0.7; cursor: not-allowed; transform: none; }
+
+
+/* =========================================
+   TAGS DE STATUS DIRETOS NA TABELA GERAL
+   ========================================= */
+.tag-tipo-servico {
+  font-size: 9px; 
+  font-weight: 800; 
+  padding: 3px 8px; 
+  border-radius: 4px; 
+  margin-top: 6px; 
+  display: inline-block;
+}
+.tag-tipo-servico.pegue { background-color: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+.tag-tipo-servico.deco { background-color: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; }
+
+.alerta-tab-falta { font-size: 0.65rem; background: #dc2626; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; }
+.alerta-tab-avaria { font-size: 0.65rem; background: #d97706; color: #fff; padding: 2px 6px; border-radius: 4px; margin-left: 8px; font-weight: bold; }
+
+/* =========================================
+   🚨 MODAL DE AUDITORIA DE ESTOQUE 🚨
+   ========================================= */
+.overlay-auditoria {
+  z-index: 9999;
+  background-color: rgba(15, 23, 42, 0.85);
+}
+
+.modal-auditoria {
+  max-width: 850px;
+  width: 95%;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.auditoria-header {
+  background: #fef2f2;
+  padding: 25px;
+  border-bottom: 3px solid #fecaca;
+}
+.auditoria-header h2 {
+  color: #dc2626;
+  margin: 0 0 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.auditoria-icon { font-size: 2rem; }
+.auditoria-header p {
+  color: #991b1b;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 500;
+  line-height: 1.5;
+}
+
+.auditoria-body {
+  padding: 20px;
+  max-height: 55vh;
+  overflow-y: auto;
+  background: #f8fafc;
+}
+
+.auditoria-card {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 15px 20px;
+  border-radius: 10px;
+  margin-bottom: 12px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.03);
+}
+
+.auditoria-info { flex: 1; min-width: 250px; }
+.auditoria-info strong { font-size: 1.1rem; color: #0f172a; }
+.auditoria-info span { color: #64748b; }
+
+.auditoria-detalhes {
+  margin-top: 5px;
+  font-size: 0.85rem;
+  color: #475569;
+}
+.auditoria-data {
+  color: #dc2626;
+  background: #fee2e2;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+.divisor { margin: 0 10px; }
+
+.auditoria-acoes {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-resolver {
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: 0.2s;
+  font-size: 0.9rem;
+}
+
+.btn-resolver.cancel {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+}
+.btn-resolver.cancel:hover { background: #f1f5f9; }
+
+.btn-resolver.ok {
+  background: #10b981;
+  color: white;
+  border: none;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+}
+.btn-resolver.ok:hover { filter: brightness(0.9); }
+
+.auditoria-footer {
+  padding: 15px 25px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+  text-align: right;
+}
+.auditoria-footer button {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 0.9rem;
+}
+.auditoria-footer button:hover { color: #64748b; text-decoration: underline; }
