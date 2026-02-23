@@ -1,81 +1,90 @@
-/* --- CONTAINER PRINCIPAL --- */
+/* Navbar.css - VERSÃO SLIM FIXA */
+
 .sidebar {
-  width: 260px;
-  min-width: 260px;
-  height: 100vh;
-  background-color: #0f172a; /* Azul escuro premium */
+  width: 250px;
+  height: 100vh; /* Ocupa exatamente a altura da tela */
+  background-color: #0f172a; /* Azul escuro Celebre */
+  color: white;
+  position: fixed;
+  left: 0;
+  top: 0;
   display: flex;
   flex-direction: column;
-  position: sticky;
-  top: 0;
-  border-right: 1px solid #1e293b;
-  font-family: 'Inter', system-ui, sans-serif;
+  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  
+  /* 🌟 A MÁGICA PARA NÃO TER ROLAGEM 🌟 */
+  overflow: hidden; 
 }
 
-/* --- LOGO --- */
-.sidebar-logo h1 {
-  color: #c5a059;
+.sidebar-logo {
+  padding: 15px 0; /* Reduzi o respiro do logo */
   text-align: center;
-  margin: 25px 0; /* Diminuído um pouco o espaço do logo */
-  font-size: 26px;
-  font-weight: 800;
-  letter-spacing: 3px; 
 }
 
-/* --- ÁREA DE NAVEGAÇÃO --- */
+.sidebar-logo h1 {
+  font-size: 1.6rem; /* Logo um pouco menor para ganhar espaço */
+  letter-spacing: 3px;
+  margin: 0 !important;
+}
+
 .sidebar-nav {
   display: flex;
   flex-direction: column;
+  padding: 10px;
   flex: 1;
-  overflow-y: auto;
-  padding-bottom: 20px;
+  /* Garante que os itens tentem se ajustar ao espaço disponível */
+  justify-content: flex-start; 
 }
 
-.sidebar-nav::-webkit-scrollbar { width: 4px; }
-.sidebar-nav::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
-
-/* --- OS BOTÕES (LINKS) --- */
 .menu-item {
+  text-decoration: none;
+  color: #94a3b8;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 10px 16px; /* DIMINUÍDO: De 12px para 10px (Mais fino) */
-  margin: 2px 20px;   /* DIMINUÍDO: De 4px para 2px (Mais próximos um do outro) */
-  color: #ffffff; 
-  text-decoration: none;
-  font-size: 15px;
-  font-weight: 500;
-  border-radius: 10px; 
+  
+  /* 🌟 AJUSTE DE ALTURA DOS ITENS 🌟 */
+  padding: 8px 15px; 
+  margin: 2px 0;
+  
+  border-radius: 8px;
   transition: all 0.2s ease;
+  
+  /* 🌟 FONTE SLIM 🌟 */
+  font-size: 0.88rem; 
+  font-weight: 500;
 }
 
 .menu-item i {
-  font-size: 18px;
-  width: 22px;
+  margin-right: 12px;
+  width: 20px;
   text-align: center;
-  transition: transform 0.2s;
+  font-size: 1rem;
 }
 
 .menu-item:hover {
-  color: #f8fafc; 
-  background-color: rgba(255, 255, 255, 0.05); 
+  background-color: rgba(197, 160, 89, 0.1);
+  color: white;
 }
 
-.menu-item:hover i {
-  transform: scale(1.15); 
-}
-
-/* --- BOTÃO ATIVO (A PÁGINA ATUAL) --- */
 .menu-item.active {
-  background-color: #c5a059; 
-  color: #0f172a; 
+  background-color: #c5a059; /* Dourado Celebre */
+  color: #0f172a;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.25); 
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
 }
 
-/* --- LINHAS DIVISÓRIAS MAIS VISÍVEIS --- */
+/* DIVISORES MAIS DISCRETOS */
 .sidebar-divider {
   height: 1px;
-  background-color: rgba(255, 255, 255, 0.15); /* Aumentei a opacidade para a linha aparecer mais */
-  margin: 8px 20px; /* DIMINUÍDO: De 15px para 8px (Gruda mais os blocos) */
+  background: rgba(148, 163, 184, 0.1);
+  margin: 8px 15px;
+}
+
+/* AJUSTE PARA O CONTEÚDO PRINCIPAL NÃO FICAR POR BAIXO */
+/* (Você deve ter isso no seu App.css ou Main.css) */
+.main-content {
+  margin-left: 250px;
+  padding: 20px;
+  width: calc(100% - 250px);
 }

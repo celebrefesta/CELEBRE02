@@ -8,18 +8,25 @@
   --texto-principal: #0f172a;
   --texto-secundario: #64748b;
   --borda: #e2e8f0;
-  --largura-menu: 0px; 
+  
+  /* 🌟 LARGURA PADRÃO DO MENU (250px) 🌟 */
+  --largura-menu: 250px; 
 }
 
 /* --- ATIVAÇÃO DO MODO NOTURNO --- */
 [data-theme='dark'] {
-  --azul-escuro: #f1f5f9; /* Inverte para o texto ficar claro */
-  --dourado: #c5a059;    /* Mantém o dourado da Ágape */
-  --fundo-cinza: #0f172a; /* Fundo agora é o azul escuro */
-  --branco: #1e293b;      /* Cards ficam em um azul petróleo */
+  --azul-escuro: #f1f5f9;
+  --dourado: #c5a059;
+  --fundo-cinza: #0f172a;
+  --branco: #1e293b;
   --texto-principal: #f1f5f9;
   --texto-secundario: #94a3b8;
   --borda: #334155;
+}
+
+/* 🌟 REGRA PARA O CATÁLOGO (ESCONDE O ESPAÇO DO MENU) 🌟 */
+.no-navbar {
+  --largura-menu: 0px !important;
 }
 
 /* --- RESET DE SEGURANÇA --- */
@@ -27,7 +34,7 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  transition: background-color 0.3s ease, color 0.3s ease; /* Transição suave entre temas */
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body {
@@ -44,12 +51,19 @@ body {
   width: 100%;
 }
 
+/* O conteúdo principal agora respeita a variável de largura */
 main, .main-content, .page-layout {
   flex: 1;
-  margin-left: var(--largura-menu); 
+  margin-left: var(--largura-menu); /* Empurra o conteúdo para a direita */
   padding: 20px;
   background-color: var(--fundo-cinza);
   min-height: 100vh;
+  transition: margin-left 0.3s ease; /* Transição suave ao entrar no catálogo */
+}
+
+/* Se for catálogo, removemos o padding para a vitrine ocupar tudo */
+.no-navbar main, .no-navbar .main-content {
+  padding: 0;
 }
 
 /* --- CLASSES CURINGAS (Style Guide) --- */
@@ -59,6 +73,7 @@ main, .main-content, .page-layout {
   font-size: 24px;
   font-weight: 800;
   text-transform: uppercase;
+  margin-bottom: 20px;
 }
 
 .content-card, .main-card, .form-widescreen {
@@ -79,8 +94,8 @@ input, select, textarea {
 
 /* Botão Padrão Celebre */
 .btn-primary-celebre, .btn-salvar, .btn-novo-cliente {
-  background-color: #0f172a !important; /* Mantém o azul escuro fixo em botões se preferir */
-  color: white !important;
+  background-color: var(--azul-escuro) !important; 
+  color: var(--fundo-cinza) !important;
   padding: 10px 24px;
   border-radius: 8px;
   font-weight: 700;
@@ -88,19 +103,24 @@ input, select, textarea {
   cursor: pointer;
   display: inline-flex;
   align-items: center;
+  transition: opacity 0.2s;
 }
+
+.btn-primary-celebre:hover {
+  opacity: 0.9;
+}
+
 /* =========================================
    ACESSIBILIDADE DE LEITURA (ZOOM)
    ========================================= */
 html[data-font-size="ampliado"] body {
-  zoom: 1.08; /* Aumenta toda a interface em 8% de forma proporcional */
+  zoom: 1.08;
 }
 
-/* Para navegadores Firefox (que lidam com zoom de forma diferente) */
 @-moz-document url-prefix() {
   html[data-font-size="ampliado"] body {
     transform: scale(1.08);
     transform-origin: top left;
-    width: 92.5%; /* Compensa o aumento da escala para não gerar rolagem horizontal */
+    width: 92.5%;
   }
 }

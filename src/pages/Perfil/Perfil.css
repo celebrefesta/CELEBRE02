@@ -138,3 +138,31 @@
 [data-theme='dark'] .btn-save-perfil:hover {
     background: #b48a3c;
 }
+
+/* Botões e links específicos para seção Assinatura / Empresa */
+.btn-edit-config {
+    background: transparent;
+    border: 1px dashed var(--borda);
+    padding: 8px 12px;
+    border-radius: 8px;
+    color: var(--texto-principal);
+    text-decoration: none;
+    font-weight: 700;
+}
+.btn-edit-config:hover { background: rgba(0,0,0,0.03); }
+
+.btn-change-plan, .btn-update-payment {
+    background: #0f172a;
+    color: white;
+    border: none;
+    padding: 10px 14px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 700;
+}
+.btn-change-plan:hover, .btn-update-payment:hover { transform: translateY(-2px); }
+
+@media (max-width: 900px) {
+  .perfil-container { grid-template-columns: 1fr; }
+  .input-row { flex-direction: column; }
+}

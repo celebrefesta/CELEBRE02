@@ -39,19 +39,19 @@ import Relatorios from './pages/Relatorios/Relatorios';
 import Configuracoes from './pages/Configuracoes/Configuracoes';
 import Perfil from './pages/Perfil/Perfil';
 import Moodboard from './pages/Moodboard/Moodboard';
+import Catalogo from './pages/Catalago/Catalago'; // Mantido com a grafia 'Catalago' da sua pasta
 
 
 const AppContent = () => {
   const location = useLocation();
   
-  // Verifica se deve mostrar o menu
-  const showNavbar = !location.pathname.includes('/assinatura');
+  // 🌟 AQUI ESTÁ A MÁGICA: Esconde o menu mestre na Assinatura e no Catálogo 🌟
+  const showNavbar = !location.pathname.includes('/assinatura') && !location.pathname.includes('/catalogo');
 
   return (
     <div className={`App ${!showNavbar ? 'no-navbar' : ''}`}>
       {showNavbar && <Navbar />}
       
-      {/* Removemos o style={{ marginLeft... }} daqui para tirar o espaço duplo */}
       <main className="main-content">
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -78,6 +78,7 @@ const AppContent = () => {
           <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/moodboard" element={<Moodboard />} />
+          <Route path="/catalogo" element={<Catalogo />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/perfil" element={<Perfil />} />
         </Routes>

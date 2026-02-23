@@ -15,7 +15,6 @@ const Navbar = () => {
           <i className="fas fa-th-large"></i> <span>Início</span>
         </NavLink>
 
-        {/* LINHA ADICIONADA AQUI (Conforme seu desenho) */}
         <div className="sidebar-divider"></div>
 
         {/* --- GRUPO 1: ATENDIMENTO & VENDAS --- */}
@@ -63,6 +62,11 @@ const Navbar = () => {
 
         <NavLink to="/moodboard" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
           <i className="fas fa-palette"></i> <span>Moodboard</span>
+        </NavLink>
+
+        {/* 🌟 AQUI ESTÁ O NOVO BOTÃO DO CATÁLOGO 🌟 */}
+        <NavLink to="/catalogo" className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <i className="fas fa-store"></i> <span>Catálogo</span>
         </NavLink>
 
         <div className="sidebar-divider"></div>
