@@ -1,6 +1,8 @@
-/* --- DNA DO SISTEMA CELEBRE --- */
+/* =====================================================
+   🎨 DNA DO SISTEMA CELEBRE
+===================================================== */
+
 :root {
-  /* Cores para o Modo Diurno (Padrão) */
   --azul-escuro: #0f172a;
   --dourado: #c5a059;
   --fundo-cinza: #f1f5f9;
@@ -8,12 +10,10 @@
   --texto-principal: #0f172a;
   --texto-secundario: #64748b;
   --borda: #e2e8f0;
-  
-  /* 🌟 LARGURA PADRÃO DO MENU (250px) 🌟 */
-  --largura-menu: 250px; 
+  --largura-menu: 250px;
 }
 
-/* --- ATIVAÇÃO DO MODO NOTURNO --- */
+/* DARK MODE */
 [data-theme='dark'] {
   --azul-escuro: #f1f5f9;
   --dourado: #c5a059;
@@ -24,103 +24,197 @@
   --borda: #334155;
 }
 
-/* 🌟 REGRA PARA O CATÁLOGO (ESCONDE O ESPAÇO DO MENU) 🌟 */
+/* MOBILE REMOVE MENU LATERAL */
+@media (max-width: 768px) {
+  :root {
+    --largura-menu: 0px;
+  }
+}
+
 .no-navbar {
   --largura-menu: 0px !important;
 }
 
-/* --- RESET DE SEGURANÇA --- */
+/* =====================================================
+   🌎 BASE GLOBAL (ESCALA CORRIGIDA)
+===================================================== */
+
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+html {
+  font-size: 100%;
 }
 
 body {
   background-color: var(--fundo-cinza);
   color: var(--texto-principal);
   font-family: 'Inter', sans-serif;
+  font-size: 14px; /* 🔥 CORRIGE O DESKTOP GIGANTE */
   overflow-x: hidden;
 }
 
-/* --- ESTRUTURA BASE --- */
+/* =====================================================
+   📦 ESTRUTURA BASE
+===================================================== */
+
 .App {
   display: flex;
   min-height: 100vh;
   width: 100%;
 }
 
-/* O conteúdo principal agora respeita a variável de largura */
-main, .main-content, .page-layout {
+main,
+.main-content,
+.page-layout {
   flex: 1;
-  margin-left: var(--largura-menu); /* Empurra o conteúdo para a direita */
-  padding: 20px;
+  margin-left: var(--largura-menu);
+  padding: 24px;
   background-color: var(--fundo-cinza);
   min-height: 100vh;
-  transition: margin-left 0.3s ease; /* Transição suave ao entrar no catálogo */
 }
 
-/* Se for catálogo, removemos o padding para a vitrine ocupar tudo */
-.no-navbar main, .no-navbar .main-content {
-  padding: 0;
-}
+/* =====================================================
+   📦 COMPONENTES
+===================================================== */
 
-/* --- CLASSES CURINGAS (Style Guide) --- */
-
-.page-title {
-  color: var(--texto-principal);
-  font-size: 24px;
-  font-weight: 800;
-  text-transform: uppercase;
-  margin-bottom: 20px;
-}
-
-.content-card, .main-card, .form-widescreen {
+.content-card,
+.main-card,
+.form-widescreen,
+.dashboard-card {
   background: var(--branco);
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border-radius: 14px;
+  padding: 22px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+  border: 1px solid var(--borda);
   width: 100%;
-  border: 1px solid var(--borda);
 }
 
-/* Ajuste nos inputs para respeitarem o tema */
-input, select, textarea {
-  background-color: var(--branco);
-  color: var(--texto-principal);
-  border: 1px solid var(--borda);
-}
-
-/* Botão Padrão Celebre */
-.btn-primary-celebre, .btn-salvar, .btn-novo-cliente {
-  background-color: var(--azul-escuro) !important; 
-  color: var(--fundo-cinza) !important;
-  padding: 10px 24px;
-  border-radius: 8px;
-  font-weight: 700;
+.btn-primary-celebre,
+.btn-salvar,
+.btn-novo-cliente,
+.btn-acao {
+  background-color: var(--azul-escuro);
+  color: var(--branco);
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 0.75rem;
   border: none;
   cursor: pointer;
   display: inline-flex;
+  justify-content: center;
   align-items: center;
-  transition: opacity 0.2s;
+  gap: 6px;
+  text-transform: uppercase;
 }
 
-.btn-primary-celebre:hover {
-  opacity: 0.9;
+/* =====================================================
+   🏠 DASHBOARD DESKTOP
+===================================================== */
+
+.dashboard-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 28px;
 }
 
-/* =========================================
-   ACESSIBILIDADE DE LEITURA (ZOOM)
-   ========================================= */
-html[data-font-size="ampliado"] body {
-  zoom: 1.08;
+.welcome-text h1 {
+  font-size: 1.8rem;
+  margin-bottom: 4px;
 }
 
-@-moz-document url-prefix() {
-  html[data-font-size="ampliado"] body {
-    transform: scale(1.08);
-    transform-origin: top left;
-    width: 92.5%;
+.welcome-text p {
+  color: var(--texto-secundario);
+}
+
+.header-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+}
+
+/* =====================================================
+   📱 MOBILE REAL (FORÇADO)
+===================================================== */
+
+@media (max-width: 768px) {
+
+  main,
+  .main-content,
+  .page-layout {
+    margin-left: 0 !important;
+    padding: 16px !important;
   }
+
+  /* HEADER */
+  .dashboard-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+  }
+
+  .welcome-text h1 {
+    font-size: 1.4rem !important;
+  }
+
+  .welcome-text p {
+    font-size: 0.85rem !important;
+  }
+
+  /* BOTÕES EM UMA LINHA */
+  .header-actions {
+    display: flex !important;
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  .header-actions button {
+    flex: 1 !important;
+    height: 52px !important;
+    font-size: 0.6rem !important;
+    padding: 6px 4px !important;
+    flex-direction: column !important;
+  }
+
+  .header-actions i {
+    font-size: 1rem !important;
+  }
+
+  /* CARDS EM 2 COLUNAS */
+  .dashboard-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 12px !important;
+  }
+
+  .dashboard-card {
+    padding: 16px !important;
+  }
+
+}
+
+/* =====================================================
+   📱 LISTAGENS / FORMULÁRIOS
+===================================================== */
+
+@media (max-width: 768px) {
+
+  table {
+    font-size: 0.75rem;
+  }
+
+  .content-card,
+  .form-widescreen {
+    padding: 16px;
+  }
+
 }

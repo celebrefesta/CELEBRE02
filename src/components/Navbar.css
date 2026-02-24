@@ -1,29 +1,44 @@
-/* Navbar.css - VERSÃO SLIM FIXA */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap');
 
+/* =========================================
+   BARRA LATERAL (SIDEBAR)
+   ========================================= */
 .sidebar {
   width: 250px;
-  height: 100vh; /* Ocupa exatamente a altura da tela */
-  background-color: #0f172a; /* Azul escuro Celebre */
+  height: 100vh;
+  background-color: #0f172a;
   color: white;
   position: fixed;
-  left: 0;
+  left: 0; /* Padrão Desktop */
   top: 0;
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
-  z-index: 1000;
-  
-  /* 🌟 A MÁGICA PARA NÃO TER ROLAGEM 🌟 */
+  z-index: 2000; /* Aumentado para cobrir tudo no mobile */
   overflow: hidden; 
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* 📱 AJUSTE MOBILE: Esconde a barra lateral */
+@media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%); /* Joga para fora da tela */
+  }
+
+  /* Classe que o React vai aplicar para abrir */
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
 }
 
 .sidebar-logo {
-  padding: 15px 0; /* Reduzi o respiro do logo */
+  padding: 15px 0;
   text-align: center;
 }
 
 .sidebar-logo h1 {
-  font-size: 1.6rem; /* Logo um pouco menor para ganhar espaço */
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1.6rem;
   letter-spacing: 3px;
   margin: 0 !important;
 }
@@ -33,7 +48,6 @@
   flex-direction: column;
   padding: 10px;
   flex: 1;
-  /* Garante que os itens tentem se ajustar ao espaço disponível */
   justify-content: flex-start; 
 }
 
@@ -42,15 +56,10 @@
   color: #94a3b8;
   display: flex;
   align-items: center;
-  
-  /* 🌟 AJUSTE DE ALTURA DOS ITENS 🌟 */
-  padding: 8px 15px; 
+  padding: 12px 15px; /* Aumentado um pouco para facilitar o toque no dedo */
   margin: 2px 0;
-  
   border-radius: 8px;
   transition: all 0.2s ease;
-  
-  /* 🌟 FONTE SLIM 🌟 */
   font-size: 0.88rem; 
   font-weight: 500;
 }
@@ -68,23 +77,104 @@
 }
 
 .menu-item.active {
-  background-color: #c5a059; /* Dourado Celebre */
+  background-color: #c5a059;
   color: #0f172a;
   font-weight: 700;
   box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
 }
 
-/* DIVISORES MAIS DISCRETOS */
 .sidebar-divider {
   height: 1px;
   background: rgba(148, 163, 184, 0.1);
   margin: 8px 15px;
 }
 
-/* AJUSTE PARA O CONTEÚDO PRINCIPAL NÃO FICAR POR BAIXO */
-/* (Você deve ter isso no seu App.css ou Main.css) */
+/* =========================================
+   CONTEÚDO PRINCIPAL (MAIN CONTENT)
+   ========================================= */
 .main-content {
   margin-left: 250px;
   padding: 20px;
   width: calc(100% - 250px);
+  min-height: 100vh;
+  transition: margin 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0; /* No mobile ele ocupa a tela toda */
+    width: 100%;
+    padding: 15px;
+    padding-top: 70px; /* Espaço para o botão hambúrguer no topo */
+  }
+}
+
+/* =========================================
+   BOTÃO HAMBÚRGUER (SÓ APARECE NO CELULAR)
+   ========================================= */
+.mobile-menu-btn {
+  display: none; /* Escondido no PC */
+}
+
+@media (max-width: 768px) {
+  .mobile-menu-btn {
+    display: block;
+    position: fixed;
+    top: 15px;
+    left: 15px;
+    z-index: 2100;
+    background: #0f172a;
+    color: white;
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-size: 20px;
+    cursor: pointer;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  }
+}
+
+/* FUNDO ESCURO AO ABRIR O MENU (OVERLAY) */
+.sidebar-overlay {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .sidebar-overlay.active {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1900;
+  }
+}
+
+/* =========================================
+   ESTRUTURA GLOBAL PARA APP (MOBILE)
+   ========================================= */
+
+/* Garante que o container principal não tenha margens no celular */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0 !important; /* Mata a margem da sidebar do PC */
+    width: 100% !important;   /* Ocupa a largura total */
+    padding: 15px !important;
+    padding-top: 80px !important; /* Dá espaço para o botão de menu fixo */
+    box-sizing: border-box;
+    overflow-x: hidden; /* Evita que a tela "dance" para os lados */
+  }
+
+  /* Faz os cards de resumo (Início) ficarem em uma coluna só */
+  .dashboard-grid, .config-grid-columns, .config-empresa-grid {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 15px !important;
+    width: 100% !important;
+  }
+
+  /* Ajusta os títulos para não ficarem gigantes no celular */
+  h1 {
+    font-size: 1.8rem !important;
+    text-align: left;
+  }
 }

@@ -480,16 +480,6 @@
 .autocomplete-results li:last-child { border-bottom: none; }
 .autocomplete-overlay { position: fixed; inset: 0; z-index: 1050; background: transparent; }
 
-/* ── RESPONSIVO ──────────────────────── */
-@media (max-width: 900px) {
-  .agenda-container { flex-direction: column; height: auto; }
-  .agenda-sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--borda); padding: 16px; }
-  .agenda-main { height: calc(100vh - 400px); }
-  .view-switcher-wrapper { flex-direction: column; align-items: flex-end; gap: 8px; }
-  .calendar-grid { grid-auto-rows: minmax(100px, 1fr); }
-  .form-row { flex-direction: column; gap: 20px; }
-}
-
 /* =========================================
    TOAST MESSAGE (FEEDBACK VISUAL)
    ========================================= */
@@ -647,3 +637,121 @@
 .compra-nome { font-size: 1.05rem; font-weight: 800; color: var(--texto-principal); }
 .compra-meta { display: flex; flex-wrap: wrap; gap: 16px; font-size: 0.9rem; color: #64748b; font-weight: 500; }
 .prazo-urgente { color: #ef4444 !important; font-weight: 800; }
+
+/* =========================================
+   📱 RESPONSIVIDADE DE ELITE (MOBILE)
+   ========================================= */
+@media (max-width: 900px) {
+  .agenda-container { 
+    flex-direction: column; 
+    height: auto; 
+    min-height: 100vh;
+  }
+
+  .agenda-sidebar { 
+    width: 100%; 
+    border-right: none; 
+    border-bottom: 1px solid var(--borda); 
+    padding: 15px; 
+    gap: 15px;
+  }
+
+  /* 🌟 1. NOVA BARRA DE FILTROS (Painel de Tags Compactas) */
+  .filtro-box {
+    display: flex !important;
+    flex-wrap: wrap !important; /* Faz as tags quebrarem de linha organizadamente */
+    gap: 8px !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+  }
+  
+  .filtro-titulo { display: none !important; } 
+
+  .filtro-item {
+    margin: 0 !important;
+    background: var(--branco) !important;
+    border: 1px solid var(--borda) !important;
+    padding: 8px 12px !important;
+    border-radius: 8px !important; /* Formato quadradinho moderno (tipo botões do iPhone) */
+    font-size: 0.75rem !important;
+    flex: 1 1 auto !important; /* Faz eles esticarem para preencher os buracos */
+    justify-content: center !important;
+    text-align: center !important;
+  }
+
+  .filtro-item.ativo {
+    background: var(--azul-escuro) !important;
+    color: var(--branco) !important;
+    border-color: var(--azul-escuro) !important;
+  }
+
+  .btn-exportar { display: none !important; } 
+
+  /* 🌟 2. CABEÇALHO DO MÊS (Fim do botão Hoje "Feio") */
+  .agenda-header {
+    flex-direction: column;
+    gap: 15px;
+    padding: 15px !important;
+  }
+
+  /* Cria uma grade rígida para o mês e as setas não quebrarem */
+  .nav-datas {
+    display: grid !important;
+    grid-template-columns: 40px 1fr 40px !important; 
+    align-items: center !important;
+    justify-items: center !important;
+    width: 100% !important;
+    gap: 5px !important;
+  }
+
+  /* Seta Esquerda */
+  .nav-datas > button:first-of-type { grid-column: 1; margin: 0 !important; }
+  
+  /* Título do Mês Centralizado */
+  .nav-datas > span.mes-ano-titulo { 
+    grid-column: 2; 
+    font-size: 1.15rem !important; 
+    text-align: center;
+  }
+  
+  /* Seta Direita */
+  .nav-datas > button:nth-of-type(2) { grid-column: 3; margin: 0 !important; }
+  
+  /* Botão Hoje - Pílula centralizada abaixo do mês */
+  .nav-datas > button.btn-hoje { 
+    grid-column: 1 / -1; /* Ocupa a linha toda na grade */
+    margin-top: 10px !important;
+    padding: 6px 24px !important;
+    border-radius: 20px !important;
+    font-size: 0.75rem !important;
+    font-weight: 700 !important;
+    background: #f1f5f9 !important;
+    color: #475569 !important;
+    border: 1px solid #cbd5e1 !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    width: auto !important;
+  }
+
+  /* Botões de Calendário / Lista (Mais limpos) */
+  .view-switcher-wrapper { width: 100%; flex-direction: column; align-items: stretch; gap: 10px; }
+  .view-switcher { justify-content: center; width: 100%; background: #f1f5f9 !important; padding: 4px !important; border-radius: 10px !important;}
+  .view-btn { flex: 1; text-align: center; padding: 10px !important; font-size: 0.85rem !important; } 
+
+  /* 🌟 3. CALENDÁRIO OTIMIZADO PARA O DEDO */
+  .calendar-grid { grid-auto-rows: minmax(75px, 1fr) !important; }
+  .weekday-header { padding: 8px 2px !important; font-size: 0.6rem !important; }
+  .day-cell { padding: 4px !important; }
+  .day-number { width: 20px !important; height: 20px !important; font-size: 0.75rem !important; margin-bottom: 2px !important; }
+  .event-time { display: none !important; } 
+  .event-tag { font-size: 0.55rem !important; padding: 3px !important; }
+
+  /* 🌟 4. CORREÇÕES DE MODAL E CARDS */
+  .modal-content.modal-form-content { width: 100% !important; max-width: 95vw !important; margin: 10px !important; padding: 20px !important; }
+  .form-row { flex-direction: column !important; gap: 15px !important; }
+
+  .list-item-card { flex-direction: column !important; align-items: flex-start !important; padding: 15px !important; }
+  .list-tipo-badge { align-self: flex-start !important; margin-top: 10px !important; }
+}

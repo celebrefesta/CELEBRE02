@@ -48,7 +48,6 @@ const Clientes = () => {
     navigate('/cadastro-cliente', { state: { clienteEditando: cliente } });
   };
 
-  // Função rápida para mudar a situação direto da tabela
   const alternarSituacaoFinanceira = async (cliente) => {
     const novaSituacao = cliente.situacaoFinanceira === 'inadimplente' ? 'adimplente' : 'inadimplente';
     if (window.confirm(`Mudar a situação deste cliente para ${novaSituacao.toUpperCase()}?`)) {
@@ -61,7 +60,6 @@ const Clientes = () => {
     }
   };
 
-  // --- INTELIGÊNCIA DOS CARDS (NOVOS E ANIVERSARIANTES) ---
   const dataAtual = new Date();
   const mesAtual = dataAtual.getMonth();
   const anoAtual = dataAtual.getFullYear();
@@ -122,7 +120,7 @@ const Clientes = () => {
 
       <div className="main-card">
         
-        {/* --- BARRA DE BUSCA PREMIUM --- */}
+        {/* --- BARRA DE BUSCA --- */}
         <div className="filter-wrapper">
           <input 
             className="search-input" 
@@ -144,7 +142,6 @@ const Clientes = () => {
                 <tr>
                   <th width="35%">CLIENTE / EMPRESA</th>
                   <th>CONTATO</th>
-                  {/* INVERTIDO AQUI: LOCALIZAÇÃO VEM ANTES DA SITUAÇÃO */}
                   <th>LOCALIZAÇÃO</th>
                   <th style={{ textAlign: 'center' }}>SITUAÇÃO</th>
                   <th style={{ textAlign: 'right' }}>AÇÕES</th>
@@ -159,7 +156,6 @@ const Clientes = () => {
                          (c.cnpj && c.cnpj.includes(termo));
                 }).map(c => {
                   
-                  // Lógica para definir a situação (se não tiver, é adimplente por padrão)
                   const isAdimplente = c.situacaoFinanceira !== 'inadimplente';
 
                   return (
@@ -177,7 +173,6 @@ const Clientes = () => {
                       <div className="user-details">
                         <strong>
                           {c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome}
-                          {/* Coloca um icone discreto de prédio se for PJ */}
                           {c.tipoPessoa === 'juridica' && <span style={{fontSize:'12px', marginLeft:'5px'}} title="Empresa">🏢</span>}
                         </strong>
                         <span className="sub-detail" style={{color: '#64748b', fontSize: '11px', marginTop: '2px'}}>
@@ -196,12 +191,12 @@ const Clientes = () => {
                       </div>
                     </td>
 
-                    {/* COLUNA 3: LOCALIZAÇÃO (MOVIDA PARA CÁ) */}
+                    {/* COLUNA 3: LOCALIZAÇÃO */}
                     <td className="local-text" style={{color: '#475569', fontSize: '13px', fontWeight: '500'}}>
                       📍 {c.cidade ? `${c.cidade}/${c.uf}` : 'Não informada'}
                     </td>
 
-                    {/* COLUNA 4: SITUAÇÃO FINANCEIRA (MOVIDA PARA CÁ) */}
+                    {/* COLUNA 4: SITUAÇÃO FINANCEIRA */}
                     <td style={{ textAlign: 'center' }}>
                       <span 
                         onClick={() => alternarSituacaoFinanceira(c)}
@@ -224,11 +219,13 @@ const Clientes = () => {
                       </span>
                     </td>
 
-                    {/* COLUNA 5: AÇÕES */}
-                    <td style={{ textAlign: 'right' }}>
-                      <button onClick={() => editarCliente(c)} className="action-icon" title="Editar">✏️</button>
-                      <button onClick={() => excluirCliente(c.id)} className="action-icon delete" title="Excluir">🗑️</button>
-                    </td>
+                   {/* COLUNA 5: AÇÕES */}
+                <td className="td-acoes">
+              <div className="acoes-wrapper">
+            <button onClick={() => editarCliente(c)} className="btn-mobile-acao btn-editar">✏️ Editar</button>
+           <button onClick={() => excluirCliente(c.id)} className="btn-mobile-acao btn-excluir">🗑️ Excluir</button>
+       </div> 
+      </td>
 
                   </tr>
                 )})}

@@ -1,0 +1,17 @@
+{
+  "short_name": "Celebre",
+  "name": "Celebre - Gestão de Festas",
+  "description": "Sistema de gestão para decoradoras de festas",
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "16x16 32x32 48x48 64x64",
+      "type": "image/x-icon"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#0f172a",
+  "background_color": "#ffffff"
+}

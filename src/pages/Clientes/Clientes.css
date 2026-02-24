@@ -1,5 +1,5 @@
 /* =========================================
-   1. ESTRUTURA GLOBAL (PADRÃO CELEBRE - MODO NOTURNO)
+   1. ESTRUTURA GLOBAL E VARIÁVEIS
    ========================================= */
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
 
@@ -9,6 +9,7 @@
   min-height: 100vh;
   width: 100%;
   box-sizing: border-box; 
+  overflow-x: hidden; 
   transition: background-color 0.3s ease;
 }
 
@@ -56,6 +57,7 @@
   text-decoration: none;
   transition: 0.2s;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+  white-space: nowrap;
 }
 
 [data-theme='dark'] .btn-novo-cliente {
@@ -64,7 +66,7 @@
 }
 
 /* =========================================
-   3. CARDS DE ESTATÍSTICAS (4 COLUNAS)
+   3. CARDS DE ESTATÍSTICAS
    ========================================= */
 .stats-row {
   display: grid;
@@ -112,7 +114,7 @@
 }
 
 /* =========================================
-   4. TABELA E BUSCA
+   4. TABELA (DESKTOP) E BUSCA
    ======================================== */
 .main-card {
   background: var(--branco);
@@ -142,52 +144,6 @@
   background-color: var(--fundo-cinza);
 }
 
-/* =========================================
-   5. ALINHAMENTO AVATAR + NOME (O PROBLEMA ESTAVA AQUI)
-   ========================================= */
-.user-info { 
-  display: flex; 
-  align-items: center; /* Alinha verticalmente no centro */
-  gap: 15px; /* Espaço entre a foto e o texto */
-  text-align: left;
-}
-
-.user-avatar-img, .user-avatar { 
-  width: 45px; 
-  height: 45px; 
-  border-radius: 50%; 
-  object-fit: cover; 
-  flex-shrink: 0; /* Impede a imagem de esmagar */
-  background: #e2e8f0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  color: #475569;
-}
-
-.user-details {
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.user-details strong { 
-  display: block; 
-  font-size: 14px; 
-  color: var(--texto-principal); 
-  line-height: 1.2;
-}
-
-.sub-detail { 
-  font-size: 11px; 
-  color: var(--texto-secundario); 
-  margin-top: 2px;
-}
-
-/* =========================================
-   6. TABELA E STATUS
-   ========================================= */
 .custom-table { width: 100%; border-collapse: collapse; }
 
 .custom-table th {
@@ -206,21 +162,163 @@
   color: var(--texto-principal);
 }
 
-.badge-tipo {
-  display: inline-block;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 12px;
-  font-weight: 700;
+/* ── DESIGN DOS BOTÕES DE AÇÃO (PC) ── */
+.td-acoes { text-align: right; }
+
+.acoes-wrapper {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
 }
 
-.badge-pf { background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; }
-.badge-pj { background-color: rgba(139, 92, 246, 0.1); color: #8b5cf6; }
-
-.action-icon {
-  background: none; border: none; cursor: pointer;
-  font-size: 22px; padding: 8px; border-radius: 6px;
-  color: var(--texto-secundario); transition: 0.2s;
+/* Botões como ícones discretos no Computador */
+.acoes-wrapper button {
+  background: none;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 8px;
+  border-radius: 6px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.action-icon:hover { background: var(--fundo-cinza); color: var(--texto-principal); }
+.acoes-wrapper .btn-editar:hover { 
+  background-color: #f1f5f9; 
+  border-color: #cbd5e1; 
+}
+
+.acoes-wrapper .btn-excluir:hover { 
+  background-color: #fef2f2; 
+  border-color: #fecaca; 
+  color: #dc2626; 
+}
+
+/* =========================================
+   5. ALINHAMENTO AVATAR + NOME
+   ========================================= */
+.user-info { 
+  display: flex; 
+  align-items: center; 
+  gap: 15px; 
+  text-align: left;
+}
+
+.user-avatar-img, .user-avatar { 
+  width: 45px; 
+  height: 45px; 
+  border-radius: 50%; 
+  object-fit: cover; 
+  flex-shrink: 0; 
+  background: #e2e8f0;
+}
+
+/* =========================================
+   📱 RESPONSIVIDADE MOBILE (< 900px)
+   ========================================= */
+@media (max-width: 900px) {
+
+  .dashboard-container { padding: 10px !important; }
+  
+  .dashboard-header { 
+    flex-direction: column !important; 
+    align-items: flex-start !important; 
+    gap: 12px !important; 
+  }
+  
+  .header-text h1 { font-size: 1.5rem !important; }
+  .btn-novo-cliente { width: 100% !important; justify-content: center !important; height: 48px !important; }
+
+  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
+  .card-stat { padding: 14px 16px !important; }
+
+  .main-card { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
+
+  .filter-wrapper { 
+    flex-direction: column !important; 
+    padding: 15px !important; 
+    background: var(--branco) !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--borda) !important;
+    margin-bottom: 15px !important;
+  }
+
+  /* Tabela vira Cards Individuais */
+  .custom-table, .custom-table tbody, .custom-table tr { 
+    display: block !important; 
+    width: 100% !important; 
+  }
+  
+  .custom-table thead { display: none !important; }
+
+  .custom-table tr {
+    margin-bottom: 15px !important;
+    border: 1px solid var(--borda) !important;
+    border-radius: 12px !important;
+    padding: 15px !important;
+    background: var(--branco) !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
+  }
+
+  .custom-table td { 
+    display: block !important; 
+    width: 100% !important; 
+    padding: 6px 0 !important; 
+    border-bottom: none !important; 
+    text-align: left !important;
+  }
+
+  .custom-table td.user-info { 
+    display: flex !important; 
+    flex-direction: row !important;
+    align-items: center !important; 
+    padding-bottom: 12px !important; 
+    border-bottom: 1px solid var(--fundo-cinza) !important; 
+    gap: 12px !important;
+    margin-bottom: 10px !important;
+  }
+
+  /* ── BOTÕES DE AÇÃO MOBILE (50/50 COM TEXTO) ── */
+  .custom-table td.td-acoes {
+    display: block !important;
+    width: 100% !important;
+    padding: 15px 0 0 0 !important;
+    margin-top: 10px !important;
+    border-top: 1px dashed var(--borda) !important;
+  }
+
+  .acoes-wrapper {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .acoes-wrapper button {
+    flex: 1 !important; 
+    height: 46px !important; 
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    border-radius: 10px !important;
+    font-size: 0.9rem !important;
+    font-weight: 700 !important;
+    border: 1px solid var(--borda) !important;
+    background-color: var(--fundo-cinza) !important;
+    padding: 0 !important;
+  }
+
+  /* Truque: Adiciona texto apenas no mobile sem mexer no JSX */
+  .acoes-wrapper .btn-editar::after { content: " Editar"; }
+  .acoes-wrapper .btn-excluir::after { content: " Excluir"; }
+
+  .acoes-wrapper .btn-excluir {
+    background-color: #fef2f2 !important;
+    color: #dc2626 !important;
+    border-color: #fecaca !important;
+  }
+}
