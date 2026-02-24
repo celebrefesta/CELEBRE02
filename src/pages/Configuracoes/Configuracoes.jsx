@@ -4,75 +4,65 @@ import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebas
 import './Configuracoes.css';
 
 const Configuracoes = () => {
-  const [abaAtiva, setAbaAtiva] = useState('aparencia');
+  const [abaAtiva, setAbaAtiva] = useState('empresa'); 
   
-  // Estados Visuais (Salvos no navegador)
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [fontSize, setFontSize] = useState(localStorage.getItem('fontSize') || 'padrao');
   
   const [config, setConfig] = useState({
-    categorias: [],
-    subcategorias: {},
-    localizacoes: [],
-    tamanhos: [],
-    metaFaturamento: 5000,
-    nomeEmpresa: 'Ágape Decorações',
-    cnpj: '',
-    telefone: '',
-    emailEmpresa: '',
-    endereco: '',
-    instagram: '', // Novo campo
-    logotipo: ''   // Novo campo
+    categorias: [], subcategorias: {}, localizacoes: [], tamanhos: [],
+    gruposTema: [], temasPorGrupo: {},
+    nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '',
+    endereco: '', instagram: '', logotipo: '', slogan: '', site: ''
   });
   const [loading, setLoading] = useState(true);
 
-  // Estados dos inputs de listas
-  const [inputCat, setInputCat] = useState('');
-  const [inputSub, setInputSub] = useState('');
-  const [inputLoc, setInputLoc] = useState('');
-  const [inputTam, setInputTam] = useState('');
+  const [inputCat, setInputCat] = useState(''); const [inputSub, setInputSub] = useState('');
+  const [inputLoc, setInputLoc] = useState(''); const [inputTam, setInputTam] = useState('');
   const [categoriaSelecionada, setCategoriaSelecionada] = useState('');
+  const [inputGrupoTema, setInputGrupoTema] = useState(''); const [inputTema, setInputTema] = useState('');
+  const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
 
-  // Aplica o tema e a fonte globalmente
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-font-size', fontSize);
-    
     localStorage.setItem('theme', theme);
     localStorage.setItem('fontSize', fontSize);
   }, [theme, fontSize]);
 
-  useEffect(() => {
-    buscarConfiguracoes();
-  }, []);
+  useEffect(() => { buscarConfiguracoes(); }, []);
 
   const buscarConfiguracoes = async () => {
     setLoading(true);
     try {
       const docRef = doc(db, "sistema", "parametros");
       const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) setConfig({ ...config, ...docSnap.data() });
-      else await setDoc(docRef, config);
-    } catch (e) { console.error("Erro ao buscar configs:", e); }
+      if (docSnap.exists()) {
+        const dados = docSnap.data();
+        setConfig(prev => ({
+          ...prev, ...dados,
+          gruposTema: dados.gruposTema || [], temasPorGrupo: dados.temasPorGrupo || {}
+        }));
+      } else { await setDoc(docRef, config); }
+    } catch (e) { console.error("Erro:", e); }
     setLoading(false);
   };
 
-  // --- FUNÇÕES DE LISTAS (ESTOQUE) ---
   const adicionarItem = async (campo, valor, subPath = null) => {
     if (!valor) return;
     const docRef = doc(db, "sistema", "parametros");
     try {
       if (subPath) {
-        const novasSub = { ...config.subcategorias };
-        if (!novasSub[subPath]) novasSub[subPath] = [];
-        novasSub[subPath].push(valor);
-        await updateDoc(docRef, { subcategorias: novasSub });
-        setInputSub('');
+        const objetoAtual = { ...config[campo] };
+        if (!objetoAtual[subPath]) objetoAtual[subPath] = [];
+        objetoAtual[subPath].push(valor);
+        await updateDoc(docRef, { [campo]: objetoAtual });
+        if (campo === 'subcategorias') setInputSub('');
+        if (campo === 'temasPorGrupo') setInputTema('');
       } else {
         await updateDoc(docRef, { [campo]: arrayUnion(valor) });
-        if(campo === 'categorias') setInputCat('');
-        if(campo === 'localizacoes') setInputLoc('');
-        if(campo === 'tamanhos') setInputTam('');
+        if(campo === 'categorias') setInputCat(''); if(campo === 'localizacoes') setInputLoc('');
+        if(campo === 'tamanhos') setInputTam(''); if(campo === 'gruposTema') setInputGrupoTema('');
       }
       buscarConfiguracoes();
     } catch (e) { alert("Erro ao adicionar."); }
@@ -83,55 +73,35 @@ const Configuracoes = () => {
     const docRef = doc(db, "sistema", "parametros");
     try {
       if (subPath) {
-        const novasSub = { ...config.subcategorias };
-        novasSub[subPath] = novasSub[subPath].filter(i => i !== valor);
-        await updateDoc(docRef, { subcategorias: novasSub });
-      } else {
-        await updateDoc(docRef, { [campo]: arrayRemove(valor) });
-      }
+        const objetoAtual = { ...config[campo] };
+        objetoAtual[subPath] = objetoAtual[subPath].filter(i => i !== valor);
+        await updateDoc(docRef, { [campo]: objetoAtual });
+      } else { await updateDoc(docRef, { [campo]: arrayRemove(valor) }); }
       buscarConfiguracoes();
     } catch (e) { alert("Erro ao remover."); }
   };
 
-  // --- FUNÇÕES DA EMPRESA E UPLOAD DE LOGO ---
-  const handleConfigChange = (campo, valor) => {
-    setConfig(prev => ({ ...prev, [campo]: valor }));
-  };
-
+  const handleConfigChange = (campo, valor) => setConfig(prev => ({ ...prev, [campo]: valor }));
   const salvarConfigTextual = async (campo, valor) => {
-    try {
-      const docRef = doc(db, "sistema", "parametros");
-      await updateDoc(docRef, { [campo]: valor });
-    } catch (error) {
-      console.error("Erro ao salvar dado da empresa:", error);
-    }
+    try { await updateDoc(doc(db, "sistema", "parametros"), { [campo]: valor }); } catch (e) { console.error(e); }
   };
 
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
       img.onload = async () => {
-        // Redimensiona o logo para não pesar o banco de dados (Max 400px)
-        const canvas = document.createElement('canvas');
-        const MAX_SIZE = 400;
+        const canvas = document.createElement('canvas'); const MAX_SIZE = 400;
         let w = img.width, h = img.height;
         if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } } 
         else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
         canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, w, h);
+        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
         const base64Logo = canvas.toDataURL('image/png', 0.9);
-        
         setConfig(prev => ({ ...prev, logotipo: base64Logo }));
-        
-        try {
-          const docRef = doc(db, "sistema", "parametros");
-          await updateDoc(docRef, { logotipo: base64Logo });
-        } catch (error) { console.error("Erro ao salvar logo:", error); }
+        try { await updateDoc(doc(db, "sistema", "parametros"), { logotipo: base64Logo }); } catch (e) { console.error(e); }
       };
       img.src = event.target.result;
     };
@@ -141,62 +111,34 @@ const Configuracoes = () => {
   const removerLogo = async () => {
     if(!window.confirm("Remover logotipo?")) return;
     setConfig(prev => ({ ...prev, logotipo: '' }));
-    try {
-      const docRef = doc(db, "sistema", "parametros");
-      await updateDoc(docRef, { logotipo: '' });
-    } catch (error) { console.error("Erro ao remover logo:", error); }
+    try { await updateDoc(doc(db, "sistema", "parametros"), { logotipo: '' }); } catch (e) { console.error(e); }
   };
 
-  if (loading) return <div className="loading-config" style={{padding: '40px'}}>Sincronizando Celebre...</div>;
+  if (loading) return <div className="loading-config">Carregando painel de controle...</div>;
 
   return (
     <div className="config-container fade-in">
-      <div className="dashboard-header">
-          <h1>CONFIGURAÇÕES</h1>
-          <p>Painel de controle da Ágape Decorações</p>
-      </div>
+      <header className="config-header-top">
+        <div className="header-titles">
+          <h1>Configurações do Sistema</h1>
+          <p>Painel de controle geral da {config.nomeEmpresa || 'sua empresa'}</p>
+        </div>
+      </header>
 
-      <div className="config-layout">
-        <aside className="config-menu">
-          <button className={abaAtiva === 'aparencia' ? 'active' : ''} onClick={() => setAbaAtiva('aparencia')}>🎨 Aparência Visual</button>
-          <button className={abaAtiva === 'listas' ? 'active' : ''} onClick={() => setAbaAtiva('listas')}>📦 Configuração pág. Estoque</button>
-          <button className={abaAtiva === 'empresa' ? 'active' : ''} onClick={() => setAbaAtiva('empresa')}>🏢 Minha Empresa</button>
-        </aside>
+      <nav className="config-top-tabs">
+        <button className={abaAtiva === 'listas' ? 'active' : ''} onClick={() => setAbaAtiva('listas')}>📦 Tabelas e Estoque</button>
+        <button className={abaAtiva === 'empresa' ? 'active' : ''} onClick={() => setAbaAtiva('empresa')}>🏢 Dados da Empresa</button>
+        <button className={abaAtiva === 'aparencia' ? 'active' : ''} onClick={() => setAbaAtiva('aparencia')}>🎨 Aparência</button>
+      </nav>
 
-        <main className="config-content">
-          
-          {/* ================================== ABA APARÊNCIA ================================== */}
-          {abaAtiva === 'aparencia' && (
-            <>
-              <div className="main-card theme-section">
-                <h3>🎨 Cores do Sistema</h3>
-                <p>Escolha o modo que melhor se adapta à sua visão.</p>
-                <div className="theme-switch-container">
-                  <button className={`theme-btn ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')}>☀️ Modo Diurno</button>
-                  <button className={`theme-btn ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')}>🌙 Modo Noturno</button>
-                </div>
-              </div>
-
-              <div className="main-card theme-section">
-                <h3>👓 Acessibilidade de Leitura</h3>
-                <p>Ajuste o tamanho da tela para uma leitura mais confortável.</p>
-                <div className="theme-switch-container">
-                  <button className={`theme-btn ${fontSize === 'padrao' ? 'active' : ''}`} onClick={() => setFontSize('padrao')}>
-                    <span style={{fontSize: '14px'}}>Aa</span> Tamanho Padrão
-                  </button>
-                  <button className={`theme-btn ${fontSize === 'ampliado' ? 'active' : ''}`} onClick={() => setFontSize('ampliado')}>
-                    <span style={{fontSize: '20px'}}>Aa</span> Tamanho Ampliado
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ================================== ABA LISTAS ================================== */}
-          {abaAtiva === 'listas' && (
-            <div className="config-grid-inner">
-              <div className="main-card config-section">
-                <h3>🏷️ Categorias</h3>
+      <main className="config-main-area">
+        
+        {abaAtiva === 'listas' && (
+          <div className="config-grid-columns">
+            <div className="config-col">
+              <div className="config-card">
+                <div className="card-top-bar blue-bar"></div>
+                <h3>🏷️ Categorias de Produto</h3>
                 <div className="add-item-box">
                   <input type="text" placeholder="Nova categoria..." value={inputCat} onChange={(e) => setInputCat(e.target.value)} />
                   <button className="btn-add" onClick={() => adicionarItem('categorias', inputCat)}>Add</button>
@@ -204,15 +146,16 @@ const Configuracoes = () => {
                 <ul className="config-list">
                   {config.categorias?.map(cat => (
                     <li key={cat} onClick={() => setCategoriaSelecionada(cat)} className={categoriaSelecionada === cat ? 'active' : ''}>
-                      {cat} <span className="del-icon" onClick={(e) => {e.stopPropagation(); removerItem('categorias', cat)}}>🗑️</span>
+                      {cat} <span className="del-icon" onClick={(e) => {e.stopPropagation(); removerItem('categorias', cat)}}>✕</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="main-card config-section">
+              <div className="config-card">
+                <div className="card-top-bar blue-bar"></div>
                 <h3>📂 Subcategorias {categoriaSelecionada && `de "${categoriaSelecionada}"`}</h3>
-                {!categoriaSelecionada ? <div className="empty-state">Selecione uma categoria ao lado.</div> : (
+                {!categoriaSelecionada ? <div className="empty-state">Selecione uma categoria acima.</div> : (
                   <>
                     <div className="add-item-box">
                       <input type="text" placeholder="Nova subcategoria..." value={inputSub} onChange={(e) => setInputSub(e.target.value)} />
@@ -220,160 +163,189 @@ const Configuracoes = () => {
                     </div>
                     <ul className="config-list">
                       {config.subcategorias[categoriaSelecionada]?.map(sub => (
-                        <li key={sub}>{sub} <span className="del-icon" onClick={() => removerItem('subcategorias', sub, categoriaSelecionada)}>🗑️</span></li>
+                        <li key={sub}>{sub} <span className="del-icon" onClick={() => removerItem('subcategorias', sub, categoriaSelecionada)}>✕</span></li>
                       ))}
                     </ul>
                   </>
                 )}
               </div>
+            </div>
 
-              <div className="main-card config-section">
-                <h3>📍 Localizações de Estoque</h3>
+            <div className="config-col">
+              <div className="config-card">
+                <div className="card-top-bar gold-bar"></div>
+                <h3>🎭 Grupos de Tema (Catálogo)</h3>
                 <div className="add-item-box">
-                  <input type="text" placeholder="Nova localização..." value={inputLoc} onChange={(e) => setInputLoc(e.target.value)} />
-                  <button className="btn-add" onClick={() => adicionarItem('localizacoes', inputLoc)}>Add</button>
+                  <input type="text" placeholder="Ex: Infantil, Casamento..." value={inputGrupoTema} onChange={(e) => setInputGrupoTema(e.target.value)} />
+                  <button className="btn-add" onClick={() => adicionarItem('gruposTema', inputGrupoTema)}>Add</button>
                 </div>
                 <ul className="config-list">
-                  {config.localizacoes?.map(loc => (
-                    <li key={loc}>
-                      {loc} <span className="del-icon" onClick={() => removerItem('localizacoes', loc)}>🗑️</span>
+                  {config.gruposTema?.map(grupo => (
+                    <li key={grupo} onClick={() => setGrupoTemaSelecionado(grupo)} className={grupoTemaSelecionado === grupo ? 'active-gold' : ''}>
+                      {grupo} <span className="del-icon" onClick={(e) => {e.stopPropagation(); removerItem('gruposTema', grupo)}}>✕</span>
                     </li>
                   ))}
                 </ul>
               </div>
 
-              <div className="main-card config-section">
-                <h3>📏 Especificações (Tamanhos)</h3>
+              <div className="config-card">
+                <div className="card-top-bar gold-bar"></div>
+                <h3>🎨 Temas {grupoTemaSelecionado && `de "${grupoTemaSelecionado}"`}</h3>
+                {!grupoTemaSelecionado ? <div className="empty-state">Selecione um Grupo de Tema acima.</div> : (
+                  <>
+                    <div className="add-item-box">
+                      <input type="text" placeholder="Ex: Homem Aranha, Princesas..." value={inputTema} onChange={(e) => setInputTema(e.target.value)} />
+                      <button className="btn-add" onClick={() => adicionarItem('temasPorGrupo', inputTema, grupoTemaSelecionado)}>Add</button>
+                    </div>
+                    <ul className="config-list">
+                      {config.temasPorGrupo[grupoTemaSelecionado]?.map(tema => (
+                        <li key={tema}>{tema} <span className="del-icon" onClick={() => removerItem('temasPorGrupo', tema, grupoTemaSelecionado)}>✕</span></li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+              </div>
+            </div>
+
+            <div className="config-col">
+              <div className="config-card">
+                <div className="card-top-bar gray-bar"></div>
+                <h3>📍 Localização Física</h3>
+                <div className="add-item-box">
+                  <input type="text" placeholder="Novo corredor/prateleira..." value={inputLoc} onChange={(e) => setInputLoc(e.target.value)} />
+                  <button className="btn-add" onClick={() => adicionarItem('localizacoes', inputLoc)}>Add</button>
+                </div>
+                <ul className="config-list">
+                  {config.localizacoes?.map(loc => (
+                    <li key={loc}>{loc} <span className="del-icon" onClick={() => removerItem('localizacoes', loc)}>✕</span></li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="config-card">
+                <div className="card-top-bar gray-bar"></div>
+                <h3>📏 Grade de Tamanhos</h3>
                 <div className="add-item-box">
                   <input type="text" placeholder="Novo tamanho..." value={inputTam} onChange={(e) => setInputTam(e.target.value)} />
                   <button className="btn-add" onClick={() => adicionarItem('tamanhos', inputTam)}>Add</button>
                 </div>
                 <ul className="config-list">
                   {config.tamanhos?.map(tam => (
-                    <li key={tam}>
-                      {tam} <span className="del-icon" onClick={() => removerItem('tamanhos', tam)}>🗑️</span>
-                    </li>
+                    <li key={tam}>{tam} <span className="del-icon" onClick={() => removerItem('tamanhos', tam)}>✕</span></li>
                   ))}
                 </ul>
               </div>
             </div>
-          )}
+          </div>
+        )}
 
-          {/* ================================== ABA EMPRESA ================================== */}
-          {abaAtiva === 'empresa' && (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+        {abaAtiva === 'empresa' && (
+          <div className="config-empresa-grid">
+            <div className="config-card">
+              <div className="card-top-bar gold-bar"></div>
+              <h3>✨ Identidade Visual</h3>
+              <p className="subtext">A marca da sua empresa nos catálogos e orçamentos.</p>
               
-              <div className="main-card">
-                <h3>🏢 Detalhes da Empresa</h3>
-                <p>Estas informações aparecerão no cabeçalho de orçamentos e recibos.</p>
-                
-                {/* UPLOAD DE LOGO */}
-                <div className="logo-upload-container">
-                  <div className="logo-preview-box">
-                    {config.logotipo ? (
-                      <img src={config.logotipo} alt="Logo Empresa" />
-                    ) : (
-                      <span style={{opacity: 0.3, fontSize: '30px'}}>🖼️</span>
-                    )}
-                  </div>
-                  <div className="logo-actions">
-                    <label className="btn-upload-logo">
-                      Upload Nova Logo
-                      <input type="file" accept="image/*" style={{display: 'none'}} onChange={handleLogoUpload} />
-                    </label>
-                    {config.logotipo && (
-                      <button className="btn-remove-logo" onClick={removerLogo}>Remover</button>
-                    )}
-                    <p style={{fontSize: '11px', color: 'var(--texto-secundario)', marginTop: '8px'}}>Formatos recomendados: PNG ou JPG. Fundo transparente.</p>
-                  </div>
+              <div className="empresa-id-wrapper">
+                <div className="logo-preview-box">
+                  {config.logotipo ? <img src={config.logotipo} alt="Logo" /> : <span style={{fontSize: '30px', opacity: 0.3}}>📷</span>}
                 </div>
-
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px' }}>
-                  <div className="form-group-config">
-                    <label>Nome Fantasia / Razão Social</label>
-                    <input 
-                      type="text" 
-                      value={config.nomeEmpresa || ''} 
-                      onChange={(e) => handleConfigChange('nomeEmpresa', e.target.value)}
-                      onBlur={(e) => salvarConfigTextual('nomeEmpresa', e.target.value)}
-                      placeholder="Ex: Ágape Decorações"
-                    />
-                  </div>
-                  <div className="form-group-config">
-                    <label>CNPJ / CPF</label>
-                    <input 
-                      type="text" 
-                      value={config.cnpj || ''} 
-                      onChange={(e) => handleConfigChange('cnpj', e.target.value)}
-                      onBlur={(e) => salvarConfigTextual('cnpj', e.target.value)}
-                      placeholder="00.000.000/0000-00"
-                    />
-                  </div>
-                  <div className="form-group-config">
-                    <label>WhatsApp Comercial</label>
-                    <input 
-                      type="text" 
-                      value={config.telefone || ''} 
-                      onChange={(e) => handleConfigChange('telefone', e.target.value)}
-                      onBlur={(e) => salvarConfigTextual('telefone', e.target.value)}
-                      placeholder="(00) 00000-0000"
-                    />
-                  </div>
-                  <div className="form-group-config">
-                    <label>E-mail de Contato</label>
-                    <input 
-                      type="email" 
-                      value={config.emailEmpresa || ''} 
-                      onChange={(e) => handleConfigChange('emailEmpresa', e.target.value)}
-                      onBlur={(e) => salvarConfigTextual('emailEmpresa', e.target.value)}
-                      placeholder="contato@empresa.com"
-                    />
-                  </div>
-                  <div className="form-group-config" style={{ gridColumn: '1 / -1' }}>
-                    <label>Endereço Completo (Sede / Galpão)</label>
-                    <input 
-                      type="text" 
-                      value={config.endereco || ''} 
-                      onChange={(e) => handleConfigChange('endereco', e.target.value)}
-                      onBlur={(e) => salvarConfigTextual('endereco', e.target.value)}
-                      placeholder="Rua, Número, Bairro - Cidade / UF"
-                    />
-                  </div>
-                  {/* NOVO CAMPO DE INSTAGRAM */}
-                  <div className="form-group-config" style={{ gridColumn: '1 / -1' }}>
-                    <label>Instagram da Empresa</label>
-                    <input 
-                      type="text" 
-                      value={config.instagram || ''} 
-                      onChange={(e) => handleConfigChange('instagram', e.target.value)}
-                      onBlur={(e) => salvarConfigTextual('instagram', e.target.value)}
-                      placeholder="Ex: @agapedecoracoes"
-                    />
-                  </div>
+                <div className="logo-actions">
+                  <label className="btn-outline">
+                    Carregar Nova Logo
+                    <input type="file" accept="image/*" style={{display: 'none'}} onChange={handleLogoUpload} />
+                  </label>
+                  {config.logotipo && <button className="btn-danger-outline" onClick={removerLogo}>Remover Logo</button>}
+                  <small>Use PNG com fundo transparente.</small>
                 </div>
               </div>
 
-              {/* BLOCO: METAS */}
-              <div className="main-card">
-                <h3>🎯 Metas de Faturamento</h3>
-                <p>Defina seu alvo mensal para acompanhar o progresso no Dashboard.</p>
-                <div className="form-group-config">
-                  <label>Sua Meta Mensal (R$)</label>
-                  <input 
-                    type="number" 
-                    value={config.metaFaturamento || ''} 
-                    onChange={(e) => handleConfigChange('metaFaturamento', e.target.value)}
-                    onBlur={(e) => salvarConfigTextual('metaFaturamento', Number(e.target.value))}
-                    style={{fontSize: '20px', fontWeight: '800', color: 'var(--dourado)', borderColor: 'var(--dourado)', maxWidth: '300px'}}
+              <div className="f-group" style={{marginTop: '15px'}}>
+                <label>Razão Social / Nome Fantasia</label>
+                <input type="text" value={config.nomeEmpresa || ''} onChange={(e) => handleConfigChange('nomeEmpresa', e.target.value)} onBlur={(e) => salvarConfigTextual('nomeEmpresa', e.target.value)} placeholder="Ex: VICHINHSK FESTA" />
+              </div>
+              <div className="f-group" style={{marginTop: '15px'}}>
+                <label>Slogan ou Breve Descrição</label>
+                <input type="text" value={config.slogan || ''} onChange={(e) => handleConfigChange('slogan', e.target.value)} onBlur={(e) => salvarConfigTextual('slogan', e.target.value)} placeholder="Ex: Transformando sonhos em decorações inesquecíveis!" />
+              </div>
+            </div>
+
+            <div className="config-card">
+              <div className="card-top-bar blue-bar"></div>
+              <h3>📱 Atendimento e Redes</h3>
+              <p className="subtext">Canais de contato direto com o cliente.</p>
+              
+              <div className="form-grid-2-col">
+                <div className="f-group">
+                  <label>WhatsApp Comercial</label>
+                  <input type="text" value={config.telefone || ''} onChange={(e) => handleConfigChange('telefone', e.target.value)} onBlur={(e) => salvarConfigTextual('telefone', e.target.value)} placeholder="(00) 00000-0000" />
+                </div>
+                <div className="f-group">
+                  <label>Instagram</label>
+                  <input type="text" value={config.instagram || ''} onChange={(e) => handleConfigChange('instagram', e.target.value)} onBlur={(e) => salvarConfigTextual('instagram', e.target.value)} placeholder="@seuinstagram" />
+                </div>
+                <div className="f-group span-2-col">
+                  <label>E-mail de Contato</label>
+                  <input type="email" value={config.emailEmpresa || ''} onChange={(e) => handleConfigChange('emailEmpresa', e.target.value)} onBlur={(e) => salvarConfigTextual('emailEmpresa', e.target.value)} placeholder="contato@suaempresa.com.br" />
+                </div>
+                <div className="f-group span-2-col">
+                  <label>Site ou LinkTree</label>
+                  <input type="text" value={config.site || ''} onChange={(e) => handleConfigChange('site', e.target.value)} onBlur={(e) => salvarConfigTextual('site', e.target.value)} placeholder="https://www.suaempresa.com.br" />
+                </div>
+              </div>
+            </div>
+
+            <div className="config-card span-2-col-full">
+              <div className="card-top-bar gray-bar"></div>
+              <h3>🏢 Dados Fiscais e Sede</h3>
+              <p className="subtext">Informações legais para a geração de contratos.</p>
+              
+              <div className="form-grid-2-col">
+                <div className="f-group">
+                  <label>CNPJ / CPF</label>
+                  <input type="text" value={config.cnpj || ''} onChange={(e) => handleConfigChange('cnpj', e.target.value)} onBlur={(e) => salvarConfigTextual('cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
+                </div>
+                <div className="f-group">
+                  <label>Endereço Completo (Sede / Galpão)</label>
+                  <textarea 
+                    rows="3" 
+                    value={config.endereco || ''} 
+                    onChange={(e) => handleConfigChange('endereco', e.target.value)} 
+                    onBlur={(e) => salvarConfigTextual('endereco', e.target.value)} 
+                    placeholder="Rua, Número, Complemento, Bairro - Cidade/UF"
+                    className="config-textarea"
                   />
                 </div>
               </div>
-
             </div>
-          )}
+          </div>
+        )}
 
-        </main>
-      </div>
+        {abaAtiva === 'aparencia' && (
+          <div className="config-empresa-grid">
+            <div className="config-card large-padding">
+              <div className="card-top-bar blue-bar"></div>
+              <h3>🎨 Modo de Cor</h3>
+              <p className="subtext">Escolha o tema do sistema.</p>
+              <div className="btn-group-toggle">
+                <button className={theme === 'light' ? 'active' : ''} onClick={() => setTheme('light')}>☀️ Claro</button>
+                <button className={theme === 'dark' ? 'active' : ''} onClick={() => setTheme('dark')}>🌙 Escuro</button>
+              </div>
+            </div>
+
+            <div className="config-card large-padding">
+              <div className="card-top-bar blue-bar"></div>
+              <h3>👓 Tamanho da Fonte</h3>
+              <p className="subtext">Ajuste o zoom da interface.</p>
+              <div className="btn-group-toggle">
+                <button className={fontSize === 'padrao' ? 'active' : ''} onClick={() => setFontSize('padrao')}>Normal</button>
+                <button className={fontSize === 'ampliado' ? 'active' : ''} onClick={() => setFontSize('ampliado')}>Ampliado</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+      </main>
     </div>
   );
 };

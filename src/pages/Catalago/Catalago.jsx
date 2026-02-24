@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom'; // 🌟 ADICIONADO AQUI
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
 import './Catalago.css';
 
 const ESTRUTURA_TEMAS = {
@@ -13,45 +13,55 @@ const ESTRUTURA_TEMAS = {
 };
 
 const Catalogo = () => {
-  const navigate = useNavigate(); // 🌟 NAVEGAÇÃO ATIVADA AQUI
+  const navigate = useNavigate();
   const [estoque, setEstoque] = useState([]);
+  const [empresa, setEmpresa] = useState({ 
+    nome: 'CELEBRE', 
+    logo: '', 
+    whats: '', 
+    endereco: '', 
+    insta: '' 
+  });
   const [loading, setLoading] = useState(true);
   
   const [filtroModalidade, setFiltroModalidade] = useState('Todas');
   const [filtroMenu, setFiltroMenu] = useState('Todos'); 
   const [busca, setBusca] = useState('');
-  
   const [carrinho, setCarrinho] = useState([]);
   const [modalFinalizar, setModalFinalizar] = useState(false);
   const [dadosCliente, setDadosCliente] = useState({ nome: '', whats: '', dataEvento: '' });
 
   useEffect(() => {
-    const carregarItens = async () => {
+    const inicializar = async () => {
       try {
+        const docRef = doc(db, "sistema", "parametros");
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) {
+          const d = docSnap.data();
+          setEmpresa({
+            nome: d.nomeEmpresa || d.nome || 'CELEBRE',
+            logo: d.logoUrl || d.logo || '',
+            whats: d.whatsapp || d.telefone || '',
+            endereco: d.endereco || '',
+            insta: d.instagram || ''
+          });
+        }
+
         const snap = await getDocs(collection(db, "estoque"));
         const itens = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => i.status !== 'manutencao'); 
         setEstoque(itens);
-      } catch (e) { 
-        console.error("Erro ao buscar estoque: ", e); 
-      } finally { 
-        setLoading(false); 
-      }
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
     };
-    carregarItens();
+    inicializar();
   }, []);
 
-  const categoriasDinamicas = [...new Set(
-    estoque
-      .map(i => i.categoria ? String(i.categoria) : "")
-      .filter(c => c !== "")
-  )].sort();
+  const categoriasDinamicas = [...new Set(estoque.map(i => i.categoria ? String(i.categoria) : "").filter(c => c !== ""))].sort();
 
-  // 🌟 FUNÇÃO SALVA-VIDAS QUE RESOLVE O ERRO DAS DIMENSÕES 🌟
   const formatarDimensoes = (dim) => {
     if (!dim) return null;
-    if (typeof dim === 'string') return dim; // Se for texto, mostra direto
+    if (typeof dim === 'string') return dim;
     if (typeof dim === 'object') {
-      // Se for o objeto do Firebase, monta as medidas organizadas
       let partes = [];
       if (dim.altura) partes.push(`A:${dim.altura}`);
       if (dim.largura) partes.push(`L:${dim.largura}`);
@@ -68,10 +78,6 @@ const Catalogo = () => {
     } else {
       setCarrinho([...carrinho, { ...item, qtd: 1 }]);
     }
-  };
-
-  const atualizarQtd = (id, novaQtd) => {
-    setCarrinho(carrinho.map(i => i.id === id ? { ...i, qtd: Math.max(1, novaQtd) } : i));
   };
 
   const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * i.qtd), 0);
@@ -96,112 +102,80 @@ const Catalogo = () => {
         criadoEm: serverTimestamp()
       });
 
-      const meuWhats = "5519999999999"; 
-      const texto = `🌟 *NOVO ORÇAMENTO VIA CATÁLOGO* 🌟\n\n*Modalidade:* ${filtroModalidade}\n*Interesse em:* ${filtroMenu}\n*Cliente:* ${dadosCliente.nome}\n*Data:* ${dadosCliente.dataEvento.split('-').reverse().join('/')}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}`;
+      const whatsDestino = empresa.whats.replace(/\D/g, '') || "5519999999999"; 
+      const texto = `🌟 *NOVO ORÇAMENTO* 🌟\n\n*Cliente:* ${dadosCliente.nome}\n*Data:* ${dadosCliente.dataEvento}\n\n*Itens:*\n${resumoItens}\n\n*Total:* R$ ${total.toFixed(2)}`;
       
-      window.open(`https://wa.me/${meuWhats}?text=${encodeURIComponent(texto)}`, '_blank');
-
-      alert("Orçamento enviado com sucesso! Aguarde nosso contato.");
+      window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(texto)}`, '_blank');
       setCarrinho([]);
       setModalFinalizar(false);
-    } catch (err) { alert("Erro ao processar pedido."); }
+    } catch (err) { alert("Erro ao processar."); }
   };
 
   const itensFiltrados = estoque.filter(i => {
-    const textoBusca = String(busca || '').toLowerCase();
-    const nomeItem = String(i.nome || '').toLowerCase();
-    const catItem = String(i.categoria || '').toLowerCase();
-    const temaItem = String(i.tema || i.tags || '').toLowerCase(); 
-
-    let passaBusca = true;
-    if (busca) {
-      passaBusca = nomeItem.includes(textoBusca) || catItem.includes(textoBusca) || temaItem.includes(textoBusca);
-    }
-
-    let passaMenu = true;
-    if (filtroMenu !== 'Todos') {
-       const filtroLimpo = String(filtroMenu).toLowerCase();
-       passaMenu = catItem.includes(filtroLimpo) || temaItem.includes(filtroLimpo) || nomeItem.includes(filtroLimpo);
-    }
-
-    let passaModalidade = true;
-    if (filtroModalidade !== 'Todas') {
-      const modItem = String(i.modalidade || '').toLowerCase();
-      passaModalidade = modItem.includes(String(filtroModalidade).toLowerCase());
-    }
-
-    return passaBusca && passaMenu && passaModalidade;
+    const tBusca = String(busca || '').toLowerCase();
+    const nomeI = String(i.nome || '').toLowerCase();
+    const catI = String(i.categoria || '').toLowerCase();
+    const temaI = String(i.tema || i.tags || '').toLowerCase(); 
+    return (!busca || nomeI.includes(tBusca) || catI.includes(tBusca) || temaI.includes(tBusca)) &&
+           (filtroMenu === 'Todos' || catI.includes(String(filtroMenu).toLowerCase()) || temaI.includes(String(filtroMenu).toLowerCase())) &&
+           (filtroModalidade === 'Todas' || String(i.modalidade || '').toLowerCase().includes(String(filtroModalidade).toLowerCase()));
   });
 
-  if (loading) return <div className="loader-catalogo">Carregando Acervo Celebre...</div>;
+  if (loading) return <div className="loader-catalogo">Carregando Acervo...</div>;
 
   return (
     <div className="catalogo-publico">
-      
       <header className="cat-header">
         <div className="cat-header-content">
-          <h1 className="cat-logo">CELEBRE</h1>
-          <p className="cat-subtitle">Catálogo Exclusivo de Acervo</p>
+          <h1 className="cat-logo">{empresa.nome}</h1>
+          
+          {/* 🌟 BLOCO UNIFICADO ABAIXO DO NOME */}
+          <div className="header-info-subtitle">
+            <p className="cat-subtitle">Vitrine Online de Locação</p>
+            <div className="header-contact-links">
+              {empresa.endereco && <span>📍 {empresa.endereco}</span>}
+              {empresa.insta && <span>📸 @{empresa.insta.replace('@','')}</span>}
+            </div>
+          </div>
         </div>
         
-        {/* 🌟 BOTÃO DE ACESSO AO SISTEMA 🌟 */}
-        <button className="btn-admin-login" onClick={() => navigate('/')}>
-          <span className="lock-icon">🔒</span> Área Restrita
-        </button>
+        <button className="btn-admin-login" onClick={() => navigate('/')}>🔒 Restrito</button>
       </header>
 
       <div className="cat-container-main">
-        
         <aside className="cat-sidebar">
+          {empresa.logo && <img src={empresa.logo} className="sidebar-logo-img" alt="Logo" />}
+          
           <div className="sidebar-section">
             <h3 className="sidebar-title">Modalidade</h3>
             <ul className="sidebar-list">
-              <li className={filtroModalidade === 'Todas' ? 'active' : ''} onClick={() => setFiltroModalidade('Todas')}>✓ Mostrar Todas</li>
+              <li className={filtroModalidade === 'Todas' ? 'active' : ''} onClick={() => setFiltroModalidade('Todas')}>✓ Todas</li>
               <li className={filtroModalidade === 'Pegue e Monte' ? 'active' : ''} onClick={() => setFiltroModalidade('Pegue e Monte')}>📦 Pegue e Monte</li>
-              <li className={filtroModalidade === 'Decoração Completa' ? 'active' : ''} onClick={() => setFiltroModalidade('Decoração Completa')}>✨ Decoração Completa</li>
+              <li className={filtroModalidade === 'Decoração Completa' ? 'active' : ''} onClick={() => setFiltroModalidade('Decoração Completa')}>✨ Decoração</li>
             </ul>
           </div>
 
           <div className="sidebar-divider"></div>
 
           <div className="sidebar-section">
-            <h3 className="sidebar-title">Acervo Geral</h3>
+            <h3 className="sidebar-title">Acervo</h3>
             <ul className="sidebar-list">
-              <li className={filtroMenu === 'Todos' ? 'active destak' : 'destak'} onClick={() => setFiltroMenu('Todos')}>
-                🌟 Ver Tudo
-              </li>
+              <li className={filtroMenu === 'Todos' ? 'active destak' : 'destak'} onClick={() => setFiltroMenu('Todos')}>🌟 Ver Tudo</li>
+              {categoriasDinamicas.map(cat => (
+                <li key={cat} className={filtroMenu === cat ? 'active' : ''} onClick={() => setFiltroMenu(cat)}>{cat}</li>
+              ))}
             </ul>
           </div>
-
-          {categoriasDinamicas.length > 0 && (
-            <>
-              <div className="sidebar-divider"></div>
-              <div className="sidebar-section">
-                <h3 className="sidebar-title">Peças Individuais</h3>
-                <ul className="sidebar-list">
-                  {categoriasDinamicas.map(cat => (
-                    <li key={cat} className={filtroMenu === cat ? 'active' : ''} onClick={() => setFiltroMenu(cat)}>
-                      {cat}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          )}
-
+          
           <div className="sidebar-divider"></div>
 
           <div className="sidebar-section">
-            <h3 className="sidebar-title">Temas Prontos</h3>
+            <h3 className="sidebar-title">Temas</h3>
             {Object.entries(ESTRUTURA_TEMAS).map(([grupo, temas]) => (
-              <div key={grupo} className="sidebar-grupo">
+              <div key={grupo}>
                 <h4 className="sidebar-grupo-title">{grupo}</h4>
                 <ul className="sidebar-list">
-                  {temas.map(tema => (
-                    <li key={tema} className={filtroMenu === tema ? 'active' : ''} onClick={() => setFiltroMenu(tema)}>
-                      {tema}
-                    </li>
-                  ))}
+                  {temas.map(t => <li key={t} className={filtroMenu === t ? 'active' : ''} onClick={() => setFiltroMenu(t)}>{t}</li>)}
                 </ul>
               </div>
             ))}
@@ -209,131 +183,47 @@ const Catalogo = () => {
         </aside>
 
         <main className="cat-content">
-          
           <div className="cat-search-bar">
-            <span className="search-icon">🔍</span>
-            <input 
-              type="text" 
-              placeholder={`Buscando em: ${filtroMenu === 'Todos' ? 'Todo o acervo' : filtroMenu}...`} 
-              value={busca} 
-              onChange={e => setBusca(e.target.value)} 
-            />
+            <input type="text" placeholder="O que você procura para sua festa?" value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
 
           <div className="cat-grid">
             {itensFiltrados.map(item => {
               const isSelected = carrinho.find(i => i.id === item.id);
               return (
-                <div key={item.id} className={`cat-card ${isSelected ? 'selected' : ''}`}>
+                <div key={item.id} className="cat-card">
                   <div className="cat-img-wrapper">
-                    {item.foto ? <img src={item.foto} alt={item.nome} /> : <div className="no-img">📷 Sem Foto</div>}
+                    {item.foto ? <img src={item.foto} alt="" /> : <div className="no-img">📷</div>}
                     {isSelected && <div className="cat-badge-selected">Na Lista</div>}
                   </div>
-                  
                   <div className="cat-info">
-                    <div className="cat-tags">
-                      <span className="tag-categoria">{item.categoria || "Geral"}</span>
-                      {item.modalidade && <span className="tag-modalidade">{item.modalidade}</span>}
-                    </div>
-
-                    <h4 className="cat-title-text" title={item.nome}>{item.nome}</h4>
-                    
-                    <div className="cat-details">
-                      {/* 🌟 AQUI USAMOS A NOVA FUNÇÃO PARA AS DIMENSÕES 🌟 */}
-                      {item.dimensoes && formatarDimensoes(item.dimensoes) && (
-                        <span className="cat-detail-item">📏 {formatarDimensoes(item.dimensoes)}</span>
-                      )}
-                      
-                      {item.cor && typeof item.cor === 'string' && (
-                        <span className="cat-detail-item">🎨 {item.cor}</span>
-                      )}
-                      
-                      {item.descricao && typeof item.descricao === 'string' && (
-                        <p className="cat-desc-text">{item.descricao}</p>
-                      )}
-                    </div>
-
-                    <div className="cat-price-text">
-                      R$ {Number(item.financeiro?.valorAluguel || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                      <small className="txt-diaria">/ aluguel</small>
-                    </div>
-
-                    <button className={`btn-vitrine-add ${isSelected ? 'added' : ''}`} onClick={() => toggleNoCarrinho(item)}>
-                      {isSelected ? '✓ Remover da Lista' : '+ Adicionar à Lista'}
+                    <h4 className="cat-title-text">{item.nome}</h4>
+                    <p className="cat-medida">{formatarDimensoes(item.dimensoes)}</p>
+                    <div className="cat-price">R$ {Number(item.financeiro?.valorAluguel || 0).toFixed(2)}</div>
+                    <button className={`btn-add-lista ${isSelected ? 'added' : ''}`} onClick={() => toggleNoCarrinho(item)}>
+                      {isSelected ? 'Remover' : 'Adicionar'}
                     </button>
                   </div>
                 </div>
               );
             })}
           </div>
-
-          {itensFiltrados.length === 0 && (
-            <div className="cat-empty-state">
-              <h3>Poxa, não encontramos peças exatas para essa busca!</h3>
-              <p>Tente selecionar "Ver Tudo" na barra lateral ou busque por nomes mais gerais.</p>
-            </div>
-          )}
         </main>
       </div>
 
+      <footer className="cat-footer">
+        <div className="footer-content">
+          <h3>{empresa.nome}</h3>
+          {empresa.endereco && <p>📍 {empresa.endereco}</p>}
+          {empresa.whats && <p>💬 WhatsApp: {empresa.whats}</p>}
+          <p className="footer-copy">© {new Date().getFullYear()} - Todos os direitos reservados</p>
+        </div>
+      </footer>
+
       {carrinho.length > 0 && (
         <div className="cat-floating-bar" onClick={() => setModalFinalizar(true)}>
-          <div className="bar-info">
-            <span className="cart-icon">🛍️</span>
-            <div>
-              <span className="cart-qtd">{carrinho.length} itens na sua lista</span>
-              <strong className="cart-total">R$ {calcularTotal().toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            </div>
-          </div>
-          <button className="btn-finalizar-cat">FINALIZAR PEDIDO ➔</button>
-        </div>
-      )}
-
-      {modalFinalizar && (
-        <div className="cat-modal-overlay">
-          <div className="cat-modal">
-            <div className="modal-header">
-              <h3>Finalizar Solicitação</h3>
-              <button className="btn-fechar-modal" onClick={() => setModalFinalizar(false)}>✕</button>
-            </div>
-            
-            <form onSubmit={enviarOrcamento}>
-              <div className="input-box" style={{marginBottom: '15px'}}>
-                <label>Seu Nome Completo</label>
-                <input type="text" required value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})} placeholder="Como podemos te chamar?" />
-              </div>
-              
-              <div className="modal-row">
-                <div className="input-box">
-                  <label>WhatsApp</label>
-                  <input type="tel" required placeholder="(00) 00000-0000" value={dadosCliente.whats} onChange={e => setDadosCliente({...dadosCliente, whats: e.target.value})} />
-                </div>
-                <div className="input-box">
-                  <label>Data do Evento</label>
-                  <input type="date" required value={dadosCliente.dataEvento} onChange={e => setDadosCliente({...dadosCliente, dataEvento: e.target.value})} />
-                </div>
-              </div>
-
-              <h4 style={{marginTop: '20px', marginBottom: '10px', color: '#0f172a'}}>Revisão dos Itens</h4>
-              <div className="carrinho-revisao">
-                {carrinho.map(i => (
-                  <div key={i.id} className="revisao-item">
-                    {i.foto ? <img src={i.foto} alt="" className="revisao-img"/> : <div className="revisao-img-placeholder">📷</div>}
-                    <span className="revisao-nome">{i.nome}</span>
-                    <div className="qtd-input">
-                      <button type="button" onClick={() => atualizarQtd(i.id, i.qtd - 1)}>-</button>
-                      <span>{i.qtd}</span>
-                      <button type="button" onClick={() => atualizarQtd(i.id, i.qtd + 1)}>+</button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="cat-modal-footer">
-                <button type="submit" className="btn-enviar-whats">ENVIAR ORÇAMENTO PELO WHATSAPP</button>
-              </div>
-            </form>
-          </div>
+          <span>🛍️ {carrinho.length} itens - <strong>R$ {calcularTotal().toFixed(2)}</strong></span>
+          <button>SOLICITAR ORÇAMENTO ➔</button>
         </div>
       )}
     </div>

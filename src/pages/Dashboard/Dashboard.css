@@ -353,3 +353,41 @@
   .dash-actions-row button { width: 100%; justify-content: center; }
   .compact-bar-value { width: auto; } /* Ajuste pro celular */
 }
+
+/* ========================================= */
+/* MODAL DE AUDITORIA DE ESTOQUE             */
+/* ========================================= */
+.auditoria-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 99999; padding: 20px;
+}
+
+.auditoria-modal {
+  background: white; border-radius: 12px; width: 100%; max-width: 650px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden;
+  animation: fadeIn 0.3s ease;
+}
+
+.auditoria-header { background: #fff1f2; padding: 25px; border-bottom: 1px solid #fecdd3; text-align: center; }
+.auditoria-header h2 { color: #e11d48; margin-bottom: 10px; font-size: 1.5rem; }
+.auditoria-header p { color: #9f1239; font-size: 0.95rem; line-height: 1.4; }
+
+.auditoria-corpo { padding: 20px; max-height: 400px; overflow-y: auto; }
+.auditoria-card {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 15px; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 10px;
+  background: #f8fafc;
+}
+
+.auditoria-info h3 { color: #0f172a; margin-bottom: 5px; font-size: 1.1rem; }
+.data-atrasada { background: #fee2e2; color: #ef4444; padding: 3px 6px; border-radius: 4px; font-weight: bold; }
+
+.auditoria-btns { display: flex; gap: 10px; }
+.btn-auditoria-check { background: #10b981; color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+.btn-auditoria-cancel { background: white; color: #e11d48; border: 1px solid #fecdd3; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+
+.auditoria-footer { text-align: center; padding: 15px; }
+.btn-auditoria-ignore { background: none; border: none; color: #94a3b8; cursor: pointer; font-size: 0.9rem; text-decoration: underline; }

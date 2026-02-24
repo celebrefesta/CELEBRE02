@@ -2,26 +2,87 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 
+// 🚨 1. MOTOR DO AVISO EMBUTIDO AQUI (Evita o erro de importação) 🚨
+const AuditoriaEstoque = () => {
+  const [pedidosAtrasados, setPedidosAtrasados] = useState([]);
+  const [visivel, setVisivel] = useState(false);
+
+  useEffect(() => {
+    const realizarAuditoria = async () => {
+      try {
+        const hoje = new Date().toISOString().split('T')[0];
+        const q = query(
+          collection(db, "locacoes"),
+          where("dataRetirada", "<", hoje),
+          where("status", "in", ["CONFIRMADO", "SEPARACAO", "confirmado", "separacao"])
+        );
+        const snap = await getDocs(q);
+        const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        if (lista.length > 0) {
+          setPedidosAtrasados(lista);
+          setVisivel(true);
+        }
+      } catch (error) { console.error("Erro na auditoria:", error); }
+    };
+    realizarAuditoria();
+  }, []);
+
+  const handleResolver = async (id, novoStatus) => {
+    try {
+      await updateDoc(doc(db, "locacoes", id), { status: novoStatus });
+      const novaLista = pedidosAtrasados.filter(p => p.id !== id);
+      setPedidosAtrasados(novaLista);
+      if (novaLista.length === 0) setVisivel(false);
+    } catch (e) { alert("Erro ao atualizar pedido."); }
+  };
+
+  if (!visivel) return null;
+
+  return (
+    <div className="auditoria-overlay">
+      <div className="auditoria-modal">
+        <div className="auditoria-header">
+          <h2>🚨 Auditoria de Estoque: Pedidos Atrasados!</h2>
+          <p>As datas dos eventos abaixo já passaram, mas o sistema diz que eles ainda não saíram da loja (estão como Orçamento ou Separação). <strong>Isso está bloqueando e mentindo sobre a disponibilidade das suas peças no estoque!</strong></p>
+        </div>
+        <div className="auditoria-corpo">
+          {pedidosAtrasados.map(pedido => (
+            <div key={pedido.id} className="auditoria-card">
+              <div className="auditoria-info">
+                <h3>{pedido.clienteNome} <small>#{pedido.id.slice(-4)}</small></h3>
+                <p>Data da Festa: <span className="data-atrasada">{pedido.dataRetirada?.split('-').reverse().join('/')}</span> | Travado em: <strong>{pedido.status}</strong></p>
+              </div>
+              <div className="auditoria-btns">
+                <button className="btn-auditoria-cancel" onClick={() => handleResolver(pedido.id, 'CANCELADO')}>✕ Cancelou a festa</button>
+                <button className="btn-auditoria-check" onClick={() => handleResolver(pedido.id, 'FINALIZADO')}>✓ Já levou e devolveu</button>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="auditoria-footer">
+          <button className="btn-auditoria-ignore" onClick={() => setVisivel(false)}>Ignorar e corrigir depois (Não recomendado)</button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
+// 🌟 2. SEU DASHBOARD ORIGINAL COMEÇA AQUI 🌟
 const Dashboard = () => {
   const navigate = useNavigate();
   
   // --- ESTADOS DO DASHBOARD ---
-  const [estatisticas, setEstatisticas] = useState({
-    acervo: 0, ativas: 0, eventos: 0, manutencao: 0, aReceber: 0
-  });
+  const [estatisticas, setEstatisticas] = useState({ acervo: 0, ativas: 0, eventos: 0, manutencao: 0, aReceber: 0 });
   const [alertas, setAlertas] = useState([]);
   const [atividades, setAtividades] = useState([]);
   const [faturamentoData, setFaturamentoData] = useState([0, 0, 0, 0]);
   const [proximosEventos, setProximosEventos] = useState([]);
   const [orcamentosPendentes, setOrcamentosPendentes] = useState([]);
-  
-  // 🌟 NOVO: ESTADO PARA O GRÁFICO DONUT 🌟
-  const [statusChart, setStatusChart] = useState({
-    orcamento: 0, confirmado: 0, andamento: 0, concluido: 0, total: 0
-  });
-
+  const [statusChart, setStatusChart] = useState({ orcamento: 0, confirmado: 0, andamento: 0, concluido: 0, total: 0 });
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -30,17 +91,14 @@ const Dashboard = () => {
         const hojeISO = new Date().toISOString().split('T')[0];
         const mesAtual = hojeISO.substring(0, 7);
 
-        // 1. BUSCAR ACERVO
         const estSnap = await getDocs(collection(db, "estoque"));
         const itens = estSnap.docs.map(d => d.data());
         
-        // 2. BUSCAR LOCAÇÕES
         const locSnap = await getDocs(collection(db, "locacoes"));
         const locs = locSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const confirmadas = locs.filter(l => l.status === 'confirmado');
         const orcamentos = locs.filter(l => (l.status || '').toLowerCase() === 'orcamento');
 
-        // 🌟 NOVO: DADOS PARA O GRÁFICO DE ROSCA 🌟
         let cOrcamento = 0, cConfirmado = 0, cAndamento = 0, cConcluido = 0;
         locs.forEach(l => {
           const s = (l.status || '').toLowerCase();
@@ -51,14 +109,9 @@ const Dashboard = () => {
         });
 
         setStatusChart({
-          orcamento: cOrcamento,
-          confirmado: cConfirmado,
-          andamento: cAndamento,
-          concluido: cConcluido,
-          total: cOrcamento + cConfirmado + cAndamento + cConcluido
+          orcamento: cOrcamento, confirmado: cConfirmado, andamento: cAndamento, concluido: cConcluido, total: cOrcamento + cConfirmado + cAndamento + cConcluido
         });
 
-        // 3. FATURAMENTO E A RECEBER
         const fatSemanal = [0, 0, 0, 0];
         let totalAReceber = 0;
 
@@ -66,7 +119,6 @@ const Dashboard = () => {
             if (l.dataRetirada && l.dataRetirada.startsWith(mesAtual)) {
                 const dia = parseInt(l.dataRetirada.split('-')[2]);
                 const valor = Number(l.valorTotal) || 0;
-                
                 if (dia <= 7) fatSemanal[0] += valor;
                 else if (dia <= 14) fatSemanal[1] += valor;
                 else if (dia <= 21) fatSemanal[2] += valor;
@@ -80,7 +132,6 @@ const Dashboard = () => {
             }
         });
 
-        // 4. ATIVIDADES RECENTES
         const recents = confirmadas
             .sort((a, b) => {
                 const dataA = a.criadoEm?.seconds ? a.criadoEm.seconds : 0;
@@ -93,7 +144,6 @@ const Dashboard = () => {
                 valor: l.valorTotal ? `R$ ${Number(l.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : ''
             }));
 
-        // 5. PRÓXIMAS ENTREGAS
         const proximos = confirmadas
             .filter(l => l.dataRetirada && l.dataRetirada >= hojeISO)
             .sort((a, b) => a.dataRetirada.localeCompare(b.dataRetirada))
@@ -105,7 +155,6 @@ const Dashboard = () => {
                 cidade: l.logistica?.cidade || 'Retirada na Loja'
             }));
 
-        // 6. ORÇAMENTOS PENDENTES
         const orcamentosRecentes = orcamentos
             .sort((a, b) => {
                 const dataA = a.criadoEm?.seconds ? a.criadoEm.seconds : 0;
@@ -114,7 +163,6 @@ const Dashboard = () => {
             })
             .slice(0, 4);
 
-        // ATUALIZAR ESTADOS
         setEstatisticas({
             acervo: estSnap.size,
             ativas: confirmadas.length,
@@ -130,11 +178,8 @@ const Dashboard = () => {
         
         setAlertas(locs.filter(l => l.status === 'confirmado' && l.dataDevolucao && l.dataDevolucao < hojeISO));
 
-      } catch (e) { 
-        console.error("Erro dashboard:", e); 
-      } finally {
-        setLoading(false);
-      }
+      } catch (e) { console.error("Erro dashboard:", e); } 
+      finally { setLoading(false); }
     };
     carregarDados();
   }, []);
@@ -143,7 +188,6 @@ const Dashboard = () => {
 
   const maxFat = Math.max(...faturamentoData, 1); 
 
-  // 🌟 MÁTEMATICA DO GRÁFICO SVG NATIVO 🌟
   const totalG = statusChart.total || 1; 
   const p1 = (statusChart.orcamento / totalG) * 100;
   const p2 = (statusChart.confirmado / totalG) * 100;
@@ -158,6 +202,9 @@ const Dashboard = () => {
   return (
     <div className="dash-wide-container fade-in">
       
+      {/* 🚨 CHAMA O AVISO DE AUDITORIA AQUI NO TOPO DA SUA TELA 🚨 */}
+      <AuditoriaEstoque />
+
       <header className="dash-wide-header">
         <div className="header-titles">
           <h1>Olá, Camila!</h1>
@@ -202,7 +249,7 @@ const Dashboard = () => {
 
       <div className="dash-main-grid-wide" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '20px' }}>
         
-        {/* COLUNA 1: FINANCEIRO E VENDAS */}
+        {/* COLUNA 1 */}
         <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
           <section className="dash-card-wide chart-card">
             <h3>💸 Faturamento do Mês</h3>
@@ -210,7 +257,6 @@ const Dashboard = () => {
               {faturamentoData.map((val, idx) => (
                 <div key={idx} className="compact-bar-group" style={{display: 'flex', alignItems: 'center', marginBottom: '12px'}}>
                   <span className="compact-bar-label" style={{width: '50px', fontSize: '0.85rem', color: '#64748b', fontWeight: 'bold'}}>Sem {idx+1}</span>
-                  {/* 🌟 GRÁFICO DE BARRAS MELHORADO COM GRADIENTE 🌟 */}
                   <div className="compact-bar-track" style={{flex: 1, height: '12px', background: '#e2e8f0', borderRadius: '6px', overflow: 'hidden', margin: '0 15px'}}>
                     <div className="compact-bar-fill" style={{width: `${(val / maxFat) * 100}%`, height: '100%', background: 'linear-gradient(90deg, #3b82f6, #1e3a8a)', borderRadius: '6px', transition: 'width 1s ease-in-out'}}></div>
                   </div>
@@ -237,7 +283,7 @@ const Dashboard = () => {
           </section>
         </div>
 
-        {/* COLUNA 2: LOGÍSTICA E STATUS GERAL */}
+        {/* COLUNA 2 */}
         <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
           <section className="dash-card-wide agenda-card">
             <h3>🚚 Próximas Entregas / Saídas</h3>
@@ -254,28 +300,21 @@ const Dashboard = () => {
             </div>
           </section>
 
-          {/* 🌟 NOVO GRÁFICO DE ROSCA (DONUT CHART) 🌟 */}
           <section className="dash-card-wide" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
             <h3 style={{ width: '100%', textAlign: 'left', marginBottom: '0' }}>📊 Status da Empresa</h3>
-            
             <div style={{ position: 'relative', width: '180px', height: '180px', margin: '20px 0' }}>
               <svg viewBox="0 0 36 36" style={{ width: '100%', height: '100%', transform: 'rotate(-90deg)' }}>
-                {/* Fundo Cinza */}
                 <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4" />
-                
-                {/* Segmentos do Gráfico */}
                 {p1 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f59e0b" strokeWidth="4" strokeDasharray={`${p1} ${100 - p1}`} strokeDashoffset={off1} strokeLinecap="round" />}
                 {p2 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10b981" strokeWidth="4" strokeDasharray={`${p2} ${100 - p2}`} strokeDashoffset={off2} strokeLinecap="round" />}
                 {p3 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#8b5cf6" strokeWidth="4" strokeDasharray={`${p3} ${100 - p3}`} strokeDashoffset={off3} strokeLinecap="round" />}
                 {p4 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3b82f6" strokeWidth="4" strokeDasharray={`${p4} ${100 - p4}`} strokeDashoffset={off4} strokeLinecap="round" />}
               </svg>
-              
               <div style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column' }}>
                 <span style={{ fontSize: '28px', fontWeight: '900', color: '#0f172a' }}>{statusChart.total}</span>
                 <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: 'bold' }}>Pedidos</span>
               </div>
             </div>
-
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'center', width: '100%', fontSize: '0.8rem', fontWeight: '600', color: '#475569' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', background: '#f59e0b', borderRadius: '50%' }}></span> Orçamentos ({statusChart.orcamento})</div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', background: '#10b981', borderRadius: '50%' }}></span> Confirmados ({statusChart.confirmado})</div>
@@ -283,10 +322,9 @@ const Dashboard = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '5px' }}><span style={{ width: '10px', height: '10px', background: '#3b82f6', borderRadius: '50%' }}></span> Finalizados ({statusChart.concluido})</div>
             </div>
           </section>
-
         </div>
 
-        {/* COLUNA 3: ÚLTIMAS LOCAÇÕES */}
+        {/* COLUNA 3 */}
         <div style={{display: 'flex', flexDirection: 'column', gap: '20px'}}>
           <section className="dash-card-wide" style={{flex: 1}}>
             <h3>🛒 Últimas Vendas Confirmadas</h3>

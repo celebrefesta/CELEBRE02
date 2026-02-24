@@ -12,15 +12,17 @@ const CadastroEstoque = () => {
   const [salvando, setSalvando] = useState(false);
   const [itensExistentes, setItensExistentes] = useState([]);
 
-  // --- ESTADOS DAS LISTAS DINÂMICAS DO SISTEMA (VINDAS DO FIREBASE) ---
+  // 🌟 LISTAS 100% DINÂMICAS VINDAS DO FIREBASE 🌟
   const [listasSistema, setListasSistema] = useState({
     categorias: [],
     subcategorias: {},
     localizacoes: [],
-    tamanhos: []
+    tamanhos: [],
+    gruposTema: [], 
+    temasPorGrupo: {} 
   });
 
-  // --- FOTOS E ENQUADRAMENTO (DRAG) ---
+  // --- FOTOS E ENQUADRAMENTO ---
   const [fotos, setFotos] = useState([]);
   const [fotoPrincipalIndex, setFotoPrincipalIndex] = useState(0);
   const [posicoesFoco, setPosicoesFoco] = useState({}); 
@@ -32,6 +34,11 @@ const CadastroEstoque = () => {
   const [codigo, setCodigo] = useState('');
   const [categoria, setCategoria] = useState('');
   const [subCategoria, setSubCategoria] = useState('');
+  
+  // Dados de Tema
+  const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
+  const [temaSelecionado, setTemaSelecionado] = useState('');
+  
   const [quantidade, setQuantidade] = useState(1);
   const [estoqueMinimo, setEstoqueMinimo] = useState(1);
   const [alertaEstoque, setAlertaEstoque] = useState('NaoAvisar'); 
@@ -59,11 +66,9 @@ const CadastroEstoque = () => {
   const [voltagem, setVoltagem] = useState('Bivolt');
   const [observacoes, setObservacoes] = useState('');
 
-  // Lista Fixa de Unidades (Não muda muito)
   const unidades = ["Unidade", "Par", "Metro", "Jogo", "Kit", "Peça"];
 
   useEffect(() => {
-    // 1. Busca os itens existentes para gerar o código SKU
     const fetchItens = async () => {
       const q = query(collection(db, "estoque"));
       const snap = await getDocs(q);
@@ -71,7 +76,6 @@ const CadastroEstoque = () => {
     };
     fetchItens();
 
-    // 2. Busca as listas dinâmicas das configurações
     const fetchConfiguracoes = async () => {
       try {
         const docRef = doc(db, "sistema", "parametros");
@@ -79,14 +83,16 @@ const CadastroEstoque = () => {
         
         if (docSnap.exists()) {
           const dados = docSnap.data();
+          // 🌟 PUXA TODAS AS LISTAS DAS CONFIGURAÇÕES 🌟
           setListasSistema({
             categorias: dados.categorias || [],
             subcategorias: dados.subcategorias || {},
             localizacoes: dados.localizacoes || [],
-            tamanhos: dados.tamanhos || []
+            tamanhos: dados.tamanhos || [],
+            gruposTema: dados.gruposTema || [], 
+            temasPorGrupo: dados.temasPorGrupo || {} 
           });
 
-          // Se for um NOVO item, pré-seleciona os primeiros valores da lista dinâmica
           if (!itemEditando) {
             if (dados.categorias?.length > 0) {
               setCategoria(dados.categorias[0]);
@@ -97,14 +103,14 @@ const CadastroEstoque = () => {
             if (dados.localizacoes?.length > 0) setLocalizacao(dados.localizacoes[0]);
           }
         }
-      } catch (e) { console.error("Erro ao buscar listas do sistema:", e); }
+      } catch (e) { console.error("Erro:", e); }
     };
     fetchConfiguracoes();
 
-    // 3. Preenche formulário se for modo de EDIÇÃO
     if (itemEditando) {
       setNome(itemEditando.nome || ''); setCodigo(itemEditando.codigo || '');
       setCategoria(itemEditando.categoria || ''); setSubCategoria(itemEditando.subCategoria || '');
+      setGrupoTemaSelecionado(itemEditando.grupoTema || ''); setTemaSelecionado(itemEditando.tema || '');
       setQuantidade(itemEditando.quantidade || 1); setEstoqueMinimo(itemEditando.estoqueMinimo || 1);
       setAlertaEstoque(itemEditando.configuracao?.alertaEstoque || 'NaoAvisar'); 
       setFornecedor(itemEditando.fornecedor || ''); setLinkFornecedor(itemEditando.linkFornecedor || '');
@@ -143,12 +149,20 @@ const CadastroEstoque = () => {
     const novaCat = e.target.value;
     setCategoria(novaCat);
     if (!itemEditando) setCodigo(gerarSKU(novaCat));
-    
-    // Atualiza subcategoria automaticamente com a primeira da lista (se existir)
     if (listasSistema.subcategorias[novaCat] && listasSistema.subcategorias[novaCat].length > 0) {
       setSubCategoria(listasSistema.subcategorias[novaCat][0]);
     } else {
       setSubCategoria('');
+    }
+  };
+
+  const handleGrupoTemaChange = (e) => {
+    const novoGrupo = e.target.value;
+    setGrupoTemaSelecionado(novoGrupo);
+    if (listasSistema.temasPorGrupo[novoGrupo] && listasSistema.temasPorGrupo[novoGrupo].length > 0) {
+      setTemaSelecionado(listasSistema.temasPorGrupo[novoGrupo][0]);
+    } else {
+      setTemaSelecionado('');
     }
   };
 
@@ -198,7 +212,6 @@ const CadastroEstoque = () => {
     const deltaX = e.clientX - startMouse.x;
     const deltaY = e.clientY - startMouse.y;
     setStartMouse({ x: e.clientX, y: e.clientY });
-
     setPosicoesFoco(prev => {
       const current = prev[fotoPrincipalIndex] || { x: 50, y: 50 };
       let newX = current.x - (deltaX * 0.4);
@@ -216,7 +229,10 @@ const CadastroEstoque = () => {
       const limparValor = (val) => Number(String(val).replace(',', '.'));
 
       const dados = {
-        nome, codigo, categoria, subCategoria, status, fornecedor, linkFornecedor, localizacao,
+        nome, codigo, categoria, subCategoria, 
+        grupoTema: grupoTemaSelecionado, 
+        tema: temaSelecionado,           
+        status, fornecedor, linkFornecedor, localizacao,
         quantidade: Number(quantidade), estoqueMinimo: Number(estoqueMinimo),
         financeiro: { valorCompra: limparValor(valorCompra), valorAluguel: limparValor(valorAluguel), valorReposicao: limparValor(valorReposicao) },
         especificacoes: { tamanho, cor, unidadeMedida, largura: Number(largura), altura: Number(altura), diametro: Number(diametro), comprimento: Number(comprimento) },
@@ -257,26 +273,11 @@ const CadastroEstoque = () => {
           
           <div className="left-photo-col">
             <h3 className="section-divider" style={{marginTop: 0}}>FOTOS DO PRODUTO</h3>
-            
             <div className="main-photo-display" style={{position: 'relative', overflow: 'hidden'}}>
               {fotos.length > 0 ? (
                 <>
-                  <img 
-                    src={fotos[fotoPrincipalIndex]} 
-                    className="main-photo-preview" 
-                    style={{ 
-                      objectPosition: `${posicoesFoco[fotoPrincipalIndex]?.x ?? 50}% ${posicoesFoco[fotoPrincipalIndex]?.y ?? 50}%`,
-                      cursor: dragging ? 'grabbing' : 'grab'
-                    }}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
-                    title="Clique e arraste para enquadrar a foto"
-                  />
-                  <div style={{position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', pointerEvents: 'none'}}>
-                    <span style={{background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '10px', padding: '4px 8px', borderRadius: '12px'}}>Arrastar para enquadrar</span>
-                  </div>
+                  <img src={fotos[fotoPrincipalIndex]} className="main-photo-preview" style={{ objectPosition: `${posicoesFoco[fotoPrincipalIndex]?.x ?? 50}% ${posicoesFoco[fotoPrincipalIndex]?.y ?? 50}%`, cursor: dragging ? 'grabbing' : 'grab' }} onMouseDown={handleMouseDown} onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onMouseLeave={handleMouseUp} />
+                  <div style={{position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', pointerEvents: 'none'}}><span style={{background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '10px', padding: '4px 8px', borderRadius: '12px'}}>Arrastar para enquadrar</span></div>
                 </>
               ) : (
                 <label htmlFor="upload-principal" style={{cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
@@ -318,11 +319,20 @@ const CadastroEstoque = () => {
                   {listasSistema.subcategorias[categoria]?.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
-              <div className="form-group span-2">
-                <label style={{color: '#10b981', fontWeight: 800}}>TIPO DE ITEM (ALERTA)</label>
-                <select value={alertaEstoque} onChange={e => setAlertaEstoque(e.target.value)}>
-                  <option value="NaoAvisar">Item Único / Acervo (Não avisar estoque baixo)</option>
-                  <option value="Avisar">Item com Reposição (Avisar se atingir o mínimo)</option>
+
+              {/* 🌟 OS DROPDOWNS SÓ MOSTRAM O QUE TIVER CADASTRADO NAS CONFIGURAÇÕES 🌟 */}
+              <div className="form-group span-1">
+                <label>GRUPO DE TEMA</label>
+                <select value={grupoTemaSelecionado} onChange={handleGrupoTemaChange}>
+                  <option value="">Geral (Sem Tema)</option>
+                  {listasSistema.gruposTema.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+              </div>
+              <div className="form-group span-1">
+                <label>TEMA ESPECÍFICO</label>
+                <select value={temaSelecionado} onChange={e => setTemaSelecionado(e.target.value)} disabled={!grupoTemaSelecionado}>
+                  <option value="">Selecione...</option>
+                  {listasSistema.temasPorGrupo[grupoTemaSelecionado]?.map(t => <option key={t} value={t}>{t}</option>)}
                 </select>
               </div>
             </div>
@@ -331,68 +341,26 @@ const CadastroEstoque = () => {
             <div className="form-grid-4">
               <div className="form-group span-2"><label>FORNECEDOR</label><input value={fornecedor} onChange={handleTextChange(setFornecedor)} /></div>
               <div className="form-group span-2"><label>URL / LINK DE COMPRA</label><input value={linkFornecedor} onChange={(e) => setLinkFornecedor(e.target.value)} placeholder="Cole o link do produto aqui..." /></div>
-              
-              <div className="form-group span-1">
-                <label>CUSTO COMPRA (R$)</label>
-                <input type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00"/>
-              </div>
-              <div className="form-group span-2">
-                <label style={{color: '#c5a059', fontWeight: 800}}>VALOR ALUGUEL (R$) *</label>
-                <input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: '#c5a059'}} placeholder="0,00"/>
-              </div>
-              <div className="form-group span-1">
-                <label>VALOR REPOSIÇÃO</label>
-                <input type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00"/>
-              </div>
+              <div className="form-group span-1"><label>CUSTO COMPRA (R$)</label><input type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00"/></div>
+              <div className="form-group span-2"><label style={{color: '#c5a059', fontWeight: 800}}>VALOR ALUGUEL (R$) *</label><input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: '#c5a059'}} placeholder="0,00"/></div>
+              <div className="form-group span-1"><label>VALOR REPOSIÇÃO</label><input type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00"/></div>
             </div>
 
             <h3 className="section-divider mt-compact">LOGÍSTICA E OPERACIONAL</h3>
             <div className="form-grid-4">
               <div className="form-group span-1"><label>QTD. TOTAL</label><input type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} /></div>
-              <div className="form-group span-1"><label>ESTOQUE MÍNIMO</label><input type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} /></div>
-              <div className="form-group span-1"><label>STATUS</label>
-                <select value={status} onChange={e => setStatus(e.target.value)}>
-                  <option value="ok">✅ Disponível</option><option value="manutencao">🛠️ Em Manutenção</option>
-                </select>
-              </div>
-              <div className="form-group span-1">
-                <label>LOCALIZAÇÃO</label>
-                <select value={localizacao} onChange={e => setLocalizacao(e.target.value)}>
-                  <option value="">Selecione...</option>
-                  {listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-              </div>
+              <div className="form-group span-2"><label style={{color: '#10b981', fontWeight: 800}}>ALERTA DE ESTOQUE</label><select value={alertaEstoque} onChange={e => setAlertaEstoque(e.target.value)}><option value="NaoAvisar">Item Único (Não avisar mínimo)</option><option value="Avisar">Avisar se atingir o mínimo</option></select></div>
+              <div className="form-group span-1"><label>ESTOQUE MÍNIMO</label><input type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'} /></div>
+              <div className="form-group span-2"><label>STATUS</label><select value={status} onChange={e => setStatus(e.target.value)}><option value="ok">✅ Disponível</option><option value="manutencao">🛠️ Em Manutenção</option></select></div>
+              <div className="form-group span-2"><label>LOCALIZAÇÃO NO GALPÃO</label><select value={localizacao} onChange={e => setLocalizacao(e.target.value)}><option value="">Selecione...</option>{listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
             </div>
 
             <h3 className="section-divider mt-compact">ESPECIFICAÇÕES TÉCNICAS</h3>
             <div className="form-grid-4">
-              <div className="form-group span-1">
-                <label>TAMANHO</label>
-                <select value={tamanho} onChange={e => setTamanho(e.target.value)}>
-                  <option value="">Selecione...</option>
-                  {listasSistema.tamanhos.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-              </div>
+              <div className="form-group span-1"><label>TAMANHO</label><select value={tamanho} onChange={e => setTamanho(e.target.value)}><option value="">Selecione...</option>{listasSistema.tamanhos.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
               <div className="form-group span-1"><label>COR</label><input value={cor} onChange={handleTextChange(setCor)} /></div>
-              <div className="form-group span-1">
-                <label>UNIDADE</label>
-                <select value={unidadeMedida} onChange={e => setUnidadeMedida(e.target.value)}>{unidades.map(u => <option key={u} value={u}>{u}</option>)}</select>
-              </div>
-              
-              {categoria === "Iluminação" ? (
-                <div className="form-group span-1"><label>VOLTAGEM</label>
-                  <select value={voltagem} onChange={e => setVoltagem(e.target.value)}>
-                    <option value="Bivolt">Bivolt</option><option value="110v">110v</option><option value="220v">220v</option>
-                  </select>
-                </div>
-              ) : (
-                <div className="form-group span-1"><label>MONTAGEM ESPECIALIZADA?</label>
-                  <select value={necessitaMontagem} onChange={e => setNecessitaMontagem(e.target.value)}>
-                    <option value="Não">Não (Pegue e Monte)</option><option value="Sim">Sim (Exige Profissional)</option>
-                  </select>
-                </div>
-              )}
-
+              <div className="form-group span-1"><label>UNIDADE</label><select value={unidadeMedida} onChange={e => setUnidadeMedida(e.target.value)}>{unidades.map(u => <option key={u} value={u}>{u}</option>)}</select></div>
+              {categoria === "Iluminação" ? (<div className="form-group span-1"><label>VOLTAGEM</label><select value={voltagem} onChange={e => setVoltagem(e.target.value)}><option value="Bivolt">Bivolt</option><option value="110v">110v</option><option value="220v">220v</option></select></div>) : (<div className="form-group span-1"><label>MONTAGEM TÉCNICA?</label><select value={necessitaMontagem} onChange={e => setNecessitaMontagem(e.target.value)}><option value="Não">Não (Pegue e Monte)</option><option value="Sim">Sim (Exige Equipe)</option></select></div>)}
               <div className="form-group span-1"><label>LARGURA (cm)</label><input type="number" value={largura} onChange={e => setLargura(e.target.value)} /></div>
               <div className="form-group span-1"><label>ALTURA (cm)</label><input type="number" value={altura} onChange={e => setAltura(e.target.value)} /></div>
               <div className="form-group span-1"><label>DIÂMETRO (cm)</label><input type="number" value={diametro} onChange={e => setDiametro(e.target.value)} /></div>
@@ -401,34 +369,9 @@ const CadastroEstoque = () => {
 
             <h3 className="section-divider mt-compact">VISIBILIDADE E OBSERVAÇÕES</h3>
             <div className="form-grid-4">
-              <div className="form-group span-1">
-                <label>DISPONÍVEL PARA:</label>
-                <select value={tipoDisponibilidade} onChange={e => setTipoDisponibilidade(e.target.value)}>
-                  <option value="Aluguel">Aluguel (Retorna)</option><option value="Venda">Venda (Sai do estoque)</option>
-                </select>
-              </div>
-              
-              <div className="form-group span-3" style={{justifyContent: 'center', paddingLeft: '10px'}}>
-                <label className="custom-toggle-container">
-                  <input 
-                    type="checkbox" 
-                    checked={visivelCatalogo} 
-                    onChange={e => setVisivelCatalogo(e.target.checked)} 
-                    className="hidden-checkbox"
-                  />
-                  <div className={`toggle-slider ${visivelCatalogo ? 'active' : ''}`}>
-                    <div className="toggle-knob"></div>
-                  </div>
-                  <span className={`toggle-label ${visivelCatalogo ? 'active-text' : 'inactive-text'}`}>
-                    {visivelCatalogo ? '👁️ VISÍVEL NO CATÁLOGO ONLINE' : '🔒 OCULTO DO CATÁLOGO'}
-                  </span>
-                </label>
-              </div>
-              
-              <div className="form-group span-4">
-                <label>OBSERVAÇÕES INTERNAS</label>
-                <textarea rows="3" value={observacoes} onChange={e => setObservacoes(e.target.value)}></textarea>
-              </div>
+              <div className="form-group span-1"><label>DISPONÍVEL PARA:</label><select value={tipoDisponibilidade} onChange={e => setTipoDisponibilidade(e.target.value)}><option value="Aluguel">Aluguel (Retorna)</option><option value="Venda">Venda (Sai do estoque)</option></select></div>
+              <div className="form-group span-3" style={{justifyContent: 'center', paddingLeft: '10px'}}><label className="custom-toggle-container"><input type="checkbox" checked={visivelCatalogo} onChange={e => setVisivelCatalogo(e.target.checked)} className="hidden-checkbox"/><div className={`toggle-slider ${visivelCatalogo ? 'active' : ''}`}><div className="toggle-knob"></div></div><span className={`toggle-label ${visivelCatalogo ? 'active-text' : 'inactive-text'}`}>{visivelCatalogo ? '👁️ VISÍVEL NO CATÁLOGO ONLINE' : '🔒 OCULTO DO CATÁLOGO'}</span></label></div>
+              <div className="form-group span-4"><label>OBSERVAÇÕES INTERNAS</label><textarea rows="3" value={observacoes} onChange={e => setObservacoes(e.target.value)}></textarea></div>
             </div>
 
             <div className="form-actions mt-compact">

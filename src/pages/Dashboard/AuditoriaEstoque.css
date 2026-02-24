@@ -1,0 +1,33 @@
+.auditoria-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(15, 23, 42, 0.85);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 10000; padding: 20px;
+}
+
+.auditoria-modal {
+  background: white; border-radius: 16px; width: 100%; max-width: 750px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); overflow: hidden;
+}
+
+.auditoria-header { background: #fff1f2; padding: 30px; border-bottom: 1px solid #fecdd3; text-align: center; }
+.auditoria-header h2 { color: #e11d48; margin-bottom: 10px; font-size: 1.6rem; }
+.auditoria-header p { color: #9f1239; font-size: 0.95rem; line-height: 1.5; }
+
+.auditoria-corpo { padding: 20px; max-height: 450px; overflow-y: auto; }
+.auditoria-card {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 20px; border: 1px solid #e2e8f0; border-radius: 12px; margin-bottom: 12px;
+  background: #f8fafc;
+}
+
+.auditoria-info h3 { color: #0f172a; margin-bottom: 5px; text-transform: uppercase; }
+.data-atrasada { background: #fee2e2; color: #ef4444; padding: 2px 6px; border-radius: 4px; font-weight: 800; }
+
+.auditoria-btns { display: flex; gap: 10px; }
+.btn-auditoria-check { background: #10b981; color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 700; cursor: pointer; }
+.btn-auditoria-cancel { background: white; color: #e11d48; border: 1px solid #fecdd3; padding: 10px 18px; border-radius: 8px; cursor: pointer; }
+
+.auditoria-footer { text-align: center; padding: 20px; }
+.btn-auditoria-ignore { background: none; border: none; color: #94a3b8; text-decoration: underline; cursor: pointer; font-size: 0.9rem; }
