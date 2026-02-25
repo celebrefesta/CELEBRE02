@@ -116,12 +116,12 @@ const Estoque = () => {
                 ? Number(item.financeiro.valorAluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) 
                 : '0,00';
 
-              // Pega a posição salva da foto 0 para exibir perfeitamente na miniatura
               const posImg = item.posicoesFoco?.[0];
 
               return (
                 <tr key={item.id}>
-                  <td>
+                  {/* FOTO E NOME - VAI VIRAR O CABEÇALHO DO CARD NO CELULAR */}
+                  <td className="item-info-cell">
                     <div className="prod-detail">
                       {item.foto ? (
                         <img 
@@ -135,21 +135,30 @@ const Estoque = () => {
                       <div><strong>{item.nome}</strong><span className="sub-text">CÓD: {item.codigo}</span></div>
                     </div>
                   </td>
-                  <td>
+                  
+                  {/* AS OUTRAS CÉLULAS VIRAM "LINHAS" NO CELULAR */}
+                  <td className="mobile-stack">
+                    <span className="mobile-label">CATEGORIA:</span>
                     <span className="tag-loc">{item.categoria}</span>
                     {item.subCategoria && <div style={{ fontSize: '11px', color: '#64748b', marginTop: '4px', fontWeight: 'bold' }}>{item.subCategoria}</div>}
                   </td>
-                  <td>
+                  
+                  <td className="mobile-stack">
+                    <span className="mobile-label">LOCALIZAÇÃO:</span>
                     <span style={{color: '#475569', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '5px', fontWeight: '500'}}>
                       📍 {item.localizacao || 'Não definida'}
                     </span>
                   </td>
-                  <td>
+                  
+                  <td className="mobile-stack">
+                    <span className="mobile-label">VALOR LOCAÇÃO:</span>
                     <span style={{fontWeight: '700', color: '#0f172a', fontSize: '14px'}}>
                       R$ {valorAluguelFormatado}
                     </span>
                   </td>
-                  <td>
+                  
+                  <td className="mobile-stack">
+                    <span className="mobile-label">ESTOQUE / DISPONÍVEL:</span>
                     <div className="stock-info" style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       <span className={estoqueBaixo ? 'text-red' : 'text-bold'} style={{ fontSize: '15px' }}>
                         {disponivelLoc} / {item.quantidade}
@@ -162,15 +171,19 @@ const Estoque = () => {
                       {estoqueBaixo && <div className="alert-badge" style={{marginTop: 0, width: 'fit-content'}}>⚠️ ESTOQUE BAIXO</div>}
                     </div>
                   </td>
-                  <td>
+                  
+                  <td className="status-cell">
                     <span className={`status-pill ${disponivelLoc > 0 ? 'disponivel' : 'manutencao'}`}>
                       {disponivelLoc > 0 ? '✅ Disponível' : '🛠️ Indisponível'}
                     </span>
                   </td>
-                  <td style={{textAlign:'right'}}>
-                    <button className="action-icon" title="Gerenciar Manutenção" onClick={() => abrirModalManutencao(item)}>🛠️</button>
-                    <button className="action-icon" onClick={() => irParaCadastro(item)}>✏️</button>
-                    <button className="action-icon delete" onClick={() => { if(window.confirm("Excluir?")) deleteDoc(doc(db, "estoque", item.id)).then(carregarEstoque) }}>🗑️</button>
+                  
+                  <td className="actions-cell">
+                    <div className="dropdown-container">
+                        <button className="action-icon" title="Gerenciar Manutenção" onClick={() => abrirModalManutencao(item)}>🛠️</button>
+                        <button className="action-icon" title="Editar" onClick={() => irParaCadastro(item)}>✏️</button>
+                        <button className="action-icon delete" title="Excluir" onClick={() => { if(window.confirm("Excluir?")) deleteDoc(doc(db, "estoque", item.id)).then(carregarEstoque) }}>🗑️</button>
+                    </div>
                   </td>
                 </tr>
               )
@@ -179,7 +192,7 @@ const Estoque = () => {
         </table>
       </div>
 
-      {/* --- MODAL DE MANUTENÇÃO COM CLASSES LIMPAS E MODERNAS --- */}
+      {/* --- MODAIS MANTIDOS ORIGINAIS --- */}
       {modalManutencao && (
         <div className="modal-overlay-blur">
           <div className="modal-maintenance-card">
@@ -189,19 +202,12 @@ const Estoque = () => {
             </div>
             
             <div className="modal-maintenance-body">
-              <p>
-                Quantas unidades de <strong>{itemParaManutencao?.nome}</strong> precisam de reparos?
-              </p>
-              
+              <p>Quantas unidades de <strong>{itemParaManutencao?.nome}</strong> precisam de reparos?</p>
               <div className="input-group-modern">
                 <label>QUANTIDADE (MÁX: {itemParaManutencao?.quantidade})</label>
                 <input 
-                  type="number" 
-                  value={qtdMaint} 
-                  onChange={(e) => setQtdMaint(e.target.value)}
-                  min="0"
-                  max={itemParaManutencao?.quantidade}
-                  className="modal-input-highlight"
+                  type="number" value={qtdMaint} onChange={(e) => setQtdMaint(e.target.value)}
+                  min="0" max={itemParaManutencao?.quantidade} className="modal-input-highlight"
                 />
                 <span className="helper-text">Dica: Digite 0 para devolver todas as peças ao estoque.</span>
               </div>
@@ -217,7 +223,7 @@ const Estoque = () => {
 
       {imagemAmpliada && (
         <div className="image-zoom-overlay" onClick={() => setImagemAmpliada(null)}>
-          <img src={imagemAmpliada} className="image-zoom-content" />
+          <img src={imagemAmpliada} className="image-zoom-content" alt="Zoom" />
           <p className="zoom-caption">Clique em qualquer lugar para fechar</p>
         </div>
       )}

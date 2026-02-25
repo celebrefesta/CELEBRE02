@@ -89,11 +89,20 @@ const Compras = () => {
 
       {/* CARDS DE RESUMO (DASHBOARD) */}
       <div className="resumo-grid">
+        <div className="card-resumo card-azul">
+          <div className="card-info">
+            <label>TOTAL NA LISTA</label>
+            <h2>{itens.length}</h2>
+            <p style={{color: '#3b82f6'}}>Itens cadastrados</p>
+          </div>
+          <div className="card-icon">🛒</div>
+        </div>
+
         <div className="card-resumo card-laranja">
           <div className="card-info">
             <label>ORÇAMENTO PENDENTE</label>
             <h2>R$ {totais.pendente.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h2>
-            <p>Estimado para as próximas festas</p>
+            <p>Estimado p/ compras</p>
           </div>
           <div className="card-icon">📂</div>
         </div>
@@ -102,7 +111,7 @@ const Compras = () => {
           <div className="card-info">
             <label>ITENS URGENTES</label>
             <h2>{totais.urgente}</h2>
-            <p style={{color: '#ef4444', fontWeight: 'bold'}}>Comprar imediatamente</p>
+            <p style={{color: '#ef4444', fontWeight: 'bold'}}>Comprar hoje</p>
           </div>
           <div className="card-icon">🚨</div>
         </div>
@@ -137,7 +146,7 @@ const Compras = () => {
         </div>
 
         <div className="tabela-wrapper">
-          <table style={{ width: '100%', tableLayout: 'fixed' }}>
+          <table className="custom-table-compras">
             <thead>
               <tr>
                 <th style={{ width: '30%' }}>ITEM & VÍNCULO</th>
@@ -145,7 +154,6 @@ const Compras = () => {
                 <th style={{ width: '15%' }}>VALOR TOTAL</th>
                 <th style={{ width: '15%' }}>STATUS</th>
                 <th style={{ width: '15%' }}>PRAZO LIMITE</th>
-                {/* 🌟 AJUSTE: Mudei para Center e tirei o Padding 🌟 */}
                 <th style={{ width: '15%', textAlign: 'center' }}>AÇÕES</th>
               </tr>
             </thead>
@@ -161,17 +169,24 @@ const Compras = () => {
                   const subtotal = (Number(item.quantidade) || 1) * (Number(item.valorEstimado) || 0);
 
                   return (
-                    <tr key={item.id} style={{ opacity: item.status === 'comprado' ? 0.6 : 1 }}>
-                      <td style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                        <span className="nome-produto" style={{ textDecoration: item.status === 'comprado' ? 'line-through' : 'none', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                    <tr key={item.id} className={item.status === 'comprado' ? 'linha-comprado' : ''}>
+                      <td className="item-info-cell">
+                        <span className="nome-produto" style={{ textDecoration: item.status === 'comprado' ? 'line-through' : 'none', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           {item.nome}
                         </span>
-                        <div className="vinculo-tag" style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        <div className="vinculo-tag" style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
                           🔗 {item.vinculo || "Estoque Geral"}
                         </div>
                       </td>
-                      <td>{item.quantidade}x</td>
-                      <td>
+                      
+                      {/* 🔥 AS DUAS COLUNAS COMEÇAM AQUI 🔥 */}
+                      <td className="mobile-stack col-50 col-left">
+                          <span className="mobile-label">QUANTIDADE:</span>
+                          <strong>{item.quantidade}x</strong>
+                      </td>
+                      
+                      <td className="mobile-stack col-50 col-right">
+                        <span className="mobile-label">VALOR ESTIMADO:</span>
                         <div className="preco-real">
                           R$ {subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                         </div>
@@ -179,27 +194,18 @@ const Compras = () => {
                            R$ {Number(item.valorEstimado).toFixed(2)} un.
                         </small>
                       </td>
-                      <td>
+                      
+                      <td className="mobile-stack col-50 col-left">
+                        <span className="mobile-label">STATUS:</span>
                         <span className={`badge ${item.status}`}>
                           {item.status === 'pendente' ? 'Pendente' : 'Comprado'}
                         </span>
                       </td>
 
-                      <td>
+                      <td className="mobile-stack col-50 col-right">
+                        <span className="mobile-label">PRAZO MÁXIMO:</span>
                         {item.prazo ? (
-                          <span style={{ 
-                            fontSize: '0.95rem', 
-                            fontWeight: '700', 
-                            color: isUrgente ? '#ef4444' : '#334155',
-                            backgroundColor: isUrgente ? '#fef2f2' : '#f8fafc',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            border: isUrgente ? '1px solid #fecaca' : '1px solid #e2e8f0',
-                            whiteSpace: 'nowrap'
-                          }}>
+                          <span className={`prazo-badge ${isUrgente ? 'urgente' : 'ok'}`}>
                             📅 {item.prazo.split('-').reverse().join('/')}
                             {isUrgente && <span title="Prazo esgotado!">🚨</span>}
                           </span>
@@ -208,35 +214,11 @@ const Compras = () => {
                         )}
                       </td>
 
-                      {/* 🌟 AJUSTE: Tirei o padding e coloquei o justifyContent no centro 🌟 */}
-                      <td>
-                        <div style={{display: 'flex', gap: '8px', justifyContent: 'center', alignItems: 'center'}}>
+                      <td className="actions-cell">
+                        <div className="botoes-acao-container">
                           <button 
                             onClick={() => toggleCheck(item)}
-                            style={{
-                              padding: '8px 12px',
-                              borderRadius: '6px',
-                              border: item.status === 'pendente' ? 'none' : '1px solid #cbd5e1',
-                              fontWeight: 'bold',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '5px',
-                              backgroundColor: item.status === 'pendente' ? '#10b981' : '#f8fafc',
-                              color: item.status === 'pendente' ? '#fff' : '#64748b',
-                              boxShadow: item.status === 'pendente' ? '0 2px 4px rgba(16, 185, 129, 0.3)' : 'none',
-                              transition: 'all 0.2s',
-                              fontSize: '0.85rem',
-                              whiteSpace: 'nowrap'
-                            }}
-                            onMouseOver={(e) => {
-                              if(item.status === 'pendente') e.currentTarget.style.backgroundColor = '#059669';
-                              else e.currentTarget.style.backgroundColor = '#f1f5f9';
-                            }}
-                            onMouseOut={(e) => {
-                              if(item.status === 'pendente') e.currentTarget.style.backgroundColor = '#10b981';
-                              else e.currentTarget.style.backgroundColor = '#f8fafc';
-                            }}
+                            className={`btn-toggle-compra ${item.status === 'pendente' ? 'pendente' : 'comprado'}`}
                           >
                             {item.status === 'pendente' ? '✅ Já Comprei' : '↩ Desfazer'}
                           </button>

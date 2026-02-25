@@ -1,27 +1,34 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
 
 /* =========================================
-   ESTRUTURA BASE E CABEÇALHO (DINÂMICOS)
-   ========================================= */
-.page-container {
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  padding: 30px !important;
-  background-color: var(--fundo-cinza);
-  min-height: 100vh;
-  box-sizing: border-box;
-  transition: 0.3s;
+   BLINDAGEM GERAL DE LARGURA
+========================================= */
+.page-container, .page-container * {
+    box-sizing: border-box;
+    max-width: 100%;
 }
 
+.page-container {
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 30px 40px !important;
+  background-color: var(--fundo-cinza);
+  min-height: 100vh;
+  transition: 0.3s;
+  overflow-x: hidden; 
+}
+
+/* =========================================
+   CABEÇALHO DINÂMICO
+========================================= */
 .page-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 20px;
+  margin-top: 10px;
   border-bottom: 2px solid var(--borda) !important; 
-  padding-bottom: 20px !important; 
-  margin-bottom: 30px !important;
+  padding-bottom: 15px !important; 
+  margin-bottom: 25px !important;
 }
 
 .page-title {
@@ -34,31 +41,32 @@
   letter-spacing: -0.5px;
 }
 
+/* =========================================
+   CONTAINER BRANCO (FORMULÁRIO)
+========================================= */
 .form-widescreen {
   background: var(--branco);
   padding: 35px;
   border-radius: 12px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
   width: 100%;
-  box-sizing: border-box;
   border: 1px solid var(--borda);
   transition: 0.3s;
 }
 
 /* =========================================
    DIVISÃO DA TELA (ESQUERDA FOTO / DIREITA DADOS)
-   ========================================= */
+========================================= */
 .estoque-form-layout {
   display: flex;
   gap: 40px;
   align-items: flex-start;
+  width: 100%;
 }
 
-/* 🌟 AQUI ESTÃO AS TRAVAS DA COLUNA (TAMANHO DO SEU DESENHO) 🌟 */
 .left-photo-col {
   width: 240px; 
-  min-width: 240px; /* Impede de encolher */
-  max-width: 240px; /* Impede de esticar */
+  min-width: 240px; 
   flex-shrink: 0;
   position: sticky;
   top: 30px;
@@ -66,21 +74,15 @@
 
 .right-data-col {
   flex-grow: 1;
-  min-width: 0;
-}
-
-/* Responsividade para telas menores */
-@media (max-width: 1000px) {
-  .estoque-form-layout { flex-direction: column; position: static; }
-  .left-photo-col { width: 100%; position: static; max-width: 240px; margin: 0 auto; }
+  min-width: 0; 
 }
 
 /* =========================================
-   ÁREA DE FOTOS E UPLOADS (QUADRADO PERFEITO)
-   ========================================= */
+   ÁREA DE FOTOS E UPLOADS
+========================================= */
 .main-photo-display {
-  width: 240px; /* Largura cravada */
-  height: 240px; /* Altura cravada igual à largura */
+  width: 240px; 
+  height: 240px; 
   border-radius: 8px;
   background: var(--fundo-cinza);
   border: 2px dashed var(--borda);
@@ -91,7 +93,6 @@
   margin-bottom: 15px;
   overflow: hidden;
   position: relative;
-  box-sizing: border-box;
 }
 
 .main-photo-display > * {
@@ -103,11 +104,16 @@
   justify-content: center;
 }
 
-.main-photo-preview { width: 100%; height: 100%; object-fit: cover; }
+.main-photo-preview { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  touch-action: none; 
+}
 
 .photo-thumbnails-row {
   display: flex; gap: 10px; flex-wrap: wrap;
-  justify-content: flex-start; /* Alinha as miniaturas à esquerda */
+  justify-content: flex-start;
 }
 
 .thumb-item {
@@ -137,7 +143,7 @@
 
 /* =========================================
    GRIDS, INPUTS E DIVISORES
-   ========================================= */
+========================================= */
 .section-divider {
   font-size: 12px; color: var(--texto-secundario); font-weight: 800;
   text-transform: uppercase; letter-spacing: 1px;
@@ -146,103 +152,202 @@
 
 .mt-compact { margin-top: 25px; }
 
-.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 15px; }
-.span-1 { grid-column: span 1; } .span-2 { grid-column: span 2; }
-.span-3 { grid-column: span 3; } .span-4 { grid-column: span 4; }
+/* GRID PRINCIPAL (COMPUTADOR) */
+.form-grid-4 { 
+  display: grid; 
+  grid-template-columns: repeat(4, 1fr); 
+  gap: 15px; 
+  margin-bottom: 25px; 
+  width: 100%;
+}
 
-.form-group { display: flex; flex-direction: column; gap: 4px; }
-.form-group label { font-size: 11px; font-weight: 700; color: var(--texto-secundario); }
+.span-1 { grid-column: span 1; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+
+/* AGRUPAMENTO BLINDADO (SEMPRE LADO A LADO) */
+.flex-row-always {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+.flex-row-always > .form-group {
+  flex: 1;
+  min-width: 0;
+}
+
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 11px; font-weight: 700; color: var(--texto-secundario); text-transform: uppercase;}
 
 .form-group input, .form-group select, .form-group textarea {
-  padding: 10px 12px; border: 1px solid var(--borda); border-radius: 6px;
-  font-size: 13px; color: var(--texto-principal); background-color: var(--fundo-cinza);
-  transition: all 0.2s; font-family: inherit; outline: none;
+  padding: 12px 14px; border: 1px solid var(--borda); border-radius: 8px;
+  font-size: 14px; color: var(--texto-principal); background-color: #fcfcfc;
+  transition: all 0.2s; font-family: inherit; outline: none; width: 100%; box-sizing: border-box;
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-  border-color: var(--dourado); background-color: var(--branco); box-shadow: 0 0 0 2px rgba(197, 160, 89, 0.1);
+  border-color: var(--dourado); background-color: var(--branco); box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
 }
 
 /* =========================================
    BOTÕES DE AÇÃO DO FORMULÁRIO
-   ========================================= */
+========================================= */
 .form-actions {
   display: flex; justify-content: flex-end; gap: 15px;
   padding-top: 20px; border-top: 1px solid var(--borda);
 }
 
 .btn-voltar {
-  padding: 10px 20px; background-color: var(--branco); color: var(--texto-secundario);
-  border: 1px solid var(--borda); border-radius: 6px; text-decoration: none;
-  font-weight: 700; font-size: 13px; transition: 0.2s;
+  padding: 12px 24px; background-color: var(--branco); color: var(--texto-secundario);
+  border: 1px solid var(--borda); border-radius: 8px; text-decoration: none;
+  font-weight: 700; font-size: 14px; transition: 0.2s;
 }
 .btn-voltar:hover { background-color: var(--fundo-cinza); color: var(--texto-principal); }
 
 .btn-salvar {
-  padding: 10px 24px; background-color: #0f172a; color: white;
-  border: none; border-radius: 6px; font-weight: 700; font-size: 13px; cursor: pointer; transition: 0.2s;
+  padding: 12px 30px; background-color: #0f172a; color: white;
+  border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s;
 }
 .btn-salvar:hover { background-color: #1e293b; }
 
-/* No escuro, o botão escuro não funciona. Trocamos para dourado! */
 [data-theme='dark'] .btn-salvar { background-color: var(--dourado); color: white; }
-[data-theme='dark'] .btn-salvar:hover { background-color: #b48a3c; }
+[data-theme='dark'] .btn-salvar:hover { background: #b48a3c; }
 
 /* =========================================
-   TOGGLE SWITCH PREMIUM (CATÁLOGO)
-   ========================================= */
-.custom-toggle-container {
-  display: flex;
-  align-items: center;
-  gap: 12px;
+   🔥 TOGGLE SWITCH À PROVA DE BALAS 🔥
+========================================= */
+.ios-toggle-wrapper {
+  display: inline-flex !important; 
+  align-items: center !important; 
+  gap: 12px !important; 
   cursor: pointer;
-  user-select: none;
-  margin-top: 15px; 
+  user-select: none; 
+  background: var(--branco);
+  border: 1px solid var(--borda);
+  padding: 8px 16px !important;
+  border-radius: 8px;
+  width: fit-content;
+  max-width: 100%;
+  transition: 0.3s;
 }
 
-.hidden-checkbox {
-  display: none; 
+.ios-toggle-wrapper:hover {
+  background: #f8fafc;
 }
 
-.toggle-slider {
-  width: 48px;
-  height: 26px;
-  background-color: var(--borda); /* Cinza padrão da borda */
-  border-radius: 26px;
-  position: relative;
-  transition: background-color 0.3s ease;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.1);
+.ios-toggle-switch {
+  width: 46px !important; 
+  height: 26px !important; 
+  background-color: var(--borda); 
+  border-radius: 30px;
+  position: relative; 
+  transition: 0.3s ease; 
+  flex-shrink: 0 !important; /* BLINDA O BOTÃO PARA NÃO ENCOLHER */
 }
 
-.toggle-slider.active {
-  background-color: #10b981; 
+.ios-toggle-wrapper.active .ios-toggle-switch { 
+  background-color: #10b981 !important; 
 }
-[data-theme='dark'] .toggle-slider.active {
-  background-color: #059669; 
-}
-
-.toggle-knob {
-  width: 20px;
-  height: 20px;
-  background-color: white;
-  border-radius: 50%;
-  position: absolute;
-  top: 3px;
-  left: 3px;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+[data-theme='dark'] .ios-toggle-wrapper.active .ios-toggle-switch { 
+  background-color: #059669 !important; 
 }
 
-.toggle-slider.active .toggle-knob {
-  transform: translateX(22px);
+.ios-toggle-knob {
+  width: 20px !important; 
+  height: 20px !important; 
+  background-color: white !important; 
+  border-radius: 50% !important;
+  position: absolute !important; 
+  top: 3px !important; 
+  left: 3px !important; 
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
 
-.toggle-label {
-  font-size: 13px;
-  font-weight: 800;
-  transition: color 0.3s ease;
-  letter-spacing: 0.5px;
+.ios-toggle-wrapper.active .ios-toggle-knob { 
+  transform: translateX(20px) !important; 
 }
 
-.toggle-label.active-text { color: #10b981; }
-.toggle-label.inactive-text { color: var(--texto-secundario); }
-[data-theme='dark'] .toggle-label.active-text { color: #34d399; }
+.ios-toggle-text { 
+  font-size: 13px !important; 
+  font-weight: 800 !important; 
+  color: var(--texto-secundario);
+  white-space: nowrap !important; /* TEXTO NUNCA QUEBRA DE LINHA */
+  letter-spacing: 0.5px !important; 
+}
+
+.ios-toggle-wrapper.active .ios-toggle-text { 
+  color: #10b981 !important; 
+}
+[data-theme='dark'] .ios-toggle-wrapper.active .ios-toggle-text { 
+  color: #34d399 !important; 
+}
+
+/* =========================================
+   📱 RESPONSIVIDADE MOBILE (A MÁGICA FINAL)
+========================================= */
+@media (max-width: 1000px) {
+  
+  .page-container { padding: 10px 0 0 0 !important; }
+  .page-header { padding: 0 15px 15px 15px !important; margin-bottom: 10px !important; }
+
+  .form-widescreen { 
+      padding: 25px 15px !important; 
+      border-radius: 0 !important; 
+      border-left: none !important;
+      border-right: none !important;
+  }
+
+  /* 1. Desempilha Foto e Formulário */
+  .estoque-form-layout { flex-direction: column !important; position: static !important; gap: 30px !important;}
+  
+  /* 2. Centraliza a área da Foto no Celular e Aumenta o tamanho dela */
+  .left-photo-col { width: 100% !important; max-width: 100% !important; position: static !important; display: flex; flex-direction: column; align-items: center;}
+  
+  .main-photo-display { width: 100% !important; max-width: 280px !important; height: 280px !important; }
+  
+  /* 3. A Mágica do Formulário (Vira Coluna) */
+  .right-data-col { width: 100% !important; }
+  
+  .form-grid-4 { 
+      display: flex !important;
+      flex-direction: column !important;
+      gap: 15px !important; 
+      margin-bottom: 20px !important; 
+  }
+  
+  .span-1, .span-2, .span-3, .span-4 { 
+      width: 100% !important; 
+      min-width: 100% !important; 
+  }
+  
+  /* 🔥 AQUI OS CAMPOS PEQUENOS FICAM LADO A LADO 🔥 */
+  .flex-row-always {
+      display: flex !important;
+      flex-direction: row !important;
+      gap: 10px !important;
+      width: 100% !important;
+  }
+
+  .flex-row-always > .form-group {
+      flex: 1 !important;
+      min-width: 0 !important; /* Impede vazamento se o texto for grande */
+  }
+
+  .flex-row-always label {
+      font-size: 9px !important; /* Diminui a letra pra caber 3 itens */
+      white-space: nowrap !important;
+      overflow: hidden !important;
+      text-overflow: ellipsis !important;
+  }
+
+  .flex-row-always input, .flex-row-always select {
+      padding: 12px 8px !important;
+      font-size: 13px !important;
+  }
+
+  /* 4. Ajuste Botões de Salvar */
+  .form-actions { flex-direction: column; }
+  .btn-voltar { width: 100%; text-align: center; }
+  .btn-salvar { width: 100%; padding: 16px !important; }
+}
