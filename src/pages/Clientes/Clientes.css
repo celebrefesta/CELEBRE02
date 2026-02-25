@@ -1,324 +1,175 @@
 /* =========================================
-   1. ESTRUTURA GLOBAL E VARIÁVEIS
-   ========================================= */
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
+   ESTILOS DA PÁGINA CLIENTES (ESPAÇO TOTAL)
+========================================= */
 
-.dashboard-container {
-  padding: 30px !important; 
-  background-color: var(--fundo-cinza); 
-  min-height: 100vh;
-  width: 100%;
-  box-sizing: border-box; 
-  overflow-x: hidden; 
-  transition: background-color 0.3s ease;
-}
+.clientes-container { width: 100%; padding: 30px 40px; box-sizing: border-box; }
+.main-card-transparent { background: transparent; box-shadow: none; border: none; padding: 0; }
 
-/* =========================================
-   2. CABEÇALHO
-   ========================================= */
-.dashboard-header {
+/* --- 🔥 FILTRO CORRIGIDO --- */
+.filter-wrapper-clean {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px; 
-  border-bottom: 2px solid var(--borda) !important; 
-  padding-bottom: 20px !important; 
-  margin-bottom: 30px !important;
-}
-
-.header-text h1 {
-  margin: 0; 
-  font-size: 26px; 
-  color: var(--texto-principal); 
-  font-weight: 800;
-  text-transform: uppercase;
-  font-family: 'Montserrat', sans-serif; 
-  letter-spacing: -0.5px; 
-}
-
-.header-text p {
-  margin: 5px 0 0 0; 
-  color: var(--texto-secundario); 
-  font-size: 14px;
-}
-
-.btn-novo-cliente {
-  background-color: #0f172a; 
-  color: white;
-  border: none;
-  padding: 0 24px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 14px;
-  cursor: pointer;
-  height: 44px;
-  display: flex; 
-  align-items: center;
-  text-decoration: none;
-  transition: 0.2s;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-  white-space: nowrap;
-}
-
-[data-theme='dark'] .btn-novo-cliente {
-  background-color: var(--dourado);
-  color: #0f172a;
-}
-
-/* =========================================
-   3. CARDS DE ESTATÍSTICAS
-   ========================================= */
-.stats-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr); 
-  gap: 25px; 
+  gap: 15px;
   margin-bottom: 30px;
-  width: 100%;
+  align-items: stretch; 
+  max-width: 800px;
 }
 
-.card-stat {
-  background: var(--branco);
-  padding: 25px;
-  border-radius: 12px;
-  border: 1px solid var(--borda);
-  box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05);
-  position: relative;
-  overflow: hidden;
-  transition: 0.3s;
-}
-
-.label-stat {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-  color: var(--texto-secundario);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 8px;
-}
-
-.value-stat {
-  font-size: 32px; 
-  font-weight: 800;
-  color: var(--texto-principal);
-  font-family: 'Montserrat', sans-serif;
-}
-
-.icon-stat {
-  position: absolute;
-  top: 25px;
-  right: 25px;
-  font-size: 28px;
-  opacity: 0.15; 
-  color: var(--texto-principal);
-}
-
-/* =========================================
-   4. TABELA (DESKTOP) E BUSCA
-   ======================================== */
-.main-card {
-  background: var(--branco);
-  border-radius: 12px;
-  border: 1px solid var(--borda);
-  overflow: hidden;
-  box-shadow: 0 4px 6px -2px rgba(0,0,0,0.05);
-  width: 100%; 
-}
-
-.filter-wrapper {
+.search-bar-container {
+  flex: 1;
   display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  padding: 15px 25px;
-  border-bottom: 1px solid var(--borda);
-  gap: 15px; 
-}
-
-.search-input {
-  flex: 1; 
-  padding: 12px 15px;
-  border: 1px solid var(--borda);
-  border-radius: 8px;
-  font-size: 14px;
-  color: var(--texto-principal);
-  background-color: var(--fundo-cinza);
-}
-
-.custom-table { width: 100%; border-collapse: collapse; }
-
-.custom-table th {
-  background: var(--fundo-cinza); 
-  padding: 15px 24px; 
-  text-align: left;
-  font-size: 11px; 
-  color: var(--texto-secundario); 
-  font-weight: 700; 
-  text-transform: uppercase;
-}
-
-.custom-table td {
-  padding: 15px 24px; 
-  border-bottom: 1px solid var(--borda); 
-  color: var(--texto-principal);
-}
-
-/* ── DESIGN DOS BOTÕES DE AÇÃO (PC) ── */
-.td-acoes { text-align: right; }
-
-.acoes-wrapper {
-  display: flex;
-  gap: 8px;
-  justify-content: flex-end;
-}
-
-/* Botões como ícones discretos no Computador */
-.acoes-wrapper button {
-  background: none;
-  border: 1px solid transparent;
-  cursor: pointer;
-  font-size: 18px;
-  padding: 8px;
-  border-radius: 6px;
-  transition: all 0.2s ease;
-  display: flex;
+  flex-direction: row !important;
   align-items: center;
-  justify-content: center;
+  background: var(--branco);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 0 16px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+  transition: all 0.3s ease;
 }
 
-.acoes-wrapper .btn-editar:hover { 
-  background-color: #f1f5f9; 
-  border-color: #cbd5e1; 
+.search-bar-container:focus-within { border-color: var(--azul-escuro); box-shadow: 0 4px 15px rgba(15, 23, 42, 0.1); }
+
+.search-icon { 
+  font-size: 18px; 
+  color: var(--texto-secundario); 
+  margin-right: 12px; 
+  position: static !important; 
+  display: block !important;
+  transform: none !important;
 }
 
-.acoes-wrapper .btn-excluir:hover { 
-  background-color: #fef2f2; 
-  border-color: #fecaca; 
-  color: #dc2626; 
+.search-input-clean { flex: 1; border: none; background: transparent; padding: 14px 0; font-size: 15px; color: var(--texto-principal); outline: none; font-weight: 500; width: 100%; box-sizing: border-box; }
+.btn-busca-mobile { padding: 0 24px; border-radius: 12px; font-size: 14px; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15); }
+
+/* --- TABELA DESKTOP --- */
+.table-responsive { width: 100%; overflow-x: auto; overflow-y: visible !important; }
+.custom-table { width: 100%; border-collapse: separate; border-spacing: 0 10px; }
+.custom-table th { padding: 15px 20px; text-align: left; font-size: 11px; text-transform: uppercase; color: var(--texto-secundario); letter-spacing: 1px; border: none; }
+
+.custom-table tbody tr { 
+  background: var(--branco); 
+  box-shadow: 0 2px 5px rgba(0,0,0,0.02); 
+  transition: all 0.2s; 
+  position: relative; 
+  z-index: 1; /* Valor base */
 }
+
+/* 🔥 ISSO RESOLVE O MENU FICAR ATRÁS: O card ativo ganha prioridade visual */
+.custom-table tbody tr:hover,
+.custom-table tbody tr:focus-within { 
+  z-index: 100 !important; 
+}
+
+.custom-table td { padding: 20px; border: none; vertical-align: middle; border-top: 1px solid var(--borda); border-bottom: 1px solid var(--borda); }
+.custom-table td:first-child { border-left: 1px solid var(--borda); border-top-left-radius: 12px; border-bottom-left-radius: 12px; }
+.custom-table td:last-child { border-right: 1px solid var(--borda); border-top-right-radius: 12px; border-bottom-right-radius: 12px; }
+
+/* --- COMPONENTES VISUAIS --- */
+.cliente-info-wrapper { display: flex; align-items: center; gap: 15px; }
+.avatar-quadrado { width: 50px; height: 50px; min-width: 50px; border-radius: 12px; object-fit: cover; background: #f1f5f9; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 700; color: #64748b; border: 1px solid var(--borda); }
+.user-details { display: flex; flex-direction: column; gap: 3px; }
+.user-details strong { font-size: 15px; color: var(--texto-principal); font-weight: 700; }
+.user-details span { font-size: 13px; color: var(--texto-secundario); }
+
+.badge-status { padding: 8px 16px; border-radius: 30px; font-size: 11px; font-weight: 800; letter-spacing: 0.5px; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; }
+.badge-status.devedor { background-color: #fee2e2 !important; color: #991b1b !important; border: 1px solid #fecaca; }
+.badge-status.ok { background-color: #d1fae5 !important; color: #065f46 !important; border: 1px solid #a7f3d0; }
+
+/* --- MENU 3 PONTINHOS --- */
+.dropdown-container { position: relative; height: 100%; display: flex; align-items: center; justify-content: center; }
+.btn-pontinhos { background: transparent; border: none; font-size: 26px; color: var(--texto-secundario); cursor: pointer; padding: 5px; line-height: 0; border-radius: 8px; transition: 0.2s; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+.btn-pontinhos:hover { background: var(--fundo-cinza); color: var(--texto-principal); }
+
+.menu-suspenso { 
+  position: absolute; 
+  right: 0; 
+  top: 45px; 
+  background: var(--branco); 
+  border: 1px solid var(--borda); 
+  border-radius: 12px; 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.15); 
+  z-index: 9999 !important; /* 🔥 PRIORIDADE MÁXIMA PARA NÃO FICAR ATRÁS */
+  min-width: 160px; 
+  overflow: hidden; 
+  padding: 5px; 
+  animation: menuPop 0.2s ease; 
+}
+@keyframes menuPop { from { opacity: 0; transform: scale(0.95) translateY(-10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+
+.item-menu { background: transparent; border: none; padding: 12px 15px; text-align: left; font-size: 14px; font-weight: 600; color: var(--texto-principal); cursor: pointer; display: flex; align-items: center; gap: 10px; width: 100%; border-radius: 8px; }
+.item-menu:hover { background: var(--fundo-cinza); }
+.item-menu.item-excluir { color: #dc2626; }
+
 
 /* =========================================
-   5. ALINHAMENTO AVATAR + NOME
-   ========================================= */
-.user-info { 
-  display: flex; 
-  align-items: center; 
-  gap: 15px; 
-  text-align: left;
-}
-
-.user-avatar-img, .user-avatar { 
-  width: 45px; 
-  height: 45px; 
-  border-radius: 50%; 
-  object-fit: cover; 
-  flex-shrink: 0; 
-  background: #e2e8f0;
-}
-
-/* =========================================
-   📱 RESPONSIVIDADE MOBILE (< 900px)
-   ========================================= */
+   📱 RESPONSIVIDADE MOBILE 
+========================================= */
 @media (max-width: 900px) {
-
-  .dashboard-container { padding: 10px !important; }
   
-  .dashboard-header { 
-    flex-direction: column !important; 
-    align-items: flex-start !important; 
-    gap: 12px !important; 
-  }
-  
-  .header-text h1 { font-size: 1.5rem !important; }
-  .btn-novo-cliente { width: 100% !important; justify-content: center !important; height: 48px !important; }
+  .clientes-container { padding: 15px 12px !important; overflow-x: hidden !important; }
+  .filter-wrapper-clean { flex-direction: column !important; max-width: 100%; gap: 10px; }
 
-  .stats-row { grid-template-columns: 1fr 1fr !important; gap: 10px !important; }
-  .card-stat { padding: 14px 16px !important; }
-
-  .main-card { padding: 0 !important; background: transparent !important; border: none !important; box-shadow: none !important; }
-
-  .filter-wrapper { 
-    flex-direction: column !important; 
-    padding: 15px !important; 
-    background: var(--branco) !important;
-    border-radius: 12px !important;
-    border: 1px solid var(--borda) !important;
-    margin-bottom: 15px !important;
-  }
-
-  /* Tabela vira Cards Individuais */
-  .custom-table, .custom-table tbody, .custom-table tr { 
+  /* 🔥 MARRETA QUE MATA OS 900PX E O OVERFLOW */
+  .table-responsive { width: 100% !important; overflow-x: hidden !important; overflow-y: visible !important; }
+  .custom-table, .custom-table tbody, .custom-table tr, .custom-table td { 
     display: block !important; 
     width: 100% !important; 
+    max-width: 100% !important; 
+    min-width: 0 !important; 
+    box-sizing: border-box !important; 
   }
-  
   .custom-table thead { display: none !important; }
 
   .custom-table tr {
-    margin-bottom: 15px !important;
-    border: 1px solid var(--borda) !important;
-    border-radius: 12px !important;
-    padding: 15px !important;
+    position: relative !important; 
     background: var(--branco) !important;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
-  }
-
-  .custom-table td { 
-    display: block !important; 
-    width: 100% !important; 
-    padding: 6px 0 !important; 
-    border-bottom: none !important; 
-    text-align: left !important;
-  }
-
-  .custom-table td.user-info { 
-    display: flex !important; 
-    flex-direction: row !important;
-    align-items: center !important; 
-    padding-bottom: 12px !important; 
-    border-bottom: 1px solid var(--fundo-cinza) !important; 
-    gap: 12px !important;
-    margin-bottom: 10px !important;
-  }
-
-  /* ── BOTÕES DE AÇÃO MOBILE (50/50 COM TEXTO) ── */
-  .custom-table td.td-acoes {
-    display: block !important;
-    width: 100% !important;
-    padding: 15px 0 0 0 !important;
-    margin-top: 10px !important;
-    border-top: 1px dashed var(--borda) !important;
-  }
-
-  .acoes-wrapper {
-    display: flex !important;
-    flex-direction: row !important;
-    justify-content: space-between !important;
-    gap: 10px !important;
-    width: 100% !important;
-  }
-
-  .acoes-wrapper button {
-    flex: 1 !important; 
-    height: 46px !important; 
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 8px !important;
-    border-radius: 10px !important;
-    font-size: 0.9rem !important;
-    font-weight: 700 !important;
     border: 1px solid var(--borda) !important;
-    background-color: var(--fundo-cinza) !important;
+    border-radius: 16px !important;
+    margin-bottom: 15px !important;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important;
     padding: 0 !important;
+    overflow: visible !important; /* 🔥 Essencial para o menu suspenso aparecer */
   }
 
-  /* Truque: Adiciona texto apenas no mobile sem mexer no JSX */
-  .acoes-wrapper .btn-editar::after { content: " Editar"; }
-  .acoes-wrapper .btn-excluir::after { content: " Excluir"; }
+  .custom-table td { padding: 12px 20px !important; border: none !important; border-bottom: 1px solid var(--fundo-cinza) !important; }
+  .custom-table td:last-child { border-bottom: none !important; }
 
-  .acoes-wrapper .btn-excluir {
-    background-color: #fef2f2 !important;
-    color: #dc2626 !important;
-    border-color: #fecaca !important;
+  .cliente-cell { background: #f8fafc; padding: 15px 20px !important; border-top-left-radius: 16px; border-top-right-radius: 16px; }
+  .avatar-quadrado { width: 45px; height: 45px; min-width: 45px; }
+  
+  .mobile-label { display: block !important; font-size: 11px; text-transform: uppercase; color: #94a3b8; font-weight: 800; }
+  .badge-status { width: 100% !important; padding: 12px !important; font-size: 12px !important; display: flex !important; }
+
+  /* 🔥 3 PONTINHOS CORRIGIDOS (A DIV flutua, o TD fica quieto) */
+  .actions-cell {
+    position: static !important;
+    padding: 0 !important;
+    height: 0 !important;
+    border: none !important;
+  }
+  
+  .dropdown-container {
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
+    z-index: 100 !important;
+    display: block !important;
+  }
+  
+  .btn-pontinhos { 
+    background: var(--branco) !important; 
+    border: 1px solid var(--borda) !important; 
+    width: 38px !important; 
+    height: 38px !important; 
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+  }
+  
+  .menu-suspenso { 
+    right: 0; 
+    top: 45px; 
+    width: 180px; 
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2); 
+    position: absolute !important;
+    z-index: 9999 !important;
   }
 }

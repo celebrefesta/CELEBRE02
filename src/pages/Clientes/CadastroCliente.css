@@ -1,222 +1,220 @@
 @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
 
 /* ==========================================
-   CSS: CADASTRO DE CLIENTE (PADRÃO CELEBRE - LARGURA TOTAL)
+   CSS: CADASTRO DE CLIENTE (DESIGN PREMIUM)
    ========================================== */
 
-/* Forçando a largura total e o respiro no topo */
-.page-container {
-  width: 100% !important;
-  max-width: 100% !important; /* REMOVE A TRAVA DE 1200px */
-  margin: 0 !important;
-  padding: 30px !important; /* Cria o respiro nas laterais e no topo */
-  background-color: #f1f5f9;
+:root {
+  --azul-escuro: #0f172a;
+  --dourado: #c5a059;
+  --fundo-cinza: #f1f5f9;
+  --branco: #ffffff;
+  --texto-principal: #0f172a;
+  --texto-secundario: #64748b;
+  --borda: #e2e8f0;
+}
+
+.form-page-container {
+  width: 100%;
+  padding: 30px 40px;
+  box-sizing: border-box;
+  background-color: var(--fundo-cinza);
   min-height: 100vh;
-  box-sizing: border-box; /* Impede a barra de rolagem horizontal */
 }
 
-/* --- CABEÇALHO COM BORDA (ALTERADO AQUI) --- */
-.page-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-top: 20px; 
-  
-  /* --- AGORA A LINHA VAI APARECER --- */
-  border-bottom: 2px solid #cbd5e1 !important; /* Linha mais escura e visível */
-  padding-bottom: 20px !important; 
-  margin-bottom: 30px !important;
+/* --- CABEÇALHO --- */
+.form-page-header {
+  margin-bottom: 25px;
+  border-bottom: 2px solid #cbd5e1;
+  padding-bottom: 20px;
 }
 
-.page-title {
-  color: #0f172a; /* Azul Escuro do Menu */
+.form-page-title {
+  color: var(--azul-escuro);
   font-size: 24px;
   font-weight: 800;
   text-transform: uppercase;
   margin: 0;
-  font-family: 'Montserrat', sans-serif; /* Fonte premium da Ágape */
-  letter-spacing: -0.5px;
+  font-family: 'Montserrat', sans-serif;
 }
 
-/* Cartão Branco Esticado */
+.form-page-subtitle { color: var(--texto-secundario); margin-top: 5px; font-size: 14px; }
+
+/* --- CARTÃO PRINCIPAL --- */
 .form-widescreen {
-  background: white;
+  background: var(--branco);
   padding: 35px;
-  border-radius: 12px;
+  border-radius: 16px;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--borda);
   width: 100%;
   box-sizing: border-box;
 }
 
-/* --- ABAS PADRONIZADAS --- */
-.tabs-container {
+/* --- ESTRUTURA DESKTOP --- */
+.estoque-form-layout {
   display: flex;
-  border-bottom: 2px solid #e2e8f0;
-  margin-bottom: 25px;
+  gap: 40px;
+  align-items: flex-start;
 }
 
-.tab-btn {
-  background: transparent;
-  border: none;
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 700;
-  color: #94a3b8;
-  cursor: pointer;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.tab-btn:hover { color: #475569; }
-
-/* Aba ativa usa o Azul Escuro e Dourado */
-.tab-btn.active { color: #0f172a; }
-.tab-btn.active::after {
-  content: '';
-  position: absolute;
-  bottom: -2px;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  background-color: #c5a059; /* Dourado Celebre */
-  border-radius: 3px 3px 0 0;
-}
-
-/* --- FOTO DE PERFIL --- */
-.foto-upload-container {
+.left-photo-col { 
+  width: 250px; 
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: center; /* Centraliza a foto na coluna */
 }
 
-.foto-circle {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  background-color: #f8fafc;
+.right-data-col { flex: 1; min-width: 0; }
+
+/* --- FOTO DE PERFIL / LOGO (CENTRALIZADA E ARRASTÁVEL) --- */
+.main-photo-display {
+  width: 220px;
+  height: 220px;
+  background: var(--fundo-cinza);
+  border-radius: 12px;
   border: 2px dashed #cbd5e1;
+  position: relative;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #94a3b8;
-  font-size: 20px;
-  margin-bottom: 8px;
-  transition: 0.2s;
-}
-
-.foto-preview {
-  width: 70px;
-  height: 70px;
-  border-radius: 50%;
-  object-fit: cover;
-  margin-bottom: 8px;
-}
-
-.foto-circle:hover {
-  border-color: #0f172a;
-  color: #0f172a;
-}
-
-.foto-label { font-size: 11px; font-weight: 800; color: #0f172a; letter-spacing: 0.5px; }
-
-/* --- TÍTULOS E GRIDS --- */
-.section-divider {
-  font-size: 12px;
-  color: #64748b;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 12px;
-  border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 6px;
-}
-
-.mt-compact { margin-top: 25px; }
-
-.form-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 12px;
   margin-bottom: 15px;
 }
 
+.main-photo-preview { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.drag-hint {
+  position: absolute;
+  bottom: 10px;
+  width: 100%;
+  text-align: center;
+  pointer-events: none;
+}
+
+.drag-hint span {
+  background: rgba(0,0,0,0.6);
+  color: white;
+  font-size: 10px;
+  padding: 4px 8px;
+  border-radius: 10px;
+}
+
+.photo-upload-label { cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
+.photo-icon { font-size: 40px; opacity: 0.3; }
+.photo-text { color: var(--texto-secundario); font-weight: bold; font-size: 14px; margin-top: 10px;}
+
+.photo-actions { display: flex; gap: 10px; width: 100%; }
+.btn-action-photo { 
+  flex: 1; 
+  padding: 10px; 
+  text-align: center; 
+  border-radius: 8px; 
+  border: 1px solid var(--borda); 
+  background: var(--branco); 
+  font-weight: 600; 
+  cursor: pointer; 
+  font-size: 13px;
+  transition: 0.2s;
+}
+.btn-action-photo:hover { background: var(--fundo-cinza); }
+.btn-remove { color: #ef4444; border-color: #fee2e2; background: #fef2f2; }
+.btn-remove:hover { background: #fef2f2; border-color: #ef4444; }
+
+/* --- ABAS --- */
+.tabs-container { display: flex; gap: 10px; border-bottom: 2px solid var(--borda); margin-bottom: 25px; }
+.tab-btn { background: transparent; border: none; padding: 12px 20px; font-size: 14px; font-weight: 700; color: var(--texto-secundario); cursor: pointer; border-bottom: 3px solid transparent; }
+.tab-btn.active { color: var(--azul-escuro); border-bottom-color: var(--dourado); }
+
+/* --- GRIDS E CAMPOS --- */
+.section-divider { font-size: 12px; color: var(--texto-secundario); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1px solid var(--fundo-cinza); padding-bottom: 8px; }
+.mt-compact { margin-top: 30px; }
+
+.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
 .span-1 { grid-column: span 1; }
 .span-2 { grid-column: span 2; }
 .span-3 { grid-column: span 3; }
 .span-4 { grid-column: span 4; }
 
-.form-group { display: flex; flex-direction: column; gap: 4px; }
-.form-group label { font-size: 11px; font-weight: 700; color: #64748b; }
-
-.form-group input, 
-.form-group select,
-.form-group textarea {
-  padding: 10px 12px;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  font-size: 13px;
-  color: #1e293b;
-  background-color: #fcfcfc;
-  transition: all 0.2s;
-  font-family: inherit;
-}
-
-.form-group input:focus, 
-.form-group select:focus,
-.form-group textarea:focus {
-  outline: none;
-  border-color: #c5a059; /* Foco Dourado */
-  background-color: white;
-  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
-}
-
-/* --- BOTÕES PADRONIZADOS COM O DASHBOARD --- */
-.form-actions {
+/* Linha compacta (Número e UF) */
+.form-group-row {
   display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  padding-top: 20px;
-  border-top: 1px solid #e2e8f0;
+  gap: 12px;
+  width: 100%;
 }
+.flex-1 { flex: 1; }
+.flex-small { width: 85px; }
 
-.btn-voltar {
-  padding: 10px 20px;
-  background-color: white;
-  color: #64748b;
-  border: 1px solid #cbd5e1;
-  border-radius: 6px;
-  text-decoration: none;
-  font-weight: 700;
-  font-size: 13px;
-  transition: 0.2s;
-  display: flex;
-  align-items: center;
+.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group label { font-size: 11px; font-weight: 700; color: var(--texto-secundario); text-transform: uppercase; }
+
+.form-group input, .form-group select, .form-group textarea {
+  padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #1e293b; background-color: #fcfcfc; box-sizing: border-box; width: 100%;
 }
+.form-group input:focus { outline: none; border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1); }
 
-.btn-voltar:hover { background-color: #f8fafc; color: #0f172a; }
+/* Select Financeiro */
+.status-select.adimplente { border-color: #10b981 !important; background-color: #f0fdf4 !important; color: #166534 !important; font-weight: bold; }
+.status-select.inadimplente { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #991b1b !important; font-weight: bold; }
 
-.btn-salvar {
-  padding: 10px 24px;
-  background-color: #0f172a; /* Azul Escuro Padrão */
-  color: white;
-  border: none;
-  border-radius: 6px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  transition: 0.2s;
-}
+/* --- BOTÕES FINAIS --- */
+.form-actions { display: flex; justify-content: flex-end; gap: 15px; padding-top: 25px; border-top: 1px solid var(--borda); }
+.btn-voltar-link { padding: 12px 24px; background-color: var(--branco); color: var(--texto-secundario); border: 1px solid #cbd5e1; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; display: flex; align-items: center; }
+.btn-salvar-form { padding: 12px 30px; background-color: var(--azul-escuro); color: var(--branco); border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15); }
 
-.btn-salvar:hover { background-color: #1e293b; }
-.btn-salvar:disabled { background-color: #94a3b8; cursor: not-allowed; }
-
-/* Responsividade */
+/* =========================================
+   📱 RESPONSIVIDADE MOBILE (BLINDADA)
+========================================= */
 @media (max-width: 900px) {
-  .form-grid-4 { grid-template-columns: repeat(2, 1fr); }
-  .span-3, .span-4 { grid-column: span 2; }
-}
-@media (max-width: 600px) {
-  .form-grid-4 { grid-template-columns: 1fr; }
-  .span-1, .span-2, .span-3, .span-4 { grid-column: span 1; }
+  
+  .form-page-container { padding: 15px !important; overflow-x: hidden !important; }
+  .form-widescreen { padding: 20px !important; width: 100% !important; border-radius: 12px; }
+
+  .estoque-form-layout { flex-direction: column !important; gap: 20px !important; }
+  
+  .left-photo-col { 
+    width: 100% !important; 
+    align-items: center; 
+  }
+  
+  .main-photo-display { 
+    width: 200px !important; 
+    height: 200px !important; 
+  }
+
+  .tabs-container { display: flex !important; width: 100% !important; }
+  .tab-btn { flex: 1 !important; padding: 12px 5px !important; font-size: 12px !important; }
+
+  /* Coluna única para a maioria, mas flex-row para Número/UF */
+  .form-grid-4 { 
+    display: flex !important; 
+    flex-direction: column !important; 
+    gap: 15px !important; 
+  }
+
+  /* Garante que Número e UF fiquem lado a lado mesmo no mobile */
+  .form-group-row {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+  }
+  
+  .form-actions { 
+    flex-direction: column-reverse !important; 
+    gap: 10px !important; 
+  }
+  
+  .btn-voltar-link, .btn-salvar-form { 
+    width: 100% !important; 
+    text-align: center !important; 
+    justify-content: center;
+    padding: 16px !important;
+  }
 }

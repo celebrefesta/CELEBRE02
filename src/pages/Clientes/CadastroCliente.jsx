@@ -35,7 +35,7 @@ const CadastroCliente = () => {
       setPosicaoFoto(clienteEditando.posicaoFoto || { x: 50, y: 50 });
       setFormData({
         nome: clienteEditando.nome || '', cpf: clienteEditando.cpf || '', rg: clienteEditando.rg || '', nascimento: clienteEditando.nascimento || '', sexo: clienteEditando.sexo || '',
-        razaoSocial: clienteEditando.razaoSocial || '', nomeFantasia: clienteEditando.nomeFantasia || '', cnpj: clienteEditando.cnpj || '', inscricaoEstadual: clienteEditando.ie || clienteEditando.inscricaoEstadual || '',
+        razaoSocial: clienteEditando.razaoSocial || '', nomeFantasia: clienteEditando.nomeFantasia || '', cnpj: clienteEditando.cnpj || '', inscricaoEstadual: clienteEditando.inscricaoEstadual || '',
         nomeContato: clienteEditando.nomeContato || '', cargo: clienteEditando.cargo || '',
         celular: clienteEditando.celular || '', telefoneFixo: clienteEditando.telefoneFixo || '', email: clienteEditando.email || '', origem: clienteEditando.origem || '',
         cep: clienteEditando.cep || '', logradouro: clienteEditando.logradouro || '', numero: clienteEditando.numero || '', complemento: clienteEditando.complemento || '', bairro: clienteEditando.bairro || '', cidade: clienteEditando.cidade || '', uf: clienteEditando.uf || '',
@@ -85,11 +85,9 @@ const CadastroCliente = () => {
         newValue = value.toLowerCase(); 
       }
     }
-
     setFormData({ ...formData, [name]: newValue });
   };
 
-  // --- UPLOAD E COMPRESSÃO DA FOTO ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -102,13 +100,11 @@ const CadastroCliente = () => {
           const MAX_HEIGHT = 600;
           let width = img.width;
           let height = img.height;
-
           if (width > height) {
             if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
           } else {
             if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
           }
-
           canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
@@ -120,34 +116,31 @@ const CadastroCliente = () => {
     }
   };
 
-  // --- LÓGICA DE ARRASTAR A IMAGEM ---
-  const handleMouseDown = (e) => {
+  // --- LÓGICA DE ARRASTAR CORRIGIDA (MOUSE + TOUCH) ---
+  const handleStart = (clientX, clientY) => {
     setDragging(true);
-    setStartMouse({ x: e.clientX, y: e.clientY });
-    e.preventDefault(); 
+    setStartMouse({ x: clientX, y: clientY });
   };
 
-  const handleMouseMove = (e) => {
+  const handleMove = (clientX, clientY) => {
     if (!dragging) return;
-    const deltaX = e.clientX - startMouse.x;
-    const deltaY = e.clientY - startMouse.y;
-    setStartMouse({ x: e.clientX, y: e.clientY });
-
+    const deltaX = clientX - startMouse.x;
+    const deltaY = clientY - startMouse.y;
+    setStartMouse({ x: clientX, y: clientY });
     setPosicaoFoto(prev => ({
       x: Math.max(0, Math.min(100, prev.x - (deltaX * 0.4))),
       y: Math.max(0, Math.min(100, prev.y - (deltaY * 0.4)))
     }));
   };
 
-  const handleMouseUp = () => setDragging(false);
+  const handleEnd = () => setDragging(false);
+
   const removerFoto = () => { setFotoBase64(''); setPosicaoFoto({x: 50, y: 50}); };
 
   const buscarCep = async (e) => {
     let cepDigitado = e.target.value.replace(/\D/g, '');
     let cepMascarado = cepDigitado.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
-    
     setFormData(prev => ({ ...prev, cep: cepMascarado }));
-
     if (cepDigitado.length === 8) {
       try {
         const resposta = await fetch(`https://viacep.com.br/ws/${cepDigitado}/json/`);
@@ -184,72 +177,75 @@ const CadastroCliente = () => {
   };
 
   return (
-    <div className="page-container">
-      <div className="page-header">
+    <div className="form-page-container">
+      <div className="form-page-header">
         <div className="header-text">
-          <h1 className="page-title">{clienteEditando ? 'EDITAR CLIENTE' : 'NOVO CLIENTE'}</h1>
-          <p style={{ color: '#64748b', marginTop: '5px' }}>Preencha os dados de contato e faturamento</p>
+          <h1 className="form-page-title">{clienteEditando ? 'EDITAR CLIENTE' : 'NOVO CLIENTE'}</h1>
+          <p className="form-page-subtitle">Preencha os dados de contato e faturamento</p>
         </div>
       </div>
 
       <div className="form-widescreen">
         <form onSubmit={salvarCliente} className="estoque-form-layout">
           
-          {/* COLUNA ESQUERDA: FOTO */}
-          <div className="left-photo-col">
+          {/* FOTO CENTRALIZADA */}
+          <div className="left-photo-col centralizado">
             <h3 className="section-divider" style={{marginTop: 0}}>FOTO / LOGO</h3>
             
-            <div className="main-photo-display" style={{position: 'relative', overflow: 'hidden', borderRadius: '12px'}}>
+            <div className="main-photo-display">
               {fotoBase64 ? (
                 <>
                   <img 
                     src={fotoBase64} 
                     className="main-photo-preview" 
+                    alt="Preview"
                     style={{ 
                       objectPosition: `${posicaoFoto.x}% ${posicaoFoto.y}%`,
-                      cursor: dragging ? 'grabbing' : 'grab'
+                      cursor: dragging ? 'grabbing' : 'grab',
+                      touchAction: 'none'
                     }}
-                    onMouseDown={handleMouseDown}
-                    onMouseMove={handleMouseMove}
-                    onMouseUp={handleMouseUp}
-                    onMouseLeave={handleMouseUp}
+                    onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientX, e.clientY); }}
+                    onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
+                    onMouseUp={handleEnd}
+                    onMouseLeave={handleEnd}
+                    onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
+                    onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
+                    onTouchEnd={handleEnd}
                   />
-                  <div style={{position: 'absolute', bottom: '10px', width: '100%', textAlign: 'center', pointerEvents: 'none'}}>
-                    <span style={{background: 'rgba(0,0,0,0.5)', color: 'white', fontSize: '10px', padding: '4px 8px', borderRadius: '12px'}}>Arrastar para enquadrar</span>
+                  <div className="drag-hint">
+                    <span>Arrastar para enquadrar</span>
                   </div>
                 </>
               ) : (
-                <label htmlFor="foto-upload" style={{cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
-                  <span style={{fontSize:'40px', opacity:0.3}}>👤</span>
-                  <span className="photo-text" style={{marginTop: '10px', color: '#94a3b8', fontWeight: 'bold'}}>Adicionar Foto</span>
+                <label htmlFor="foto-upload" className="photo-upload-label">
+                  <span className="photo-icon">👤</span>
+                  <span className="photo-text">Adicionar Foto</span>
                   <input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} />
                 </label>
               )}
             </div>
             
             {fotoBase64 && (
-              <div style={{display: 'flex', gap: '10px', marginTop: '15px'}}>
-                <label htmlFor="foto-upload" className="btn-voltar" style={{flex: 1, textAlign: 'center', cursor: 'pointer', padding: '8px'}}>Trocar</label>
-                <button type="button" onClick={removerFoto} className="btn-voltar" style={{flex: 1, color: '#ef4444', borderColor: '#fee2e2', background: '#fef2f2'}}>Remover</button>
+              <div className="photo-actions">
+                <label htmlFor="foto-upload" className="btn-action-photo">Trocar</label>
+                <button type="button" onClick={removerFoto} className="btn-action-photo btn-remove">Remover</button>
                 <input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} />
               </div>
             )}
           </div>
 
-          {/* COLUNA DIREITA: DADOS */}
           <div className="right-data-col">
-            
-            <div className="tabs-container" style={{marginBottom: '20px', display: 'flex', gap: '15px', borderBottom: '2px solid #f1f5f9', paddingBottom: '10px'}}>
+            <div className="tabs-container">
               <button 
                 type="button" 
-                style={{background: 'none', border: 'none', fontSize: '15px', fontWeight: 'bold', padding: '5px 10px', cursor: 'pointer', color: tipoPessoa === 'fisica' ? '#0f172a' : '#94a3b8', borderBottom: tipoPessoa === 'fisica' ? '3px solid #c5a059' : '3px solid transparent', transition: 'all 0.2s'}}
+                className={`tab-btn ${tipoPessoa === 'fisica' ? 'active' : ''}`}
                 onClick={() => setTipoPessoa('fisica')}
               >
                 👤 Pessoa Física
               </button>
               <button 
                 type="button" 
-                style={{background: 'none', border: 'none', fontSize: '15px', fontWeight: 'bold', padding: '5px 10px', cursor: 'pointer', color: tipoPessoa === 'juridica' ? '#0f172a' : '#94a3b8', borderBottom: tipoPessoa === 'juridica' ? '3px solid #c5a059' : '3px solid transparent', transition: 'all 0.2s'}}
+                className={`tab-btn ${tipoPessoa === 'juridica' ? 'active' : ''}`}
                 onClick={() => setTipoPessoa('juridica')}
               >
                 🏢 Pessoa Jurídica
@@ -289,8 +285,8 @@ const CadastroCliente = () => {
             <div className="form-grid-4">
               <div className="form-group span-1"><label>CELULAR / WHATSAPP</label><input type="tel" name="celular" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} /></div>
               <div className="form-group span-1"><label>TELEFONE FIXO</label><input type="tel" name="telefoneFixo" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label>E-MAIL</label><input type="email" name="email" value={formData.email} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label>COMO NOS CONHECEU?</label>
+              <div className="form-group span-2"><label>E-MAIL</label><input type="email" name="email" value={formData.email} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label>COMO NOS CONHECEU?</label>
                 <select name="origem" value={formData.origem} onChange={handleChange}>
                   <option value="">Selecione...</option>
                   <option value="Instagram">Instagram</option>
@@ -305,18 +301,27 @@ const CadastroCliente = () => {
 
             <h3 className="section-divider mt-compact">ENDEREÇO</h3>
             <div className="form-grid-4">
-              <div className="form-group span-1"><label>CEP (BUSCA AUTO)</label><input type="text" name="cep" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
+              <div className="form-group span-2"><label>CEP (BUSCA AUTO)</label><input type="text" name="cep" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
               <div className="form-group span-2"><label>LOGRADOURO</label><input type="text" name="logradouro" value={formData.logradouro} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label>NÚMERO</label><input type="text" id="numeroInput" name="numero" value={formData.numero} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label>BAIRRO</label><input type="text" name="bairro" value={formData.bairro} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label>CIDADE</label><input type="text" name="cidade" value={formData.cidade} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label>UF</label><input type="text" name="uf" value={formData.uf} onChange={handleChange} /></div>
+              
+              {/* 🔥 NÚMERO E UF LOGO ABAIXO DO LOGRADOURO (SIDE BY SIDE) */}
+              <div className="form-group-row span-4">
+                <div className="form-group flex-1">
+                  <label>NÚMERO</label>
+                  <input type="text" id="numeroInput" name="numero" value={formData.numero} onChange={handleChange} />
+                </div>
+                <div className="form-group flex-small">
+                  <label>UF</label>
+                  <input type="text" name="uf" value={formData.uf} onChange={handleChange} />
+                </div>
+              </div>
+
+              <div className="form-group span-2"><label>BAIRRO</label><input type="text" name="bairro" value={formData.bairro} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label>CIDADE</label><input type="text" name="cidade" value={formData.cidade} onChange={handleChange} /></div>
             </div>
 
             <h3 className="section-divider mt-compact">INFORMAÇÕES ADICIONAIS</h3>
             <div className="form-grid-4">
-              
-              {/* CAMPO SITUAÇÃO FINANCEIRA CORRIGIDO */}
               <div className="form-group span-1">
                 <label style={{ color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800' }}>
                   SITUAÇÃO FINANCEIRA
@@ -325,13 +330,7 @@ const CadastroCliente = () => {
                   name="situacaoFinanceira" 
                   value={formData.situacaoFinanceira} 
                   onChange={(e) => setFormData({...formData, situacaoFinanceira: e.target.value})}
-                  style={{
-                    borderColor: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
-                    backgroundColor: formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
-                    color: formData.situacaoFinanceira === 'inadimplente' ? '#991b1b' : '#166534',
-                    fontWeight: 'bold',
-                    cursor: 'pointer'
-                  }}
+                  className={`status-select ${formData.situacaoFinanceira}`}
                 >
                   <option value="adimplente">✅ Adimplente</option>
                   <option value="inadimplente">⚠️ Inadimplente</option>
@@ -343,8 +342,8 @@ const CadastroCliente = () => {
             </div>
 
             <div className="form-actions mt-compact">
-              <Link to="/clientes" className="btn-voltar">Cancelar</Link>
-              <button type="submit" className="btn-salvar" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Cliente'}</button>
+              <Link to="/clientes" className="btn-voltar-link">Cancelar</Link>
+              <button type="submit" className="btn-salvar-form" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Cliente'}</button>
             </div>
           </div>
         </form>
