@@ -13,7 +13,9 @@ const FinanceiroTab = () => {
   const [metricas, setMetricas] = useState({ receitas: 0, despesas: 0, lucro: 0 });
   const [transacoes, setTransacoes] = useState([]);
   
-  // --- NOVO: Estado para os dados da empresa vindos das Configurações ---
+  // 🔥 NOVO ESTADO: Controla qual aba do Livro Caixa está ativa
+  const [filtroTipo, setFiltroTipo] = useState('todos'); 
+
   const [dadosEmpresa, setDadosEmpresa] = useState({
     nomeEmpresa: 'Ágape Decorações',
     logotipo: '',
@@ -31,7 +33,6 @@ const FinanceiroTab = () => {
           getDoc(doc(db, "sistema", "parametros"))
         ]);
 
-        // Carrega as configurações da empresa para o Relatório
         if (snapConfig.exists()) {
           const cfg = snapConfig.data();
           setDadosEmpresa({
@@ -50,7 +51,6 @@ const FinanceiroTab = () => {
         let totalDespesas = 0;
         const listaTransacoes = [];
 
-        // --- FUNÇÕES INTELIGENTES DE DATA ---
         const formatarData = (dataBase) => {
           if (!dataBase) return new Date().toLocaleDateString('pt-BR');
           if (typeof dataBase === 'string') {
@@ -151,6 +151,12 @@ const FinanceiroTab = () => {
     buscarDadosFinanceirosEConfigs();
   }, []);
 
+  // 🔥 LÓGICA DE FILTRO: Só mostra o que o usuário escolheu no botão
+  const transacoesFiltradas = transacoes.filter(t => {
+    if (filtroTipo === 'todos') return true;
+    return t.tipo === filtroTipo;
+  });
+
   // --- FUNÇÃO GERAR PDF ---
   const exportarPDF = () => {
     try {
@@ -158,7 +164,6 @@ const FinanceiroTab = () => {
       const dataHoje = new Date().toLocaleDateString('pt-BR');
       let startY = 25;
 
-      // 1. Cabeçalho Dinâmico com Logo e Dados da Empresa
       if (dadosEmpresa.logotipo) {
         doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
         doc.setFontSize(18);
@@ -180,14 +185,17 @@ const FinanceiroTab = () => {
         startY = 35;
       }
 
-      // 2. Título do Documento e Data
       doc.setFontSize(12);
       doc.setTextColor(15, 23, 42);
-      doc.text(`DEMONSTRATIVO DE RESULTADOS (DRE)`, 14, startY - 5);
+      // Ajusta o título do PDF conforme o filtro selecionado
+      let tituloPDF = `DEMONSTRATIVO DE RESULTADOS (DRE)`;
+      if (filtroTipo === 'receita') tituloPDF = `RELATÓRIO DE ENTRADAS (RECEITAS)`;
+      if (filtroTipo === 'despesa') tituloPDF = `RELATÓRIO DE SAÍDAS (DESPESAS)`;
+      
+      doc.text(tituloPDF, 14, startY - 5);
       doc.setFontSize(10);
       doc.text(`Gerado em: ${dataHoje}`, 160, startY - 5);
 
-      // 3. Resumo Financeiro
       doc.setFillColor(248, 250, 252);
       doc.rect(14, startY, 182, 25, 'F');
       
@@ -201,9 +209,10 @@ const FinanceiroTab = () => {
       doc.setTextColor(metricas.lucro >= 0 ? 22 : 220, metricas.lucro >= 0 ? 163 : 38, metricas.lucro >= 0 ? 74 : 38);
       doc.text(saldoText, 110, startY + 12);
 
-      // 4. Tabela de Transações
       const tableColumn = ["Data", "Descrição da Movimentação", "Tipo", "Valor (R$)"];
-      const tableRows = transacoes.map(t => [
+      
+      // O PDF agora imprime apenas as transações filtradas!
+      const tableRows = transacoesFiltradas.map(t => [
         t.dataStr || '-',
         t.descricao || '-',
         t.tipo === 'receita' ? 'Entrada' : 'Saída',
@@ -220,7 +229,7 @@ const FinanceiroTab = () => {
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
       });
 
-      doc.save(`DRE_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}_${dataHoje.replace(/\//g, '-')}.pdf`);
+      doc.save(`Relatorio_${filtroTipo}_${dataHoje.replace(/\//g, '-')}.pdf`);
 
     } catch (error) {
       console.error("Erro ao gerar PDF: ", error);
@@ -277,9 +286,34 @@ const FinanceiroTab = () => {
             <h3>📋 DRE - Livro Caixa</h3>
             <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginTop: '4px'}}>Extrato real de entradas e saídas efetivadas na empresa.</p>
           </div>
-          <button className="btn-export-pdf" onClick={exportarPDF}>
-            📄 Salvar Relatório em PDF
-          </button>
+          
+          {/* 🔥 AQUI ENTRAM OS NOVOS BOTÕES DE FILTRO AO LADO DO PDF 🔥 */}
+          <div className="dre-actions-group">
+            <div className="dre-filter-buttons">
+              <button 
+                className={filtroTipo === 'todos' ? 'active' : ''} 
+                onClick={() => setFiltroTipo('todos')}
+              >
+                Todos
+              </button>
+              <button 
+                className={filtroTipo === 'receita' ? 'active btn-verde' : ''} 
+                onClick={() => setFiltroTipo('receita')}
+              >
+                ⬆ Entradas
+              </button>
+              <button 
+                className={filtroTipo === 'despesa' ? 'active btn-vermelho' : ''} 
+                onClick={() => setFiltroTipo('despesa')}
+              >
+                ⬇ Saídas
+              </button>
+            </div>
+            
+            <button className="btn-export-pdf" onClick={exportarPDF}>
+              📄 Salvar PDF
+            </button>
+          </div>
         </div>
         
         <div className="table-container" style={{ marginTop: '15px' }}>
@@ -293,27 +327,34 @@ const FinanceiroTab = () => {
               </tr>
             </thead>
             <tbody>
-              {transacoes.map((t) => (
-                <tr key={t.id}>
-                  <td style={{color: 'var(--texto-secundario)', fontWeight: '500'}}>{t.dataStr}</td>
-                  <td>
-                    <strong style={{color: 'var(--texto-principal)'}}>{t.descricao}</strong>
-                  </td>
-                  <td style={{textAlign: 'center'}}>
-                    <span className={`badge-dre ${t.tipo}`}>
-                      {t.tipo === 'receita' ? '⬆ Entrada' : '⬇ Saída'}
-                    </span>
-                  </td>
-                  <td style={{
-                    textAlign: 'right', 
-                    fontWeight: '800', 
-                    color: t.tipo === 'receita' ? '#10b981' : '#ef4444'
-                  }}>
-                    {t.tipo === 'receita' ? '+ ' : '- '} 
-                    {t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                  </td>
+              {/* O map agora roda em cima das transacoesFiltradas! */}
+              {transacoesFiltradas.length === 0 ? (
+                <tr>
+                   <td colSpan="4" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhuma movimentação encontrada para este filtro.</td>
                 </tr>
-              ))}
+              ) : (
+                transacoesFiltradas.map((t) => (
+                  <tr key={t.id}>
+                    <td style={{color: 'var(--texto-secundario)', fontWeight: '500'}}>{t.dataStr}</td>
+                    <td>
+                      <strong style={{color: 'var(--texto-principal)'}}>{t.descricao}</strong>
+                    </td>
+                    <td style={{textAlign: 'center'}}>
+                      <span className={`badge-dre ${t.tipo}`}>
+                        {t.tipo === 'receita' ? '⬆ Entrada' : '⬇ Saída'}
+                      </span>
+                    </td>
+                    <td style={{
+                      textAlign: 'right', 
+                      fontWeight: '800', 
+                      color: t.tipo === 'receita' ? '#10b981' : '#ef4444'
+                    }}>
+                      {t.tipo === 'receita' ? '+ ' : '- '} 
+                      {t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

@@ -179,7 +179,7 @@ const Compras = () => {
                         </div>
                       </td>
                       
-                      {/* 🔥 AS DUAS COLUNAS COMEÇAM AQUI 🔥 */}
+                      {/* 🔥 DIVISÃO DAS DUAS COLUNAS NO MOBILE 🔥 */}
                       <td className="mobile-stack col-50 col-left">
                           <span className="mobile-label">QUANTIDADE:</span>
                           <strong>{item.quantidade}x</strong>
@@ -214,6 +214,7 @@ const Compras = () => {
                         )}
                       </td>
 
+                      {/* BOTÕES DE AÇÃO */}
                       <td className="actions-cell">
                         <div className="botoes-acao-container">
                           <button 

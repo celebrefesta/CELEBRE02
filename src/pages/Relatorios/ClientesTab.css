@@ -59,7 +59,7 @@
 [data-theme='dark'] .text-verde { color: #34d399 !important; }
 
 .card-destaque { border-left-color: #0f172a; }
-[data-theme='dark'] .card-destaque { border-left-color: var(--dourado); } /* Destaque vira dourado no dark */
+[data-theme='dark'] .card-destaque { border-left-color: var(--dourado); } 
 
 .card-verde { border-left-color: #10b981; }
 .card-vermelho { border-left-color: #ef4444; }
@@ -117,8 +117,6 @@
 
 .rank-bar-bg-v4 { height: 8px; background: var(--fundo-cinza); border-radius: 4px; overflow: hidden; border: 1px solid var(--borda); }
 .rank-bar-fill-v4 { height: 100%; background: linear-gradient(90deg, var(--dourado), #0f172a); border-radius: 4px; }
-
-/* No escuro o gradiente brilha em tons dourados */
 [data-theme='dark'] .rank-bar-fill-v4 { background: linear-gradient(90deg, #fde68a, var(--dourado)); }
 
 /* =========================================
@@ -142,16 +140,13 @@
 }
 
 .fid-txt-v6 { display: flex; flex-direction: column; flex: 1; }
-
 .fid-txt-v6 label { font-size: 11px; font-weight: 800; color: var(--texto-secundario); text-transform: uppercase; margin-bottom: 4px; }
 .fid-txt-v6 strong { font-size: 16px; color: var(--texto-principal); font-weight: 800; }
 
 .fid-progress-wrapper-v6 { display: flex; align-items: center; gap: 12px; margin-top: 4px; width: 100%; }
 .fid-percentage-v6 { font-size: 16px; font-weight: 900; color: var(--dourado); min-width: 40px; }
-
 .fid-bar-bg-v6 { flex: 1; height: 8px; background: var(--borda); border-radius: 10px; overflow: hidden; }
 .fid-bar-fill-v6 { height: 100%; background: linear-gradient(90deg, var(--dourado), #0f172a); border-radius: 10px; transition: width 1s ease-in-out; }
-
 [data-theme='dark'] .fid-bar-fill-v6 { background: linear-gradient(90deg, #fde68a, var(--dourado)); }
 
 /* =========================================
@@ -162,7 +157,6 @@
   border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer; transition: 0.2s;
 }
 .btn-export-pdf-clientes:hover { background: #1e293b; transform: translateY(-1px); }
-
 [data-theme='dark'] .btn-export-pdf-clientes { background: var(--dourado); color: white; }
 [data-theme='dark'] .btn-export-pdf-clientes:hover { background: #b48a3c; }
 
@@ -189,9 +183,99 @@
 .bold { font-weight: 800; }
 
 /* =========================================
-   RESPONSIVIDADE
+   📱 RESPONSIVIDADE MOBILE (A MÁGICA FINAL)
    ========================================= */
-@media (max-width: 1024px) {
-  .clientes-layout-split { grid-template-columns: 1fr; }
-  .kpi-grid { grid-template-columns: 1fr; }
+@media (max-width: 900px) {
+  
+  /* Quebra as colunas laterais para empilhar */
+  .clientes-layout-split { 
+      grid-template-columns: 1fr !important; 
+      gap: 15px !important; 
+  }
+
+  /* -------------------------------------
+     🔥 CARDS MEGA FININHOS (A DIETA) 🔥
+  ---------------------------------------- */
+  .kpi-grid { 
+      display: flex !important; 
+      flex-direction: column !important; 
+      gap: 8px !important; 
+      margin-bottom: 20px !important; 
+  }
+
+  .kpi-card { 
+      flex-direction: row !important; 
+      justify-content: space-between !important;
+      align-items: center !important;
+      padding: 12px 16px !important; 
+      border-radius: 10px !important;
+      min-height: 0 !important; 
+  }
+
+  .kpi-card span { 
+      font-size: 10px !important; 
+      margin-bottom: 0 !important; 
+      letter-spacing: 0.5px !important;
+      line-height: 1 !important; 
+  }
+  
+  .kpi-card h2 { 
+      font-size: 16px !important; 
+      margin: 0 !important; 
+      text-align: right !important; 
+      line-height: 1 !important; 
+  }
+  
+  .kpi-card small { display: none !important; } 
+
+  /* -------------------------------------
+     🔥 TELA INFINITA (SEM BORDAS) 🔥
+  ---------------------------------------- */
+  .main-card-premium {
+      padding: 20px 15px !important;
+      border-radius: 0 !important;
+      border-left: none !important;
+      border-right: none !important;
+      box-shadow: none !important;
+      background: transparent !important;
+  }
+
+  /* Deixa os ícones e cards de fidelidade mais compactos */
+  .fid-item-v6 { padding: 12px !important; gap: 12px !important;}
+  .fid-icon-v6 { width: 38px !important; height: 38px !important; font-size: 18px !important;}
+  .fid-txt-v6 strong { font-size: 15px !important;}
+
+  /* -------------------------------------
+     🔥 TABELA VIP VIRA CARDS 🔥
+  ---------------------------------------- */
+  .table-vip-v4, .table-vip-v4 tbody { display: block !important; width: 100% !important; }
+  .table-vip-v4 thead { display: none !important; } /* Esconde o cabeçalho */
+  
+  .table-vip-v4 tr { 
+      display: flex !important; 
+      flex-wrap: wrap !important;
+      justify-content: space-between !important; 
+      align-items: center !important; 
+      padding: 12px 15px !important; 
+      margin-bottom: 10px !important;
+      border-radius: 12px !important;
+      border: 1px solid var(--borda) !important;
+      background: var(--branco) !important;
+  }
+
+  .table-vip-v4 td { 
+      padding: 0 !important; 
+      border: none !important; 
+  }
+
+  /* A coluna do nome e medalha ganha o espaço principal na esquerda */
+  .table-vip-v4 td:nth-child(1) { flex: 1 !important; } 
+  
+  /* As colunas de números (como ticket médio ou total) ficam alinhadas na direita */
+  .table-vip-v4 td:nth-child(2),
+  .table-vip-v4 td:nth-child(3) { 
+      font-size: 13px !important; 
+      font-weight: 700 !important; 
+      text-align: right !important;
+  }
 }
