@@ -1,3 +1,13 @@
+/* =========================================
+   BLINDAGEM GERAL DA PÁGINA
+   ========================================= */
+* { box-sizing: border-box !important; }
+
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
 .modelos-page-container {
   max-width: 1200px;
   margin: 0 auto;
@@ -7,210 +17,49 @@
   min-height: 100vh;
 }
 
+/* =========================================
+   CABEÇALHO
+   ========================================= */
 .modelos-header {
-  text-align: center;
+  text-align: left; /* Alinhado à esquerda fica mais moderno */
   margin-bottom: 40px;
 }
 
 .modelos-header h1 {
-  font-size: 32px;
+  font-size: 28px;
   color: #0f172a;
-  margin-bottom: 10px;
+  margin: 0;
+  font-weight: 900;
+  letter-spacing: -0.5px;
 }
 
-/* Ajuste do Grid para não ficar "vazio" */
-.modelos-grid {
-  display: grid;
-  grid-template-columns: 450px 1fr; /* Lado esquerdo fixo, direito expande */
-  gap: 40px;
-  align-items: start;
+.modelos-header p {
+    color: #64748b;
+    margin-top: 5px;
+    font-size: 14px;
 }
 
-.modelo-form-card {
-  background: white;
-  padding: 30px;
-  border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-  border-top: 6px solid #c5a059;
+.btn-back { 
+    background: white; 
+    border: 1px solid #cbd5e1; 
+    padding: 8px 16px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    color: #0f172a; 
+    font-weight: 700;
+    font-size: 13px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    transition: 0.2s;
 }
-
-.form-group { margin-bottom: 20px; }
-
-.form-group label {
-  display: block;
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-  margin-bottom: 8px;
-  text-transform: uppercase;
-}
-
-.form-input {
-  width: 100%;
-  padding: 12px;
-  border: 2px solid #e2e8f0;
-  border-radius: 10px;
-  background: #f8fafc;
-  font-family: inherit;
-}
-
-.form-input.area { min-height: 300px; resize: none; }
-
-.btn-save-modelo {
-  width: 100%;
-  background: #0f172a;
-  color: white;
-  padding: 15px;
-  border-radius: 12px;
-  border: none;
-  font-weight: 700;
-  cursor: pointer;
-  transition: transform 0.2s;
-}
-
-.btn-save-modelo:hover { transform: translateY(-2px); }
-
-/* Estilo da Lista de Modelos */
-.modelos-lista {
-  background: white;
-  padding: 30px;
-  border-radius: 20px;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-}
-
-.modelo-item-card {
-  background: #fff;
-  padding: 20px;
-  border-radius: 12px;
-  margin-bottom: 15px;
-  border: 1px solid #f1f5f9;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  transition: all 0.2s;
-}
-
-.modelo-item-card:hover { border-color: #c5a059; box-shadow: 0 4px 12px rgba(197, 160, 89, 0.1); }
-
-/* Container Principal */
-.modelos-page-container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 40px 20px;
-  font-family: 'Inter', sans-serif;
-  background-color: #f8fafc;
-  min-height: 100vh;
-}
-
-.modelos-header { text-align: center; margin-bottom: 40px; }
-.modelos-header h1 { font-size: 32px; color: #0f172a; margin: 10px 0; }
-.btn-back { background: none; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 8px; cursor: pointer; color: #64748b; }
-
-/* Grid Layout */
-.modelos-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* Dividido meio a meio */
-  gap: 30px;
-  align-items: start;
-}
-
-/* Card do Formulário */
-.modelo-form-card {
-  background: white; padding: 30px; border-radius: 20px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.05); border-top: 6px solid #c5a059;
-}
-
-/* --- NOVOS BOTÕES DE ATALHO --- */
-.atalhos-templates {
-  background: #f1f5f9;
-  padding: 15px;
-  border-radius: 12px;
-  margin-bottom: 20px;
-  border: 1px dashed #cbd5e1;
-}
-
-.atalhos-templates p {
-  margin: 0 0 10px 0;
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-  text-transform: uppercase;
-}
-
-.btn-group-templates {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
-.btn-group-templates button {
-  flex: 1;
-  padding: 8px;
-  background: white;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
-  color: #334155;
-  transition: all 0.2s;
-  white-space: nowrap;
-}
-
-.btn-group-templates button:hover {
-  border-color: #c5a059;
-  color: #c5a059;
-  background: #fffbf2;
-}
-
-/* Inputs e Textarea */
-.form-group { margin-bottom: 20px; }
-.form-group label { display: block; font-size: 11px; font-weight: 800; color: #94a3b8; margin-bottom: 8px; }
-
-.form-input {
-  width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 10px;
-  background: #f8fafc; box-sizing: border-box; font-family: inherit;
-}
-.form-input:focus { outline: none; border-color: #c5a059; background: white; }
-
-.btn-save-modelo {
-  width: 100%; background: #0f172a; color: white; padding: 16px;
-  border-radius: 12px; border: none; font-weight: 700; cursor: pointer;
-}
-.btn-save-modelo:hover { background: #1e293b; }
-
-.btn-cancel-edit {
-  width: 100%; margin-top: 10px; background: white; border: 1px solid #ef4444; color: #ef4444;
-  padding: 10px; border-radius: 10px; cursor: pointer;
-}
-
-/* Lista de Modelos */
-.modelos-lista { background: white; padding: 30px; border-radius: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-
-.modelo-item-card {
-  background: #fff; padding: 20px; border-radius: 12px; margin-bottom: 15px;
-  border: 1px solid #f1f5f9; display: flex; justify-content: space-between; align-items: center;
-}
-.modelo-item-card:hover { border-color: #c5a059; }
-
-.modelo-info h4 { margin: 0 0 5px 0; color: #0f172a; font-size: 16px; }
-.modelo-info p { margin: 0; color: #64748b; font-size: 13px; line-height: 1.4; }
-
-.modelo-actions { display: flex; gap: 8px; }
-.btn-icon-small {
-  background: #f1f5f9; border: none; width: 32px; height: 32px; border-radius: 8px;
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-}
-.btn-icon-small:hover { background: #e2e8f0; }
-.btn-icon-small.delete:hover { background: #fee2e2; color: #ef4444; }
+.btn-back:hover { background: #f1f5f9; border-color: #94a3b8; }
 
 /* =========================================
-   ABAS DA PÁGINA DE CONFIGURAÇÃO DE TEXTOS
+   ABAS DE NAVEGAÇÃO
    ========================================= */
 .abas-config-textos {
   display: flex;
-  gap: 10px;
-  margin-top: 20px;
+  gap: 15px;
+  margin-top: 25px;
   border-bottom: 2px solid #e2e8f0;
   padding-bottom: 0;
 }
@@ -218,14 +67,14 @@
 .aba-btn {
   background: transparent;
   border: none;
-  padding: 10px 20px;
-  font-size: 0.95rem;
-  font-weight: 700;
+  padding: 12px 20px;
+  font-size: 14px;
+  font-weight: 800;
   color: #64748b;
   cursor: pointer;
   border-bottom: 3px solid transparent;
   transition: all 0.2s ease;
-  margin-bottom: -2px; /* Sobrepõe a borda da caixa para efeito de aba colada */
+  margin-bottom: -2px; 
 }
 
 .aba-btn:hover {
@@ -237,12 +86,201 @@
 
 .aba-btn.ativa {
   color: #0f172a;
-  border-bottom: 3px solid #3b82f6;
+  border-bottom: 3px solid #0f172a; /* Azul Naval pro ativo principal */
   background: transparent;
 }
 
-/* Opcional: Se a aba for do tipo perigo (Logística), muda a cor do hover e do ativo */
 .aba-btn:nth-child(2).ativa {
-  border-bottom-color: #dc2626;
+  border-bottom-color: #dc2626; /* Vermelho para a aba de logística/avarias */
   color: #dc2626;
+}
+
+/* =========================================
+   GRID PRINCIPAL (DESKTOP)
+   ========================================= */
+.modelos-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr; 
+  gap: 30px;
+  align-items: start;
+}
+
+/* =========================================
+   CARD DO FORMULÁRIO
+   ========================================= */
+.modelo-form-card {
+  background: white; 
+  padding: 30px; 
+  border-radius: 16px;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+  border: 1px solid #e2e8f0;
+  border-top: 6px solid #0f172a; /* Azul naval no topo */
+}
+.modelo-form-card h3 { margin-top: 0; color: #0f172a; font-weight: 800;}
+
+/* NOVOS BOTÕES DE ATALHO */
+.atalhos-templates {
+  background: #f8fafc;
+  padding: 15px;
+  border-radius: 10px;
+  margin-bottom: 25px;
+  border: 1px solid #e2e8f0;
+}
+
+.atalhos-templates p {
+  margin: 0 0 10px 0;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  text-transform: uppercase;
+}
+
+.btn-group-templates { display: flex; gap: 10px; flex-wrap: wrap; }
+.btn-group-templates button {
+  flex: 1; padding: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 8px;
+  cursor: pointer; font-size: 12px; font-weight: 700; color: #334155; transition: all 0.2s; white-space: nowrap; box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+.btn-group-templates button:hover { border-color: #0f172a; color: #0f172a; transform: translateY(-1px);}
+
+/* Inputs e Textarea */
+.form-group { margin-bottom: 20px; }
+.form-group label { display: block; font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 8px; text-transform: uppercase;}
+
+.form-input {
+  width: 100%; padding: 14px; border: 2px solid #e2e8f0; border-radius: 10px;
+  background: #f8fafc; box-sizing: border-box; font-family: inherit; font-size: 14px; color: #0f172a;
+}
+.form-input:focus { outline: none; border-color: #0f172a; background: white; }
+.form-input.area { min-height: 350px; resize: vertical; line-height: 1.5; }
+
+.btn-save-modelo {
+  width: 100%; background: #0f172a; color: white; padding: 16px; font-size: 14px;
+  border-radius: 10px; border: none; font-weight: 800; cursor: pointer; transition: 0.2s;
+}
+.btn-save-modelo:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);}
+
+.btn-cancel-edit {
+  width: 100%; margin-top: 10px; background: transparent; border: 2px solid #ef4444; color: #ef4444;
+  padding: 12px; border-radius: 10px; cursor: pointer; font-weight: 800; transition: 0.2s;
+}
+.btn-cancel-edit:hover { background: #fef2f2; }
+
+/* =========================================
+   LISTA DE MODELOS SALVOS
+   ========================================= */
+.modelos-lista { 
+    background: white; 
+    padding: 30px; 
+    border-radius: 16px; 
+    box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
+    border: 1px solid #e2e8f0;
+}
+.modelos-lista h3 { margin-top: 0; color: #0f172a; font-weight: 800; margin-bottom: 20px;}
+
+.modelo-item-card {
+  background: #ffffff; padding: 20px; border-radius: 12px; margin-bottom: 15px;
+  border: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;
+  transition: all 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.modelo-item-card:hover { border-color: #0f172a; box-shadow: 0 4px 10px rgba(0,0,0,0.05); transform: translateX(2px);}
+
+.modelo-info { flex: 1; min-width: 0; padding-right: 15px;}
+.modelo-info h4 { margin: 0 0 5px 0; color: #0f172a; font-size: 15px; font-weight: 800; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;}
+.modelo-info p { margin: 0; color: #64748b; font-size: 12px; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;}
+
+.modelo-actions { display: flex; gap: 8px; flex-shrink: 0;}
+.btn-icon-small {
+  background: #f1f5f9; border: 1px solid #e2e8f0; width: 36px; height: 36px; border-radius: 8px;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; transition: 0.2s;
+}
+.btn-icon-small:hover { background: #e2e8f0; border-color: #cbd5e1;}
+.btn-icon-small.delete:hover { background: #fee2e2; color: #ef4444; border-color: #fca5a5;}
+
+/* =========================================
+   📱 RESPONSIVIDADE MOBILE (BLINDAGEM TOTAL)
+   ========================================= */
+@media (max-width: 900px) {
+    .modelos-page-container {
+        padding: 15px;
+        width: 100%;
+        max-width: 100%;
+    }
+
+    /* Cabeçalho desvia do menu */
+    .modelos-header {
+        margin-top: 50px; /* Foge do botão Hambúrguer */
+        margin-bottom: 25px;
+    }
+    
+    .modelos-header h1 { font-size: 22px; margin-top: 15px; }
+
+    /* As abas viram botões fáceis de tocar */
+    .abas-config-textos {
+        flex-direction: column;
+        gap: 8px;
+        border-bottom: none;
+        margin-top: 20px;
+    }
+
+    .aba-btn {
+        width: 100%;
+        background: #ffffff;
+        border: 1px solid #e2e8f0;
+        border-radius: 10px;
+        padding: 14px;
+        margin-bottom: 0;
+        text-align: center;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+
+    .aba-btn.ativa {
+        background: #0f172a;
+        color: white;
+        border-color: #0f172a;
+    }
+
+    .aba-btn:nth-child(2).ativa {
+        background: #dc2626;
+        color: white;
+        border-color: #dc2626;
+    }
+
+    /* O FIM DO ESMAGAMENTO: O Grid vira coluna única */
+    .modelos-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+    }
+
+    .modelo-form-card, .modelos-lista {
+        padding: 20px 15px;
+    }
+
+    /* Botões de atalho ocupam a tela toda */
+    .btn-group-templates {
+        flex-direction: column;
+    }
+    .btn-group-templates button {
+        width: 100%;
+        padding: 14px;
+        font-size: 14px;
+    }
+
+    /* Card da lista de modelos (Ações embaixo) */
+    .modelo-item-card {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+
+    .modelo-info { padding-right: 0; width: 100%;}
+    .modelo-info h4 { white-space: normal; } /* Permite o título longo quebrar linha */
+
+    .modelo-actions {
+        width: 100%;
+        justify-content: flex-end;
+        border-top: 1px dashed #e2e8f0;
+        padding-top: 15px;
+    }
+    
+    .btn-icon-small { width: 44px; height: 44px; font-size: 16px;} /* Botões maiores pro dedo */
 }

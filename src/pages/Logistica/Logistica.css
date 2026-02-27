@@ -1,12 +1,12 @@
 /* =========================================
-   KANBAN LOGÍSTICA - LAYOUT DE GRADE PERFEITO
+   BLINDAGEM GERAL DA ABA LOGÍSTICA
    ========================================= */
+* { box-sizing: border-box !important; }
 
 .kanban-container {
   padding: 20px 25px;
-  background: #f1f5f9;
+  background: #f8fafc;
   height: calc(100vh - 60px); 
-  box-sizing: border-box; /* 🚨 Trava o fundo pra não dar barra de rolagem geral na tela */
   font-family: 'Inter', sans-serif;
   display: flex;
   flex-direction: column;
@@ -15,119 +15,145 @@
 
 .kanban-container.modo-lista-ativa { 
   height: auto; 
-  min-height: calc(100vh - 60px); 
+  min-height: 100vh; 
   overflow: visible; 
+  padding-bottom: 80px; 
 }
 
-/* HEADER E FILTROS */
+/* =========================================
+   HEADER E FILTROS (SUPERIOR PC)
+   ========================================= */
 .kanban-header-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; flex-shrink: 0; }
-.kanban-titles h1 { font-size: 1.6rem; color: #0f172a; margin: 0 0 5px 0; font-weight: 800; }
+.kanban-titles h1 { font-size: 1.6rem; color: #0f172a; margin: 0 0 5px 0; font-weight: 800; letter-spacing: -0.5px;}
 .kanban-titles p { color: #64748b; margin: 0; font-size: 0.9rem; }
 .kanban-top-actions { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
 
 .view-switcher-log, .kanban-filters { display: flex; background: #ffffff; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
 .view-switcher-log button, .kanban-filters button { background: transparent; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 700; color: #64748b; font-size: 0.8rem; transition: 0.2s; }
-.view-switcher-log button:hover, .kanban-filters button:hover { background: #f1f5f9; }
+.view-switcher-log button:hover, .kanban-filters button:hover { background: #f1f5f9; color: #0f172a;}
 .view-switcher-log button.ativo, .kanban-filters button.ativo { background: #0f172a; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
 /* =========================================
-   BOARD KANBAN (GRID)
+   🖥️ VISUALIZAÇÃO: KANBAN (QUADROS VERTICAIS)
    ========================================= */
 .board-colunas {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(220px, 1fr)); 
-  gap: 12px;
+  display: flex;
+  gap: 15px;
   width: 100%;
   overflow-x: auto; 
-  overflow-y: hidden; /* 🚨 Some com a barra de rolagem lateral principal */
+  overflow-y: hidden; 
   padding-bottom: 10px;
   flex: 1; 
-  scrollbar-width: none;
-}
-.board-colunas::-webkit-scrollbar { display: none; }
-
-@media (max-width: 1300px) {
-  .board-colunas { display: flex; overflow-y: hidden; }
-  .board-colunas .kanban-col { flex: 0 0 270px; }
+  scrollbar-width: thin;
 }
 
-/* AS COLUNAS EM SI */
 .kanban-col {
   background: #e2e8f0; 
   border-radius: 12px;
   padding: 12px; 
   display: flex;
   flex-direction: column;
+  min-width: 280px; 
+  width: 280px;
   height: 100%; 
   max-height: calc(100vh - 160px);
 }
 
-/* 🌟 CORREÇÃO DEFINITIVA DO CABEÇALHO DA COLUNA (TÍTULOS) 🌟 */
-.col-header { 
-  display: flex; 
-  align-items: center; 
-  margin-bottom: 12px; 
-  flex-shrink: 0; 
-  min-height: 28px; /* Força o cabeçalho a existir */
-  width: 100%;
-}
+.col-header { display: flex; align-items: center; margin-bottom: 15px; flex-shrink: 0; }
 .col-header .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
-.col-header h3 { font-size: 0.95rem; font-weight: 800; color: #0f172a; margin: 0; flex: 1; white-space: nowrap; }
+.col-header h3 { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; flex: 1; }
 .badge-count { background: #ffffff; color: #64748b; font-size: 0.8rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
-/* 🌟 CORPO DA COLUNA - SEM BARRA DE ROLAGEM VISÍVEL 🌟 */
 .col-body { 
   display: flex; 
   flex-direction: column; 
-  gap: 10px; 
+  gap: 12px; 
   overflow-y: auto; 
-  padding-right: 2px; 
+  padding-right: 4px; 
   flex: 1; 
   scrollbar-width: none; 
-  -ms-overflow-style: none; 
 }
-.col-body::-webkit-scrollbar { 
-  display: none; 
-}
-
-.col-vazia { text-align: center; color: #94a3b8; font-size: 0.85rem; font-weight: 600; padding: 20px 0; border: 2px dashed #cbd5e1; border-radius: 8px;}
+.col-body::-webkit-scrollbar { display: none; }
 
 /* =========================================
-   CARTÕES (COMPACTOS E BONITOS)
+   📄 VISUALIZAÇÃO: LISTA (PC ULTRA LIMPO)
    ========================================= */
-.k-card {
-  background: #ffffff; border-radius: 10px; padding: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.03); border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px; transition: all 0.2s ease; flex-shrink: 0; 
+.board-lista { display: flex; flex-direction: column; gap: 15px; width: 100%; }
+.board-lista .kanban-col { width: 100%; max-width: 100%; height: auto; background: transparent; padding: 0; }
+
+.board-lista .col-header { 
+  padding: 0 0 8px 0; 
+  background: transparent; 
+  border-radius: 0; 
+  border-bottom: 2px solid #cbd5e1; 
+  margin-bottom: 10px; 
+  margin-top: 15px; 
 }
-.k-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.08); border-color: #cbd5e1; }
+.board-lista .col-header h3 { color: #475569; text-transform: uppercase; font-size: 0.95rem; letter-spacing: 0.5px; }
+.board-lista .badge-count { background: #e2e8f0; color: #475569; box-shadow: none; }
 
-.k-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 6px; border-bottom: 1px solid #f1f5f9; padding-bottom: 6px; margin-bottom: 2px;}
-.k-card-cliente { display: flex; flex-direction: column; overflow: hidden; }
-.k-card-cliente strong { font-size: 0.9rem; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.k-card-pedido { font-size: 0.7rem; color: #94a3b8; font-weight: 700; margin-top: 2px; }
-.k-tag { font-size: 0.6rem; font-weight: 800; padding: 3px 6px; border-radius: 4px; white-space: nowrap; }
-.tag-entrega { background: #eff6ff; color: #2563eb; }
-.tag-loja { background: #fefce8; color: #ca8a04; }
+.board-lista .col-body { display: flex !important; flex-direction: column !important; gap: 6px !important; overflow: visible; }
 
-.k-card-info { display: flex; flex-direction: column; gap: 3px; }
-.info-linha { display: flex; justify-content: space-between; font-size: 0.75rem; color: #64748b; }
-.info-linha strong { color: #0f172a; max-width: 65%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; text-align: right;}
+/* Card da Lista no PC */
+.card-modo-lista {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  padding: 8px 15px !important; 
+  border-radius: 6px !important;
+  gap: 15px !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: none !important; 
+}
 
-/* BOTÕES DE AÇÃO NO CARTÃO */
-.k-btn-itens-toggle { background: #f1f5f9; border: 1px dashed #e2e8f0; padding: 6px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; color: #64748b; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 2px;}
-.k-btn-itens-toggle:hover { background: #e2e8f0; color: #0f172a; }
-.k-btn-itens-toggle.pulse-btn { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+.card-modo-lista:hover { background: #f8fafc !important; border-color: #cbd5e1 !important; transform: none !important; }
+.card-modo-lista .alerta-urgente { margin: 0 !important; padding: 4px 10px !important; border-radius: 4px !important; order: -1 !important; font-size: 0.65rem !important; white-space: nowrap !important; }
+.card-modo-lista .k-card-header { flex: 1.2 !important; border: none !important; padding: 0 !important; margin: 0 !important; flex-direction: row !important; align-items: center !important; justify-content: flex-start !important; gap: 10px !important; }
+.card-modo-lista .k-card-cliente strong { font-size: 0.9rem !important; }
+.card-modo-lista .info-modo-lista { flex: 2 !important; flex-direction: row !important; background: transparent !important; border: none !important; padding: 0 !important; justify-content: flex-start !important; gap: 20px !important; }
+.card-modo-lista .info-modo-lista .info-linha { flex-direction: row !important; align-items: center !important; gap: 6px !important; font-size: 0.8rem !important; }
+.card-modo-lista .actions-modo-lista { flex: 1 !important; flex-direction: row !important; justify-content: flex-end !important; align-items: center !important; gap: 8px !important; margin: 0 !important; }
+.card-modo-lista .actions-modo-lista .k-btn-itens-toggle { width: auto !important; margin: 0 !important; padding: 8px 12px !important; font-size: 0.75rem !important;}
+.card-modo-lista .actions-modo-lista .k-card-actions { width: auto !important; margin: 0 !important; gap: 6px !important;}
+.card-modo-lista .actions-modo-lista .k-card-actions button { padding: 8px 12px !important; font-size: 0.75rem !important; }
 
-.k-card-actions { display: flex; gap: 6px; margin-top: 4px; width: 100%; }
-.k-btn-view, .k-btn-move { flex: 1; border: none; padding: 8px 4px; border-radius: 6px; font-size: 0.7rem; font-weight: 800; text-align: center; cursor: pointer; transition: 0.2s; }
+/* =========================================
+   💳 DESIGN UNIVERSAL DO CARD (KANBAN)
+   ========================================= */
+.k-card { background: #ffffff; border-radius: 12px; padding: 16px; box-shadow: 0 2px 6px rgba(0,0,0,0.04); border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 12px; transition: all 0.2s ease; flex-shrink: 0; }
+.k-card:hover { box-shadow: 0 6px 15px rgba(0,0,0,0.08); border-color: #cbd5e1; transform: translateY(-2px); }
+
+.k-card-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.k-card-cliente { display: flex; flex-direction: column; overflow: hidden; flex: 1; }
+.k-card-cliente strong { font-size: 1.05rem; color: #0f172a; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 800;}
+.k-card-pedido { font-size: 0.75rem; color: #94a3b8; font-weight: 700; margin-top: 4px; letter-spacing: 0.5px;}
+
+.k-tag { font-size: 0.65rem; font-weight: 800; padding: 5px 8px; border-radius: 6px; white-space: nowrap; text-transform: uppercase; letter-spacing: 0.5px;}
+.tag-entrega { background: #eff6ff; color: #2563eb; border: 1px solid #dbeafe; }
+.tag-loja { background: #fefce8; color: #ca8a04; border: 1px solid #fef08a;}
+
+.k-card-info { background: #f8fafc; border: 1px solid #f1f5f9; border-radius: 8px; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.info-linha { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; color: #64748b; }
+.info-linha strong { color: #0f172a; font-weight: 700; text-align: right; }
+
+.k-card-actions-wrapper { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+.k-btn-itens-toggle { background: #f1f5f9; border: 1px dashed #cbd5e1; padding: 10px; border-radius: 8px; font-size: 0.85rem; font-weight: 800; color: #475569; cursor: pointer; transition: 0.2s; width: 100%;}
+.k-btn-itens-toggle:hover { background: #e2e8f0; color: #0f172a; border-color: #94a3b8;}
+.k-btn-itens-toggle.pulse-btn { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; box-shadow: 0 0 10px rgba(34, 197, 94, 0.2);}
+
+.k-card-actions { display: flex; gap: 8px; width: 100%; }
+.k-btn-view, .k-btn-move { flex: 1; border: none; padding: 10px 4px; border-radius: 8px; font-size: 0.8rem; font-weight: 800; text-align: center; cursor: pointer; transition: 0.2s; }
 .k-btn-view { background: transparent; border: 1px solid #e2e8f0; color: #64748b; }
 .k-btn-view:hover { background: #f1f5f9; color: #0f172a; }
 .k-btn-move { color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-.k-btn-move:hover { filter: brightness(0.9); transform: translateY(-1px); }
+.k-btn-move:hover { filter: brightness(0.9); transform: translateY(-1px); box-shadow: 0 4px 6px rgba(0,0,0,0.15);}
 .k-btn-move.btn-bloqueado { cursor: not-allowed; box-shadow: none; }
 .k-btn-move.btn-bloqueado:hover { transform: none; filter: none; }
 
 /* ALERTAS */
-.alerta-urgente { font-size: 0.7rem; font-weight: 800; text-align: center; padding: 4px; border-radius: 6px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+.alerta-urgente { font-size: 0.75rem; font-weight: 800; text-align: center; padding: 6px; border-radius: 6px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
 .alerta-urgente.hoje, .alerta-urgente.atrasado, .alerta-urgente.devolver { background: #fef2f2; color: #dc2626; border: 1px solid #fca5a5; }
 .alerta-urgente.amanha { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; }
 .card-com-avaria { border: 2px solid #f59e0b !important; }
@@ -135,26 +161,98 @@
 .avaria-badge { background: #f59e0b !important; color: white !important; border: none !important; }
 .falta-badge { background: #ef4444 !important; color: white !important; border: none !important; }
 
-/* BOARD LISTA (CELULAR) */
-.board-lista { display: flex; flex-direction: column; gap: 20px; width: 100%; }
-.board-lista .kanban-col { width: 100%; max-width: none; height: auto; background: transparent; padding: 0; }
-.board-lista .col-header { padding: 10px 15px; background: #e2e8f0; border-radius: 8px; margin-bottom: 10px; }
-.board-lista .col-body { overflow: visible; padding-right: 0; }
-.card-modo-lista .info-modo-lista { flex-direction: row; gap: 15px; }
-.card-modo-lista .info-modo-lista .info-linha { flex: 1; justify-content: flex-start; gap: 5px; }
-.card-modo-lista .actions-modo-lista { display: flex; gap: 10px; align-items: stretch; margin-top: 5px;}
-.card-modo-lista .actions-modo-lista .k-btn-itens-toggle { flex: 1; margin-top: 0; }
-.card-modo-lista .actions-modo-lista .k-card-actions { flex: 2; margin-top: 0; }
+/* =========================================
+   📱 RESPONSIVIDADE MOBILE (CABEÇALHO PERFEITO)
+   ========================================= */
+@media (max-width: 900px) {
+  .kanban-container { padding: 15px; }
+
+  /* 🔥 CABEÇALHO DO CELULAR REFEITO 🔥 */
+  .kanban-header-top { 
+    flex-direction: column !important; 
+    align-items: flex-start !important; 
+    text-align: left !important;
+    gap: 15px !important; 
+    margin-bottom: 22px !important;
+  }
+
+  /* Desvia do botão hambúrguer com classe */
+  .kanban-titles {
+    padding-left: 45px !important; 
+    width: 100% !important;
+  }
+
+  .kanban-titles h1 { font-size: 1.4rem !important; margin-bottom: 4px !important; }
+  .kanban-titles p { font-size: 0.8rem !important; line-height: 1.3 !important; }
+
+  .kanban-top-actions { 
+    width: 100% !important; 
+    flex-direction: column !important; 
+    gap: 10px !important; 
+  }
+
+  /* Pílulas de filtro estilo Apple (Claras e Elegantes) */
+  .view-switcher-log, .kanban-filters { 
+    width: 100% !important; 
+    background: #e2e8f0 !important; 
+    border: none !important;
+    padding: 4px !important;
+    border-radius: 10px !important;
+    justify-content: space-between !important;
+  }
+
+  .view-switcher-log button, .kanban-filters button { 
+    flex: 1 !important; 
+    padding: 10px 5px !important; 
+    font-size: 0.8rem !important; 
+    color: #64748b !important;
+    border-radius: 8px !important;
+  }
+
+  /* Destaque do botão ativo fica Branco em vez de escuro */
+  .view-switcher-log button.ativo, .kanban-filters button.ativo { 
+    background: #ffffff !important; 
+    color: #0f172a !important; 
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08) !important; 
+  }
+
+  /* KANBAN NO CELULAR */
+  .board-colunas:not(.board-lista) {
+      scroll-snap-type: x mandatory;
+      padding-bottom: 20px;
+  }
+  .board-colunas:not(.board-lista) .kanban-col {
+      min-width: 88vw !important; 
+      width: 88vw !important;
+      scroll-snap-align: center; 
+      margin-right: 5px; 
+  }
+
+  /* LISTA NO CELULAR */
+  .card-modo-lista {
+      flex-direction: column !important;
+      align-items: stretch !important;
+      padding: 16px !important;
+      gap: 12px !important;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.04) !important;
+  }
+  .card-modo-lista .alerta-urgente { order: 0 !important; width: 100% !important; margin-bottom: 6px !important; font-size: 0.75rem !important;}
+  .card-modo-lista .k-card-header { flex-direction: row !important; justify-content: space-between !important; width: 100% !important; }
+  .card-modo-lista .k-card-cliente strong { font-size: 1.1rem !important; }
+  .card-modo-lista .info-modo-lista { flex-direction: row !important; justify-content: space-between !important; background: #f8fafc !important; padding: 10px 12px !important; border-radius: 8px !important; width: 100% !important; border: 1px solid #f1f5f9 !important;}
+  .card-modo-lista .info-modo-lista .info-linha { flex-direction: column !important; align-items: flex-start !important; gap: 2px !important; }
+  .card-modo-lista .info-modo-lista .info-linha span { font-size: 0.65rem !important; text-transform: uppercase;}
+  .card-modo-lista .actions-modo-lista { flex-direction: column !important; width: 100% !important; }
+  .card-modo-lista .actions-modo-lista .k-btn-itens-toggle, .card-modo-lista .actions-modo-lista .k-card-actions { width: 100% !important; }
+  .card-modo-lista .actions-modo-lista .k-btn-itens-toggle { padding: 12px !important; font-size: 0.9rem !important; }
+  .card-modo-lista .actions-modo-lista .k-card-actions button { padding: 12px !important; font-size: 0.85rem !important;}
+}
 
 /* =========================================
-   🌟 MODAL DE CHECKLIST 🌟
+   🌟 MODAIS (CHECKLIST E RELATÓRIO) 🌟
    ========================================= */
-.modal-overlay-v3 {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px);
-}
-.modal-content-v3 {
-  background: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 600px;
-}
+.modal-overlay-v3 { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.6); display: flex; align-items: center; justify-content: center; z-index: 9999; backdrop-filter: blur(4px); }
+.modal-content-v3 { background: #ffffff; border-radius: 12px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); width: 90%; max-width: 600px; }
 .modal-checklist-large { max-width: 600px !important; width: 95vw; padding: 0 !important; overflow: hidden !important; display: flex; flex-direction: column; max-height: 85vh; }
 .modal-header-v3 { display: flex; justify-content: space-between; align-items: center; padding: 20px; border-bottom: 1px solid #e2e8f0; }
 .modal-checklist-body { padding: 20px; overflow-y: auto; flex: 1; background: #f8fafc; }
@@ -184,59 +282,13 @@
 .dev-row.faltou { background: #fef2f2; border-color: #fecaca; }
 .dev-row.faltou .chk-nome { text-decoration: line-through; color: #dc2626; }
 
-/* =========================================
-   🌟 MODAL DE CONFIGURAÇÃO DE VALORES (PDF) 🌟
-   ========================================= */
-.config-valor-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: var(--branco);
-  border: 1px solid var(--borda);
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 12px;
-}
-.config-item-info {
-  display: flex;
-  align-items: center;
-  font-size: 1rem;
-  color: var(--texto-principal);
-}
-.config-badge {
-  padding: 4px 8px;
-  border-radius: 4px;
-  font-size: 0.7rem;
-  font-weight: bold;
-}
-.badge-avaria { background: #fffbeb; color: #d97706; border: 1px solid #fde68a;}
-.badge-falta { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;}
-
-.config-item-input {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-.config-item-input label {
-  font-size: 0.85rem;
-  color: var(--texto-secundario);
-  font-weight: 600;
-}
-.config-item-input input {
-  padding: 8px 12px;
-  border-radius: 6px;
-  border: 1px solid var(--borda);
-  width: 100px;
-  font-size: 1rem;
-  font-weight: bold;
-  color: var(--texto-principal);
-  text-align: right;
-  outline: none;
-}
-.config-item-input input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
-}
+/* MODAL CONFIG VALORES */
+.config-valor-row { display: flex; justify-content: space-between; align-items: center; background: var(--branco, #fff); border: 1px solid var(--borda, #e2e8f0); padding: 15px; border-radius: 8px; margin-bottom: 12px;}
+.config-item-info { display: flex; align-items: center; font-size: 1rem; color: #0f172a;}
+.config-item-input { display: flex; align-items: center; gap: 10px;}
+.config-item-input label { font-size: 0.85rem; color: #64748b; font-weight: 600;}
+.config-item-input input { padding: 8px 12px; border-radius: 6px; border: 1px solid #e2e8f0; width: 100px; font-size: 1rem; font-weight: bold; color: #0f172a; text-align: right; outline: none;}
+.config-item-input input:focus { border-color: #3b82f6; box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);}
 
 @media (max-width: 600px) {
   .config-valor-row { flex-direction: column; align-items: flex-start; gap: 15px; }

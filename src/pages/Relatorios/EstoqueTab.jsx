@@ -318,21 +318,26 @@ const EstoqueTab = () => {
             <button className="btn-export-pdf-clientes" onClick={exportarPDFEstoque}>📄 Baixar Inventário</button>
           </div>
           
-          <div style={{ maxHeight: '750px', overflowY: 'auto', paddingRight: '5px' }}>
-            <table className="table-vip-v4">
+          {/* REMOVIDO: maxHeight: '750px', overflowY: 'auto' */}
+          <div style={{ paddingRight: '5px' }}>
+            <table className="table-estoque-v4">
               <thead>
                 <tr>
-                  <th>ITEM / PRODUTO</th>
-                  <th>CATEGORIA</th>
-                  <th className="centro">QTD.</th>
-                  <th className="direita">STATUS</th>
+                  <th width="40%">ITEM / PRODUTO</th>
+                  <th width="25%" className="centro">CATEGORIA</th>
+                  <th width="15%" className="centro">QTD.</th>
+                  <th width="20%" className="direita">STATUS</th>
                 </tr>
               </thead>
               <tbody>
                 {estoqueLista.map((item, i) => (
                   <tr key={i} style={{ opacity: item.quantidade === 0 ? 0.6 : 1 }}>
-                    <td className="td-name">{item.nome}</td>
-                    <td><span className="badge-categoria">{item.categoria}</span></td>
+                    <td className="td-name">
+                      <span className="estoque-name">{item.nome}</span>
+                    </td>
+                    <td className="centro">
+                      <span className="badge-categoria">{item.categoria}</span>
+                    </td>
                     <td className="centro bold" style={{color: item.quantidade <= 1 ? '#ef4444' : '#0f172a'}}>
                       {item.quantidade}
                     </td>

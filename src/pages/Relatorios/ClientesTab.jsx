@@ -19,7 +19,6 @@ const ClientesTab = () => {
   const [topClientes, setTopClientes] = useState([]);
   const [todosClientesData, setTodosClientesData] = useState([]);
   
-  // --- NOVO: Estado para guardar os dados da Empresa (Logo e Nome) ---
   const [dadosEmpresa, setDadosEmpresa] = useState({
     nomeEmpresa: 'Ágape Decorações',
     logotipo: ''
@@ -28,14 +27,12 @@ const ClientesTab = () => {
   useEffect(() => {
     const buscarDadosClientesEConfigs = async () => {
       try {
-        // Busca Clientes, Locações e as Configurações da Empresa ao mesmo tempo
         const [snapClientes, snapLocacoes, snapConfig] = await Promise.all([
           getDocs(collection(db, "clientes")),
           getDocs(collection(db, "locacoes")),
           getDoc(doc(db, "sistema", "parametros"))
         ]);
 
-        // Carrega Configurações da Empresa (para o PDF)
         if (snapConfig.exists()) {
           const configData = snapConfig.data();
           setDadosEmpresa({
@@ -81,7 +78,6 @@ const ClientesTab = () => {
         const seisMesesAtras = new Date();
         seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
 
-        // --- CÁLCULOS DE FIDELIZAÇÃO ---
         const listaStats = Object.values(clientesStats);
         const clientesFieis = listaStats.filter(c => c.qtdLocacoes > 1).length;
         const taxaRetorno = totalClientes > 0 ? (clientesFieis / totalClientes) * 100 : 0;
@@ -128,26 +124,18 @@ const ClientesTab = () => {
   const exportarRelatorioGeral = () => {
     try {
       const doc = new jsPDF();
-      let startY = 25; // Posição inicial da tabela (vai descer se tiver logo)
+      let startY = 25; 
 
-      // Se houver logotipo cadastrado, adiciona no PDF
       if (dadosEmpresa.logotipo) {
-        // Tenta adicionar a logo (ajuste x, y, width, height conforme necessidade)
-        // x=14, y=10, largura=30, altura=30
         doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
-        
-        // Ajusta os textos para o lado da logo
         doc.setFontSize(20);
         doc.setTextColor(15, 23, 42);
         doc.text(dadosEmpresa.nomeEmpresa, 48, 22);
-        
         doc.setFontSize(12);
         doc.setTextColor(100, 116, 139);
         doc.text("Relatório Geral de Clientes", 48, 30);
-        
-        startY = 45; // Empurra a tabela mais para baixo
+        startY = 45; 
       } else {
-        // Se não tiver logo, segue o padrão normal, mas com o nome dinâmico
         doc.setFontSize(18);
         doc.setTextColor(15, 23, 42); 
         doc.text(`Relatório de Clientes - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
@@ -175,7 +163,6 @@ const ClientesTab = () => {
 
   return (
     <div className="fade-in">
-      {/* KPI GRID */}
       <div className="kpi-grid">
         <div className="kpi-card card-destaque">
           <span>CLIENTES TOTAIS</span>
@@ -196,7 +183,6 @@ const ClientesTab = () => {
 
       <div className="clientes-layout-split mt-20">
         <div className="col-esquerda">
-          {/* QUADRO REGIONAL */}
           <div className="main-card-premium">
             <div className="card-header-flex">
               <h3>📍 Concentração Regional</h3>
@@ -219,7 +205,6 @@ const ClientesTab = () => {
             </div>
           </div>
 
-          {/* QUADRO FIDELIDADE REESTILIZADO */}
           <div className="main-card-premium card-fidelidade-v6 mt-20">
             <div className="card-header-flex">
               <h3>✨ Fidelização {dadosEmpresa.nomeEmpresa.split(' ')[0]}</h3>
@@ -252,7 +237,6 @@ const ClientesTab = () => {
           </div>
         </div>
 
-        {/* TABELA VIP */}
         <div className="main-card-premium col-tabela">
           <div className="card-header-flex">
             <h3>🏆 Clientes VIP (Top 8)</h3>
@@ -260,27 +244,15 @@ const ClientesTab = () => {
           </div>
           <table className="table-vip-v4">
             <thead>
-              <tr>
-                <th>CLIENTE</th>
-                <th className="centro">FESTAS</th>
-                <th className="direita">TOTAL GASTO</th>
-              </tr>
+              <tr><th width="40%">CLIENTE</th><th width="20%" className="centro">FESTAS</th><th width="20%" className="centro">TICKET MÉDIO</th><th width="20%" className="direita">TOTAL GASTO</th></tr>
             </thead>
             <tbody>
-              {topClientes.map((c, i) => (
-                <tr key={i}>
-                  <td>
-                    <div className="vip-cell">
-                      <span className={`vip-rank rank-${i+1}`}>{i+1}</span>
-                      <span className="vip-name">{c.nome}</span>
-                    </div>
-                  </td>
-                  <td className="centro">{c.qtdLocacoes}</td>
-                  <td className="direita bold text-verde">
-                    R$ {c.gastoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                  </td>
-                </tr>
-              ))}
+              {topClientes.map((c, i) => {
+                const ticketMedioVip = c.gastoTotal / (c.qtdLocacoes || 1);
+                return (
+                  <tr key={i}><td><div className="vip-cell"><span className={`vip-rank rank-${i+1}`}>{i+1}</span><span className="vip-name">{c.nome}</span></div></td><td className="centro bold" style={{ color: 'var(--texto-secundario)' }}>{c.qtdLocacoes}x</td><td className="centro" style={{ color: '#64748b', fontSize: '13px', fontWeight: '600' }}>R$ {ticketMedioVip.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td><td className="direita bold text-verde">R$ {c.gastoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

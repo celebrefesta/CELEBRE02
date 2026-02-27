@@ -19,7 +19,6 @@ const PedidosTab = () => {
   const [filtroAtual, setFiltroAtual] = useState('TODOS');
   const [taxaConversao, setTaxaConversao] = useState(0);
 
-  // --- NOVO: Estado para guardar os dados da Empresa (Logo e Nome) ---
   const [dadosEmpresa, setDadosEmpresa] = useState({
     nomeEmpresa: 'Ágape Decorações',
     logotipo: ''
@@ -33,7 +32,6 @@ const PedidosTab = () => {
           getDoc(doc(db, "sistema", "parametros"))
         ]);
 
-        // Carrega Configurações da Empresa (para o PDF)
         if (snapConfig.exists()) {
           const configData = snapConfig.data();
           setDadosEmpresa({
@@ -293,22 +291,18 @@ const PedidosTab = () => {
             <button className={`btn-filtro ${filtroAtual === 'DECORACAO' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('DECORACAO')}>Decoração</button>
           </div>
           
-          <div style={{ maxHeight: '600px', overflowY: 'auto', paddingRight: '5px' }}>
-            <table className="table-vip-v4">
+          {/* REMOVIDO: scroll interno para a tabela fluir livremente */}
+          <div style={{ paddingRight: '5px' }}>
+            <table className="table-pedidos-v4">
               <thead>
-                <tr>
-                  <th>Nº PEDIDO</th>
-                  <th>CLIENTE / DATA</th>
-                  <th className="direita">VALOR TOTAL</th>
-                  <th className="centro">STATUS</th>
-                </tr>
+                <tr><th width="20%">Nº PEDIDO</th><th width="40%">CLIENTE / DATA</th><th width="20%" className="direita">VALOR TOTAL</th><th width="20%" className="centro">STATUS</th></tr>
               </thead>
               <tbody>
                 {pedidosFiltrados.map((pedido, i) => (
                   <tr key={i} className="fade-in">
                     <td style={{fontWeight: '800', color: 'var(--texto-secundario)'}}>#{pedido.numero}</td>
                     <td>
-                      <div className="td-name" style={{color: 'var(--texto-principal)'}}>{pedido.cliente}</div>
+                      <div className="td-name" style={{color: 'var(--texto-principal)', fontWeight: '700'}}>{pedido.cliente}</div>
                       <div style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '4px'}}>{pedido.dataStr}</div>
                       <span className={`badge-tipo-servico ${pedido.tipoServico.includes('PEGUE') ? 'tipo-pm' : 'tipo-dec'}`}>
                         {pedido.tipoServico.includes('PEGUE') ? '📦 PEGUE E MONTE' : '✨ DECORAÇÃO'}

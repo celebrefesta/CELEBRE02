@@ -9,15 +9,13 @@ const AssinaturaContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // CRIAMOS DUAS REFERÊNCIAS: UMA PARA CADA ASSINATURA
   const sigCliente = useRef({});
   const sigAgape = useRef({});
   
   const [contrato, setContrato] = useState(null);
   const [carregando, setCarregando] = useState(true);
-  const [status, setStatus] = useState("pronto"); // pronto, salvando, sucesso, erro
+  const [status, setStatus] = useState("pronto"); 
 
-  // 1. Carrega os dados do contrato
   useEffect(() => {
     const buscar = async () => {
       try {
@@ -34,49 +32,49 @@ const AssinaturaContrato = () => {
     buscar();
   }, [id, navigate]);
 
-  // Funções para limpar cada quadro separadamente
-  const limparCliente = () => sigCliente.current.clear();
-  const limparAgape = () => sigAgape.current.clear();
+  const limparCliente = () => { if(sigCliente.current) sigCliente.current.clear(); };
+  const limparAgape = () => { if(sigAgape.current) sigAgape.current.clear(); };
 
-  // 2. SALVAR AS DUAS ASSINATURAS
   const salvarAssinaturas = async () => {
-    // Validação: O Cliente é OBRIGADO a assinar
-    if (sigCliente.current.isEmpty()) {
-      alert("⚠️ O campo do CLIENTE precisa ser assinado!");
-      return;
+    let novaAssinaturaCliente = null;
+    let novaAssinaturaAgape = null;
+
+    if (sigCliente.current && !sigCliente.current.isEmpty()) {
+        novaAssinaturaCliente = sigCliente.current.getCanvas().toDataURL("image/png");
+    }
+
+    if (sigAgape.current && !sigAgape.current.isEmpty()) {
+        novaAssinaturaAgape = sigAgape.current.getCanvas().toDataURL("image/png");
+    }
+
+    if (!novaAssinaturaCliente && !novaAssinaturaAgape) {
+        alert("⚠️ Você não fez nenhuma assinatura nova para salvar.");
+        return;
     }
 
     setStatus("salvando");
 
     try {
       const docRef = doc(db, "contratos", id);
-      
-      // Captura as imagens (Usando .getCanvas() para evitar bugs)
-      const imgCliente = sigCliente.current.getCanvas().toDataURL("image/png");
-      
-      // A da Ágape é opcional? Se estiver vazia, salva null. Se tiver desenho, salva a imagem.
-      const imgAgape = !sigAgape.current.isEmpty() 
-        ? sigAgape.current.getCanvas().toDataURL("image/png") 
-        : null;
+      const atualizacao = {};
 
-      // Monta o objeto para atualizar no Firebase
-      const atualizacao = {
-        assinaturaCliente: imgCliente,
-        status: "Assinado",
-        dataAssinatura: new Date().toISOString()
-      };
+      if (novaAssinaturaCliente) atualizacao.assinaturaCliente = novaAssinaturaCliente;
+      if (novaAssinaturaAgape) atualizacao.assinaturaAgape = novaAssinaturaAgape;
 
-      // Só adiciona a da Ágape se ela existir
-      if (imgAgape) {
-        atualizacao.assinaturaAgape = imgAgape;
+      const temCliente = contrato.assinaturaCliente || novaAssinaturaCliente;
+      const temAgape = contrato.assinaturaAgape || novaAssinaturaAgape;
+
+      if (temCliente && temAgape) {
+          atualizacao.status = "Assinado";
+          atualizacao.dataAssinatura = new Date().toISOString();
       }
 
       await updateDoc(docRef, atualizacao);
 
       setStatus("sucesso");
       setTimeout(() => {
-        alert("✅ Contrato assinado e finalizado com sucesso!");
-        navigate("/contratos");
+        alert("✅ Assinatura salva com sucesso!");
+        window.location.reload(); 
       }, 500);
 
     } catch (error) {
@@ -91,9 +89,17 @@ const AssinaturaContrato = () => {
   return (
     <div className="assinatura-container">
       <div className="assinatura-card">
+        
+        {/* 🔥 NOVO BOTÃO DE VOLTAR AQUI 🔥 */}
+        <div style={{ textAlign: "left", marginBottom: "20px" }}>
+          <button className="btn-voltar-assinatura" onClick={() => navigate("/contratos")}>
+            ← Voltar
+          </button>
+        </div>
+
         <header className="assinatura-header">
           <h1>Assinatura Digital 🖋️</h1>
-          <p>Olá, <strong>{contrato?.cliente}</strong>. Por favor, revise e assine.</p>
+          <p>Olá, <strong>{contrato?.cliente}</strong>. Revise e assine os termos abaixo.</p>
         </header>
 
         <div className="resumo-contrato">
@@ -105,46 +111,72 @@ const AssinaturaContrato = () => {
         {/* --- CAMPO 1: CLIENTE --- */}
         <div className="canvas-wrapper">
           <label className="label-assinatura">✍️ ASSINATURA DO CLIENTE ({contrato?.cliente}):</label>
-          <div className="canvas-border">
-            <SignatureCanvas
-              ref={sigCliente}
-              penColor="#0f172a"
-              canvasProps={{ className: "sigCanvas" }}
-              backgroundColor="white"
-            />
-          </div>
-          <button className="btn-limpar" onClick={limparCliente}>Limpar / Refazer</button>
+          
+          {contrato?.assinaturaCliente ? (
+             <div className="assinatura-trancada">
+                 <div className="selo-ok">✅ ASSINADO E TRAVADO</div>
+                 <img src={contrato.assinaturaCliente} alt="Assinatura Cliente" />
+             </div>
+          ) : (
+            <>
+              <div className="canvas-border">
+                <SignatureCanvas
+                  ref={sigCliente}
+                  penColor="#0f172a"
+                  canvasProps={{ className: "sigCanvas" }}
+                  backgroundColor="transparent"
+                />
+              </div>
+              <button className="btn-limpar" onClick={limparCliente}>Limpar / Refazer</button>
+            </>
+          )}
         </div>
 
         {/* --- CAMPO 2: ÁGAPE DECORAÇÕES --- */}
         <div className="canvas-wrapper agape-wrapper">
           <label className="label-assinatura ouro">✍️ ASSINATURA ÁGAPE DECORAÇÕES:</label>
-          <div className="canvas-border ouro-border">
-            <SignatureCanvas
-              ref={sigAgape}
-              penColor="#b48a3c" /* Assinatura Dourada */
-              canvasProps={{ className: "sigCanvas" }}
-              backgroundColor="white"
-            />
-          </div>
-          <button className="btn-limpar" onClick={limparAgape}>Limpar / Refazer</button>
+          
+          {contrato?.assinaturaAgape ? (
+             <div className="assinatura-trancada ouro-border">
+                 <div className="selo-ok">✅ ASSINADO E TRAVADO</div>
+                 <img src={contrato.assinaturaAgape} alt="Assinatura Ágape" />
+             </div>
+          ) : (
+            <>
+              <div className="canvas-border ouro-border">
+                <SignatureCanvas
+                  ref={sigAgape}
+                  penColor="#b48a3c"
+                  canvasProps={{ className: "sigCanvas" }}
+                  backgroundColor="transparent"
+                />
+              </div>
+              <button className="btn-limpar" onClick={limparAgape}>Limpar / Refazer</button>
+            </>
+          )}
         </div>
 
         {/* --- BOTÃO FINAL --- */}
-        <button 
-          className="btn-confirmar-assinatura" 
-          onClick={salvarAssinaturas}
-          disabled={status !== "pronto" && status !== "erro"}
-          style={{ 
-            backgroundColor: status === "sucesso" ? "#22c55e" : "#0f172a",
-            opacity: status === "salvando" ? 0.7 : 1
-          }}
-        >
-          {status === "pronto" && "FINALIZAR E SALVAR CONTRATO"}
-          {status === "salvando" && "⏳ SALVANDO ASSINATURAS..."}
-          {status === "sucesso" && "✅ SUCESSO!"}
-          {status === "erro" && "ERRO - TENTE NOVAMENTE"}
-        </button>
+        {(!contrato?.assinaturaCliente || !contrato?.assinaturaAgape) ? (
+            <button 
+              className="btn-confirmar-assinatura" 
+              onClick={salvarAssinaturas}
+              disabled={status !== "pronto" && status !== "erro"}
+              style={{ 
+                backgroundColor: status === "sucesso" ? "#22c55e" : "#0f172a",
+                opacity: status === "salvando" ? 0.7 : 1
+              }}
+            >
+              {status === "pronto" && "SALVAR ASSINATURA"}
+              {status === "salvando" && "⏳ SALVANDO..."}
+              {status === "sucesso" && "✅ SUCESSO!"}
+              {status === "erro" && "ERRO - TENTE NOVAMENTE"}
+            </button>
+        ) : (
+            <div className="contrato-finalizado-alerta">
+                🎉 Contrato 100% Finalizado e Assinado!
+            </div>
+        )}
       </div>
     </div>
   );

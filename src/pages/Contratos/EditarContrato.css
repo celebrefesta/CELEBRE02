@@ -1,0 +1,35 @@
+/* =========================================
+   ESTILOS EXCLUSIVOS DA TELA "EDITAR CONTRATO"
+   ========================================= */
+
+/* Etiqueta de Status no Cabeçalho */
+.status-badge-large {
+    display: inline-block;
+    padding: 8px 16px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #ffffff;
+    border: 1px solid var(--borda, #cbd5e1);
+    color: var(--texto-secundario, #64748b);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+/* Opcional: Se quiser que a etiqueta mude de cor com base no texto, 
+   o React precisaria passar uma classe, mas só com a borda cinza 
+   ela já fica super elegante e neutra ao lado do título. */
+
+/* Ajuste do cabeçalho no mobile para a etiqueta não quebrar o layout */
+@media (max-width: 900px) {
+    .header-title-row { 
+        flex-direction: column !important; 
+        align-items: flex-start !important; 
+        gap: 10px !important; 
+    }
+    .status-badge-large {
+        font-size: 11px !important;
+        padding: 6px 12px !important;
+    }
+}
