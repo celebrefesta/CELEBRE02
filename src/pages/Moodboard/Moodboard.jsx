@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom'; 
 import { db } from '../../firebaseConfig';
 import html2canvas from 'html2canvas'; 
 import './Moodboard.css';
 
-// --- CORREÇÃO 1: Ícones agora aceitam props (cor, tamanho, style) ---
 const Icons = {
   Crown: (props) => <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>,
   Couch: (props) => <svg {...props} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h20v8H2zm0 0l2-6h16l2 6M6 16v4m12-4v4"/></svg>,
@@ -24,24 +24,23 @@ const Icons = {
 };
 
 const Moodboard = () => {
+  const navigate = useNavigate(); 
   const [estoqueReal, setEstoqueReal] = useState([]);
   const [itensCanvas, setItensCanvas] = useState([]);
   const [selecionadoId, setSelecionadoId] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('acervo'); 
   const [editingTextId, setEditingTextId] = useState(null);
-  
-  // Fundos
+
   const [wallBackground, setWallBackground] = useState('#f1f5f9');
   const [floorBackground, setFloorBackground] = useState('#e2e8f0');
   const [activeSurface, setActiveSurface] = useState('wall');
 
-  // Estados para Salvar/Carregar
   const [modalSalvarAberto, setModalSalvarAberto] = useState(false);
   const [modalAbrirAberto, setModalAbrirAberto] = useState(false);
   const [nomeProjeto, setNomeProjeto] = useState("");
   const [projetosSalvos, setProjetosSalvos] = useState([]);
 
-  const canvasRef = useRef(null);
+  const boardRef = useRef(null);
   const [expandedCats, setExpandedCats] = useState({});
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
 
@@ -58,7 +57,8 @@ const Moodboard = () => {
 
   const interactionMode = useRef('none');
   const activeItemId = useRef(null);
-  const resizeDir = useRef('');
+  const resizeDir = useRef(null);
+  const lastPos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
     const carregar = async () => {
@@ -76,7 +76,6 @@ const Moodboard = () => {
     carregar();
   }, []);
 
-  // --- FUNÇÕES DE SALVAR E CARREGAR ---
   const handleAbrirModalSalvar = () => {
     if (itensCanvas.length === 0) return alert("O projeto está vazio!");
     setNomeProjeto("");
@@ -87,18 +86,11 @@ const Moodboard = () => {
     if (!nomeProjeto.trim()) return alert("Digite um nome para o projeto!");
     try {
         await addDoc(collection(db, "projetos_moodboard"), {
-            nome: nomeProjeto,
-            itens: itensCanvas,
-            wallBackground,
-            floorBackground,
-            createdAt: new Date().toISOString()
+            nome: nomeProjeto, itens: itensCanvas, wallBackground, floorBackground, createdAt: new Date().toISOString()
         });
         alert("Projeto salvo com sucesso! ✅");
         setModalSalvarAberto(false);
-    } catch (error) {
-        console.error("Erro ao salvar:", error);
-        alert("Erro ao salvar projeto.");
-    }
+    } catch (error) { alert("Erro ao salvar projeto."); }
   };
 
   const handleAbrirListaProjetos = async () => {
@@ -108,10 +100,7 @@ const Moodboard = () => {
         const lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setProjetosSalvos(lista);
         setModalAbrirAberto(true);
-    } catch (error) {
-        console.error(error);
-        alert("Erro ao buscar projetos.");
-    }
+    } catch (error) { alert("Erro ao buscar projetos."); }
   };
 
   const carregarProjeto = (projeto) => {
@@ -124,34 +113,29 @@ const Moodboard = () => {
   };
 
   const deletarProjetoSalvo = async (id) => {
-    if (window.confirm("Tem certeza que deseja excluir este projeto salvo?")) {
+    if (window.confirm("Excluir este projeto salvo?")) {
         try {
             await deleteDoc(doc(db, "projetos_moodboard", id));
             setProjetosSalvos(prev => prev.filter(p => p.id !== id));
-        } catch (error) {
-            alert("Erro ao excluir.");
-        }
+        } catch (error) { alert("Erro ao excluir."); }
     }
   };
 
-  // --- ACTIONS ---
   const handleContextMenu = (e, id) => { e.preventDefault(); setSelecionadoId(id); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id }); };
   const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
   const bringToFront = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => { const idx = prev.findIndex(i => i.uniqueId === contextMenu.itemId); if(idx < 0) return prev; const item = prev[idx]; const rest = prev.filter(i => i.uniqueId !== contextMenu.itemId); return [...rest, item]; }); closeContextMenu(); };
   const sendToBack = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => { const idx = prev.findIndex(i => i.uniqueId === contextMenu.itemId); if(idx < 0) return prev; const item = prev[idx]; const rest = prev.filter(i => i.uniqueId !== contextMenu.itemId); return [item, ...rest]; }); closeContextMenu(); };
-  const rotateItem = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => prev.map(i => i.uniqueId === contextMenu.itemId ? { ...i, rotation: (i.rotation || 0) + 90 } : i)); closeContextMenu(); };
-  const flipItem = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => prev.map(i => i.uniqueId === contextMenu.itemId ? { ...i, flipH: !i.flipH } : i)); closeContextMenu(); };
   const toggleLock = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => prev.map(i => i.uniqueId === contextMenu.itemId ? { ...i, locked: !i.locked } : i)); closeContextMenu(); };
   const toggleCategory = (cat) => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
 
   const adicionarAoCanvas = (item) => {
-    const novoItem = { ...item, type: 'image', uniqueId: `img_${Date.now()}`, x: 350, y: 350, width: 150, height: 150, rotation: 0, flipH: false, locked: false, opacity: 100, brightness: 100, contrast: 100, shadow: 0 };
+    const novoItem = { ...item, type: 'image', uniqueId: `img_${Date.now()}`, x: 50, y: 50, width: 150, height: 150, rotation: 0, flipH: false, locked: false, opacity: 100, brightness: 100, contrast: 100, shadow: 0 };
     setItensCanvas(prev => [...prev, novoItem]); setSelecionadoId(novoItem.uniqueId); setAbaAtiva('efeitos');
   };
 
   const adicionarTexto = () => {
     const idUnico = `txt_${Date.now()}`;
-    const itemTexto = { type: 'text', content: "Novo Texto", color: "#1e293b", fontSize: 32, fontFamily: "'Poppins', sans-serif", uniqueId: idUnico, x: 300, y: 250, width: 250, height: 60, rotation: 0, locked: false, opacity: 100, shadow: 0 };
+    const itemTexto = { type: 'text', content: "Novo Texto", color: "#1e293b", fontSize: 32, fontFamily: "'Poppins', sans-serif", uniqueId: idUnico, x: 50, y: 50, width: 250, height: 60, rotation: 0, locked: false, opacity: 100, shadow: 0 };
     setItensCanvas(prev => [...prev, itemTexto]); setSelecionadoId(idUnico); setEditingTextId(idUnico);
   };
 
@@ -161,54 +145,79 @@ const Moodboard = () => {
   };
 
   const handleClearProject = () => { 
-      if (window.confirm("⚠️ Tem certeza que deseja limpar a tela? O desenho atual será perdido se não estiver salvo.")) { 
+      if (window.confirm("⚠️ Tem certeza que deseja limpar a tela?")) { 
           setItensCanvas([]); setWallBackground('#f1f5f9'); setFloorBackground('#e2e8f0'); 
       }
   };
   
-  const handleExportImage = async () => { if (!canvasRef.current) return; setSelecionadoId(null); setTimeout(async () => { const canvas = await html2canvas(canvasRef.current, { useCORS: true, allowTaint: true, ignoreElements: (el) => el.classList.contains('canvas-header-overlay') }); const link = document.createElement('a'); link.download = `Projeto.png`; link.href = canvas.toDataURL(); link.click(); }, 200); };
-
-  // --- LÓGICA DE INTERAÇÃO (DRAG AND DROP) ---
-  const handleItemMouseDown = (e, id, type) => { 
-    e.stopPropagation(); 
-    setSelecionadoId(id); 
-    if (type === 'text') setAbaAtiva('texto'); else setAbaAtiva('efeitos'); 
-    
-    const item = itensCanvas.find(i => i.uniqueId === id); 
-    // Só permite arrastar se NÃO estiver editando texto e se o item NÃO estiver bloqueado
-    if (id !== editingTextId && !item?.locked) { 
-        interactionMode.current = 'drag'; 
-        activeItemId.current = id; 
-    } 
+  const handleExportImage = async () => { 
+      if (!boardRef.current) return; 
+      setSelecionadoId(null); 
+      setTimeout(async () => { 
+          const canvas = await html2canvas(boardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null }); 
+          const link = document.createElement('a'); 
+          link.download = `Projeto_Agape.png`; 
+          link.href = canvas.toDataURL(); 
+          link.click(); 
+      }, 200); 
   };
 
-  const handleResizeMouseDown = (e, id, dir) => { e.stopPropagation(); interactionMode.current = 'resize'; resizeDir.current = dir; activeItemId.current = id; };
-  
-  const handleMouseMove = (e) => {
+  const handlePointerDown = (e, id, type, dir = null) => {
+    e.stopPropagation();
+    e.target.setPointerCapture(e.pointerId);
+    setSelecionadoId(id);
+    
+    if (!dir) {
+        if (type === 'text') setAbaAtiva('texto'); else setAbaAtiva('efeitos');
+    }
+
+    const item = itensCanvas.find(i => i.uniqueId === id);
+    if (id !== editingTextId && !item?.locked) {
+        interactionMode.current = dir ? 'resize' : 'drag';
+        activeItemId.current = id;
+        resizeDir.current = dir;
+        lastPos.current = { x: e.clientX, y: e.clientY };
+    }
+  };
+
+  const handlePointerMove = (e) => {
     if (interactionMode.current === 'none' || !activeItemId.current) return;
     
-    // Evita selecionar texto da página enquanto arrasta
-    e.preventDefault();
+    const dx = e.clientX - lastPos.current.x;
+    const dy = e.clientY - lastPos.current.y;
+    lastPos.current = { x: e.clientX, y: e.clientY };
+
+    let scale = 1;
+    if (boardRef.current) scale = boardRef.current.getBoundingClientRect().width / boardRef.current.offsetWidth;
+    
+    const adjDx = dx / scale;
+    const adjDy = dy / scale;
 
     setItensCanvas(prev => prev.map(item => {
       if (item.uniqueId === activeItemId.current && !item.locked) {
-        if (interactionMode.current === 'drag') return { ...item, x: item.x + e.movementX, y: item.y + e.movementY };
+        if (interactionMode.current === 'drag') {
+            return { ...item, x: item.x + adjDx, y: item.y + adjDy };
+        }
         if (interactionMode.current === 'resize') {
             let newW = item.width; let newH = item.height;
-            if (resizeDir.current.includes('e')) newW += e.movementX;
-            if (resizeDir.current.includes('s')) newH += e.movementY;
+            if (resizeDir.current.includes('e')) newW += adjDx;
+            if (resizeDir.current.includes('s')) newH += adjDy;
             return { ...item, width: Math.max(30, newW), height: Math.max(30, newH) };
         }
       } return item;
     }));
   };
 
-  const handleMouseUp = () => { interactionMode.current = 'none'; activeItemId.current = null; };
+  const handlePointerUp = (e) => {
+    try { e.target.releasePointerCapture(e.pointerId); } catch(err){}
+    interactionMode.current = 'none';
+    activeItemId.current = null;
+    resizeDir.current = null;
+  };
   
-  // CORREÇÃO 2: Limpar modo de edição ao clicar fora
   const handleCanvasClick = () => {
       setSelecionadoId(null);
-      setEditingTextId(null); // Importante: sai do modo de edição
+      setEditingTextId(null); 
       closeContextMenu();
   };
 
@@ -219,8 +228,9 @@ const Moodboard = () => {
   const getStyle = (valor) => (!valor ? { background: '#fff' } : valor.startsWith('url') ? { backgroundImage: valor, backgroundSize: 'cover', backgroundPosition: 'center' } : { backgroundColor: valor });
 
   return (
-    <div className="studio-page" onMouseMove={handleMouseMove} onMouseUp={handleMouseUp} onClick={handleCanvasClick}>
+    <div className="studio-page" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onClick={handleCanvasClick}>
       
+      {/* BARRA DE FERRAMENTAS */}
       <div className="studio-toolbar" onClick={e => e.stopPropagation()}>
         <div className="tool-logo"><Icons.Crown /></div>
         <div className={`tool-item ${abaAtiva === 'acervo' ? 'active' : ''}`} onClick={() => setAbaAtiva('acervo')}><Icons.Couch /><span>Acervo</span></div>
@@ -229,6 +239,7 @@ const Moodboard = () => {
         <div className={`tool-item ${abaAtiva === 'efeitos' ? 'active' : ''}`} onClick={() => setAbaAtiva('efeitos')}><Icons.Magic /><span>Efeitos</span></div>
       </div>
 
+      {/* PAINEL LATERAL/INFERIOR */}
       <div className="studio-panel" onClick={e => e.stopPropagation()}>
         {abaAtiva === 'acervo' && (
            <div className="panel-content">
@@ -295,7 +306,6 @@ const Moodboard = () => {
                                 <input type="color" className="color-input-mini" value={itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {color: e.target.value})} />
                             </div>
                             <input type="range" min="12" max="150" value={itemSelecionado.fontSize} onChange={e => atualizarItem(selecionadoId, {fontSize: Number(e.target.value)})} />
-                            <div className="action-buttons-grid"><button className={`btn-secondary ${itemSelecionado.locked ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {locked: !itemSelecionado.locked})}>{itemSelecionado.locked ? <Icons.Lock /> : <Icons.Unlock />}</button></div>
                         </div>
                     ) : <p className="hint-text">Selecione um texto.</p>}
                 </div>
@@ -306,52 +316,75 @@ const Moodboard = () => {
              <div className="panel-content">
                 <h3 className="panel-title">CENÁRIO</h3>
                 <div className="surface-switcher"><button className={`switch-btn ${activeSurface === 'wall' ? 'active' : ''}`} onClick={() => setActiveSurface('wall')}>🧱 PAREDE</button><button className={`switch-btn ${activeSurface === 'floor' ? 'active' : ''}`} onClick={() => setActiveSurface('floor')}>🟧 CHÃO</button></div>
+                
                 <div className="bg-tools">
-                    <div className="bg-options-grid">{paletaCores.map(c => <div key={c} className="bg-option-item" style={{backgroundColor: c}} onClick={() => aplicarAoFundo(c)} />)}</div>
+                    <div className="bg-options-grid">
+                        {/* 🔥 NOVO SELETOR DE CORES INFINITAS (COLOR PICKER) 🔥 */}
+                        <div className="bg-option-item color-picker-btn" style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} title="Cor Personalizada">
+                            <input type="color" 
+                                   className="invisible-color-input"
+                                   onChange={(e) => aplicarAoFundo(e.target.value)} 
+                            />
+                        </div>
+                        {/* Cores Padrão */}
+                        {paletaCores.map(c => <div key={c} className="bg-option-item" style={{backgroundColor: c}} onClick={() => aplicarAoFundo(c)} />)}
+                    </div>
                     <div className="bg-presets-grid">{(activeSurface === 'wall' ? texturasParede : texturasChao).map((bg, idx) => <div key={idx} className="bg-preset-item" style={{backgroundImage: `url(${bg.url})`}} onClick={() => aplicarAoFundo(bg.url)}><span>{bg.nome}</span></div>)}</div>
                 </div>
             </div>
         )}
       </div>
 
-      <div className="studio-canvas" ref={canvasRef} onContextMenu={(e) => { e.preventDefault(); }}>
-        <div className="canvas-layers">
-            <div className="layer-wall" style={getStyle(wallBackground)}></div>
-            <div className="layer-floor" style={getStyle(floorBackground)}></div>
+      {/* ÁREA DA PRANCHETA (AGORA MAIOR E MAIS LIMPA!) */}
+      <div className="studio-canvas" onContextMenu={(e) => { e.preventDefault(); }}>
+        
+        {/* HEADER FLUTUANTE DE CONTROLES */}
+        <div className="canvas-header-overlay" onClick={e => e.stopPropagation()}>
+             <button className="btn-voltar-moodboard" onClick={() => navigate(-1)}>
+                 ← <span className="btn-text">Voltar</span>
+             </button>
+
+             <div className="header-actions-group">
+                 <button className="btn-header-action" onClick={handleAbrirListaProjetos}><Icons.Folder /> <span className="btn-text">Abrir</span></button>
+                 <button className="btn-header-action" onClick={handleAbrirModalSalvar}><Icons.Save /> <span className="btn-text">Salvar</span></button>
+                 <div className="header-divider"></div>
+                 <button className="btn-header-action" onClick={handleClearProject}><Icons.Trash /> <span className="btn-text">Limpar</span></button>
+                 <button className="btn-header-action primary" onClick={handleExportImage}><Icons.Download /> <span className="btn-text">Baixar</span></button>
+             </div>
         </div>
         
-        <div className="canvas-header-overlay">
-             <button className="btn-header-action" onClick={handleAbrirListaProjetos} title="Meus Projetos"><Icons.Folder /> Abrir</button>
-             <button className="btn-header-action" onClick={handleAbrirModalSalvar} title="Salvar Projeto"><Icons.Save /> Salvar</button>
-             <div className="header-divider"></div>
-             <button className="btn-header-action" onClick={handleClearProject}><Icons.Trash /> Limpar</button>
-             <button className="btn-header-action primary" onClick={handleExportImage}><Icons.Download /> Baixar</button>
+        {/* 🔥 O QUADRO BRANCO RESPONSIVO 🔥 */}
+        <div className="canvas-artboard" ref={boardRef}>
+            <div className="canvas-layers">
+                <div className="layer-wall" style={getStyle(wallBackground)}></div>
+                <div className="layer-floor" style={getStyle(floorBackground)}></div>
+            </div>
+            
+            {itensCanvas.map((item, index) => (
+              <div key={item.uniqueId} className={`canvas-object ${selecionadoId === item.uniqueId ? 'selected' : ''} ${item.locked ? 'locked-item' : ''}`}
+                style={{ 
+                    left: item.x, top: item.y, width: item.width, height: item.height, zIndex: index + 10,
+                    transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1})`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    filter: `brightness(${item.brightness}%) contrast(${item.contrast}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`,
+                    opacity: item.opacity / 100, cursor: item.locked ? 'not-allowed' : 'grab',
+                    touchAction: 'none'
+                }}
+                onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type)} 
+                onClick={e => e.stopPropagation()} 
+                onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}
+               >
+                
+                {item.type === 'text' ? (
+                    <div style={{ width:'100%', fontSize: `${item.fontSize}px`, color: item.color, fontFamily: item.fontFamily, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textAlign: item.textAlign }}>{item.content}</div>
+                ) : <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} crossOrigin="anonymous" alt="" />}
+                
+                {selecionadoId === item.uniqueId && !item.locked && !editingTextId && (
+                    <><div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} /><div className="selection-border" /></>
+                )}
+              </div>
+            ))}
         </div>
-        
-        {itensCanvas.map((item, index) => (
-          <div key={item.uniqueId} className={`canvas-object ${selecionadoId === item.uniqueId ? 'selected' : ''} ${item.locked ? 'locked-item' : ''}`}
-            style={{ 
-                left: item.x, top: item.y, width: item.width, height: item.height, zIndex: index + 10,
-                transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1})`,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                filter: `brightness(${item.brightness}%) contrast(${item.contrast}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`,
-                opacity: item.opacity / 100, cursor: item.locked ? 'not-allowed' : 'grab',
-                userSelect: 'none' /* Importante para não selecionar texto ao arrastar */
-            }}
-            onMouseDown={e => handleItemMouseDown(e, item.uniqueId, item.type)} onClick={e => e.stopPropagation()} onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}>
-            
-            {item.type === 'text' ? (
-                <div style={{ width:'100%', fontSize: `${item.fontSize}px`, color: item.color, fontFamily: item.fontFamily, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textAlign: item.textAlign }}>{item.content}</div>
-            ) : <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain' }} crossOrigin="anonymous" alt="" />}
-            
-            {selecionadoId === item.uniqueId && !item.locked && !editingTextId && (
-                <><div className="resize-handle se" onMouseDown={e => handleResizeMouseDown(e, item.uniqueId, 'se')} /><div className="selection-border" /></>
-            )}
-            {item.locked && selecionadoId === item.uniqueId && (
-                <div style={{position:'absolute', top:-15, right:-15, background:'#ef4444', color:'white', borderRadius:'50%', padding:2}}><Icons.Lock width={16} /></div>
-            )}
-          </div>
-        ))}
 
         {contextMenu.visible && (
             <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
@@ -364,7 +397,7 @@ const Moodboard = () => {
             </div>
         )}
 
-        {/* --- MODAIS --- */}
+        {/* MODAIS */}
         {modalSalvarAberto && (
             <div className="modal-overlay">
                 <div className="modal-content">

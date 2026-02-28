@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
+import SignatureCanvas from 'react-signature-canvas'; // 🔥 IMPORTAÇÃO DO CANVAS ADICIONADA
 import './Configuracoes.css';
 
 const Configuracoes = () => {
@@ -9,11 +10,15 @@ const Configuracoes = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [fontSize, setFontSize] = useState(localStorage.getItem('fontSize') || 'padrao');
   
+  // 🔥 REFERÊNCIA PARA A ASSINATURA
+  const sigGlobal = useRef({});
+
   const [config, setConfig] = useState({
     categorias: [], subcategorias: {}, localizacoes: [], tamanhos: [],
     gruposTema: [], temasPorGrupo: {},
     nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '',
-    endereco: '', instagram: '', logotipo: '', slogan: '', site: ''
+    endereco: '', instagram: '', logotipo: '', slogan: '', site: '',
+    assinatura: '' // 🔥 CAMPO NOVO ADICIONADO AQUI
   });
   const [loading, setLoading] = useState(true);
 
@@ -112,6 +117,34 @@ const Configuracoes = () => {
     if(!window.confirm("Remover logotipo?")) return;
     setConfig(prev => ({ ...prev, logotipo: '' }));
     try { await updateDoc(doc(db, "sistema", "parametros"), { logotipo: '' }); } catch (e) { console.error(e); }
+  };
+
+  // 🔥 FUNÇÕES DA ASSINATURA GLOBAL 🔥
+  const limparAssinatura = () => { if(sigGlobal.current) sigGlobal.current.clear(); };
+
+  const salvarAssinaturaGlobal = async () => {
+    if (sigGlobal.current.isEmpty()) {
+      alert("⚠️ Por favor, desenhe sua assinatura antes de salvar.");
+      return;
+    }
+    const base64Sig = sigGlobal.current.getCanvas().toDataURL("image/png");
+    setConfig(prev => ({ ...prev, assinatura: base64Sig }));
+    
+    try {
+      await updateDoc(doc(db, "sistema", "parametros"), { assinatura: base64Sig });
+      alert("✅ Assinatura padrão salva com sucesso! Ela será usada em todos os novos contratos.");
+    } catch (e) {
+      alert("❌ Erro ao salvar assinatura.");
+      console.error(e);
+    }
+  };
+
+  const removerAssinaturaGlobal = async () => {
+    if(!window.confirm("Tem certeza que deseja apagar a assinatura padrão do sistema?")) return;
+    setConfig(prev => ({ ...prev, assinatura: '' }));
+    try {
+      await updateDoc(doc(db, "sistema", "parametros"), { assinatura: '' });
+    } catch (e) { console.error(e); }
   };
 
   if (loading) return <div className="loading-config">Carregando painel de controle...</div>;
@@ -318,6 +351,39 @@ const Configuracoes = () => {
                 </div>
               </div>
             </div>
+
+            {/* 🔥 NOVO BLOCO: ASSINATURA PADRÃO DA EMPRESA 🔥 */}
+            <div className="config-card span-2-col-full">
+              <div className="card-top-bar gold-bar"></div>
+              <h3>✍️ Assinatura Oficial da Empresa</h3>
+              <p className="subtext">Assine aqui uma única vez. O sistema vai aplicar esta assinatura automaticamente em todos os novos contratos.</p>
+              
+              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                {config.assinatura ? (
+                  <div className="assinatura-trancada ouro-border" style={{width: '100%', maxWidth: '500px'}}>
+                    <div className="selo-ok">✅ ASSINATURA SALVA NO SISTEMA</div>
+                    <img src={config.assinatura} alt="Assinatura Padrão" />
+                    <button className="btn-danger-outline" onClick={removerAssinaturaGlobal} style={{marginTop: '15px'}}>Remover e Fazer Nova</button>
+                  </div>
+                ) : (
+                  <div style={{width: '100%', maxWidth: '500px'}}>
+                    <div className="canvas-border ouro-border">
+                      <SignatureCanvas
+                        ref={sigGlobal}
+                        penColor="#b48a3c"
+                        canvasProps={{ className: "sigCanvas" }}
+                        backgroundColor="transparent"
+                      />
+                    </div>
+                    <div style={{display: 'flex', gap: '15px', marginTop: '15px'}}>
+                      <button className="btn-outline" style={{flex: 1}} onClick={limparAssinatura}>Apagar Traço</button>
+                      <button className="btn-salvar-config" style={{flex: 2}} onClick={salvarAssinaturaGlobal}>Salvar Assinatura Padrão</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
           </div>
         )}
 

@@ -33,6 +33,7 @@ import NovoContrato from "./pages/Contratos/NovoContrato";
 import EditarContrato from "./pages/Contratos/EditarContrato";
 import AssinaturaContrato from "./pages/Contratos/AssinaturaContrato";
 import ModelosContrato from "./pages/Contratos/ModelosContrato";
+import VisualizarContrato from "./pages/Contratos/VisualizarContrato"; // 🔥 NOVO IMPORT AQUI 🔥
 
 // --- GESTÃO ---
 import Relatorios from './pages/Relatorios/Relatorios';
@@ -45,8 +46,10 @@ import Catalogo from './pages/Catalago/Catalago'; // Mantido com a grafia 'Catal
 const AppContent = () => {
   const location = useLocation();
   
-  // 🌟 AQUI ESTÁ A MÁGICA: Esconde o menu mestre na Assinatura e no Catálogo 🌟
-  const showNavbar = !location.pathname.includes('/assinatura') && !location.pathname.includes('/catalogo');
+  // 🌟 AQUI ESTÁ A MÁGICA: Esconde o menu mestre na Assinatura, no Catálogo e na tela de Visualizar 🌟
+  const showNavbar = !location.pathname.includes('/assinatura') && 
+                     !location.pathname.includes('/catalogo') &&
+                     !location.pathname.includes('/visualizar'); // 🔥 Esconde o menu para a "Folha A4" ficar livre 🔥
 
   return (
     <div className={`App ${!showNavbar ? 'no-navbar' : ''}`}>
@@ -76,6 +79,7 @@ const AppContent = () => {
           <Route path="/modelos-contrato" element={<ModelosContrato />} />
           <Route path="/editar-contrato/:id" element={<EditarContrato />} />
           <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
+          <Route path="/visualizar/:id" element={<VisualizarContrato />} /> {/* 🔥 NOVA ROTA ADICIONADA AQUI 🔥 */}
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/moodboard" element={<Moodboard />} />
           <Route path="/catalogo" element={<Catalogo />} />

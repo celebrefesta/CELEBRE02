@@ -7,7 +7,7 @@ import "./Contratos.css";
 
 const Contratos = () => {
   const [contratos, setContratos] = useState([]);
-  const [menuAberto, setMenuAberto] = useState(null); // Estado para controlar qual menu está aberto
+  const [menuAberto, setMenuAberto] = useState(null); 
   const navigate = useNavigate();
 
   // Fecha o menu se clicar fora dele
@@ -28,20 +28,8 @@ const Contratos = () => {
 
   // Alterna a visibilidade do menu de um item específico
   const toggleMenu = (e, id) => {
-    e.stopPropagation(); // Impede que o evento de clique feche o menu imediatamente
+    e.stopPropagation(); 
     setMenuAberto(menuAberto === id ? null : id);
-  };
-
-  // FUNÇÃO: Enviar Link no WhatsApp
-  const enviarNoZap = (contrato) => {
-    const urlBase = window.location.origin; 
-    const linkAssinatura = `${urlBase}/assinatura/${contrato.id}`;
-    
-    const texto = `Olá ${contrato.cliente}, tudo bem? 👋\n\nAqui está o link do seu contrato digital da Ágape Decorações.\n\nPor favor, clique para revisar e assinar:\n${linkAssinatura}`;
-    
-    const linkZap = `https://wa.me/?text=${encodeURIComponent(texto)}`;
-    window.open(linkZap, '_blank');
-    setMenuAberto(null); // Fecha o menu após a ação
   };
 
   // FUNÇÃO: Gerar PDF Completo (Com Assinaturas)
@@ -236,15 +224,20 @@ const Contratos = () => {
                         <button onClick={() => navigate(`/editar-contrato/${item.id}`)}>
                           ✏️ Editar
                         </button>
-                        <button onClick={() => enviarNoZap(item)}>
-                          📱 WhatsApp
+                        
+                        {/* 🔥 NOVO BOTÃO DE VISUALIZAR AQUI 🔥 */}
+                        <button onClick={() => navigate(`/visualizar/${item.id}`)}>
+                          👁️ Visualizar
                         </button>
+
                         <button onClick={() => navigate(`/assinatura/${item.id}`)}>
                           🖋️ Assinar
                         </button>
+                        
                         <button onClick={() => gerarPDF(item)}>
                           📄 PDF
                         </button>
+                        
                         <hr />
                         <button 
                           className="danger" 

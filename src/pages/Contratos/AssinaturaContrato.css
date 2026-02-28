@@ -38,6 +38,58 @@ html, body {
 }
 
 /* =========================================
+   AÇÕES DO TOPO (VOLTAR E WHATSAPP) 🔥 MUDANÇA AQUI 🔥
+   ========================================= */
+.topo-card-acoes {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+}
+
+.btn-voltar-assinatura {
+    background: #f1f5f9;
+    border: 1px solid #cbd5e1;
+    padding: 8px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    color: #64748b;
+    font-weight: 800;
+    font-size: 13px;
+    transition: 0.2s;
+    display: inline-flex;
+    align-items: center;
+}
+
+.btn-voltar-assinatura:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+    border-color: #94a3b8;
+}
+
+.btn-whatsapp-direto {
+    background-color: #25d366;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 4px 10px rgba(37, 211, 102, 0.2);
+    transition: 0.2s;
+}
+
+.btn-whatsapp-direto:hover { 
+    background-color: #128c7e; 
+    transform: translateY(-2px); 
+    box-shadow: 0 6px 12px rgba(37, 211, 102, 0.3); 
+}
+
+/* =========================================
    CABEÇALHO E RESUMO
    ========================================= */
 .assinatura-header h1 {
@@ -172,56 +224,6 @@ html, body {
 }
 
 /* =========================================
-   📱 RESPONSIVIDADE MOBILE EXTREMA
-   ========================================= */
-@media (max-width: 900px) {
-  .assinatura-container {
-      padding: 20px 15px !important;
-      align-items: flex-start; 
-  }
-
-  .assinatura-card {
-      padding: 25px 15px !important;
-      border-radius: 16px !important;
-      box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
-      width: 100% !important;
-      max-width: 100vw !important;
-      margin: 0 !important;
-      box-sizing: border-box !important;
-  }
-
-  .assinatura-header h1 { font-size: 24px !important; }
-  .assinatura-header p { font-size: 14px !important; }
-
-  .resumo-contrato {
-      padding: 15px !important;
-      margin-bottom: 25px !important;
-  }
-  
-  .resumo-contrato p { font-size: 13px !important; }
-
-  /* Ajuste preciso para o celular */
-  .canvas-wrapper { 
-      width: 100% !important; 
-      max-width: 100% !important; 
-      box-sizing: border-box !important;
-  }
-  
-  .canvas-border { 
-      width: 100% !important; 
-      max-width: 100% !important;
-      height: 180px !important; /* Diminui um pouco a altura pro celular */
-      box-sizing: border-box !important;
-  }
-  
-  .btn-confirmar-assinatura {
-      padding: 16px !important;
-      font-size: 15px !important;
-      margin-top: 0 !important;
-  }
-}
-
-/* =========================================
    ESTILO DAS ASSINATURAS SALVAS E TRANCADAS
    ========================================= */
 .assinatura-trancada {
@@ -274,28 +276,58 @@ html, body {
 }
 
 /* =========================================
-   BOTÃO DE VOLTAR
+   📱 RESPONSIVIDADE MOBILE EXTREMA
    ========================================= */
-.btn-voltar-assinatura {
-    background: #f1f5f9;
-    border: 1px solid #cbd5e1;
-    padding: 8px 16px;
-    border-radius: 8px;
-    cursor: pointer;
-    color: #64748b;
-    font-weight: 800;
-    font-size: 13px;
-    transition: 0.2s;
-    display: inline-flex;
-    align-items: center;
-}
-
-.btn-voltar-assinatura:hover {
-    background: #e2e8f0;
-    color: #0f172a;
-    border-color: #94a3b8;
-}
-
 @media (max-width: 900px) {
-    .assinatura-trancada { height: 180px; }
+  .assinatura-container {
+      padding: 20px 15px !important;
+      align-items: flex-start; 
+  }
+
+  .assinatura-card {
+      padding: 25px 15px !important;
+      border-radius: 16px !important;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.05) !important;
+      width: 100% !important;
+      max-width: 100vw !important;
+      margin: 0 !important;
+      box-sizing: border-box !important;
+  }
+
+  .topo-card-acoes {
+      margin-top: 35px; /* Evita bater no menu Hambúrguer */
+  }
+
+  /* Deixa só o ícone do WhatsApp no celular para poupar espaço */
+  .btn-whatsapp-direto span { display: none; } 
+  .btn-whatsapp-direto { padding: 10px 15px; }
+
+  .assinatura-header h1 { font-size: 24px !important; }
+  .assinatura-header p { font-size: 14px !important; }
+
+  .resumo-contrato {
+      padding: 15px !important;
+      margin-bottom: 25px !important;
+  }
+  
+  .resumo-contrato p { font-size: 13px !important; }
+
+  .canvas-wrapper { 
+      width: 100% !important; 
+      max-width: 100% !important; 
+      box-sizing: border-box !important;
+  }
+  
+  .canvas-border, .assinatura-trancada { 
+      width: 100% !important; 
+      max-width: 100% !important;
+      height: 180px !important; /* Diminui a altura pro celular */
+      box-sizing: border-box !important;
+  }
+  
+  .btn-confirmar-assinatura {
+      padding: 16px !important;
+      font-size: 15px !important;
+      margin-top: 0 !important;
+  }
 }

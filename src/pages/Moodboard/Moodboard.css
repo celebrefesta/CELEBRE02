@@ -1,13 +1,13 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Dancing+Script:wght@400;700&family=Pacifico&family=Montserrat:wght@400;700&display=swap');
 
-/* --- LAYOUT PRINCIPAL --- */
+/* --- LAYOUT PRINCIPAL (TELA CHEIA) --- */
 .studio-page {
-  position: fixed; top: 0; left: 260px; right: 0; bottom: 0;
-  background: #e2e8f0; display: flex; z-index: 10;
-  font-family: 'Poppins', sans-serif;
+  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+  background: #e2e8f0; display: flex; z-index: 9999; 
+  font-family: 'Poppins', sans-serif; overflow: hidden;
 }
 
-/* --- TOOLBAR ESQUERDA --- */
+/* --- TOOLBAR (PRETA) --- */
 .studio-toolbar {
   width: 80px; background: #0f172a; 
   display: flex; flex-direction: column; align-items: center; z-index: 20; padding-top: 20px;
@@ -23,7 +23,7 @@
 .tool-item:hover { background: #1e293b; color: #fff; }
 .tool-item.active { background: #1e293b; color: #c5a059; border-left-color: #c5a059; }
 
-/* --- PAINEL LATERAL --- */
+/* --- PAINEL LATERAL (BRANCO) --- */
 .studio-panel {
   width: 320px; background: white; border-right: 1px solid #e2e8f0; 
   display: flex; flex-direction: column; z-index: 15;
@@ -31,338 +31,172 @@
 .panel-content { height: 100%; display: flex; flex-direction: column; padding: 20px; overflow-y: auto; }
 .panel-title { font-size: 16px; color: #0f172a; margin: 0 0 20px 0; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 
-/* --- LISTA DE ACERVO (ACORDEÃO COM SETA) --- */
+/* ACERVO */
 .acervo-list-scroll { flex: 1; display: flex; flex-direction: column; gap: 8px; padding-bottom: 20px; }
-
-.acervo-category {
-  background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0;
-}
-
-/* O CABEÇALHO DA CATEGORIA (ONDE CLICA) */
-.acervo-category-header {
-  display:flex; justify-content:space-between; align-items:center; cursor:pointer; 
-  padding: 12px 15px; background: #f8fafc; color:#334155;
-  font-weight: 600; font-size: 13px; transition: 0.2s;
-  user-select: none;
-}
+.acervo-category { background: white; border-radius: 8px; overflow: hidden; border: 1px solid #e2e8f0; }
+.acervo-category-header { display:flex; justify-content:space-between; align-items:center; cursor:pointer; padding: 12px 15px; background: #f8fafc; color:#334155; font-weight: 600; font-size: 13px; transition: 0.2s; user-select: none; }
 .acervo-category-header:hover { background: #f1f5f9; color: #0f172a; }
-
-/* A FLECHINHA ANIMADA */
-.acervo-category-header::after {
-  content: '›'; /* Símbolo da seta */
-  font-size: 20px; line-height: 15px; font-weight: bold; color: #94a3b8;
-  transition: transform 0.3s ease; /* Faz girar suave */
-  margin-left: 10px;
-}
-
-/* QUANDO ABERTO */
+.acervo-category-header::after { content: '›'; font-size: 20px; line-height: 15px; font-weight: bold; color: #94a3b8; transition: transform 0.3s ease; margin-left: 10px; }
 .acervo-category-header.expanded { background: #fff; border-bottom: 1px solid #f1f5f9; color: #0f172a; }
 .acervo-category-header.expanded::after { transform: rotate(90deg); color: #c5a059; }
-
-.acervo-category-header .count { 
-  background: #e2e8f0; padding: 2px 8px; border-radius: 12px; 
-  font-size: 10px; color: #64748b; margin-left: auto; margin-right: 5px; 
-}
-
-/* O GRID DE ITENS (SÓ APARECE QUANDO ABERTO) */
-.acervo-grid {
-  display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px;
-  background: #fff; padding: 10px; animation: slideDown 0.3s ease-out;
-}
+.acervo-category-header .count { background: #e2e8f0; padding: 2px 8px; border-radius: 12px; font-size: 10px; color: #64748b; margin-left: auto; margin-right: 5px; }
+.acervo-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; background: #fff; padding: 10px; animation: slideDown 0.3s ease-out; }
 @keyframes slideDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
 
-.acervo-card {
-  border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; cursor: pointer;
-  transition: 0.2s; background: white; position: relative;
-}
+.acervo-card { border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; cursor: pointer; transition: 0.2s; background: white; position: relative; }
 .acervo-card:hover { transform: translateY(-3px); border-color: #c5a059; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
-
 .card-thumb { height: 90px; width: 100%; display: flex; align-items: center; justify-content: center; background: #fdfdfd; padding: 5px; }
 .card-thumb img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .card-name { font-size: 11px; text-align: center; padding: 6px; background: #f8fafc; color: #475569; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-/* FERRAMENTAS */
+/* FERRAMENTAS & EFEITOS */
 .btn-primary-action { width: 100%; padding: 12px; background: #0f172a; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; margin-bottom: 20px; }
-.btn-primary-action:hover { background: #1e293b; }
 .btn-danger-action { width: 100%; padding: 8px; background: white; color: #ef4444; border: 1px solid #fee2e2; border-radius: 8px; font-weight: 600; cursor: pointer; margin-top: 10px; font-size: 12px; }
-.btn-danger-action:hover { background: #fee2e2; }
-
 .edit-box { background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; display: flex; flex-direction: column; gap: 8px; }
 .edit-box textarea { width: 100%; border: 1px solid #cbd5e1; border-radius: 4px; padding: 8px; font-family: inherit; }
+.font-selector { width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; cursor: pointer; font-size: 13px; color: #334155; }
+.style-row { display: flex; gap: 5px; align-items: center; background: white; border: 1px solid #e2e8f0; padding: 5px; border-radius: 6px; }
+.btn-style { flex: 1; border: none; background: transparent; padding: 6px; border-radius: 4px; cursor: pointer; color: #64748b; transition: 0.2s; }
+.btn-style.active { background: #e2e8f0; color: #0f172a; font-weight: bold; }
+.divider-v { width: 1px; height: 20px; background: #e2e8f0; margin: 0 5px; }
+.color-input-mini { width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0; }
 
-/* CENÁRIOS */
-.bg-options-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 8px; margin-bottom: 15px; }
+/* CENÁRIO (COM O SELETOR DE CORES MÁGICO) */
+.bg-options-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; margin-bottom: 15px; }
 .bg-option-item { width: 100%; aspect-ratio: 1; border-radius: 50%; border: 1px solid #e2e8f0; cursor: pointer; transition: 0.2s; }
 .bg-option-item:hover { transform: scale(1.1); border-color: #94a3b8; }
+
+/* O input do arco-íris escondido */
+.color-picker-btn { position: relative; overflow: hidden; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+.invisible-color-input { position: absolute; top: -10px; left: -10px; width: 200%; height: 200%; opacity: 0; cursor: pointer; }
+
 .bg-presets-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
 .bg-preset-item { height: 60px; border-radius: 8px; background-size: cover; background-position: center; cursor: pointer; display: flex; align-items: flex-end; overflow: hidden; position: relative; }
 .bg-preset-item span { width: 100%; background: rgba(0,0,0,0.6); color: white; font-size: 10px; padding: 4px 8px; text-align: center; backdrop-filter: blur(2px); }
-.bg-preset-item:hover { opacity: 0.9; box-shadow: 0 0 0 2px #c5a059; }
+.surface-switcher { display: flex; background: #f1f5f9; border-radius: 8px; padding: 4px; margin-bottom: 20px; }
+.switch-btn { flex: 1; border: none; background: transparent; padding: 8px; font-size: 12px; font-weight: 700; color: #64748b; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+.switch-btn.active { background: white; color: #0f172a; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-/* --- CANVAS --- */
-.studio-canvas { flex: 1; position: relative; background-color: #f1f5f9; background-image: radial-gradient(#cbd5e1 1px, transparent 1px); background-size: 20px 20px; overflow: hidden; box-shadow: inset 0 0 20px rgba(0,0,0,0.05); }
-.canvas-header-overlay { position: absolute; top: 20px; right: 20px; display: flex; gap: 10px; z-index: 100; }
+/* --- A PRANCHETA (CANVAS) --- */
+.studio-canvas { 
+  flex: 1; 
+  position: relative; 
+  background-color: #f1f5f9; 
+  background-image: radial-gradient(#cbd5e1 1px, transparent 1px); 
+  background-size: 20px 20px; 
+  overflow: auto; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 20px 20px 20px;
+  box-shadow: inset 0 0 20px rgba(0,0,0,0.05); 
+}
+
+/* O Quadro Branco (No PC fica tamanho Paisagem) */
+.canvas-artboard {
+  position: relative;
+  background: white;
+  width: 960px; 
+  height: 540px; 
+  box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+  border: 1px solid #cbd5e1;
+  overflow: hidden; 
+  flex-shrink: 0; /* Previne que amasse no PC */
+}
+
+.canvas-layers { position: absolute; top: 0; left: 0; right: 0; bottom: 0; z-index: 0; display: flex; flex-direction: column; }
+.layer-wall { height: 60%; width: 100%; background-color: #f1f5f9; transition: background 0.3s; border-bottom: 1px solid rgba(0,0,0,0.1); }
+.layer-floor { height: 40%; width: 100%; background-color: #e2e8f0; transition: background 0.3s; box-shadow: inset 0 10px 20px rgba(0,0,0,0.05); }
+
+/* HEADER E BOTÕES DA PRANCHETA */
+.canvas-header-overlay { 
+  position: absolute; 
+  top: 20px; left: 20px; right: 20px; 
+  display: flex; justify-content: space-between; align-items: center; 
+  z-index: 100; 
+}
+.btn-voltar-moodboard { background: white; border: 1px solid #cbd5e1; padding: 8px 16px; border-radius: 8px; font-weight: 800; color: #0f172a; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items: center; gap: 5px;}
+.header-actions-group { display: flex; gap: 10px; }
 .btn-header-action { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 6px; border: 1px solid #cbd5e1; background: white; color: #475569; font-weight: 600; font-size: 13px; cursor: pointer; }
 .btn-header-action.primary { background: #0f172a; color: white; border: none; }
-.btn-header-action:hover { transform: translateY(-2px); box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
+.header-divider { width: 1px; height: 20px; background: #cbd5e1; margin: 0 5px; }
 
-/* ITENS NO CANVAS */
+/* ITENS DO CANVAS */
 .canvas-object { position: absolute; cursor: grab; }
 .canvas-object:active { cursor: grabbing; }
 .canvas-object.selected { outline: 2px dashed #c5a059; }
-.btn-delete-floating { position: absolute; top: -10px; right: -10px; width: 20px; height: 20px; background: #ef4444; color: white; border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 14px; line-height: 1; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
-.resize-handle { width: 10px; height: 10px; background: white; border: 2px solid #c5a059; border-radius: 50%; position: absolute; bottom: -5px; right: -5px; cursor: se-resize; }
-.empty-canvas-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; color: #94a3b8; }
-.empty-canvas-msg svg { width: 48px; height: 48px; margin-bottom: 10px; opacity: 0.5; }
+.resize-handle { width: 12px; height: 12px; background: white; border: 2px solid #c5a059; border-radius: 50%; position: absolute; bottom: -6px; right: -6px; cursor: se-resize; }
 
-/* ... (Mantenha todo o CSS anterior) ... */
-
-/* --- MENU DE CONTEXTO (CLIQUE DIREITO) --- */
-.context-menu {
-  position: fixed;
-  z-index: 9999;
-  background: white;
-  width: 180px;
-  border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.15), 0 5px 10px rgba(0,0,0,0.05);
-  border: 1px solid #e2e8f0;
-  overflow: hidden;
-  animation: popIn 0.1s ease-out;
-}
-
-@keyframes popIn {
-  from { opacity: 0; transform: scale(0.95); }
-  to { opacity: 1; transform: scale(1); }
-}
-
-.ctx-item {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 15px;
-  font-size: 13px;
-  color: #334155;
-  cursor: pointer;
-  transition: 0.2s;
-  font-weight: 500;
-}
-
-.ctx-item:hover {
-  background: #f1f5f9;
-  color: #0f172a;
-}
-
-.ctx-item svg {
-  width: 16px;
-  height: 16px;
-  opacity: 0.6;
-}
-
-.ctx-item.delete {
-  color: #ef4444;
-}
-
-.ctx-item.delete:hover {
-  background: #fef2f2;
-}
-
-.ctx-divider {
-  height: 1px;
-  background: #f1f5f9;
-  margin: 0;
-}
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Great+Vibes&family=Dancing+Script:wght@400;700&family=Pacifico&family=Montserrat:wght@400;700&display=swap');
-
-/* ... (Mantenha o CSS anterior do Layout e Acervo) ... */
-
-/* --- FERRAMENTAS DE TEXTO MELHORADAS --- */
-.text-tools { display: flex; flex-direction: column; gap: 15px; }
-
-.edit-box { 
-  background: #f8fafc; padding: 15px; border-radius: 8px; border: 1px solid #e2e8f0; 
-  display: flex; flex-direction: column; gap: 10px; 
-}
-
-.edit-box label { 
-  font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: -5px; 
-}
-
-.edit-box textarea {
-  width: 100%; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px; 
-  font-family: inherit; resize: vertical; min-height: 60px;
-}
-
-.font-selector {
-  width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 6px; 
-  background: white; cursor: pointer; font-size: 13px; color: #334155;
-}
-
-/* Linha de Botões de Estilo (Negrito, Itálico, Cor) */
-.style-row {
-  display: flex; gap: 5px; align-items: center; background: white; 
-  border: 1px solid #e2e8f0; padding: 5px; border-radius: 6px;
-}
-
-.btn-style {
-  flex: 1; border: none; background: transparent; padding: 6px; border-radius: 4px;
-  cursor: pointer; color: #64748b; display: flex; align-items: center; justify-content: center;
-  transition: 0.2s;
-}
-
-.btn-style:hover { background: #f1f5f9; color: #0f172a; }
-.btn-style.active { background: #e2e8f0; color: #0f172a; font-weight: bold; }
-
-.divider-v { width: 1px; height: 20px; background: #e2e8f0; margin: 0 5px; }
-
-.color-input-mini {
-  width: 30px; height: 30px; border: none; background: none; cursor: pointer; padding: 0;
-}
-
-.hint-text { font-size: 12px; color: #94a3b8; text-align: center; margin-top: 20px; font-style: italic; }
-
-/* ... (Mantenha o CSS anterior do Layout, Toolbar, Acervo e Texto) ... */
-
-/* --- SWITCHER PAREDE / CHÃO --- */
-.surface-switcher {
-  display: flex;
-  background: #f1f5f9;
-  border-radius: 8px;
-  padding: 4px;
-  margin-bottom: 20px;
-}
-
-.switch-btn {
-  flex: 1;
-  border: none;
-  background: transparent;
-  padding: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: 0.2s;
-}
-
-.switch-btn.active {
-  background: white;
-  color: #0f172a;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-}
-
-.helper-text {
-  font-size: 12px;
-  color: #64748b;
-  margin-bottom: 15px;
-  text-align: center;
-}
-
-/* --- CAMADAS DO CANVAS (PAREDE E CHÃO) --- */
-.canvas-layers {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 0; /* Fica no fundo de tudo */
-  display: flex;
-  flex-direction: column;
-}
-
-.layer-wall {
-  height: 75%; /* Parede ocupa 75% da altura */
-  width: 100%;
-  background-color: #f1f5f9;
-  transition: background 0.3s;
-  /* Bordinha sutil pra simular rodapé/encontro */
-  border-bottom: 1px solid rgba(0,0,0,0.1); 
-}
-
-.layer-floor {
-  height: 25%; /* Chão ocupa 25% da altura */
-  width: 100%;
-  background-color: #e2e8f0;
-  transition: background 0.3s;
-  /* Perspectiva simples: o topo do chão é mais escuro */
-  box-shadow: inset 0 10px 20px rgba(0,0,0,0.05); 
-}
-
-/* ... (Mantenha o começo do arquivo igual) ... */
-
-/* --- CAMADAS DO CANVAS (PAREDE E CHÃO AJUSTADOS) --- */
-.canvas-layers {
-  position: absolute;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 0; /* Fica no fundo de tudo */
-  display: flex;
-  flex-direction: column;
-}
-
-.layer-wall {
-  height: 60%; /* Diminuído para dar espaço (antes era 75%) */
-  width: 100%;
-  background-color: #f1f5f9;
-  transition: background 0.3s;
-  border-bottom: 1px solid rgba(0,0,0,0.1); 
-}
-
-.layer-floor {
-  height: 35%; /* Aumentado para 40% (era 25%) CHÃO DO CENÁRIO */ 
-  width: 100%;
-  background-color: #e2e8f0;
-  transition: background 0.3s;
-  /* Perspectiva sutil no chão */
-  box-shadow: inset 0 10px 20px rgba(0,0,0,0.05); 
-}
-/* ... (Mantenha todo o CSS anterior) ... */
-
-/* --- BOTÕES DO HEADER --- */
-.header-divider {
-  width: 1px; height: 20px; background: #cbd5e1; margin: 0 5px;
-}
-
-/* --- MODAIS (JANELAS FLUTUANTES) --- */
-.modal-overlay {
-  position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.5); z-index: 9999;
-  display: flex; align-items: center; justify-content: center;
-  backdrop-filter: blur(2px);
-}
-
-.modal-content {
-  background: white; padding: 25px; border-radius: 12px; width: 350px;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.2); animation: popIn 0.2s ease-out;
-}
-.modal-content.large { width: 450px; }
-
-.modal-content h3 { margin-top: 0; color: #0f172a; margin-bottom: 15px; }
-
-.modal-content input {
-  width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 20px;
-  font-size: 14px;
-}
-
+/* MODAIS E MENUS */
+.context-menu { position: fixed; z-index: 9999; background: white; width: 180px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.15); border: 1px solid #e2e8f0; }
+.ctx-item { display: flex; align-items: center; gap: 10px; padding: 12px 15px; font-size: 13px; cursor: pointer; }
+.ctx-item:hover { background: #f1f5f9; }
+.modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 9999; display: flex; align-items: center; justify-content: center; }
+.modal-content { background: white; padding: 25px; border-radius: 12px; width: 350px; }
+.modal-content input { width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 6px; margin-bottom: 20px; }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+.btn-cancel { background: #f1f5f9; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; color: #475569; font-weight: 600; }
+.btn-confirm { background: #0f172a; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; color: white; font-weight: 600; }
+.projects-list { max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px; }
+.project-item-row { display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer; }
 
-.btn-cancel {
-  background: #f1f5f9; border: none; padding: 10px 15px; border-radius: 6px; cursor: pointer; color: #475569; font-weight: 600;
-}
-.btn-confirm {
-  background: #0f172a; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; color: white; font-weight: 600;
-}
-.btn-cancel.full { width: 100%; margin-top: 15px; }
+/* =========================================
+   📱 A MÁGICA: O QUADRO GIGANTE PARA CELULAR
+   ========================================= */
+@media (max-width: 900px) {
+    /* O layout vira coluna */
+    .studio-page { flex-direction: column; }
+    
+    /* 1. O ESPAÇO DO QUADRO BRANCO (Ocupa 60% da tela agora para mais visão!) */
+    .studio-canvas {
+        order: 1;
+        flex: none;
+        height: 60vh; 
+        padding: 60px 10px 10px 10px; 
+        align-items: stretch; /* Permite que o quadro estique e ocupe o espaço */
+        justify-content: stretch;
+    }
 
-/* LISTA DE PROJETOS SALVOS */
-.projects-list {
-  max-height: 300px; overflow-y: auto; border: 1px solid #e2e8f0; border-radius: 6px;
-}
+    /* 2. O QUADRO BRANCO ESTICADO */
+    .canvas-artboard {
+        width: 100% !important; /* Esquece o tamanho do PC, ocupa 100% do que sobrar */
+        height: 100% !important; 
+        border-radius: 12px; 
+    }
 
-.project-item-row {
-  display: flex; justify-content: space-between; align-items: center;
-  padding: 12px; border-bottom: 1px solid #f1f5f9; cursor: pointer;
-}
-.project-item-row:hover { background: #f8fafc; }
-.project-item-row span { flex: 1; font-weight: 500; color: #334155; }
-.project-item-row:last-child { border-bottom: none; }
+    /* 3. A METADE DE BAIXO (O PAINEL BRANCO COM O ACERVO) */
+    .studio-panel {
+        order: 2;
+        width: 100%;
+        height: calc(40vh - 65px); 
+        border-right: none;
+        border-top: 2px solid #cbd5e1;
+        border-radius: 20px 20px 0 0;
+        box-shadow: 0 -5px 15px rgba(0,0,0,0.1);
+        z-index: 30;
+    }
 
-.btn-icon-del {
-  background: none; border: none; color: #ef4444; cursor: pointer; padding: 5px; opacity: 0.6; transition: 0.2s;
+    /* 4. A BARRA PRETA DE FERRAMENTAS VAI PRO RODAPÉ */
+    .studio-toolbar {
+        order: 3;
+        width: 100%;
+        height: 65px;
+        flex-direction: row;
+        padding: 0;
+        z-index: 40;
+    }
+    .tool-logo { display: none; }
+    .tool-item { height: 100%; border-left: none; border-top: 3px solid transparent; flex: 1; }
+    .tool-item.active { border-top-color: #c5a059; background: #1e293b; border-left-color: transparent;}
+
+    /* 5. OS BOTÕES DO TOPO OTIMIZADOS E SEM TEXTO PARA POUPAR ESPAÇO */
+    .canvas-header-overlay { 
+        top: 10px; left: 10px; right: 10px;
+    }
+    .header-actions-group { gap: 5px; }
+    
+    /* MÁGICA: Esconde todas as palavras e mostra só os ícones no topo */
+    .btn-text { display: none; } 
+    .btn-header-action { padding: 8px; justify-content: center; }
+    .btn-voltar-moodboard { padding: 8px 12px; font-size: 14px; }
 }
-.btn-icon-del:hover { opacity: 1; background: #fee2e2; border-radius: 4px; }

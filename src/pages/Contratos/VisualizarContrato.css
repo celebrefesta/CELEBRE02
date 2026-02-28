@@ -1,0 +1,155 @@
+.visualizar-container {
+    background-color: #cbd5e1; /* Fundo cinza para destacar a folha branca */
+    min-height: 100vh;
+    padding: 40px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-family: 'Times New Roman', Times, serif; /* Fonte clássica de contrato */
+}
+
+.acoes-flutuantes {
+    width: 100%;
+    max-width: 800px;
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+}
+
+.btn-voltar, .btn-imprimir {
+    background: #0f172a;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: bold;
+    font-family: 'Inter', sans-serif;
+    cursor: pointer;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    transition: 0.2s;
+}
+.btn-voltar:hover { background: #1e293b; }
+.btn-imprimir { background: #2563eb; }
+.btn-imprimir:hover { background: #1d4ed8; }
+
+/* A FOLHA A4 */
+.documento-a4 {
+    background: white;
+    width: 100%;
+    max-width: 800px; /* Largura padrão de folha */
+    min-height: 1122px; /* Proporção A4 vertical */
+    padding: 60px;
+    box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+    border-radius: 4px;
+    color: #000;
+}
+
+.doc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.doc-empresa-info h2 {
+    margin: 0 0 5px 0;
+    font-size: 22px;
+    color: #1e293b;
+    font-family: 'Inter', sans-serif;
+    font-weight: 900;
+}
+
+.doc-empresa-info p {
+    margin: 2px 0;
+    font-size: 13px;
+    color: #475569;
+    font-family: 'Inter', sans-serif;
+}
+
+.doc-logo img {
+    max-height: 80px;
+    max-width: 150px;
+    object-fit: contain;
+}
+
+.doc-divisor {
+    border: none;
+    border-top: 2px solid #0f172a;
+    margin: 20px 0;
+}
+
+.doc-titulo {
+    text-align: center;
+    font-size: 18px;
+    font-weight: bold;
+    margin: 30px 0;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.doc-resumo-caixa {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    padding: 20px;
+    margin-bottom: 30px;
+    font-family: 'Inter', sans-serif;
+    font-size: 14px;
+}
+
+.doc-resumo-caixa p { margin: 8px 0; }
+
+.doc-clausulas {
+    white-space: pre-wrap; /* MÁGICA: Mantém os parágrafos e espaços que você digitou */
+    font-size: 15px;
+    line-height: 1.6;
+    text-align: justify;
+    margin-bottom: 60px;
+}
+
+/* ÁREA DE ASSINATURAS */
+.doc-assinaturas-area {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    margin-top: 50px;
+}
+
+.box-assinatura {
+    text-align: center;
+    width: 40%;
+}
+
+.img-assinatura {
+    max-width: 100%;
+    max-height: 100px;
+    object-fit: contain;
+    border-bottom: 1px solid #000;
+    margin-bottom: 5px;
+    padding-bottom: 5px;
+}
+
+.linha-em-branco {
+    width: 100%;
+    border-bottom: 1px solid #000;
+    height: 60px; /* Espaço vazio pra assinar de caneta caso você imprima o contrato em branco */
+    margin-bottom: 10px;
+}
+
+.box-assinatura p { margin: 0; font-size: 14px; }
+.box-assinatura span { font-size: 12px; color: #64748b; }
+
+/* 🖨️ MODO IMPRESSÃO (Some com o fundo cinza e botões na hora de imprimir/salvar PDF) */
+@media print {
+    body, html { background: white !important; }
+    .visualizar-container { background: white !important; padding: 0 !important; }
+    .acoes-flutuantes { display: none !important; }
+    .documento-a4 { box-shadow: none !important; padding: 0 !important; margin: 0 !important; width: 100% !important; max-width: 100% !important; }
+}
+
+/* RESPONSIVIDADE PARA O CELULAR */
+@media (max-width: 768px) {
+    .visualizar-container { padding: 15px 10px; }
+    .documento-a4 { padding: 20px; }
+    .doc-header { flex-direction: column; align-items: center; text-align: center; gap: 15px; }
+    .doc-assinaturas-area { flex-direction: column; gap: 40px; align-items: center; }
+    .box-assinatura { width: 80%; }
+}
