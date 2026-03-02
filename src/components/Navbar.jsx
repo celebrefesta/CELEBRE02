@@ -27,6 +27,7 @@ const Navbar = () => {
 
       {/* 🌟 SIDEBAR (Recebe a classe mobile-open se o estado for true) */}
       <div className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
+        
         <div className="sidebar-logo">
           <h1 style={{ color: '#c5a059', textAlign: 'center', margin: '20px 0' }}>CELEBRE</h1>
         </div>
@@ -86,15 +87,6 @@ const Navbar = () => {
             <i className="fas fa-store"></i> <span>Catálogo</span>
           </NavLink>
 
-          <div className="sidebar-divider"></div>
-
-          <NavLink to="/perfil" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-            <i className="fas fa-user-circle"></i> <span>Meu Perfil</span>
-          </NavLink>
-
-          <NavLink to="/configuracoes" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-            <i className="fas fa-cog"></i> <span>Configurações</span>
-          </NavLink>
         </nav>
       </div>
     </>

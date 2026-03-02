@@ -1,9 +1,10 @@
-/* Catalago.css - VERSÃO SLIM PROFESSIONAL */
+/* Catalago.css - VERSÃO FINAL (DRAWER MENU + MODAL + CADASTRO) */
 
 .catalogo-publico {
   background-color: #f8fafc;
   min-height: 100vh;
   font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
 }
 
 /* HEADER SLIM */
@@ -18,8 +19,10 @@
   position: relative;
 }
 
+.cat-header-content { display: flex; flex-direction: column; gap: 5px; }
+
 .cat-logo {
-  font-size: 1.5rem; /* Letra menor e mais chique */
+  font-size: 1.5rem; 
   font-weight: 900;
   letter-spacing: 4px;
   color: #c5a059;
@@ -33,6 +36,9 @@
   text-transform: uppercase;
 }
 
+.header-info-subtitle { display: flex; flex-direction: column; gap: 5px; }
+.header-contact-links { display: flex; gap: 15px; font-size: 0.8rem; color: #cbd5e1; }
+
 .btn-admin-login {
   background: transparent;
   border: 1px solid #334155;
@@ -41,9 +47,10 @@
   border-radius: 4px;
   font-size: 0.7rem;
   cursor: pointer;
+  white-space: nowrap;
 }
 
-/* LAYOUT COM SIDEBAR FIXA */
+/* LAYOUT PC: SIDEBAR FIXA E CONTENT DO LADO */
 .cat-container-main {
   display: flex;
   max-width: 1400px;
@@ -53,17 +60,23 @@
 }
 
 .cat-sidebar {
-  width: 220px; /* Sidebar mais estreita */
+  width: 240px; 
   background: white;
   padding: 15px;
   border-radius: 8px;
   border: 1px solid #e2e8f0;
-  /* 🌟 SIDEBAR FIXA NA TELA 🌟 */
   position: sticky;
   top: 20px;
   height: calc(100vh - 40px);
   overflow-y: auto;
+  flex-shrink: 0; 
 }
+
+/* Oculta os itens que são exclusivos do mobile no PC */
+.sidebar-overlay { display: none; }
+.sidebar-mobile-header { display: none; }
+.btn-mobile-filtros-fab { display: none; }
+.active-filters-mobile { display: none; }
 
 .sidebar-title {
   font-size: 0.85rem;
@@ -75,30 +88,49 @@
   padding-left: 8px;
 }
 
-.sidebar-list { list-style: none; padding: 0; }
+.sidebar-grupo-title {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin: 15px 0 5px 0;
+  font-weight: 600;
+}
+
+.sidebar-list { list-style: none; padding: 0; margin: 0; }
 .sidebar-list li {
-  font-size: 0.8rem; /* Letra menor */
-  padding: 6px 10px;
+  font-size: 0.8rem; 
+  padding: 8px 10px;
   color: #64748b;
   cursor: pointer;
   border-radius: 4px;
+  transition: background 0.2s;
+  margin-bottom: 2px;
 }
 
-.sidebar-list li.active { background: #fdfbf7; color: #c5a059; font-weight: bold; }
-.sidebar-list li.destak { background: #0f172a; color: white; text-align: center; margin-bottom: 10px; }
+.sidebar-list li:hover { background: #f1f5f9; }
+.sidebar-list li.active { background: #fdfbf7; color: #c5a059; font-weight: bold; border-left: 2px solid #c5a059;}
+.sidebar-list li.destak { background: #0f172a; color: white; text-align: center; margin-bottom: 10px; font-weight: bold; }
+.sidebar-list li.destak:hover { background: #1e293b; }
 
-/* GRID E CARDS SLIM */
-.cat-content { flex: 1; }
+.sidebar-divider { height: 1px; background: #e2e8f0; margin: 15px 0; }
 
+/* MAIN CONTENT */
+.cat-content { flex: 1; min-width: 0; }
+
+.cat-top-controls { display: flex; gap: 10px; margin-bottom: 20px; align-items: center; }
+
+.cat-search-bar { flex: 1; }
 .cat-search-bar input {
   width: 100%;
-  padding: 10px 15px;
+  padding: 12px 15px;
   border-radius: 6px;
   border: 1px solid #cbd5e1;
-  font-size: 0.85rem;
-  margin-bottom: 20px;
+  font-size: 0.9rem;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+  outline: none;
 }
+.cat-search-bar input:focus { border-color: #c5a059; }
 
+/* GRID E CARDS SLIM */
 .cat-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -110,13 +142,24 @@
   border-radius: 8px;
   border: 1px solid #e2e8f0;
   overflow: hidden;
-  transition: transform 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
 }
+.cat-card:hover { transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0,0,0,0.05); }
 
 .cat-img-wrapper { aspect-ratio: 1/1; background: #f1f5f9; position: relative; }
 .cat-img-wrapper img { width: 100%; height: 100%; object-fit: cover; }
+.no-img { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; font-size: 2rem; color: #cbd5e1; }
 
-.cat-info { padding: 12px; text-align: center; }
+.cat-badge-selected {
+  position: absolute; top: 10px; right: 10px;
+  background: #22c55e; color: white;
+  padding: 4px 8px; font-size: 0.7rem; font-weight: bold;
+  border-radius: 4px; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.cat-info { padding: 12px; text-align: center; display: flex; flex-direction: column; flex: 1; }
 .cat-title-text { 
   font-size: 0.85rem; 
   font-weight: 700; 
@@ -126,8 +169,8 @@
   text-overflow: ellipsis;
 }
 
-.cat-medida { font-size: 0.7rem; color: #94a3b8; }
-.cat-price { font-size: 1rem; color: #c5a059; font-weight: 800; margin: 8px 0; }
+.cat-medida { font-size: 0.7rem; color: #94a3b8; margin: 0; }
+.cat-price { font-size: 1rem; color: #c5a059; font-weight: 800; margin: auto 0 8px 0; padding-top: 5px; }
 
 .btn-add-lista {
   width: 100%;
@@ -138,8 +181,9 @@
   border: 1px solid #0f172a;
   background: white;
   cursor: pointer;
+  transition: 0.2s;
 }
-
+.btn-add-lista:hover { background: #f8fafc; }
 .btn-add-lista.added { background: #f1f5f9; color: #94a3b8; border-color: #cbd5e1; }
 
 /* CARRINHO FLUTUANTE */
@@ -166,61 +210,286 @@
   border: none;
   color: white;
   font-weight: 900;
-  padding: 5px 15px;
+  padding: 6px 15px;
   border-radius: 20px;
   cursor: pointer;
 }
 
-/* HEADER INFO TOP */
-.header-top-info {
-  background: rgba(255, 255, 255, 0.05);
-  width: 100%;
-  padding: 5px 40px;
-  display: flex;
-  justify-content: center;
-  gap: 30px;
-  font-size: 0.7rem;
-  color: #94a3b8;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-  position: absolute;
-  top: 0; left: 0;
-}
-
-/* FOOTER DO CATÁLOGO */
 .cat-footer {
   background: #0f172a;
   color: white;
-  padding: 60px 20px;
+  padding: 40px 20px;
   text-align: center;
   margin-top: 50px;
   border-top: 4px solid #c5a059;
 }
 
-.footer-content h3 {
-  color: #c5a059;
-  font-size: 1.2rem;
-  margin-bottom: 15px;
-  letter-spacing: 2px;
-}
+.footer-content h3 { color: #c5a059; font-size: 1.2rem; margin-bottom: 10px; letter-spacing: 2px; }
+.footer-content p { font-size: 0.85rem; color: #94a3b8; margin: 5px 0; }
+.footer-copy { margin-top: 20px !important; font-size: 0.7rem !important; opacity: 0.5; }
+.sidebar-logo-img { width: 100%; max-height: 100px; object-fit: contain; margin-bottom: 20px; padding-bottom: 15px; border-bottom: 1px solid #f1f5f9; }
 
-.footer-content p {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  margin-bottom: 8px;
+/* =========================================
+   🔥 MODAL DE FINALIZAR ORÇAMENTO 🔥
+   ========================================= */
+.modal-overlay-catalogo {
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(15, 23, 42, 0.8);
+    z-index: 3000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease-out;
 }
-
-.footer-copy {
-  margin-top: 30px !important;
-  font-size: 0.7rem !important;
-  opacity: 0.5;
+  
+.modal-content-catalogo {
+    background: white;
+    width: 90%;
+    max-width: 450px;
+    border-radius: 12px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    max-height: 90vh;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+    animation: slideUp 0.3s ease-out;
 }
+  
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+  
+.modal-header-catalogo {
+    background: #0f172a;
+    color: white;
+    padding: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+  
+.modal-header-catalogo h2 { margin: 0; font-size: 1.2rem; color: #c5a059; letter-spacing: 1px;}
+.btn-close-modal { background: none; border: none; color: #94a3b8; font-size: 1.5rem; cursor: pointer; transition: 0.2s;}
+.btn-close-modal:hover { color: white; }
+  
+.modal-body-catalogo {
+    padding: 20px;
+    overflow-y: auto;
+}
+  
+.resumo-carrinho {
+    background: #f8fafc;
+    padding: 15px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+  
+.resumo-carrinho h3 { margin-top: 0; font-size: 0.9rem; color: #64748b; border-bottom: 2px solid #e2e8f0; padding-bottom: 10px; text-transform: uppercase;}
+.resumo-carrinho ul { list-style: none; padding: 0; margin: 0; }
+.resumo-carrinho li { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px dashed #cbd5e1; font-size: 0.85rem; color: #334155; font-weight: 500;}
+.resumo-carrinho li:last-child { border-bottom: none; }
+  
+.resumo-total { display: flex; justify-content: space-between; margin-top: 10px; padding-top: 15px; border-top: 2px solid #cbd5e1; font-size: 1.1rem; color: #0f172a; }
+.resumo-total strong { color: #c5a059; font-size: 1.2rem;}
+  
+.form-orcamento h3 { margin-top: 0; font-size: 1rem; color: #0f172a; margin-bottom: 15px; text-align: center;}
+.form-orcamento label { display: block; font-size: 0.8rem; font-weight: bold; color: #64748b; margin-bottom: 5px; }
+.form-orcamento input {
+    width: 100%;
+    padding: 12px 15px;
+    margin-bottom: 15px;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    font-size: 0.95rem;
+    font-family: inherit;
+    background: white;
+    outline: none;
+    transition: 0.2s;
+}
+.form-orcamento input:focus { border-color: #c5a059; box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.2); }
+  
+.btn-enviar-zap {
+    width: 100%;
+    background: #25D366; 
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 900;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 10px;
+    transition: background 0.2s, transform 0.1s;
+    margin-top: 10px;
+}
+.btn-enviar-zap:hover { background: #1ebc56; }
+.btn-enviar-zap:active { transform: scale(0.98); }
 
-/* Ajuste na logo da sidebar */
-.sidebar-logo-img {
-  width: 100%;
-  max-height: 100px;
-  object-fit: contain;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #f1f5f9;
+/* =========================================
+   🔥 ESTILOS DO SELETOR ORÇAMENTO/CADASTRO 🔥
+   ========================================= */
+
+.tipo-pedido-toggle {
+    display: flex;
+    background: #f1f5f9;
+    border-radius: 8px;
+    padding: 5px;
+    margin-bottom: 20px;
+    border: 1px solid #e2e8f0;
+}
+  
+.tipo-pedido-toggle button {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+  
+.tipo-pedido-toggle button.active {
+    background: white;
+    color: #0f172a;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+}
+  
+.form-cadastro-call {
+    text-align: center;
+    padding: 15px 10px;
+    background: #fdfbf7;
+    border-radius: 8px;
+    border: 1px dashed #c5a059;
+}
+  
+.form-cadastro-call p {
+    font-size: 0.9rem;
+    color: #475569;
+    margin-bottom: 20px;
+    line-height: 1.5;
+}
+  
+.btn-ir-cadastro {
+    width: 100%;
+    background: #c5a059;
+    color: white;
+    border: none;
+    padding: 15px;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 900;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3);
+}
+  
+.btn-ir-cadastro:hover { background: #b08d4a; }
+.btn-ir-cadastro:active { transform: scale(0.98); }
+
+/* =========================================
+   📱 RESPONSIVO: GAVETA + BOTÃO FAB MINIMALISTA (TEM QUE FICAR NO FINAL!)
+   ========================================= */
+@media (max-width: 900px) {
+  
+  .cat-header {
+    flex-direction: column;
+    padding: 15px;
+    gap: 15px;
+    text-align: center;
+  }
+  .header-contact-links { justify-content: center; flex-wrap: wrap; }
+  .btn-admin-login { position: absolute; top: 15px; right: 15px; }
+
+  .cat-container-main { flex-direction: column; padding: 10px; gap: 0; }
+
+  /* 🌟 A GAVETA (SIDEBAR ESCONDIDA) 🌟 */
+  .cat-sidebar {
+    position: fixed;
+    top: 0;
+    left: -100%; 
+    width: 280px;
+    height: 100vh;
+    z-index: 2000; 
+    border-radius: 0;
+    border: none;
+    box-shadow: 5px 0 25px rgba(0,0,0,0.2);
+    transition: left 0.3s ease-in-out;
+  }
+
+  .cat-sidebar.open { left: 0; }
+
+  .sidebar-overlay {
+    display: block;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1999;
+    animation: fadeIn 0.3s;
+  }
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  .sidebar-mobile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e2e8f0;
+  }
+  .sidebar-mobile-header h3 { margin: 0; color: #0f172a; }
+  .btn-fechar-menu { background: transparent; border: none; font-size: 1.5rem; color: #64748b; cursor: pointer; padding: 0; }
+  
+  .sidebar-logo-img { display: none; } 
+
+  /* 🔥 BOTÃO FLUTUANTE CIRCULAR MINIMALISTA (☰) 🔥 */
+  .btn-mobile-filtros-fab {
+    display: flex;
+    position: fixed;
+    bottom: 90px; /* Acima da barra flutuante de orçamentos se houver */
+    right: 20px;
+    width: 50px;
+    height: 50px;
+    align-items: center;
+    justify-content: center;
+    background: #0f172a; /* Preto chique */
+    color: white;
+    border: none;
+    border-radius: 50%; /* Círculo perfeito */
+    font-size: 1.5rem; /* Palitinhos maiores */
+    cursor: pointer;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+    z-index: 1000; 
+  }
+
+  .active-filters-mobile {
+    display: flex; justify-content: space-between; align-items: center;
+    background: #fdfbf7; border: 1px solid #c5a059; color: #0f172a;
+    padding: 8px 12px; border-radius: 6px; font-size: 0.75rem; margin-bottom: 15px;
+  }
+  .active-filters-mobile button { background: none; border: none; color: #ef4444; font-weight: bold; text-decoration: underline; cursor: pointer; }
+
+  /* 2 ITENS POR LINHA NO CELULAR */
+  .cat-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .cat-title-text { font-size: 0.8rem; }
+  .cat-price { font-size: 0.9rem; }
+  .cat-info { padding: 8px; }
+
+  /* Carrinho flutuante (se houver itens) */
+  .cat-floating-bar {
+    width: 90%;
+    justify-content: space-between;
+    padding: 10px 15px;
+    font-size: 0.8rem;
+    z-index: 999; /* Fica logo abaixo do botão de filtros no z-index */
+  }
+  .cat-floating-bar button { padding: 6px 12px; font-size: 0.75rem; }
 }

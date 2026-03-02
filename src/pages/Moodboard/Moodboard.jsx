@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { collection, getDocs, query, orderBy, addDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, getDoc, updateDoc, query, orderBy, addDoc, deleteDoc, doc } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom'; 
 import { db } from '../../firebaseConfig';
 import html2canvas from 'html2canvas'; 
@@ -21,6 +21,8 @@ const Icons = {
   Flip: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12l-4-4m4 4l-4 4m4-4H9m-4 0l4-4m-4 4l4 4m-4-4h10"/></svg>,
   Bold: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>,
   Italic: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>,
+  ArrowUp: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>,
+  ArrowDown: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>,
 };
 
 const Moodboard = () => {
@@ -34,6 +36,13 @@ const Moodboard = () => {
   const [wallBackground, setWallBackground] = useState('#f1f5f9');
   const [floorBackground, setFloorBackground] = useState('#e2e8f0');
   const [activeSurface, setActiveSurface] = useState('wall');
+  
+  const [texturasParede, setTexturasParede] = useState([
+    { nome: 'Tijolinho Branco', url: 'https://images.unsplash.com/photo-1558611997-0950a7cf6161?q=80&w=2070&auto=format&fit=crop' }
+  ]);
+  const [texturasChao, setTexturasChao] = useState([
+    { nome: 'Madeira Clara', url: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=1974&auto=format&fit=crop' }
+  ]);
 
   const [modalSalvarAberto, setModalSalvarAberto] = useState(false);
   const [modalAbrirAberto, setModalAbrirAberto] = useState(false);
@@ -45,9 +54,6 @@ const Moodboard = () => {
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
 
   const fontesDisponiveis = [ { nome: 'Moderna (Poppins)', valor: "'Poppins', sans-serif" }, { nome: 'Clássica (Playfair)', valor: "'Playfair Display', serif" }, { nome: 'Elegante (Great Vibes)', valor: "'Great Vibes', cursive" }, { nome: 'Manuscrita (Dancing)', valor: "'Dancing Script', cursive" }, { nome: 'Divertida (Pacifico)', valor: "'Pacifico', cursive" }, { nome: 'Simples (Montserrat)', valor: "'Montserrat', sans-serif" } ];
-  const texturasParede = [ { nome: 'Tijolinho Branco', url: 'https://images.unsplash.com/photo-1558611997-0950a7cf6161?q=80&w=2070&auto=format&fit=crop' }, { nome: 'Cimento Queimado', url: 'https://images.unsplash.com/photo-1518640027989-a30d5d7e498e?q=80&w=2070&auto=format&fit=crop' } ];
-  const texturasChao = [ { nome: 'Madeira Clara', url: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=1974&auto=format&fit=crop' }, { nome: 'Grama', url: 'https://images.unsplash.com/photo-1589556264800-08ae9e129a8c?q=80&w=2070&auto=format&fit=crop' } ];
-  const paletaCores = ['#ffffff', '#f8fafc', '#f1f5f9', '#e2e8f0', '#cbd5e1', '#fee2e2', '#dbeafe', '#dcfce7', '#fef3c7', '#f3e8ff', '#0f172a', '#334155'];
 
   const grouped = useMemo(() => {
     const mapa = {};
@@ -61,20 +67,94 @@ const Moodboard = () => {
   const lastPos = useRef({ x: 0, y: 0 });
 
   useEffect(() => {
-    const carregar = async () => {
+    const carregarTudo = async () => {
       try {
         const q = query(collection(db, 'estoque'), orderBy('criadoEm', 'desc'));
         const snap = await getDocs(q);
         const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         const norm = lista.map(i => ({ ...i, imagem: i.foto || i.imagem || (i.fotos?.[0]) || '' }));
         setEstoqueReal(norm);
+
+        const paramSnap = await getDoc(doc(db, "sistema", "parametros"));
+        if(paramSnap.exists()) {
+            const data = paramSnap.data();
+            if(data.texturasParede && data.texturasParede.length > 0) setTexturasParede(data.texturasParede);
+            if(data.texturasChao && data.texturasChao.length > 0) setTexturasChao(data.texturasChao);
+        }
       } catch (err) {
-        const dadosLocal = JSON.parse(localStorage.getItem('estoque')) || [];
-        setEstoqueReal(dadosLocal);
+        console.error(err);
       }
     };
-    carregar();
+    carregarTudo();
   }, []);
+
+  const adicionarTextura = async (tipo) => {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.onchange = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = async () => {
+                const canvas = document.createElement('canvas');
+                const MAX_WIDTH = 800; 
+                let width = img.width;
+                let height = img.height;
+                
+                if (width > MAX_WIDTH) {
+                    height *= MAX_WIDTH / width;
+                    width = MAX_WIDTH;
+                }
+                
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+                
+                const base64 = canvas.toDataURL('image/jpeg', 0.7); 
+
+                const nome = prompt("Nome para este fundo (ex: Painel Redondo Rosa):");
+                if (!nome) return;
+
+                const nova = { nome, url: base64 };
+                try {
+                    if(tipo === 'wall') {
+                        const atualizadas = [...texturasParede, nova];
+                        setTexturasParede(atualizadas);
+                        await updateDoc(doc(db, "sistema", "parametros"), { texturasParede: atualizadas });
+                    } else {
+                        const atualizadas = [...texturasChao, nova];
+                        setTexturasChao(atualizadas);
+                        await updateDoc(doc(db, "sistema", "parametros"), { texturasChao: atualizadas });
+                    }
+                    alert("✅ Fundo salvo na galeria com sucesso!");
+                } catch(err) { alert("❌ Erro ao salvar fundo. Imagem muito grande."); }
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
+    };
+    input.click();
+  };
+
+  const removerTextura = async (tipo, urlParaRemover) => {
+    if(!window.confirm("Deseja mesmo excluir este fundo da galeria?")) return;
+    try {
+        if(tipo === 'wall') {
+            const atualizadas = texturasParede.filter(t => t.url !== urlParaRemover);
+            setTexturasParede(atualizadas);
+            await updateDoc(doc(db, "sistema", "parametros"), { texturasParede: atualizadas });
+        } else {
+            const atualizadas = texturasChao.filter(t => t.url !== urlParaRemover);
+            setTexturasChao(atualizadas);
+            await updateDoc(doc(db, "sistema", "parametros"), { texturasChao: atualizadas });
+        }
+    } catch(e) { alert("Erro ao remover fundo."); }
+  };
 
   const handleAbrirModalSalvar = () => {
     if (itensCanvas.length === 0) return alert("O projeto está vazio!");
@@ -123,9 +203,40 @@ const Moodboard = () => {
 
   const handleContextMenu = (e, id) => { e.preventDefault(); setSelecionadoId(id); setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id }); };
   const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
-  const bringToFront = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => { const idx = prev.findIndex(i => i.uniqueId === contextMenu.itemId); if(idx < 0) return prev; const item = prev[idx]; const rest = prev.filter(i => i.uniqueId !== contextMenu.itemId); return [...rest, item]; }); closeContextMenu(); };
-  const sendToBack = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => { const idx = prev.findIndex(i => i.uniqueId === contextMenu.itemId); if(idx < 0) return prev; const item = prev[idx]; const rest = prev.filter(i => i.uniqueId !== contextMenu.itemId); return [item, ...rest]; }); closeContextMenu(); };
-  const toggleLock = () => { if (!contextMenu.itemId) return; setItensCanvas(prev => prev.map(i => i.uniqueId === contextMenu.itemId ? { ...i, locked: !i.locked } : i)); closeContextMenu(); };
+  
+  const bringToFront = (targetId = null) => { 
+      const id = targetId || contextMenu.itemId; 
+      if (!id) return; 
+      setItensCanvas(prev => { 
+          const idx = prev.findIndex(i => i.uniqueId === id); 
+          if(idx < 0) return prev; 
+          const item = prev[idx]; 
+          const rest = prev.filter(i => i.uniqueId !== id); 
+          return [...rest, item]; 
+      }); 
+      closeContextMenu(); 
+  };
+  
+  const sendToBack = (targetId = null) => { 
+      const id = targetId || contextMenu.itemId;
+      if (!id) return; 
+      setItensCanvas(prev => { 
+          const idx = prev.findIndex(i => i.uniqueId === id); 
+          if(idx < 0) return prev; 
+          const item = prev[idx]; 
+          const rest = prev.filter(i => i.uniqueId !== id); 
+          return [item, ...rest]; 
+      }); 
+      closeContextMenu(); 
+  };
+
+  const toggleLock = (targetId = null) => { 
+      const id = targetId || contextMenu.itemId;
+      if (!id) return; 
+      setItensCanvas(prev => prev.map(i => i.uniqueId === id ? { ...i, locked: !i.locked } : i)); 
+      closeContextMenu(); 
+  };
+  
   const toggleCategory = (cat) => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
 
   const adicionarAoCanvas = (item) => {
@@ -135,12 +246,28 @@ const Moodboard = () => {
 
   const adicionarTexto = () => {
     const idUnico = `txt_${Date.now()}`;
-    const itemTexto = { type: 'text', content: "Novo Texto", color: "#1e293b", fontSize: 32, fontFamily: "'Poppins', sans-serif", uniqueId: idUnico, x: 50, y: 50, width: 250, height: 60, rotation: 0, locked: false, opacity: 100, shadow: 0 };
-    setItensCanvas(prev => [...prev, itemTexto]); setSelecionadoId(idUnico); setEditingTextId(idUnico);
+    const itemTexto = { 
+        type: 'text', 
+        content: "", 
+        color: "#000000", 
+        neonColor: "#c5a059", 
+        fontSize: 48, 
+        fontFamily: "'Pacifico', cursive", 
+        uniqueId: idUnico, 
+        x: window.innerWidth < 600 ? 20 : 100, 
+        y: window.innerWidth < 600 ? 50 : 100, 
+        width: 150, height: 60, 
+        rotation: 0, locked: false, opacity: 100, shadow: 0,
+        neonGlow: 0 
+    };
+    setItensCanvas(prev => [...prev, itemTexto]); 
+    setSelecionadoId(idUnico); 
+    setEditingTextId(idUnico); 
+    setAbaAtiva('texto');
   };
 
   const aplicarAoFundo = (valor) => {
-    const estiloFinal = valor.startsWith('http') ? `url(${valor})` : valor;
+    const estiloFinal = valor.startsWith('data:image') || valor.startsWith('http') ? `url(${valor})` : valor;
     if (activeSurface === 'wall') setWallBackground(estiloFinal); else setFloorBackground(estiloFinal);
   };
 
@@ -199,10 +326,16 @@ const Moodboard = () => {
             return { ...item, x: item.x + adjDx, y: item.y + adjDy };
         }
         if (interactionMode.current === 'resize') {
-            let newW = item.width; let newH = item.height;
-            if (resizeDir.current.includes('e')) newW += adjDx;
-            if (resizeDir.current.includes('s')) newH += adjDy;
-            return { ...item, width: Math.max(30, newW), height: Math.max(30, newH) };
+            if (item.type === 'text') {
+                let sizeChange = (adjDx + adjDy) * 0.4; 
+                let newFontSize = (item.fontSize || 48) + sizeChange;
+                return { ...item, fontSize: Math.max(12, Math.round(newFontSize)) };
+            } else {
+                let newW = item.width; let newH = item.height;
+                if (resizeDir.current.includes('e')) newW += adjDx;
+                if (resizeDir.current.includes('s')) newH += adjDy;
+                return { ...item, width: Math.max(30, newW), height: Math.max(30, newH) };
+            }
         }
       } return item;
     }));
@@ -216,6 +349,9 @@ const Moodboard = () => {
   };
   
   const handleCanvasClick = () => {
+      if (selecionadoId) {
+          setAbaAtiva('acervo'); 
+      }
       setSelecionadoId(null);
       setEditingTextId(null); 
       closeContextMenu();
@@ -269,45 +405,118 @@ const Moodboard = () => {
         {abaAtiva === 'efeitos' && (
             <div className="panel-content">
                 <h3 className="panel-title">EFEITOS & AJUSTES</h3>
+                
+                <button 
+                    className="btn-primary-action" 
+                    style={{ backgroundColor: '#c5a059', color: '#0f172a', marginBottom: '15px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} 
+                    onClick={() => { setSelecionadoId(null); setAbaAtiva('acervo'); }}
+                >
+                    + Adicionar Mais Itens
+                </button>
+
                 {itemSelecionado ? (
                     <div className="effects-tools">
-                        <div className="selected-preview"><span>Editando: {itemSelecionado.nome || "Item"}</span></div>
+                        <div className="selected-preview"><span>Editando: {itemSelecionado.nome || (itemSelecionado.type === 'text' ? 'Texto' : 'Item')}</span></div>
+                        
                         {itemSelecionado.type === 'image' && (
                           <>
-                            <div className="slider-group"><label>Brilho ({itemSelecionado.brightness}%)</label><input type="range" min="0" max="200" value={itemSelecionado.brightness || 100} onChange={e => atualizarItem(selecionadoId, {brightness: Number(e.target.value)})} /></div>
-                            <div className="slider-group"><label>Contraste ({itemSelecionado.contrast}%)</label><input type="range" min="0" max="200" value={itemSelecionado.contrast || 100} onChange={e => atualizarItem(selecionadoId, {contrast: Number(e.target.value)})} /></div>
+                            <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
+                                <label>Brilho ({itemSelecionado.brightness}%)</label>
+                                <input type="range" min="0" max="200" value={itemSelecionado.brightness || 100} 
+                                    onChange={e => atualizarItem(selecionadoId, {brightness: Number(e.target.value)})} 
+                                    onDoubleClick={() => atualizarItem(selecionadoId, {brightness: 100})} 
+                                />
+                            </div>
+                            <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
+                                <label>Contraste ({itemSelecionado.contrast}%)</label>
+                                <input type="range" min="0" max="200" value={itemSelecionado.contrast || 100} 
+                                    onChange={e => atualizarItem(selecionadoId, {contrast: Number(e.target.value)})} 
+                                    onDoubleClick={() => atualizarItem(selecionadoId, {contrast: 100})}
+                                />
+                            </div>
                           </>
                         )}
-                        <div className="slider-group"><label>Opacidade ({itemSelecionado.opacity}%)</label><input type="range" min="10" max="100" value={itemSelecionado.opacity || 100} onChange={e => atualizarItem(selecionadoId, {opacity: Number(e.target.value)})} /></div>
-                        <div className="slider-group"><label>Sombra ({itemSelecionado.shadow}px) {itemSelecionado.shadow === 0 && <small>(Off)</small>}</label><input type="range" min="0" max="50" value={itemSelecionado.shadow || 0} onChange={e => atualizarItem(selecionadoId, {shadow: Number(e.target.value)})} /></div>
+                        <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
+                            <label>Opacidade ({itemSelecionado.opacity}%)</label>
+                            <input type="range" min="10" max="100" value={itemSelecionado.opacity || 100} 
+                                onChange={e => atualizarItem(selecionadoId, {opacity: Number(e.target.value)})} 
+                                onDoubleClick={() => atualizarItem(selecionadoId, {opacity: 100})}
+                            />
+                        </div>
+                        <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
+                            <label>Sombra ({itemSelecionado.shadow}px) {itemSelecionado.shadow === 0 && <small>(Off)</small>}</label>
+                            <input type="range" min="0" max="50" value={itemSelecionado.shadow || 0} 
+                                onChange={e => atualizarItem(selecionadoId, {shadow: Number(e.target.value)})} 
+                                onDoubleClick={() => atualizarItem(selecionadoId, {shadow: 0})}
+                            />
+                        </div>
+                        
+                        <div className="action-buttons-grid" style={{marginTop: '10px'}}>
+                            <button className="btn-secondary" onClick={() => bringToFront(selecionadoId)}><Icons.ArrowUp width={14} /> Frente</button>
+                            <button className="btn-secondary" onClick={() => sendToBack(selecionadoId)}><Icons.ArrowDown width={14} /> Trás</button>
+                        </div>
+
                         <div className="action-buttons-grid">
-                            <button className={`btn-secondary ${itemSelecionado.locked ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {locked: !itemSelecionado.locked})}>{itemSelecionado.locked ? <><Icons.Lock width={14} /> Bloqueado</> : <><Icons.Unlock width={14} /> Bloquear</>}</button>
+                            <button className={`btn-secondary ${itemSelecionado.locked ? 'active' : ''}`} onClick={() => toggleLock(selecionadoId)}>{itemSelecionado.locked ? <><Icons.Lock width={14} /> Bloqueado</> : <><Icons.Unlock width={14} /> Bloquear</>}</button>
                             <button className="btn-secondary" onClick={() => atualizarItem(selecionadoId, {flipH: !itemSelecionado.flipH})}><Icons.Flip width={14} /> Virar</button>
                         </div>
-                        <button className="btn-danger-action" onClick={() => deleteItem(selecionadoId)}>Remover Item</button>
+                        
+                        <button className="btn-danger-action" onClick={() => deleteItem(selecionadoId)}><Icons.Trash width={14} /> Remover Item</button>
                     </div>
-                ) : (<div className="empty-state-panel"><Icons.Magic style={{opacity: 0.2, width: 40, height: 40}} /><p>Selecione um item.</p></div>)}
+                ) : (<div className="empty-state-panel"><p style={{fontSize: '13px', color: '#64748b'}}>Selecione um item no quadro.</p></div>)}
             </div>
         )}
 
         {abaAtiva === 'texto' && (
              <div className="panel-content">
-                <h3 className="panel-title">EDITOR DE TEXTO</h3>
+                <h3 className="panel-title">ESTILO DO TEXTO</h3>
                 <div className="text-tools">
-                    <button className="btn-primary-action" onClick={adicionarTexto}>+ Novo Texto</button>
+                    <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}}>
+                        <button className="btn-primary-action" style={{marginBottom: 0}} onClick={adicionarTexto}>+ Novo Texto</button>
+                        <button className="btn-secondary" style={{flex: 1, padding: '12px', borderRadius: '8px', fontWeight: 'bold'}} onClick={() => { setSelecionadoId(null); setAbaAtiva('acervo'); }}>Ver Peças</button>
+                    </div>
+                    
                     {itemSelecionado?.type === 'text' ? (
                         <div className="edit-box">
-                            <textarea value={itemSelecionado.content} onChange={e => atualizarItem(selecionadoId, {content: e.target.value})} rows={2} />
-                            <select className="font-selector" value={itemSelecionado.fontFamily} onChange={e => atualizarItem(selecionadoId, {fontFamily: e.target.value})}>{fontesDisponiveis.map(f => <option key={f.nome} value={f.valor}>{f.nome}</option>)}</select>
-                            <div className="style-row">
+                            <p className="hint-text" style={{margin: '0 0 10px 0', color: '#0f172a', fontWeight: 'bold'}}>💡 Dê 2 cliques no texto na tela para editar!</p>
+                            
+                            <select className="font-selector" value={itemSelecionado.fontFamily} onChange={e => atualizarItem(selecionadoId, {fontFamily: e.target.value})}>
+                                {fontesDisponiveis.map(f => <option key={f.nome} value={f.valor}>{f.nome}</option>)}
+                            </select>
+                            
+                            <div className="style-controls-row">
                                 <button className={`btn-style ${itemSelecionado.fontWeight === 'bold' ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {fontWeight: itemSelecionado.fontWeight === 'bold' ? 'normal' : 'bold'})}><Icons.Bold /></button>
                                 <button className={`btn-style ${itemSelecionado.fontStyle === 'italic' ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {fontStyle: itemSelecionado.fontStyle === 'italic' ? 'normal' : 'italic'})}><Icons.Italic /></button>
                                 <div className="divider-v"></div>
-                                <input type="color" className="color-input-mini" value={itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {color: e.target.value})} />
+                                <label className="color-picker-wrapper">
+                                    Cor: <input type="color" className="color-input-mini" value={itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {color: e.target.value})} />
+                                </label>
                             </div>
-                            <input type="range" min="12" max="150" value={itemSelecionado.fontSize} onChange={e => atualizarItem(selecionadoId, {fontSize: Number(e.target.value)})} />
+
+                            <div className="slider-group" style={{marginTop: '10px'}} title="Dê 2 cliques para voltar ao normal">
+                                <label>Tamanho da Fonte ({itemSelecionado.fontSize}px)</label>
+                                <input type="range" min="12" max="150" value={itemSelecionado.fontSize} 
+                                    onChange={e => atualizarItem(selecionadoId, {fontSize: Number(e.target.value)})} 
+                                    onDoubleClick={() => atualizarItem(selecionadoId, {fontSize: 48})}
+                                />
+                            </div>
+
+                            <div className="slider-group" style={{marginTop: '15px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
+                                    <label style={{color: '#c5a059', margin: 0}} title="Dê 2 cliques na bolinha abaixo para desligar">🌟 Efeito LED ({(itemSelecionado.neonGlow || 0)}px)</label>
+                                    
+                                    <label className="color-picker-wrapper" style={{fontSize: '10px', cursor: 'pointer'}}>
+                                        Cor LED: <input type="color" className="color-input-mini" style={{width: '20px', height: '20px'}} value={itemSelecionado.neonColor || itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {neonColor: e.target.value})} />
+                                    </label>
+                                </div>
+                                <input type="range" min="0" max="50" value={itemSelecionado.neonGlow || 0} 
+                                    onChange={e => atualizarItem(selecionadoId, {neonGlow: Number(e.target.value)})} 
+                                    onDoubleClick={() => atualizarItem(selecionadoId, {neonGlow: 0})}
+                                />
+                            </div>
+
                         </div>
-                    ) : <p className="hint-text">Selecione um texto.</p>}
+                    ) : <p className="hint-text">Crie ou selecione um texto.</p>}
                 </div>
             </div>
         )}
@@ -318,27 +527,33 @@ const Moodboard = () => {
                 <div className="surface-switcher"><button className={`switch-btn ${activeSurface === 'wall' ? 'active' : ''}`} onClick={() => setActiveSurface('wall')}>🧱 PAREDE</button><button className={`switch-btn ${activeSurface === 'floor' ? 'active' : ''}`} onClick={() => setActiveSurface('floor')}>🟧 CHÃO</button></div>
                 
                 <div className="bg-tools">
-                    <div className="bg-options-grid">
-                        {/* 🔥 NOVO SELETOR DE CORES INFINITAS (COLOR PICKER) 🔥 */}
-                        <div className="bg-option-item color-picker-btn" style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} title="Cor Personalizada">
-                            <input type="color" 
-                                   className="invisible-color-input"
-                                   onChange={(e) => aplicarAoFundo(e.target.value)} 
-                            />
+                    <div className="bg-options-grid" style={{ justifyContent: 'center' }}>
+                        <div className="color-picker-btn" style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} title="Escolha qualquer cor">
+                            <input type="color" className="invisible-color-input" onChange={(e) => aplicarAoFundo(e.target.value)} />
                         </div>
-                        {/* Cores Padrão */}
-                        {paletaCores.map(c => <div key={c} className="bg-option-item" style={{backgroundColor: c}} onClick={() => aplicarAoFundo(c)} />)}
                     </div>
-                    <div className="bg-presets-grid">{(activeSurface === 'wall' ? texturasParede : texturasChao).map((bg, idx) => <div key={idx} className="bg-preset-item" style={{backgroundImage: `url(${bg.url})`}} onClick={() => aplicarAoFundo(bg.url)}><span>{bg.nome}</span></div>)}</div>
+                    
+                    <div className="adm-header-flex">
+                        <h4>Texturas Salvas</h4>
+                        <button className="btn-add-textura" onClick={() => adicionarTextura(activeSurface)}>+ Enviar Imagem</button>
+                    </div>
+
+                    <div className="bg-presets-grid">
+                        {(activeSurface === 'wall' ? texturasParede : texturasChao).map((bg, idx) => (
+                            <div key={idx} className="bg-preset-item" style={{backgroundImage: `url(${bg.url})`}} onClick={() => aplicarAoFundo(bg.url)}>
+                                <span>{bg.nome}</span>
+                                <div className="btn-del-bg" onClick={(e) => { e.stopPropagation(); removerTextura(activeSurface, bg.url); }}>✕</div>
+                            </div>
+                        ))}
+                    </div>
                 </div>
             </div>
         )}
       </div>
 
-      {/* ÁREA DA PRANCHETA (AGORA MAIOR E MAIS LIMPA!) */}
+      {/* ÁREA DA PRANCHETA */}
       <div className="studio-canvas" onContextMenu={(e) => { e.preventDefault(); }}>
         
-        {/* HEADER FLUTUANTE DE CONTROLES */}
         <div className="canvas-header-overlay" onClick={e => e.stopPropagation()}>
              <button className="btn-voltar-moodboard" onClick={() => navigate(-1)}>
                  ← <span className="btn-text">Voltar</span>
@@ -353,7 +568,7 @@ const Moodboard = () => {
              </div>
         </div>
         
-        {/* 🔥 O QUADRO BRANCO RESPONSIVO 🔥 */}
+        {/* O QUADRO BRANCO */}
         <div className="canvas-artboard" ref={boardRef}>
             <div className="canvas-layers">
                 <div className="layer-wall" style={getStyle(wallBackground)}></div>
@@ -363,7 +578,11 @@ const Moodboard = () => {
             {itensCanvas.map((item, index) => (
               <div key={item.uniqueId} className={`canvas-object ${selecionadoId === item.uniqueId ? 'selected' : ''} ${item.locked ? 'locked-item' : ''}`}
                 style={{ 
-                    left: item.x, top: item.y, width: item.width, height: item.height, zIndex: index + 10,
+                    left: item.x, 
+                    top: item.y, 
+                    width: item.type === 'text' ? 'max-content' : `${item.width}px`, 
+                    height: item.type === 'text' ? 'max-content' : `${item.height}px`, 
+                    zIndex: index + 10,
                     transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     filter: `brightness(${item.brightness}%) contrast(${item.contrast}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`,
@@ -375,23 +594,86 @@ const Moodboard = () => {
                 onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}
                >
                 
+                {/* LÓGICA DE TEXTO APRIMORADA */}
                 {item.type === 'text' ? (
-                    <div style={{ width:'100%', fontSize: `${item.fontSize}px`, color: item.color, fontFamily: item.fontFamily, fontWeight: item.fontWeight, fontStyle: item.fontStyle, textAlign: item.textAlign }}>{item.content}</div>
-                ) : <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} crossOrigin="anonymous" alt="" />}
+                    editingTextId === item.uniqueId ? (
+                        <textarea
+                            autoFocus
+                            wrap="off" 
+                            onFocus={(e) => {
+                                const val = e.target.value;
+                                e.target.setSelectionRange(val.length, val.length);
+                            }}
+                            value={item.content}
+                            onChange={(e) => {
+                                e.target.style.width = '100px'; 
+                                e.target.style.width = (e.target.scrollWidth + 10) + 'px';
+                                e.target.style.height = 'auto';
+                                e.target.style.height = e.target.scrollHeight + 'px';
+                                atualizarItem(item.uniqueId, { content: e.target.value });
+                            }}
+                            onBlur={(e) => {
+                                setEditingTextId(null);
+                                if(!e.target.value.trim()) deleteItem(item.uniqueId); 
+                            }} 
+                            style={{
+                                minWidth: '100px',
+                                width: item.content ? 'auto' : '150px',
+                                height: 'auto',
+                                fontSize: `${item.fontSize}px`, color: item.color, fontFamily: item.fontFamily,
+                                fontWeight: item.fontWeight, fontStyle: item.fontStyle, textAlign: item.textAlign,
+                                background: 'rgba(255,255,255,0.9)', border: '2px dashed #0f172a', borderRadius: '6px',
+                                outline: 'none', resize: 'none', overflow: 'hidden', padding: '5px 10px',
+                                lineHeight: '1.2', whiteSpace: 'pre',
+                                textShadow: item.neonGlow > 0 ? `0 0 5px ${item.neonColor || item.color}, 0 0 ${item.neonGlow}px ${item.neonColor || item.color}, 0 0 ${item.neonGlow * 2}px ${item.neonColor || item.color}` : 'none'
+                            }}
+                        />
+                    ) : (
+                        <div 
+                            onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(item.uniqueId); }}
+                            style={{ 
+                                width:'max-content', height: 'max-content', 
+                                fontSize: `${item.fontSize}px`, color: item.color, 
+                                fontFamily: item.fontFamily, fontWeight: item.fontWeight, 
+                                fontStyle: item.fontStyle, textAlign: item.textAlign, cursor: 'text',
+                                whiteSpace: 'pre-wrap', padding: '5px 10px', lineHeight: '1.2',
+                                textShadow: item.neonGlow > 0 ? `0 0 5px ${item.neonColor || item.color}, 0 0 ${item.neonGlow}px ${item.neonColor || item.color}, 0 0 ${item.neonGlow * 2}px ${item.neonColor || item.color}` : 'none'
+                            }}>
+                            {item.content || <span style={{opacity: 0, paddingLeft: '50px'}}>_</span>}
+                        </div>
+                    )
+                ) : (
+                    <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} crossOrigin="anonymous" alt="" />
+                )}
                 
+                {/* 🔥 BOTÃO FLUTUANTE "EDITAR" (IMPEDE O EVENTO PAI DE ROUBAR O CLIQUE) 🔥 */}
                 {selecionadoId === item.uniqueId && !item.locked && !editingTextId && (
-                    <><div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} /><div className="selection-border" /></>
+                    <>
+                        <div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} />
+                        <div className="selection-border" />
+                        {item.type === 'text' && window.innerWidth < 900 && (
+                            <div 
+                                onPointerDown={(e) => e.stopPropagation()} /* O SEGREDO TÁ AQUI */
+                                onClick={(e) => { e.stopPropagation(); setEditingTextId(item.uniqueId); }}
+                                onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setEditingTextId(item.uniqueId); }}
+                                style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '6px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 6px rgba(0,0,0,0.2)', zIndex: 1000 }}
+                            >
+                                ✏️ Editar
+                            </div>
+                        )}
+                    </>
                 )}
               </div>
             ))}
         </div>
 
+        {/* MENU DE CONTEXTO */}
         {contextMenu.visible && (
             <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
-                <div className="ctx-item" onClick={bringToFront}><Icons.Layers style={{transform: 'rotate(180deg)'}} /> Trazer p/ Frente</div>
-                <div className="ctx-item" onClick={sendToBack}><Icons.Layers /> Enviar p/ Trás</div>
+                <div className="ctx-item" onClick={() => bringToFront()}><Icons.Layers style={{transform: 'rotate(180deg)'}} width={16} /> Trazer p/ Frente</div>
+                <div className="ctx-item" onClick={() => sendToBack()}><Icons.Layers width={16} /> Enviar p/ Trás</div>
                 <div className="ctx-divider"></div>
-                <div className="ctx-item" onClick={toggleLock}><Icons.Lock /> {itensCanvas.find(i => i.uniqueId === contextMenu.itemId)?.locked ? 'Desbloquear' : 'Bloquear'}</div>
+                <div className="ctx-item" onClick={() => toggleLock()}><Icons.Lock /> {itensCanvas.find(i => i.uniqueId === contextMenu.itemId)?.locked ? 'Desbloquear' : 'Bloquear'}</div>
                 <div className="ctx-divider"></div>
                 <div className="ctx-item delete" onClick={() => { deleteItem(contextMenu.itemId); closeContextMenu(); }}><Icons.Trash /> Excluir</div>
             </div>
@@ -399,7 +681,7 @@ const Moodboard = () => {
 
         {/* MODAIS */}
         {modalSalvarAberto && (
-            <div className="modal-overlay">
+            <div className="overlay">
                 <div className="modal-content">
                     <h3>Salvar Projeto</h3>
                     <input type="text" placeholder="Nome do Projeto" value={nomeProjeto} onChange={(e) => setNomeProjeto(e.target.value)} autoFocus />
@@ -412,7 +694,7 @@ const Moodboard = () => {
         )}
 
         {modalAbrirAberto && (
-            <div className="modal-overlay">
+            <div className="overlay">
                 <div className="modal-content large">
                     <h3>Projetos Salvos</h3>
                     <div className="projects-list">

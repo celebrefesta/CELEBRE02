@@ -294,6 +294,7 @@ const CadastroCliente = () => {
                   <option value="Facebook">Facebook</option>
                   <option value="Pesquisa Google">Pesquisa no Google</option>
                   <option value="Indicação">Indicação</option>
+                  <option value="Auto-Cadastro (Site)">Auto-Cadastro (Site)</option>
                   <option value="Outros">Outros</option>
                 </select>
               </div>
@@ -304,7 +305,6 @@ const CadastroCliente = () => {
               <div className="form-group span-2"><label>CEP (BUSCA AUTO)</label><input type="text" name="cep" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
               <div className="form-group span-2"><label>LOGRADOURO</label><input type="text" name="logradouro" value={formData.logradouro} onChange={handleChange} /></div>
               
-              {/* 🔥 NÚMERO E UF LOGO ABAIXO DO LOGRADOURO (SIDE BY SIDE) */}
               <div className="form-group-row span-4">
                 <div className="form-group flex-1">
                   <label>NÚMERO</label>
@@ -322,8 +322,14 @@ const CadastroCliente = () => {
 
             <h3 className="section-divider mt-compact">INFORMAÇÕES ADICIONAIS</h3>
             <div className="form-grid-4">
+              
+              {/* 🔥 AQUI ENTRA A MÁGICA DO PENDENTE E AS CORES 🔥 */}
               <div className="form-group span-1">
-                <label style={{ color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800' }}>
+                <label style={{ 
+                  color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : 
+                         formData.situacaoFinanceira === 'pendente' ? '#d97706' : '#10b981', 
+                  fontWeight: '800' 
+                }}>
                   SITUAÇÃO FINANCEIRA
                 </label>
                 <select 
@@ -331,8 +337,16 @@ const CadastroCliente = () => {
                   value={formData.situacaoFinanceira} 
                   onChange={(e) => setFormData({...formData, situacaoFinanceira: e.target.value})}
                   className={`status-select ${formData.situacaoFinanceira}`}
+                  style={{
+                    backgroundColor: formData.situacaoFinanceira === 'pendente' ? '#fef3c7' : 
+                                     formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
+                    color: formData.situacaoFinanceira === 'pendente' ? '#d97706' : 
+                           formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
+                    border: formData.situacaoFinanceira === 'pendente' ? '1px solid #fcd34d' : '1px solid transparent'
+                  }}
                 >
-                  <option value="adimplente">✅ Adimplente</option>
+                  <option value="adimplente">✅ Adimplente (Liberado)</option>
+                  <option value="pendente">⏳ Pendente (Site)</option>
                   <option value="inadimplente">⚠️ Inadimplente</option>
                 </select>
               </div>

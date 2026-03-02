@@ -1,14 +1,19 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 
-// --- MENU ---
+// --- MENU & TOPBAR ---
 import Navbar from './components/Navbar';
+import Topbar from './components/Topbar'; // 🔥 IMPORTAÇÃO DA BARRA SUPERIOR AQUI 🔥
 import './App.css';
 
 // --- PÁGINAS ---
 import Dashboard from './pages/Dashboard/Dashboard';
 import Clientes from './pages/Clientes/Clientes';
 import CadastroCliente from './pages/Clientes/CadastroCliente'; 
+
+// 🔥 CAMINHO 100% CORRIGIDO BASEADO NA SUA FOTO 🔥
+import AutoCadastro from './pages/Clientes/AutoCadastro'; 
+
 import Estoque from './pages/Estoque/Estoque';
 import CadastroEstoque from './pages/Estoque/CadastroEstoque';
 
@@ -33,33 +38,43 @@ import NovoContrato from "./pages/Contratos/NovoContrato";
 import EditarContrato from "./pages/Contratos/EditarContrato";
 import AssinaturaContrato from "./pages/Contratos/AssinaturaContrato";
 import ModelosContrato from "./pages/Contratos/ModelosContrato";
-import VisualizarContrato from "./pages/Contratos/VisualizarContrato"; // 🔥 NOVO IMPORT AQUI 🔥
+import VisualizarContrato from "./pages/Contratos/VisualizarContrato"; 
 
 // --- GESTÃO ---
 import Relatorios from './pages/Relatorios/Relatorios';
 import Configuracoes from './pages/Configuracoes/Configuracoes';
 import Perfil from './pages/Perfil/Perfil';
 import Moodboard from './pages/Moodboard/Moodboard';
-import Catalogo from './pages/Catalago/Catalago'; // Mantido com a grafia 'Catalago' da sua pasta
+import Catalogo from './pages/Catalago/Catalago'; 
+import Notificacoes from './pages/Notificacoes/Notificacoes'; 
 
 
 const AppContent = () => {
   const location = useLocation();
   
-  // 🌟 AQUI ESTÁ A MÁGICA: Esconde o menu mestre na Assinatura, no Catálogo e na tela de Visualizar 🌟
+  // 🌟 Esconde o menu mestre na Assinatura, Catálogo, Visualizar e AUTOCADASTRO 🌟
   const showNavbar = !location.pathname.includes('/assinatura') && 
                      !location.pathname.includes('/catalogo') &&
-                     !location.pathname.includes('/visualizar'); // 🔥 Esconde o menu para a "Folha A4" ficar livre 🔥
+                     !location.pathname.includes('/visualizar') &&
+                     !location.pathname.includes('/autocadastro'); 
 
   return (
     <div className={`App ${!showNavbar ? 'no-navbar' : ''}`}>
       {showNavbar && <Navbar />}
       
       <main className="main-content">
+        
+        {/* 🔥 BARRA SUPERIOR EXIBIDA AQUI (Só aparece se o menu lateral também estiver visível) 🔥 */}
+        {showNavbar && <Topbar />}
+
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/cadastro-cliente" element={<CadastroCliente />} />
+          
+          {/* 🔥 ROTA OFICIAL DO CATÁLOGO PARA O CLIENTE 🔥 */}
+          <Route path="/autocadastro" element={<AutoCadastro />} /> 
+          
           <Route path="/estoque" element={<Estoque />} />
           <Route path="/cadastro-estoque" element={<CadastroEstoque />} />
           <Route path="/locacoes" element={<Locacoes />} />
@@ -79,12 +94,15 @@ const AppContent = () => {
           <Route path="/modelos-contrato" element={<ModelosContrato />} />
           <Route path="/editar-contrato/:id" element={<EditarContrato />} />
           <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
-          <Route path="/visualizar/:id" element={<VisualizarContrato />} /> {/* 🔥 NOVA ROTA ADICIONADA AQUI 🔥 */}
+          <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
           <Route path="/relatorios" element={<Relatorios />} />
           <Route path="/moodboard" element={<Moodboard />} />
           <Route path="/catalogo" element={<Catalogo />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/perfil" element={<Perfil />} />
+          
+          {/* 🔥 ROTA DE NOTIFICAÇÕES AQUI 🔥 */}
+          <Route path="/notificacoes" element={<Notificacoes />} /> 
         </Routes>
       </main>
     </div>

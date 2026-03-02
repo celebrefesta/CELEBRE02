@@ -1,0 +1,178 @@
+.topbar-container {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 10px 30px;
+  background-color: white;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 99;
+  height: 60px;
+  box-sizing: border-box;
+}
+
+.topbar-direita {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.topbar-divisor {
+  height: 30px;
+  width: 1px;
+  background-color: #e2e8f0;
+  margin: 0 5px;
+}
+
+/* ==================================
+   DROPDOWN DE PERFIL (A GAVETA) 
+================================== */
+.perfil-dropdown-container {
+  position: relative;
+}
+
+/* O botão com a foto e o nome */
+.perfil-btn-trigger {
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 8px;
+  transition: background-color 0.2s;
+}
+
+.perfil-btn-trigger:hover {
+  background-color: #f8fafc;
+}
+
+/* A bolinha com a foto/ícone */
+.perfil-avatar {
+  width: 35px;
+  height: 35px;
+  background-color: #0f172a; /* Cor da sua marca */
+  color: #c5a059; /* Dourado */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.perfil-nome {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #334155;
+}
+
+.seta-menu {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  transition: transform 0.3s ease;
+}
+
+/* Efeito da setinha virando pra cima ao abrir */
+.seta-menu.girar {
+  transform: rotate(180deg);
+}
+
+/* O balão do menu que cai */
+.perfil-dropdown-menu {
+  position: absolute;
+  top: 120%;
+  right: 0;
+  background-color: white; 
+  width: 240px;
+  border-radius: 12px;
+  box-shadow: 0 10px 35px rgba(0,0,0,0.1);
+  border: 1px solid #e2e8f0;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  animation: fadeIn 0.2s ease forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdown-cabecalho {
+  padding: 10px 15px;
+  display: flex;
+  flex-direction: column;
+  border-bottom: 1px solid #f1f5f9;
+  margin-bottom: 5px;
+}
+
+.dropdown-cabecalho strong {
+  color: #0f172a;
+  font-size: 0.95rem;
+}
+
+.dropdown-cabecalho span {
+  color: #94a3b8;
+  font-size: 0.75rem;
+  margin-top: 2px;
+}
+
+/* Os botões dentro do menu */
+.dropdown-item {
+  background: transparent;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 15px;
+  width: 100%;
+  text-align: left;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.dropdown-item i {
+  font-size: 1.1rem;
+  color: #94a3b8;
+  width: 20px;
+  text-align: center;
+}
+
+.dropdown-item:hover {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.dropdown-item:hover i {
+  color: #c5a059;
+}
+
+.dropdown-divisor {
+  height: 1px;
+  background-color: #f1f5f9;
+  margin: 5px 0;
+}
+
+/* Efeito vermelhinho no botão de sair */
+.dropdown-item.sair:hover {
+  background-color: #fef2f2;
+  color: #ef4444;
+}
+
+.dropdown-item.sair:hover i {
+  color: #ef4444;
+}
+
+/* CELULAR */
+@media (max-width: 600px) {
+  .perfil-nome { display: none; } /* Esconde o nome para caber no celular */
+  .perfil-dropdown-menu { width: 220px; }
+  .topbar-container { padding: 10px 15px; }
+}

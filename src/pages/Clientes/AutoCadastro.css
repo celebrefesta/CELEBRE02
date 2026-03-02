@@ -1,0 +1,147 @@
+.cadastro-externo-container {
+  background-color: #f1f5f9;
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start; 
+  padding: 20px; /* Diminuí o espaço do topo da tela */
+  font-family: 'Inter', sans-serif;
+}
+
+.cadastro-card {
+  background: white;
+  width: 100%;
+  max-width: 550px;
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.05);
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.cadastro-header-topo {
+  background: #0f172a;
+  color: white;
+  padding: 20px 15px; /* Deixei o cabeçalho preto mais fininho */
+  text-align: center;
+  position: relative;
+  border-bottom: 4px solid #c5a059;
+}
+
+.btn-voltar-simples {
+  position: absolute;
+  top: 15px; left: 15px;
+  background: rgba(255,255,255,0.1);
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.2s;
+}
+.btn-voltar-simples:hover { background: rgba(255,255,255,0.2); }
+
+.cadastro-header-topo h2 { color: #c5a059; margin: 5px 0; font-size: 1.2rem; }
+.cadastro-header-topo p { font-size: 0.8rem; color: #cbd5e1; margin: 0; }
+
+.aviso-carrinho-ativo {
+    background: #fdfbf7;
+    color: #0f172a;
+    padding: 10px;
+    text-align: center;
+    font-size: 0.85rem;
+    border-bottom: 1px solid #e2e8f0;
+}
+.aviso-carrinho-ativo strong { color: #c5a059; }
+
+/* 🔥 AQUI TIREI TODO O EXCESSO DE ESPAÇO 🔥 */
+.form-corpo { 
+  padding: 15px 20px; /* Menos borda branca em volta do formulário */
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; /* Distância cravada e pequena entre as linhas */
+}
+
+.sessao-label {
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  margin-top: 10px; /* Um pequeno respiro antes de começar a nova seção */
+  margin-bottom: 0px; 
+  border-bottom: 2px solid #f1f5f9;
+  padding-bottom: 3px;
+}
+
+.form-dupla { 
+  display: flex; 
+  gap: 10px; /* Espaço entre duas caixas na mesma linha */
+}
+
+.form-group { display: block; flex: 1; width: 100%; margin: 0; padding: 0; }
+.form-group.input-curto { flex: 0.4; } 
+
+.form-group label {
+  display: block;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: #64748b;
+  margin-bottom: 2px; /* 🔥 GRUDA o título na caixinha 🔥 */
+  margin-left: 2px;
+  text-transform: uppercase;
+}
+
+.form-group input {
+  padding: 8px 12px; /* Caixinha de texto mais fina e delicada */
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  outline: none;
+  transition: all 0.2s ease;
+  width: 100%;
+  box-sizing: border-box;
+  background-color: #f8fafc;
+  margin: 0;
+}
+
+.form-group input:focus { 
+  border-color: #c5a059; 
+  background-color: white;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15); 
+}
+
+.btn-finalizar-tudo {
+  background: #c5a059;
+  color: white;
+  border: none;
+  padding: 14px;
+  border-radius: 8px;
+  font-weight: 900;
+  font-size: 0.95rem;
+  cursor: pointer;
+  margin-top: 10px;
+  box-shadow: 0 5px 15px rgba(197, 160, 89, 0.3);
+  transition: transform 0.2s, background 0.2s;
+}
+
+.btn-finalizar-tudo:hover { background: #b08d4a; transform: translateY(-2px); }
+.btn-finalizar-tudo:active { transform: translateY(0); }
+
+/* 🔥 CELULAR: SEM ESTICAMENTO MÁGICO 🔥 */
+@media (max-width: 550px) {
+  .form-dupla { 
+    flex-direction: column; 
+    gap: 10px; /* Mantém super justo no celular */
+  }
+  .cadastro-externo-container { 
+    padding: 0; 
+    background-color: white; /* Fundo branco pra mesclar com o card */
+  }
+  .cadastro-card { 
+    border-radius: 0; 
+    min-height: auto; /* 🔥 ISSO MATA O "ESTICAMENTO" DA TELA 🔥 */
+    box-shadow: none; 
+    padding-bottom: 40px; /* Respiro no final da tela antes do rodape do celular */
+  }
+}
