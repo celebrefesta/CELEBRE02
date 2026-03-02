@@ -37,9 +37,13 @@ const Clientes = () => {
     navigate('/cadastro-cliente', { state: { clienteEditando: cliente } });
   };
 
+  // 🔥 REGRA ATUALIZADA: Permite alternar entre os 3 status clicando na etiqueta
   const alternarSituacaoFinanceira = async (cliente) => {
-    const novaSituacao = cliente.situacaoFinanceira === 'inadimplente' ? 'adimplente' : 'inadimplente';
-    if (window.confirm(`Mudar situação para ${novaSituacao.toUpperCase()}?`)) {
+    let novaSituacao = 'adimplente';
+    if (cliente.situacaoFinanceira === 'adimplente') novaSituacao = 'inadimplente';
+    if (cliente.situacaoFinanceira === 'inadimplente') novaSituacao = 'pendente';
+    
+    if (window.confirm(`Mudar situação de ${cliente.nome || cliente.nomeFantasia} para ${novaSituacao.toUpperCase()}?`)) {
       try {
         await updateDoc(doc(db, "clientes", cliente.id), { situacaoFinanceira: novaSituacao });
         carregarClientes();
@@ -63,7 +67,6 @@ const Clientes = () => {
 
       <div className="main-card-transparent">
         
-        {/* 🔥 BARRA DE BUSCA CORRIGIDA COM O BOTÃO FILTRAR */}
         <div className="filter-wrapper-clean">
           <div className="search-bar-container">
             <span className="search-icon">🔍</span>
@@ -123,12 +126,21 @@ const Clientes = () => {
                     </td>
 
                     <td className="status-cell text-center mobile-stack">
-                      {/* 🔥 BADGE CORRIGIDO */}
+                      {/* 🔥 BADGE CORRIGIDO: Agora reconhece os 3 status 🔥 */}
                       <span 
                         onClick={() => alternarSituacaoFinanceira(c)}
-                        className={`badge-status ${c.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`}
+                        className={`badge-status ${
+                          c.situacaoFinanceira === 'inadimplente' ? 'devedor' : 
+                          c.situacaoFinanceira === 'pendente' ? 'pendente-bg' : 'ok'
+                        }`}
+                        style={{
+                          // Se o CSS principal não tiver a classe pendente-bg, eu forço as cores aqui por garantia
+                          backgroundColor: c.situacaoFinanceira === 'pendente' ? '#fef3c7' : '',
+                          color: c.situacaoFinanceira === 'pendente' ? '#d97706' : ''
+                        }}
                       >
-                        {c.situacaoFinanceira === 'inadimplente' ? '⚠️ INADIMPLENTE' : '✅ ADIMPLENTE'}
+                        {c.situacaoFinanceira === 'inadimplente' ? '⚠️ INADIMPLENTE' : 
+                         c.situacaoFinanceira === 'pendente' ? '⏳ PENDENTE' : '✅ ADIMPLENTE'}
                       </span>
                     </td>
 

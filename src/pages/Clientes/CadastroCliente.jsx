@@ -12,7 +12,6 @@ const CadastroCliente = () => {
   const [tipoPessoa, setTipoPessoa] = useState('fisica');
   const [salvando, setSalvando] = useState(false);
 
-  // --- FOTO COM ARRASTO (DRAG) ---
   const [fotoBase64, setFotoBase64] = useState('');
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
   const [dragging, setDragging] = useState(false);
@@ -25,7 +24,9 @@ const CadastroCliente = () => {
     celular: '', telefoneFixo: '', email: '', origem: '',
     cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '',
     tags: '', observacoes: '',
-    situacaoFinanceira: 'adimplente' 
+    // 🔥 Agora temos DOIS controles independentes 🔥
+    situacaoFinanceira: 'adimplente', 
+    statusCadastro: 'aprovado'
   });
 
   useEffect(() => {
@@ -33,6 +34,11 @@ const CadastroCliente = () => {
       setTipoPessoa(clienteEditando.tipoPessoa || 'fisica');
       setFotoBase64(clienteEditando.foto || '');
       setPosicaoFoto(clienteEditando.posicaoFoto || { x: 50, y: 50 });
+      
+      // Se o cliente antigo tinha o financeiro "pendente" (a regra velha), nós convertemos 
+      // para a regra nova: Cadastro Pendente + Financeiro Limpo (Adimplente)
+      const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
+      
       setFormData({
         nome: clienteEditando.nome || '', cpf: clienteEditando.cpf || '', rg: clienteEditando.rg || '', nascimento: clienteEditando.nascimento || '', sexo: clienteEditando.sexo || '',
         razaoSocial: clienteEditando.razaoSocial || '', nomeFantasia: clienteEditando.nomeFantasia || '', cnpj: clienteEditando.cnpj || '', inscricaoEstadual: clienteEditando.inscricaoEstadual || '',
@@ -40,12 +46,14 @@ const CadastroCliente = () => {
         celular: clienteEditando.celular || '', telefoneFixo: clienteEditando.telefoneFixo || '', email: clienteEditando.email || '', origem: clienteEditando.origem || '',
         cep: clienteEditando.cep || '', logradouro: clienteEditando.logradouro || '', numero: clienteEditando.numero || '', complemento: clienteEditando.complemento || '', bairro: clienteEditando.bairro || '', cidade: clienteEditando.cidade || '', uf: clienteEditando.uf || '',
         tags: clienteEditando.tags || '', observacoes: clienteEditando.observacoes || '',
-        situacaoFinanceira: clienteEditando.situacaoFinanceira || 'adimplente' 
+        
+        // 🔥 Aplica a conversão inteligente aqui 🔥
+        situacaoFinanceira: eraPendenteAntigo ? 'adimplente' : (clienteEditando.situacaoFinanceira || 'adimplente'),
+        statusCadastro: clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado')
       });
     }
   }, [clienteEditando]);
 
-  // --- FUNÇÕES DE MÁSCARA AUTOMÁTICA ---
   const maskCPF = (v) => {
     v = v.replace(/\D/g, ""); 
     v = v.replace(/(\d{3})(\d)/, "$1.$2"); 
@@ -116,7 +124,6 @@ const CadastroCliente = () => {
     }
   };
 
-  // --- LÓGICA DE ARRASTAR CORRIGIDA (MOUSE + TOUCH) ---
   const handleStart = (clientX, clientY) => {
     setDragging(true);
     setStartMouse({ x: clientX, y: clientY });
@@ -188,7 +195,6 @@ const CadastroCliente = () => {
       <div className="form-widescreen">
         <form onSubmit={salvarCliente} className="estoque-form-layout">
           
-          {/* FOTO CENTRALIZADA */}
           <div className="left-photo-col centralizado">
             <h3 className="section-divider" style={{marginTop: 0}}>FOTO / LOGO</h3>
             
@@ -320,14 +326,37 @@ const CadastroCliente = () => {
               <div className="form-group span-2"><label>CIDADE</label><input type="text" name="cidade" value={formData.cidade} onChange={handleChange} /></div>
             </div>
 
-            <h3 className="section-divider mt-compact">INFORMAÇÕES ADICIONAIS</h3>
+            <h3 className="section-divider mt-compact">CONTROLE DE SISTEMA</h3>
             <div className="form-grid-4">
               
-              {/* 🔥 AQUI ENTRA A MÁGICA DO PENDENTE E AS CORES 🔥 */}
-              <div className="form-group span-1">
+              {/* 🔥 NOVO: STATUS DO CADASTRO 🔥 */}
+              <div className="form-group span-2">
                 <label style={{ 
-                  color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : 
-                         formData.situacaoFinanceira === 'pendente' ? '#d97706' : '#10b981', 
+                  color: formData.statusCadastro === 'pendente' ? '#d97706' : '#10b981', 
+                  fontWeight: '800' 
+                }}>
+                  STATUS DO CADASTRO
+                </label>
+                <select 
+                  name="statusCadastro" 
+                  value={formData.statusCadastro} 
+                  onChange={handleChange}
+                  className="status-select"
+                  style={{
+                    backgroundColor: formData.statusCadastro === 'pendente' ? '#fef3c7' : '#f0fdf4',
+                    color: formData.statusCadastro === 'pendente' ? '#d97706' : '#10b981',
+                    border: formData.statusCadastro === 'pendente' ? '1px solid #fcd34d' : '1px solid #86efac'
+                  }}
+                >
+                  <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>
+                  <option value="aprovado">✔️ Cadastro Aprovado</option>
+                </select>
+              </div>
+
+              {/* 🔥 CORRIGIDO: SITUAÇÃO FINANCEIRA VOLTOU AO NORMAL 🔥 */}
+              <div className="form-group span-2">
+                <label style={{ 
+                  color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', 
                   fontWeight: '800' 
                 }}>
                   SITUAÇÃO FINANCEIRA
@@ -335,23 +364,20 @@ const CadastroCliente = () => {
                 <select 
                   name="situacaoFinanceira" 
                   value={formData.situacaoFinanceira} 
-                  onChange={(e) => setFormData({...formData, situacaoFinanceira: e.target.value})}
-                  className={`status-select ${formData.situacaoFinanceira}`}
+                  onChange={handleChange}
+                  className="status-select"
                   style={{
-                    backgroundColor: formData.situacaoFinanceira === 'pendente' ? '#fef3c7' : 
-                                     formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
-                    color: formData.situacaoFinanceira === 'pendente' ? '#d97706' : 
-                           formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
-                    border: formData.situacaoFinanceira === 'pendente' ? '1px solid #fcd34d' : '1px solid transparent'
+                    backgroundColor: formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
+                    color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
+                    border: formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac'
                   }}
                 >
-                  <option value="adimplente">✅ Adimplente (Liberado)</option>
-                  <option value="pendente">⏳ Pendente (Site)</option>
-                  <option value="inadimplente">⚠️ Inadimplente</option>
+                  <option value="adimplente">✅ Nome Limpo (Adimplente)</option>
+                  <option value="inadimplente">⚠️ Devendo (Inadimplente)</option>
                 </select>
               </div>
 
-              <div className="form-group span-3"><label>TAGS (CRM)</label><input type="text" name="tags" placeholder="Ex: VIP, Problemático" value={formData.tags} onChange={handleChange} /></div>
+              <div className="form-group span-4"><label>TAGS (Ex: VIP, Problemático)</label><input type="text" name="tags" placeholder="Digite as tags..." value={formData.tags} onChange={handleChange} /></div>
               <div className="form-group span-4"><label>OBSERVAÇÕES INTERNAS</label><textarea name="observacoes" rows="2" value={formData.observacoes} onChange={handleChange}></textarea></div>
             </div>
 

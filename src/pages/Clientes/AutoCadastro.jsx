@@ -85,12 +85,12 @@ const AutoCadastro = () => {
     setLoading(true);
 
     try {
-      // 🔥 MÁGICA 1: Salvando as informações separadinhas com os mesmos nomes do seu painel 🔥
       const isJuridica = form.documento.length > 14;
       
+      // 1. Salva o cliente oficial no banco de dados como 'pendente'
       const clienteRef = await addDoc(collection(db, "clientes"), {
         nome: form.nome,
-        nomeFantasia: isJuridica ? form.nome : '', // Se for PJ, joga o nome pro Nome Fantasia
+        nomeFantasia: isJuridica ? form.nome : '',
         cpf: !isJuridica ? form.documento : '',
         cnpj: isJuridica ? form.documento : '',
         celular: form.contato,
@@ -100,12 +100,13 @@ const AutoCadastro = () => {
         numero: form.numero,
         bairro: form.bairro,
         cidade: form.cidade,
-        situacaoFinanceira: 'pendente', // 🔥 NASCE PENDENTE DE APROVAÇÃO 🔥
+        situacaoFinanceira: 'pendente', 
         origem: 'Auto-Cadastro (Site)',
         tipoPessoa: isJuridica ? 'juridica' : 'fisica', 
         criadoEm: serverTimestamp()
       });
 
+      // 2. Se tiver itens no carrinho, salva a lista como Orçamento
       if (carrinho.length > 0) {
         const total = calcularTotal();
         await addDoc(collection(db, "locacoes"), {
@@ -120,16 +121,15 @@ const AutoCadastro = () => {
           criadoEm: serverTimestamp()
         });
 
-        const resumoItens = carrinho.map(i => `- ${i.qtd}x ${i.nome}`).join('\n');
-        const whatsDestino = empresa.whats?.replace(/\D/g, '') || "5519999999999"; 
-        
-        const textoZap = `🌟 *NOVO CADASTRO (Aguardando Aprovação)* 🌟\n\n*Cliente:* ${form.nome}\n*Documento:* ${form.documento}\n*Data do Evento:* ${form.dataEvento}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}\n\n_Olá! Fiz meu cadastro no site e aguardo a aprovação para fechar o pedido!_`;
-        
-        window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(textoZap)}`, '_blank');
+        // 🔥 Aviso profissional na tela, sem abrir WhatsApp 🔥
+        alert("🎉 Pedido recebido com sucesso!\n\nSua lista e seu cadastro foram enviados para a nossa equipe. Em breve entraremos em contato pelo seu WhatsApp para confirmar a aprovação!");
       } else {
-        alert("Cadastro recebido! Em breve nossa equipe fará a aprovação do seu perfil.");
-        navigate('/catalogo');
+        // 🔥 Aviso se a pessoa só fez o cadastro sem escolher peças 🔥
+        alert("✅ Cadastro recebido com sucesso!\n\nNossa equipe fará a análise do seu perfil e entraremos em contato.");
       }
+
+      // 3. Manda o cliente de volta para o catálogo
+      navigate('/catalogo');
 
     } catch (error) {
       console.error("Erro no cadastro:", error);

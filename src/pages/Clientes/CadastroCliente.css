@@ -1,220 +1,185 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
-
-/* ==========================================
-   CSS: CADASTRO DE CLIENTE (DESIGN PREMIUM)
-   ========================================== */
-
-:root {
-  --azul-escuro: #0f172a;
-  --dourado: #c5a059;
-  --fundo-cinza: #f1f5f9;
-  --branco: #ffffff;
-  --texto-principal: #0f172a;
-  --texto-secundario: #64748b;
-  --borda: #e2e8f0;
-}
-
+/* Container Principal - Agora ocupa a largura total disponível */
 .form-page-container {
+  padding: 20px 40px;
   width: 100%;
-  padding: 30px 40px;
   box-sizing: border-box;
-  background-color: var(--fundo-cinza);
-  min-height: 100vh;
 }
 
-/* --- CABEÇALHO --- */
 .form-page-header {
   margin-bottom: 25px;
-  border-bottom: 2px solid #cbd5e1;
-  padding-bottom: 20px;
+  border-bottom: 2px solid #f0f0f0;
+  padding-bottom: 15px;
 }
 
 .form-page-title {
-  color: var(--azul-escuro);
-  font-size: 24px;
+  font-size: 1.8rem;
+  color: #222;
   font-weight: 800;
-  text-transform: uppercase;
-  margin: 0;
-  font-family: 'Montserrat', sans-serif;
+  letter-spacing: -0.5px;
 }
 
-.form-page-subtitle { color: var(--texto-secundario); margin-top: 5px; font-size: 14px; }
-
-/* --- CARTÃO PRINCIPAL --- */
+/* Layout sem as bordas vazias nas laterais */
 .form-widescreen {
-  background: var(--branco);
-  padding: 35px;
-  border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--borda);
   width: 100%;
-  box-sizing: border-box;
 }
 
-/* --- ESTRUTURA DESKTOP --- */
 .estoque-form-layout {
-  display: flex;
+  display: grid;
+  grid-template-columns: 320px 1fr; /* Coluna da foto definida, dados expandem no resto */
   gap: 40px;
-  align-items: flex-start;
+  align-items: start;
 }
 
-.left-photo-col { 
-  width: 250px; 
-  flex-shrink: 0;
+/* Coluna da Foto - Fixa e elegante na esquerda */
+.left-photo-col {
+  background: #ffffff;
+  padding: 30px;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
   display: flex;
   flex-direction: column;
-  align-items: center; /* Centraliza a foto na coluna */
+  align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  position: sticky; /* A foto te acompanha enquanto você desce os dados */
+  top: 20px;
 }
 
-.right-data-col { flex: 1; min-width: 0; }
-
-/* --- FOTO DE PERFIL / LOGO (CENTRALIZADA E ARRASTÁVEL) --- */
 .main-photo-display {
   width: 220px;
   height: 220px;
-  background: var(--fundo-cinza);
-  border-radius: 12px;
-  border: 2px dashed #cbd5e1;
-  position: relative;
+  border-radius: 20px; /* Quadrado arredondado moderno */
   overflow: hidden;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 15px;
+  border: 2px dashed #d1d5db;
+  background: #f9fafb;
+  position: relative;
+  transition: all 0.3s;
 }
 
-.main-photo-preview { 
-  width: 100%; 
-  height: 100%; 
-  object-fit: cover; 
-  user-select: none;
-  -webkit-user-drag: none;
+.main-photo-display:hover {
+  border-color: #3b82f6;
 }
 
-.drag-hint {
-  position: absolute;
-  bottom: 10px;
+.main-photo-preview {
   width: 100%;
-  text-align: center;
-  pointer-events: none;
+  height: 100%;
+  object-fit: cover;
 }
 
-.drag-hint span {
-  background: rgba(0,0,0,0.6);
-  color: white;
-  font-size: 10px;
-  padding: 4px 8px;
+/* Coluna de Dados - Ocupa todo o espaço restante */
+.right-data-col {
+  background: #fff;
+  width: 100%;
+}
+
+.section-divider {
+  font-size: 0.85rem;
+  color: #3b82f6; /* Um azul sutil para os títulos das seções */
+  font-weight: 800;
+  border-bottom: 2px solid #eff6ff;
+  padding-bottom: 8px;
+  margin: 30px 0 20px 0;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+/* Grid de Campos - Agora aproveitando o espaço largo */
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+
+/* Inputs mais robustos */
+.form-group label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #6b7280;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+  padding: 12px 15px;
+  border: 1px solid #d1d5db;
   border-radius: 10px;
+  font-size: 1rem;
+  background-color: #fff;
+  color: #1f2937;
+  transition: all 0.2s;
 }
 
-.photo-upload-label { cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; width: 100%; height: 100%; }
-.photo-icon { font-size: 40px; opacity: 0.3; }
-.photo-text { color: var(--texto-secundario); font-weight: bold; font-size: 14px; margin-top: 10px;}
-
-.photo-actions { display: flex; gap: 10px; width: 100%; }
-.btn-action-photo { 
-  flex: 1; 
-  padding: 10px; 
-  text-align: center; 
-  border-radius: 8px; 
-  border: 1px solid var(--borda); 
-  background: var(--branco); 
-  font-weight: 600; 
-  cursor: pointer; 
-  font-size: 13px;
-  transition: 0.2s;
+.form-group input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
 }
-.btn-action-photo:hover { background: var(--fundo-cinza); }
-.btn-remove { color: #ef4444; border-color: #fee2e2; background: #fef2f2; }
-.btn-remove:hover { background: #fef2f2; border-color: #ef4444; }
 
-/* --- ABAS --- */
-.tabs-container { display: flex; gap: 10px; border-bottom: 2px solid var(--borda); margin-bottom: 25px; }
-.tab-btn { background: transparent; border: none; padding: 12px 20px; font-size: 14px; font-weight: 700; color: var(--texto-secundario); cursor: pointer; border-bottom: 3px solid transparent; }
-.tab-btn.active { color: var(--azul-escuro); border-bottom-color: var(--dourado); }
-
-/* --- GRIDS E CAMPOS --- */
-.section-divider { font-size: 12px; color: var(--texto-secundario); font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 15px; border-bottom: 1px solid var(--fundo-cinza); padding-bottom: 8px; }
-.mt-compact { margin-top: 30px; }
-
-.form-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
-.span-1 { grid-column: span 1; }
-.span-2 { grid-column: span 2; }
-.span-3 { grid-column: span 3; }
-.span-4 { grid-column: span 4; }
-
-/* Linha compacta (Número e UF) */
-.form-group-row {
+/* Abas */
+.tabs-container {
   display: flex;
-  gap: 12px;
-  width: 100%;
+  gap: 15px;
+  margin-bottom: 25px;
+  background: #f3f4f6;
+  padding: 6px;
+  border-radius: 12px;
+  width: fit-content;
 }
-.flex-1 { flex: 1; }
-.flex-small { width: 85px; }
 
-.form-group { display: flex; flex-direction: column; gap: 6px; }
-.form-group label { font-size: 11px; font-weight: 700; color: var(--texto-secundario); text-transform: uppercase; }
-
-.form-group input, .form-group select, .form-group textarea {
-  padding: 12px 14px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; color: #1e293b; background-color: #fcfcfc; box-sizing: border-box; width: 100%;
+.tab-btn {
+  padding: 10px 25px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: 8px;
+  font-weight: 700;
+  color: #4b5563;
+  transition: all 0.2s;
 }
-.form-group input:focus { outline: none; border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1); }
 
-/* Select Financeiro */
-.status-select.adimplente { border-color: #10b981 !important; background-color: #f0fdf4 !important; color: #166534 !important; font-weight: bold; }
-.status-select.inadimplente { border-color: #ef4444 !important; background-color: #fef2f2 !important; color: #991b1b !important; font-weight: bold; }
+.tab-btn.active {
+  background: #fff;
+  color: #111827;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
 
-/* --- BOTÕES FINAIS --- */
-.form-actions { display: flex; justify-content: flex-end; gap: 15px; padding-top: 25px; border-top: 1px solid var(--borda); }
-.btn-voltar-link { padding: 12px 24px; background-color: var(--branco); color: var(--texto-secundario); border: 1px solid #cbd5e1; border-radius: 8px; text-decoration: none; font-weight: 700; font-size: 14px; display: flex; align-items: center; }
-.btn-salvar-form { padding: 12px 30px; background-color: var(--azul-escuro); color: var(--branco); border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 10px rgba(15, 23, 42, 0.15); }
+/* Ações */
+.form-actions {
+  margin-top: 50px;
+  padding: 30px 0;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+  gap: 20px;
+}
 
-/* =========================================
-   📱 RESPONSIVIDADE MOBILE (BLINDADA)
-========================================= */
-@media (max-width: 900px) {
-  
-  .form-page-container { padding: 15px !important; overflow-x: hidden !important; }
-  .form-widescreen { padding: 20px !important; width: 100% !important; border-radius: 12px; }
+.btn-salvar-form {
+  background: #111827; /* Preto luxo */
+  color: white;
+  padding: 14px 45px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
 
-  .estoque-form-layout { flex-direction: column !important; gap: 20px !important; }
-  
-  .left-photo-col { 
-    width: 100% !important; 
-    align-items: center; 
+.btn-salvar-form:active {
+  transform: scale(0.98);
+}
+
+/* Celular */
+@media (max-width: 1024px) {
+  .estoque-form-layout {
+    grid-template-columns: 1fr;
   }
-  
-  .main-photo-display { 
-    width: 200px !important; 
-    height: 200px !important; 
+  .left-photo-col {
+    position: static;
+    width: auto;
   }
-
-  .tabs-container { display: flex !important; width: 100% !important; }
-  .tab-btn { flex: 1 !important; padding: 12px 5px !important; font-size: 12px !important; }
-
-  /* Coluna única para a maioria, mas flex-row para Número/UF */
-  .form-grid-4 { 
-    display: flex !important; 
-    flex-direction: column !important; 
-    gap: 15px !important; 
-  }
-
-  /* Garante que Número e UF fiquem lado a lado mesmo no mobile */
-  .form-group-row {
-    display: flex !important;
-    flex-direction: row !important;
-    width: 100% !important;
-  }
-  
-  .form-actions { 
-    flex-direction: column-reverse !important; 
-    gap: 10px !important; 
-  }
-  
-  .btn-voltar-link, .btn-salvar-form { 
-    width: 100% !important; 
-    text-align: center !important; 
-    justify-content: center;
-    padding: 16px !important;
+  .form-page-container {
+    padding: 20px;
   }
 }

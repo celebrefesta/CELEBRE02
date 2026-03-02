@@ -50,7 +50,7 @@ const EditarLocacao = () => {
             const data = docSnap.data();
             
             setNumeroPedido(data.numeroPedido || '');
-            setStatusAtual(data.status || 'orcamento'); // Se não tiver, começa como orçamento
+            setStatusAtual(data.status || 'orcamento'); 
             setClienteSelecionado(data.clienteId || '');
             setTemaFesta(data.temaFesta || '');
             setTipoServico(data.tipoServico || 'PEGUE E MONTE');
@@ -73,7 +73,14 @@ const EditarLocacao = () => {
               obsTransporte: log.obsTransporte || ''
             });
 
-            setCarrinho(data.itens || []);
+            // 🔥 CORREÇÃO 1: Normaliza os preços assim que puxa do banco 🔥
+            const itensFormatados = (data.itens || []).map(item => ({
+              ...item,
+              // Procura em 'preco', se não tiver, procura em 'financeiro.valorAluguel', se não, é 0.
+              preco: Number(item.preco || item.financeiro?.valorAluguel || 0)
+            }));
+            setCarrinho(itensFormatados);
+            
             setDesconto(data.desconto || 0);
             setObsInternas(data.obsInternas || '');
           }
@@ -104,9 +111,13 @@ const EditarLocacao = () => {
     return Number(logistica.frete.toString().replace(/\./g, "").replace(",", "."));
   };
 
+  // 🔥 CORREÇÃO 2: Cálculo total blindado contra preços vazios 🔥
   const calcularTotal = () => {
-    const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
-    const total = subtotal + getFreteNumerico() - Number(desconto);
+    const subtotal = carrinho.reduce((acc, item) => {
+      const precoValido = Number(item.preco || item.financeiro?.valorAluguel || 0);
+      return acc + (precoValido * (item.qtd || 1));
+    }, 0);
+    const total = subtotal + getFreteNumerico() - Number(desconto || 0);
     return { subtotal, total: Math.max(0, total) };
   };
 
@@ -308,30 +319,35 @@ const EditarLocacao = () => {
                 <table className="tabela-carrinho">
                   <thead><tr><th width="50"></th><th>PRODUTO</th><th className="text-center">QTD</th><th className="text-right">TOTAL</th><th width="40"></th></tr></thead>
                   <tbody>
-                    {carrinho.map(item => (
-                      <tr key={item.id} className="carrinho-item-card">
-                        <td className="carrinho-img">
-                          {item.foto ? <img src={item.foto} alt="Peça"/> : <div className="img-placeholder">📷</div>}
-                        </td>
-                        <td className="carrinho-info">
-                          <strong>{item.nome}</strong>
-                          <span>R$ {Number(item.preco).toFixed(2)} un</span>
-                        </td>
-                        <td className="text-center">
-                          <div className="controle-qtd">
-                            <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
-                            <span>{item.qtd}</span>
-                            <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i))}>+</button>
-                          </div>
-                        </td>
-                        <td className="text-right carrinho-total-item">
-                          <strong>R$ {(item.preco * item.qtd).toFixed(2)}</strong>
-                        </td>
-                        <td className="text-center">
-                          <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))}>🗑️</button>
-                        </td>
-                      </tr>
-                    ))}
+                    {carrinho.map(item => {
+                      // 🔥 CORREÇÃO 3: Tabela de itens blindada contra preços vazios 🔥
+                      const precoExibicao = Number(item.preco || item.financeiro?.valorAluguel || 0);
+                      
+                      return (
+                        <tr key={item.id} className="carrinho-item-card">
+                          <td className="carrinho-img">
+                            {item.foto ? <img src={item.foto} alt="Peça"/> : <div className="img-placeholder">📷</div>}
+                          </td>
+                          <td className="carrinho-info">
+                            <strong>{item.nome}</strong>
+                            <span>R$ {precoExibicao.toFixed(2)} un</span>
+                          </td>
+                          <td className="text-center">
+                            <div className="controle-qtd">
+                              <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
+                              <span>{item.qtd}</span>
+                              <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i))}>+</button>
+                            </div>
+                          </td>
+                          <td className="text-right carrinho-total-item">
+                            <strong>R$ {(precoExibicao * item.qtd).toFixed(2)}</strong>
+                          </td>
+                          <td className="text-center">
+                            <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))}>🗑️</button>
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               )}
@@ -368,7 +384,7 @@ const EditarLocacao = () => {
             
             <h3 className="section-divider" style={{border: 'none', marginBottom: '15px'}}>PRÓXIMO PASSO DO PEDIDO</h3>
 
-            {/* 🚨 A ESTEIRA DE PRODUÇÃO (AGORA USANDO OS BOTÕES PREMIUM) 🚨 */}
+            {/* 🚨 A ESTEIRA DE PRODUÇÃO 🚨 */}
             <div className="fin-acoes" style={{marginTop: '0'}}>
                 
                 {statusAtual === 'orcamento' && (
@@ -435,7 +451,6 @@ const EditarLocacao = () => {
             <div className="catalogo-grid">
               {itensFiltrados.map(item => (
                 <div key={item.id} className="peca-card" onClick={() => addCarrinho(item)}>
-                  {/* 🔥 FOTO COM O BOTÃO DE + INCLUÍDO 🔥 */}
                   <div className="peca-img">
                       {item.foto ? <img src={item.foto} alt=""/> : '📷'}
                       <button className="btn-add-peca">+</button>
