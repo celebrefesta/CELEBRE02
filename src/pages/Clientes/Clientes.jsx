@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Clientes.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, query, where, writeBatch } from 'firebase/firestore';
 
 const Clientes = () => {
   const [clientes, setClientes] = useState([]);
@@ -24,12 +24,30 @@ const Clientes = () => {
     finally { setLoading(false); }
   };
 
-  const excluirCliente = async (id) => {
-    if (window.confirm("Excluir definitivamente?")) {
+  // 🔥 CORREÇÃO: DELETAR CLIENTE E SEUS FANTASMAS 🔥
+  const excluirCliente = async (id, nome) => {
+    if (window.confirm(`Você está prestes a excluir o cliente ${nome}. Deseja excluir também todos os PEDIDOS vinculados a ele para evitar erros no sistema?`)) {
       try {
+        // 1. Exclui o cliente
         await deleteDoc(doc(db, "clientes", id));
+        
+        // 2. Busca os pedidos orfãos e exclui num lote só (Batch)
+        const qPedidos = query(collection(db, "locacoes"), where("clienteId", "==", id));
+        const pedidosSnap = await getDocs(qPedidos);
+        
+        if (!pedidosSnap.empty) {
+            const batch = writeBatch(db);
+            pedidosSnap.forEach((docPedido) => {
+                batch.delete(docPedido.ref);
+            });
+            await batch.commit();
+            alert(`Cliente e ${pedidosSnap.size} pedido(s) vinculados foram excluídos com sucesso!`);
+        } else {
+            alert("Cliente excluído com sucesso!");
+        }
+
         carregarClientes(); 
-      } catch (error) { alert("Erro ao excluir."); }
+      } catch (error) { alert("Erro ao excluir cliente e/ou seus vínculos."); }
     }
   };
 
@@ -37,7 +55,6 @@ const Clientes = () => {
     navigate('/cadastro-cliente', { state: { clienteEditando: cliente } });
   };
 
-  // 🔥 REGRA ATUALIZADA: Permite alternar entre os 3 status clicando na etiqueta
   const alternarSituacaoFinanceira = async (cliente) => {
     let novaSituacao = 'adimplente';
     if (cliente.situacaoFinanceira === 'adimplente') novaSituacao = 'inadimplente';
@@ -126,7 +143,6 @@ const Clientes = () => {
                     </td>
 
                     <td className="status-cell text-center mobile-stack">
-                      {/* 🔥 BADGE CORRIGIDO: Agora reconhece os 3 status 🔥 */}
                       <span 
                         onClick={() => alternarSituacaoFinanceira(c)}
                         className={`badge-status ${
@@ -134,7 +150,6 @@ const Clientes = () => {
                           c.situacaoFinanceira === 'pendente' ? 'pendente-bg' : 'ok'
                         }`}
                         style={{
-                          // Se o CSS principal não tiver a classe pendente-bg, eu forço as cores aqui por garantia
                           backgroundColor: c.situacaoFinanceira === 'pendente' ? '#fef3c7' : '',
                           color: c.situacaoFinanceira === 'pendente' ? '#d97706' : ''
                         }}
@@ -150,7 +165,7 @@ const Clientes = () => {
                         {menuAberto === c.id && (
                           <div className="menu-suspenso">
                             <button onClick={() => editarCliente(c)} className="item-menu">✏️ Editar</button>
-                            <button onClick={() => excluirCliente(c.id)} className="item-menu item-excluir">🗑️ Excluir</button>
+                            <button onClick={() => excluirCliente(c.id, c.nome || c.nomeFantasia)} className="item-menu item-excluir">🗑️ Excluir</button>
                           </div>
                         )}
                       </div>

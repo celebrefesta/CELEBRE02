@@ -8,44 +8,47 @@ const CadastroEstoque = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const itemEditando = location.state?.itemEditando || null;
+  const dadosCompra = location.state?.dadosCompra || null; 
 
   const [salvando, setSalvando] = useState(false);
   const [itensExistentes, setItensExistentes] = useState([]);
 
-  // 🌟 LISTAS 100% DINÂMICAS VINDAS DO FIREBASE 🌟
   const [listasSistema, setListasSistema] = useState({
     categorias: [], subcategorias: {}, localizacoes: [], tamanhos: [], gruposTema: [], temasPorGrupo: {} 
   });
 
-  // --- FOTOS E ENQUADRAMENTO ---
   const [fotos, setFotos] = useState([]);
   const [fotoPrincipalIndex, setFotoPrincipalIndex] = useState(0);
   const [posicoesFoco, setPosicoesFoco] = useState({}); 
   const [dragging, setDragging] = useState(false);
   const [startMouse, setStartMouse] = useState({ x: 0, y: 0 });
 
-  // Dados Básicos
   const [nome, setNome] = useState('');
   const [codigo, setCodigo] = useState('');
   const [categoria, setCategoria] = useState('');
   const [subCategoria, setSubCategoria] = useState('');
   
-  // Dados de Tema
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
   const [temaSelecionado, setTemaSelecionado] = useState('');
   
+  const [isKit, setIsKit] = useState(false);
+  const [pecasKit, setPecasKit] = useState([{ 
+      id: Date.now(), nome: '', valorAluguel: '', 
+      cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' 
+  }]);
+
   const [quantidade, setQuantidade] = useState(1);
   const [estoqueMinimo, setEstoqueMinimo] = useState(1);
   const [alertaEstoque, setAlertaEstoque] = useState('NaoAvisar'); 
   const [fornecedor, setFornecedor] = useState('');
   const [linkFornecedor, setLinkFornecedor] = useState('');
-  const [status, setStatus] = useState('ok');
+  const [status, setStatus] = useState('ok'); 
   const [localizacao, setLocalizacao] = useState('');
 
-  // Financeiro e Especificações
   const [valorCompra, setValorCompra] = useState('');
   const [valorAluguel, setValorAluguel] = useState('');
   const [valorReposicao, setValorReposicao] = useState('');
+  
   const [tamanho, setTamanho] = useState('');
   const [cor, setCor] = useState('');
   const [unidadeMedida, setUnidadeMedida] = useState('Unidade');
@@ -54,7 +57,6 @@ const CadastroEstoque = () => {
   const [diametro, setDiametro] = useState('');
   const [comprimento, setComprimento] = useState('');
   
-  // Configurações
   const [tipoDisponibilidade, setTipoDisponibilidade] = useState('Aluguel');
   const [visivelCatalogo, setVisivelCatalogo] = useState(true);
   const [necessitaMontagem, setNecessitaMontagem] = useState('Não');
@@ -83,7 +85,7 @@ const CadastroEstoque = () => {
             tamanhos: dados.tamanhos || [], gruposTema: dados.gruposTema || [], temasPorGrupo: dados.temasPorGrupo || {} 
           });
 
-          if (!itemEditando) {
+          if (!itemEditando && !dadosCompra) {
             if (dados.categorias?.length > 0) {
               setCategoria(dados.categorias[0]);
               if (dados.subcategorias?.[dados.categorias[0]]?.length > 0) setSubCategoria(dados.subcategorias[dados.categorias[0]][0]);
@@ -99,6 +101,12 @@ const CadastroEstoque = () => {
       setNome(itemEditando.nome || ''); setCodigo(itemEditando.codigo || '');
       setCategoria(itemEditando.categoria || ''); setSubCategoria(itemEditando.subCategoria || '');
       setGrupoTemaSelecionado(itemEditando.grupoTema || ''); setTemaSelecionado(itemEditando.tema || '');
+      
+      setIsKit(itemEditando.especificacoes?.isKit || false);
+      if (itemEditando.especificacoes?.pecasKit) {
+         setPecasKit(itemEditando.especificacoes.pecasKit);
+      }
+
       setQuantidade(itemEditando.quantidade || 1); setEstoqueMinimo(itemEditando.estoqueMinimo || 1);
       setAlertaEstoque(itemEditando.configuracao?.alertaEstoque || 'NaoAvisar'); 
       setFornecedor(itemEditando.fornecedor || ''); setLinkFornecedor(itemEditando.linkFornecedor || '');
@@ -119,8 +127,17 @@ const CadastroEstoque = () => {
       
       if (itemEditando.fotos && itemEditando.fotos.length > 0) setFotos(itemEditando.fotos);
       else if (itemEditando.foto) setFotos([itemEditando.foto]);
+    
+    } else if (dadosCompra) {
+      setNome(dadosCompra.nome || '');
+      setQuantidade(dadosCompra.quantidade || 1);
+      if (dadosCompra.valorEstimado) setValorCompra(Number(dadosCompra.valorEstimado).toFixed(2).replace('.', ','));
+      if (dadosCompra.valorAluguel) setValorAluguel(Number(dadosCompra.valorAluguel).toFixed(2).replace('.', ','));
+      setFornecedor(dadosCompra.fornecedor || '');
+      setObservacoes(dadosCompra.obs || '');
+      setStatus('pintura'); 
     }
-  }, [itemEditando]);
+  }, [itemEditando, dadosCompra]);
 
   const gerarSKU = (cat) => {
     if (!cat) return '';
@@ -207,8 +224,25 @@ const CadastroEstoque = () => {
 
   const handlePointerUp = () => setDragging(false);
 
+  const atualizarPecaKit = (idx, campo, valor) => {
+      const newPecas = [...pecasKit];
+      newPecas[idx][campo] = valor;
+      setPecasKit(newPecas);
+  };
+
   const salvarItem = async (e) => {
     e.preventDefault();
+
+    if (!categoria) return alert("❌ Selecione a Categoria principal.");
+    if (!subCategoria) return alert("❌ Selecione a Subcategoria.");
+    if (!grupoTemaSelecionado) return alert("❌ Selecione o Grupo de Tema.");
+    if (!temaSelecionado) return alert("❌ Selecione o Tema Específico.");
+    
+    if (isKit) {
+        const hasEmptyPeca = pecasKit.some(p => !p.nome.trim() || !p.valorAluguel.trim());
+        if (hasEmptyPeca) return alert("❌ Preencha o nome e o valor de aluguel de TODAS as peças do Kit, ou clique na lixeira para remover as linhas vazias.");
+    }
+
     setSalvando(true);
     try {
       const limparValor = (val) => Number(String(val).replace(',', '.'));
@@ -219,7 +253,18 @@ const CadastroEstoque = () => {
         status, fornecedor, linkFornecedor, localizacao,
         quantidade: Number(quantidade), estoqueMinimo: Number(estoqueMinimo),
         financeiro: { valorCompra: limparValor(valorCompra), valorAluguel: limparValor(valorAluguel), valorReposicao: limparValor(valorReposicao) },
-        especificacoes: { tamanho, cor, unidadeMedida, largura: Number(largura), altura: Number(altura), diametro: Number(diametro), comprimento: Number(comprimento) },
+        
+        especificacoes: { 
+            tamanho: isKit ? '' : tamanho, 
+            cor: isKit ? '' : cor, 
+            unidadeMedida, 
+            largura: isKit ? 0 : Number(largura), 
+            altura: isKit ? 0 : Number(altura), 
+            diametro: isKit ? 0 : Number(diametro), 
+            comprimento: isKit ? 0 : Number(comprimento),
+            isKit, pecasKit: isKit ? pecasKit : [] 
+        },
+        
         configuracao: { tipoDisponibilidade, visivelCatalogo, necessitaMontagem, voltagem, alertaEstoque },
         observacoes, fotos, posicoesFoco, foto: fotos.length > 0 ? fotos[0] : '', 
         atualizadoEm: serverTimestamp()
@@ -229,8 +274,39 @@ const CadastroEstoque = () => {
         await updateDoc(doc(db, "estoque", itemEditando.id), dados);
         alert("Item atualizado!");
       } else {
-        await addDoc(collection(db, "estoque"), { ...dados, criadoEm: serverTimestamp() });
-        alert("Novo item adicionado!");
+        const docRef = await addDoc(collection(db, "estoque"), { ...dados, criadoEm: serverTimestamp() });
+        const mainId = docRef.id;
+
+        if (isKit && pecasKit.length > 0) {
+            for (let i = 0; i < pecasKit.length; i++) {
+                const peca = pecasKit[i];
+                if (peca.nome.trim()) {
+                    const valPeca = Number(peca.valorAluguel.replace(',', '.'));
+                    const pecaDados = {
+                        ...dados, 
+                        nome: `${nome} - ${peca.nome}`, 
+                        codigo: `${codigo}-P${i+1}`, 
+                        financeiro: { ...dados.financeiro, valorAluguel: isNaN(valPeca) ? 0 : valPeca, valorCompra: 0, valorReposicao: 0 },
+                        especificacoes: { 
+                            ...dados.especificacoes, 
+                            isKit: false, 
+                            isSubPeca: true, 
+                            kitPaiId: mainId, 
+                            unidadeMedida: 'Unidade',
+                            cor: peca.cor || '',
+                            tamanho: peca.tamanho || '',
+                            largura: Number(peca.largura) || 0,
+                            altura: Number(peca.altura) || 0,
+                            diametro: Number(peca.diametro) || 0,
+                            comprimento: Number(peca.comprimento) || 0
+                        },
+                        quantidade: 1 
+                    };
+                    await addDoc(collection(db, "estoque"), { ...pecaDados, criadoEm: serverTimestamp() });
+                }
+            }
+        }
+        alert(isKit ? "Mágica feita! O Kit e as peças avulsas com suas medidas foram gerados com sucesso no Acervo!" : "Novo item adicionado com sucesso ao Acervo!");
       }
       navigate('/estoque');
     } catch (error) { alert("Erro ao salvar."); } 
@@ -246,8 +322,12 @@ const CadastroEstoque = () => {
     <div className="page-container">
       <div className="page-header">
         <div className="header-text">
-          <h1 className="page-title">{itemEditando ? 'EDITAR ITEM DO ACERVO' : 'NOVO ITEM DO ACERVO'}</h1>
-          <p style={{ color: '#64748b', marginTop: '5px' }}>Configure as regras de estoque e detalhes da peça</p>
+          <h1 className="page-title">
+            {itemEditando ? 'EDITAR ITEM DO ACERVO' : dadosCompra ? '✨ FINALIZAR CADASTRO DE COMPRA' : 'NOVO ITEM DO ACERVO'}
+          </h1>
+          <p style={{ color: '#64748b', marginTop: '5px' }}>
+            {dadosCompra ? 'Você indicou que já comprou este item! Adicione a foto, confira o status e salve no acervo.' : 'Configure as regras de estoque e detalhes da peça'}
+          </p>
         </div>
       </div>
 
@@ -292,23 +372,146 @@ const CadastroEstoque = () => {
               ))}
               <label className="thumb-upload-btn"><span>+</span><input type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} /></label>
             </div>
+
+            {/* 🔥 TIPO DE CADASTRO E ESPECIFICAÇÕES AQUI NA ESQUERDA 🔥 */}
+            <div className="tipo-cadastro-container" style={{background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', marginTop: '20px'}}>
+                <label style={{color: '#0f172a', fontWeight: 'bold', display: 'block', marginBottom: '10px'}}>TIPO DE CADASTRO</label>
+                <div className="toggle-simples" style={{marginBottom: '10px'}}>
+                  <button type="button" className={!isKit ? 'active' : ''} onClick={() => { setIsKit(false); setUnidadeMedida('Unidade'); }}>Peça Única</button>
+                  <button type="button" className={isKit ? 'active' : ''} onClick={() => { setIsKit(true); setUnidadeMedida('Kit'); }}>📦 É um Kit</button>
+                </div>
+                
+                {isKit ? (
+                  <div className="kit-builder mt-10">
+                    <label style={{color: '#c5a059', fontWeight: 'bold', marginBottom: '5px', display: 'block'}}>O QUE VEM NESTE KIT?</label>
+                    <p style={{fontSize: '11.5px', color: '#64748b', marginBottom: '15px', lineHeight: '1.4'}}>
+                      Ao salvar, o sistema criará magicamente o cadastro individual de cada uma das peças abaixo.
+                    </p>
+                    
+                    {pecasKit.map((p, idx) => (
+                      <div key={p.id} style={{background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '12px', marginBottom: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
+                        
+                        <div style={{display: 'flex', gap: '8px', marginBottom: '8px', alignItems: 'center'}}>
+                          <input type="text" placeholder={`Ex: Bandeja P`} value={p.nome} onChange={e => atualizarPecaKit(idx, 'nome', e.target.value)} style={{flex: 2, padding: '8px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                          <input type="text" placeholder="R$ Aluguel" value={p.valorAluguel} onChange={e => atualizarPecaKit(idx, 'valorAluguel', e.target.value)} onBlur={e => {
+                             let val = e.target.value.replace(',', '.');
+                             const num = parseFloat(val);
+                             if(!isNaN(num)) atualizarPecaKit(idx, 'valorAluguel', num.toFixed(2).replace('.', ','));
+                          }} style={{flex: 1, padding: '8px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                          <button type="button" onClick={() => setPecasKit(pecasKit.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', height: '36px', width: '36px', cursor: 'pointer', fontWeight: 'bold'}}>X</button>
+                        </div>
+
+                        <div style={{display: 'flex', gap: '8px', marginBottom: '8px'}}>
+                          <input type="text" placeholder="Cor (Ex: Azul Bebê)" value={p.cor} onChange={e => atualizarPecaKit(idx, 'cor', e.target.value)} style={{flex: 1, padding: '8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1'}} />
+                          <select value={p.tamanho} onChange={e => atualizarPecaKit(idx, 'tamanho', e.target.value)} style={{flex: 1, padding: '8px', fontSize: '12px', borderRadius: '6px', border: '1px solid #cbd5e1', backgroundColor: '#fff'}}>
+                            <option value="">Tamanho...</option>
+                            {listasSistema.tamanhos.map(t => <option key={t} value={t}>{t}</option>)}
+                          </select>
+                        </div>
+
+                        {/* 🔥 CORREÇÃO DO LAYOUT VAZANDO COM FLEXWRAP 🔥 */}
+                        <div style={{display: 'flex', gap: '6px', flexWrap: 'wrap'}}>
+                          <div style={{flex: '1 1 20%', minWidth: '60px'}}>
+                            <input type="number" placeholder="Larg(cm)" value={p.largura} onChange={e => atualizarPecaKit(idx, 'largura', e.target.value)} style={{width: '100%', padding: '8px 4px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center'}} title="Largura" />
+                          </div>
+                          <div style={{flex: '1 1 20%', minWidth: '60px'}}>
+                            <input type="number" placeholder="Alt(cm)" value={p.altura} onChange={e => atualizarPecaKit(idx, 'altura', e.target.value)} style={{width: '100%', padding: '8px 4px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center'}} title="Altura" />
+                          </div>
+                          <div style={{flex: '1 1 20%', minWidth: '60px'}}>
+                            <input type="number" placeholder="Diâm(cm)" value={p.diametro} onChange={e => atualizarPecaKit(idx, 'diametro', e.target.value)} style={{width: '100%', padding: '8px 4px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center'}} title="Diâmetro" />
+                          </div>
+                          <div style={{flex: '1 1 20%', minWidth: '60px'}}>
+                            <input type="number" placeholder="Comp(cm)" value={p.comprimento} onChange={e => atualizarPecaKit(idx, 'comprimento', e.target.value)} style={{width: '100%', padding: '8px 4px', fontSize: '11px', borderRadius: '6px', border: '1px solid #cbd5e1', textAlign: 'center'}} title="Comprimento" />
+                          </div>
+                        </div>
+
+                      </div>
+                    ))}
+                    <button type="button" onClick={() => setPecasKit([...pecasKit, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} style={{background: '#0f172a', color: '#fff', border: 'none', width: '100%', padding: '12px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginTop: '5px', transition: 'all 0.2s'}}>+ Adicionar Nova Peça ao Kit</button>
+                  </div>
+                ) : (
+                  <div className="single-item-builder mt-10" style={{borderTop: '1px dashed #cbd5e1', paddingTop: '15px'}}>
+                    <label style={{color: '#c5a059', fontWeight: 'bold', marginBottom: '10px', display: 'block'}}>ESPECIFICAÇÕES DA PEÇA</label>
+                    
+                    <div style={{display: 'flex', gap: '8px', marginBottom: '10px'}}>
+                      <div style={{flex: 1}}>
+                        <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>TAMANHO</label>
+                        <select value={tamanho} onChange={e => setTamanho(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#fff'}}>
+                          <option value="">Selecione...</option>
+                          {listasSistema.tamanhos.map(t => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
+                      <div style={{flex: 1}}>
+                        <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>COR</label>
+                        <input value={cor} onChange={handleTextChange(setCor)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1'}} />
+                      </div>
+                      <div style={{flex: 1}}>
+                        <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>UNIDADE</label>
+                        <select value={unidadeMedida} onChange={e => setUnidadeMedida(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#fff'}}>
+                          {unidades.map(u => <option key={u} value={u}>{u}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div style={{display: 'flex', gap: '8px', marginBottom: '10px'}}>
+                      <div style={{flex: 1}}>
+                        {categoria === "Iluminação" ? (
+                          <>
+                            <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>VOLTAGEM</label>
+                            <select value={voltagem} onChange={e => setVoltagem(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#fff'}}>
+                              <option value="Bivolt">Bivolt</option><option value="110v">110v</option><option value="220v">220v</option>
+                            </select>
+                          </>
+                        ) : (
+                          <>
+                            <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>MONTAGEM?</label>
+                            <select value={necessitaMontagem} onChange={e => setNecessitaMontagem(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#fff'}}>
+                              <option value="Não">Não</option><option value="Sim">Sim</option>
+                            </select>
+                          </>
+                        )}
+                      </div>
+                      <div style={{flex: 1}}>
+                        <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>LARG(cm)</label>
+                        <input type="number" value={largura} onChange={e => setLargura(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1'}} />
+                      </div>
+                      <div style={{flex: 1}}>
+                        <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>ALT(cm)</label>
+                        <input type="number" value={altura} onChange={e => setAltura(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1'}} />
+                      </div>
+                    </div>
+
+                    <div style={{display: 'flex', gap: '8px'}}>
+                      <div style={{flex: 1}}>
+                        <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>DIÂM(cm)</label>
+                        <input type="number" value={diametro} onChange={e => setDiametro(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1'}} />
+                      </div>
+                      <div style={{flex: 1}}>
+                        <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>COMP(cm)</label>
+                        <input type="number" value={comprimento} onChange={e => setComprimento(e.target.value)} style={{width:'100%', padding:'8px', borderRadius:'6px', border:'1px solid #cbd5e1'}} />
+                      </div>
+                      <div style={{flex: 1}}></div>
+                    </div>
+                  </div>
+                )}
+            </div>
           </div>
 
           <div className="right-data-col">
             
             <h3 className="section-divider" style={{marginTop: 0}}>IDENTIFICAÇÃO E REGRAS</h3>
             <div className="form-grid-4">
-              <div className="form-group span-3"><label>NOME DO PRODUTO *</label><input value={nome} onChange={handleTextChange(setNome)} required /></div>
+              <div className="form-group span-3"><label>NOME DO PRODUTO / KIT *</label><input value={nome} onChange={handleTextChange(setNome)} required /></div>
               <div className="form-group span-1"><label>CÓDIGO SKU</label><input value={codigo} readOnly style={{backgroundColor: '#e2e8f0'}} /></div>
               
               <div className="span-4 flex-row-always">
-                <div className="form-group"><label>CATEGORIA</label><select value={categoria} onChange={handleCategoriaChange}><option value="">Selecione...</option>{listasSistema.categorias.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
-                <div className="form-group"><label>SUBCATEGORIA</label><select value={subCategoria} onChange={e => setSubCategoria(e.target.value)}><option value="">Selecione...</option>{listasSistema.subcategorias[categoria]?.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
+                <div className="form-group"><label>CATEGORIA *</label><select value={categoria} onChange={handleCategoriaChange} required><option value="">Selecione...</option>{listasSistema.categorias.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
+                <div className="form-group"><label>SUBCATEGORIA *</label><select value={subCategoria} onChange={e => setSubCategoria(e.target.value)} required><option value="">Selecione...</option>{listasSistema.subcategorias[categoria]?.map(s => <option key={s} value={s}>{s}</option>)}</select></div>
               </div>
               
               <div className="span-4 flex-row-always">
-                <div className="form-group"><label>GRUPO DE TEMA</label><select value={grupoTemaSelecionado} onChange={handleGrupoTemaChange}><option value="">Geral (Sem Tema)</option>{listasSistema.gruposTema.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
-                <div className="form-group"><label>TEMA ESPECÍFICO</label><select value={temaSelecionado} onChange={e => setTemaSelecionado(e.target.value)} disabled={!grupoTemaSelecionado}><option value="">Selecione...</option>{listasSistema.temasPorGrupo[grupoTemaSelecionado]?.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
+                <div className="form-group"><label>GRUPO DE TEMA *</label><select value={grupoTemaSelecionado} onChange={handleGrupoTemaChange} required><option value="">Selecione o Grupo</option>{listasSistema.gruposTema.map(g => <option key={g} value={g}>{g}</option>)}</select></div>
+                <div className="form-group"><label>TEMA ESPECÍFICO *</label><select value={temaSelecionado} onChange={e => setTemaSelecionado(e.target.value)} disabled={!grupoTemaSelecionado} required><option value="">Selecione o Tema...</option>{listasSistema.temasPorGrupo[grupoTemaSelecionado]?.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
               </div>
             </div>
 
@@ -317,17 +520,15 @@ const CadastroEstoque = () => {
               <div className="form-group span-2"><label>FORNECEDOR</label><input value={fornecedor} onChange={handleTextChange(setFornecedor)} /></div>
               <div className="form-group span-2"><label>URL / LINK DE COMPRA</label><input value={linkFornecedor} onChange={(e) => setLinkFornecedor(e.target.value)} placeholder="Cole o link do produto aqui..." /></div>
               
-              {/* 🔥 OS 3 VALORES AGORA ESTÃO BLINDADOS NA MESMA LINHA 🔥 */}
               <div className="span-4 flex-row-always">
                 <div className="form-group"><label>COMPRA (R$)</label><input type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00"/></div>
-                <div className="form-group"><label style={{color: '#c5a059', fontWeight: 800}}>ALUGUEL (R$) *</label><input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: '#c5a059'}} placeholder="0,00"/></div>
+                <div className="form-group"><label style={{color: '#c5a059', fontWeight: 800}}>{isKit ? 'ALUGUEL KIT (R$) *' : 'ALUGUEL (R$) *'}</label><input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: '#c5a059'}} placeholder="0,00"/></div>
                 <div className="form-group"><label>REPOSIÇÃO (R$)</label><input type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00"/></div>
               </div>
             </div>
 
             <h3 className="section-divider mt-compact">LOGÍSTICA E OPERACIONAL</h3>
             <div className="form-grid-4">
-              {/* 🔥 QTD E ESTOQUE MÍNIMO JUNTOS NA MESMA LINHA 🔥 */}
               <div className="span-4 flex-row-always">
                 <div className="form-group"><label>QUANTIDADE TOTAL</label><input type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} /></div>
                 <div className="form-group"><label>ESTOQUE MÍNIMO</label><input type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'} /></div>
@@ -336,31 +537,27 @@ const CadastroEstoque = () => {
               <div className="form-group span-4"><label style={{color: '#10b981', fontWeight: 800}}>ALERTA DE ESTOQUE</label><select value={alertaEstoque} onChange={e => setAlertaEstoque(e.target.value)}><option value="NaoAvisar">Item Único (Não avisar mínimo)</option><option value="Avisar">Avisar se atingir o mínimo</option></select></div>
               
               <div className="span-4 flex-row-always">
-                <div className="form-group"><label>STATUS</label><select value={status} onChange={e => setStatus(e.target.value)}><option value="ok">✅ Disponível</option><option value="manutencao">🛠️ Em Manutenção</option></select></div>
+                <div className="form-group">
+                  <label>STATUS DA PEÇA</label>
+                  <select value={status} onChange={e => setStatus(e.target.value)} style={{fontWeight: 'bold', color: status === 'pintura' ? '#d97706' : status === 'manutencao' ? '#ef4444' : '#10b981'}}>
+                    <option value="ok">✅ Pronto para Uso (Disponível)</option>
+                    <option value="pintura">🎨 Precisa de Pintura / Acabamento</option>
+                    <option value="manutencao">🛠️ Em Manutenção / Quebrado</option>
+                  </select>
+                </div>
                 <div className="form-group"><label>LOCALIZAÇÃO</label><select value={localizacao} onChange={e => setLocalizacao(e.target.value)}><option value="">Selecione...</option>{listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}</select></div>
               </div>
             </div>
 
-            <h3 className="section-divider mt-compact">ESPECIFICAÇÕES TÉCNICAS</h3>
-            <div className="form-grid-4">
-              {/* 🔥 ESPECIFICAÇÕES AGRUPADAS LADO A LADO 🔥 */}
-              <div className="span-4 flex-row-always">
-                <div className="form-group"><label>TAMANHO</label><select value={tamanho} onChange={e => setTamanho(e.target.value)}><option value="">Selecione...</option>{listasSistema.tamanhos.map(t => <option key={t} value={t}>{t}</option>)}</select></div>
-                <div className="form-group"><label>COR</label><input value={cor} onChange={handleTextChange(setCor)} /></div>
-                <div className="form-group"><label>UNIDADE</label><select value={unidadeMedida} onChange={e => setUnidadeMedida(e.target.value)}>{unidades.map(u => <option key={u} value={u}>{u}</option>)}</select></div>
+            {isKit && (
+              <div className="form-grid-4">
+                <h3 className="section-divider mt-compact">ESPECIFICAÇÕES GERAIS DO KIT</h3>
+                <div className="span-4 flex-row-always">
+                  <div className="form-group"><label>UNIDADE</label><select value={unidadeMedida} disabled style={{background: '#f1f5f9'}}><option value="Kit">Kit</option></select></div>
+                  {categoria === "Iluminação" ? (<div className="form-group"><label>VOLTAGEM</label><select value={voltagem} onChange={e => setVoltagem(e.target.value)}><option value="Bivolt">Bivolt</option><option value="110v">110v</option><option value="220v">220v</option></select></div>) : (<div className="form-group"><label>MONTAGEM?</label><select value={necessitaMontagem} onChange={e => setNecessitaMontagem(e.target.value)}><option value="Não">Não (Pegue/Monte)</option><option value="Sim">Sim (Equipe)</option></select></div>)}
+                </div>
               </div>
-
-              <div className="span-4 flex-row-always">
-                {categoria === "Iluminação" ? (<div className="form-group"><label>VOLTAGEM</label><select value={voltagem} onChange={e => setVoltagem(e.target.value)}><option value="Bivolt">Bivolt</option><option value="110v">110v</option><option value="220v">220v</option></select></div>) : (<div className="form-group"><label>MONTAGEM?</label><select value={necessitaMontagem} onChange={e => setNecessitaMontagem(e.target.value)}><option value="Não">Não (Pegue/Monte)</option><option value="Sim">Sim (Equipe)</option></select></div>)}
-                <div className="form-group"><label>LARGURA(cm)</label><input type="number" value={largura} onChange={e => setLargura(e.target.value)} /></div>
-                <div className="form-group"><label>ALTURA(cm)</label><input type="number" value={altura} onChange={e => setAltura(e.target.value)} /></div>
-              </div>
-
-              <div className="span-4 flex-row-always" style={{justifyContent: 'flex-start', width: '66%'}}>
-                <div className="form-group"><label>DIÂMETRO(cm)</label><input type="number" value={diametro} onChange={e => setDiametro(e.target.value)} /></div>
-                <div className="form-group"><label>COMPRIMENTO(cm)</label><input type="number" value={comprimento} onChange={e => setComprimento(e.target.value)} /></div>
-              </div>
-            </div>
+            )}
 
             <h3 className="section-divider mt-compact">VISIBILIDADE E OBSERVAÇÕES</h3>
             <div className="form-grid-4">
@@ -384,8 +581,8 @@ const CadastroEstoque = () => {
             </div>
 
             <div className="form-actions mt-compact">
-              <Link to="/estoque" className="btn-voltar">Cancelar</Link>
-              <button type="submit" className="btn-salvar" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Item'}</button>
+              <Link to={dadosCompra ? "/compras" : "/estoque"} className="btn-voltar">Cancelar</Link>
+              <button type="submit" className="btn-salvar" disabled={salvando}>{salvando ? 'Salvando...' : (isKit ? 'Salvar Item e Gerar Peças' : 'Salvar Item')}</button>
             </div>
           </div>
         </form>

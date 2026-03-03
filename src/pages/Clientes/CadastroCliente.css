@@ -1,57 +1,78 @@
-/* Container Principal - Agora ocupa a largura total disponível */
+/* ====================================================
+   CADASTRO DE CLIENTES - LAYOUT WIDESCREEN (TELA CHEIA)
+   ==================================================== */
+
+/* 1. Força o container a usar 100% da tela, ignorando bloqueios globais */
 .form-page-container {
-  padding: 20px 40px;
-  width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  padding: 20px 40px !important;
   box-sizing: border-box;
 }
 
 .form-page-header {
   margin-bottom: 25px;
-  border-bottom: 2px solid #f0f0f0;
+  border-bottom: 2px solid #e2e8f0;
   padding-bottom: 15px;
 }
 
 .form-page-title {
   font-size: 1.8rem;
-  color: #222;
+  color: #0f172a;
   font-weight: 800;
-  letter-spacing: -0.5px;
+  margin: 0;
 }
 
-/* Layout sem as bordas vazias nas laterais */
+.form-page-subtitle {
+  color: #64748b;
+  margin-top: 5px;
+}
+
+/* 2. Fundo Branco que abraça todo o formulário e estica */
 .form-widescreen {
-  width: 100%;
+  width: 100% !important;
+  max-width: 100% !important;
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+  padding: 40px;
+  box-sizing: border-box;
+  border: 1px solid #e2e8f0;
 }
 
+/* 3. Grid Responsivo e Largo */
 .estoque-form-layout {
   display: grid;
-  grid-template-columns: 320px 1fr; /* Coluna da foto definida, dados expandem no resto */
-  gap: 40px;
+  grid-template-columns: 320px 1fr; /* Lateral Fixa, O resto estica infinitamente */
+  gap: 50px;
   align-items: start;
 }
 
-/* Coluna da Foto - Fixa e elegante na esquerda */
+/* 4. COLUNA 1: FOTO E RESUMO (Fixa) */
 .left-photo-col {
-  background: #ffffff;
-  padding: 30px;
+  background: #f8fafc;
+  padding: 25px;
   border-radius: 16px;
-  border: 1px solid #e5e7eb;
+  border: 1px solid #e2e8f0;
   display: flex;
   flex-direction: column;
   align-items: center;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-  position: sticky; /* A foto te acompanha enquanto você desce os dados */
+  position: sticky; /* O resumo te acompanha quando você rola a tela para baixo! */
   top: 20px;
 }
 
 .main-photo-display {
-  width: 220px;
-  height: 220px;
-  border-radius: 20px; /* Quadrado arredondado moderno */
+  width: 200px;
+  height: 200px;
+  border-radius: 50%; /* Foto redonda, visual de CRM de Alta Performance */
   overflow: hidden;
-  border: 2px dashed #d1d5db;
-  background: #f9fafb;
+  border: 3px dashed #cbd5e1;
+  background: #ffffff;
+  display: flex;
+  justify-content: center;
+  align-items: center;
   position: relative;
+  margin-bottom: 15px;
   transition: all 0.3s;
 }
 
@@ -65,121 +86,290 @@
   object-fit: cover;
 }
 
-/* Coluna de Dados - Ocupa todo o espaço restante */
+.photo-upload-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: pointer;
+  color: #94a3b8;
+}
+
+.photo-icon {
+  font-size: 3rem;
+  margin-bottom: 10px;
+  color: #cbd5e1;
+}
+
+.photo-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.btn-action-photo {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  color: #475569;
+}
+
+.btn-remove {
+  color: #ef4444;
+  border-color: #fca5a5;
+  background: #fef2f2;
+}
+
+/* Painel de Resumo Embaixo da Foto */
+.painel-resumo-lateral {
+  width: 100%;
+  margin-top: 30px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  box-sizing: border-box;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02);
+}
+
+.resumo-badges {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.badge-status, .badge-financeiro {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.badge-status.pendente { background: #fef3c7; color: #d97706; border: 1px solid #fcd34d; }
+.badge-status.aprovado { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+.badge-financeiro.inadimplente { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+.badge-financeiro.adimplente { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+
+.resumo-info {
+  text-align: center;
+  padding: 10px 0;
+  border-top: 1px dashed #cbd5e1;
+  border-bottom: 1px dashed #cbd5e1;
+}
+
+.resumo-info h4 {
+  margin: 0 0 5px 0;
+  color: #0f172a;
+  font-size: 1.1rem;
+  word-break: break-word;
+}
+
+.resumo-info p {
+  margin: 0;
+  color: #64748b;
+  font-size: 0.85rem;
+}
+
+.btn-whatsapp-resumo {
+  background: #25D366;
+  color: white;
+  padding: 12px;
+  border-radius: 8px;
+  text-decoration: none;
+  font-weight: bold;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  transition: background 0.2s;
+  font-size: 0.9rem;
+  box-shadow: 0 4px 6px rgba(37, 211, 102, 0.2);
+}
+
+.btn-whatsapp-resumo:hover {
+  background: #1ebc59;
+}
+
+.resumo-footer {
+  text-align: center;
+  color: #94a3b8;
+}
+
+/* 5. COLUNA 2: FORMULÁRIOS (Larga) */
 .right-data-col {
-  background: #fff;
   width: 100%;
 }
 
 .section-divider {
-  font-size: 0.85rem;
-  color: #3b82f6; /* Um azul sutil para os títulos das seções */
+  font-size: 0.9rem;
+  color: #3b82f6;
   font-weight: 800;
   border-bottom: 2px solid #eff6ff;
   padding-bottom: 8px;
-  margin: 30px 0 20px 0;
+  margin: 0 0 20px 0;
   text-transform: uppercase;
   letter-spacing: 1px;
 }
 
-/* Grid de Campos - Agora aproveitando o espaço largo */
-.form-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px;
+.mt-compact {
+  margin-top: 40px !important;
 }
 
-/* Inputs mais robustos */
-.form-group label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #6b7280;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-}
-
-.form-group input, 
-.form-group select, 
-.form-group textarea {
-  padding: 12px 15px;
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
-  font-size: 1rem;
-  background-color: #fff;
-  color: #1f2937;
-  transition: all 0.2s;
-}
-
-.form-group input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
-  outline: none;
-}
-
-/* Abas */
 .tabs-container {
   display: flex;
-  gap: 15px;
-  margin-bottom: 25px;
-  background: #f3f4f6;
+  gap: 10px;
+  margin-bottom: 30px;
+  background: #f1f5f9;
   padding: 6px;
   border-radius: 12px;
   width: fit-content;
 }
 
 .tab-btn {
-  padding: 10px 25px;
+  padding: 12px 30px;
   border: none;
   background: transparent;
   cursor: pointer;
   border-radius: 8px;
   font-weight: 700;
-  color: #4b5563;
+  color: #64748b;
   transition: all 0.2s;
+  font-size: 0.95rem;
 }
 
 .tab-btn.active {
-  background: #fff;
-  color: #111827;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
 }
 
-/* Ações */
-.form-actions {
-  margin-top: 50px;
-  padding: 30px 0;
-  border-top: 1px solid #e5e7eb;
-  display: flex;
-  justify-content: flex-end;
+/* Grid Dinâmico Esticado */
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
   gap: 20px;
 }
 
-.btn-salvar-form {
-  background: #111827; /* Preto luxo */
-  color: white;
-  padding: 14px 45px;
-  border: none;
-  border-radius: 12px;
+.span-1 { grid-column: span 1; }
+.span-2 { grid-column: span 2; }
+.span-3 { grid-column: span 3; }
+.span-4 { grid-column: span 4; }
+
+.form-group-row {
+  display: flex;
+  gap: 20px;
+}
+
+.flex-1 { flex: 1; }
+.flex-small { width: 120px; }
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group label {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+}
+
+.form-group input, 
+.form-group select, 
+.form-group textarea {
+  padding: 14px 15px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  font-size: 1rem;
+  background-color: #f8fafc;
+  color: #0f172a;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #3b82f6;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+  outline: none;
+}
+
+.status-select {
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* Ações Finais */
+.form-actions {
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 25px;
+}
+
+.btn-voltar-link {
+  color: #64748b;
+  text-decoration: none;
   font-weight: 700;
   font-size: 1rem;
+}
+
+.btn-salvar-form {
+  background: #0f172a;
+  color: white;
+  padding: 16px 50px;
+  border: none;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 1rem;
   cursor: pointer;
-  transition: transform 0.1s;
+  transition: transform 0.1s, background 0.2s;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+.btn-salvar-form:hover {
+  background: #1e293b;
 }
 
 .btn-salvar-form:active {
   transform: scale(0.98);
 }
 
-/* Celular */
+/* Ajuste Celular (Mantém a sua versão perfeita intocada) */
 @media (max-width: 1024px) {
+  .form-page-container {
+    padding: 15px !important;
+  }
+  .form-widescreen {
+    padding: 20px;
+  }
   .estoque-form-layout {
+    grid-template-columns: 1fr; /* Colapsa para 1 coluna */
+    gap: 30px;
+  }
+  .form-grid-4 {
     grid-template-columns: 1fr;
   }
-  .left-photo-col {
-    position: static;
-    width: auto;
+  .span-1, .span-2, .span-3, .span-4 {
+    grid-column: span 1;
   }
-  .form-page-container {
-    padding: 20px;
+  .left-photo-col {
+    position: static; /* Tira o sticky no mobile */
   }
 }

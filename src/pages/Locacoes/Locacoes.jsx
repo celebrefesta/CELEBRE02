@@ -8,7 +8,12 @@ const Locacoes = () => {
   const navigate = useNavigate();
   const [lista, setLista] = useState([]);
   const [busca, setBusca] = useState('');
-  const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes'); 
+  
+  // 🔥 NOVOS ESTADOS DE FILTRO SEPARADOS 🔥
+  const [filtroStatus, setFiltroStatus] = useState('todos'); // todos, orcamentos, confirmados, cancelados
+  const [filtroServico, setFiltroServico] = useState('todos'); // todos, pegue, decoracao
+  const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes'); // recentes, proximos, maiorValor, menorValor
+  
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
 
@@ -35,7 +40,14 @@ const Locacoes = () => {
         } else if (data.logistica && String(data.logistica.tipoFrete || data.logistica.frete).toUpperCase().includes('RETIRADA')) {
            tipoServico = "PEGUE E MONTE";
         }
-        return { id: doc.id, ...data, tipoServicoFormatado: tipoServico };
+        
+        // Garante que o criadoEm tenha um valor comparável, mesmo se for antigo
+        let timestampCriacao = 0;
+        if (data.criadoEm) {
+            timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
+        }
+
+        return { id: doc.id, ...data, tipoServicoFormatado: tipoServico, createdAtMs: timestampCriacao };
       });
 
       setLista(dados);
@@ -127,8 +139,8 @@ const Locacoes = () => {
     } catch (e) { alert("Erro"); } finally { setSalvandoPagamento(false); }
   };
 
+  // 🔥 1. APLICA A BUSCA DE TEXTO 🔥
   let filtrados = [...lista];
-
   if (busca) {
     const termo = busca.toLowerCase();
     filtrados = filtrados.filter(i => 
@@ -137,28 +149,52 @@ const Locacoes = () => {
     );
   }
 
-  if (filtroOrdenacao === 'orcamentos') {
-    filtrados = filtrados.filter(i => (i.status || '').toLowerCase().includes('orcam'));
+  // 🔥 2. APLICA O FILTRO DE STATUS 🔥
+  if (filtroStatus === 'orcamentos') {
+      filtrados = filtrados.filter(i => (i.status || '').toLowerCase().includes('orcam'));
+  } else if (filtroStatus === 'confirmados') {
+      filtrados = filtrados.filter(i => {
+          const s = (i.status || '').toLowerCase();
+          return !s.includes('orcam') && s !== 'cancelado';
+      });
+  } else if (filtroStatus === 'cancelados') {
+      filtrados = filtrados.filter(i => (i.status || '').toLowerCase() === 'cancelado');
   }
 
+  // 🔥 3. APLICA O FILTRO DE TIPO DE SERVIÇO 🔥
+  if (filtroServico === 'pegue') {
+      filtrados = filtrados.filter(i => i.tipoServicoFormatado.includes('PEGUE'));
+  } else if (filtroServico === 'decoracao') {
+      filtrados = filtrados.filter(i => !i.tipoServicoFormatado.includes('PEGUE'));
+  }
+
+  // 🔥 4. APLICA A ORDENAÇÃO CORRIGIDA 🔥
   filtrados.sort((a, b) => {
+    
     if (filtroOrdenacao === 'proximos') {
       const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
       const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
       return dataA - dataB;
+    
+    } else if (filtroOrdenacao === 'maiorValor') {
+      return Number(b.valorTotal || 0) - Number(a.valorTotal || 0);
+    
+    } else if (filtroOrdenacao === 'menorValor') {
+      return Number(a.valorTotal || 0) - Number(b.valorTotal || 0);
+    
     } else {
-      const numA = a.numeroPedido || '';
-      const numB = b.numeroPedido || '';
+      // PADRÃO: "MAIS RECENTES" (Orçamentos colados no topo, depois os criados recentemente)
       const statusA = (a.status || '').toLowerCase();
       const statusB = (b.status || '').toLowerCase();
+      const isA_Orcam = statusA.includes('orcam');
+      const isB_Orcam = statusB.includes('orcam');
 
-      const isAWeb = !numA && statusA.includes('orcam');
-      const isBWeb = !numB && statusB.includes('orcam');
+      // 1º Regra: Se um é orçamento e o outro não, orçamento sobe.
+      if (isA_Orcam && !isB_Orcam) return -1;
+      if (!isA_Orcam && isB_Orcam) return 1;
 
-      if (isAWeb && !isBWeb) return -1;
-      if (!isAWeb && isBWeb) return 1;
-
-      return numB.localeCompare(numA);
+      // 2º Regra: Se os dois são iguais no status acima, ordena pelo timestamp de criação mais novo
+      return b.createdAtMs - a.createdAtMs;
     }
   });
 
@@ -183,34 +219,58 @@ const Locacoes = () => {
         </div>
       </div>
 
-      <div className="filter-wrapper-clean" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <div className="search-bar-container" style={{ flex: '1', minWidth: '280px' }}>
-          <span className="search-icon">🔍</span>
-          {/* 🔥 ADICIONADO NAME E ID 🔥 */}
-          <input 
-            type="text"
-            name="buscaPedidos"
-            id="buscaPedidos"
-            className="search-input-clean" 
-            placeholder="Buscar por cliente ou nº do pedido..." 
-            value={busca} 
-            onChange={e => setBusca(e.target.value)} 
-          />
-        </div>
+      {/* 🔥 NOVA BARRA DE FILTROS SUPER AVANÇADA 🔥 */}
+      <div className="filter-wrapper-clean" style={{ display: 'flex', flexDirection: 'column', gap: '15px', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
         
-        {/* 🔥 ADICIONADO NAME E ID 🔥 */}
-        <select 
-          name="filtroOrdenacao"
-          id="filtroOrdenacao"
-          value={filtroOrdenacao} 
-          onChange={(e) => setFiltroOrdenacao(e.target.value)}
-          className="search-input-clean"
-          style={{ width: 'auto', minWidth: '240px', cursor: 'pointer', background: 'white', border: '1px solid #cbd5e1', color: '#0f172a', fontWeight: 'bold' }}
-        >
-          <option value="recentes">🌟 Mais Recentes (Orçamentos no Topo)</option>
-          <option value="proximos">📅 Eventos Mais Próximos</option>
-          <option value="orcamentos">🎯 Mostrar Apenas Orçamentos</option>
-        </select>
+        {/* Linha 1: Busca e Chips de Status */}
+        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="search-bar-container" style={{ flex: '1', minWidth: '280px', margin: 0 }}>
+              <span className="search-icon">🔍</span>
+              <input 
+                type="text"
+                className="search-input-clean" 
+                placeholder="Buscar por cliente ou pedido..." 
+                value={busca} 
+                onChange={e => setBusca(e.target.value)} 
+              />
+            </div>
+            
+            <div className="chips-categorias" style={{ padding: 0, overflow: 'visible', margin: 0, gap: '8px' }}>
+                <button type="button" className={`chip-cat ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Todos</button>
+                <button type="button" className={`chip-cat ${filtroStatus === 'orcamentos' ? 'active' : ''}`} style={filtroStatus === 'orcamentos' ? {backgroundColor: '#fef3c7', color: '#d97706', borderColor: '#fcd34d'} : {}} onClick={() => setFiltroStatus('orcamentos')}>Leads / Orçamentos</button>
+                <button type="button" className={`chip-cat ${filtroStatus === 'confirmados' ? 'active' : ''}`} style={filtroStatus === 'confirmados' ? {backgroundColor: '#dcfce7', color: '#10b981', borderColor: '#6ee7b7'} : {}} onClick={() => setFiltroStatus('confirmados')}>Confirmados</button>
+                <button type="button" className={`chip-cat ${filtroStatus === 'cancelados' ? 'active' : ''}`} style={filtroStatus === 'cancelados' ? {backgroundColor: '#fef2f2', color: '#ef4444', borderColor: '#fca5a5'} : {}} onClick={() => setFiltroStatus('cancelados')}>Cancelados</button>
+            </div>
+        </div>
+
+        <div style={{ width: '100%', height: '1px', background: '#f1f5f9' }}></div>
+
+        {/* Linha 2: Selects de Serviço e Ordenação */}
+        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+            <select 
+              value={filtroServico} 
+              onChange={(e) => setFiltroServico(e.target.value)}
+              className="search-input-clean"
+              style={{ width: 'auto', minWidth: '220px', cursor: 'pointer', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#64748b', fontSize: '13px' }}
+            >
+              <option value="todos">🔧 Todos os Serviços</option>
+              <option value="pegue">📦 Apenas Pegue e Monte</option>
+              <option value="decoracao">✨ Apenas Decoração Completa</option>
+            </select>
+
+            <select 
+              value={filtroOrdenacao} 
+              onChange={(e) => setFiltroOrdenacao(e.target.value)}
+              className="search-input-clean"
+              style={{ width: 'auto', minWidth: '220px', cursor: 'pointer', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#64748b', fontSize: '13px' }}
+            >
+              <option value="recentes">🌟 Mais Recentes / Novos Pedidos</option>
+              <option value="proximos">📅 Eventos Mais Próximos</option>
+              <option value="maiorValor">💰 Maior Valor para Menor Valor</option>
+              <option value="menorValor">📉 Menor Valor para Maior Valor</option>
+            </select>
+        </div>
+
       </div>
 
       <div className="table-responsive">
@@ -229,6 +289,8 @@ const Locacoes = () => {
           <tbody>
             {loading ? (
               <tr><td colSpan="7" className="loading-td">Carregando locações...</td></tr>
+            ) : filtrados.length === 0 ? (
+              <tr><td colSpan="7" style={{textAlign: "center", padding: "40px", color: "#94a3b8"}}>Nenhum pedido encontrado nesta filtragem.</td></tr>
             ) : (
               filtrados.map(item => {
                 const valorTotal = Number(item.valorTotal || 0);
@@ -280,13 +342,13 @@ const Locacoes = () => {
                     className={temAlertas ? 'linha-alerta' : ''} 
                     style={{ opacity: isCancelado ? 0.6 : 1, cursor: 'pointer' }}
                     onClick={() => navigate(`/locacoes/editar/${item.id}`)}
-                    title="Clique em qualquer lugar da linha para abrir os detalhes deste pedido"
+                    title="Clique para abrir detalhes do pedido"
                   >
                     <td className="pedido-id-cell">
                       {item.numeroPedido ? (
                         `#${item.numeroPedido}`
                       ) : isOrcamento ? (
-                        <span style={{color: '#f59e0b', fontWeight: 'bold'}}>ORÇAMENTO DO SITE</span>
+                        <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO DO SITE</span>
                       ) : (
                         <span style={{color: '#94a3b8', fontWeight: 'bold'}}>#S/N</span>
                       )}
@@ -388,7 +450,6 @@ const Locacoes = () => {
                 <form onSubmit={registrarPagamento} className="form-pagamento">
                     <div className="form-group-pag">
                       <label>Valor Recebido (R$)</label>
-                      {/* 🔥 ADICIONADO NAME E ID 🔥 */}
                       <input 
                         type="number" 
                         name="valorPagamento" 
@@ -402,7 +463,6 @@ const Locacoes = () => {
                     </div>
                     <div className="form-group-pag">
                       <label>Forma de Pagamento</label>
-                      {/* 🔥 ADICIONADO NAME E ID 🔥 */}
                       <select 
                         name="formaPagamento" 
                         id="formaPagamento" 
@@ -417,7 +477,6 @@ const Locacoes = () => {
                     </div>
                     <div className="form-group-pag">
                       <label>Data do Pagamento</label>
-                      {/* 🔥 ADICIONADO NAME E ID 🔥 */}
                       <input 
                         type="date" 
                         name="dataPagamento" 
@@ -436,7 +495,7 @@ const Locacoes = () => {
          </div>
       )}
 
-      {/* 🔥 SUPER AUDITORIA DE PROBLEMAS GERAIS 🔥 */}
+      {/* SUPER AUDITORIA */}
       {mostrarAuditoria && (
         <div className="modal-overlay-v2">
           <div className="modal-box-v2 auditoria-box">

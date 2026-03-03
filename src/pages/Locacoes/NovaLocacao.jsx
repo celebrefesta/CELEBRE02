@@ -23,14 +23,19 @@ const NovaLocacao = () => {
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
   
   const [logistica, setLogistica] = useState({ 
-    tipo: 'retirada', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', obsTransporte: '' 
+    tipo: 'retirada', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', referencia: '', obsTransporte: '' 
   });
   const [desconto, setDesconto] = useState(0);
   const [obsInternas, setObsInternas] = useState('');
 
-  // --- ESTADOS DO MODAL DE COMPRA RÁPIDA ---
   const [modalCompraAberto, setModalCompraAberto] = useState(false);
-  const [formCompra, setFormCompra] = useState({ nome: "", quantidade: 1, valorEstimado: "", categoria: "material", prazo: "", obs: "" });
+  
+  const [formCompra, setFormCompra] = useState({ 
+      nome: "", quantidade: 1, valorEstimado: "", valorAluguel: "", categoria: "material", prazo: "", fornecedor: "", obs: "" 
+  });
+  
+  const [sugestoesCompra, setSugestoesCompra] = useState([]);
+
   const [salvandoCompra, setSalvandoCompra] = useState(false);
   const [acaoSalvar, setAcaoSalvar] = useState('fechar');
 
@@ -54,13 +59,44 @@ const NovaLocacao = () => {
 
   const categoriasUnicas = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
 
+  const dispararCompraAutomatica = (item) => {
+    let valorAlg = item.financeiro?.valorAluguel || "0,00";
+    if (typeof valorAlg === 'number') valorAlg = valorAlg.toFixed(2).replace(".", ",");
+    else if (!valorAlg && item.preco) valorAlg = Number(item.preco).toFixed(2).replace(".", ",");
+
+    setFormCompra({
+        nome: item.nome,
+        quantidade: 1, 
+        valorEstimado: "",
+        valorAluguel: valorAlg,
+        categoria: item.categoria || "acervo",
+        prazo: datas.retirada || "",
+        fornecedor: "",
+        obs: "Peça adicionada automaticamente por falta de estoque no momento do pedido."
+    });
+    setModalCompraAberto(true);
+  };
+
   const addCarrinho = (item) => {
     const precoItem = Number(item.financeiro?.valorAluguel || 0);
+    const qtdEstoque = Number(item.quantidade) || 1; 
+    
     const existe = carrinho.find(i => i.id === item.id);
+    
     if (existe) {
+      if (existe.qtd >= qtdEstoque && !existe.isPendenteCompra) {
+          alert(`⚠️ Estoque Insuficiente!\nVocê possui apenas ${qtdEstoque} unidade(s) de "${item.nome}".\n\nVamos abrir a tela de COMPRA para adicionar a unidade faltante!`);
+          dispararCompraAutomatica(item);
+          return;
+      }
       setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
     } else {
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem }]);
+      if (qtdEstoque < 1) {
+          alert(`⚠️ Estoque Zerado!\nVocê não possui "${item.nome}" disponível no acervo no momento.\n\nVamos abrir a tela de COMPRA para encomendar!`);
+          dispararCompraAutomatica(item);
+          return;
+      }
+      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, qtdOriginal: qtdEstoque }]); 
     }
   };
 
@@ -102,8 +138,26 @@ const NovaLocacao = () => {
     setLogistica({ ...logistica, frete: v });
   };
 
+  const handleDataRetiradaChange = (e) => {
+    const novaData = e.target.value;
+    setDatas(prev => {
+      if (prev.devolucao && novaData > prev.devolucao) {
+        return { retirada: novaData, devolucao: novaData };
+      }
+      return { ...prev, retirada: novaData };
+    });
+  };
+
   const handleSalvar = async (status) => {
-    if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data de retirada!");
+    if (!clienteSelecionado) return alert("Selecione o Cliente!");
+    if (!temaFesta) return alert("Preencha o Tema da Festa!");
+    if (!datas.retirada) return alert("Preencha a Data de Retirada!");
+    if (!datas.devolucao) return alert("Preencha a Data de Devolução!");
+    
+    if (datas.devolucao && datas.retirada > datas.devolucao) {
+        return alert("A data de devolução não pode ser menor que a data de retirada!");
+    }
+
     try {
       const coll = collection(db, "locacoes");
       const snap = await getCountFromServer(coll);
@@ -138,23 +192,39 @@ const NovaLocacao = () => {
     try {
       const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente Atual';
       const nomeVinculo = temaFesta ? `${temaFesta} - ${nomeCliente}` : `Pedido em Criação de ${nomeCliente}`;
-      let valorNumerico = formCompra.valorEstimado ? Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
+      
+      let valorCusto = formCompra.valorEstimado ? Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
+      let valorAluguel = formCompra.valorAluguel ? Number(formCompra.valorAluguel.replace(/\./g, "").replace(",", ".")) : 0;
 
-      await addDoc(collection(db, "lista_compras"), {
-        nome: formCompra.nome, quantidade: Number(formCompra.quantidade), valorEstimado: valorNumerico, categoria: formCompra.categoria, 
-        prazo: formCompra.prazo || datas.retirada || "", obs: formCompra.obs, vinculoTipo: "pedido", vinculoId: "pendente_salvamento", 
+      const novaCompraRef = await addDoc(collection(db, "lista_compras"), {
+        nome: formCompra.nome, quantidade: Number(formCompra.quantidade), valorEstimado: valorCusto, categoria: formCompra.categoria, 
+        prazo: formCompra.prazo || datas.retirada || "", fornecedor: formCompra.fornecedor, obs: formCompra.obs, vinculoTipo: "pedido", vinculoId: "pendente_salvamento", 
         vinculo: nomeVinculo, status: "pendente", createdAt: serverTimestamp()
       });
 
-      setFormCompra({ nome: "", quantidade: 1, valorEstimado: "", categoria: "material", prazo: "", obs: "" });
+      const itemParaCarrinho = {
+        id: novaCompraRef.id, 
+        nome: formCompra.nome,
+        categoria: formCompra.categoria,
+        foto: '', 
+        preco: valorAluguel,
+        qtd: Number(formCompra.quantidade),
+        qtdOriginal: Number(formCompra.quantidade), 
+        isPendenteCompra: true 
+      };
+
+      setCarrinho(prev => [...prev, itemParaCarrinho]);
+      setFormCompra({ nome: "", quantidade: 1, valorEstimado: "", valorAluguel: "", categoria: "material", prazo: "", fornecedor: "", obs: "" });
+      setSugestoesCompra([]);
+      
       if (acaoSalvar === 'fechar') {
-        alert("Adicionado com sucesso!");
+        alert("Lista de Compras e Carrinho atualizados com sucesso!");
         setModalCompraAberto(false);
       } else {
-        alert("✅ Salvo! Digite o próximo.");
+        alert("✅ Salvo no carrinho! Digite o próximo.");
         document.getElementById('compraNomeInput').focus();
       }
-    } catch (err) { alert("Erro"); } finally { setSalvandoCompra(false); }
+    } catch (err) { alert("Erro ao salvar compra."); } finally { setSalvandoCompra(false); }
   };
 
   if (loading) return <div className="loading-state">Carregando formulário...</div>;
@@ -168,7 +238,6 @@ const NovaLocacao = () => {
 
       <div className="layout-duas-colunas">
         
-        {/* COLUNA ESQUERDA: FORMULÁRIO */}
         <div className="coluna-form">
           
           <div className="card-secao">
@@ -197,14 +266,20 @@ const NovaLocacao = () => {
                 </select>
               </div>
               <div className="form-group flex-2">
-                <label>Tema da Festa</label>
+                <label>Tema da Festa *</label>
                 <input type="text" placeholder="Ex: Safari, Casamento..." value={temaFesta} onChange={e => setTemaFesta(e.target.value)} />
               </div>
             </div>
 
             <div className="form-row">
-              <div className="form-group flex-1"><label>Data de Retirada / Evento *</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} /></div>
-              <div className="form-group flex-1"><label>Data de Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} /></div>
+              <div className="form-group flex-1">
+                <label>Data de Retirada / Evento *</label>
+                <input type="date" value={datas.retirada} onChange={handleDataRetiradaChange} />
+              </div>
+              <div className="form-group flex-1">
+                <label>Data de Devolução *</label>
+                <input type="date" min={datas.retirada} value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} />
+              </div>
             </div>
           </div>
 
@@ -224,13 +299,19 @@ const NovaLocacao = () => {
                   <div className="form-group flex-2"><label>Cidade / UF</label><input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} /></div>
                   <div className="form-group flex-1"><label>Taxa Frete (R$)</label><input type="text" placeholder="0,00" value={logistica.frete} onChange={handleFreteChange} /></div>
                 </div>
-                <div className="form-row">
+                
+                <div className="form-row mt-10">
                   <div className="form-group flex-2"><label>Logradouro</label><input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} /></div>
-                  <div className="form-group-inline flex-2">
-                    <div className="form-group flex-1"><label>Número</label><input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} /></div>
-                    <div className="form-group flex-2"><label>Bairro</label><input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} /></div>
+                  <div className="form-group flex-1"><label>Número</label><input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} /></div>
+                  <div className="form-group flex-2"><label>Bairro</label><input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} /></div>
+                </div>
+                <div className="form-row mt-10">
+                  <div className="form-group flex-1">
+                    <label>Ponto de Referência</label>
+                    <input type="text" placeholder="Ex: Ao lado do mercado, portão preto..." value={logistica.referencia} onChange={e => setLogistica({...logistica, referencia: e.target.value})} />
                   </div>
                 </div>
+
                 <div className="form-group mt-10">
                   <label>Observações de Transporte</label>
                   <textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})}></textarea>
@@ -263,14 +344,37 @@ const NovaLocacao = () => {
                           {item.foto ? <img src={item.foto} alt="Peça"/> : <div className="img-placeholder">📷</div>}
                         </td>
                         <td className="carrinho-info">
-                          <strong>{item.nome}</strong>
+                          <strong>
+                            {item.nome}
+                            {item.isPendenteCompra && (
+                                <span style={{marginLeft: '8px', background: '#fef3c7', color: '#d97706', border: '1px solid #fcd34d', padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold'}}>
+                                    ⏳ COMPRA PENDENTE
+                                </span>
+                            )}
+                          </strong>
                           <span>R$ {Number(item.preco).toFixed(2)} un</span>
+                          
+                          {/* 🔥 NOVO: EXIBIÇÃO DE ESTOQUE DENTRO DO CARRINHO 🔥 */}
+                          {!item.isPendenteCompra && (
+                              <span style={{fontSize: '0.75rem', color: '#3b82f6', fontWeight: '600', display: 'block', marginTop: '4px'}}>
+                                  📦 Em estoque: {item.qtdOriginal} unid.
+                              </span>
+                          )}
                         </td>
                         <td className="text-center">
                           <div className="controle-qtd">
                             <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
                             <span>{item.qtd}</span>
-                            <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i))}>+</button>
+                            <button type="button" onClick={() => {
+                                if (item.isPendenteCompra) {
+                                    setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i));
+                                } else if (item.qtd >= item.qtdOriginal) {
+                                    alert(`⚠️ Estoque Insuficiente!\nVocê possui apenas ${item.qtdOriginal} unidade(s) de "${item.nome}".\n\nVamos abrir a tela de COMPRA para a unidade extra!`);
+                                    dispararCompraAutomatica(item);
+                                } else {
+                                    setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i));
+                                }
+                            }}>+</button>
                           </div>
                         </td>
                         <td className="text-right carrinho-total-item">
@@ -296,7 +400,6 @@ const NovaLocacao = () => {
 
         </div>
 
-        {/* COLUNA DIREITA: FINANCEIRO FIXO */}
         <aside className="coluna-financeiro">
           <div className="card-financeiro-sticky">
             <h3>Resumo Financeiro</h3>
@@ -320,7 +423,6 @@ const NovaLocacao = () => {
         </aside>
       </div>
 
-      {/* --- MODAL CATÁLOGO DE PEÇAS --- */}
       {modalAberto && (
         <div className="modal-overlay-premium">
           <div className="modal-box-premium catalogo-modal">
@@ -344,9 +446,11 @@ const NovaLocacao = () => {
               {itensFiltrados.map(item => (
                 <div key={item.id} className="peca-card" onClick={() => addCarrinho(item)}>
                   
-                  {/* FOTO E BOTÃO DE + */}
                   <div className="peca-img">
                     {item.foto ? <img src={item.foto} alt=""/> : '📷'}
+                    <div style={{position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>
+                        Qtd: {item.quantidade || 1}
+                    </div>
                     <button className="btn-add-peca">+</button>
                   </div>
                   
@@ -364,40 +468,107 @@ const NovaLocacao = () => {
         </div>
       )}
 
-      {/* --- MODAL COMPRA RÁPIDA --- */}
       {modalCompraAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
-          <div className="modal-box-premium">
+          <div className="modal-box-premium" style={{maxWidth: '650px'}}>
             <div className="modal-header">
-              <h3>🛒 Lista de Compras</h3>
+              <h3>🛒 Comprar Item & Adicionar ao Pedido</h3>
               <button className="btn-fechar" onClick={() => setModalCompraAberto(false)}>X</button>
             </div>
-            <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '20px'}}>Adicione itens que faltam para este pedido. Eles irão direto para a tela de Compras.</p>
+            <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '20px'}}>
+              Se a peça já existir no seu acervo, selecione na lista abaixo para não criar cadastros duplicados!
+            </p>
             
             <form onSubmit={handleSalvarCompraRapida} className="form-pagamento">
-              <div className="form-group-pag">
-                <label>O que precisa comprar? *</label>
-                <input id="compraNomeInput" type="text" required autoFocus value={formCompra.nome} onChange={e => setFormCompra({...formCompra, nome: e.target.value})} />
+              
+              <div className="form-group-pag" style={{position: 'relative'}}>
+                <label>Nome do Item que será comprado *</label>
+                <input 
+                  id="compraNomeInput" 
+                  type="text" 
+                  required 
+                  autoFocus 
+                  autoComplete="off"
+                  value={formCompra.nome} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormCompra({...formCompra, nome: val});
+                    
+                    if(val.length >= 2) {
+                       const filtrados = estoque.filter(item => item.nome.toLowerCase().includes(val.toLowerCase()));
+                       setSugestoesCompra(filtrados);
+                    } else {
+                       setSugestoesCompra([]);
+                    }
+                  }} 
+                  onBlur={() => setTimeout(() => setSugestoesCompra([]), 200)}
+                />
+                
+                {sugestoesCompra.length > 0 && (
+                   <div style={{position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', zIndex: 100, maxHeight: '180px', overflowY: 'auto', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}>
+                      {sugestoesCompra.map(item => (
+                         <div 
+                           key={item.id} 
+                           onMouseDown={() => { 
+                              let valorAlg = item.financeiro?.valorAluguel || "0,00";
+                              if (typeof valorAlg === 'number') valorAlg = valorAlg.toFixed(2).replace(".", ",");
+                              
+                              setFormCompra({
+                                 ...formCompra, 
+                                 nome: item.nome,
+                                 categoria: item.categoria || "acervo",
+                                 valorAluguel: valorAlg
+                              });
+                              setSugestoesCompra([]);
+                           }}
+                           style={{padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}
+                           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}
+                         >
+                           <span style={{fontWeight: 'bold', color: '#0f172a', fontSize: '13px'}}>{item.nome}</span>
+                           <span style={{fontSize: '11px', color: '#64748b', backgroundColor: '#e2e8f0', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold'}}>No Acervo: {item.quantidade}</span>
+                         </div>
+                      ))}
+                   </div>
+                )}
               </div>
-              <div className="form-group-row">
+              
+              <div className="form-group-row mt-10">
                 <div className="form-group-pag" style={{width: '80px'}}>
                   <label>Qtd *</label>
                   <input type="number" min="1" required value={formCompra.quantidade} onChange={e => setFormCompra({...formCompra, quantidade: e.target.value})} />
                 </div>
                 <div className="form-group-pag flex-1">
-                  <label>Valor Unit. Estimado</label>
+                  <label title="Quanto você vai gastar na loja">Custo Est. (R$)</label>
                   <input type="text" placeholder="0,00" value={formCompra.valorEstimado} onChange={e => setFormCompra({...formCompra, valorEstimado: maskCurrency(e.target.value)})} />
                 </div>
+                <div className="form-group-pag flex-1">
+                  <label title="Quanto vai custar para o cliente alugar">Cobrar Aluguel</label>
+                  <input type="text" placeholder="0,00" style={{borderColor: '#c5a059', backgroundColor: '#fffbeb'}} value={formCompra.valorAluguel} onChange={e => setFormCompra({...formCompra, valorAluguel: maskCurrency(e.target.value)})} />
+                </div>
               </div>
+
+              <div className="form-group-row">
+                <div className="form-group-pag flex-1">
+                  <label>Data Limite (Chegada)</label>
+                  <input type="date" value={formCompra.prazo} onChange={e => setFormCompra({...formCompra, prazo: e.target.value})} />
+                </div>
+                <div className="form-group-pag flex-2">
+                  <label>Fornecedor (Nome ou Link)</label>
+                  <input type="text" placeholder="Ex: Mercado Livre..." value={formCompra.fornecedor} onChange={e => setFormCompra({...formCompra, fornecedor: e.target.value})} />
+                </div>
+              </div>
+
               <div className="form-group-pag">
                 <label>Categoria</label>
                 <select value={formCompra.categoria} onChange={e => setFormCompra({...formCompra, categoria: e.target.value})}>
-                  <option value="material">Material (Bexiga, Fita...)</option>
-                  <option value="acervo">Acervo (Vaso, Móvel...)</option>
+                  <option value="material">Material de Consumo (Bexiga, Fita...)</option>
+                  <option value="acervo">Peça de Acervo (Vaso, Móvel...)</option>
                 </select>
               </div>
+              
               <div className="form-group-pag">
-                <label>Observação (Cor, loja...)</label>
+                <label>Observação (Cor, tamanho, etc)</label>
                 <textarea rows="2" value={formCompra.obs} onChange={e => setFormCompra({...formCompra, obs: e.target.value})}></textarea>
               </div>
 
@@ -407,7 +578,7 @@ const NovaLocacao = () => {
                   {salvandoCompra && acaoSalvar === 'continuar' ? 'Salvando...' : '+ Salvar e Novo'}
                 </button>
                 <button type="submit" className="btn-salvar-form" style={{flex: 1, padding: '12px'}} onClick={() => setAcaoSalvar('fechar')} disabled={salvandoCompra}>
-                  {salvandoCompra && acaoSalvar === 'fechar' ? 'Salvando...' : 'Salvar e Fechar'}
+                  {salvandoCompra && acaoSalvar === 'fechar' ? 'Salvando...' : 'Salvar e Inserir'}
                 </button>
               </div>
             </form>

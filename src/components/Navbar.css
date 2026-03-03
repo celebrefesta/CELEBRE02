@@ -94,19 +94,31 @@
    ========================================= */
 .main-content {
   margin-left: 250px;
-  padding: 20px;
+  padding: 0; /* 🔥 ZERADO: Agora as páginas decidem seu próprio limite 🔥 */
   width: calc(100% - 250px);
   min-height: 100vh;
   transition: margin 0.3s ease;
+  box-sizing: border-box; /* 🔥 IMPEDE O VAZAMENTO LATERAL 🔥 */
+  overflow-x: hidden; /* 🔥 CORTA A BARRA DE ROLAGEM HORIZONTAL 🔥 */
+  background-color: #f1f5f9; /* Fundo suave para dar contraste aos cards brancos */
 }
 
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 0; /* No mobile ele ocupa a tela toda */
-    width: 100%;
-    padding: 15px;
-    padding-top: 70px; /* Espaço para o botão hambúrguer no topo */
-  }
+/* =========================================
+   BARRA SUPERIOR (NAVBAR DO SININHO E PERFIL)
+   ========================================= */
+.navbar-top {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end; /* Joga os itens para a direita */
+  align-items: center;
+  padding: 15px 30px;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  box-sizing: border-box;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  gap: 20px;
 }
 
 /* =========================================
@@ -158,7 +170,7 @@
   .main-content {
     margin-left: 0 !important; /* Mata a margem da sidebar do PC */
     width: 100% !important;   /* Ocupa a largura total */
-    padding: 15px !important;
+    padding: 0 !important;
     padding-top: 80px !important; /* Dá espaço para o botão de menu fixo */
     box-sizing: border-box;
     overflow-x: hidden; /* Evita que a tela "dance" para os lados */

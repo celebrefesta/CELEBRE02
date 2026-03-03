@@ -554,17 +554,18 @@ const Moodboard = () => {
       {/* ÁREA DA PRANCHETA */}
       <div className="studio-canvas" onContextMenu={(e) => { e.preventDefault(); }}>
         
+        {/* 🔥 BOTÕES DA BARRA SUPERIOR CORRIGIDOS E EXPLICATIVOS 🔥 */}
         <div className="canvas-header-overlay" onClick={e => e.stopPropagation()}>
-             <button className="btn-voltar-moodboard" onClick={() => navigate(-1)}>
-                 ← <span className="btn-text">Voltar</span>
-             </button>
-
              <div className="header-actions-group">
-                 <button className="btn-header-action" onClick={handleAbrirListaProjetos}><Icons.Folder /> <span className="btn-text">Abrir</span></button>
-                 <button className="btn-header-action" onClick={handleAbrirModalSalvar}><Icons.Save /> <span className="btn-text">Salvar</span></button>
+                 <button className="btn-header-action" onClick={handleAbrirListaProjetos}><Icons.Folder /> <span className="btn-text">ABRIR PROJETOS</span></button>
+                 <button className="btn-header-action" onClick={handleAbrirModalSalvar}><Icons.Save /> <span className="btn-text">SALVAR NOVO PROJETO</span></button>
                  <div className="header-divider"></div>
-                 <button className="btn-header-action" onClick={handleClearProject}><Icons.Trash /> <span className="btn-text">Limpar</span></button>
-                 <button className="btn-header-action primary" onClick={handleExportImage}><Icons.Download /> <span className="btn-text">Baixar</span></button>
+                 <button className="btn-header-action" onClick={handleClearProject}><Icons.Trash /> <span className="btn-text">LIMPAR TELA</span></button>
+                 <button className="btn-header-action primary" onClick={handleExportImage}><Icons.Download /> <span className="btn-text">BAIXAR PROJETO (PNG)</span></button>
+                 <div className="header-divider"></div>
+                 <button className="btn-header-action" style={{backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold'}} onClick={() => navigate('/')}>
+                     ✕ <span className="btn-text">SAIR</span>
+                 </button>
              </div>
         </div>
         
@@ -653,7 +654,7 @@ const Moodboard = () => {
                         <div className="selection-border" />
                         {item.type === 'text' && window.innerWidth < 900 && (
                             <div 
-                                onPointerDown={(e) => e.stopPropagation()} /* O SEGREDO TÁ AQUI */
+                                onPointerDown={(e) => e.stopPropagation()} 
                                 onClick={(e) => { e.stopPropagation(); setEditingTextId(item.uniqueId); }}
                                 onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setEditingTextId(item.uniqueId); }}
                                 style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '6px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 6px rgba(0,0,0,0.2)', zIndex: 1000 }}

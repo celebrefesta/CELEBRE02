@@ -24,7 +24,6 @@ const CadastroCliente = () => {
     celular: '', telefoneFixo: '', email: '', origem: '',
     cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '',
     tags: '', observacoes: '',
-    // 🔥 Agora temos DOIS controles independentes 🔥
     situacaoFinanceira: 'adimplente', 
     statusCadastro: 'aprovado'
   });
@@ -35,8 +34,6 @@ const CadastroCliente = () => {
       setFotoBase64(clienteEditando.foto || '');
       setPosicaoFoto(clienteEditando.posicaoFoto || { x: 50, y: 50 });
       
-      // Se o cliente antigo tinha o financeiro "pendente" (a regra velha), nós convertemos 
-      // para a regra nova: Cadastro Pendente + Financeiro Limpo (Adimplente)
       const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
       
       setFormData({
@@ -46,8 +43,6 @@ const CadastroCliente = () => {
         celular: clienteEditando.celular || '', telefoneFixo: clienteEditando.telefoneFixo || '', email: clienteEditando.email || '', origem: clienteEditando.origem || '',
         cep: clienteEditando.cep || '', logradouro: clienteEditando.logradouro || '', numero: clienteEditando.numero || '', complemento: clienteEditando.complemento || '', bairro: clienteEditando.bairro || '', cidade: clienteEditando.cidade || '', uf: clienteEditando.uf || '',
         tags: clienteEditando.tags || '', observacoes: clienteEditando.observacoes || '',
-        
-        // 🔥 Aplica a conversão inteligente aqui 🔥
         situacaoFinanceira: eraPendenteAntigo ? 'adimplente' : (clienteEditando.situacaoFinanceira || 'adimplente'),
         statusCadastro: clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado')
       });
@@ -193,10 +188,10 @@ const CadastroCliente = () => {
       </div>
 
       <div className="form-widescreen">
-        <form onSubmit={salvarCliente} className="estoque-form-layout">
+        <form onSubmit={salvarCliente} className="estoque-form-layout" autoComplete="on">
           
-          <div className="left-photo-col centralizado">
-            <h3 className="section-divider" style={{marginTop: 0}}>FOTO / LOGO</h3>
+          <div className="left-photo-col">
+            <h3 className="section-divider" style={{marginTop: 0, textAlign: 'center', width: '100%'}}>PERFIL DO CLIENTE</h3>
             
             <div className="main-photo-display">
               {fotoBase64 ? (
@@ -238,6 +233,39 @@ const CadastroCliente = () => {
                 <input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} />
               </div>
             )}
+
+            <div className="painel-resumo-lateral">
+              <div className="resumo-badges">
+                <span className={`badge-status ${formData.statusCadastro}`}>
+                  {formData.statusCadastro === 'pendente' ? '⏳ Cadastro Pendente' : '✅ Cadastro Aprovado'}
+                </span>
+                <span className={`badge-financeiro ${formData.situacaoFinanceira}`}>
+                  {formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente'}
+                </span>
+              </div>
+
+              <div className="resumo-info">
+                <h4>{tipoPessoa === 'fisica' ? (formData.nome || 'Novo Cliente') : (formData.nomeFantasia || 'Nova Empresa')}</h4>
+                <p>{tipoPessoa === 'fisica' ? (formData.cpf || 'CPF não informado') : (formData.cnpj || 'CNPJ não informado')}</p>
+              </div>
+
+              {formData.celular && (
+                <a 
+                  href={`https://wa.me/55${formData.celular.replace(/\D/g, '')}`} 
+                  target="_blank" 
+                  rel="noreferrer" 
+                  className="btn-whatsapp-resumo"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="18" height="18" fill="currentColor"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>
+                  Chamar no WhatsApp
+                </a>
+              )}
+
+              <div className="resumo-footer">
+                <small>📅 Criado em: {clienteEditando?.criadoEm ? new Date(clienteEditando.criadoEm).toLocaleDateString('pt-BR') : 'Hoje'}</small>
+              </div>
+            </div>
+            
           </div>
 
           <div className="right-data-col">
@@ -261,13 +289,14 @@ const CadastroCliente = () => {
             {tipoPessoa === 'fisica' ? (
               <>
                 <h3 className="section-divider" style={{marginTop: 0}}>DADOS PESSOAIS</h3>
+                {/* 🔥 ADICIONADO autoComplete NOS CAMPOS PESSOAIS 🔥 */}
                 <div className="form-grid-4">
-                  <div className="form-group span-2"><label>NOME COMPLETO *</label><input type="text" name="nome" value={formData.nome} onChange={handleChange} required /></div>
-                  <div className="form-group span-1"><label>CPF</label><input type="text" name="cpf" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label>RG (OPCIONAL)</label><input type="text" name="rg" placeholder="00.000.000-0" value={formData.rg} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label>NASCIMENTO</label><input type="date" name="nascimento" value={formData.nascimento} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label>SEXO</label>
-                    <select name="sexo" value={formData.sexo} onChange={handleChange}>
+                  <div className="form-group span-2"><label htmlFor="nome">NOME COMPLETO *</label><input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} required /></div>
+                  <div className="form-group span-1"><label htmlFor="cpf">CPF</label><input id="cpf" type="text" name="cpf" autoComplete="off" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} /></div>
+                  <div className="form-group span-1"><label htmlFor="rg">RG (OPCIONAL)</label><input id="rg" type="text" name="rg" autoComplete="off" placeholder="00.000.000-0" value={formData.rg} onChange={handleChange} /></div>
+                  <div className="form-group span-1"><label htmlFor="nascimento">NASCIMENTO</label><input id="nascimento" type="date" name="nascimento" autoComplete="bday" value={formData.nascimento} onChange={handleChange} /></div>
+                  <div className="form-group span-1"><label htmlFor="sexo">SEXO</label>
+                    <select id="sexo" name="sexo" autoComplete="sex" value={formData.sexo} onChange={handleChange}>
                       <option value="">Selecione...</option><option value="Feminino">Feminino</option><option value="Masculino">Masculino</option>
                     </select>
                   </div>
@@ -277,23 +306,24 @@ const CadastroCliente = () => {
               <>
                 <h3 className="section-divider" style={{marginTop: 0}}>DADOS DA EMPRESA</h3>
                 <div className="form-grid-4">
-                  <div className="form-group span-2"><label>RAZÃO SOCIAL</label><input type="text" name="razaoSocial" value={formData.razaoSocial} onChange={handleChange} /></div>
-                  <div className="form-group span-2"><label>NOME FANTASIA *</label><input type="text" name="nomeFantasia" value={formData.nomeFantasia} onChange={handleChange} required /></div>
-                  <div className="form-group span-1"><label>CNPJ</label><input type="text" name="cnpj" placeholder="00.000.000/0000-00" value={formData.cnpj} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label>INSCRIÇÃO ESTADUAL</label><input type="text" name="inscricaoEstadual" value={formData.inscricaoEstadual} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label>NOME DO CONTATO</label><input type="text" name="nomeContato" value={formData.nomeContato} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label>CARGO / DEPTO</label><input type="text" name="cargo" value={formData.cargo} onChange={handleChange} /></div>
+                  <div className="form-group span-2"><label htmlFor="razaoSocial">RAZÃO SOCIAL</label><input id="razaoSocial" type="text" name="razaoSocial" autoComplete="organization" value={formData.razaoSocial} onChange={handleChange} /></div>
+                  <div className="form-group span-2"><label htmlFor="nomeFantasia">NOME FANTASIA *</label><input id="nomeFantasia" type="text" name="nomeFantasia" autoComplete="organization" value={formData.nomeFantasia} onChange={handleChange} required /></div>
+                  <div className="form-group span-1"><label htmlFor="cnpj">CNPJ</label><input id="cnpj" type="text" name="cnpj" autoComplete="off" placeholder="00.000.000/0000-00" value={formData.cnpj} onChange={handleChange} /></div>
+                  <div className="form-group span-1"><label htmlFor="inscricaoEstadual">INSCRIÇÃO ESTADUAL</label><input id="inscricaoEstadual" type="text" name="inscricaoEstadual" autoComplete="off" value={formData.inscricaoEstadual} onChange={handleChange} /></div>
+                  <div className="form-group span-1"><label htmlFor="nomeContato">NOME DO CONTATO</label><input id="nomeContato" type="text" name="nomeContato" autoComplete="name" value={formData.nomeContato} onChange={handleChange} /></div>
+                  <div className="form-group span-1"><label htmlFor="cargo">CARGO / DEPTO</label><input id="cargo" type="text" name="cargo" autoComplete="organization-title" value={formData.cargo} onChange={handleChange} /></div>
                 </div>
               </>
             )}
 
             <h3 className="section-divider mt-compact">CONTATO E MARKETING</h3>
+            {/* 🔥 ADICIONADO autoComplete NOS CAMPOS DE CONTATO 🔥 */}
             <div className="form-grid-4">
-              <div className="form-group span-1"><label>CELULAR / WHATSAPP</label><input type="tel" name="celular" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label>TELEFONE FIXO</label><input type="tel" name="telefoneFixo" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label>E-MAIL</label><input type="email" name="email" value={formData.email} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label>COMO NOS CONHECEU?</label>
-                <select name="origem" value={formData.origem} onChange={handleChange}>
+              <div className="form-group span-1"><label htmlFor="celular">CELULAR / WHATSAPP</label><input id="celular" type="tel" name="celular" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} /></div>
+              <div className="form-group span-1"><label htmlFor="telefoneFixo">TELEFONE FIXO</label><input id="telefoneFixo" type="tel" name="telefoneFixo" autoComplete="tel" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label htmlFor="email">E-MAIL</label><input id="email" type="email" name="email" autoComplete="email" value={formData.email} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label htmlFor="origem">COMO NOS CONHECEU?</label>
+                <select id="origem" name="origem" autoComplete="off" value={formData.origem} onChange={handleChange}>
                   <option value="">Selecione...</option>
                   <option value="Instagram">Instagram</option>
                   <option value="WhatsApp">WhatsApp</option>
@@ -307,38 +337,37 @@ const CadastroCliente = () => {
             </div>
 
             <h3 className="section-divider mt-compact">ENDEREÇO</h3>
+            {/* 🔥 ADICIONADO autoComplete NOS CAMPOS DE ENDEREÇO 🔥 */}
             <div className="form-grid-4">
-              <div className="form-group span-2"><label>CEP (BUSCA AUTO)</label><input type="text" name="cep" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
-              <div className="form-group span-2"><label>LOGRADOURO</label><input type="text" name="logradouro" value={formData.logradouro} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label htmlFor="cep">CEP (BUSCA AUTO)</label><input id="cep" type="text" name="cep" autoComplete="postal-code" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
+              <div className="form-group span-2"><label htmlFor="logradouro">LOGRADOURO</label><input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} /></div>
               
               <div className="form-group-row span-4">
                 <div className="form-group flex-1">
-                  <label>NÚMERO</label>
-                  <input type="text" id="numeroInput" name="numero" value={formData.numero} onChange={handleChange} />
+                  <label htmlFor="numeroInput">NÚMERO</label>
+                  <input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} />
                 </div>
                 <div className="form-group flex-small">
-                  <label>UF</label>
-                  <input type="text" name="uf" value={formData.uf} onChange={handleChange} />
+                  <label htmlFor="uf">UF</label>
+                  <input id="uf" type="text" name="uf" autoComplete="address-level1" value={formData.uf} onChange={handleChange} />
                 </div>
               </div>
 
-              <div className="form-group span-2"><label>BAIRRO</label><input type="text" name="bairro" value={formData.bairro} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label>CIDADE</label><input type="text" name="cidade" value={formData.cidade} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label htmlFor="bairro">BAIRRO</label><input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label htmlFor="cidade">CIDADE</label><input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} /></div>
             </div>
 
             <h3 className="section-divider mt-compact">CONTROLE DE SISTEMA</h3>
             <div className="form-grid-4">
               
-              {/* 🔥 NOVO: STATUS DO CADASTRO 🔥 */}
               <div className="form-group span-2">
-                <label style={{ 
-                  color: formData.statusCadastro === 'pendente' ? '#d97706' : '#10b981', 
-                  fontWeight: '800' 
-                }}>
+                <label htmlFor="statusCadastro" style={{ color: formData.statusCadastro === 'pendente' ? '#d97706' : '#10b981', fontWeight: '800' }}>
                   STATUS DO CADASTRO
                 </label>
                 <select 
+                  id="statusCadastro"
                   name="statusCadastro" 
+                  autoComplete="off"
                   value={formData.statusCadastro} 
                   onChange={handleChange}
                   className="status-select"
@@ -353,16 +382,14 @@ const CadastroCliente = () => {
                 </select>
               </div>
 
-              {/* 🔥 CORRIGIDO: SITUAÇÃO FINANCEIRA VOLTOU AO NORMAL 🔥 */}
               <div className="form-group span-2">
-                <label style={{ 
-                  color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', 
-                  fontWeight: '800' 
-                }}>
+                <label htmlFor="situacaoFinanceira" style={{ color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800' }}>
                   SITUAÇÃO FINANCEIRA
                 </label>
                 <select 
+                  id="situacaoFinanceira"
                   name="situacaoFinanceira" 
+                  autoComplete="off"
                   value={formData.situacaoFinanceira} 
                   onChange={handleChange}
                   className="status-select"
@@ -377,8 +404,8 @@ const CadastroCliente = () => {
                 </select>
               </div>
 
-              <div className="form-group span-4"><label>TAGS (Ex: VIP, Problemático)</label><input type="text" name="tags" placeholder="Digite as tags..." value={formData.tags} onChange={handleChange} /></div>
-              <div className="form-group span-4"><label>OBSERVAÇÕES INTERNAS</label><textarea name="observacoes" rows="2" value={formData.observacoes} onChange={handleChange}></textarea></div>
+              <div className="form-group span-4"><label htmlFor="tags">TAGS (Ex: VIP, Problemático)</label><input id="tags" type="text" name="tags" autoComplete="off" placeholder="Digite as tags..." value={formData.tags} onChange={handleChange} /></div>
+              <div className="form-group span-4"><label htmlFor="observacoes">OBSERVAÇÕES INTERNAS</label><textarea id="observacoes" name="observacoes" autoComplete="off" rows="2" value={formData.observacoes} onChange={handleChange}></textarea></div>
             </div>
 
             <div className="form-actions mt-compact">

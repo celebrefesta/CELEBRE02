@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig"; 
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
+// 🔥 IMPORTAÇÕES ADICIONADAS: where, getDocs, addDoc
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs, addDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "./Compras.css";
 
@@ -45,14 +46,66 @@ const Compras = () => {
     return () => unsubscribe();
   }, []);
 
-  // --- 2. ALTERAR STATUS (MARCAR COMO COMPRADO) ---
+  // --- 2. ALTERAR STATUS & MÁGICA DO ACERVO ---
   const toggleCheck = async (item) => {
     try {
       const novoStatus = item.status === "pendente" ? "comprado" : "pendente";
+      const qtdComprada = Number(item.quantidade) || 1;
+
+      // 🔥 PASSO 1: O sistema procura no Acervo se essa peça já existe (busca pelo nome exato)
+      const qEstoque = query(collection(db, "estoque"), where("nome", "==", item.nome));
+      const snapshotEstoque = await getDocs(qEstoque);
+
+      if (novoStatus === "comprado") {
+        if (!snapshotEstoque.empty) {
+          // 🔄 CASO A: REPOSIÇÃO (A peça já existe!)
+          const docExistente = snapshotEstoque.docs[0];
+          const qtdAtual = Number(docExistente.data().quantidade) || 0;
+          
+          await updateDoc(doc(db, "estoque", docExistente.id), {
+            quantidade: qtdAtual + qtdComprada, // Soma a quantidade sem duplicar o item
+            atualizadoEm: new Date().toISOString()
+          });
+          alert(`📦 Estoque Atualizado! Adicionamos +${qtdComprada} na peça "${item.nome}" que já existia no seu acervo.`);
+        
+        } else {
+          // ✨ CASO B: ITEM NOVO (A peça não existe no acervo)
+          // Se não for "material de consumo" (ex: bexiga), ele cria um item novo no Acervo!
+          if (item.categoria !== "material") {
+            await addDoc(collection(db, "estoque"), {
+              nome: item.nome,
+              categoria: item.categoria || "Geral",
+              quantidade: qtdComprada,
+              financeiro: {
+                  valorAluguel: item.valorAluguel || 0
+              },
+              criadoEm: new Date().toISOString()
+            });
+            alert(`✨ Sucesso! A peça "${item.nome}" foi cadastrada como um NOVO ITEM no acervo.`);
+          }
+        }
+      } else {
+        // ↩️ CASO C: DESFAZER (O usuário clicou em Desfazer a compra)
+        if (!snapshotEstoque.empty) {
+          const docExistente = snapshotEstoque.docs[0];
+          const qtdAtual = Number(docExistente.data().quantidade) || 0;
+          const novaQtd = Math.max(0, qtdAtual - qtdComprada); // Subtrai a quantidade para corrigir
+          
+          await updateDoc(doc(db, "estoque", docExistente.id), {
+            quantidade: novaQtd,
+            atualizadoEm: new Date().toISOString()
+          });
+          alert(`↩️ Desfeito! A peça "${item.nome}" foi retirada do seu acervo novamente.`);
+        }
+      }
+
+      // Por fim, muda a cor do botão na lista de compras
       const itemRef = doc(db, "lista_compras", item.id);
       await updateDoc(itemRef, { status: novoStatus });
+
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
+      alert("Erro ao integrar compra com o acervo.");
     }
   };
 
@@ -179,7 +232,6 @@ const Compras = () => {
                         </div>
                       </td>
                       
-                      {/* 🔥 DIVISÃO DAS DUAS COLUNAS NO MOBILE 🔥 */}
                       <td className="mobile-stack col-50 col-left">
                           <span className="mobile-label">QUANTIDADE:</span>
                           <strong>{item.quantidade}x</strong>
@@ -214,7 +266,6 @@ const Compras = () => {
                         )}
                       </td>
 
-                      {/* BOTÕES DE AÇÃO */}
                       <td className="actions-cell">
                         <div className="botoes-acao-container">
                           <button 
