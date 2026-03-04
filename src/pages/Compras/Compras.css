@@ -376,3 +376,112 @@
           width: 100%;
       }
   }
+
+  /* --- 🔥 LABELS DE INTELIGÊNCIA LOGÍSTICA 🔥 --- */
+.alerta-logistica {
+    font-size: 0.70rem;
+    font-weight: 800;
+    padding: 4px 8px;
+    border-radius: 6px;
+    display: inline-block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    max-width: max-content;
+}
+
+.alerta-seguro {
+    background-color: #dcfce7;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+.alerta-atencao {
+    background-color: #fef3c7;
+    color: #b45309;
+    border: 1px dashed #f59e0b;
+}
+
+.alerta-urgente {
+    background-color: #fee2e2;
+    color: #b91c1c;
+    border: 1px solid #fca5a5;
+    animation: piscarUrgente 2s infinite;
+}
+
+.alerta-vencido {
+    background-color: #f1f5f9;
+    color: #475569;
+    text-decoration: line-through;
+}
+
+@keyframes piscarUrgente {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+/* --- 🔥 NOVOS BOTÕES DE STATUS TRIPLO 🔥 --- */
+.btn-acao-status { 
+    font-weight: 800; 
+    padding: 10px 14px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    border: none; 
+    font-size: 11px; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.btn-acao-status.comprar { background: #3b82f6; color: white; }
+.btn-acao-status.comprar:hover { background: #2563eb; transform: translateY(-1px);}
+
+.btn-acao-status.chegou { background: #10b981; color: white; }
+.btn-acao-status.chegou:hover { background: #059669; transform: translateY(-1px);}
+
+.btn-acao-status.desfazer { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; box-shadow: none;}
+.btn-acao-status.desfazer:hover { background: #e2e8f0; color: #0f172a; }
+
+/* --- 🔥 NOVAS CORES DE BADGE (STATUS) 🔥 --- */
+.badge.pendente { background: #fef3c7; color: #b45309; }
+.badge.comprado { background: #eff6ff; color: #1d4ed8; }
+.badge.chegou { background: #dcfce7; color: #166534; }
+
+/* --- 🔥 NOVAS ETIQUETAS LOGÍSTICAS 🔥 --- */
+.alerta-a-caminho {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}
+/* --- 🔥 NOVOS BOTÕES DE STATUS TRIPLO 🔥 --- */
+.btn-acao-status { 
+    font-weight: 800; 
+    padding: 10px 14px; 
+    border-radius: 8px; 
+    cursor: pointer; 
+    transition: 0.2s; 
+    border: none; 
+    font-size: 11px; 
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+.btn-acao-status.comprar { background: #3b82f6; color: white; }
+.btn-acao-status.comprar:hover { background: #2563eb; transform: translateY(-1px);}
+
+.btn-acao-status.chegou { background: #10b981; color: white; }
+.btn-acao-status.chegou:hover { background: #059669; transform: translateY(-1px);}
+
+.btn-acao-status.desfazer { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; box-shadow: none;}
+.btn-acao-status.desfazer:hover { background: #e2e8f0; color: #0f172a; }
+
+/* --- 🔥 NOVAS CORES DE BADGE (STATUS) 🔥 --- */
+.badge.pendente { background: #fef3c7; color: #b45309; }
+.badge.comprado { background: #eff6ff; color: #1d4ed8; }
+.badge.chegou { background: #dcfce7; color: #166534; }
+
+/* --- 🔥 NOVAS ETIQUETAS LOGÍSTICAS 🔥 --- */
+.alerta-a-caminho {
+    background-color: #eff6ff;
+    color: #1d4ed8;
+    border: 1px solid #bfdbfe;
+}

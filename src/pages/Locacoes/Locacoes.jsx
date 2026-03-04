@@ -9,10 +9,9 @@ const Locacoes = () => {
   const [lista, setLista] = useState([]);
   const [busca, setBusca] = useState('');
   
-  // 🔥 NOVOS ESTADOS DE FILTRO SEPARADOS 🔥
-  const [filtroStatus, setFiltroStatus] = useState('todos'); // todos, orcamentos, confirmados, cancelados
-  const [filtroServico, setFiltroServico] = useState('todos'); // todos, pegue, decoracao
-  const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes'); // recentes, proximos, maiorValor, menorValor
+  const [filtroStatus, setFiltroStatus] = useState('todos'); 
+  const [filtroServico, setFiltroServico] = useState('todos'); 
+  const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes'); 
   
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
@@ -41,7 +40,6 @@ const Locacoes = () => {
            tipoServico = "PEGUE E MONTE";
         }
         
-        // Garante que o criadoEm tenha um valor comparável, mesmo se for antigo
         let timestampCriacao = 0;
         if (data.criadoEm) {
             timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
@@ -71,7 +69,7 @@ const Locacoes = () => {
           motivos.push("👻 Orçamento Vencido");
         } 
         else if (['confirmado', 'preparacao'].includes(statusStr) && locDate && locDate.getTime() <= hoje.getTime()) {
-          motivos.push("📦 Atrasado para Entrega/Separação");
+          motivos.push("📦 Atrasado para Entrega");
         } 
         else if (statusStr === 'entregue' && devDate && devDate.getTime() < hoje.getTime()) {
           motivos.push("⏳ Devolução Atrasada");
@@ -139,7 +137,6 @@ const Locacoes = () => {
     } catch (e) { alert("Erro"); } finally { setSalvandoPagamento(false); }
   };
 
-  // 🔥 1. APLICA A BUSCA DE TEXTO 🔥
   let filtrados = [...lista];
   if (busca) {
     const termo = busca.toLowerCase();
@@ -149,7 +146,6 @@ const Locacoes = () => {
     );
   }
 
-  // 🔥 2. APLICA O FILTRO DE STATUS 🔥
   if (filtroStatus === 'orcamentos') {
       filtrados = filtrados.filter(i => (i.status || '').toLowerCase().includes('orcam'));
   } else if (filtroStatus === 'confirmados') {
@@ -161,45 +157,36 @@ const Locacoes = () => {
       filtrados = filtrados.filter(i => (i.status || '').toLowerCase() === 'cancelado');
   }
 
-  // 🔥 3. APLICA O FILTRO DE TIPO DE SERVIÇO 🔥
   if (filtroServico === 'pegue') {
       filtrados = filtrados.filter(i => i.tipoServicoFormatado.includes('PEGUE'));
   } else if (filtroServico === 'decoracao') {
       filtrados = filtrados.filter(i => !i.tipoServicoFormatado.includes('PEGUE'));
   }
 
-  // 🔥 4. APLICA A ORDENAÇÃO CORRIGIDA 🔥
   filtrados.sort((a, b) => {
-    
     if (filtroOrdenacao === 'proximos') {
       const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
       const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
       return dataA - dataB;
-    
     } else if (filtroOrdenacao === 'maiorValor') {
       return Number(b.valorTotal || 0) - Number(a.valorTotal || 0);
-    
     } else if (filtroOrdenacao === 'menorValor') {
       return Number(a.valorTotal || 0) - Number(b.valorTotal || 0);
-    
     } else {
-      // PADRÃO: "MAIS RECENTES" (Orçamentos colados no topo, depois os criados recentemente)
       const statusA = (a.status || '').toLowerCase();
       const statusB = (b.status || '').toLowerCase();
       const isA_Orcam = statusA.includes('orcam');
       const isB_Orcam = statusB.includes('orcam');
 
-      // 1º Regra: Se um é orçamento e o outro não, orçamento sobe.
       if (isA_Orcam && !isB_Orcam) return -1;
       if (!isA_Orcam && isB_Orcam) return 1;
 
-      // 2º Regra: Se os dois são iguais no status acima, ordena pelo timestamp de criação mais novo
       return b.createdAtMs - a.createdAtMs;
     }
   });
 
   return (
-    <div className="locacoes-container">
+    <div className="locacoes-container dashboard-container">
       <header className="dashboard-header">
         <div className="welcome-text">
           <h1>MINHAS LOCAÇÕES</h1>
@@ -208,69 +195,60 @@ const Locacoes = () => {
         <button className="btn-primary-celebre" onClick={() => navigate('/locacoes/nova')}>+ NOVA LOCAÇÃO</button>
       </header>
 
-      <div className="resumo-topo-v2">
-        <div className="card-resumo-v2 verde">
-          <span>Confirmados</span>
-          <strong>{lista.filter(i => !['orcamento', 'cancelado'].includes((i.status || '').toLowerCase())).length}</strong>
+      <div className="dashboard-cards">
+        <div className="dash-card success">
+          <div className="dash-icon">✅</div>
+          <div className="dash-info">
+            <h3>Confirmados / Ativos</h3>
+            <h2>{lista.filter(i => !['orcamento', 'cancelado'].includes((i.status || '').toLowerCase())).length}</h2>
+          </div>
         </div>
-        <div className="card-resumo-v2 laranja">
-          <span>Orçamentos / Leads</span>
-          <strong>{lista.filter(i => (i.status || '').toLowerCase() === 'orcamento').length}</strong>
+        <div className="dash-card warning">
+          <div className="dash-icon">📂</div>
+          <div className="dash-info">
+            <h3>Orçamentos / Leads</h3>
+            <h2>{lista.filter(i => (i.status || '').toLowerCase() === 'orcamento').length}</h2>
+          </div>
         </div>
       </div>
 
-      {/* 🔥 NOVA BARRA DE FILTROS SUPER AVANÇADA 🔥 */}
-      <div className="filter-wrapper-clean" style={{ display: 'flex', flexDirection: 'column', gap: '15px', background: '#fff', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
-        
-        {/* Linha 1: Busca e Chips de Status */}
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div className="search-bar-container" style={{ flex: '1', minWidth: '280px', margin: 0 }}>
-              <span className="search-icon">🔍</span>
-              <input 
-                type="text"
-                className="search-input-clean" 
-                placeholder="Buscar por cliente ou pedido..." 
-                value={busca} 
-                onChange={e => setBusca(e.target.value)} 
-              />
-            </div>
-            
-            <div className="chips-categorias" style={{ padding: 0, overflow: 'visible', margin: 0, gap: '8px' }}>
-                <button type="button" className={`chip-cat ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Todos</button>
-                <button type="button" className={`chip-cat ${filtroStatus === 'orcamentos' ? 'active' : ''}`} style={filtroStatus === 'orcamentos' ? {backgroundColor: '#fef3c7', color: '#d97706', borderColor: '#fcd34d'} : {}} onClick={() => setFiltroStatus('orcamentos')}>Leads / Orçamentos</button>
-                <button type="button" className={`chip-cat ${filtroStatus === 'confirmados' ? 'active' : ''}`} style={filtroStatus === 'confirmados' ? {backgroundColor: '#dcfce7', color: '#10b981', borderColor: '#6ee7b7'} : {}} onClick={() => setFiltroStatus('confirmados')}>Confirmados</button>
-                <button type="button" className={`chip-cat ${filtroStatus === 'cancelados' ? 'active' : ''}`} style={filtroStatus === 'cancelados' ? {backgroundColor: '#fef2f2', color: '#ef4444', borderColor: '#fca5a5'} : {}} onClick={() => setFiltroStatus('cancelados')}>Cancelados</button>
-            </div>
-        </div>
-
-        <div style={{ width: '100%', height: '1px', background: '#f1f5f9' }}></div>
-
-        {/* Linha 2: Selects de Serviço e Ordenação */}
-        <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-            <select 
-              value={filtroServico} 
-              onChange={(e) => setFiltroServico(e.target.value)}
-              className="search-input-clean"
-              style={{ width: 'auto', minWidth: '220px', cursor: 'pointer', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#64748b', fontSize: '13px' }}
-            >
+      <div className="advanced-filter-bar">
+        <div className="filter-main-row">
+          <div className="search-group">
+            <span className="search-icon">🔍</span>
+            <input 
+              type="text" 
+              placeholder="Buscar por cliente ou pedido..." 
+              value={busca} 
+              onChange={e => setBusca(e.target.value)} 
+            />
+          </div>
+          
+          <div className="select-group">
+            <select value={filtroServico} onChange={(e) => setFiltroServico(e.target.value)}>
               <option value="todos">🔧 Todos os Serviços</option>
               <option value="pegue">📦 Apenas Pegue e Monte</option>
-              <option value="decoracao">✨ Apenas Decoração Completa</option>
+              <option value="decoracao">✨ Apenas Decoração</option>
             </select>
 
-            <select 
-              value={filtroOrdenacao} 
-              onChange={(e) => setFiltroOrdenacao(e.target.value)}
-              className="search-input-clean"
-              style={{ width: 'auto', minWidth: '220px', cursor: 'pointer', background: '#f8fafc', border: '1px solid #cbd5e1', color: '#64748b', fontSize: '13px' }}
-            >
-              <option value="recentes">🌟 Mais Recentes / Novos Pedidos</option>
+            <select value={filtroOrdenacao} onChange={(e) => setFiltroOrdenacao(e.target.value)}>
+              <option value="recentes">🌟 Mais Recentes / Novos</option>
               <option value="proximos">📅 Eventos Mais Próximos</option>
-              <option value="maiorValor">💰 Maior Valor para Menor Valor</option>
-              <option value="menorValor">📉 Menor Valor para Maior Valor</option>
+              <option value="maiorValor">💰 Maior Valor</option>
+              <option value="menorValor">📉 Menor Valor</option>
             </select>
+          </div>
         </div>
 
+        <div className="filter-chips-row">
+          <span className="chips-label">STATUS DOS PEDIDOS:</span>
+          <div className="chips-list">
+            <button type="button" className={`chip-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Todos</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'orcamentos' ? 'active orcamento' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>Leads / Orçamentos</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'confirmados' ? 'active confirmado' : ''}`} onClick={() => setFiltroStatus('confirmados')}>Confirmados</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'cancelados' ? 'active cancelado' : ''}`} onClick={() => setFiltroStatus('cancelados')}>Cancelados</button>
+          </div>
+        </div>
       </div>
 
       <div className="table-responsive">
@@ -435,7 +413,6 @@ const Locacoes = () => {
         </table>
       </div>
 
-      {/* MODAL PAGAMENTO */}
       {modalPagamento && pedidoSelecionado && (
          <div className="modal-overlay-v2">
             <div className="modal-box-v2 pagamento-box">
@@ -495,13 +472,17 @@ const Locacoes = () => {
          </div>
       )}
 
-      {/* SUPER AUDITORIA */}
+      {/* 🔥 O FIM DO DESASTRE DA AUDITORIA: NOVO DESIGN PREMIUM 🔥 */}
       {mostrarAuditoria && (
         <div className="modal-overlay-v2">
           <div className="modal-box-v2 auditoria-box">
+            
             <div className="auditoria-header">
-              <h2>🚨 ATENÇÃO: Erros Operacionais Detectados!</h2>
-              <p>O sistema encontrou furos de processo. Pode ser atraso na devolução, peças quebradas, falta de pagamento ou orçamentos abandonados. <b>Resolva para limpar esta lista!</b></p>
+              <div className="auditoria-header-icon">🚨</div>
+              <div className="auditoria-header-text">
+                <h2>ATENÇÃO: Erros Operacionais Detectados!</h2>
+                <p>O sistema encontrou furos de processo. Pode ser atraso na devolução, peças quebradas, falta de pagamento ou orçamentos abandonados. <b>Resolva para limpar esta lista!</b></p>
+              </div>
             </div>
             
             <div className="auditoria-body">
@@ -511,34 +492,39 @@ const Locacoes = () => {
 
                 return (
                   <div key={req.id} className="auditoria-card">
+                    
                     <div className="auditoria-info">
-                      <strong>{req.clienteNome}</strong> <span>#{req.numeroPedido || 'S/N'}</span><br/>
-                      <div className="auditoria-detalhes" style={{ marginBottom: '8px' }}>
-                        Data da Festa: <b className="auditoria-data">{req.dataRetirada.split('-').reverse().join('/')}</b>
-                        <span className="divisor">|</span> 
-                        Travado em: <b style={{textTransform: 'uppercase'}}>{req.status}</b>
+                      <strong>{req.clienteNome}</strong> 
+                      <span className="ordem-id">#{req.numeroPedido || 'S/N'}</span>
+                      
+                      <div className="auditoria-detalhes">
+                        <span>Data do Evento:</span> 
+                        <span className="auditoria-data">{req.dataRetirada ? req.dataRetirada.split('-').reverse().join('/') : 'S/D'}</span>
+                        <span className="divisor">•</span> 
+                        <span>Travado em:</span> 
+                        <span className="auditoria-status">{req.status.toUpperCase()}</span>
                       </div>
                       
-                      <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <div className="auditoria-badges-row">
                         {req.alertasAuditoria.map((alerta, idx) => (
-                           <span key={idx} style={{ background: '#fef2f2', color: '#b91c1c', padding: '3px 8px', borderRadius: '4px', fontSize: '0.75rem', fontWeight: 'bold', border: '1px solid #fca5a5' }}>
+                           <span key={idx} className="auditoria-badge">
                              {alerta}
                            </span>
                         ))}
                       </div>
                     </div>
                     
-                    <div style={{ display: 'flex', gap: '8px', marginTop: '15px' }}>
+                    <div className="auditoria-acoes">
                       {ehOrcamento ? (
-                        <button onClick={() => resolverPedidoEsquecido(req.id, 'cancelado')} className="btn-resolver cancel" style={{ flex: 1, justifyContent: 'center' }}>
-                          ❌ Descartar Orçamento
+                        <button onClick={() => resolverPedidoEsquecido(req.id, 'cancelado')} className="btn-resolver cancel">
+                          🗑️ Descartar Orçamento
                         </button>
                       ) : statusAtual !== 'finalizado' ? (
                         <>
-                          <button onClick={() => resolverPedidoEsquecido(req.id, 'cancelado')} className="btn-resolver cancel" style={{ flex: 1, justifyContent: 'center', fontSize: '0.85rem' }}>
+                          <button onClick={() => resolverPedidoEsquecido(req.id, 'cancelado')} className="btn-resolver cancel">
                             ❌ Cancelar
                           </button>
-                          <button onClick={() => resolverPedidoEsquecido(req.id, 'finalizado')} className="btn-resolver ok" style={{ flex: 1, justifyContent: 'center', fontSize: '0.85rem' }}>
+                          <button onClick={() => resolverPedidoEsquecido(req.id, 'finalizado')} className="btn-resolver ok">
                             ✔️ Forçar Baixa
                           </button>
                         </>
@@ -549,12 +535,13 @@ const Locacoes = () => {
                           setMostrarAuditoria(false); 
                           navigate(`/locacoes/editar/${req.id}`); 
                         }} 
-                        className="btn-resolver" 
-                        style={{ background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', padding: '0 15px', fontWeight: 'bold', flex: statusAtual === 'finalizado' ? 1 : 'unset' }}
+                        className="btn-abrir-pedido"
+                        style={statusAtual === 'finalizado' ? { width: '100%', justifyContent: 'center' } : {}}
                       >
-                        ➔ Abrir Pedido
+                        Abrir Pedido ➔
                       </button>
                     </div>
+
                   </div>
                 );
               })}
@@ -565,9 +552,11 @@ const Locacoes = () => {
                 Minimizar Avisos (Não recomendado)
               </button>
             </div>
+
           </div>
         </div>
       )}
+
     </div>
   );
 };

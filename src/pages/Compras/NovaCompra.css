@@ -1,249 +1,285 @@
 /* =========================================
-   1. BLINDAGEM E USO TOTAL DA LARGURA
-   ========================================= */
-.page-container, .page-container * {
-  box-sizing: border-box;
-  max-width: 100%;
+   ESTILOS NOVA COMPRA PREMIUM (TELA CHEIA)
+========================================= */
+
+.nova-compra-page {
+    width: 100%;
+    /* max-width removido para esticar na tela toda */
+    padding: 30px 40px;
+    animation: fadeIn 0.4s ease-out;
+    box-sizing: border-box;
 }
 
-.page-container {
-  font-family: 'Inter', sans-serif;
-  color: #334155;
-  padding: 30px;
-  width: 100%;
-  margin: 0 auto;
-  overflow-x: hidden;
-  background-color: #f8fafc;
-  min-height: 100vh;
+.page-header-premium {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 30px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid #e2e8f0;
 }
+
+.header-titles h1 { margin: 0 0 5px 0; color: #0f172a; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;}
+.header-titles p { margin: 0; color: #64748b; font-size: 14px; }
+
+.btn-voltar-simples {
+    background: white; border: 1px solid #cbd5e1; padding: 10px 20px; border-radius: 8px;
+    color: #475569; font-weight: 700; cursor: pointer; transition: all 0.2s; font-size: 13px;
+    display: flex; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+.btn-voltar-simples:hover { background: #f8fafc; color: #0f172a; border-color: #94a3b8; }
+
+
+/* --- GRID DO FORMULÁRIO --- */
+.nova-compra-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    align-items: stretch;
+}
+
+.compra-card-premium {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    border: 1px solid #e2e8f0;
+    display: flex;
+    flex-direction: column;
+}
+
+.card-header-linha {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 25px;
+}
+.icone-titulo {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 10px;
+    border-radius: 10px;
+    font-size: 18px;
+}
+.card-title {
+    margin: 0; color: #0f172a; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+
+/* --- INPUTS MODERNOS --- */
+.form-row-modern { display: flex; gap: 15px; }
+
+.form-group-modern {
+    display: flex; flex-direction: column; gap: 8px; width: 100%;
+}
+
+.form-group-modern label {
+    font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;
+}
+
+.form-group-modern input, 
+.form-group-modern textarea {
+    padding: 14px 16px; border: 1px solid #cbd5e1; border-radius: 10px; background: #f8fafc;
+    font-size: 14px; font-weight: 600; color: #0f172a; outline: none; transition: all 0.2s ease; font-family: inherit;
+}
+.form-group-modern input:focus, 
+.form-group-modern textarea:focus {
+    border-color: #0f172a; background: #ffffff; box-shadow: 0 0 0 3px rgba(15,23,42,0.1);
+}
+
+.input-destaque input { border-color: #c5a059; background: #fffbeb; }
+.input-destaque input:focus { border-color: #b45309; box-shadow: 0 0 0 3px rgba(197,160,89,0.2); }
+.input-destaque label { color: #b45309; }
+
+.mt-15 { margin-top: 15px; }
+.mt-20 { margin-top: 20px; }
+
+.helper-text { font-size: 11px; color: #94a3b8; font-weight: 600; margin-top: 2px; display: block; line-height: 1.4;}
+.helper-text.success { color: #16a34a; font-weight: 700;}
+
+
+/* --- SEGMENTED CONTROLS (BOTÕES EM PÍLULA ESTILO IPHONE) --- */
+.segment-control {
+    display: flex; background: #f1f5f9; padding: 5px; border-radius: 12px; gap: 5px; border: 1px solid #e2e8f0;
+}
+.segment-control button {
+    flex: 1; padding: 12px 10px; border: none; background: transparent; border-radius: 8px;
+    font-size: 13px; font-weight: 700; color: #64748b; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+.segment-control button:hover { color: #0f172a; }
+
+.segment-control button.active {
+    background: white; color: #0f172a; box-shadow: 0 2px 8px rgba(0,0,0,0.1); font-weight: 800;
+}
+
+/* O toggle especial de condição */
+.condition-toggle button.active.ok { color: #16a34a; border: 1px solid #bbf7d0; }
+.condition-toggle button.active.alert { background: #fffbeb; color: #d97706; border: 1px solid #fde68a; box-shadow: 0 2px 8px rgba(245,158,11,0.15);}
+
+
+/* --- CAIXA DE PEDIDO SELECIONADO --- */
+.pedido-selecionado-box {
+    margin-top: 15px; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 20px;
+    display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 10px rgba(22,163,74,0.05);
+}
+.ps-info { display: flex; flex-direction: column; gap: 4px; }
+.ps-festa { font-size: 11px; font-weight: 800; color: #166534; text-transform: uppercase; letter-spacing: 0.5px;}
+.ps-cliente { font-size: 17px; color: #14532d; font-weight: 800; }
+.ps-data { font-size: 12px; color: #16a34a; font-weight: 700; }
+
+.btn-trocar-pedido {
+    background: white; border: 1px solid #86efac; color: #166534;
+    padding: 10px 18px; border-radius: 8px; font-weight: 800; font-size: 12px; cursor: pointer; transition: 0.2s;
+}
+.btn-trocar-pedido:hover { background: #bbf7d0; transform: translateY(-1px);}
+
+.ps-vazio {
+    width: 100%; display: flex; justify-content: space-between; align-items: center;
+    background: #fffbeb; border: 1px dashed #fcd34d; border-radius: 12px; padding: 15px 20px;
+}
+.ps-vazio span { color: #b45309; font-size: 13px; font-weight: 700; }
+.ps-vazio button {
+    background: #f59e0b; color: white; border: none; padding: 10px 16px; border-radius: 8px; font-weight: 800; cursor: pointer; transition: 0.2s;
+}
+.ps-vazio button:hover { background: #d97706; }
+
+
+/* --- AÇÕES INFERIORES --- */
+.form-actions-premium {
+    margin-top: auto; 
+    display: flex; gap: 15px; justify-content: flex-end; border-top: 1px solid #e2e8f0; padding-top: 25px;
+}
+.btn-cancelar-premium {
+    padding: 14px 24px; border: 1px solid #e2e8f0; background: white; color: #64748b;
+    font-weight: 800; font-size: 14px; border-radius: 10px; cursor: pointer; transition: 0.2s;
+}
+.btn-cancelar-premium:hover { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+
+.btn-salvar-premium {
+    padding: 14px 32px; border: none; background: #0f172a; color: white;
+    font-weight: 800; font-size: 14px; border-radius: 10px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 10px rgba(15,23,42,0.2);
+}
+.btn-salvar-premium:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 6px 15px rgba(15,23,42,0.3); }
+.btn-salvar-premium:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
 
 /* =========================================
-   2. HEADER (CARD PREMIUM)
-   ========================================= */
-.page-header {
-  background: white; 
-  padding: 25px 30px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); 
-  border: 1px solid #e2e8f0;
-  margin-bottom: 30px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+   🔥 O NOVO MODAL PREMIUM DE PEDIDOS 🔥
+========================================= */
+.modal-overlay-premium {
+    position: fixed; inset: 0; background: rgba(15, 23, 42, 0.85); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center; z-index: 99999;
+}
+.modal-box-pedido {
+    background: #f8fafc; border-radius: 20px; width: 95%; max-width: 750px;
+    max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    animation: menuPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.page-title { 
-  font-size: 24px; 
-  color: #0f172a; 
-  margin: 0; 
-  font-weight: 800; 
-  text-transform: uppercase; 
-  letter-spacing: -0.5px; 
+.modal-header-pedido {
+    background: white; padding: 25px 30px; display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 1px solid #e2e8f0;
+}
+.modal-header-pedido h3 { margin: 0 0 5px 0; color: #0f172a; font-size: 22px; font-weight: 800; letter-spacing: -0.5px;}
+.modal-header-pedido p { margin: 0; color: #64748b; font-size: 14px; }
+.btn-fechar-modal { 
+    background: #f1f5f9; color: #64748b; border: none; width: 36px; height: 36px; 
+    border-radius: 50%; font-weight: bold; font-size: 16px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; justify-content: center;
+}
+.btn-fechar-modal:hover { background: #e2e8f0; color: #0f172a; }
+
+.modal-search-box {
+    margin: 20px 30px; display: flex; align-items: center; background: white; border: 2px solid #cbd5e1;
+    border-radius: 12px; padding: 0 15px; height: 50px; transition: 0.2s; box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+}
+.modal-search-box:focus-within { border-color: #0f172a; box-shadow: 0 0 0 4px rgba(15,23,42,0.1); }
+.modal-search-box .icon { font-size: 18px; color: #64748b;}
+.modal-search-box input { border: none; background: transparent; width: 100%; height: 100%; outline: none; font-size: 15px; margin-left: 10px; color: #0f172a; font-weight: 600; font-family: inherit;}
+
+.modal-lista-pedidos {
+    flex: 1; overflow-y: auto; padding: 0 30px 30px 30px; display: flex; flex-direction: column; gap: 12px;
+}
+.modal-lista-pedidos::-webkit-scrollbar { width: 8px; }
+.modal-lista-pedidos::-webkit-scrollbar-track { background: transparent; }
+.modal-lista-pedidos::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+
+/* O CARD DE PEDIDO CLICÁVEL */
+.card-pedido-select {
+    background: white; border: 1px solid #e2e8f0; border-radius: 14px; padding: 20px;
+    display: flex; justify-content: space-between; align-items: center; cursor: pointer;
+    transition: all 0.2s ease; box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+}
+.card-pedido-select:hover {
+    border-color: #94a3b8; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.06);
 }
 
-/* =========================================
-   3. ESTRUTURA GLOBAL E GRID
-   ========================================= */
-.estoque-form-layout {
-  display: flex;
-  gap: 25px; 
-  align-items: stretch !important; 
-  flex-wrap: wrap; 
-  width: 100%;
-}
+.cp-left { display: flex; flex-direction: column; gap: 4px; }
+.cp-id { font-size: 11px; font-weight: 800; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;}
+.cp-nome { font-size: 16px; color: #0f172a; font-weight: 800; }
+.cp-tema { font-size: 13px; color: #475569; font-weight: 600;}
 
-.left-photo-col, .right-data-col {
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
-  border-radius: 16px !important;
-  border: 1px solid #e2e8f0 !important;
-  display: flex !important;
-  flex-direction: column !important; 
-}
+.cp-right { display: flex; align-items: center; gap: 20px; }
+.cp-data-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 8px 14px; border-radius: 10px; text-align: right; }
+.cp-data-box .label { display: block; font-size: 9px; text-transform: uppercase; color: #94a3b8; font-weight: 800; margin-bottom: 2px;}
+.cp-data-box strong { font-size: 15px; color: #0f172a; font-weight: 800; }
 
-.left-photo-col { flex: 1; min-width: 320px; padding: 30px; background: white;}
-.right-data-col { flex: 1.2; min-width: 320px; padding: 30px; background: white;}
+.cp-status { font-size: 10px; font-weight: 800; padding: 6px 12px; border-radius: 20px; text-transform: uppercase; background: #f1f5f9; color: #475569; border: 1px solid transparent;}
+.cp-status.confirmado { background: #dcfce7; color: #166534; border-color: #86efac; }
+.cp-status.orcamento { background: #fef3c7; color: #92400e; border-color: #fcd34d;}
 
-/* A grade dos inputs */
-.form-grid-4 {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 20px; 
-  width: 100%;
-}
+.lista-vazia { text-align: center; padding: 40px; color: #94a3b8; font-weight: 600; background: white; border-radius: 14px; border: 1px dashed #cbd5e1;}
 
-.span-2 { grid-column: span 2; }
-.span-4 { grid-column: span 4; }
+.fade-in { animation: fadeIn 0.3s ease-out; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
 
-/* Mantém o título colado no input e alinha tudo na base */
-.form-group {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end; 
-  height: 100%; 
-}
-
-.form-group label {
-  display: block;
-  font-size: 11px;
-  font-weight: 800;
-  color: #64748b;
-  margin-bottom: 6px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.section-divider {
-  font-size: 14px;
-  color: #0f172a;
-  border-bottom: 2px solid #f1f5f9;
-  padding-bottom: 8px;
-  margin-bottom: 20px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  font-weight: 800;
-}
-
-/* =========================================
-   4. BOTÕES DE RÁDIO (CATEGORIA)
-   ========================================= */
-.custom-radio-group {
-  display: flex;
-  gap: 15px;
-  flex-direction: row; 
-}
-
-.custom-radio-card {
-  flex: 1;
-  border: 2px solid #e2e8f0;
-  border-radius: 12px;
-  padding: 15px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: white;
-  text-align: center;
-}
-
-.custom-radio-card strong { display: block; color: #0f172a; font-size: 14px; margin-bottom: 4px; }
-.custom-radio-card span { display: block; color: #64748b; font-size: 11px; line-height: 1.3;}
-.custom-radio-card:hover { border-color: #cbd5e1; background-color: #f8fafc; transform: translateY(-2px);}
-.custom-radio-card.selected { border-color: #c5a059; background-color: rgba(197, 160, 89, 0.05); box-shadow: 0 4px 12px rgba(197, 160, 89, 0.15);}
-
-/* =========================================
-   5. TABS DE DESTINO (VÍNCULO)
-   ========================================= */
-.tabs-container {
-  display: flex;
-  background-color: #f1f5f9;
-  padding: 6px;
-  border-radius: 12px;
-  gap: 6px;
-}
-
-.tab-btn {
-  flex: 1;
-  background: transparent;
-  border: none;
-  padding: 12px;
-  border-radius: 8px;
-  font-weight: 700;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 14px;
-}
-
-.tab-btn:hover { color: #0f172a; background-color: #e2e8f0;}
-.tab-btn.active { background: white; color: #0f172a; box-shadow: 0 2px 6px rgba(0,0,0,0.06); }
-
-.vinculo-selecionado { margin-top: 15px; padding: 12px 15px; background-color: #f0fdf4; border: 1px solid #bbf7d0; color: #166534; border-radius: 8px; font-size: 14px; }
-
-/* =========================================
-   6. BOTÕES DE AÇÃO LÁ NO FUNDO
-   ========================================= */
-.form-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 15px;
-  margin-top: auto !important; 
-  padding-top: 30px;
-}
-
-.btn-salvar { background-color: #0f172a; color: white; border: none; padding: 14px 28px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 15px;}
-.btn-salvar:hover { background-color: #1e293b; transform: translateY(-1px); box-shadow: 0 4px 8px rgba(0,0,0,0.1);}
-
-.btn-voltar { background-color: white; color: #475569; border: 1px solid #cbd5e1; padding: 14px 28px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 15px;}
-.btn-voltar:hover { background-color: #f1f5f9; color: #0f172a; }
-
-/* =========================================
-   7. MODAL DE BUSCA 
-   ========================================= */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(15, 23, 42, 0.7); display: flex; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(4px); }
-.modal-box { background: white; width: 90%; max-width: 500px; border-radius: 16px; padding: 25px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); max-height: 80vh; display: flex; flex-direction: column; }
-.modal-box h3 { margin-top: 0; color: #0f172a; border-bottom: 2px solid #f1f5f9; padding-bottom: 15px; margin-bottom: 15px; }
-.modal-list { overflow-y: auto; flex: 1; margin-bottom: 15px; }
-.modal-item { padding: 15px; border-bottom: 1px solid #f1f5f9; cursor: pointer; font-weight: 500; color: #334155; transition: all 0.2s ease; border-radius: 8px; }
-.modal-item:hover { background: #f8fafc; color: #c5a059; padding-left: 20px; }
-
-/* =========================================
-   📱 RESPONSIVIDADE MOBILE (TELA INFINITA HARD)
-   ========================================= */
+/* Responsividade Mobile */
 @media (max-width: 900px) {
-  
-  /* 🔥 MÁGICA 1: Zera as bordinhas laterais cinzas do container principal 🔥 */
-  .page-container { padding: 20px 0 20px 0 !important; }
+    .nova-compra-page { padding: 15px; }
+    .nova-compra-grid { grid-template-columns: 1fr; }
+    .form-row-modern { flex-direction: column; }
+    .card-pedido-select { flex-direction: column; align-items: flex-start; gap: 15px; }
+    .cp-right { width: 100%; flex-direction: row; justify-content: space-between; align-items: center; }
+    .cp-data-box { text-align: left; }
+}
 
-  /* Zera qualquer padding fantasma no formulário inteiro */
-  .form-widescreen { padding: 0 !important; margin: 0 !important; width: 100% !important; }
+/* Cor do alerta de atraso (Viagem no tempo) */
+.helper-text.error { color: #dc2626; font-weight: 800; font-size: 11px; }
 
-  /* Reduz espaço interno do cabeçalho e encosta ele nas bordas laterais */
-  .page-header { 
-      padding: 15px 12px !important; 
-      margin-bottom: 15px !important; 
-      border-radius: 0 !important; /* Quinas retas no topo */
-      border-left: none !important;
-      border-right: none !important;
-      width: 100% !important;
-  }
+/* Destaque para a pergunta da quantidade de peças do Kit */
+.box-destaque-kit {
+    background-color: #f0fdf4;
+    padding: 15px;
+    border-radius: 12px;
+    border: 1px solid #bbf7d0;
+    box-shadow: 0 2px 6px rgba(22, 163, 74, 0.05);
+}
+/* --- 🔥 CAIXA DO SIMULADOR DE FRETE 🔥 --- */
+.simulador-frete-box {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 15px;
+}
+.simulador-frete-box select {
+    width: 100%; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-weight: 700; color: #0f172a;
+}
 
-  .estoque-form-layout { flex-direction: column; gap: 15px !important; width: 100% !important; }
-  
-  /* 🔥 MÁGICA 2: As caixas brancas encostam 100% nas bordas laterais do celular 🔥 */
-  .left-photo-col, .right-data-col { 
-      width: 100% !important; 
-      min-width: 0 !important; 
-      padding: 20px 12px !important; /* Respiro interno pequeno e elegante */
-      border-radius: 0 !important; /* Quinas retas no formulário */
-      border-left: none !important;
-      border-right: none !important;
-      box-shadow: none !important; /* Remove sombra pra parecer nativo */
-  }
+.mensagem-prazo-risco {
+    padding: 10px; border-radius: 8px; font-size: 12px; font-weight: 800; text-align: center;
+}
+.mensagem-prazo-risco.bloqueado {
+    background-color: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; animation: piscarUrgente 1.5s infinite;
+}
+.mensagem-prazo-risco.ok {
+    background-color: #dcfce7; color: #166534; border: 1px solid #86efac;
+}
 
-  .form-grid-4 {
-      display: grid !important;
-      grid-template-columns: 1fr 1fr !important; 
-      gap: 12px !important; 
-  }
-  .span-2 { grid-column: span 1 !important; }
-  .span-4 { grid-column: span 2 !important; }
+.btn-salvar-premium.disabled-error {
+    background-color: #ef4444 !important; opacity: 0.5 !important; cursor: not-allowed; box-shadow: none !important;
+}
 
-  .custom-radio-group { gap: 8px !important; }
-  .custom-radio-card { padding: 12px 6px !important; } 
-  .custom-radio-card strong { font-size: 13px !important; }
-  .custom-radio-card span { font-size: 10px !important; margin-top: 5px !important; }
-  
-  /* Mantém as tabs encostadas */
-  .tabs-container { border-radius: 8px !important; padding: 4px !important;}
-  
-  /* Botões de ação ocupando a largura total na base */
-  .form-actions {
-      flex-direction: column-reverse !important; 
-      padding: 20px 12px !important; /* Mantém um respiro apenas nos botões finais */
-      margin-bottom: 10px !important;
-  }
-  .btn-salvar, .btn-voltar {
-      width: 100% !important;
-      justify-content: center !important;
-      padding: 16px !important;
-      font-size: 16px !important;
-  }
+@keyframes piscarUrgente {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
 }
