@@ -11,6 +11,7 @@ const NovaLocacao = () => {
   // --- ESTADOS DO PEDIDO ---
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
+  const [todasLocacoes, setTodasLocacoes] = useState([]); 
   const [carrinho, setCarrinho] = useState([]);
   
   const [modalAberto, setModalAberto] = useState(false);
@@ -29,12 +30,13 @@ const NovaLocacao = () => {
   const [obsInternas, setObsInternas] = useState('');
 
   const [modalCompraAberto, setModalCompraAberto] = useState(false);
-  
   const [formCompra, setFormCompra] = useState({ 
       nome: "", quantidade: 1, valorEstimado: "", valorAluguel: "", categoria: "material", prazo: "", fornecedor: "", obs: "" 
   });
   
   const [sugestoesCompra, setSugestoesCompra] = useState([]);
+  const [pecasSimilaresPlanoB, setPecasSimilaresPlanoB] = useState([]);
+  const [previewPlanoB, setPreviewPlanoB] = useState(null); 
 
   const [salvandoCompra, setSalvandoCompra] = useState(false);
   const [acaoSalvar, setAcaoSalvar] = useState('fechar');
@@ -42,12 +44,14 @@ const NovaLocacao = () => {
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const [snapCli, snapEst] = await Promise.all([
+        const [snapCli, snapEst, snapLoc] = await Promise.all([
           getDocs(collection(db, "clientes")),
-          getDocs(collection(db, "estoque"))
+          getDocs(collection(db, "estoque")),
+          getDocs(collection(db, "locacoes")) 
         ]);
         setClientes(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
         setEstoque(snapEst.docs.map(d => ({ id: d.id, ...d.data() })));
+        setTodasLocacoes(snapLoc.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (error) {
         console.error("Erro ao carregar:", error);
       } finally {
@@ -58,6 +62,87 @@ const NovaLocacao = () => {
   }, []);
 
   const categoriasUnicas = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
+
+  const isOverlapping = (start1, end1, start2, end2) => {
+      if (!start1 || !end1 || !start2 || !end2) return false;
+      const s1 = new Date(start1 + 'T00:00:00').getTime();
+      const e1 = new Date(end1 + 'T00:00:00').getTime();
+      const s2 = new Date(start2 + 'T00:00:00').getTime();
+      const e2 = new Date(end2 + 'T00:00:00').getTime();
+      return s1 <= e2 && e1 >= s2;
+  };
+
+  const getQuantidadeDisponivel = (pecaId) => {
+      const peca = estoque.find(e => e.id === pecaId);
+      if (!peca) return 0;
+
+      const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
+      const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
+
+      let livres = Math.max(0, qtdFisica - qtdManutencao);
+
+      if (datas.retirada && datas.devolucao) {
+          let qtdReservada = 0;
+          todasLocacoes.forEach(loc => {
+              const status = (loc.status || '').toLowerCase();
+              if (['confirmado', 'preparacao', 'entregue'].includes(status)) {
+                  if (isOverlapping(datas.retirada, datas.devolucao, loc.dataRetirada, loc.dataDevolucao)) {
+                      const itemNoPedido = loc.itens?.find(i => i.id === pecaId);
+                      if (itemNoPedido) {
+                          qtdReservada += (parseInt(itemNoPedido.qtd) || 0);
+                      }
+                  }
+              }
+          });
+          livres = Math.max(0, livres - qtdReservada);
+      }
+
+      return livres;
+  };
+
+  const abrirCatalogo = () => {
+      if (!datas.retirada || !datas.devolucao) {
+          alert("📅 ATENÇÃO: Por favor, preencha as DATAS DE RETIRADA e DEVOLUÇÃO no topo da tela primeiro!\n\nO sistema precisa das datas para calcular o que está livre.");
+          return;
+      }
+      setModalAberto(true);
+  };
+
+  const buscarSimilaresNoEstoque = (itemFaltante) => {
+    if (!itemFaltante || !itemFaltante.nome) return [];
+
+    const normalize = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
+    const palavrasAlvo = normalize(itemFaltante.nome)
+        .split(' ')
+        .filter(p => p.length > 2 && !['com', 'para', 'das', 'dos', 'kit', 'par', 'festa', 'tema', 'locacao'].includes(p));
+
+    if (palavrasAlvo.length === 0) return [];
+
+    const palavraPrincipal = palavrasAlvo[0]; 
+    const temaAtual = normalize(temaFesta); 
+
+    let similares = estoque.map(peca => {
+        const qtdLivre = getQuantidadeDisponivel(peca.id);
+        if (peca.id === itemFaltante.id || qtdLivre <= 0) return { ...peca, score: -1 };
+
+        let score = 0;
+        const nomePecaNorm = normalize(peca.nome);
+        const palavrasPeca = nomePecaNorm.split(' ');
+
+        if (palavrasPeca.includes(palavraPrincipal)) score += 10;
+        if (temaAtual && temaAtual.length > 2 && nomePecaNorm.includes(temaAtual)) score += 15; 
+        
+        palavrasAlvo.forEach(palavra => {
+            if (nomePecaNorm.includes(palavra) && palavra !== palavraPrincipal) score += 5;
+        });
+
+        return { ...peca, score, qtdLivre };
+    });
+
+    similares = similares.filter(p => p.score >= 10);
+    similares.sort((a, b) => b.score - a.score);
+    return similares.slice(0, 4);
+  };
 
   const dispararCompraAutomatica = (item) => {
     let valorAlg = item.financeiro?.valorAluguel || "0,00";
@@ -72,32 +157,77 @@ const NovaLocacao = () => {
         categoria: item.categoria || "acervo",
         prazo: datas.retirada || "",
         fornecedor: "",
-        obs: "Peça adicionada automaticamente por falta de estoque no momento do pedido."
+        obs: "Falta de estoque para esta data."
     });
+
+    setPreviewPlanoB(null);
+    const planoB = buscarSimilaresNoEstoque(item);
+    setPecasSimilaresPlanoB(planoB);
+
     setModalCompraAberto(true);
   };
 
-  const addCarrinho = (item) => {
-    const precoItem = Number(item.financeiro?.valorAluguel || 0);
-    const qtdEstoque = Number(item.quantidade) || 1; 
+  const aceitarSugestaoPlanoB = (pecaSubstituta) => {
+      addCarrinho(pecaSubstituta, true); 
+      setModalCompraAberto(false);
+      setPreviewPlanoB(null);
+      alert(`✅ Excelente! A peça "${pecaSubstituta.nome}" foi adicionada ao pedido!`);
+  };
+
+  const addCarrinho = (item, isSubstituicao = false) => {
+    const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
+    const qtdFisicaTotal = Number(item.quantidade) || 1; 
+    
+    const qtdLivreNaData = getQuantidadeDisponivel(item.id);
     
     const existe = carrinho.find(i => i.id === item.id);
     
     if (existe) {
-      if (existe.qtd >= qtdEstoque && !existe.isPendenteCompra) {
-          alert(`⚠️ Estoque Insuficiente!\nVocê possui apenas ${qtdEstoque} unidade(s) de "${item.nome}".\n\nVamos abrir a tela de COMPRA para adicionar a unidade faltante!`);
+      if (isSubstituicao) {
+          setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
+          return;
+      }
+
+      if (existe.qtd >= qtdLivreNaData && !existe.isPendenteCompra) {
+          alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê só tem ${qtdLivreNaData} unidade(s) livre(s) de "${item.nome}" para esta data.\n\nVamos buscar um Plano B!`);
           dispararCompraAutomatica(item);
           return;
       }
       setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
     } else {
-      if (qtdEstoque < 1) {
-          alert(`⚠️ Estoque Zerado!\nVocê não possui "${item.nome}" disponível no acervo no momento.\n\nVamos abrir a tela de COMPRA para encomendar!`);
+      if (qtdLivreNaData < 1 && !isSubstituicao) {
+          alert(`⚠️ PEÇA INDISPONÍVEL!\nEsta peça está em manutenção ou já alugada para esta data.\n\nVamos ver alternativas no acervo!`);
           dispararCompraAutomatica(item);
           return;
       }
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, qtdOriginal: qtdEstoque }]); 
+      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, qtdOriginal: qtdFisicaTotal, qtdLivreNestaData: qtdLivreNaData }]); 
     }
+  };
+
+  const handleChangeQtdCarrinho = (itemId, novaQtd) => {
+      const itemCarrinho = carrinho.find(i => i.id === itemId);
+      if (!itemCarrinho) return;
+
+      let qtdDesejada = parseInt(novaQtd);
+      if (isNaN(qtdDesejada)) qtdDesejada = ''; 
+
+      if (itemCarrinho.isPendenteCompra) {
+           setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
+           return;
+      }
+
+      if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
+          const livresAgora = getQuantidadeDisponivel(itemId);
+
+          if (qtdDesejada > livresAgora) {
+              alert(`⚠️ OPERAÇÃO BLOQUEADA!\nO limite absoluto para "${itemCarrinho.nome}" nesta data é: ${livresAgora} unidade(s).\n\nO sistema corrigiu o valor para o máximo permitido.`);
+              setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: livresAgora} : i));
+          } else {
+              setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
+          }
+      } else {
+           setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
+      }
   };
 
   const getFreteNumerico = () => {
@@ -106,7 +236,7 @@ const NovaLocacao = () => {
   };
 
   const calcularTotal = () => {
-    const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * item.qtd), 0);
+    const subtotal = carrinho.reduce((acc, item) => acc + (item.preco * (Number(item.qtd)||1)), 0);
     const total = subtotal + getFreteNumerico() - Number(desconto);
     return { subtotal, total: Math.max(0, total) };
   };
@@ -158,21 +288,60 @@ const NovaLocacao = () => {
         return alert("A data de devolução não pode ser menor que a data de retirada!");
     }
 
+    for (let item of carrinho) {
+        if (item.isPendenteCompra) continue;
+        const livresAgora = getQuantidadeDisponivel(item.id);
+        const qtdNoCarrinho = Number(item.qtd) || 1;
+        
+        if (qtdNoCarrinho > livresAgora) {
+            alert(`⛔ ERRO GRAVE DE ESTOQUE:\nA peça "${item.nome}" possui apenas ${livresAgora} unidade(s) livre(s) para esta data, mas você inseriu ${qtdNoCarrinho} no pedido.\n\nPor favor, diminua a quantidade ou faça o pedido de compra antes de confirmar o evento.`);
+            return; 
+        }
+    }
+
     try {
       const coll = collection(db, "locacoes");
       const snap = await getCountFromServer(coll);
       const count = snap.data().count + 1;
       const codigo = `${new Date().getFullYear()}-${count.toString().padStart(3, '0')}`;
-      const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente';
+
+      const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
+      
+      if (!clienteEncontrado) {
+          alert("ERRO DE SINCRONIA: O sistema não conseguiu confirmar a identidade deste cliente. Recarregue a página e tente novamente.");
+          return;
+      }
+
+      const nomeClienteReal = clienteEncontrado.nome || clienteEncontrado.nomeCompleto || clienteEncontrado.razaoSocial;
+
+      if (!nomeClienteReal || nomeClienteReal.trim().toLowerCase() === "cliente") {
+          alert("O cadastro deste cliente está incompleto na agenda. Por favor, edite o nome dele na aba Clientes primeiro.");
+          return;
+      }
 
       await addDoc(coll, {
-        numeroPedido: codigo, clienteId: clienteSelecionado, clienteNome: nomeCliente, temaFesta, tipoServico, 
-        dataRetirada: datas.retirada, dataDevolucao: datas.devolucao, itens: carrinho, logistica: { ...logistica, frete: getFreteNumerico() }, 
-        obsInternas, desconto: Number(desconto), valorTotal: calcularTotal().total, status, criadoEm: new Date()
+        numeroPedido: codigo, 
+        clienteId: clienteSelecionado, 
+        clienteNome: nomeClienteReal, 
+        temaFesta, 
+        tipoServico, 
+        dataRetirada: datas.retirada, 
+        dataDevolucao: datas.devolucao, 
+        itens: carrinho, 
+        logistica: { ...logistica, frete: getFreteNumerico() }, 
+        obsInternas, 
+        desconto: Number(desconto), 
+        valorTotal: calcularTotal().total, 
+        status, 
+        criadoEm: serverTimestamp()
       });
-      alert(`Pedido ${codigo} salvo!`);
+
+      alert(`Pedido ${codigo} salvo com sucesso para ${nomeClienteReal}!`);
       navigate('/locacoes');
-    } catch (e) { alert("Erro ao salvar."); }
+    } catch (e) { 
+        console.error(e);
+        alert("Erro ao salvar o pedido."); 
+    }
   };
 
   const itensFiltrados = estoque.filter(item => {
@@ -190,8 +359,10 @@ const NovaLocacao = () => {
     e.preventDefault();
     setSalvandoCompra(true);
     try {
-      const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente Atual';
-      const nomeVinculo = temaFesta ? `${temaFesta} - ${nomeCliente}` : `Pedido em Criação de ${nomeCliente}`;
+      const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
+      const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto) : 'Cliente Não Identificado';
+      
+      const nomeVinculo = temaFesta ? `${temaFesta} - ${nomeClienteReal}` : `Pedido em Criação de ${nomeClienteReal}`;
       
       let valorCusto = formCompra.valorEstimado ? Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
       let valorAluguel = formCompra.valorAluguel ? Number(formCompra.valorAluguel.replace(/\./g, "").replace(",", ".")) : 0;
@@ -327,7 +498,7 @@ const NovaLocacao = () => {
               <h3 className="section-divider" style={{margin: 0, border: 'none'}}>📦 ITENS DO PEDIDO</h3>
               <div className="botoes-acoes-itens">
                 <button type="button" className="btn-secundario-alerta" onClick={() => { if(!clienteSelecionado) return alert("Selecione o cliente primeiro."); setModalCompraAberto(true);}}>🛒 Faltou algo? (Comprar)</button>
-                <button type="button" className="btn-primary-outline" onClick={() => setModalAberto(true)}>+ ADC. PEÇAS</button>
+                <button type="button" className="btn-primary-outline" onClick={abrirCatalogo}>+ ADC. PEÇAS</button>
               </div>
             </div>
 
@@ -335,58 +506,82 @@ const NovaLocacao = () => {
               {carrinho.length === 0 ? (
                 <div className="carrinho-vazio">Nenhuma peça adicionada ainda. Clique em "+ Adc. Peças".</div>
               ) : (
-                <table className="tabela-carrinho">
-                  <thead><tr><th width="50"></th><th>PRODUTO</th><th className="text-center">QTD</th><th className="text-right">TOTAL</th><th width="40"></th></tr></thead>
-                  <tbody>
-                    {carrinho.map(item => (
-                      <tr key={item.id} className="carrinho-item-card">
-                        <td className="carrinho-img">
-                          {item.foto ? <img src={item.foto} alt="Peça"/> : <div className="img-placeholder">📷</div>}
-                        </td>
-                        <td className="carrinho-info">
-                          <strong>
-                            {item.nome}
-                            {item.isPendenteCompra && (
-                                <span style={{marginLeft: '8px', background: '#fef3c7', color: '#d97706', border: '1px solid #fcd34d', padding: '2px 6px', borderRadius: '4px', fontSize: '0.65rem', fontWeight: 'bold'}}>
-                                    ⏳ COMPRA PENDENTE
-                                </span>
-                            )}
-                          </strong>
-                          <span>R$ {Number(item.preco).toFixed(2)} un</span>
-                          
-                          {/* 🔥 NOVO: EXIBIÇÃO DE ESTOQUE DENTRO DO CARRINHO 🔥 */}
-                          {!item.isPendenteCompra && (
-                              <span style={{fontSize: '0.75rem', color: '#3b82f6', fontWeight: '600', display: 'block', marginTop: '4px'}}>
-                                  📦 Em estoque: {item.qtdOriginal} unid.
-                              </span>
-                          )}
-                        </td>
-                        <td className="text-center">
-                          <div className="controle-qtd">
-                            <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
-                            <span>{item.qtd}</span>
-                            <button type="button" onClick={() => {
-                                if (item.isPendenteCompra) {
-                                    setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i));
-                                } else if (item.qtd >= item.qtdOriginal) {
-                                    alert(`⚠️ Estoque Insuficiente!\nVocê possui apenas ${item.qtdOriginal} unidade(s) de "${item.nome}".\n\nVamos abrir a tela de COMPRA para a unidade extra!`);
-                                    dispararCompraAutomatica(item);
-                                } else {
-                                    setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i));
-                                }
-                            }}>+</button>
-                          </div>
-                        </td>
-                        <td className="text-right carrinho-total-item">
-                          <strong>R$ {(item.preco * item.qtd).toFixed(2)}</strong>
-                        </td>
-                        <td className="text-center">
-                          <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))}>🗑️</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                <div style={{overflowX: 'auto'}}>
+                    <table style={{width: '100%', borderCollapse: 'collapse', minWidth: '500px'}}>
+                      <thead>
+                        <tr style={{borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', textAlign: 'left'}}>
+                          <th style={{padding: '12px 10px', width: '50%'}}>Produto</th>
+                          <th style={{padding: '12px 10px', textAlign: 'center', width: '20%'}}>Quantidade</th>
+                          <th style={{padding: '12px 10px', textAlign: 'right', width: '20%'}}>Total</th>
+                          <th style={{padding: '12px 10px', width: '10%'}}></th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {carrinho.map(item => (
+                          <tr key={item.id} style={{borderBottom: '1px solid #f1f5f9', transition: '0.2s'}}>
+                            
+                            <td style={{padding: '12px 10px'}}>
+                               <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
+                                  <div style={{width: '45px', height: '45px', backgroundColor: '#f8fafc', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                                     {item.foto ? <img src={item.foto} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <span style={{fontSize:'20px'}}>📷</span>}
+                                  </div>
+                                  <div style={{display: 'flex', flexDirection: 'column'}}>
+                                     <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>{item.nome}</strong>
+                                     <span style={{color: '#64748b', fontSize: '12px'}}>R$ {Number(item.preco).toFixed(2)} un.</span>
+                                     {item.isPendenteCompra ? (
+                                         <span style={{color: '#d97706', fontSize: '10px', fontWeight: 'bold', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', width: 'max-content', marginTop: '4px'}}>⏳ COMPRA PENDENTE</span>
+                                     ) : (
+                                         <span style={{color: '#10b981', fontSize: '10px', fontWeight: 'bold', marginTop: '4px'}}>📦 Confirmado p/ Evento!</span>
+                                     )}
+                                  </div>
+                               </div>
+                            </td>
+
+                            <td style={{padding: '12px 10px', textAlign: 'center'}}>
+                              <div style={{display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f8fafc', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                                <button type="button" onClick={() => handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) - 1)} style={{width: '28px', height: '28px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a'}}>-</button>
+                                
+                                <input 
+                                  type="number" 
+                                  min="1" 
+                                  value={item.qtd} 
+                                  onChange={(e) => handleChangeQtdCarrinho(item.id, e.target.value)}
+                                  onBlur={(e) => {
+                                      if (!e.target.value || parseInt(e.target.value) < 1) handleChangeQtdCarrinho(item.id, 1);
+                                  }}
+                                  style={{width: '40px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: 'bold', fontSize: '14px', color: '#0f172a', appearance: 'textfield'}}
+                                />
+
+                                <button type="button" onClick={() => {
+                                    if (item.isPendenteCompra) {
+                                        handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) + 1);
+                                    } else {
+                                        const livresAgora = getQuantidadeDisponivel(item.id);
+                                        if ((Number(item.qtd) || 1) >= livresAgora) {
+                                            alert(`⚠️ LIMITE ATINGIDO!\nVocê possui apenas ${livresAgora} unidade(s) livre(s) de "${item.nome}" para esta data.\n\nVamos buscar um Plano B!`);
+                                            dispararCompraAutomatica(item);
+                                        } else {
+                                            handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) + 1);
+                                        }
+                                    }
+                                }} style={{width: '28px', height: '28px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a'}}>+</button>
+                              </div>
+                            </td>
+
+                            <td style={{padding: '12px 10px', textAlign: 'right'}}>
+                              <strong style={{color: '#0f172a', fontSize: '15px'}}>R$ {(item.preco * (Number(item.qtd) || 1)).toFixed(2)}</strong>
+                            </td>
+
+                            <td style={{padding: '12px 10px', textAlign: 'center'}}>
+                              <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))} style={{background: '#fef2f2', border: 'none', color: '#ef4444', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s'}} onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'} onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}>
+                                  🗑️
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                </div>
               )}
             </div>
           </div>
@@ -423,17 +618,33 @@ const NovaLocacao = () => {
         </aside>
       </div>
 
+      {/* 🔥 CATÁLOGO OTIMIZADO: GRADE PERFEITA, IMAGEM FIXA E BOTÃO CLARO 🔥 */}
       {modalAberto && (
-        <div className="modal-overlay-premium">
-          <div className="modal-box-premium catalogo-modal">
-            <div className="modal-header">
-              <h3>📦 Catálogo de Peças</h3>
+        <div className="modal-overlay-premium" style={{ zIndex: 9999 }}>
+          <div className="modal-box-premium catalogo-modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+            
+            <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: '18px' }}>📦 Catálogo de Peças <span style={{color: '#64748b', fontWeight: 'normal'}}>(Livre dia {datas.retirada.split('-').reverse().join('/')})</span></h3>
               <button className="btn-fechar" onClick={() => setModalAberto(false)}>X</button>
             </div>
             
-            <div className="catalogo-filtros">
-              <input type="text" className="search-input-clean" style={{border: '1px solid var(--borda)', padding: '10px', borderRadius: '8px'}} placeholder="🔎 Buscar peça..." value={busca} onChange={e => setBusca(e.target.value)} />
-              <div className="chips-categorias">
+            {/* BUSCA BONITA E LARGA */}
+            <div className="catalogo-filtros" style={{ padding: '15px 30px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
+              <input 
+                type="text" 
+                placeholder="🔎 Buscar peça pelo nome..." 
+                value={busca} 
+                onChange={e => setBusca(e.target.value)} 
+                style={{ 
+                    width: '100%', maxWidth: '500px', padding: '14px 18px', 
+                    borderRadius: '8px', border: '2px solid #cbd5e1', 
+                    fontSize: '15px', outline: 'none', transition: 'border-color 0.2s',
+                    backgroundColor: '#fff'
+                }} 
+                onFocus={e => e.target.style.borderColor = '#0f172a'}
+                onBlur={e => e.target.style.borderColor = '#cbd5e1'}
+              />
+              <div className="chips-categorias" style={{ marginTop: '15px', gap: '8px' }}>
                 {categoriasUnicas.map(cat => (
                   <button key={cat} type="button" className={`chip-cat ${filtroCategoria === cat ? 'active' : ''}`} onClick={() => setFiltroCategoria(cat)}>
                     {cat}
@@ -442,58 +653,129 @@ const NovaLocacao = () => {
               </div>
             </div>
 
-            <div className="catalogo-grid">
-              {itensFiltrados.map(item => (
-                <div key={item.id} className="peca-card" onClick={() => addCarrinho(item)}>
-                  
-                  <div className="peca-img">
-                    {item.foto ? <img src={item.foto} alt=""/> : '📷'}
-                    <div style={{position: 'absolute', top: 5, right: 5, background: 'rgba(0,0,0,0.7)', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>
-                        Qtd: {item.quantidade || 1}
-                    </div>
-                    <button className="btn-add-peca">+</button>
-                  </div>
-                  
-                  <div className="peca-info">
-                    <strong>{item.nome}</strong>
-                    <span>{item.categoria}</span>
-                    <b className="txt-sucesso">R$ {item.financeiro?.valorAluguel || 0}</b>
-                  </div>
+            {/* GRADE QUE CABE MAIS ITENS NA TELA */}
+            <div className="catalogo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', overflowY: 'auto', padding: '20px 30px', background: '#f1f5f9', flexGrow: 1 }}>
+              {itensFiltrados.map(item => {
+                const qtdFisica = parseInt(item.quantidade || 0) || parseInt(item.estoque || 0) || 0;
+                const qtdManutencao = parseInt(item.manutencao || 0) || parseInt(item.emManutencao || 0) || parseInt(item.qtdManutencao || 0) || parseInt(item.avariadas || 0) || parseInt(item.defeito || 0) || parseInt(item.quebradas || 0) || 0;
+                
+                const totalFisicoReal = Math.max(0, qtdFisica - qtdManutencao);
+                const qtdLivre = getQuantidadeDisponivel(item.id);
+                const esgotado = qtdLivre <= 0;
 
-                </div>
-              ))}
-              {itensFiltrados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada.</p>}
+                return (
+                  <div key={item.id} onClick={() => { if(!esgotado) addCarrinho(item) }} style={{ background: '#fff', border: esgotado ? '2px solid #fecaca' : '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '310px', cursor: esgotado ? 'not-allowed' : 'pointer', opacity: esgotado ? 0.7 : 1, boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }} onMouseEnter={e => { if(!esgotado) { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; } }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; }}>
+                    
+                    {/* IMAGEM COM ALTURA FIXA E PROTEGIDA (NÃO SOME MAIS) */}
+                    <div style={{ height: '140px', width: '100%', flexShrink: 0, backgroundColor: '#f8fafc', position: 'relative', borderBottom: '1px solid #f1f5f9' }}>
+                        {item.foto ? <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontSize:'35px'}}>📷</div>}
+                        {esgotado && <div style={{position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}><span style={{background: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px', transform: 'rotate(-10deg)', letterSpacing: '1px'}}>❌ ALUGADA</span></div>}
+                    </div>
+                    
+                    {/* INFORMAÇÕES DA PEÇA */}
+                    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
+                        
+                        <div>
+                            <strong style={{ fontSize: '14px', color: '#0f172a', marginBottom: '2px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.nome}>{item.nome}</strong>
+                            <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: '800' }}>{item.categoria}</span>
+                        </div>
+                        
+                        {/* OS BADGES BONITOS DE ESTOQUE */}
+                        <div style={{ display: 'flex', gap: '8px', margin: '10px 0' }}>
+                            <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', padding: '5px 2px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                                <span style={{ display: 'block', fontSize: '9px', color: '#475569', fontWeight: 'bold' }}>TOTAL</span>
+                                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{totalFisicoReal}</strong>
+                            </div>
+                            <div style={{ flex: 1, background: esgotado ? '#fef2f2' : '#f0fdf4', borderRadius: '6px', padding: '5px 2px', textAlign: 'center', border: esgotado ? '1px solid #fca5a5' : '1px solid #86efac' }}>
+                                <span style={{ display: 'block', fontSize: '9px', color: esgotado ? '#ef4444' : '#16a34a', fontWeight: 'bold' }}>LIVRES</span>
+                                <strong style={{ fontSize: '14px', color: esgotado ? '#ef4444' : '#16a34a' }}>{qtdLivre}</strong>
+                            </div>
+                        </div>
+
+                        {/* PREÇO E O BOTÃO DE (+) DE VERDADE */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <span style={{ fontSize: '16px', fontWeight: '900', color: esgotado ? '#ef4444' : '#10b981' }}>R$ {item.financeiro?.valorAluguel || 0}</span>
+                            <button style={{ width: '32px', height: '32px', background: esgotado ? '#f1f5f9' : '#0f172a', color: esgotado ? '#cbd5e1' : 'white', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: 'none', cursor: esgotado ? 'not-allowed' : 'pointer' }} disabled={esgotado}>
+                                {esgotado ? '✕' : '+'}
+                            </button>
+                        </div>
+
+                    </div>
+
+                  </div>
+                );
+              })}
+              {itensFiltrados.length === 0 && <p style={{ color: '#64748b', gridColumn: '1 / -1', textAlign: 'center', marginTop: '30px', fontSize: '15px' }}>Nenhuma peça encontrada com este nome ou categoria.</p>}
             </div>
           </div>
         </div>
       )}
 
+      {/* 🔥 MODAL DE COMPRA COM A SELEÇÃO DESBLOQUEADA 🔥 */}
       {modalCompraAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
-          <div className="modal-box-premium" style={{maxWidth: '650px'}}>
-            <div className="modal-header">
-              <h3>🛒 Comprar Item & Adicionar ao Pedido</h3>
+          <div className="modal-box-premium" style={{maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto'}}>
+            <div className="modal-header" style={{borderBottom: 'none', paddingBottom: '0'}}>
+              <h3>🛒 Faltou a peça?</h3>
               <button className="btn-fechar" onClick={() => setModalCompraAberto(false)}>X</button>
             </div>
-            <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '20px'}}>
-              Se a peça já existir no seu acervo, selecione na lista abaixo para não criar cadastros duplicados!
+            
+            {pecasSimilaresPlanoB.length > 0 && (
+                <div style={{margin: '15px 30px', padding: '15px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px'}}>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px'}}>
+                        <span style={{fontSize: '24px'}}>💡</span>
+                        <div>
+                            <strong style={{color: '#0f172a', display: 'block', fontSize: '15px'}}>Plano B: Salve a venda!</strong>
+                            <span style={{color: '#475569', fontSize: '13px'}}>O sistema encontrou opções COERENTES e LIVRES NESTA DATA:</span>
+                        </div>
+                    </div>
+                    
+                    {previewPlanoB ? (
+                        <div style={{background: '#fff', border: '2px solid #10b981', borderRadius: '10px', padding: '20px', textAlign: 'center', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.15)', animation: 'fadeIn 0.3s'}}>
+                           <p style={{fontSize: '13px', color: '#64748b', marginBottom: '10px'}}>Você está substituindo <b>{formCompra.nome}</b> por:</p>
+                           
+                           <div style={{width: '180px', height: '180px', background: '#f1f5f9', borderRadius: '10px', margin: '0 auto 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', overflow: 'hidden'}}>
+                               {previewPlanoB.foto ? <img src={previewPlanoB.foto} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}}/> : '📷'}
+                           </div>
+                           
+                           <h3 style={{margin: '0 0 10px 0', color: '#0f172a', fontSize: '20px'}}>{previewPlanoB.nome}</h3>
+                           <span style={{background: '#dcfce7', color: '#166534', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold'}}>📦 {previewPlanoB.qtdLivre} livres p/ esta data</span>
+
+                           <div style={{display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '20px'}}>
+                               <button type="button" onClick={() => setPreviewPlanoB(null)} style={{padding: '12px 20px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#475569'}}>← Cancelar e Voltar</button>
+                               <button type="button" onClick={() => aceitarSugestaoPlanoB(previewPlanoB)} style={{padding: '12px 20px', background: '#10b981', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#fff', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)'}}>✅ Confirmar Substituição</button>
+                           </div>
+                        </div>
+                    ) : (
+                        <div style={{display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px'}}>
+                            {pecasSimilaresPlanoB.map(pecaB => (
+                                <div key={pecaB.id} style={{minWidth: '130px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', textAlign: 'center', transition: '0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
+                                    <div style={{width: '60px', height: '60px', background: '#f1f5f9', borderRadius: '8px', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'}}>
+                                        {pecaB.foto ? <img src={pecaB.foto} alt="" style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px'}}/> : '📷'}
+                                    </div>
+                                    <strong style={{fontSize: '12px', display: 'block', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '8px'}} title={pecaB.nome}>{pecaB.nome}</strong>
+                                    <button type="button" onClick={() => setPreviewPlanoB(pecaB)} style={{background: '#0f172a', color: 'white', border: 'none', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', width: '100%', fontWeight: 'bold', transition: '0.2s'}} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'} onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0f172a'}>
+                                        🔎 Ver & Trocar
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
+
+            <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '15px', padding: '0 30px'}}>
+              O cliente faz questão da peça original? Preencha abaixo para solicitar a COMPRA dela.
             </p>
             
-            <form onSubmit={handleSalvarCompraRapida} className="form-pagamento">
+            <form onSubmit={handleSalvarCompraRapida} className="form-pagamento" style={{padding: '0 30px 30px 30px', opacity: previewPlanoB ? 0.3 : 1, pointerEvents: previewPlanoB ? 'none' : 'auto'}}>
               
               <div className="form-group-pag" style={{position: 'relative'}}>
                 <label>Nome do Item que será comprado *</label>
-                <input 
-                  id="compraNomeInput" 
-                  type="text" 
-                  required 
-                  autoFocus 
-                  autoComplete="off"
-                  value={formCompra.nome} 
+                <input id="compraNomeInput" type="text" required autoFocus autoComplete="off" value={formCompra.nome} 
                   onChange={(e) => {
                     const val = e.target.value;
                     setFormCompra({...formCompra, nome: val});
-                    
                     if(val.length >= 2) {
                        const filtrados = estoque.filter(item => item.nome.toLowerCase().includes(val.toLowerCase()));
                        setSugestoesCompra(filtrados);
@@ -504,31 +786,28 @@ const NovaLocacao = () => {
                   onBlur={() => setTimeout(() => setSugestoesCompra([]), 200)}
                 />
                 
+                {/* 🔥 A CAIXA DE PESQUISA DESBLOQUEADA PARA COMPRAS 🔥 */}
                 {sugestoesCompra.length > 0 && (
                    <div style={{position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', zIndex: 100, maxHeight: '180px', overflowY: 'auto', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}>
-                      {sugestoesCompra.map(item => (
+                      {sugestoesCompra.map(item => {
+                         const livres = getQuantidadeDisponivel(item.id);
+                         return (
                          <div 
                            key={item.id} 
                            onMouseDown={() => { 
                               let valorAlg = item.financeiro?.valorAluguel || "0,00";
                               if (typeof valorAlg === 'number') valorAlg = valorAlg.toFixed(2).replace(".", ",");
-                              
-                              setFormCompra({
-                                 ...formCompra, 
-                                 nome: item.nome,
-                                 categoria: item.categoria || "acervo",
-                                 valorAluguel: valorAlg
-                              });
+                              setFormCompra({...formCompra, nome: item.nome, categoria: item.categoria || "acervo", valorAluguel: valorAlg});
                               setSugestoesCompra([]);
                            }}
                            style={{padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}
                            onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
                            onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}
                          >
-                           <span style={{fontWeight: 'bold', color: '#0f172a', fontSize: '13px'}}>{item.nome}</span>
-                           <span style={{fontSize: '11px', color: '#64748b', backgroundColor: '#e2e8f0', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold'}}>No Acervo: {item.quantidade}</span>
+                           <span style={{fontWeight: 'bold', color: '#0f172a', fontSize: '13px'}}>{item.nome} {livres <= 0 && '(ALUGADO)'}</span>
+                           <span style={{fontSize: '11px', color: livres > 0 ? '#166534' : '#ef4444', backgroundColor: livres > 0 ? '#dcfce7' : '#fee2e2', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold'}}>Livres: {livres}</span>
                          </div>
-                      ))}
+                      )})}
                    </div>
                 )}
               </div>

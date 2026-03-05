@@ -30,9 +30,30 @@ const Locacoes = () => {
 
   const carregarLocacoes = async () => {
     try {
+      const clientesSnapshot = await getDocs(collection(db, "clientes"));
+      const dicionarioClientes = {};
+      clientesSnapshot.forEach(doc => {
+          const cData = doc.data();
+          dicionarioClientes[doc.id] = cData.nome || cData.nomeCompleto || cData.razaoSocial || "Sem Nome";
+      });
+
       const querySnapshot = await getDocs(collection(db, "locacoes"));
+      
+      const hoje = new Date();
+      hoje.setHours(0,0,0,0);
+
       const dados = querySnapshot.docs.map(doc => {
         const data = doc.data();
+
+        let nomeDoClienteReal = data.clienteNome || data.nomeCliente || "Cliente";
+        const idSalvo = data.clienteId || data.idCliente || (typeof data.cliente === 'string' ? data.cliente : null);
+
+        if (idSalvo && dicionarioClientes[idSalvo]) {
+            nomeDoClienteReal = dicionarioClientes[idSalvo];
+        } else if (data.cliente && typeof data.cliente === 'object') {
+            nomeDoClienteReal = data.cliente.nome || nomeDoClienteReal;
+        }
+
         let tipoServico = "DECORAÇÃO";
         if (data.tipoServico || data.tipoDaFesta || data.modalidade) {
            tipoServico = String(data.tipoServico || data.tipoDaFesta || data.modalidade).toUpperCase();
@@ -45,19 +66,38 @@ const Locacoes = () => {
             timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
         }
 
-        return { id: doc.id, ...data, tipoServicoFormatado: tipoServico, createdAtMs: timestampCriacao };
+        let statusReal = (data.status || '').toLowerCase();
+        let isVencido = false;
+
+        // 🔥 LIXEIRO AUTOMÁTICO DE ORÇAMENTOS VENCIDOS 🔥
+        if (statusReal.includes('orcam') && data.dataRetirada) {
+            const locDate = new Date(data.dataRetirada + 'T00:00:00');
+            if (locDate.getTime() < hoje.getTime()) {
+                // Se passou da data da festa e não foi confirmado, arquiva como Lead Perdido
+                isVencido = true;
+            }
+        }
+
+        return { 
+            id: doc.id, 
+            ...data, 
+            status: statusReal, 
+            isOrcamentoVencido: isVencido,
+            clienteNome: nomeDoClienteReal, 
+            tipoServicoFormatado: tipoServico, 
+            createdAtMs: timestampCriacao 
+        };
       });
 
       setLista(dados);
 
-      const hoje = new Date();
-      hoje.setHours(0,0,0,0);
-      
       const anomalias = [];
 
       dados.forEach(item => {
-        const statusStr = (item.status || '').toLowerCase();
-        if (statusStr === 'cancelado') return; 
+        const statusStr = item.status;
+        
+        // Leads Perdidos e Cancelados não entram na auditoria (já foram arquivados)
+        if (statusStr === 'cancelado' || item.isOrcamentoVencido) return; 
 
         const locDate = item.dataRetirada ? new Date(item.dataRetirada + 'T00:00:00') : null;
         const devDate = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDate;
@@ -65,10 +105,7 @@ const Locacoes = () => {
         let motivos = [];
         const isOrcamento = statusStr.includes('orcam');
 
-        if (isOrcamento && locDate && locDate.getTime() < hoje.getTime()) {
-          motivos.push("👻 Orçamento Vencido");
-        } 
-        else if (['confirmado', 'preparacao'].includes(statusStr) && locDate && locDate.getTime() <= hoje.getTime()) {
+        if (['confirmado', 'preparacao'].includes(statusStr) && locDate && locDate.getTime() <= hoje.getTime()) {
           motivos.push("📦 Atrasado para Entrega");
         } 
         else if (statusStr === 'entregue' && devDate && devDate.getTime() < hoje.getTime()) {
@@ -146,15 +183,30 @@ const Locacoes = () => {
     );
   }
 
-  if (filtroStatus === 'orcamentos') {
-      filtrados = filtrados.filter(i => (i.status || '').toLowerCase().includes('orcam'));
+  // 🔥 O NOVO FILTRO INTELIGENTE 🔥
+  if (filtroStatus === 'todos') {
+      // Todos exclui Cancelados e Leads Perdidos (Deixa a tela limpa!)
+      filtrados = filtrados.filter(i => {
+          const st = (i.status || '').toLowerCase();
+          return st !== 'cancelado' && !i.isOrcamentoVencido;
+      });
+  } else if (filtroStatus === 'orcamentos') {
+      // Aba de orçamentos exibe apenas os orçamentos que AINDA são válidos
+      filtrados = filtrados.filter(i => {
+          const st = (i.status || '').toLowerCase();
+          return st.includes('orcam') && !i.isOrcamentoVencido;
+      });
   } else if (filtroStatus === 'confirmados') {
       filtrados = filtrados.filter(i => {
-          const s = (i.status || '').toLowerCase();
-          return !s.includes('orcam') && s !== 'cancelado';
+          const st = (i.status || '').toLowerCase();
+          return !st.includes('orcam') && st !== 'cancelado' && !i.isOrcamentoVencido;
       });
   } else if (filtroStatus === 'cancelados') {
-      filtrados = filtrados.filter(i => (i.status || '').toLowerCase() === 'cancelado');
+      // A lixeira puxa os Cancelados E os Leads Perdidos!
+      filtrados = filtrados.filter(i => {
+          const st = (i.status || '').toLowerCase();
+          return st === 'cancelado' || i.isOrcamentoVencido;
+      });
   }
 
   if (filtroServico === 'pegue') {
@@ -163,7 +215,20 @@ const Locacoes = () => {
       filtrados = filtrados.filter(i => !i.tipoServicoFormatado.includes('PEGUE'));
   }
 
+  // 🔥 O NOVO MOTOR DE ORDENAÇÃO POR PRIORIDADE 🔥
   filtrados.sort((a, b) => {
+    const getPriority = (item) => {
+        const st = (item.status || '').toLowerCase();
+        if (st === 'cancelado' || item.isOrcamentoVencido) return 3; // Lixo pro final
+        if (st.includes('orcam')) return 2; // Orçamentos no meio
+        return 1; // Confirmados e Ativos no topo absoluto!
+    };
+
+    const pA = getPriority(a);
+    const pB = getPriority(b);
+
+    if (pA !== pB) return pA - pB;
+
     if (filtroOrdenacao === 'proximos') {
       const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
       const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
@@ -173,14 +238,6 @@ const Locacoes = () => {
     } else if (filtroOrdenacao === 'menorValor') {
       return Number(a.valorTotal || 0) - Number(b.valorTotal || 0);
     } else {
-      const statusA = (a.status || '').toLowerCase();
-      const statusB = (b.status || '').toLowerCase();
-      const isA_Orcam = statusA.includes('orcam');
-      const isB_Orcam = statusB.includes('orcam');
-
-      if (isA_Orcam && !isB_Orcam) return -1;
-      if (!isA_Orcam && isB_Orcam) return 1;
-
       return b.createdAtMs - a.createdAtMs;
     }
   });
@@ -200,14 +257,17 @@ const Locacoes = () => {
           <div className="dash-icon">✅</div>
           <div className="dash-info">
             <h3>Confirmados / Ativos</h3>
-            <h2>{lista.filter(i => !['orcamento', 'cancelado'].includes((i.status || '').toLowerCase())).length}</h2>
+            <h2>{lista.filter(i => {
+                const s = (i.status || '').toLowerCase();
+                return !['orcamento', 'cancelado'].includes(s) && !i.isOrcamentoVencido;
+            }).length}</h2>
           </div>
         </div>
         <div className="dash-card warning">
           <div className="dash-icon">📂</div>
           <div className="dash-info">
-            <h3>Orçamentos / Leads</h3>
-            <h2>{lista.filter(i => (i.status || '').toLowerCase() === 'orcamento').length}</h2>
+            <h3>Orçamentos Futuros</h3>
+            <h2>{lista.filter(i => (i.status || '').toLowerCase().includes('orcam') && !i.isOrcamentoVencido).length}</h2>
           </div>
         </div>
       </div>
@@ -243,10 +303,10 @@ const Locacoes = () => {
         <div className="filter-chips-row">
           <span className="chips-label">STATUS DOS PEDIDOS:</span>
           <div className="chips-list">
-            <button type="button" className={`chip-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Todos</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Todos (Ativos)</button>
             <button type="button" className={`chip-btn ${filtroStatus === 'orcamentos' ? 'active orcamento' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>Leads / Orçamentos</button>
             <button type="button" className={`chip-btn ${filtroStatus === 'confirmados' ? 'active confirmado' : ''}`} onClick={() => setFiltroStatus('confirmados')}>Confirmados</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'cancelados' ? 'active cancelado' : ''}`} onClick={() => setFiltroStatus('cancelados')}>Cancelados</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'cancelados' ? 'active cancelado' : ''}`} onClick={() => setFiltroStatus('cancelados')}>Lixeira / Leads Perdidos</button>
           </div>
         </div>
       </div>
@@ -275,7 +335,7 @@ const Locacoes = () => {
                 const valorPago = Number(item.valorPago || 0);
                 const saldoDevedor = valorTotal - valorPago;
                 const statusStr = (item.status || '').toLowerCase();
-                const isCancelado = statusStr === 'cancelado';
+                const isCancelado = statusStr === 'cancelado' || item.isOrcamentoVencido;
                 const isOrcamento = statusStr.includes('orcam'); 
                 
                 const temAvaria = item.itens?.some(i => i.avaria);
@@ -285,7 +345,8 @@ const Locacoes = () => {
                 let alertaOperacional = null;
                 let corAlerta = '';
 
-                if (item.dataRetirada && !['finalizado', 'cancelado'].includes(statusStr)) {
+                // Mostra alertas de operação apenas para itens não cancelados/vencidos
+                if (item.dataRetirada && !['finalizado', 'cancelado'].includes(statusStr) && !item.isOrcamentoVencido) {
                     const hoje = new Date();
                     hoje.setHours(0,0,0,0);
                     
@@ -296,11 +357,7 @@ const Locacoes = () => {
                     const locDate = new Date(item.dataRetirada + 'T00:00:00');
                     const devDate = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDate;
 
-                    if (isOrcamento && locDate.getTime() < hoje.getTime()) {
-                        alertaOperacional = "👻 Orçamento Vencido";
-                        corAlerta = "#94a3b8"; 
-                    } 
-                    else if (statusStr === 'confirmado' && locDate.getTime() <= amanha.getTime()) {
+                    if (statusStr === 'confirmado' && locDate.getTime() <= amanha.getTime()) {
                         alertaOperacional = "📦 Separar Peças!";
                         corAlerta = "#f59e0b"; 
                     }
@@ -325,6 +382,8 @@ const Locacoes = () => {
                     <td className="pedido-id-cell">
                       {item.numeroPedido ? (
                         `#${item.numeroPedido}`
+                      ) : item.isOrcamentoVencido ? (
+                        <span style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px'}}>LEAD PERDIDO</span>
                       ) : isOrcamento ? (
                         <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO DO SITE</span>
                       ) : (
@@ -332,7 +391,9 @@ const Locacoes = () => {
                       )}
                     </td>
                     <td className="cliente-info-cell">
-                      <strong style={{textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '15px'}}>{item.clienteNome}</strong>
+                      <strong style={{textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '15px'}}>
+                        {item.clienteNome}
+                      </strong>
                       <div className="tags-row">
                         <span className={`tag-servico ${item.tipoServicoFormatado.includes('PEGUE') ? 'pegue' : 'deco'}`}>
                           {item.tipoServicoFormatado}
@@ -360,8 +421,8 @@ const Locacoes = () => {
                     </td>
                     
                     <td className="status-cell">
-                      <span className={`status-pill-v2 ${statusStr}`}>
-                        {item.status?.toUpperCase() || 'S/S'}
+                      <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr}`}>
+                        {item.isOrcamentoVencido ? 'LEAD PERDIDO' : item.status?.toUpperCase() || 'S/S'}
                       </span>
                       {alertaOperacional && (
                          <div style={{ marginTop: '6px', fontSize: '0.75rem', fontWeight: '800', color: corAlerta, textTransform: 'uppercase' }}>
@@ -427,25 +488,11 @@ const Locacoes = () => {
                 <form onSubmit={registrarPagamento} className="form-pagamento">
                     <div className="form-group-pag">
                       <label>Valor Recebido (R$)</label>
-                      <input 
-                        type="number" 
-                        name="valorPagamento" 
-                        id="valorPagamento" 
-                        step="0.01" 
-                        value={pagamento.valor} 
-                        onChange={e => setPagamento({...pagamento, valor: e.target.value})} 
-                        required 
-                        autoFocus
-                      />
+                      <input type="number" step="0.01" value={pagamento.valor} onChange={e => setPagamento({...pagamento, valor: e.target.value})} required autoFocus />
                     </div>
                     <div className="form-group-pag">
                       <label>Forma de Pagamento</label>
-                      <select 
-                        name="formaPagamento" 
-                        id="formaPagamento" 
-                        value={pagamento.formaPagto} 
-                        onChange={e => setPagamento({...pagamento, formaPagto: e.target.value})}
-                      >
+                      <select value={pagamento.formaPagto} onChange={e => setPagamento({...pagamento, formaPagto: e.target.value})}>
                           <option value="Pix">Pix</option>
                           <option value="Dinheiro">Dinheiro</option>
                           <option value="Cartão de Crédito">Cartão de Crédito</option>
@@ -454,14 +501,7 @@ const Locacoes = () => {
                     </div>
                     <div className="form-group-pag">
                       <label>Data do Pagamento</label>
-                      <input 
-                        type="date" 
-                        name="dataPagamento" 
-                        id="dataPagamento" 
-                        value={pagamento.data} 
-                        onChange={e => setPagamento({...pagamento, data: e.target.value})} 
-                        required 
-                      />
+                      <input type="date" value={pagamento.data} onChange={e => setPagamento({...pagamento, data: e.target.value})} required />
                     </div>
                     <div className="modal-actions">
                         <button type="button" className="btn-cancel" onClick={() => setModalPagamento(false)}>Cancelar</button>
@@ -472,87 +512,41 @@ const Locacoes = () => {
          </div>
       )}
 
-      {/* 🔥 O FIM DO DESASTRE DA AUDITORIA: NOVO DESIGN PREMIUM 🔥 */}
       {mostrarAuditoria && (
         <div className="modal-overlay-v2">
           <div className="modal-box-v2 auditoria-box">
-            
             <div className="auditoria-header">
               <div className="auditoria-header-icon">🚨</div>
               <div className="auditoria-header-text">
                 <h2>ATENÇÃO: Erros Operacionais Detectados!</h2>
-                <p>O sistema encontrou furos de processo. Pode ser atraso na devolução, peças quebradas, falta de pagamento ou orçamentos abandonados. <b>Resolva para limpar esta lista!</b></p>
+                <p>Resolva para limpar esta lista!</p>
               </div>
             </div>
-            
             <div className="auditoria-body">
               {pedidosComProblema.map(req => {
                 const statusAtual = (req.status || '').toLowerCase();
-                const ehOrcamento = statusAtual.includes('orcam');
-
                 return (
                   <div key={req.id} className="auditoria-card">
-                    
                     <div className="auditoria-info">
                       <strong>{req.clienteNome}</strong> 
                       <span className="ordem-id">#{req.numeroPedido || 'S/N'}</span>
-                      
                       <div className="auditoria-detalhes">
-                        <span>Data do Evento:</span> 
-                        <span className="auditoria-data">{req.dataRetirada ? req.dataRetirada.split('-').reverse().join('/') : 'S/D'}</span>
-                        <span className="divisor">•</span> 
-                        <span>Travado em:</span> 
-                        <span className="auditoria-status">{req.status.toUpperCase()}</span>
+                        <span>Data do Evento:</span> <span className="auditoria-data">{req.dataRetirada ? req.dataRetirada.split('-').reverse().join('/') : 'S/D'}</span>
                       </div>
-                      
                       <div className="auditoria-badges-row">
-                        {req.alertasAuditoria.map((alerta, idx) => (
-                           <span key={idx} className="auditoria-badge">
-                             {alerta}
-                           </span>
-                        ))}
+                        {req.alertasAuditoria.map((alerta, idx) => <span key={idx} className="auditoria-badge">{alerta}</span>)}
                       </div>
                     </div>
-                    
                     <div className="auditoria-acoes">
-                      {ehOrcamento ? (
-                        <button onClick={() => resolverPedidoEsquecido(req.id, 'cancelado')} className="btn-resolver cancel">
-                          🗑️ Descartar Orçamento
-                        </button>
-                      ) : statusAtual !== 'finalizado' ? (
-                        <>
-                          <button onClick={() => resolverPedidoEsquecido(req.id, 'cancelado')} className="btn-resolver cancel">
-                            ❌ Cancelar
-                          </button>
-                          <button onClick={() => resolverPedidoEsquecido(req.id, 'finalizado')} className="btn-resolver ok">
-                            ✔️ Forçar Baixa
-                          </button>
-                        </>
-                      ) : null}
-                      
-                      <button 
-                        onClick={() => {
-                          setMostrarAuditoria(false); 
-                          navigate(`/locacoes/editar/${req.id}`); 
-                        }} 
-                        className="btn-abrir-pedido"
-                        style={statusAtual === 'finalizado' ? { width: '100%', justifyContent: 'center' } : {}}
-                      >
-                        Abrir Pedido ➔
-                      </button>
+                      <button onClick={() => { setMostrarAuditoria(false); navigate(`/locacoes/editar/${req.id}`); }} className="btn-abrir-pedido">Abrir Pedido ➔</button>
                     </div>
-
                   </div>
                 );
               })}
             </div>
-
             <div className="auditoria-footer">
-              <button onClick={() => setMostrarAuditoria(false)}>
-                Minimizar Avisos (Não recomendado)
-              </button>
+              <button onClick={() => setMostrarAuditoria(false)}>Minimizar Avisos</button>
             </div>
-
           </div>
         </div>
       )}

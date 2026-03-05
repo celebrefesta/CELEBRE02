@@ -30,6 +30,8 @@ const Catalogo = () => {
   const [tipoFluxo, setTipoFluxo] = useState('orcamento'); 
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
+  const [produtoDetalhe, setProdutoDetalhe] = useState(null);
+
   useEffect(() => {
     const inicializar = async () => {
       try {
@@ -70,6 +72,16 @@ const Catalogo = () => {
     return null;
   };
 
+  const formatarDimensoesDetalhe = (esp) => {
+      if (!esp) return null;
+      let partes = [];
+      if (Number(esp.largura) > 0) partes.push(`Largura: ${esp.largura}cm`);
+      if (Number(esp.altura) > 0) partes.push(`Altura: ${esp.altura}cm`);
+      if (Number(esp.diametro) > 0) partes.push(`Diâmetro: ${esp.diametro}cm`);
+      if (Number(esp.comprimento) > 0) partes.push(`Comp.: ${esp.comprimento}cm`);
+      return partes.length > 0 ? partes.join(' | ') : null;
+  };
+
   const toggleNoCarrinho = (item) => {
     const existe = carrinho.find(i => i.id === item.id);
     if (existe) {
@@ -78,6 +90,8 @@ const Catalogo = () => {
       setCarrinho([...carrinho, { ...item, qtd: 1 }]);
     }
   };
+
+  const isNoCarrinho = (id) => carrinho.some(i => i.id === id);
 
   const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * i.qtd), 0);
 
@@ -127,6 +141,18 @@ const Catalogo = () => {
     if (tipo === 'modalidade') setFiltroModalidade(valor);
     if (tipo === 'menu') setFiltroMenu(valor);
     setMenuMobileAberto(false); 
+  };
+
+  const calcularAncoragemKit = (item) => {
+      const precoAtual = Number(item.financeiro?.valorAluguel || 0);
+      let precoSomaAvulso = 0;
+      
+      if (item.especificacoes?.isDecoracao && item.especificacoes?.itensDecoracao) {
+          precoSomaAvulso = item.especificacoes.itensDecoracao.reduce((acc, peca) => acc + (Number(peca.precoOriginal) * (peca.qtd || 1)), 0);
+      }
+      
+      const desconto = precoSomaAvulso - precoAtual;
+      return { precoAtual, precoSomaAvulso, desconto, isVantajoso: desconto > 0 };
   };
 
   if (loading) return <div className="loader-catalogo">Carregando Acervo...</div>;
@@ -211,20 +237,24 @@ const Catalogo = () => {
 
           <div className="cat-grid">
             {itensFiltrados.map(item => {
-              const isSelected = carrinho.find(i => i.id === item.id);
+              const isSelected = isNoCarrinho(item.id);
               return (
                 <div key={item.id} className="cat-card">
-                  <div className="cat-img-wrapper">
-                    {item.foto ? <img src={item.foto} alt="" /> : <div className="no-img">📷</div>}
-                    {isSelected && <div className="cat-badge-selected">Na Lista</div>}
+                  <div style={{cursor: 'pointer'}} onClick={() => setProdutoDetalhe(item)}>
+                      <div className="cat-img-wrapper">
+                        {item.foto ? <img src={item.foto} alt="" /> : <div className="no-img">📷</div>}
+                        {isSelected && <div className="cat-badge-selected">Na Lista</div>}
+                      </div>
+                      <div className="cat-info" style={{paddingBottom: '5px'}}>
+                        <h4 className="cat-title-text">{item.nome}</h4>
+                        <p className="cat-medida">{formatarDimensoes(item.dimensoes)}</p>
+                        <div className="cat-price">R$ {Number(item.financeiro?.valorAluguel || 0).toFixed(2)}</div>
+                      </div>
                   </div>
-                  <div className="cat-info">
-                    <h4 className="cat-title-text">{item.nome}</h4>
-                    <p className="cat-medida">{formatarDimensoes(item.dimensoes)}</p>
-                    <div className="cat-price">R$ {Number(item.financeiro?.valorAluguel || 0).toFixed(2)}</div>
-                    <button className={`btn-add-lista ${isSelected ? 'added' : ''}`} onClick={() => toggleNoCarrinho(item)}>
-                      {isSelected ? 'Remover' : 'Adicionar'}
-                    </button>
+                  <div style={{padding: '0 15px 15px 15px'}}>
+                      <button className={`btn-add-lista ${isSelected ? 'added' : ''}`} onClick={() => toggleNoCarrinho(item)}>
+                        {isSelected ? 'Remover da Lista' : 'Adicionar'}
+                      </button>
                   </div>
                 </div>
               );
@@ -252,6 +282,155 @@ const Catalogo = () => {
         <div className="cat-floating-bar" onClick={() => setModalFinalizar(true)}>
           <span>🛍️ {carrinho.length} itens - <strong>R$ {calcularTotal().toFixed(2)}</strong></span>
           <button>VER CARRINHO ➔</button>
+        </div>
+      )}
+
+      {/* =========================================================
+          🔥 MODAL E-COMMERCE PREMIUM (DETALHES DO PRODUTO) 🔥
+      ========================================================= */}
+      {produtoDetalhe && (
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px', boxSizing: 'border-box', opacity: 1, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setProdutoDetalhe(null)}>
+          <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '950px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={e => e.stopPropagation()}>
+            
+            <button onClick={() => setProdutoDetalhe(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '50%', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', zIndex: 10, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
+
+            {/* LADO ESQUERDO: IMAGENS */}
+            <div style={{ width: window.innerWidth < 768 ? '100%' : '50%', backgroundColor: '#f8fafc', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', borderRight: window.innerWidth < 768 ? 'none' : '1px solid #e2e8f0', borderBottom: window.innerWidth < 768 ? '1px solid #e2e8f0' : 'none' }}>
+               <div style={{ width: '100%', height: '350px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+                   {produtoDetalhe.foto ? <img src={produtoDetalhe.foto} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={produtoDetalhe.nome}/> : <span style={{fontSize:'50px'}}>📷</span>}
+               </div>
+
+               {/* 🔥 ÁREA REESCRITA COM TEXTO LIMPO 🔥 */}
+               {produtoDetalhe.especificacoes?.isDecoracao && produtoDetalhe.especificacoes?.itensDecoracao?.length > 0 && (
+                   <div style={{ width: '100%', marginTop: '30px', borderTop: '2px dashed #cbd5e1', paddingTop: '20px' }}>
+                       <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px'}}>
+                           <span style={{fontSize: '20px'}}>✨</span>
+                           <span style={{ fontSize: '13px', color: '#c5a059', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                               Peças inclusas nesta decoração:
+                           </span>
+                       </div>
+                       
+                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'flex-start' }}>
+                           {produtoDetalhe.especificacoes.itensDecoracao.map((peca, idx) => (
+                               <div key={idx} style={{ width: 'calc(33.33% - 10px)', minWidth: '80px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                                   <div style={{ width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #cbd5e1', position: 'relative', marginBottom: '8px', background: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }} title={`${peca.qtd}x ${peca.nome}`}>
+                                       {peca.foto ? <img src={peca.foto} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt=""/> : <div style={{width:'100%', height:'100%', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px'}}>📷</div>}
+                                       <div style={{ position: 'absolute', bottom: 0, right: 0, background: '#0f172a', color: 'white', fontSize: '11px', fontWeight: 'bold', padding: '3px 7px', borderTopLeftRadius: '8px' }}>{peca.qtd}x</div>
+                                   </div>
+                                   <strong style={{ fontSize: '12px', color: '#0f172a', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{peca.nome}</strong>
+                               </div>
+                           ))}
+                       </div>
+                   </div>
+               )}
+            </div>
+
+            {/* LADO DIREITO: DADOS, FICHA TÉCNICA E PREÇO */}
+            <div style={{ width: window.innerWidth < 768 ? '100%' : '50%', padding: '30px', display: 'flex', flexDirection: 'column' }}>
+               <div style={{ marginBottom: '5px' }}>
+                   <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
+                       {produtoDetalhe.especificacoes?.isDecoracao ? 'Pacote Completo' : produtoDetalhe.categoria}
+                   </span>
+               </div>
+               
+               <h2 style={{ fontSize: '26px', color: '#0f172a', margin: '10px 0', lineHeight: '1.2' }}>{produtoDetalhe.nome}</h2>
+               
+               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', marginTop: '20px', marginBottom: '20px' }}>
+                   <strong style={{ fontSize: '12px', color: '#475569', display: 'block', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📋 Ficha Técnica</strong>
+                   
+                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
+                       {produtoDetalhe.categoria && (
+                           <div>
+                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Categoria:</span>
+                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.categoria}</strong>
+                           </div>
+                       )}
+                       {produtoDetalhe.tema && (
+                           <div>
+                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Tema Sugerido:</span>
+                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.tema}</strong>
+                           </div>
+                       )}
+                       {produtoDetalhe.especificacoes?.cor && (
+                           <div>
+                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Cor principal:</span>
+                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.especificacoes.cor}</strong>
+                           </div>
+                       )}
+                       {produtoDetalhe.especificacoes?.tamanho && (
+                           <div>
+                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Porte/Tamanho:</span>
+                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.especificacoes.tamanho}</strong>
+                           </div>
+                       )}
+                       {formatarDimensoesDetalhe(produtoDetalhe.especificacoes) && (
+                           <div style={{gridColumn: '1 / -1', background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
+                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '2px'}}>Medidas Oficiais:</span>
+                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{formatarDimensoesDetalhe(produtoDetalhe.especificacoes)}</strong>
+                           </div>
+                       )}
+                   </div>
+               </div>
+
+               {produtoDetalhe.observacoes && (
+                   <div style={{ marginBottom: '20px' }}>
+                       <strong style={{ fontSize: '12px', color: '#475569', display: 'block', marginBottom: '5px' }}>Dicas e Detalhes:</strong>
+                       <p style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.5', margin: 0 }}>{produtoDetalhe.observacoes}</p>
+                   </div>
+               )}
+
+               <div style={{ flexGrow: 1 }}></div>
+
+               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '10px' }}>
+                   
+                   {/* 🔥 A NOVA CAIXA COM A FRASE DE VENDAS 🔥 */}
+                   {(() => {
+                       const { precoAtual, precoSomaAvulso, desconto, isVantajoso } = calcularAncoragemKit(produtoDetalhe);
+                       
+                       if (isVantajoso) {
+                           return (
+                               <div style={{ marginBottom: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '15px', borderRadius: '10px' }}>
+                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
+                                       <span style={{ fontSize: '13px', color: '#64748b' }}>
+                                           Alugando as peças individuais ficaria: <strong style={{ textDecoration: 'line-through', color: '#ef4444' }}>R$ {precoSomaAvulso.toFixed(2)}</strong>
+                                       </span>
+                                       <span style={{ fontSize: '15px', color: '#0f172a', marginTop: '5px' }}>
+                                           A decoração completa fica por: <strong style={{ fontSize: '32px', color: '#10b981', fontWeight: '900', display: 'block', marginTop: '2px' }}>R$ {precoAtual.toFixed(2)}</strong>
+                                       </span>
+                                   </div>
+                                   <div style={{ background: '#10b981', color: 'white', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', display: 'inline-block', width: '100%', textAlign: 'center' }}>
+                                       Viu como compensa? Você economiza R$ {desconto.toFixed(2)}! 😉
+                                   </div>
+                               </div>
+                           );
+                       } else {
+                           return (
+                               <div style={{ marginBottom: '15px' }}>
+                                   <strong style={{ fontSize: '36px', color: '#0f172a', fontWeight: '900' }}>R$ {precoAtual.toFixed(2)}</strong>
+                                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Valor do aluguel</span>
+                               </div>
+                           );
+                       }
+                   })()}
+
+                   <button 
+                       onClick={() => {
+                           toggleNoCarrinho(produtoDetalhe);
+                           setProdutoDetalhe(null); 
+                       }} 
+                       style={{ 
+                           width: '100%', padding: '16px', borderRadius: '10px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', border: 'none', transition: '0.2s',
+                           background: isNoCarrinho(produtoDetalhe.id) ? '#fef2f2' : '#c5a059',
+                           color: isNoCarrinho(produtoDetalhe.id) ? '#ef4444' : '#fff',
+                           boxShadow: isNoCarrinho(produtoDetalhe.id) ? 'none' : '0 8px 20px rgba(197, 160, 89, 0.4)'
+                       }}
+                   >
+                       {isNoCarrinho(produtoDetalhe.id) ? 'Remover da Lista' : 'Adicionar à Minha Festa'}
+                   </button>
+               </div>
+
+            </div>
+          </div>
         </div>
       )}
 
@@ -325,7 +504,6 @@ const Catalogo = () => {
                   <div className="form-cadastro-call">
                     <p>Faça o seu cadastro oficial para agilizar sua locação, ter acesso ao histórico de pedidos e aprovações mais rápidas!</p>
                     
-                    {/* 🔥 ROTA CORRIGIDA PARA /autocadastro 🔥 */}
                     <button 
                         type="button" 
                         className="btn-ir-cadastro" 

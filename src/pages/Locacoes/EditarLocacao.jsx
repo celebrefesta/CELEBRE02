@@ -32,6 +32,9 @@ const EditarLocacao = () => {
   const [numeroPedido, setNumeroPedido] = useState('');
   const [statusAtual, setStatusAtual] = useState('');
 
+  // 🔥 TRAVA PRINCIPAL 🔥
+  const isFinalizado = statusAtual === 'finalizado' || statusAtual === 'cancelado';
+
   useEffect(() => {
     const carregarDados = async () => {
       try {
@@ -73,10 +76,8 @@ const EditarLocacao = () => {
               obsTransporte: log.obsTransporte || ''
             });
 
-            // 🔥 CORREÇÃO 1: Normaliza os preços assim que puxa do banco 🔥
             const itensFormatados = (data.itens || []).map(item => ({
               ...item,
-              // Procura em 'preco', se não tiver, procura em 'financeiro.valorAluguel', se não, é 0.
               preco: Number(item.preco || item.financeiro?.valorAluguel || 0)
             }));
             setCarrinho(itensFormatados);
@@ -97,6 +98,7 @@ const EditarLocacao = () => {
   const categoriasUnicas = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
 
   const addCarrinho = (item) => {
+    if (isFinalizado) return; // Segurança extra
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
     const existe = carrinho.find(i => i.id === item.id);
     if (existe) {
@@ -111,7 +113,6 @@ const EditarLocacao = () => {
     return Number(logistica.frete.toString().replace(/\./g, "").replace(",", "."));
   };
 
-  // 🔥 CORREÇÃO 2: Cálculo total blindado contra preços vazios 🔥
   const calcularTotal = () => {
     const subtotal = carrinho.reduce((acc, item) => {
       const precoValido = Number(item.preco || item.financeiro?.valorAluguel || 0);
@@ -122,6 +123,7 @@ const EditarLocacao = () => {
   };
 
   const handleCepChange = async (e) => {
+    if (isFinalizado) return;
     let value = e.target.value.replace(/\D/g, "");
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setLogistica(prev => ({ ...prev, cep: cepFormatado }));
@@ -145,6 +147,7 @@ const EditarLocacao = () => {
   };
 
   const handleFreteChange = (e) => {
+    if (isFinalizado) return;
     let v = e.target.value.replace(/\D/g, ""); 
     if (!v) { setLogistica({ ...logistica, frete: "" }); return; }
     v = (v / 100).toFixed(2) + ""; 
@@ -206,6 +209,7 @@ const EditarLocacao = () => {
       case 'preparacao': return { txt: '📦 EM SEPARAÇÃO', cor: '#f59e0b' };
       case 'entregue': return { txt: '🚚 ENTREGUE / COM O CLIENTE', cor: '#8b5cf6' };
       case 'finalizado': return { txt: '✅ FINALIZADO (DEVOLVIDO)', cor: '#10b981' };
+      case 'cancelado': return { txt: '❌ CANCELADO', cor: '#ef4444' };
       default: return { txt: 'Desconhecido', cor: '#ccc' };
     }
   };
@@ -217,10 +221,9 @@ const EditarLocacao = () => {
   return (
     <div className="locacao-form-container">
       
-      {/* HEADER PREMIUM COM BADGE */}
       <header className="page-header">
         <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
-            <h1 className="page-title">Editar Pedido {numeroPedido && <span style={{color: 'var(--dourado)'}}>#{numeroPedido}</span>}</h1>
+            <h1 className="page-title">{isFinalizado ? '🔎 Visualizar Pedido' : 'Editar Pedido'} {numeroPedido && <span style={{color: 'var(--dourado)'}}>#{numeroPedido}</span>}</h1>
             <span style={{background: badgeInfo.cor, color: 'white', padding: '6px 14px', borderRadius: '20px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase'}}>
                 {badgeInfo.txt}
             </span>
@@ -228,16 +231,22 @@ const EditarLocacao = () => {
         <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar</button>
       </header>
 
+      {/* AVISO DE MODO LEITURA */}
+      {isFinalizado && (
+          <div style={{background: '#f8fafc', borderLeft: '4px solid #94a3b8', padding: '12px 20px', marginBottom: '20px', color: '#475569', fontSize: '13px', borderRadius: '0 8px 8px 0'}}>
+              <b>🔒 Modo Somente Leitura:</b> Este pedido já foi {statusAtual}, portanto seus dados e itens não podem mais ser alterados.
+          </div>
+      )}
+
       <div className="layout-duas-colunas">
-        <div className="coluna-form">
+        <div className="coluna-form" style={{opacity: isFinalizado ? 0.8 : 1}}>
           
-          {/* --- DADOS DO EVENTO --- */}
           <div className="card-secao">
             <h3 className="section-divider">👤 DADOS DO EVENTO</h3>
 
             <div className="form-group mb-15">
               <label>MODALIDADE DE SERVIÇO *</label>
-              <div className="toggle-servico">
+              <div className="toggle-servico" style={{pointerEvents: isFinalizado ? 'none' : 'auto'}}>
                 <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`}
                   onClick={() => { setTipoServico('PEGUE E MONTE'); setLogistica({...logistica, tipo: 'retirada', frete: ''}); }}>
                   📦 PEGUE E MONTE
@@ -252,28 +261,27 @@ const EditarLocacao = () => {
             <div className="form-row">
               <div className="form-group flex-2">
                 <label>Cliente *</label>
-                <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)}>
+                <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)} disabled={isFinalizado}>
                   <option value="">Selecione um cliente cadastrado...</option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia}</option>)}
                 </select>
               </div>
               <div className="form-group flex-2">
                 <label>Tema da Festa</label>
-                <input type="text" placeholder="Ex: Safari, Casamento..." value={temaFesta} onChange={e => setTemaFesta(e.target.value)} />
+                <input type="text" placeholder="Ex: Safari, Casamento..." value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={isFinalizado}/>
               </div>
             </div>
             
             <div className="form-row">
-              <div className="form-group flex-1"><label>Data de Retirada / Evento *</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} /></div>
-              <div className="form-group flex-1"><label>Data de Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} /></div>
+              <div className="form-group flex-1"><label>Data de Retirada / Evento *</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} disabled={isFinalizado}/></div>
+              <div className="form-group flex-1"><label>Data de Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} disabled={isFinalizado}/></div>
             </div>
           </div>
 
-          {/* --- LOGÍSTICA --- */}
           <div className="card-secao">
             <div className="header-com-toggle">
               <h3 className="section-divider" style={{margin: 0, border: 'none'}}>🚚 LOGÍSTICA & ENTREGA</h3>
-              <div className="toggle-simples">
+              <div className="toggle-simples" style={{pointerEvents: isFinalizado ? 'none' : 'auto'}}>
                 <button type="button" className={logistica.tipo === 'entrega' ? 'active' : ''} onClick={() => setLogistica({...logistica, tipo: 'entrega'})}>Com Frete</button>
                 <button type="button" className={logistica.tipo === 'retirada' ? 'active' : ''} onClick={() => setLogistica({...logistica, tipo: 'retirada', frete: ''})}>Retirada na Loja</button>
               </div>
@@ -282,20 +290,20 @@ const EditarLocacao = () => {
             {logistica.tipo === 'entrega' ? (
               <div className="logistica-form mt-15">
                 <div className="form-row">
-                  <div className="form-group flex-1"><label>CEP</label><input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} /></div>
-                  <div className="form-group flex-2"><label>Cidade / UF</label><input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} /></div>
-                  <div className="form-group flex-1"><label>Taxa Frete (R$)</label><input type="text" placeholder="0,00" value={logistica.frete} onChange={handleFreteChange} /></div>
+                  <div className="form-group flex-1"><label>CEP</label><input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} disabled={isFinalizado}/></div>
+                  <div className="form-group flex-2"><label>Cidade / UF</label><input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} disabled={isFinalizado}/></div>
+                  <div className="form-group flex-1"><label>Taxa Frete (R$)</label><input type="text" placeholder="0,00" value={logistica.frete} onChange={handleFreteChange} disabled={isFinalizado}/></div>
                 </div>
                 <div className="form-row">
-                  <div className="form-group flex-2"><label>Logradouro</label><input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} /></div>
+                  <div className="form-group flex-2"><label>Logradouro</label><input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} disabled={isFinalizado}/></div>
                   <div className="form-group-inline flex-2">
-                    <div className="form-group flex-1"><label>Número</label><input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} /></div>
-                    <div className="form-group flex-2"><label>Bairro</label><input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} /></div>
+                    <div className="form-group flex-1"><label>Número</label><input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} disabled={isFinalizado}/></div>
+                    <div className="form-group flex-2"><label>Bairro</label><input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} disabled={isFinalizado}/></div>
                   </div>
                 </div>
                 <div className="form-group mt-10">
                   <label>Observações de Transporte</label>
-                  <textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})}></textarea>
+                  <textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})} disabled={isFinalizado}></textarea>
                 </div>
               </div>
             ) : (
@@ -303,24 +311,25 @@ const EditarLocacao = () => {
             )}
           </div>
 
-          {/* --- ITENS --- */}
           <div className="card-secao">
             <div className="header-com-botoes">
               <h3 className="section-divider" style={{margin: 0, border: 'none'}}>📦 ITENS DO PEDIDO</h3>
-              <div className="botoes-acoes-itens">
-                <button type="button" className="btn-primary-outline" onClick={() => setModalAberto(true)}>+ ADC. PEÇAS</button>
-              </div>
+              {/* Oculta botão de adicionar se estiver finalizado */}
+              {!isFinalizado && (
+                  <div className="botoes-acoes-itens">
+                    <button type="button" className="btn-primary-outline" onClick={() => setModalAberto(true)}>+ ADC. PEÇAS</button>
+                  </div>
+              )}
             </div>
 
             <div className="carrinho-container mt-15">
               {carrinho.length === 0 ? (
-                <div className="carrinho-vazio">Nenhuma peça adicionada ainda. Clique em "+ Adc. Peças".</div>
+                <div className="carrinho-vazio">Nenhuma peça adicionada.</div>
               ) : (
                 <table className="tabela-carrinho">
-                  <thead><tr><th width="50"></th><th>PRODUTO</th><th className="text-center">QTD</th><th className="text-right">TOTAL</th><th width="40"></th></tr></thead>
+                  <thead><tr><th width="50"></th><th>PRODUTO</th><th className="text-center">QTD</th><th className="text-right">TOTAL</th>{!isFinalizado && <th width="40"></th>}</tr></thead>
                   <tbody>
                     {carrinho.map(item => {
-                      // 🔥 CORREÇÃO 3: Tabela de itens blindada contra preços vazios 🔥
                       const precoExibicao = Number(item.preco || item.financeiro?.valorAluguel || 0);
                       
                       return (
@@ -333,18 +342,25 @@ const EditarLocacao = () => {
                             <span>R$ {precoExibicao.toFixed(2)} un</span>
                           </td>
                           <td className="text-center">
-                            <div className="controle-qtd">
-                              <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
-                              <span>{item.qtd}</span>
-                              <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i))}>+</button>
-                            </div>
+                            {/* Controle de QTD blindado se finalizado */}
+                            {isFinalizado ? (
+                                <div style={{fontWeight: 'bold', fontSize: '14px', background: '#f1f5f9', padding: '4px 12px', borderRadius: '6px', display: 'inline-block'}}>{item.qtd}x</div>
+                            ) : (
+                                <div className="controle-qtd">
+                                  <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
+                                  <span>{item.qtd}</span>
+                                  <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i))}>+</button>
+                                </div>
+                            )}
                           </td>
                           <td className="text-right carrinho-total-item">
                             <strong>R$ {(precoExibicao * item.qtd).toFixed(2)}</strong>
                           </td>
-                          <td className="text-center">
-                            <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))}>🗑️</button>
-                          </td>
+                          {!isFinalizado && (
+                              <td className="text-center">
+                                <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))}>🗑️</button>
+                              </td>
+                          )}
                         </tr>
                       )
                     })}
@@ -354,17 +370,15 @@ const EditarLocacao = () => {
             </div>
           </div>
 
-          {/* --- OBSERVAÇÕES --- */}
           <div className="card-secao">
             <h3 className="section-divider">🔒 OBSERVAÇÕES INTERNAS</h3>
             <div className="form-group">
-              <textarea rows="2" placeholder="Anotações visíveis apenas para a equipe" value={obsInternas} onChange={e => setObsInternas(e.target.value)}></textarea>
+              <textarea rows="2" placeholder="Anotações visíveis apenas para a equipe" value={obsInternas} onChange={e => setObsInternas(e.target.value)} disabled={isFinalizado}></textarea>
             </div>
           </div>
 
         </div>
 
-        {/* --- FINANCEIRO E FUNIL DE PRODUÇÃO --- */}
         <aside className="coluna-financeiro">
           <div className="card-financeiro-sticky">
             <h3>💰 Financeiro</h3>
@@ -372,7 +386,11 @@ const EditarLocacao = () => {
             <div className="fin-linha"><span>Frete</span> <span>+ R$ {getFreteNumerico().toFixed(2)}</span></div>
             <div className="fin-linha desconto-linha">
               <span>Desconto (R$)</span> 
-              <input type="number" min="0" value={desconto} onChange={e => setDesconto(e.target.value)} />
+              {isFinalizado ? (
+                  <strong>{desconto}</strong>
+              ) : (
+                  <input type="number" min="0" value={desconto} onChange={e => setDesconto(e.target.value)} />
+              )}
             </div>
             
             <div className="fin-total">
@@ -384,7 +402,6 @@ const EditarLocacao = () => {
             
             <h3 className="section-divider" style={{border: 'none', marginBottom: '15px'}}>PRÓXIMO PASSO DO PEDIDO</h3>
 
-            {/* 🚨 A ESTEIRA DE PRODUÇÃO 🚨 */}
             <div className="fin-acoes" style={{marginTop: '0'}}>
                 
                 {statusAtual === 'orcamento' && (
@@ -411,14 +428,13 @@ const EditarLocacao = () => {
                 </button>
                 )}
 
-                {statusAtual === 'finalizado' && (
+                {isFinalizado && (
                 <div style={{background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', padding: '15px', borderRadius: '8px', textAlign: 'center', fontWeight: '700', marginBottom: '10px', fontSize: '13px'}}>
                     🎉 Ciclo Concluído! Tudo Certo.
                 </div>
                 )}
 
-                {/* Botão Secundário para Salvar apenas as alterações do formulário */}
-                {statusAtual !== 'finalizado' && (
+                {!isFinalizado && (
                 <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center'}} onClick={() => handleSalvar()}>
                     💾 Apenas Salvar Alterações
                 </button>
@@ -428,8 +444,7 @@ const EditarLocacao = () => {
         </aside>
       </div>
 
-      {/* --- MODAL DO CATÁLOGO DE PEÇAS --- */}
-      {modalAberto && (
+      {modalAberto && !isFinalizado && (
         <div className="modal-overlay-premium">
           <div className="modal-box-premium catalogo-modal">
             <div className="modal-header">
