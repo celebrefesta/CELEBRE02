@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { db } from '../../firebaseConfig';
 import { doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
-import SignatureCanvas from 'react-signature-canvas'; // 🔥 IMPORTAÇÃO DO CANVAS ADICIONADA
+import SignatureCanvas from 'react-signature-canvas'; 
 import './Configuracoes.css';
 
 const Configuracoes = () => {
@@ -10,7 +10,8 @@ const Configuracoes = () => {
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [fontSize, setFontSize] = useState(localStorage.getItem('fontSize') || 'padrao');
   
-  // 🔥 REFERÊNCIA PARA A ASSINATURA
+  const [language, setLanguage] = useState(localStorage.getItem('language') || 'pt');
+  
   const sigGlobal = useRef({});
 
   const [config, setConfig] = useState({
@@ -18,7 +19,7 @@ const Configuracoes = () => {
     gruposTema: [], temasPorGrupo: {},
     nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '',
     endereco: '', instagram: '', logotipo: '', slogan: '', site: '',
-    assinatura: '' // 🔥 CAMPO NOVO ADICIONADO AQUI
+    assinatura: '', pixelFacebook: '' 
   });
   const [loading, setLoading] = useState(true);
 
@@ -31,9 +32,31 @@ const Configuracoes = () => {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-font-size', fontSize);
+    document.documentElement.setAttribute('data-lang', language); 
+    
     localStorage.setItem('theme', theme);
     localStorage.setItem('fontSize', fontSize);
-  }, [theme, fontSize]);
+  }, [theme, fontSize, language]);
+
+  // 🔥 A FUNÇÃO MÁGICA QUE COMANDA O GOOGLE TRADUTOR 🔥
+  const handleMudarIdiomaAutomatico = (lang) => {
+    setLanguage(lang);
+    localStorage.setItem('language', lang);
+
+    // Envia a ordem secreta via cookie para o Google
+    if (lang === 'pt') {
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+      document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; domain=" + window.location.hostname + "; path=/;";
+    } else {
+      document.cookie = `googtrans=/pt/${lang}; path=/;`;
+      document.cookie = `googtrans=/pt/${lang}; domain=${window.location.hostname}; path=/;`;
+    }
+    
+    // Dá um "piscar" na página para o Google ler a ordem e traduzir tudo
+    setTimeout(() => {
+        window.location.reload();
+    }, 300);
+  };
 
   useEffect(() => { buscarConfiguracoes(); }, []);
 
@@ -119,7 +142,6 @@ const Configuracoes = () => {
     try { await updateDoc(doc(db, "sistema", "parametros"), { logotipo: '' }); } catch (e) { console.error(e); }
   };
 
-  // 🔥 FUNÇÕES DA ASSINATURA GLOBAL 🔥
   const limparAssinatura = () => { if(sigGlobal.current) sigGlobal.current.clear(); };
 
   const salvarAssinaturaGlobal = async () => {
@@ -352,7 +374,25 @@ const Configuracoes = () => {
               </div>
             </div>
 
-            {/* 🔥 NOVO BLOCO: ASSINATURA PADRÃO DA EMPRESA 🔥 */}
+            <div className="config-card span-2-col-full">
+              <div className="card-top-bar blue-bar"></div>
+              <h3>📈 Marketing e Rastreamento</h3>
+              <p className="subtext">Conecte o seu catálogo à inteligência do Instagram/Facebook Ads.</p>
+              
+              <div className="form-grid-2-col">
+                <div className="f-group span-2-col">
+                  <label>ID do Pixel (Facebook / Meta)</label>
+                  <input 
+                    type="text" 
+                    value={config.pixelFacebook || ''} 
+                    onChange={(e) => handleConfigChange('pixelFacebook', e.target.value)} 
+                    onBlur={(e) => salvarConfigTextual('pixelFacebook', e.target.value)} 
+                    placeholder="Ex: 123456789012345 (Apenas números)" 
+                  />
+                </div>
+              </div>
+            </div>
+
             <div className="config-card span-2-col-full">
               <div className="card-top-bar gold-bar"></div>
               <h3>✍️ Assinatura Oficial da Empresa</h3>
@@ -408,6 +448,18 @@ const Configuracoes = () => {
                 <button className={fontSize === 'ampliado' ? 'active' : ''} onClick={() => setFontSize('ampliado')}>Ampliado</button>
               </div>
             </div>
+
+            <div className="config-card large-padding span-2-col-full">
+              <div className="card-top-bar gold-bar"></div>
+              <h3>🌐 Idioma do Sistema</h3>
+              <p className="subtext">Selecione a linguagem principal da interface do painel.</p>
+              <div className="lang-grid">
+                <button className={`btn-lang ${language === 'pt' ? 'active' : ''}`} onClick={() => handleMudarIdiomaAutomatico('pt')}>🇧🇷 Português</button>
+                <button className={`btn-lang ${language === 'en' ? 'active' : ''}`} onClick={() => handleMudarIdiomaAutomatico('en')}>🇺🇸 English</button>
+                <button className={`btn-lang ${language === 'es' ? 'active' : ''}`} onClick={() => handleMudarIdiomaAutomatico('es')}>🇪🇸 Español</button>
+              </div>
+            </div>
+
           </div>
         )}
 

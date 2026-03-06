@@ -1,46 +1,91 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, query, where, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
 import './AuditoriaEstoque.css';
 
 const AuditoriaEstoque = () => {
-  const [pedidosAtrasados, setPedidosAtrasados] = useState([]);
+  const navigate = useNavigate();
+  const [pedidosComProblema, setPedidosComProblema] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visivel, setVisivel] = useState(false);
 
   useEffect(() => {
-    const realizarAuditoria = async () => {
+    const realizarAuditoriaUnificada = async () => {
       try {
-        const hoje = new Date().toISOString().split('T')[0];
-        // Busca pedidos confirmados ou em separação cuja data já passou
-        const q = query(
-          collection(db, "locacoes"),
-          where("dataRetirada", "<", hoje),
-          where("status", "in", ["CONFIRMADO", "SEPARACAO"])
-        );
+        const tzoffset = (new Date()).getTimezoneOffset() * 60000;
+        const hoje = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
 
-        const snap = await getDocs(q);
-        const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        const snap = await getDocs(collection(db, "locacoes"));
+        const anomalias = [];
 
-        if (lista.length > 0) {
-          setPedidosAtrasados(lista);
+        snap.docs.forEach(docSnap => {
+          const item = { id: docSnap.id, ...docSnap.data() };
+          const statusStr = (item.status || '').toLowerCase();
+          
+          if (statusStr === 'cancelado') return;
+
+          const isOrcamento = statusStr.includes('orcam');
+          if (isOrcamento && item.dataRetirada && item.dataRetirada < hoje) return; // Ignora orçamentos vencidos
+
+          let alertas = [];
+          let permiteAcaoRapida = false;
+
+          // 1. Estoque Travado
+          if (['confirmado', 'preparacao'].includes(statusStr) && item.dataRetirada && item.dataRetirada < hoje) {
+            alertas.push({ tipo: 'estoque', texto: 'Estoque Travado (Data Passou)' });
+            permiteAcaoRapida = true; // Se for só isso, deixa resolver rápido
+          }
+          // 2. Atrasado para Entrega/Retirada
+          else if (['confirmado', 'preparacao'].includes(statusStr) && item.dataRetirada === hoje) {
+            alertas.push({ tipo: 'entrega', texto: 'Separar / Entregar Hoje!' });
+          }
+
+          // 3. Devolução Atrasada
+          if (statusStr === 'entregue' && item.dataDevolucao && item.dataDevolucao < hoje) {
+            alertas.push({ tipo: 'devolucao', texto: 'Devolução Atrasada' });
+          }
+
+          // 4. Financeiro
+          const saldoDevedor = Number(item.valorTotal || 0) - Number(item.valorPago || 0);
+          if (saldoDevedor > 0 && !isOrcamento && item.dataDevolucao && item.dataDevolucao <= hoje) {
+            alertas.push({ tipo: 'financeiro', texto: `Pagamento Pendente (R$ ${saldoDevedor.toFixed(2)})` });
+            permiteAcaoRapida = false; // Tem dívida? Tira o botão rápido.
+          }
+
+          // 5. Avarias e Faltas
+          const temAvaria = item.itens?.some(i => i.avaria);
+          const temFalta = item.itens?.some(i => i.faltou);
+          if (temAvaria) { alertas.push({ tipo: 'avaria', texto: 'Peça Avariada' }); permiteAcaoRapida = false; }
+          if (temFalta) { alertas.push({ tipo: 'falta', texto: 'Peça Faltando' }); permiteAcaoRapida = false; }
+
+          // Se tiver alerta e o status for finalizado, só mostra se tiver BO de dinheiro/avaria
+          if (statusStr === 'finalizado' && !temAvaria && !temFalta && saldoDevedor <= 0) return;
+
+          if (alertas.length > 0) {
+            anomalias.push({ ...item, alertas, permiteAcaoRapida });
+          }
+        });
+
+        if (anomalias.length > 0) {
+          setPedidosComProblema(anomalias);
           setVisivel(true);
         }
       } catch (error) {
-        console.error("Erro na auditoria:", error);
+        console.error("Erro na auditoria unificada:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    realizarAuditoria();
+    realizarAuditoriaUnificada();
   }, []);
 
-  const handleResolver = async (id, novoStatus) => {
+  const handleResolverRapido = async (id, novoStatus) => {
     try {
       await updateDoc(doc(db, "locacoes", id), { status: novoStatus });
-      const novaLista = pedidosAtrasados.filter(p => p.id !== id);
-      setPedidosAtrasados(novaLista);
+      const novaLista = pedidosComProblema.filter(p => p.id !== id);
+      setPedidosComProblema(novaLista);
       if (novaLista.length === 0) setVisivel(false);
     } catch (e) {
       alert("Erro ao atualizar pedido.");
@@ -51,27 +96,51 @@ const AuditoriaEstoque = () => {
 
   return (
     <div className="auditoria-overlay">
-      <div className="auditoria-modal">
+      <div className="auditoria-modal" style={{maxWidth: '850px'}}>
+        
         <div className="auditoria-header">
-          <h2>🚨 Auditoria de Estoque: Pedidos Atrasados!</h2>
-          <p>As datas dos eventos abaixo já passaram, mas o sistema diz que ainda não saíram da loja. 
-             <strong> Isso está bloqueando e mentindo sobre a disponibilidade das suas peças!</strong></p>
+          <div className="auditoria-icone">🚨</div>
+          <h2>Atenção! Diagnóstico do Sistema</h2>
+          <p>
+            O sistema detectou <strong>{pedidosComProblema.length} anomalias</strong> na sua operação (Estoques travados, pagamentos pendentes ou avarias). Resolva para limpar esta lista:
+          </p>
         </div>
 
         <div className="auditoria-corpo">
-          {pedidosAtrasados.map(pedido => (
+          {pedidosComProblema.map(pedido => (
             <div key={pedido.id} className="auditoria-card">
               <div className="auditoria-info">
-                <h3>{pedido.clienteNome} <small>#{pedido.id.slice(-4)}</small></h3>
-                <p>Data da Festa: <span className="data-atrasada">{pedido.dataRetirada}</span> | Status: {pedido.status}</p>
+                <h3>{pedido.clienteNome || 'Cliente não informado'} <span className="pedido-id">#{pedido.id.slice(-4)}</span></h3>
+                
+                <div className="auditoria-detalhes">
+                    <span className="badge-data">📅 Data: {pedido.dataRetirada?.split('-').reverse().join('/') || 'S/D'}</span>
+                    <span className="badge-status">Status: {pedido.status?.toUpperCase()}</span>
+                </div>
+
+                <div className="auditoria-tags-erro">
+                    {pedido.alertas.map((alerta, idx) => (
+                        <span key={idx} className={`tag-erro ${alerta.tipo}`}>
+                            {alerta.texto}
+                        </span>
+                    ))}
+                </div>
               </div>
+              
               <div className="auditoria-btns">
-                <button className="btn-auditoria-cancel" onClick={() => handleResolver(pedido.id, 'CANCELADO')}>
-                  ✕ Cancelou a festa
-                </button>
-                <button className="btn-auditoria-check" onClick={() => handleResolver(pedido.id, 'FINALIZADO')}>
-                  ✓ Já levou e devolveu
-                </button>
+                {pedido.permiteAcaoRapida ? (
+                    <>
+                        <button className="btn-auditoria-cancel" onClick={() => handleResolverRapido(pedido.id, 'CANCELADO')} title="A festa não aconteceu.">
+                        ✕ Cancelado
+                        </button>
+                        <button className="btn-auditoria-check" onClick={() => handleResolverRapido(pedido.id, 'FINALIZADO')} title="A festa aconteceu e as peças voltaram.">
+                        ✓ Finalizado
+                        </button>
+                    </>
+                ) : (
+                    <button className="btn-auditoria-abrir" onClick={() => navigate(`/locacoes/editar/${pedido.id}`)}>
+                        Abrir Pedido ➔
+                    </button>
+                )}
               </div>
             </div>
           ))}
@@ -79,9 +148,10 @@ const AuditoriaEstoque = () => {
 
         <div className="auditoria-footer">
           <button className="btn-auditoria-ignore" onClick={() => setVisivel(false)}>
-            Ignorar e corrigir depois (Não recomendado)
+            Minimizar avisos por agora
           </button>
         </div>
+        
       </div>
     </div>
   );

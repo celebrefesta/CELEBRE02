@@ -45,3 +45,17 @@ button { cursor: pointer; font-family: 'Poppins', sans-serif; }
 @media (max-width: 768px) {
     .container { margin-left: 0 !important; width: 100% !important; padding: 1rem; }
 }
+
+/* =========================================
+   ACESSIBILIDADE: TAMANHO DA FONTE / ZOOM
+   ========================================= */
+html[data-font-size="ampliado"] {
+    zoom: 1.1; /* Aumenta o sistema inteiro em 10% */
+}
+
+/* =========================================
+   OCULTAR BARRAS DO GOOGLE TRADUTOR AUTOMÁTICO
+   ========================================= */
+body { top: 0 !important; }
+.skiptranslate { display: none !important; }
+#goog-gt-tt { display: none !important; }

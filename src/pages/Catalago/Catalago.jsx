@@ -16,7 +16,7 @@ const Catalogo = () => {
   const navigate = useNavigate();
   const [estoque, setEstoque] = useState([]);
   const [empresa, setEmpresa] = useState({ 
-    nome: 'CELEBRE', logo: '', whats: '', endereco: '', insta: '' 
+    nome: 'CELEBRE', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '' 
   });
   const [loading, setLoading] = useState(true);
   
@@ -32,6 +32,7 @@ const Catalogo = () => {
 
   const [produtoDetalhe, setProdutoDetalhe] = useState(null);
 
+  // 🔥 1. CARREGA OS DADOS DA EMPRESA (INCLUINDO O PIXEL) 🔥
   useEffect(() => {
     const inicializar = async () => {
       try {
@@ -44,7 +45,8 @@ const Catalogo = () => {
             logo: d.logoUrl || d.logo || '',
             whats: d.whatsapp || d.telefone || '',
             endereco: d.endereco || '',
-            insta: d.instagram || ''
+            insta: d.instagram || '',
+            pixelFacebook: d.pixelFacebook || d.pixel || '' // Busca o Pixel no banco
           });
         }
 
@@ -56,6 +58,30 @@ const Catalogo = () => {
     };
     inicializar();
   }, []);
+
+  // 🔥 2. INSTALADOR SILENCIOSO DO FACEBOOK PIXEL 🔥
+  useEffect(() => {
+    if (empresa.pixelFacebook) {
+      !function(f,b,e,v,n,t,s)
+      {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+      n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+      if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+      n.queue=[];t=b.createElement(e);t.async=!0;
+      t.src=v;s=b.getElementsByTagName(e)[0];
+      s.parentNode.insertBefore(t,s)}(window, document,'script',
+      'https://connect.facebook.net/en_US/fbevents.js');
+      
+      window.fbq('init', empresa.pixelFacebook);
+      window.fbq('track', 'PageView'); // Avisa o Facebook que alguém entrou no site
+    }
+  }, [empresa.pixelFacebook]);
+
+  // Função disparadora de eventos do Pixel
+  const dispararPixel = (nomeEvento, dados = {}) => {
+    if (window.fbq && empresa.pixelFacebook) {
+      window.fbq('track', nomeEvento, dados);
+    }
+  };
 
   const categoriasDinamicas = [...new Set(estoque.map(i => i.categoria ? String(i.categoria) : "").filter(c => c !== ""))].sort();
 
@@ -88,12 +114,24 @@ const Catalogo = () => {
       setCarrinho(carrinho.filter(i => i.id !== item.id));
     } else {
       setCarrinho([...carrinho, { ...item, qtd: 1 }]);
+      // 📡 DISPARA O PIXEL: O cliente colocou algo no carrinho!
+      dispararPixel('AddToCart', { 
+          content_name: item.nome, 
+          value: Number(item.financeiro?.valorAluguel || 0), 
+          currency: 'BRL' 
+      });
     }
   };
 
   const isNoCarrinho = (id) => carrinho.some(i => i.id === id);
 
   const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * i.qtd), 0);
+
+  const abrirCarrinho = () => {
+      setModalFinalizar(true);
+      // 📡 DISPARA O PIXEL: O cliente abriu o carrinho para ver o resumo
+      dispararPixel('InitiateCheckout', { value: calcularTotal(), currency: 'BRL' });
+  };
 
   const enviarOrcamento = async (e) => {
     e.preventDefault();
@@ -114,6 +152,9 @@ const Catalogo = () => {
         origem: 'catalogo_publico',
         criadoEm: serverTimestamp()
       });
+
+      // 📡 DISPARA O PIXEL: Golaço! O cliente enviou o orçamento (Virou um Lead de Valor)
+      dispararPixel('Lead', { value: total, currency: 'BRL' });
 
       const whatsDestino = empresa.whats.replace(/\D/g, '') || "5519999999999"; 
       const texto = `🌟 *NOVO ORÇAMENTO* 🌟\n\n*Cliente:* ${dadosCliente.nome}\n*Data do Evento:* ${dadosCliente.dataEvento}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}\n\nOlá! Vim pelo catálogo e gostaria de verificar a disponibilidade destas peças!`;
@@ -279,7 +320,7 @@ const Catalogo = () => {
       )}
 
       {carrinho.length > 0 && (
-        <div className="cat-floating-bar" onClick={() => setModalFinalizar(true)}>
+        <div className="cat-floating-bar" onClick={abrirCarrinho}>
           <span>🛍️ {carrinho.length} itens - <strong>R$ {calcularTotal().toFixed(2)}</strong></span>
           <button>VER CARRINHO ➔</button>
         </div>

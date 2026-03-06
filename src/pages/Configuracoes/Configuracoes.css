@@ -394,3 +394,63 @@
     transition: 0.2s;
 }
 .btn-salvar-config:hover { background: #1e293b; transform: translateY(-2px); }
+
+/* Estilo para o grupo de seleção de Idioma */
+.lang-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.btn-lang {
+    padding: 12px !important;
+    font-size: 14px !important;
+    border: 1px solid var(--borda) !important;
+    background: var(--fundo-cinza) !important;
+}
+
+.btn-lang.active {
+    border-color: var(--dourado) !important;
+    background: var(--branco) !important;
+    color: var(--dourado) !important;
+    font-weight: 800;
+}
+
+/* =========================================
+   ESTILOS PARA O BLOCO DE IDIOMAS
+   ========================================= */
+.lang-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.btn-lang {
+    padding: 16px !important;
+    font-size: 15px !important;
+    border: 2px solid var(--borda) !important;
+    background: var(--fundo-cinza) !important;
+    color: var(--texto-secundario) !important;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font-weight: bold;
+}
+
+.btn-lang:hover {
+    border-color: #94a3b8 !important;
+    background: var(--branco) !important;
+}
+
+.btn-lang.active {
+    border-color: var(--dourado) !important;
+    background: var(--branco) !important;
+    color: var(--texto-principal) !important;
+    box-shadow: 0 4px 15px rgba(197, 160, 89, 0.1);
+}

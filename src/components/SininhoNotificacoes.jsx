@@ -9,10 +9,8 @@ const SininhoNotificacoes = () => {
   const [clientesPendentes, setClientesPendentes] = useState([]);
   const [pedidosPendentes, setPedidosPendentes] = useState([]);
   const [menuAberto, setMenuAberto] = useState(false);
-  const menuRef = useRef(null);
-
-  // 🔥 ESTADO QUE CONTROLA A BOLINHA VERMELHA 🔥
   const [quantidadeNova, setQuantidadeNova] = useState(0);
+  const menuRef = useRef(null);
 
   // Fecha a gaveta se clicar fora
   useEffect(() => {
@@ -25,6 +23,7 @@ const SininhoNotificacoes = () => {
     return () => document.removeEventListener("mousedown", handleClickFora);
   }, []);
 
+  // 1. SENSOR QUE BUSCA TUDO O QUE ESTÁ PENDENTE NO BANCO
   useEffect(() => {
     const qClientes = query(collection(db, "clientes"), where("situacaoFinanceira", "==", "pendente"));
     const unsubscribeClientes = onSnapshot(qClientes, (snapshot) => {
@@ -44,30 +43,32 @@ const SininhoNotificacoes = () => {
     };
   }, []);
 
-  const totalRealDePendencias = clientesPendentes.length + pedidosPendentes.length;
-
-  // 🔥 LÓGICA ESTILO FACEBOOK/INSTAGRAM 🔥
+  // 2. LÓGICA DE VIZUALIZAÇÃO (ESTILO INSTAGRAM)
   useEffect(() => {
-    // Puxa da memória quantas notificações você já tinha visto antes
-    const vistos = parseInt(localStorage.getItem('notificacoesVistas') || '0');
+    // Junta todos os itens atuais em uma lista só
+    const todosItens = [...clientesPendentes, ...pedidosPendentes];
+    
+    // Puxa do navegador os IDs que você já clicou para ver no passado
+    const idsVistos = JSON.parse(localStorage.getItem('notificacoesVistasIds') || '[]');
+    
+    // Filtra apenas os itens que chegaram agora e que você ainda NÃO viu
+    const novosItens = todosItens.filter(item => !idsVistos.includes(item.id));
+    
+    setQuantidadeNova(novosItens.length);
+  }, [clientesPendentes, pedidosPendentes]);
 
-    if (totalRealDePendencias > vistos) {
-       // Se o total atual for MAIOR que o visto, mostra na bolinha só a diferença (os novos)
-       setQuantidadeNova(totalRealDePendencias - vistos);
-    } else if (totalRealDePendencias < vistos) {
-       // Se você resolveu algum pedido (aprovou/excluiu), atualiza a memória para baixo e esconde a bolinha
-       localStorage.setItem('notificacoesVistas', totalRealDePendencias.toString());
-       setQuantidadeNova(0);
-    } else {
-       setQuantidadeNova(0);
-    }
-  }, [totalRealDePendencias]);
-
+  // 3. AÇÃO DE LER AS NOTIFICAÇÕES
   const handleAbrirMenu = () => {
     if (!menuAberto) {
-        // Ao abrir a gaveta, salva na memória que você já viu tudo e ZERA a bolinha vermelha
-        localStorage.setItem('notificacoesVistas', totalRealDePendencias.toString());
-        setQuantidadeNova(0);
+      // Quando você clica para abrir o sininho, o sistema pega o ID de TODAS as pendências atuais
+      // e salva no navegador dizendo: "A Camila já viu que esses caras existem".
+      const todosItens = [...clientesPendentes, ...pedidosPendentes];
+      const todosIds = todosItens.map(item => item.id);
+      
+      localStorage.setItem('notificacoesVistasIds', JSON.stringify(todosIds));
+      
+      // Zera a bolinha vermelha na hora, trazendo paz de espírito!
+      setQuantidadeNova(0);
     }
     setMenuAberto(!menuAberto);
   };
@@ -79,13 +80,14 @@ const SininhoNotificacoes = () => {
 
   return (
     <div className="sininho-wrapper" ref={menuRef}>
-      {/* O Botão do Sininho Atualizado */}
+      {/* O Botão do Sininho */}
       <button 
         className={`sininho-btn-trigger ${menuAberto ? 'ativo' : ''}`} 
         onClick={handleAbrirMenu}
+        title="Ver notificações"
       >
         <i className="fas fa-bell"></i>
-        {/* Mostra a bolinha apenas se tiver notificações não vistas */}
+        {/* Só mostra a bolinha se tiver número MAIOR que zero */}
         {quantidadeNova > 0 && <span className="sininho-badge">{quantidadeNova}</span>}
       </button>
 
@@ -97,8 +99,8 @@ const SininhoNotificacoes = () => {
           </div>
 
           <div className="noti-dropdown-body">
-            {totalRealDePendencias === 0 ? (
-              <div className="noti-vazia">Você não tem novas notificações.</div>
+            {clientesPendentes.length === 0 && pedidosPendentes.length === 0 ? (
+              <div className="noti-vazia">Você não tem pendências no momento.</div>
             ) : (
               <>
                 {/* Lista de Clientes Oficiais Pendentes */}
@@ -108,7 +110,7 @@ const SininhoNotificacoes = () => {
                       <i className="fas fa-user-plus"></i>
                     </div>
                     <div className="noti-text">
-                      <p><strong>{cliente.nome}</strong> fez um cadastro completo.</p>
+                      <p><strong>{cliente.nome || cliente.nomeCompleto}</strong> fez um cadastro completo.</p>
                       <span>Aguardando aprovação</span>
                     </div>
                   </div>
@@ -131,7 +133,7 @@ const SininhoNotificacoes = () => {
           </div>
 
           <div className="noti-dropdown-footer" onClick={irParaNotificacoes}>
-            Ver todas pendências completas
+            Ir para a Central de Notificações ➔
           </div>
         </div>
       )}

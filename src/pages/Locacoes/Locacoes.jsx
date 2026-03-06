@@ -21,9 +21,6 @@ const Locacoes = () => {
   const [pagamento, setPagamento] = useState({ valor: '', formaPagto: 'Pix', data: new Date().toISOString().split('T')[0] });
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
 
-  const [pedidosComProblema, setPedidosComProblema] = useState([]);
-  const [mostrarAuditoria, setMostrarAuditoria] = useState(false);
-
   useEffect(() => {
     carregarLocacoes();
   }, []);
@@ -90,63 +87,10 @@ const Locacoes = () => {
       });
 
       setLista(dados);
-
-      const anomalias = [];
-
-      dados.forEach(item => {
-        const statusStr = item.status;
-        
-        // Leads Perdidos e Cancelados não entram na auditoria (já foram arquivados)
-        if (statusStr === 'cancelado' || item.isOrcamentoVencido) return; 
-
-        const locDate = item.dataRetirada ? new Date(item.dataRetirada + 'T00:00:00') : null;
-        const devDate = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDate;
-        
-        let motivos = [];
-        const isOrcamento = statusStr.includes('orcam');
-
-        if (['confirmado', 'preparacao'].includes(statusStr) && locDate && locDate.getTime() <= hoje.getTime()) {
-          motivos.push("📦 Atrasado para Entrega");
-        } 
-        else if (statusStr === 'entregue' && devDate && devDate.getTime() < hoje.getTime()) {
-          motivos.push("⏳ Devolução Atrasada");
-        }
-
-        const temAvaria = item.itens?.some(i => i.avaria);
-        const temFalta = item.itens?.some(i => i.faltou);
-        if (temAvaria) motivos.push("⚠️ Peça Avariada");
-        if (temFalta) motivos.push("❌ Peça Faltando");
-
-        const saldoDevedor = Number(item.valorTotal || 0) - Number(item.valorPago || 0);
-        if (saldoDevedor > 0 && !isOrcamento && devDate && devDate.getTime() <= hoje.getTime()) {
-          motivos.push("💰 Pagamento Pendente");
-        }
-
-        if (motivos.length > 0) {
-          if (statusStr === 'finalizado' && !temAvaria && !temFalta && saldoDevedor <= 0) {
-             return; 
-          }
-          anomalias.push({ ...item, alertasAuditoria: motivos });
-        }
-      });
-
-      if (anomalias.length > 0) {
-        setPedidosComProblema(anomalias);
-        setMostrarAuditoria(true);
-      }
       setLoading(false);
-    } catch (error) { console.error(error); setLoading(false); }
-  };
-
-  const resolverPedidoEsquecido = async (id, novoStatus) => {
-    try {
-      await updateDoc(doc(db, "locacoes", id), { status: novoStatus });
-      setLista(prev => prev.map(item => item.id === id ? { ...item, status: novoStatus } : item));
-      const novaLista = pedidosComProblema.filter(item => item.id !== id);
-      setPedidosComProblema(novaLista);
-      if(novaLista.length === 0) setMostrarAuditoria(false);
-    } catch (e) {
-      alert("Erro ao corrigir o pedido.");
+    } catch (error) { 
+        console.error(error); 
+        setLoading(false); 
     }
   };
 
@@ -183,15 +127,12 @@ const Locacoes = () => {
     );
   }
 
-  // 🔥 O NOVO FILTRO INTELIGENTE 🔥
   if (filtroStatus === 'todos') {
-      // Todos exclui Cancelados e Leads Perdidos (Deixa a tela limpa!)
       filtrados = filtrados.filter(i => {
           const st = (i.status || '').toLowerCase();
           return st !== 'cancelado' && !i.isOrcamentoVencido;
       });
   } else if (filtroStatus === 'orcamentos') {
-      // Aba de orçamentos exibe apenas os orçamentos que AINDA são válidos
       filtrados = filtrados.filter(i => {
           const st = (i.status || '').toLowerCase();
           return st.includes('orcam') && !i.isOrcamentoVencido;
@@ -202,7 +143,6 @@ const Locacoes = () => {
           return !st.includes('orcam') && st !== 'cancelado' && !i.isOrcamentoVencido;
       });
   } else if (filtroStatus === 'cancelados') {
-      // A lixeira puxa os Cancelados E os Leads Perdidos!
       filtrados = filtrados.filter(i => {
           const st = (i.status || '').toLowerCase();
           return st === 'cancelado' || i.isOrcamentoVencido;
@@ -215,13 +155,12 @@ const Locacoes = () => {
       filtrados = filtrados.filter(i => !i.tipoServicoFormatado.includes('PEGUE'));
   }
 
-  // 🔥 O NOVO MOTOR DE ORDENAÇÃO POR PRIORIDADE 🔥
   filtrados.sort((a, b) => {
     const getPriority = (item) => {
         const st = (item.status || '').toLowerCase();
-        if (st === 'cancelado' || item.isOrcamentoVencido) return 3; // Lixo pro final
-        if (st.includes('orcam')) return 2; // Orçamentos no meio
-        return 1; // Confirmados e Ativos no topo absoluto!
+        if (st === 'cancelado' || item.isOrcamentoVencido) return 3; 
+        if (st.includes('orcam')) return 2; 
+        return 1; 
     };
 
     const pA = getPriority(a);
@@ -345,7 +284,6 @@ const Locacoes = () => {
                 let alertaOperacional = null;
                 let corAlerta = '';
 
-                // Mostra alertas de operação apenas para itens não cancelados/vencidos
                 if (item.dataRetirada && !['finalizado', 'cancelado'].includes(statusStr) && !item.isOrcamentoVencido) {
                     const hoje = new Date();
                     hoje.setHours(0,0,0,0);
@@ -510,45 +448,6 @@ const Locacoes = () => {
                 </form>
             </div>
          </div>
-      )}
-
-      {mostrarAuditoria && (
-        <div className="modal-overlay-v2">
-          <div className="modal-box-v2 auditoria-box">
-            <div className="auditoria-header">
-              <div className="auditoria-header-icon">🚨</div>
-              <div className="auditoria-header-text">
-                <h2>ATENÇÃO: Erros Operacionais Detectados!</h2>
-                <p>Resolva para limpar esta lista!</p>
-              </div>
-            </div>
-            <div className="auditoria-body">
-              {pedidosComProblema.map(req => {
-                const statusAtual = (req.status || '').toLowerCase();
-                return (
-                  <div key={req.id} className="auditoria-card">
-                    <div className="auditoria-info">
-                      <strong>{req.clienteNome}</strong> 
-                      <span className="ordem-id">#{req.numeroPedido || 'S/N'}</span>
-                      <div className="auditoria-detalhes">
-                        <span>Data do Evento:</span> <span className="auditoria-data">{req.dataRetirada ? req.dataRetirada.split('-').reverse().join('/') : 'S/D'}</span>
-                      </div>
-                      <div className="auditoria-badges-row">
-                        {req.alertasAuditoria.map((alerta, idx) => <span key={idx} className="auditoria-badge">{alerta}</span>)}
-                      </div>
-                    </div>
-                    <div className="auditoria-acoes">
-                      <button onClick={() => { setMostrarAuditoria(false); navigate(`/locacoes/editar/${req.id}`); }} className="btn-abrir-pedido">Abrir Pedido ➔</button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            <div className="auditoria-footer">
-              <button onClick={() => setMostrarAuditoria(false)}>Minimizar Avisos</button>
-            </div>
-          </div>
-        </div>
       )}
 
     </div>

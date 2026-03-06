@@ -2,76 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
+import AuditoriaEstoque from './AuditoriaEstoque'; // 🔥 IMPORTANDO A VERSÃO BONITA AQUI! 🔥
 
-// 🚨 1. MOTOR DO AVISO EMBUTIDO AQUI (Evita o erro de importação) 🚨
-const AuditoriaEstoque = () => {
-  const [pedidosAtrasados, setPedidosAtrasados] = useState([]);
-  const [visivel, setVisivel] = useState(false);
-
-  useEffect(() => {
-    const realizarAuditoria = async () => {
-      try {
-        const hoje = new Date().toISOString().split('T')[0];
-        const q = query(
-          collection(db, "locacoes"),
-          where("dataRetirada", "<", hoje),
-          where("status", "in", ["CONFIRMADO", "SEPARACAO", "confirmado", "separacao"])
-        );
-        const snap = await getDocs(q);
-        const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-        if (lista.length > 0) {
-          setPedidosAtrasados(lista);
-          setVisivel(true);
-        }
-      } catch (error) { console.error("Erro na auditoria:", error); }
-    };
-    realizarAuditoria();
-  }, []);
-
-  const handleResolver = async (id, novoStatus) => {
-    try {
-      await updateDoc(doc(db, "locacoes", id), { status: novoStatus });
-      const novaLista = pedidosAtrasados.filter(p => p.id !== id);
-      setPedidosAtrasados(novaLista);
-      if (novaLista.length === 0) setVisivel(false);
-    } catch (e) { alert("Erro ao atualizar pedido."); }
-  };
-
-  if (!visivel) return null;
-
-  return (
-    <div className="auditoria-overlay">
-      <div className="auditoria-modal">
-        <div className="auditoria-header">
-          <h2>🚨 Auditoria de Estoque: Pedidos Atrasados!</h2>
-          <p>As datas dos eventos abaixo já passaram, mas o sistema diz que eles ainda não saíram da loja (estão como Orçamento ou Separação). <strong>Isso está bloqueando e mentindo sobre a disponibilidade das suas peças no estoque!</strong></p>
-        </div>
-        <div className="auditoria-corpo">
-          {pedidosAtrasados.map(pedido => (
-            <div key={pedido.id} className="auditoria-card">
-              <div className="auditoria-info">
-                <h3>{pedido.clienteNome} <small>#{pedido.id.slice(-4)}</small></h3>
-                <p>Data da Festa: <span className="data-atrasada">{pedido.dataRetirada?.split('-').reverse().join('/')}</span> | Travado em: <strong>{pedido.status}</strong></p>
-              </div>
-              <div className="auditoria-btns">
-                <button className="btn-auditoria-cancel" onClick={() => handleResolver(pedido.id, 'CANCELADO')}>✕ Cancelou a festa</button>
-                <button className="btn-auditoria-check" onClick={() => handleResolver(pedido.id, 'FINALIZADO')}>✓ Já levou e devolveu</button>
-              </div>
-            </div>
-          ))}
-        </div>
-        <div className="auditoria-footer">
-          <button className="btn-auditoria-ignore" onClick={() => setVisivel(false)}>Ignorar e corrigir depois (Não recomendado)</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-
-// 🌟 2. SEU DASHBOARD ORIGINAL COMEÇA AQUI 🌟
 const Dashboard = () => {
   const navigate = useNavigate();
   
@@ -202,7 +135,7 @@ const Dashboard = () => {
   return (
     <div className="dash-wide-container fade-in">
       
-      {/* 🚨 CHAMA O AVISO DE AUDITORIA AQUI NO TOPO DA SUA TELA 🚨 */}
+      {/* 🚨 CHAMA O AVISO DE AUDITORIA DO ARQUIVO SEPARADO 🚨 */}
       <AuditoriaEstoque />
 
       <header className="dash-wide-header">
