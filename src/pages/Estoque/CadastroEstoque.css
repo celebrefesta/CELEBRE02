@@ -351,3 +351,55 @@
   .btn-voltar { width: 100%; text-align: center; }
   .btn-salvar { width: 100%; padding: 16px !important; }
 }
+
+/* 🔥 AJUSTE DEFINITIVO PARA O ZOOM DO CROPPER 🔥 */
+
+/* 1. Garante que o contêiner do cropper tenha um fundo limpo */
+.cropper-container {
+    background-color: #f8fafc !important; /* Fundo cinza bem clarinho igual ao da página */
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+/* 2. 🔥 A MÁGICA: Muda o comportamento da imagem de 'cover' para 'contain' 🔥 */
+.cropper-view-box img,
+.cropper-canvas img {
+    object-fit: contain !important; /* Faz a imagem caber inteira no quadrado, sem cortar nada */
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100% !important;
+    max-height: 100% !important;
+}
+
+/* 3. Ajusta o visual do controle de zoom (slider) para ficar mais elegante */
+.zoom-control-wrapper {
+    margin-top: 15px;
+    padding: 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: #fff;
+    border-radius: 20px;
+    border: 1px solid #e2e8f0;
+    height: 36px;
+}
+
+.zoom-slider {
+    flex: 1;
+    -webkit-appearance: none;
+    height: 4px;
+    background: #e2e8f0;
+    border-radius: 2px;
+    outline: none;
+}
+
+.zoom-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #c5a059; /* Cor dourada do seu sistema */
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid #fff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}

@@ -65,6 +65,15 @@
 }
 .barra-pesquisa input:focus { border-color: var(--dourado); background: var(--branco); }
 
+/* Novos Selects (Categoria e Status) */
+.barra-select { flex: 1.2; min-width: 150px; }
+.filtro-select {
+    width: 100%; padding: 11px 12px; border: 1px solid var(--borda); border-radius: 8px;
+    font-size: 13px; font-weight: 700; color: #0f172a; background: #fff; outline: none; 
+    transition: 0.2s; cursor: pointer;
+}
+.filtro-select:focus { border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1); }
+
 .seletor-data { flex: 1; min-width: 200px; border-left: 2px dashed var(--borda); padding-left: 20px; }
 .filtro-label { font-size: 11px; font-weight: 900; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px;}
 .data-input-wrapper { display: flex; gap: 8px; align-items: center;}
@@ -118,10 +127,12 @@
 .estoque-maint-dica { color: #d97706; background: #fffbeb; }
 .estoque-baixo-dica { color: #ef4444; background: #fef2f2; border: 1px solid #fecaca;}
 
+/* 🔥 AQUI ESTÃO AS PÍLULAS DE STATUS 🔥 */
 .status-pill { padding: 6px 12px; border-radius: 20px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;}
 .status-pill.disponivel { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #bbf7d0;} 
 .status-pill.manutencao { background: rgba(217, 119, 6, 0.1); color: #d97706; border: 1px solid #fde68a;}
 .status-pill.esgotado { background: #ef4444; color: #ffffff; border: 1px solid #b91c1c; box-shadow: 0 2px 4px rgba(239,68,68,0.2);}
+.status-pill.sem-estoque { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; } /* NOVA PÍLULA CINZA */
 
 /* BOTÕES DE AÇÃO */
 .dropdown-container { display: flex; justify-content: flex-end; gap: 6px; position: relative;}
@@ -256,12 +267,3 @@
         margin: 0 !important;
     }
 }
-
-/* ESTILOS DOS NOVOS FILTROS DE CATEGORIA E STATUS */
-.barra-select { flex: 1.2; min-width: 150px; }
-.filtro-select {
-    width: 100%; padding: 11px 12px; border: 1px solid var(--borda); border-radius: 8px;
-    font-size: 13px; font-weight: 700; color: #0f172a; background: #fff; outline: none; 
-    transition: 0.2s; cursor: pointer;
-}
-.filtro-select:focus { border-color: var(--dourado); box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1); }

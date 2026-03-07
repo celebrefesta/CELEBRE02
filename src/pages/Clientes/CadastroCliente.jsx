@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroCliente.css'; 
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, query, getDocs } from 'firebase/firestore';
 
 const CadastroCliente = () => {
   const navigate = useNavigate();
@@ -11,6 +11,9 @@ const CadastroCliente = () => {
 
   const [tipoPessoa, setTipoPessoa] = useState('fisica');
   const [salvando, setSalvando] = useState(false);
+
+  // 🔥 NOVO ESTADO: TRAVA DEFINITIVA DO STATUS PENDENTE 🔥
+  const [podeSerPendente, setPodeSerPendente] = useState(true);
 
   const [fotoBase64, setFotoBase64] = useState('');
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
@@ -36,6 +39,9 @@ const CadastroCliente = () => {
       
       const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
       
+      // Descobre qual é o status real do cliente (mesmo os antigos que não tinham esse campo)
+      const statusReal = clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado');
+      
       setFormData({
         nome: clienteEditando.nome || '', cpf: clienteEditando.cpf || '', rg: clienteEditando.rg || '', nascimento: clienteEditando.nascimento || '', sexo: clienteEditando.sexo || '',
         razaoSocial: clienteEditando.razaoSocial || '', nomeFantasia: clienteEditando.nomeFantasia || '', cnpj: clienteEditando.cnpj || '', inscricaoEstadual: clienteEditando.inscricaoEstadual || '',
@@ -44,9 +50,64 @@ const CadastroCliente = () => {
         cep: clienteEditando.cep || '', logradouro: clienteEditando.logradouro || '', numero: clienteEditando.numero || '', complemento: clienteEditando.complemento || '', bairro: clienteEditando.bairro || '', cidade: clienteEditando.cidade || '', uf: clienteEditando.uf || '',
         tags: clienteEditando.tags || '', observacoes: clienteEditando.observacoes || '',
         situacaoFinanceira: eraPendenteAntigo ? 'adimplente' : (clienteEditando.situacaoFinanceira || 'adimplente'),
-        statusCadastro: clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado')
+        statusCadastro: statusReal
       });
+
+      // 🔥 A MÁGICA DA TRAVA ACONTECE AQUI 🔥
+      if (statusReal === 'aprovado' || statusReal === 'bloqueado') {
+          setPodeSerPendente(false);
+      } else {
+          setPodeSerPendente(true);
+      }
+
+    } else {
+      setFormData(prev => ({...prev, statusCadastro: 'pendente'}));
+      setPodeSerPendente(true);
     }
+  }, [clienteEditando]);
+
+  // ROBÔ DE INADIMPLÊNCIA AUTOMÁTICA
+  useEffect(() => {
+    const verificarInadimplencia = async () => {
+      if (!clienteEditando?.id) return; 
+      
+      try {
+        const qLocacoes = query(collection(db, "locacoes"));
+        const snap = await getDocs(qLocacoes);
+        
+        let temDividaVencida = false;
+        const hoje = new Date();
+        hoje.setHours(0,0,0,0); 
+
+        snap.docs.forEach(doc => {
+          const loc = doc.data();
+          
+          if (loc.clienteId === clienteEditando.id || loc.cliente?.id === clienteEditando.id) {
+            if (loc.status === 'cancelado' || loc.status === 'orcamento') return;
+
+            const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
+            if (dataStr) {
+              const dataEvento = new Date(dataStr + 'T00:00:00');
+              const pagStatus = (loc.statusPagamento || '').toLowerCase();
+              
+              if (dataEvento < hoje && pagStatus !== 'pago' && pagStatus !== 'quitado') {
+                temDividaVencida = true;
+              }
+            }
+          }
+        });
+
+        setFormData(prev => ({
+          ...prev,
+          situacaoFinanceira: temDividaVencida ? 'inadimplente' : 'adimplente'
+        }));
+
+      } catch(e) {
+        console.error("Erro ao verificar inadimplência automática:", e);
+      }
+    };
+
+    verificarInadimplencia();
   }, [clienteEditando]);
 
   const maskCPF = (v) => {
@@ -237,7 +298,7 @@ const CadastroCliente = () => {
             <div className="painel-resumo-lateral">
               <div className="resumo-badges">
                 <span className={`badge-status ${formData.statusCadastro}`}>
-                  {formData.statusCadastro === 'pendente' ? '⏳ Cadastro Pendente' : '✅ Cadastro Aprovado'}
+                  {formData.statusCadastro === 'pendente' ? '⏳ Cadastro Pendente' : formData.statusCadastro === 'bloqueado' ? '🚫 Bloqueado' : '✅ Cadastro Aprovado'}
                 </span>
                 <span className={`badge-financeiro ${formData.situacaoFinanceira}`}>
                   {formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente'}
@@ -289,7 +350,6 @@ const CadastroCliente = () => {
             {tipoPessoa === 'fisica' ? (
               <>
                 <h3 className="section-divider" style={{marginTop: 0}}>DADOS PESSOAIS</h3>
-                {/* 🔥 ADICIONADO autoComplete NOS CAMPOS PESSOAIS 🔥 */}
                 <div className="form-grid-4">
                   <div className="form-group span-2"><label htmlFor="nome">NOME COMPLETO *</label><input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} required /></div>
                   <div className="form-group span-1"><label htmlFor="cpf">CPF</label><input id="cpf" type="text" name="cpf" autoComplete="off" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} /></div>
@@ -317,7 +377,6 @@ const CadastroCliente = () => {
             )}
 
             <h3 className="section-divider mt-compact">CONTATO E MARKETING</h3>
-            {/* 🔥 ADICIONADO autoComplete NOS CAMPOS DE CONTATO 🔥 */}
             <div className="form-grid-4">
               <div className="form-group span-1"><label htmlFor="celular">CELULAR / WHATSAPP</label><input id="celular" type="tel" name="celular" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} /></div>
               <div className="form-group span-1"><label htmlFor="telefoneFixo">TELEFONE FIXO</label><input id="telefoneFixo" type="tel" name="telefoneFixo" autoComplete="tel" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} /></div>
@@ -337,7 +396,6 @@ const CadastroCliente = () => {
             </div>
 
             <h3 className="section-divider mt-compact">ENDEREÇO</h3>
-            {/* 🔥 ADICIONADO autoComplete NOS CAMPOS DE ENDEREÇO 🔥 */}
             <div className="form-grid-4">
               <div className="form-group span-2"><label htmlFor="cep">CEP (BUSCA AUTO)</label><input id="cep" type="text" name="cep" autoComplete="postal-code" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
               <div className="form-group span-2"><label htmlFor="logradouro">LOGRADOURO</label><input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} /></div>
@@ -361,7 +419,7 @@ const CadastroCliente = () => {
             <div className="form-grid-4">
               
               <div className="form-group span-2">
-                <label htmlFor="statusCadastro" style={{ color: formData.statusCadastro === 'pendente' ? '#d97706' : '#10b981', fontWeight: '800' }}>
+                <label htmlFor="statusCadastro" style={{ color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981', fontWeight: '800' }}>
                   STATUS DO CADASTRO
                 </label>
                 <select 
@@ -372,36 +430,46 @@ const CadastroCliente = () => {
                   onChange={handleChange}
                   className="status-select"
                   style={{
-                    backgroundColor: formData.statusCadastro === 'pendente' ? '#fef3c7' : '#f0fdf4',
-                    color: formData.statusCadastro === 'pendente' ? '#d97706' : '#10b981',
-                    border: formData.statusCadastro === 'pendente' ? '1px solid #fcd34d' : '1px solid #86efac'
+                    backgroundColor: formData.statusCadastro === 'pendente' ? '#fef3c7' : formData.statusCadastro === 'bloqueado' ? '#fef2f2' : '#f0fdf4',
+                    color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981',
+                    border: formData.statusCadastro === 'pendente' ? '1px solid #fcd34d' : formData.statusCadastro === 'bloqueado' ? '1px solid #fca5a5' : '1px solid #86efac'
                   }}
                 >
-                  <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>
+                  {/* 🔥 TRAVA: Só mostra o Pendente se o estado liberar 🔥 */}
+                  {podeSerPendente && (
+                    <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>
+                  )}
                   <option value="aprovado">✔️ Cadastro Aprovado</option>
+                  <option value="bloqueado">🚫 Cadastro Bloqueado</option>
                 </select>
               </div>
 
+              {/* 🔥 CAMPO DE INADIMPLÊNCIA BLINDADO PELO SISTEMA 🔥 */}
               <div className="form-group span-2">
-                <label htmlFor="situacaoFinanceira" style={{ color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800' }}>
-                  SITUAÇÃO FINANCEIRA
+                <label htmlFor="situacaoFinanceira" style={{ color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  SITUAÇÃO FINANCEIRA <span title="Este campo é automático e não pode ser alterado manualmente">🔒</span>
                 </label>
                 <select 
                   id="situacaoFinanceira"
                   name="situacaoFinanceira" 
                   autoComplete="off"
                   value={formData.situacaoFinanceira} 
-                  onChange={handleChange}
+                  disabled={true} /* TRAVADO */
                   className="status-select"
                   style={{
                     backgroundColor: formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
                     color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
-                    border: formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac'
+                    border: formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac',
+                    cursor: 'not-allowed',
+                    opacity: 0.9
                   }}
                 >
                   <option value="adimplente">✅ Nome Limpo (Adimplente)</option>
                   <option value="inadimplente">⚠️ Devendo (Inadimplente)</option>
                 </select>
+                <small style={{fontSize: '10px', color: '#64748b', marginTop: '4px', display: 'block'}}>
+                  * Atualizado automaticamente pelo módulo de locações.
+                </small>
               </div>
 
               <div className="form-group span-4"><label htmlFor="tags">TAGS (Ex: VIP, Problemático)</label><input id="tags" type="text" name="tags" autoComplete="off" placeholder="Digite as tags..." value={formData.tags} onChange={handleChange} /></div>

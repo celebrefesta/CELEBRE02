@@ -8,6 +8,7 @@ const CadastroEstoque = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const itemEditando = location.state?.itemEditando || null;
+  const itemDuplicando = location.state?.itemDuplicando || null; // 🔥 PEGA O ITEM CLONADO
   const dadosCompra = location.state?.dadosCompra || null; 
 
   const [salvando, setSalvando] = useState(false);
@@ -31,7 +32,6 @@ const CadastroEstoque = () => {
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
   const [temaSelecionado, setTemaSelecionado] = useState('');
   
-  // OS 3 TIPOS DE CADASTRO
   const [tipoCadastro, setTipoCadastro] = useState('avulsa');
   
   const [pecasKitNovas, setPecasKitNovas] = useState([{ 
@@ -96,47 +96,57 @@ const CadastroEstoque = () => {
     };
     fetchConfiguracoes();
 
-    if (itemEditando) {
-      setNome(itemEditando.nome || ''); setCodigo(itemEditando.codigo || '');
-      setCategoria(itemEditando.categoria || ''); setSubCategoria(itemEditando.subCategoria || '');
-      setGrupoTemaSelecionado(itemEditando.grupoTema || ''); setTemaSelecionado(itemEditando.tema || '');
+    // 🔥 FUNDE AS DUAS LÓGICAS (EDITAR OU DUPLICAR) 🔥
+    const itemBase = itemEditando || itemDuplicando;
+
+    if (itemBase) {
+      // Se for cópia, avisa no nome
+      setNome(itemDuplicando ? `${itemBase.nome} (Cópia)` : itemBase.nome || ''); 
       
-      const ehDecoracao = itemEditando.especificacoes?.isDecoracao || false;
-      const ehKitPai = itemEditando.especificacoes?.isKitPai || itemEditando.especificacoes?.isKit || false;
+      // Se for cópia, DEIXA O CÓDIGO VAZIO para o sistema gerar um novo!
+      setCodigo(itemEditando ? itemBase.codigo || '' : ''); 
+      
+      setCategoria(itemBase.categoria || ''); 
+      setSubCategoria(itemBase.subCategoria || '');
+      setGrupoTemaSelecionado(itemBase.grupoTema || ''); 
+      setTemaSelecionado(itemBase.tema || '');
+      
+      const ehDecoracao = itemBase.especificacoes?.isDecoracao || false;
+      const ehKitPai = itemBase.especificacoes?.isKitPai || itemBase.especificacoes?.isKit || false;
 
       if (ehDecoracao) {
           setTipoCadastro('decoracao');
           setTipoDisponibilidade('Aluguel');
-          setItensDoKit(itemEditando.especificacoes?.itensDecoracao || itemEditando.especificacoes?.itensDoKit || []);
+          setItensDoKit(itemBase.especificacoes?.itensDecoracao || itemBase.especificacoes?.itensDoKit || []);
       } else if (ehKitPai) {
           setTipoCadastro('kit');
-          setPecasKitNovas(itemEditando.especificacoes?.pecasKit || []);
+          setPecasKitNovas(itemBase.especificacoes?.pecasKit || []);
       } else {
           setTipoCadastro('avulsa');
       }
 
-      setQuantidade(itemEditando.quantidade || 1); setEstoqueMinimo(itemEditando.estoqueMinimo || 1);
-      setAlertaEstoque(itemEditando.configuracao?.alertaEstoque || 'NaoAvisar'); 
-      setFornecedor(itemEditando.fornecedor || ''); setLinkFornecedor(itemEditando.linkFornecedor || '');
-      setLocalizacao(itemEditando.localizacao || ''); setStatus(itemEditando.status || 'ok');
-      setValorCompra(itemEditando.financeiro?.valorCompra?.toFixed(2).replace('.', ',') || '');
-      setValorAluguel(itemEditando.financeiro?.valorAluguel?.toFixed(2).replace('.', ',') || '');
-      setValorReposicao(itemEditando.financeiro?.valorReposicao?.toFixed(2).replace('.', ',') || '');
-      setTamanho(itemEditando.especificacoes?.tamanho || ''); setCor(itemEditando.especificacoes?.cor || '');
-      setUnidadeMedida(itemEditando.especificacoes?.unidadeMedida || 'Unidade');
-      setLargura(itemEditando.especificacoes?.largura || ''); setAltura(itemEditando.especificacoes?.altura || '');
-      setDiametro(itemEditando.especificacoes?.diametro || ''); setComprimento(itemEditando.especificacoes?.comprimento || '');
+      setQuantidade(itemBase.quantidade || 1); setEstoqueMinimo(itemBase.estoqueMinimo || 1);
+      setAlertaEstoque(itemBase.configuracao?.alertaEstoque || 'NaoAvisar'); 
+      setFornecedor(itemBase.fornecedor || ''); setLinkFornecedor(itemBase.linkFornecedor || '');
+      setLocalizacao(itemBase.localizacao || ''); setStatus(itemBase.status || 'ok');
+      setValorCompra(itemBase.financeiro?.valorCompra?.toFixed(2).replace('.', ',') || '');
+      setValorAluguel(itemBase.financeiro?.valorAluguel?.toFixed(2).replace('.', ',') || '');
+      setValorReposicao(itemBase.financeiro?.valorReposicao?.toFixed(2).replace('.', ',') || '');
+      setTamanho(itemBase.especificacoes?.tamanho || ''); setCor(itemBase.especificacoes?.cor || '');
+      setUnidadeMedida(itemBase.especificacoes?.unidadeMedida || 'Unidade');
+      setLargura(itemBase.especificacoes?.largura || ''); setAltura(itemBase.especificacoes?.altura || '');
+      setDiametro(itemBase.especificacoes?.diametro || ''); setComprimento(itemBase.especificacoes?.comprimento || '');
       
-      if (!ehDecoracao) setTipoDisponibilidade(itemEditando.configuracao?.tipoDisponibilidade || 'Aluguel');
+      if (!ehDecoracao) setTipoDisponibilidade(itemBase.configuracao?.tipoDisponibilidade || 'Aluguel');
       
-      setVisivelCatalogo(itemEditando.configuracao?.visivelCatalogo !== false);
-      setNecessitaMontagem(itemEditando.configuracao?.necessitaMontagem || 'Não');
-      setVoltagem(itemEditando.configuracao?.voltagem || 'Bivolt');
-      setObservacoes(itemEditando.observacoes || '');
-      setPosicoesFoco(itemEditando.posicoesFoco || {});
+      setVisivelCatalogo(itemBase.configuracao?.visivelCatalogo !== false);
+      setNecessitaMontagem(itemBase.configuracao?.necessitaMontagem || 'Não');
+      setVoltagem(itemBase.configuracao?.voltagem || 'Bivolt');
+      setObservacoes(itemBase.observacoes || '');
+      setPosicoesFoco(itemBase.posicoesFoco || {});
       
-      if (itemEditando.fotos && itemEditando.fotos.length > 0) setFotos(itemEditando.fotos);
-      else if (itemEditando.foto) setFotos([itemEditando.foto]);
+      if (itemBase.fotos && itemBase.fotos.length > 0) setFotos(itemBase.fotos);
+      else if (itemBase.foto) setFotos([itemBase.foto]);
     
     } else if (dadosCompra) {
       setNome(dadosCompra.nome || '');
@@ -147,20 +157,19 @@ const CadastroEstoque = () => {
       setObservacoes(dadosCompra.obs || '');
       setStatus('pintura'); 
     }
-  }, [itemEditando, dadosCompra]);
+  }, [itemEditando, itemDuplicando, dadosCompra]);
 
   const gerarSKU = (cat) => {
     if (!cat) return '';
     const prefixo = cat.substring(0, 3).toUpperCase();
-    const total = itensExistentes.filter(i => i.categoria === cat).length;
-    return `${prefixo}-${String(total + 1).padStart(3, '0')}`;
+    let totalNaCategoria = itensExistentes.filter(i => i.categoria === cat && i.id !== itemEditando?.id).length;
+    return `${prefixo}-${String(totalNaCategoria + 1).padStart(3, '0')}`;
   };
 
-  // Gerador Inteligente de SKU (Sabe quando é Decoração ou Peça)
   useEffect(() => {
     if (!itemEditando && itensExistentes.length > 0 && !codigo) {
         if (tipoCadastro === 'decoracao') {
-            setCodigo(gerarSKU('DEC')); // Prefixo DEC para Decorações
+            setCodigo(gerarSKU('DEC')); 
         } else if (categoria) {
             setCodigo(gerarSKU(categoria));
         }
@@ -170,9 +179,12 @@ const CadastroEstoque = () => {
   const handleCategoriaChange = (e) => {
     const novaCat = e.target.value;
     setCategoria(novaCat);
-    if (!itemEditando) setCodigo(gerarSKU(novaCat));
-    if (listasSistema.subcategorias[novaCat] && listasSistema.subcategorias[novaCat].length > 0) setSubCategoria(listasSistema.subcategorias[novaCat][0]);
-    else setSubCategoria('');
+    setCodigo(gerarSKU(novaCat));
+    if (listasSistema.subcategorias[novaCat] && listasSistema.subcategorias[novaCat].length > 0) {
+        setSubCategoria(listasSistema.subcategorias[novaCat][0]);
+    } else {
+        setSubCategoria('');
+    }
   };
 
   const handleGrupoTemaChange = (e) => {
@@ -190,13 +202,11 @@ const CadastroEstoque = () => {
     if (!isNaN(num)) setter(num.toFixed(2).replace('.', ','));
   };
 
-  // 🔥 O NOVO MOTOR DE UPLOAD (NÃO CRASHA O REACT E ACEITA VÁRIAS FOTOS) 🔥
   const handleFileChange = async (e) => {
     const inputTarget = e.target;
     const files = Array.from(inputTarget.files);
     if (files.length === 0) return;
 
-    // Reseta o input na hora H para o React não surtar no loop
     inputTarget.value = ''; 
 
     const novasFotos = await Promise.all(files.map(file => {
@@ -208,7 +218,7 @@ const CadastroEstoque = () => {
                 const img = new Image();
                 img.onload = () => {
                     const canvas = document.createElement('canvas');
-                    const MAX = 800; // Tamanho ideal que não trava o navegador
+                    const MAX = 800; 
                     let w = img.width, h = img.height;
                     if (w > h) { if (w > MAX) { h *= MAX / w; w = MAX; } } 
                     else { if (h > MAX) { w *= MAX / h; h = MAX; } }
@@ -328,7 +338,6 @@ const CadastroEstoque = () => {
     try {
       const limparValor = (val) => Number(String(val).replace(',', '.'));
       
-      // Se for Decoração, o sistema injeta essas categorias fantasmas para não quebrar o banco de dados.
       const catFinal = isDecoracao ? 'Decoração Completa' : categoria;
       const subCatFinal = isDecoracao ? 'Pacote' : subCategoria;
 
@@ -372,6 +381,7 @@ const CadastroEstoque = () => {
         atualizadoEm: serverTimestamp()
       };
 
+      // 🔥 SE TIVER ITEM EDITANDO, ATUALIZA. SENÃO (NOVO OU CÓPIA), CRIA UM DOCUMENTO NOVO 🔥
       if (itemEditando) {
         await updateDoc(doc(db, "estoque", itemEditando.id), dados);
         alert("Item atualizado com sucesso!");
@@ -413,7 +423,7 @@ const CadastroEstoque = () => {
 
         if (isDecoracao) alert("✨ Decoração Completa salva! Pronta para ser alugada.");
         else if (isKitNovo) alert("📦 Kit desmembrado salvo com sucesso!");
-        else alert("🧩 Peça adicionada com sucesso!");
+        else alert(itemDuplicando ? "📋 Peça duplicada com sucesso!" : "🧩 Peça adicionada com sucesso!");
       }
       navigate('/estoque');
     } catch (error) { alert("Erro ao salvar."); } 
@@ -432,10 +442,11 @@ const CadastroEstoque = () => {
       <div className="page-header" style={{marginBottom: '20px'}}>
         <div className="header-text">
           <h1 className="page-title">
-            {itemEditando ? 'EDITAR ITEM DO ACERVO' : dadosCompra ? '✨ FINALIZAR CADASTRO DE COMPRA' : 'NOVO ITEM DO ACERVO'}
+            {/* 🔥 MUDA O TÍTULO PARA AVISAR QUE ESTÁ DUPLICANDO 🔥 */}
+            {itemEditando ? 'EDITAR ITEM DO ACERVO' : itemDuplicando ? '📋 DUPLICAR ITEM DO ACERVO' : dadosCompra ? '✨ FINALIZAR CADASTRO DE COMPRA' : 'NOVO ITEM DO ACERVO'}
           </h1>
           <p style={{ color: '#64748b', marginTop: '5px' }}>
-            {dadosCompra ? 'Você indicou que já comprou este item! Adicione a foto, confira o status e salve no acervo.' : 'Configure as regras de estoque e detalhes da peça'}
+            {itemDuplicando ? 'Altere as especificações (como cor ou tamanho) da nova peça antes de salvar.' : dadosCompra ? 'Você indicou que já comprou este item! Adicione a foto, confira o status e salve no acervo.' : 'Configure as regras de estoque e detalhes da peça'}
           </p>
         </div>
       </div>
@@ -454,7 +465,8 @@ const CadastroEstoque = () => {
                     <img 
                         src={fotos[fotoPrincipalIndex]} 
                         style={{ 
-                          width: '100%', height: '100%', objectFit: 'cover',
+                          width: '100%', height: '100%', 
+                          objectFit: 'contain', /* 🔥 A MÁGICA ACONTECE AQUI: Mudamos de 'cover' para 'contain' 🔥 */
                           objectPosition: `${focoAtual.x}% ${focoAtual.y}%`, 
                           transform: `scale(${focoAtual.z})`,
                           cursor: dragging ? 'grabbing' : 'grab',
@@ -491,7 +503,8 @@ const CadastroEstoque = () => {
                         const tFoco = getFocoThumb(idx);
                         return (
                         <div key={idx} style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '2px solid #0f172a' : '1px solid #cbd5e1', position: 'relative', cursor: 'pointer'}} onClick={() => setFotoPrincipalIndex(idx)}>
-                            <img src={f} style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
+                            {/* 🔥 A MÁGICA NAS MINIATURAS TAMBÉM 🔥 */}
+                            <img src={f} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
                             <button type="button" onClick={(e) => {e.stopPropagation(); removerFoto(idx)}} style={{position: 'absolute', top: 0, right: 0, background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>×</button>
                         </div>
                     )})}
@@ -685,7 +698,6 @@ const CadastroEstoque = () => {
               <div className="form-group span-3"><label>NOME {tipoCadastro === 'decoracao' ? 'DA DECORAÇÃO' : 'DA PEÇA'} *</label><input value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Vaso Dourado"} /></div>
               <div className="form-group span-1"><label>CÓDIGO SKU</label><input value={codigo} readOnly style={{backgroundColor: '#f1f5f9', color: '#64748b', fontWeight: 'bold', border: '1px dashed #cbd5e1'}} /></div>
               
-              {/* Oculta Categoria e Subcategoria se for Decoração, pois a Decoração não precisa disso */}
               {tipoCadastro !== 'decoracao' && (
                 <div className="span-4 flex-row-always">
                   <div className="form-group"><label>CATEGORIA *</label><select value={categoria} onChange={handleCategoriaChange} required><option value="" disabled hidden>Selecione...</option>{listasSistema.categorias.map(c => <option key={c} value={c}>{c}</option>)}</select></div>
