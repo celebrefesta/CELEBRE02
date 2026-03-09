@@ -1,19 +1,19 @@
 /* =========================================
-   DASHBOARD CELEBRE v6.2
-   REDESIGN PREMIUM • RESPONSIVO REAL
+   DASHBOARD CELEBRE v8.3
+   REDESIGN PREMIUM • 3 COLUNAS PERFEITAS
 ========================================= */
 
 .dash-wide-container {
-  padding: 24px 28px;
-  background: var(--fundo-cinza);
+  padding: 30px 40px;
+  background: #f8fafc; 
   min-height: 100vh;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', system-ui, sans-serif;
   overflow-x: hidden;
-  transition: 0.3s;
+  box-sizing: border-box;
 }
 
 /* =========================================
-   HEADER E BOTÕES
+   HEADER E BOTÕES RÁPIDOS
 ========================================= */
 
 .dash-wide-header {
@@ -21,285 +21,193 @@
   justify-content: space-between;
   align-items: center;
   gap: 20px;
-  margin-bottom: 28px;
+  margin-bottom: 30px;
 }
 
 .header-titles h1 {
-  color: var(--texto-principal);
-  font-size: 22px;
+  color: #0f172a;
+  font-size: 26px;
   margin: 0;
-  font-weight: 800;
+  font-weight: 800; 
+  letter-spacing: -0.5px;
 }
 
 .header-titles p {
-  color: var(--texto-secundario);
-  margin-top: 4px;
+  color: #64748b;
+  margin-top: 6px;
   font-size: 14px;
+  font-weight: 400; 
 }
 
-.header-titles strong {
-  color: var(--dourado);
-}
+.header-titles strong { color: #c5a059; font-weight: 600; }
 
-.dash-actions-row {
-  display: flex;
-  gap: 10px;
-}
+.dash-actions-row { display: flex; gap: 12px; }
 
 .dash-actions-row button {
-  background: #0f172a;
-  color: white;
-  border: none;
-  padding: 10px 14px;
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 10px;
-  cursor: pointer;
-  text-transform: uppercase;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.08);
+  background: #0f172a; color: white; border: none; padding: 12px 18px;
+  border-radius: 8px; font-weight: 700; font-size: 11px; cursor: pointer;
+  text-transform: uppercase; letter-spacing: 0.5px; transition: 0.2s;
+  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.1);
 }
-
-.dash-actions-row button:hover {
-  background: var(--dourado);
-  color: #0f172a;
-}
+.dash-actions-row button:hover { background: #1e293b; transform: translateY(-2px); }
 
 /* =========================================
-   KPIs / ESTATÍSTICAS
+   KPIs / ESTATÍSTICAS DO TOPO
 ========================================= */
 
 .stats-wide-row {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 30px;
+  display: grid; grid-template-columns: repeat(5, 1fr); gap: 15px; margin-bottom: 30px;
 }
 
 .stat-card-wide {
-  background: var(--branco);
-  padding: 20px;
-  border-radius: 12px;
-  border-left: 5px solid #cbd5e1;
-  border: 1px solid var(--borda);
+  background: white; padding: 22px 20px; border-radius: 12px; border: 1px solid #e2e8f0;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.02); display: flex; flex-direction: column;
+  transition: transform 0.2s ease;
 }
+.stat-card-wide:hover { transform: translateY(-3px); box-shadow: 0 6px 15px rgba(0,0,0,0.05); }
 
-.stat-card-wide span {
-  display: block;
-  font-size: 11px;
-  color: var(--texto-secundario);
-  font-weight: 700;
-  text-transform: uppercase;
-}
+.stat-card-wide span { font-size: 11px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+.stat-card-wide strong { font-size: 26px; color: #0f172a; margin-top: 8px; font-weight: 800; letter-spacing: -0.5px; }
 
-.stat-card-wide strong {
-  font-size: 22px;
-  color: var(--texto-principal);
-  margin-top: 6px;
-  display: block;
-}
-
-.border-gold { border-left-color: #c5a059; }
-.border-blue { border-left-color: #3b82f6; }
-.border-green { border-left-color: #10b981; }
-.border-red { border-left-color: #ef4444; }
+.border-gold { border-bottom: 3px solid #c5a059; }
+.border-blue { border-bottom: 3px solid #3b82f6; }
+.border-green { border-bottom: 3px solid #10b981; }
+.border-purple { border-bottom: 3px solid #8b5cf6; }
+.border-red { border-bottom: 3px solid #ef4444; }
 
 /* =========================================
-   GRID PRINCIPAL
+   GRID PRINCIPAL (3 COLUNAS FLEXÍVEIS)
 ========================================= */
 
 .dash-main-grid-wide {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr 1fr;
-  gap: 20px;
-  margin-bottom: 30px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; align-items: stretch;
 }
+
+.dash-column { display: flex; flex-direction: column; gap: 20px; }
 
 .dash-card-wide {
-  background: var(--branco);
-  padding: 22px;
-  border-radius: 14px;
-  border: 1px solid var(--borda);
+  background: white; padding: 25px; border-radius: 16px; border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.02); display: flex; flex-direction: column;
 }
+.flex-grow { flex: 1; } 
 
-.dash-card-wide h3 {
-  font-size: 14px;
-  margin-bottom: 16px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid var(--borda);
-}
+.border-top-yellow { border-top: 4px solid #f59e0b; }
+.border-top-red { border-top: 4px solid #ef4444; }
+
+.dash-card-wide h3 { font-size: 15px; color: #0f172a; margin: 0 0 15px 0; font-weight: 700; text-align: left; }
+.card-subtitle { font-size: 12px; color: #64748b; margin: -10px 0 20px 0; font-weight: 400; }
 
 /* =========================================
-   GRÁFICO FATURAMENTO
+   GRÁFICO DE STATUS (ROSCA) E PÍLULAS
 ========================================= */
 
-.compact-chart {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+.chart-circle-container {
+  position: relative; width: 140px; height: 140px; margin: 10px auto 25px auto; display: block;
 }
+.circular-chart { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0px 4px 6px rgba(0,0,0,0.05)); }
+.chart-center-text {
+  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+}
+.chart-center-text strong { font-size: 34px; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: -1px;}
+.chart-center-text span { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-top: 4px; letter-spacing: 1px;}
 
-.compact-bar-group {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+/* 🔥 NOVA LEGENDA EM PÍLULAS (CHIPS) 🔥 */
+.chart-legend-pills {
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 25px;
 }
+.chart-legend-pills div {
+  display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; font-weight: 600;
+  background: #f8fafc; padding: 6px 12px; border-radius: 20px; border: 1px solid #e2e8f0;
+  transition: all 0.2s ease; cursor: default;
+}
+.chart-legend-pills div:hover {
+  background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.05); border-color: #cbd5e1; transform: translateY(-1px);
+}
+.chart-legend-pills span { width: 8px; height: 8px; border-radius: 50%; display: block; flex-shrink: 0;}
+.chart-legend-pills b { color: #0f172a; font-weight: 800; margin-left: 2px;}
 
-.compact-bar-label {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--texto-secundario);
-  min-width: 50px;
+/* 🔥 NOVO PIPELINE FINANCEIRO (CAIXA PREMIUM) 🔥 */
+.dash-financial-summary {
+    width: 100%; background: linear-gradient(145deg, #f8fafc, #f1f5f9);
+    padding: 20px; border-radius: 14px; border: 1px solid #e2e8f0;
+    box-sizing: border-box; margin-top: auto; box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
 }
+.dash-financial-summary h4 {
+    margin: 0 0 15px 0; font-size: 11px; color: #475569; font-weight: 800;
+    text-transform: uppercase; letter-spacing: 0.5px; display: flex; align-items: center; gap: 6px;
+}
+.summary-item {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 13px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0;
+}
+.summary-item:last-child { margin-bottom: 0; border-bottom: none; padding-bottom: 0;}
+.summary-item span { font-weight: 600; }
+.summary-item strong { font-weight: 900; font-size: 15px; letter-spacing: -0.5px;}
+.warning-text { color: #b45309; }
+.green-text { color: #16a34a; }
+
+/* =========================================
+   GRÁFICO DE FATURAMENTO (BARRAS)
+========================================= */
+
+.compact-chart { display: flex; flex-direction: column; gap: 15px; }
+.compact-bar-group { display: flex; align-items: center; justify-content: space-between; }
+.compact-bar-label { font-size: 12px; color: #475569; font-weight: 600; width: 45px; }
 
 .compact-bar-track {
-  flex: 1;
-  height: 12px;
-  background: var(--fundo-cinza);
-  border-radius: 6px;
-  overflow: hidden;
+  flex: 1; height: 10px; background: #f1f5f9; border-radius: 6px; overflow: hidden; margin: 0 15px;
 }
-
 .compact-bar-fill {
-  height: 100%;
-  background: linear-gradient(to right, #0f172a, #3b82f6);
+  height: 100%; background: linear-gradient(90deg, #3b82f6, #1e3a8a); border-radius: 6px; transition: 1s ease-out;
 }
-
-.compact-bar-value {
-  font-size: 12px;
-  font-weight: 700;
-  color: var(--texto-principal);
-  min-width: 80px;
-  text-align: right;
-}
+.compact-bar-value { font-size: 12px; font-weight: 700; color: #0f172a; width: 85px; text-align: right; }
 
 /* =========================================
-   LISTAS / FEED
+   LISTAS / FEED (ORÇAMENTOS E ENTREGAS)
 ========================================= */
 
-.activity-feed {
-  display: flex;
-  flex-direction: column;
-}
+.activity-feed { display: flex; flex-direction: column; flex: 1; }
+.empty-feed { color: #94a3b8; font-size: 13px; text-align: center; margin: auto 0; font-style: italic; }
 
 .feed-row-moderno {
-  display: flex;
-  gap: 12px;
-  padding: 12px 0;
-  border-bottom: 1px solid var(--borda);
-  flex-wrap: wrap;
+  display: flex; gap: 12px; padding: 12px 0; border-bottom: 1px solid #f1f5f9; cursor: pointer; transition: 0.2s; align-items: center;
 }
+.cursor-default { cursor: default !important; }
+.feed-row-moderno:hover:not(.cursor-default) { background: #f8fafc; padding-left: 10px; border-radius: 8px; border-bottom-color: transparent;}
+.feed-row-moderno:last-child { border-bottom: none; }
 
 .feed-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--fundo-cinza);
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0;
 }
+.warning-icon { background: #fffbeb; color: #d97706; }
+.blue-icon { background: #eff6ff; color: #2563eb; }
+.green-icon { background: #f0fdf4; color: #16a34a; }
+.danger-icon { background: #fef2f2; color: #ef4444; }
 
-.feed-info p {
-  margin: 0;
-  font-size: 13px;
-  font-weight: 700;
-}
-
-.feed-valor {
-  font-size: 12px;
-  font-weight: 700;
-  color: #10b981;
-}
+.feed-info { flex: 1; display: flex; flex-direction: column; gap: 2px;}
+.feed-info p { margin: 0; font-size: 13px; font-weight: 600; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.feed-sub { font-size: 11px; color: #64748b; font-weight: 400; }
+.feed-valor { font-size: 13px; font-weight: 700; color: #10b981; white-space: nowrap;}
 
 /* =========================================
-   ALERTAS
+   RESPONSIVIDADE 
 ========================================= */
 
-.dash-alertas-banner {
-  background: #fef2f2;
-  border: 1px solid #fca5a5;
-  border-radius: 12px;
-  padding: 20px;
-  margin-bottom: 30px;
+@media (max-width: 1200px) {
+  .dash-main-grid-wide { grid-template-columns: repeat(2, 1fr); }
+  .stats-wide-row { grid-template-columns: repeat(3, 1fr); }
 }
 
-/* =========================================
-   RESPONSIVO TABLET
-========================================= */
-
-@media (max-width: 1024px) {
-
-  .stats-wide-row {
-    grid-template-columns: repeat(2, 1fr);
-  }
-
-  .dash-main-grid-wide {
-    grid-template-columns: 1fr;
-  }
-
+@media (max-width: 900px) {
+  .dash-wide-container { padding: 20px !important; }
+  .stats-wide-row { grid-template-columns: repeat(2, 1fr); }
 }
-
-/* =========================================
-   RESPONSIVO MOBILE
-========================================= */
 
 @media (max-width: 768px) {
-
-  .dash-wide-container {
-    padding: 16px 14px;
-  }
-
-  .dash-wide-header {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 14px;
-  }
-
-  .dash-actions-row {
-    width: 100%;
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 6px;
-  }
-
-  .dash-actions-row button {
-    padding: 6px 4px;
-    height: 52px;
-    font-size: 9px;
-  }
-
-  .stats-wide-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-  }
-
-  .stat-card-wide {
-    padding: 16px;
-  }
-
-  .stat-card-wide strong {
-    font-size: 18px;
-  }
-
-  .dash-main-grid-wide {
-    grid-template-columns: 1fr !important;
-    gap: 16px;
-  }
-
-}
-
-/* =========================================
-   MODAL AUDITORIA (INALTERADO)
-========================================= */
-
-.auditoria-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15,23,42,0.85);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 99999;
-  padding: 20px;
+  .dash-wide-container { padding: 15px; }
+  .dash-wide-header { flex-direction: column; align-items: stretch; }
+  .dash-actions-row { display: grid; grid-template-columns: 1fr 1fr; }
+  .dash-actions-row button { height: 45px; }
+  .dash-main-grid-wide { grid-template-columns: 1fr; }
+  .stats-wide-row { grid-template-columns: 1fr; gap: 10px; }
 }

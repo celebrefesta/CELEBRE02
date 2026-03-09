@@ -5,16 +5,9 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Agenda.css';
 
-// ============================================================
-// AGENDA v5.4 - NOVO FLUXO ADMINISTRATIVO (REUNIÕES, TAREFAS, ETC)
-// ============================================================
-
 const TIPOS = {
-  // Automáticos do Sistema (Locações)
   entrega:   { label: 'Entrega',   cor: '#3b82f6', dot: 'blue'   },
   devolucao: { label: 'Devolução', cor: '#f97316', dot: 'orange' },
-  
-  // Manuais (Administrativo)
   reuniao:   { label: 'Reunião',   cor: '#8b5cf6', dot: 'purple' },
   visita:    { label: 'Visita Técnica', cor: '#22c55e', dot: 'green'  },
   pagamento: { label: 'Cobrança/Pgto', cor: '#eab308', dot: 'yellow' },
@@ -42,31 +35,22 @@ const dmaParaISO = (dia, mes, ano) =>
 
 const Agenda = () => {
   const [dataAtual, setDataAtual] = useState(new Date());
-  
   const [viewPrincipal, setViewPrincipal] = useState('calendario'); 
   const [viewLista, setViewLista] = useState('semana');
 
-  // Firebase Dados
   const [clientes, setClientes]   = useState([]);
   const [locacoes, setLocacoes]   = useState([]);
   const [compras, setCompras]     = useState([]);
   const [eventosManual, setEventosManual] = useState([]); 
   
-  const [dadosEmpresa, setDadosEmpresa] = useState({
-    nomeEmpresa: 'Ágape Decorações',
-    logotipo: ''
-  });
+  const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Ágape Decorações', logotipo: '' });
 
   const [loadingFB, setLoadingFB] = useState(true);
   const [salvando, setSalvando]   = useState(false); 
-
   const [toastMsg, setToastMsg] = useState('');
 
   const [filtroAtivo, setFiltroAtivo]     = useState('todos');
   const [busca, setBusca]                 = useState('');
-
-  const [buscaFiltroCliente, setBuscaFiltroCliente] = useState('');
-  const [mostrarDropdownCli, setMostrarDropdownCli] = useState(false);
 
   const [buscaClienteModal, setBuscaClienteModal] = useState('');
   const [mostrarDropdownModal, setMostrarDropdownModal] = useState(false);
@@ -85,7 +69,6 @@ const Agenda = () => {
   useEffect(() => {
     const carregarDados = async () => {
       setLoadingFB(true);
-
       try {
         const sc = await getDocs(collection(db, 'clientes'));
         setClientes(sc.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -118,9 +101,7 @@ const Agenda = () => {
             logotipo: configData.logotipo || ''
           });
         }
-      } catch (e) {
-        console.error('Erro ao buscar dados da Empresa:', e);
-      }
+      } catch (e) { console.error('Erro ao buscar dados da Empresa:', e); }
 
       setLoadingFB(false);
     };
@@ -140,15 +121,15 @@ const Agenda = () => {
         valorTotal: loc.valorTotal, valorPago: loc.valorPago, status: loc.status,
       };
       
-      if (loc.dataRetirada) {
+      if (loc.dataRetirada && !['cancelado'].includes((loc.status || '').toLowerCase())) {
         const dma = isoParaDMA(loc.dataRetirada);
         const horarioExt = (typeof loc.dataRetirada === 'string' && loc.dataRetirada.includes('T')) ? loc.dataRetirada.split('T')[1].substring(0, 5) : '';
-        if (dma) evs.push({ ...base, id: `loc-ent-${loc.id}`, tipo: 'entrega', titulo: `Entrega ${num} · ${nome}`, horario: horarioExt, ...dma });
+        if (dma) evs.push({ ...base, id: `loc-ent-${loc.id}`, tipo: 'entrega', titulo: `Entrega ${num}`, horario: horarioExt, ...dma });
       }
-      if (loc.dataDevolucao) {
+      if (loc.dataDevolucao && !['cancelado'].includes((loc.status || '').toLowerCase())) {
         const dma = isoParaDMA(loc.dataDevolucao);
         const horarioExt = (typeof loc.dataDevolucao === 'string' && loc.dataDevolucao.includes('T')) ? loc.dataDevolucao.split('T')[1].substring(0, 5) : '';
-        if (dma) evs.push({ ...base, id: `loc-dev-${loc.id}`, tipo: 'devolucao', titulo: `Devolução ${num} · ${nome}`, horario: horarioExt, ...dma });
+        if (dma) evs.push({ ...base, id: `loc-dev-${loc.id}`, tipo: 'devolucao', titulo: `Devolução ${num}`, horario: horarioExt, ...dma });
       }
     });
     return evs;
@@ -158,7 +139,9 @@ const Agenda = () => {
 
   const getDiasNoMes       = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   const getDiaSemanaInicio = (d) => new Date(d.getFullYear(), d.getMonth(), 1).getDay();
-  const nomeMes = dataAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  
+  let nomeMes = dataAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
+  nomeMes = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
 
   const eventoVisivel = (ev) =>
     (filtroAtivo === 'todos' || filtroAtivo === 'compras' || ev.tipo === filtroAtivo) &&
@@ -221,7 +204,7 @@ const Agenda = () => {
         const docRef = doc(db, 'agenda_eventos', eventoSelecionado.id);
         await updateDoc(docRef, evParaSalvar);
         setEventosManual(prev => prev.map(x => x.id === eventoSelecionado.id ? { id: eventoSelecionado.id, ...evParaSalvar } : x));
-        mostrarToast('✅ Evento atualizado com sucesso!');
+        mostrarToast('✅ Evento atualizado!');
       } else {
         let evsCriados = [];
         const docRef = await addDoc(collection(db, 'agenda_eventos'), evParaSalvar);
@@ -236,7 +219,7 @@ const Agenda = () => {
           }
         }
         setEventosManual(prev => [...prev, ...evsCriados]);
-        mostrarToast('✨ Novo agendamento salvo!');
+        mostrarToast('✨ Novo compromisso salvo!');
       }
       setModalFormAberto(false);
     } catch (err) {
@@ -246,14 +229,14 @@ const Agenda = () => {
         : [...eventosManual, {id: Date.now().toString(), ...evParaSalvar}];
       setEventosManual(novaLista);
       localStorage.setItem('agenda_eventos_v3', JSON.stringify(novaLista));
-      mostrarToast('⚠️ Salvo localmente.');
+      mostrarToast('⚠️ Salvo offline.');
       setModalFormAberto(false);
     } finally { setSalvando(false); }
   };
 
   const excluirEvento = async () => {
     if (formData.origem === 'locacao') return;
-    if (window.confirm('Tem certeza que deseja apagar este evento?')) {
+    if (window.confirm('Apagar este evento definitivamente?')) {
       setSalvando(true);
       try {
         await deleteDoc(doc(db, 'agenda_eventos', formData.id));
@@ -261,16 +244,16 @@ const Agenda = () => {
         mostrarToast('🗑️ Evento apagado.');
         setModalFormAberto(false);
       } catch (err) {
-        console.error(err);
         const novaLista = eventosManual.filter(x => x.id !== formData.id);
         setEventosManual(novaLista);
         localStorage.setItem('agenda_eventos_v3', JSON.stringify(novaLista));
-        mostrarToast('🗑️ Evento apagado localmente.');
+        mostrarToast('🗑️ Evento apagado (offline).');
         setModalFormAberto(false);
       } finally { setSalvando(false); }
     }
   };
 
+  // 🔥 FUNÇÃO DE PDF ATUALIZADA COM CORES 🔥
   const exportarPDF = () => {
     try {
       const docPDF = new jsPDF();
@@ -278,24 +261,40 @@ const Agenda = () => {
       let tituloRelatorio = '';
       let subtituloRelatorio = '';
 
+      // Tabela de Cores Específicas para o PDF (Fundo claro e texto escuro, igual tela)
+      const PDF_COLORS = {
+        entrega:   { bg: '#eff6ff', text: '#1e3a8a' },
+        devolucao: { bg: '#fff7ed', text: '#9a3412' },
+        visita:    { bg: '#f0fdf4', text: '#166534' },
+        bloqueio:  { bg: '#fef2f2', text: '#991b1b' },
+        reuniao:   { bg: '#faf5ff', text: '#6b21a8' },
+        pagamento: { bg: '#fefce8', text: '#854d0e' },
+        tarefa:    { bg: '#f8fafc', text: '#334155' }
+      };
+
       if (filtroAtivo === 'compras') {
         tituloRelatorio = 'Lista de Compras Pendentes';
         subtituloRelatorio = `${comprasPendentes.length} itens aguardando compra`;
-        listaExportacao = comprasPendentes.map(c => [
-          c.nome || '-',
-          c.quantidade || '1',
-          c.valorEstimado ? `R$ ${Number(c.valorEstimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
-          c.prazo ? new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '-',
-          c.vinculo || '-'
-        ]);
+        listaExportacao = comprasPendentes.map(c => {
+            const urgente = c.prazo && c.prazo <= hojeISO;
+            return [
+                c.nome || '-', 
+                c.quantidade || '1',
+                c.valorEstimado ? `R$ ${Number(c.valorEstimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
+                {
+                    content: c.prazo ? new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '-',
+                    // Datas de compras atrasadas ficam em vermelho negrito no PDF!
+                    styles: urgente ? { textColor: '#ef4444', fontStyle: 'bold' } : {}
+                },
+                c.vinculo || '-'
+            ];
+        });
 
       } else {
         let eventosFiltrados = [];
-        
         if (viewPrincipal === 'calendario' || (viewPrincipal === 'lista' && viewLista === 'mes')) {
           eventosFiltrados = eventosMesAtual.filter(eventoVisivel);
           tituloRelatorio = `Agenda Mensal: ${nomeMes}`;
-          
         } else if (viewPrincipal === 'lista' && viewLista === 'semana') {
           const diaSemana = dataAtual.getDay();
           const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
@@ -309,11 +308,9 @@ const Agenda = () => {
           const strInicio = inicio.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
           const strFim = fim.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
           tituloRelatorio = `Agenda da Semana: ${strInicio} a ${strFim}`;
-
         } else if (viewPrincipal === 'lista' && viewLista === 'dia') {
           eventosFiltrados = eventosDoDia(dataAtual.getDate()).filter(eventoVisivel);
           tituloRelatorio = `Agenda do Dia: ${dataAtual.toLocaleDateString('pt-BR')}`;
-          
         } else if (viewPrincipal === 'lista' && viewLista === 'ano') {
           eventosFiltrados = todosEventos.filter(e => e.ano === dataAtual.getFullYear() && eventoVisivel(e));
           tituloRelatorio = `Agenda Anual: ${dataAtual.getFullYear()}`;
@@ -326,78 +323,58 @@ const Agenda = () => {
             if (a.dia !== b.dia) return a.dia - b.dia;
             return (a.horario || '99:99').localeCompare(b.horario || '99:99');
           })
-          .map(e => [
-            `${String(e.dia).padStart(2, '0')}/${String(e.mes + 1).padStart(2, '0')}`,
-            e.horario || '--:--',
-            TIPOS[e.tipo]?.label || '',
-            e.titulo || '',
-            e.clienteNome || 'Não informado'
-          ]);
+          .map(e => {
+            const cor = PDF_COLORS[e.tipo] || { bg: '#f1f5f9', text: '#475569' };
+            return [
+              `${String(e.dia).padStart(2, '0')}/${String(e.mes + 1).padStart(2, '0')}`,
+              e.horario || '--:--',
+              { 
+                  // Pílula com fundo e cor específica injetada no PDF!
+                  content: TIPOS[e.tipo]?.label || '', 
+                  styles: { fillColor: cor.bg, textColor: cor.text, fontStyle: 'bold', halign: 'center' } 
+              },
+              e.titulo || '', 
+              e.clienteNome || 'Não informado'
+            ];
+          });
       }
 
-      let startY = 35; 
-      let startXTexto = 14;
-
+      let startY = 35; let startXTexto = 14;
       if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
-        try {
-          docPDF.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 25, 25);
-          startXTexto = 45;
-        } catch(e) { console.error('Erro ao renderizar Logo no PDF'); }
+        try { docPDF.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 25, 25); startXTexto = 45; } catch(e) {}
       }
 
-      docPDF.setFontSize(22);
-      docPDF.setTextColor(15, 23, 42); 
-      docPDF.setFont("helvetica", "bold");
+      docPDF.setFontSize(22); docPDF.setTextColor(15, 23, 42); docPDF.setFont("helvetica", "bold");
       docPDF.text(dadosEmpresa.nomeEmpresa.toUpperCase(), startXTexto, 22);
 
-      docPDF.setFontSize(10);
-      docPDF.setTextColor(150, 150, 150);
-      docPDF.setFont("helvetica", "normal");
+      docPDF.setFontSize(10); docPDF.setTextColor(150, 150, 150); docPDF.setFont("helvetica", "normal");
       docPDF.text("DEPARTAMENTO DE LOGÍSTICA / AGENDA", startXTexto, 28);
 
-      docPDF.setFontSize(14);
-      docPDF.setTextColor(0, 0, 0);
-      docPDF.setFont("helvetica", "bold");
+      docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.setFont("helvetica", "bold");
       docPDF.text(tituloRelatorio, 14, 45);
 
-      docPDF.setFontSize(9);
-      docPDF.setTextColor(100);
-      docPDF.setFont("helvetica", "normal");
+      docPDF.setFontSize(9); docPDF.setTextColor(100); docPDF.setFont("helvetica", "normal");
       docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 51);
       
-      if (subtituloRelatorio) {
-        docPDF.text(subtituloRelatorio, 14, 56);
-        startY = 65;
-      } else {
-        startY = 60;
-      }
+      if (subtituloRelatorio) { docPDF.text(subtituloRelatorio, 14, 56); startY = 65; } else { startY = 60; }
 
-      docPDF.setLineWidth(0.5);
-      docPDF.setDrawColor(200, 200, 200);
-      docPDF.line(14, startY - 4, 196, startY - 4);
+      docPDF.setLineWidth(0.5); docPDF.setDrawColor(200, 200, 200); docPDF.line(14, startY - 4, 196, startY - 4);
 
       let colunasDef = [["Data", "Horário", "Tipo", "Título do Evento", "Cliente"]];
-      if (filtroAtivo === 'compras') {
-        colunasDef = [["Item", "Qtd", "Valor Est.", "Prazo", "Referência / Vínculo"]];
-      }
+      if (filtroAtivo === 'compras') colunasDef = [["Item", "Qtd", "Valor Est.", "Prazo", "Referência / Vínculo"]];
 
       autoTable(docPDF, {
-        startY: startY,
-        head: colunasDef,
-        body: listaExportacao,
-        theme: 'striped',
+        startY: startY, head: colunasDef, body: listaExportacao, theme: 'striped',
         headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' }, 
-        styles: { fontSize: 9, cellPadding: 4 },
+        // valign: 'middle' garante que a pílula colorida fique centralizada e bonita
+        styles: { fontSize: 9, cellPadding: 5, valign: 'middle' }, 
         alternateRowStyles: { fillColor: [248, 250, 252] },
       });
 
       const nomeArquivoSafe = dadosEmpresa.nomeEmpresa.replace(/[^a-z0-9]/gi, '_');
       docPDF.save(`${nomeArquivoSafe}_${tituloRelatorio.replace(/[^a-z0-9]/gi, '_')}.pdf`);
       mostrarToast('📄 PDF gerado com sucesso!');
-    } catch (error) {
-      console.error("Erro ao gerar PDF:", error);
-      mostrarToast('❌ Erro ao gerar o arquivo PDF.');
-    }
+    } catch (error) { mostrarToast('❌ Erro ao gerar o arquivo PDF.'); }
   };
 
   const mudarAno = (dir) => { const d = new Date(dataAtual); d.setFullYear(dataAtual.getFullYear() + dir); setDataAtual(d); };
@@ -405,15 +382,11 @@ const Agenda = () => {
   const mudarDia = (dir) => { const d = new Date(dataAtual); d.setDate(dataAtual.getDate() + dir); setDataAtual(d); };
   const mudarSemana = (dir) => { const d = new Date(dataAtual); d.setDate(dataAtual.getDate() + dir * 7); setDataAtual(d); };
 
-  // ══════════════════════════════════════════════════════════
-  // RENDERS DOS COMPONENTES VISUAIS
-  // ══════════════════════════════════════════════════════════
-
   const renderCardEvento = (ev) => {
     const saldo = ev.origem === 'locacao' ? Number(ev.valorTotal || 0) - Number(ev.valorPago || 0) : null;
     return (
       <div key={ev.id} className={`list-item-card${ev.origem === 'locacao' ? ' card-locacao' : ''}`} onClick={() => abrirModalForm(ev.dia, ev)}>
-        <div className="list-left-bar" style={{ backgroundColor: TIPOS[ev.tipo]?.cor }} />
+        <div className={`list-left-bar bar-${ev.tipo}`} />
         <div className="list-info">
           <div className="list-item-header">
             <h4>{ev.titulo}</h4>
@@ -448,26 +421,27 @@ const Agenda = () => {
       const extra  = evsDia.length - MAX;
       dias.push(
         <div key={dia} className={`day-cell${isHoje ? ' today' : ''}`} onClick={() => handleDiaClick(dia)}>
-          <span className="day-number">{dia}</span>
+          <div className="day-header-cell">
+              <span className="day-number">{dia}</span>
+          </div>
           <div className="eventos-container">
             {evsDia.slice(0, MAX).map(ev => (
               <div key={ev.id} className={`event-tag tag-${ev.tipo}${ev.origem === 'locacao' ? ' tag-locacao-origem' : ''}`} onClick={e => { e.stopPropagation(); abrirModalForm(dia, ev); }}>
-                {ev.horario && <span className="event-time">{ev.horario}</span>}
                 <span className="event-titulo">{ev.titulo}</span>
               </div>
             ))}
-            {extra > 0 && <div className="event-tag tag-mais" onClick={e => { e.stopPropagation(); setDiaSelecionado(dia); setModalListaAberto(true); }}>+{extra} mais</div>}
+            {extra > 0 && <div className="event-tag tag-mais" onClick={e => { e.stopPropagation(); setDiaSelecionado(dia); setModalListaAberto(true); }}>+ {extra} a mais</div>}
           </div>
         </div>
       );
     }
     return (
-      <>
+      <div className="calendar-wrapper">
         <div className="calendar-grid-header">
           {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => <div key={d} className="weekday-header">{d}</div>)}
         </div>
         <div className="calendar-grid">{dias}</div>
-      </>
+      </div>
     );
   };
 
@@ -656,10 +630,10 @@ const Agenda = () => {
           <div className="view-switcher-wrapper">
             <div className="view-switcher primary">
               <button className={`view-btn ${viewPrincipal === 'calendario' ? 'active' : ''}`} onClick={() => {setViewPrincipal('calendario'); setFiltroAtivo('todos');}}>
-                📅 Calendário
+                Calendário
               </button>
               <button className={`view-btn ${viewPrincipal === 'lista' ? 'active' : ''}`} onClick={() => {setViewPrincipal('lista'); setFiltroAtivo('todos');}}>
-                📝 Lista
+                Lista
               </button>
             </div>
 
@@ -690,7 +664,6 @@ const Agenda = () => {
     }
   };
 
-  // 🚨 O NOVO MODAL ESTÁ AQUI (COM OS NOVOS TIPOS) 🚨
   const renderModalForm = () => {
     const ehLocacao = formData.origem === 'locacao';
     const saldo = ehLocacao ? Number(formData.valorTotal || 0) - Number(formData.valorPago || 0) : 0;
@@ -699,7 +672,7 @@ const Agenda = () => {
       <div className="modal-overlay" onClick={() => !salvando && setModalFormAberto(false)}>
         <div className="modal-content modal-form-content" onClick={e => e.stopPropagation()}>
           <div className="modal-header">
-            <h3>{ehLocacao ? '🔗 Detalhe da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : '➕ Novo Compromisso')}</h3>
+            <h3>{ehLocacao ? '🔗 Detalhe da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : 'Novo Compromisso')}</h3>
             <button className="btn-close" onClick={() => !salvando && setModalFormAberto(false)}>×</button>
           </div>
 
@@ -773,7 +746,7 @@ const Agenda = () => {
                     <option value="visita">📍 Visita Técnica / Local</option>
                     <option value="pagamento">💰 Lembrete Financeiro</option>
                     <option value="tarefa">📌 Tarefa Administrativa</option>
-                    <option value="bloqueio">🚫 Bloqueio de Data (Não alugar)</option>
+                    <option value="bloqueio">🚫 Bloqueio de Data</option>
                   </select>
                 </div>
                 {!eventoSelecionado && (
@@ -798,7 +771,7 @@ const Agenda = () => {
                 />
               </div>
               <div className="modal-actions">
-                {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>🗑️ Apagar</button>}
+                {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar</button>}
                 <button type="button" className="btn-cancelar-modal" onClick={() => setModalFormAberto(false)} disabled={salvando}>Cancelar</button>
                 <button type="submit" className="btn-salvar-modal" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Compromisso'}</button>
               </div>
@@ -810,77 +783,88 @@ const Agenda = () => {
   };
 
   return (
-    <div className="agenda-container">
+    <div className="agenda-container fade-in">
       {toastMsg && (
         <div className="toast-mensagem fade-in">
           {toastMsg}
         </div>
       )}
 
-      {/* 🚨 SIDEBAR ATUALIZADA COM OS NOVOS FILTROS 🚨 */}
-      <div className="agenda-sidebar">
-        <button className="btn-novo-agendamento" onClick={() => abrirModalForm(new Date().getDate())}>
-          + Novo Compromisso
+      <aside className="agenda-sidebar custom-scrollbar">
+        <div className="sidebar-header-fixed">
+            <button className="btn-novo-agendamento" onClick={() => abrirModalForm(new Date().getDate())}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Novo Compromisso
+            </button>
+
+            <div className="busca-box">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="busca-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" placeholder="Buscar na agenda..." value={busca} onChange={e => setBusca(e.target.value)} className="busca-input" />
+                {busca && <button className="busca-clear" onClick={() => setBusca('')}>×</button>}
+            </div>
+        </div>
+
+        <nav className="sidebar-menu">
+            <div className={`menu-item highlight ${filtroAtivo === 'todos' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('todos'); if(viewPrincipal === 'calendario' && filtroAtivo === 'compras') setViewPrincipal('lista'); }}>
+                <span className="menu-icon">📅</span>
+                <span className="menu-label">Visão Geral</span>
+            </div>
+
+            <div className="menu-section">
+                <h4 className="menu-section-title">Logística do Sistema</h4>
+                {[
+                  ['entrega',  'blue',   'Entregas',   contadores.entrega],
+                  ['devolucao','orange', 'Devoluções', contadores.devolucao],
+                ].map(([tipo, cor, label, count]) => (
+                  <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
+                    <span className={`dot bg-${cor}`} />
+                    <span className="menu-label">{label}</span>
+                    {count > 0 && <span className="menu-badge">{count}</span>}
+                  </div>
+                ))}
+            </div>
+
+            <div className="menu-section">
+                <h4 className="menu-section-title">Administrativo</h4>
+                {[
+                  ['reuniao',  'purple', 'Reuniões',       contadores.reuniao],
+                  ['visita',   'green',  'Visitas Técnicas', contadores.visita],
+                  ['pagamento','yellow', 'Cobranças',      contadores.pagamento],
+                  ['tarefa',   'gray',   'Tarefas Internas', contadores.tarefa],
+                  ['bloqueio', 'red',    'Bloqueios de Data',contadores.bloqueio],
+                ].map(([tipo, cor, label, count]) => (
+                  <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
+                    <span className={`dot bg-${cor}`} />
+                    <span className="menu-label">{label}</span>
+                    {count > 0 && <span className="menu-badge">{count}</span>}
+                  </div>
+                ))}
+            </div>
+
+            <div className="menu-section">
+                <h4 className="menu-section-title">Estoque & Compras</h4>
+                <div className={`menu-item ${filtroAtivo === 'compras' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('compras'); setViewPrincipal('lista');}}>
+                  <span className="dot bg-compras" />
+                  <span className="menu-label">Lista de Compras</span>
+                  {comprasPendentes.length > 0 && (
+                    <span className={`menu-badge ${comprasUrgentes > 0 ? 'urgente' : ''}`}>
+                      {comprasPendentes.length}
+                    </span>
+                  )}
+                </div>
+            </div>
+        </nav>
+
+        <button className="btn-exportar" onClick={exportarPDF}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            Exportar Relatório
         </button>
+      </aside>
 
-        <div className="busca-box">
-          <span className="busca-icon">🔍</span>
-          <input type="text" placeholder="Buscar cliente ou título..." value={busca} onChange={e => setBusca(e.target.value)} className="busca-input" />
-          {busca && <button className="busca-clear" onClick={() => setBusca('')}>×</button>}
-        </div>
-
-        <div className="filtro-box">
-          <div className="filtro-item" onClick={() => {setFiltroAtivo('todos'); if(viewPrincipal === 'calendario' && filtroAtivo === 'compras') setViewPrincipal('lista'); }} style={{marginBottom: '15px'}}>
-            <span className="dot gray" />
-            <span style={{ flex: 1 }}>Mostrar Tudo</span>
-          </div>
-
-          <div className="filtro-titulo">Entregas do Sistema</div>
-          {[
-            ['entrega',  'blue',   'Entregas',   contadores.entrega],
-            ['devolucao','orange', 'Devoluções', contadores.devolucao],
-          ].map(([tipo, cor, label, count]) => (
-            <div key={tipo} className={`filtro-item${filtroAtivo === tipo ? ' ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
-              <span className={`dot ${cor}`} />
-              <span style={{ flex: 1 }}>{label}</span>
-              {count > 0 && <span className="filtro-contador">{count}</span>}
-            </div>
-          ))}
-
-          <div className="filtro-titulo" style={{marginTop: '15px'}}>Compromissos Manuais</div>
-          {[
-            ['reuniao',  'purple', 'Reuniões',       contadores.reuniao],
-            ['visita',   'green',  'Visitas Técnicas',  contadores.visita],
-            ['pagamento','yellow', 'Cobranças/Pagamento', contadores.pagamento],
-            ['tarefa',   'gray',   'Tarefas Internas',   contadores.tarefa],
-            ['bloqueio', 'red',    'Bloqueios',      contadores.bloqueio],
-          ].map(([tipo, cor, label, count]) => (
-            <div key={tipo} className={`filtro-item${filtroAtivo === tipo ? ' ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
-              <span className={`dot ${cor}`} />
-              <span style={{ flex: 1 }}>{label}</span>
-              {count > 0 && <span className="filtro-contador">{count}</span>}
-            </div>
-          ))}
-
-          <div className="filtro-titulo" style={{marginTop: '15px'}}>Estoque & Logística</div>
-          <div className={`filtro-item filtro-compras${filtroAtivo === 'compras' ? ' ativo' : ''}`} onClick={() => {setFiltroAtivo('compras'); setViewPrincipal('lista');}}>
-            <span className="dot dot-compras" />
-            <span style={{ flex: 1 }}>Compras</span>
-            {comprasPendentes.length > 0 && (
-              <span className={`filtro-contador${comprasUrgentes > 0 ? ' contador-urgente' : ''}`}>
-                {comprasUrgentes > 0 ? `🚨 ${comprasPendentes.length}` : comprasPendentes.length}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <button className="btn-exportar" onClick={exportarPDF}>📄 Exportar PDF</button>
-      </div>
-
-      <div className="agenda-main">
+      <main className="agenda-main">
         {renderHeader()}
-        {loadingFB ? <div className="loading-agenda">Buscando dados na nuvem...</div> : renderConteudo()}
-      </div>
+        {loadingFB ? <div className="loading-agenda">Sincronizando calendário...</div> : renderConteudo()}
+      </main>
 
       {modalListaAberto && (
         <div className="modal-overlay" onClick={() => setModalListaAberto(false)}>
@@ -905,7 +889,7 @@ const Agenda = () => {
                 </div>
               ))}
             </div>
-            <button className="btn-add-no-dia" onClick={() => abrirModalForm(diaSelecionado)}>+ Adicionar compromisso</button>
+            <button className="btn-add-no-dia" onClick={() => abrirModalForm(diaSelecionado)}>+ Novo compromisso neste dia</button>
           </div>
         </div>
       )}

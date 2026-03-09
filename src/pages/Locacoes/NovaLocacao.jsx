@@ -8,7 +8,6 @@ const NovaLocacao = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
 
-  // --- ESTADOS DO PEDIDO ---
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
   const [todasLocacoes, setTodasLocacoes] = useState([]); 
@@ -40,6 +39,13 @@ const NovaLocacao = () => {
 
   const [salvandoCompra, setSalvandoCompra] = useState(false);
   const [acaoSalvar, setAcaoSalvar] = useState('fechar');
+
+  // --- ESTADOS DO SINAL E CATRACA ---
+  const [modalSinalAberto, setModalSinalAberto] = useState(false);
+  const [valorSinal, setValorSinal] = useState('');
+  const [formaPagtoSinal, setFormaPagtoSinal] = useState('Pix');
+  const [salvandoPedido, setSalvandoPedido] = useState(false);
+  const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
 
   useEffect(() => {
     const carregarDados = async () => {
@@ -278,7 +284,7 @@ const NovaLocacao = () => {
     });
   };
 
-  const handleSalvar = async (status) => {
+  const interceptarSalvamento = (status) => {
     if (!clienteSelecionado) return alert("Selecione o Cliente!");
     if (!temaFesta) return alert("Preencha o Tema da Festa!");
     if (!datas.retirada) return alert("Preencha a Data de Retirada!");
@@ -288,17 +294,31 @@ const NovaLocacao = () => {
         return alert("A data de devolução não pode ser menor que a data de retirada!");
     }
 
+    if (carrinho.length === 0) {
+        return alert("Você precisa adicionar pelo menos 1 peça no pedido!");
+    }
+
     for (let item of carrinho) {
         if (item.isPendenteCompra) continue;
         const livresAgora = getQuantidadeDisponivel(item.id);
         const qtdNoCarrinho = Number(item.qtd) || 1;
         
         if (qtdNoCarrinho > livresAgora) {
-            alert(`⛔ ERRO GRAVE DE ESTOQUE:\nA peça "${item.nome}" possui apenas ${livresAgora} unidade(s) livre(s) para esta data, mas você inseriu ${qtdNoCarrinho} no pedido.\n\nPor favor, diminua a quantidade ou faça o pedido de compra antes de confirmar o evento.`);
-            return; 
+            return alert(`⛔ ERRO GRAVE DE ESTOQUE:\nA peça "${item.nome}" possui apenas ${livresAgora} unidade(s) livre(s) para esta data.\nDiminua a quantidade antes de salvar.`);
         }
     }
 
+    setStatusParaSalvar(status);
+
+    if (status === 'orcamento') {
+        executarSalvamentoFinal('orcamento', 0, 0); 
+    } else {
+        setModalSinalAberto(true);
+    }
+  };
+
+  const executarSalvamentoFinal = async (statusFinal, valorRecebidoNoCaixa = 0, valorSinalNegociado = 0) => {
+    setSalvandoPedido(true);
     try {
       const coll = collection(db, "locacoes");
       const snap = await getCountFromServer(coll);
@@ -306,18 +326,7 @@ const NovaLocacao = () => {
       const codigo = `${new Date().getFullYear()}-${count.toString().padStart(3, '0')}`;
 
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
-      
-      if (!clienteEncontrado) {
-          alert("ERRO DE SINCRONIA: O sistema não conseguiu confirmar a identidade deste cliente. Recarregue a página e tente novamente.");
-          return;
-      }
-
-      const nomeClienteReal = clienteEncontrado.nome || clienteEncontrado.nomeCompleto || clienteEncontrado.razaoSocial;
-
-      if (!nomeClienteReal || nomeClienteReal.trim().toLowerCase() === "cliente") {
-          alert("O cadastro deste cliente está incompleto na agenda. Por favor, edite o nome dele na aba Clientes primeiro.");
-          return;
-      }
+      const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto || clienteEncontrado.razaoSocial) : "Cliente";
 
       await addDoc(coll, {
         numeroPedido: codigo, 
@@ -332,16 +341,69 @@ const NovaLocacao = () => {
         obsInternas, 
         desconto: Number(desconto), 
         valorTotal: calcularTotal().total, 
-        status, 
+        valorPago: valorRecebidoNoCaixa, 
+        sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
+        status: statusFinal, 
         criadoEm: serverTimestamp()
       });
 
-      alert(`Pedido ${codigo} salvo com sucesso para ${nomeClienteReal}!`);
+      if (valorRecebidoNoCaixa > 0) {
+        await addDoc(collection(db, "financeiro_lancamentos"), {
+            tipo: 'entrada', 
+            categoria: 'Locação', 
+            valor: valorRecebidoNoCaixa, 
+            formaPagto: formaPagtoSinal,
+            data: new Date().toISOString().split('T')[0], 
+            status: 'pago', 
+            createdAt: serverTimestamp(),
+            descricao: `SINAL - Pedido #${codigo} - ${nomeClienteReal}`
+        });
+      }
+
+      alert(`✅ Pedido ${codigo} salvo com sucesso!`);
       navigate('/locacoes');
     } catch (e) { 
         console.error(e);
         alert("Erro ao salvar o pedido."); 
+    } finally {
+        setSalvandoPedido(false);
+        setModalSinalAberto(false);
     }
+  };
+
+  const salvarSinalRecebido = () => {
+      const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
+      executarSalvamentoFinal('confirmado', valorDigitadoNum, valorDigitadoNum);
+  };
+
+  const salvarAguardandoPagamento = () => {
+      const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
+      executarSalvamentoFinal('orcamento', 0, valorDigitadoNum);
+  };
+
+  const salvarSemSinal = () => {
+      const confirmouSemSinal = window.confirm("⚠️ ALERTA DE RISCO!\n\nVocê deixou o valor de entrada como R$ 0,00.\n\nTem certeza que deseja CONFIRMAR este pedido assumindo o risco de não ter recebido nenhum sinal?");
+      if (confirmouSemSinal) {
+          executarSalvamentoFinal('confirmado', 0, 0);
+      }
+  };
+
+  const abrirWhatsAppCobranca = () => {
+      const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
+      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto || '') : '';
+      const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
+      
+      const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      const vSinalFormatado = valorSinal || '0,00';
+
+      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui. Muito obrigada! 🥰`;
+
+      const msgEncoded = encodeURIComponent(texto);
+      const url = telefoneC 
+            ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` 
+            : `https://api.whatsapp.com/send?text=${msgEncoded}`;
+            
+      window.open(url, '_blank');
   };
 
   const itensFiltrados = estoque.filter(item => {
@@ -361,7 +423,6 @@ const NovaLocacao = () => {
     try {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
       const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto) : 'Cliente Não Identificado';
-      
       const nomeVinculo = temaFesta ? `${temaFesta} - ${nomeClienteReal}` : `Pedido em Criação de ${nomeClienteReal}`;
       
       let valorCusto = formCompra.valorEstimado ? Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
@@ -374,14 +435,7 @@ const NovaLocacao = () => {
       });
 
       const itemParaCarrinho = {
-        id: novaCompraRef.id, 
-        nome: formCompra.nome,
-        categoria: formCompra.categoria,
-        foto: '', 
-        preco: valorAluguel,
-        qtd: Number(formCompra.quantidade),
-        qtdOriginal: Number(formCompra.quantidade), 
-        isPendenteCompra: true 
+        id: novaCompraRef.id, nome: formCompra.nome, categoria: formCompra.categoria, foto: '', preco: valorAluguel, qtd: Number(formCompra.quantidade), qtdOriginal: Number(formCompra.quantidade), isPendenteCompra: true 
       };
 
       setCarrinho(prev => [...prev, itemParaCarrinho]);
@@ -398,6 +452,8 @@ const NovaLocacao = () => {
     } catch (err) { alert("Erro ao salvar compra."); } finally { setSalvandoCompra(false); }
   };
 
+  const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
+
   if (loading) return <div className="loading-state">Carregando formulário...</div>;
 
   return (
@@ -410,21 +466,14 @@ const NovaLocacao = () => {
       <div className="layout-duas-colunas">
         
         <div className="coluna-form">
-          
           <div className="card-secao">
             <h3 className="section-divider">👤 DADOS DO EVENTO</h3>
             
             <div className="form-group mb-15">
               <label>MODALIDADE DE SERVIÇO *</label>
               <div className="toggle-servico">
-                <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`}
-                  onClick={() => { setTipoServico('PEGUE E MONTE'); setLogistica({...logistica, tipo: 'retirada', frete: ''}); }}>
-                  📦 PEGUE E MONTE
-                </button>
-                <button type="button" className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`}
-                  onClick={() => { setTipoServico('DECORACAO COMPLETA'); setLogistica({...logistica, tipo: 'entrega'}); }}>
-                  ✨ DECORAÇÃO COMPLETA
-                </button>
+                <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`} onClick={() => { setTipoServico('PEGUE E MONTE'); setLogistica({...logistica, tipo: 'retirada', frete: ''}); }}>📦 PEGUE E MONTE</button>
+                <button type="button" className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`} onClick={() => { setTipoServico('DECORACAO COMPLETA'); setLogistica({...logistica, tipo: 'entrega'}); }}>✨ DECORAÇÃO COMPLETA</button>
               </div>
             </div>
 
@@ -540,18 +589,7 @@ const NovaLocacao = () => {
                             <td style={{padding: '12px 10px', textAlign: 'center'}}>
                               <div style={{display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f8fafc', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
                                 <button type="button" onClick={() => handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) - 1)} style={{width: '28px', height: '28px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a'}}>-</button>
-                                
-                                <input 
-                                  type="number" 
-                                  min="1" 
-                                  value={item.qtd} 
-                                  onChange={(e) => handleChangeQtdCarrinho(item.id, e.target.value)}
-                                  onBlur={(e) => {
-                                      if (!e.target.value || parseInt(e.target.value) < 1) handleChangeQtdCarrinho(item.id, 1);
-                                  }}
-                                  style={{width: '40px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: 'bold', fontSize: '14px', color: '#0f172a', appearance: 'textfield'}}
-                                />
-
+                                <input type="number" min="1" value={item.qtd} onChange={(e) => handleChangeQtdCarrinho(item.id, e.target.value)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleChangeQtdCarrinho(item.id, 1); }} style={{width: '40px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: 'bold', fontSize: '14px', color: '#0f172a', appearance: 'textfield'}} />
                                 <button type="button" onClick={() => {
                                     if (item.isPendenteCompra) {
                                         handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) + 1);
@@ -573,9 +611,7 @@ const NovaLocacao = () => {
                             </td>
 
                             <td style={{padding: '12px 10px', textAlign: 'center'}}>
-                              <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))} style={{background: '#fef2f2', border: 'none', color: '#ef4444', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s'}} onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'} onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}>
-                                  🗑️
-                              </button>
+                              <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))} style={{background: '#fef2f2', border: 'none', color: '#ef4444', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s'}} onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'} onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}>🗑️</button>
                             </td>
                           </tr>
                         ))}
@@ -611,14 +647,98 @@ const NovaLocacao = () => {
             </div>
 
             <div className="fin-acoes">
-              <button type="button" className="btn-salvar-form" onClick={() => handleSalvar('confirmado')}>✔ CONFIRMAR PEDIDO</button>
-              <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center', marginTop: '10px'}} onClick={() => handleSalvar('orcamento')}>💾 Salvar como Orçamento</button>
+              <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')}>✔ CONFIRMAR PEDIDO</button>
+              <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center', marginTop: '10px'}} onClick={() => interceptarSalvamento('orcamento')}>💾 Salvar como Orçamento</button>
             </div>
           </div>
         </aside>
       </div>
 
-      {/* 🔥 CATÁLOGO OTIMIZADO: GRADE PERFEITA, IMAGEM FIXA E BOTÃO CLARO 🔥 */}
+      {/* =========================================================================
+          🔥 NOVO MODAL INTELIGENTE DE SINAL (FIXO E UNIFICADO) 🔥 
+          ========================================================================= */}
+      {modalSinalAberto && (
+        <div className="modal-overlay-premium" style={{zIndex: 99999}}>
+          <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
+            
+            <div style={{background: '#f8fafc', padding: '25px', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
+               <h3 style={{margin: 0, color: '#0f172a', fontSize: '22px'}}>💰 Confirmação e Sinal</h3>
+               
+               <div style={{marginTop: '20px', padding: '20px', background: '#eff6ff', border: '2px dashed #3b82f6', borderRadius: '12px'}}>
+                  <span style={{fontSize: '13px', color: '#1e3a8a', display: 'block', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Valor Total do Pedido</span>
+                  <strong style={{fontSize: '32px', color: '#1d4ed8'}}>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+               </div>
+            </div>
+            
+            <form onSubmit={(e) => e.preventDefault()} style={{padding: '25px'}}>
+               
+               <div style={{display: 'flex', gap: '15px', marginBottom: '20px'}}>
+                   <div className="form-group-pag" style={{flex: 1}}>
+                     <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Valor da Entrada (R$)</label>
+                     <input 
+                        type="text" 
+                        placeholder="0,00" 
+                        autoFocus
+                        style={{fontSize: '22px', padding: '15px', textAlign: 'center', borderColor: '#3b82f6', color: '#1e3a8a', backgroundColor: '#fff', fontWeight: 'bold'}}
+                        value={valorSinal} 
+                        onChange={e => setValorSinal(maskCurrency(e.target.value))} 
+                     />
+                   </div>
+
+                   <div className="form-group-pag" style={{flex: 1}}>
+                     <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Forma de Pagto.</label>
+                     <select 
+                        value={formaPagtoSinal} 
+                        onChange={e => setFormaPagtoSinal(e.target.value)}
+                        style={{padding: '15px', fontSize: '16px', height: '100%', borderColor: '#cbd5e1', backgroundColor: '#fff'}}
+                     >
+                         <option value="Pix">Pix</option>
+                         <option value="Dinheiro">Dinheiro</option>
+                         <option value="Cartão de Crédito">Cartão de Crédito</option>
+                         <option value="Cartão de Débito">Cartão de Débito</option>
+                     </select>
+                   </div>
+               </div>
+
+               <div style={{ marginBottom: '20px' }}>
+                  <button
+                      type="button"
+                      onClick={abrirWhatsAppCobranca}
+                      style={{ width: '100%', padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '15px', transition: '0.2s', boxShadow: '0 4px 6px rgba(34, 197, 94, 0.2)' }}
+                  >
+                      <span style={{fontSize: '20px'}}>📱</span> Enviar Cobrança no WhatsApp
+                  </button>
+              </div>
+
+              <hr style={{border: 'none', borderTop: '1px solid #e2e8f0', margin: '25px 0'}} />
+
+              {valorDigitadoNum > 0 ? (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                     <button type="button" onClick={salvarSinalRecebido} disabled={salvandoPedido} style={{padding: '16px', background: '#0f172a', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
+                       {salvandoPedido ? 'Salvando...' : '✅ O cliente JÁ PAGOU (Aprovar Pedido)'}
+                     </button>
+                     
+                     <button type="button" onClick={salvarAguardandoPagamento} disabled={salvandoPedido} style={{padding: '16px', background: '#fffbeb', border: '2px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
+                       {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
+                     </button>
+                  </div>
+               ) : (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                      <button type="button" onClick={salvarSemSinal} disabled={salvandoPedido} style={{padding: '16px', background: '#ef4444', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
+                          {salvandoPedido ? 'Salvando...' : '⚠️ Aprovar Pedido SEM RECEBER SINAL'}
+                      </button>
+                  </div>
+               )}
+
+               <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>
+                  Cancelar e Voltar
+               </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* CATÁLOGO OTIMIZADO */}
       {modalAberto && (
         <div className="modal-overlay-premium" style={{ zIndex: 9999 }}>
           <div className="modal-box-premium catalogo-modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
@@ -628,7 +748,6 @@ const NovaLocacao = () => {
               <button className="btn-fechar" onClick={() => setModalAberto(false)}>X</button>
             </div>
             
-            {/* BUSCA BONITA E LARGA */}
             <div className="catalogo-filtros" style={{ padding: '15px 30px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
               <input 
                 type="text" 
@@ -653,7 +772,6 @@ const NovaLocacao = () => {
               </div>
             </div>
 
-            {/* GRADE QUE CABE MAIS ITENS NA TELA */}
             <div className="catalogo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', overflowY: 'auto', padding: '20px 30px', background: '#f1f5f9', flexGrow: 1 }}>
               {itensFiltrados.map(item => {
                 const qtdFisica = parseInt(item.quantidade || 0) || parseInt(item.estoque || 0) || 0;
@@ -666,21 +784,17 @@ const NovaLocacao = () => {
                 return (
                   <div key={item.id} onClick={() => { if(!esgotado) addCarrinho(item) }} style={{ background: '#fff', border: esgotado ? '2px solid #fecaca' : '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '310px', cursor: esgotado ? 'not-allowed' : 'pointer', opacity: esgotado ? 0.7 : 1, boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }} onMouseEnter={e => { if(!esgotado) { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; } }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; }}>
                     
-                    {/* IMAGEM COM ALTURA FIXA E PROTEGIDA (NÃO SOME MAIS) */}
                     <div style={{ height: '140px', width: '100%', flexShrink: 0, backgroundColor: '#f8fafc', position: 'relative', borderBottom: '1px solid #f1f5f9' }}>
                         {item.foto ? <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontSize:'35px'}}>📷</div>}
                         {esgotado && <div style={{position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}><span style={{background: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px', transform: 'rotate(-10deg)', letterSpacing: '1px'}}>❌ ALUGADA</span></div>}
                     </div>
                     
-                    {/* INFORMAÇÕES DA PEÇA */}
                     <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
-                        
                         <div>
                             <strong style={{ fontSize: '14px', color: '#0f172a', marginBottom: '2px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.nome}>{item.nome}</strong>
                             <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: '800' }}>{item.categoria}</span>
                         </div>
                         
-                        {/* OS BADGES BONITOS DE ESTOQUE */}
                         <div style={{ display: 'flex', gap: '8px', margin: '10px 0' }}>
                             <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', padding: '5px 2px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
                                 <span style={{ display: 'block', fontSize: '9px', color: '#475569', fontWeight: 'bold' }}>TOTAL</span>
@@ -692,16 +806,13 @@ const NovaLocacao = () => {
                             </div>
                         </div>
 
-                        {/* PREÇO E O BOTÃO DE (+) DE VERDADE */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <span style={{ fontSize: '16px', fontWeight: '900', color: esgotado ? '#ef4444' : '#10b981' }}>R$ {item.financeiro?.valorAluguel || 0}</span>
                             <button style={{ width: '32px', height: '32px', background: esgotado ? '#f1f5f9' : '#0f172a', color: esgotado ? '#cbd5e1' : 'white', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: 'none', cursor: esgotado ? 'not-allowed' : 'pointer' }} disabled={esgotado}>
                                 {esgotado ? '✕' : '+'}
                             </button>
                         </div>
-
                     </div>
-
                   </div>
                 );
               })}
@@ -711,7 +822,7 @@ const NovaLocacao = () => {
         </div>
       )}
 
-      {/* 🔥 MODAL DE COMPRA COM A SELEÇÃO DESBLOQUEADA 🔥 */}
+      {/* MODAL DE COMPRA */}
       {modalCompraAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
           <div className="modal-box-premium" style={{maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto'}}>
@@ -772,7 +883,7 @@ const NovaLocacao = () => {
               
               <div className="form-group-pag" style={{position: 'relative'}}>
                 <label>Nome do Item que será comprado *</label>
-                <input id="compraNomeInput" type="text" required autoFocus autoComplete="off" value={formCompra.nome} 
+                <input id="compraNomeInput" type="text" required autoComplete="off" value={formCompra.nome} 
                   onChange={(e) => {
                     const val = e.target.value;
                     setFormCompra({...formCompra, nome: val});
@@ -786,7 +897,6 @@ const NovaLocacao = () => {
                   onBlur={() => setTimeout(() => setSugestoesCompra([]), 200)}
                 />
                 
-                {/* 🔥 A CAIXA DE PESQUISA DESBLOQUEADA PARA COMPRAS 🔥 */}
                 {sugestoesCompra.length > 0 && (
                    <div style={{position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', zIndex: 100, maxHeight: '180px', overflowY: 'auto', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}>
                       {sugestoesCompra.map(item => {

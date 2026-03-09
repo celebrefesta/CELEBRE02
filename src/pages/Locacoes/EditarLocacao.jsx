@@ -2,14 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './NovaLocacao.css'; 
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, doc, getDoc, updateDoc } from 'firebase/firestore'; 
+import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
 
 const EditarLocacao = () => {
   const navigate = useNavigate();
   const { id } = useParams(); 
   const [loading, setLoading] = useState(true);
 
-  // --- ESTADOS ---
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
   const [carrinho, setCarrinho] = useState([]);
@@ -31,8 +30,15 @@ const EditarLocacao = () => {
   
   const [numeroPedido, setNumeroPedido] = useState('');
   const [statusAtual, setStatusAtual] = useState('');
+  const [valorJaPago, setValorJaPago] = useState(0); 
 
-  // 🔥 TRAVA PRINCIPAL 🔥
+  // --- ESTADOS DO SINAL E CATRACA ---
+  const [modalSinalAberto, setModalSinalAberto] = useState(false);
+  const [valorSinal, setValorSinal] = useState('');
+  const [formaPagtoSinal, setFormaPagtoSinal] = useState('Pix');
+  const [salvandoPedido, setSalvandoPedido] = useState(false);
+  const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
+
   const isFinalizado = statusAtual === 'finalizado' || statusAtual === 'cancelado';
 
   useEffect(() => {
@@ -58,6 +64,7 @@ const EditarLocacao = () => {
             setTemaFesta(data.temaFesta || '');
             setTipoServico(data.tipoServico || 'PEGUE E MONTE');
             setDatas({ retirada: data.dataRetirada || '', devolucao: data.dataDevolucao || '' });
+            setValorJaPago(Number(data.valorPago || 0));
             
             const log = data.logistica || {};
             let freteFormatado = '';
@@ -98,7 +105,7 @@ const EditarLocacao = () => {
   const categoriasUnicas = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
 
   const addCarrinho = (item) => {
-    if (isFinalizado) return; // Segurança extra
+    if (isFinalizado) return; 
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
     const existe = carrinho.find(i => i.id === item.id);
     if (existe) {
@@ -157,7 +164,7 @@ const EditarLocacao = () => {
     setLogistica({ ...logistica, frete: v });
   };
 
-  const handleSalvar = async (novoStatus) => {
+  const interceptarSalvamento = (novoStatus) => {
     if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data de retirada!");
     
     if (novoStatus === 'finalizado') {
@@ -165,10 +172,24 @@ const EditarLocacao = () => {
         if (!confirmacao) return;
     }
 
+    const statusFinalDesejado = novoStatus || statusAtual;
+
+    if (statusAtual === 'orcamento' && statusFinalDesejado === 'confirmado') {
+        setStatusParaSalvar('confirmado');
+        setModalSinalAberto(true);
+        return;
+    }
+
+    executarSalvamentoFinal(statusFinalDesejado, 0, 0); 
+  };
+
+  const executarSalvamentoFinal = async (statusFinal, valorSinalEntrandoNoCaixa = 0, valorSinalNegociado = 0) => {
+    setSalvandoPedido(true);
     try {
       const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente';
       const logisticaParaSalvar = { ...logistica, frete: getFreteNumerico() };
-      const statusFinal = novoStatus || statusAtual;
+      
+      const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
 
       const docRef = doc(db, "locacoes", id);
       await updateDoc(docRef, {
@@ -183,18 +204,73 @@ const EditarLocacao = () => {
         obsInternas,
         desconto: Number(desconto),
         valorTotal: calcularTotal().total,
+        valorPago: novoValorPagoTotal,
+        sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
         status: statusFinal,
         atualizadoEm: new Date()
       });
+
+      if (valorSinalEntrandoNoCaixa > 0) {
+        await addDoc(collection(db, "financeiro_lancamentos"), {
+            tipo: 'entrada', 
+            categoria: 'Locação', 
+            valor: valorSinalEntrandoNoCaixa, 
+            formaPagto: formaPagtoSinal,
+            data: new Date().toISOString().split('T')[0], 
+            status: 'pago', 
+            createdAt: serverTimestamp(),
+            descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`
+        });
+      }
       
-      if (novoStatus && novoStatus !== statusAtual) {
-          alert(`✅ Pedido avançou para: ${novoStatus.toUpperCase()}`);
+      if (statusFinal && statusFinal !== statusAtual) {
+          alert(`✅ Pedido avançou para: ${statusFinal.toUpperCase()}`);
       } else {
           alert(`Alterações salvas com sucesso!`);
       }
       
       navigate('/locacoes');
-    } catch (e) { alert("Erro ao atualizar o pedido."); }
+    } catch (e) { 
+      alert("Erro ao atualizar o pedido."); 
+    } finally {
+      setSalvandoPedido(false);
+      setModalSinalAberto(false);
+    }
+  };
+
+  const salvarSinalRecebido = () => {
+      const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
+      executarSalvamentoFinal('confirmado', valorDigitadoNum, valorDigitadoNum);
+  };
+
+  const salvarAguardandoPagamento = () => {
+      const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
+      executarSalvamentoFinal('orcamento', 0, valorDigitadoNum);
+  };
+
+  const salvarSemSinal = () => {
+      const confirmouSemSinal = window.confirm("⚠️ ALERTA DE RISCO!\n\nVocê deixou o valor de entrada como R$ 0,00.\n\nTem certeza que deseja APROVAR este pedido assumindo o risco de não ter recebido nenhum sinal?");
+      if (confirmouSemSinal) {
+          executarSalvamentoFinal('confirmado', 0, 0);
+      }
+  };
+
+  const abrirWhatsAppCobranca = () => {
+      const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
+      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto || '') : '';
+      const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
+      
+      const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
+      const vSinalFormatado = valorSinal || '0,00';
+
+      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui. Muito obrigada! 🥰`;
+
+      const msgEncoded = encodeURIComponent(texto);
+      const url = telefoneC 
+            ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` 
+            : `https://api.whatsapp.com/send?text=${msgEncoded}`;
+            
+      window.open(url, '_blank');
   };
 
   const itensFiltrados = estoque.filter(item => {
@@ -214,7 +290,14 @@ const EditarLocacao = () => {
     }
   };
 
+  const maskCurrency = (value) => {
+    let v = value.replace(/\D/g, ""); 
+    if (!v) return "";
+    return (v / 100).toFixed(2).replace(".", ",").replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,").replace(/(\d)(\d{3}),/g, "$1.$2,");
+  };
+
   const badgeInfo = getBadgeStatus();
+  const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
 
   if (loading) return <div className="loading-state">Carregando Pedido...</div>;
 
@@ -231,7 +314,6 @@ const EditarLocacao = () => {
         <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar</button>
       </header>
 
-      {/* AVISO DE MODO LEITURA */}
       {isFinalizado && (
           <div style={{background: '#f8fafc', borderLeft: '4px solid #94a3b8', padding: '12px 20px', marginBottom: '20px', color: '#475569', fontSize: '13px', borderRadius: '0 8px 8px 0'}}>
               <b>🔒 Modo Somente Leitura:</b> Este pedido já foi {statusAtual}, portanto seus dados e itens não podem mais ser alterados.
@@ -314,7 +396,6 @@ const EditarLocacao = () => {
           <div className="card-secao">
             <div className="header-com-botoes">
               <h3 className="section-divider" style={{margin: 0, border: 'none'}}>📦 ITENS DO PEDIDO</h3>
-              {/* Oculta botão de adicionar se estiver finalizado */}
               {!isFinalizado && (
                   <div className="botoes-acoes-itens">
                     <button type="button" className="btn-primary-outline" onClick={() => setModalAberto(true)}>+ ADC. PEÇAS</button>
@@ -342,7 +423,6 @@ const EditarLocacao = () => {
                             <span>R$ {precoExibicao.toFixed(2)} un</span>
                           </td>
                           <td className="text-center">
-                            {/* Controle de QTD blindado se finalizado */}
                             {isFinalizado ? (
                                 <div style={{fontWeight: 'bold', fontSize: '14px', background: '#f1f5f9', padding: '4px 12px', borderRadius: '6px', display: 'inline-block'}}>{item.qtd}x</div>
                             ) : (
@@ -397,6 +477,13 @@ const EditarLocacao = () => {
               <span>TOTAL</span>
               <strong>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
             </div>
+
+            {valorJaPago > 0 && (
+                <div style={{marginTop: '10px', padding: '10px', background: '#f0fdf4', borderRadius: '8px', color: '#166534', fontSize: '13px', display: 'flex', justifyContent: 'space-between', fontWeight: 'bold'}}>
+                    <span>Já Pago (Sinal):</span>
+                    <span>R$ {valorJaPago.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                </div>
+            )}
             
             <hr style={{margin: '25px 0', border: 'none', borderTop: '2px dashed var(--borda)'}} />
             
@@ -405,25 +492,25 @@ const EditarLocacao = () => {
             <div className="fin-acoes" style={{marginTop: '0'}}>
                 
                 {statusAtual === 'orcamento' && (
-                <button type="button" className="btn-salvar-form" onClick={() => handleSalvar('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}}>
                     ✔ APROVAR PEDIDO
                 </button>
                 )}
 
                 {statusAtual === 'confirmado' && (
-                <button type="button" className="btn-salvar-form" onClick={() => handleSalvar('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}}>
                     📦 INICIAR SEPARAÇÃO
                 </button>
                 )}
 
                 {statusAtual === 'preparacao' && (
-                <button type="button" className="btn-salvar-form" onClick={() => handleSalvar('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}}>
                     🚚 MARCAR COMO ENTREGUE
                 </button>
                 )}
 
                 {statusAtual === 'entregue' && (
-                <button type="button" className="btn-salvar-form" onClick={() => handleSalvar('finalizado')} style={{backgroundColor: '#10b981', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('finalizado')} style={{backgroundColor: '#10b981', marginBottom: '10px'}}>
                     ✅ RECEBER E FINALIZAR
                 </button>
                 )}
@@ -435,7 +522,7 @@ const EditarLocacao = () => {
                 )}
 
                 {!isFinalizado && (
-                <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center'}} onClick={() => handleSalvar()}>
+                <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center'}} onClick={() => interceptarSalvamento()}>
                     💾 Apenas Salvar Alterações
                 </button>
                 )}
@@ -443,6 +530,91 @@ const EditarLocacao = () => {
           </div>
         </aside>
       </div>
+
+      {/* =========================================================================
+          🔥 NOVO MODAL INTELIGENTE DE SINAL (FIXO E UNIFICADO) 🔥 
+          ========================================================================= */}
+      {modalSinalAberto && (
+        <div className="modal-overlay-premium" style={{zIndex: 99999}}>
+          <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
+            
+            <div style={{background: '#f8fafc', padding: '25px', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
+               <h3 style={{margin: 0, color: '#0f172a', fontSize: '22px'}}>💰 Confirmação e Sinal</h3>
+               
+               <div style={{marginTop: '20px', padding: '20px', background: '#eff6ff', border: '2px dashed #3b82f6', borderRadius: '12px'}}>
+                  <span style={{fontSize: '13px', color: '#1e3a8a', display: 'block', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Valor Total do Pedido</span>
+                  <strong style={{fontSize: '32px', color: '#1d4ed8'}}>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+               </div>
+            </div>
+            
+            <form onSubmit={(e) => e.preventDefault()} style={{padding: '25px'}}>
+               
+               <div style={{display: 'flex', gap: '15px', marginBottom: '20px'}}>
+                   <div className="form-group-pag" style={{flex: 1}}>
+                     <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Valor da Entrada (R$)</label>
+                     <input 
+                        type="text" 
+                        placeholder="0,00" 
+                        autoFocus
+                        style={{fontSize: '22px', padding: '15px', textAlign: 'center', borderColor: '#3b82f6', color: '#1e3a8a', backgroundColor: '#fff', fontWeight: 'bold'}}
+                        value={valorSinal} 
+                        onChange={e => setValorSinal(maskCurrency(e.target.value))} 
+                     />
+                   </div>
+
+                   <div className="form-group-pag" style={{flex: 1}}>
+                     <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Forma de Pagto.</label>
+                     <select 
+                        value={formaPagtoSinal} 
+                        onChange={e => setFormaPagtoSinal(e.target.value)}
+                        style={{padding: '15px', fontSize: '16px', height: '100%', borderColor: '#cbd5e1', backgroundColor: '#fff'}}
+                     >
+                         <option value="Pix">Pix</option>
+                         <option value="Dinheiro">Dinheiro</option>
+                         <option value="Cartão de Crédito">Cartão de Crédito</option>
+                         <option value="Cartão de Débito">Cartão de Débito</option>
+                     </select>
+                   </div>
+               </div>
+
+               <div style={{ marginBottom: '20px' }}>
+                  <button
+                      type="button"
+                      onClick={abrirWhatsAppCobranca}
+                      style={{ width: '100%', padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '15px', transition: '0.2s', boxShadow: '0 4px 6px rgba(34, 197, 94, 0.2)' }}
+                  >
+                      <span style={{fontSize: '20px'}}>📱</span> Enviar Cobrança no WhatsApp
+                  </button>
+              </div>
+
+              <hr style={{border: 'none', borderTop: '1px solid #e2e8f0', margin: '25px 0'}} />
+
+              {/* BOTOES DE AÇÃO */}
+              {valorDigitadoNum > 0 ? (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                     <button type="button" onClick={salvarSinalRecebido} disabled={salvandoPedido} style={{padding: '16px', background: '#0f172a', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
+                       {salvandoPedido ? 'Salvando...' : '✅ O cliente JÁ PAGOU (Aprovar Pedido)'}
+                     </button>
+                     
+                     <button type="button" onClick={salvarAguardandoPagamento} disabled={salvandoPedido} style={{padding: '16px', background: '#fffbeb', border: '2px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
+                       {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter como Orçamento)'}
+                     </button>
+                  </div>
+               ) : (
+                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
+                      <button type="button" onClick={salvarSemSinal} disabled={salvandoPedido} style={{padding: '16px', background: '#ef4444', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
+                          {salvandoPedido ? 'Salvando...' : '⚠️ Aprovar Pedido SEM RECEBER SINAL'}
+                      </button>
+                  </div>
+               )}
+
+               <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>
+                  Cancelar e Voltar
+               </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {modalAberto && !isFinalizado && (
         <div className="modal-overlay-premium">

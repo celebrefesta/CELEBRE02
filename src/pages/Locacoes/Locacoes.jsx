@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './Locacoes.css';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
 
 const Locacoes = () => {
   const navigate = useNavigate();
+  const location = useLocation(); 
+
   const [lista, setLista] = useState([]);
   const [busca, setBusca] = useState('');
   
@@ -22,8 +24,12 @@ const Locacoes = () => {
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
 
   useEffect(() => {
+    if (location.state && location.state.buscarPedidoId) {
+      const idCurto = location.state.buscarPedidoId.substring(0, 6);
+      setBusca(idCurto);
+    }
     carregarLocacoes();
-  }, []);
+  }, [location]);
 
   const carregarLocacoes = async () => {
     try {
@@ -63,14 +69,12 @@ const Locacoes = () => {
             timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
         }
 
-        let statusReal = (data.status || '').toLowerCase();
+        let statusReal = String(data.status || '').toLowerCase();
         let isVencido = false;
 
-        // 🔥 LIXEIRO AUTOMÁTICO DE ORÇAMENTOS VENCIDOS 🔥
         if (statusReal.includes('orcam') && data.dataRetirada) {
             const locDate = new Date(data.dataRetirada + 'T00:00:00');
             if (locDate.getTime() < hoje.getTime()) {
-                // Se passou da data da festa e não foi confirmado, arquiva como Lead Perdido
                 isVencido = true;
             }
         }
@@ -110,7 +114,7 @@ const Locacoes = () => {
       await addDoc(collection(db, "financeiro_lancamentos"), {
         tipo: 'entrada', categoria: 'Locação', valor: Number(pagamento.valor), formaPagto: pagamento.formaPagto,
         data: pagamento.data, status: 'pago', createdAt: serverTimestamp(),
-        descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido} - ${pedidoSelecionado.clienteNome}`
+        descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6)} - ${pedidoSelecionado.clienteNome}`
       });
       alert("Recebido!");
       carregarLocacoes();
@@ -121,31 +125,41 @@ const Locacoes = () => {
   let filtrados = [...lista];
   if (busca) {
     const termo = busca.toLowerCase();
-    filtrados = filtrados.filter(i => 
-      (i.clienteNome || '').toLowerCase().includes(termo) || 
-      (i.numeroPedido || '').includes(termo)
-    );
+    filtrados = filtrados.filter(i => {
+      const nomeMatch = (i.clienteNome || '').toLowerCase().includes(termo);
+      const numeroAppMatch = (i.numeroPedido || '').includes(termo);
+      const idRealMatch = (i.id || '').toLowerCase().includes(termo); 
+      
+      return nomeMatch || numeroAppMatch || idRealMatch;
+    });
   }
 
+  // 🔥 O FILTRO BLINDADO CONTRA ESPAÇOS EM BRANCO 🔥
   if (filtroStatus === 'todos') {
       filtrados = filtrados.filter(i => {
-          const st = (i.status || '').toLowerCase();
-          return st !== 'cancelado' && !i.isOrcamentoVencido;
+          const st = String(i.status || '').toLowerCase();
+          // Se contiver a palavra, ele pega! Ignora espaços em branco antes ou depois.
+          return !st.includes('cancelado') && !st.includes('finalizado') && !i.isOrcamentoVencido;
       });
   } else if (filtroStatus === 'orcamentos') {
       filtrados = filtrados.filter(i => {
-          const st = (i.status || '').toLowerCase();
+          const st = String(i.status || '').toLowerCase();
           return st.includes('orcam') && !i.isOrcamentoVencido;
       });
   } else if (filtroStatus === 'confirmados') {
       filtrados = filtrados.filter(i => {
-          const st = (i.status || '').toLowerCase();
-          return !st.includes('orcam') && st !== 'cancelado' && !i.isOrcamentoVencido;
+          const st = String(i.status || '').toLowerCase();
+          return !st.includes('orcam') && !st.includes('cancelado') && !st.includes('finalizado') && !i.isOrcamentoVencido;
+      });
+  } else if (filtroStatus === 'finalizados') {
+      filtrados = filtrados.filter(i => {
+          const st = String(i.status || '').toLowerCase();
+          return st.includes('finalizado');
       });
   } else if (filtroStatus === 'cancelados') {
       filtrados = filtrados.filter(i => {
-          const st = (i.status || '').toLowerCase();
-          return st === 'cancelado' || i.isOrcamentoVencido;
+          const st = String(i.status || '').toLowerCase();
+          return st.includes('cancelado') || i.isOrcamentoVencido;
       });
   }
 
@@ -157,9 +171,9 @@ const Locacoes = () => {
 
   filtrados.sort((a, b) => {
     const getPriority = (item) => {
-        const st = (item.status || '').toLowerCase();
-        if (st === 'cancelado' || item.isOrcamentoVencido) return 3; 
-        if (st.includes('orcam')) return 2; 
+        const st = String(item.status || '').toLowerCase();
+        if (st.includes('cancelado') || item.isOrcamentoVencido) return 3; 
+        if (st.includes('finalizado')) return 2; 
         return 1; 
     };
 
@@ -177,7 +191,7 @@ const Locacoes = () => {
     } else if (filtroOrdenacao === 'menorValor') {
       return Number(a.valorTotal || 0) - Number(b.valorTotal || 0);
     } else {
-      return b.createdAtMs - a.createdAtMs;
+      return b.createdAtMs - a.createdAtMs; 
     }
   });
 
@@ -195,10 +209,10 @@ const Locacoes = () => {
         <div className="dash-card success">
           <div className="dash-icon">✅</div>
           <div className="dash-info">
-            <h3>Confirmados / Ativos</h3>
+            <h3>Ativos (Em Processo)</h3>
             <h2>{lista.filter(i => {
-                const s = (i.status || '').toLowerCase();
-                return !['orcamento', 'cancelado'].includes(s) && !i.isOrcamentoVencido;
+                const s = String(i.status || '').toLowerCase();
+                return !s.includes('orcam') && !s.includes('cancelado') && !s.includes('finalizado') && !i.isOrcamentoVencido;
             }).length}</h2>
           </div>
         </div>
@@ -206,7 +220,7 @@ const Locacoes = () => {
           <div className="dash-icon">📂</div>
           <div className="dash-info">
             <h3>Orçamentos Futuros</h3>
-            <h2>{lista.filter(i => (i.status || '').toLowerCase().includes('orcam') && !i.isOrcamentoVencido).length}</h2>
+            <h2>{lista.filter(i => String(i.status || '').toLowerCase().includes('orcam') && !i.isOrcamentoVencido).length}</h2>
           </div>
         </div>
       </div>
@@ -242,10 +256,11 @@ const Locacoes = () => {
         <div className="filter-chips-row">
           <span className="chips-label">STATUS DOS PEDIDOS:</span>
           <div className="chips-list">
-            <button type="button" className={`chip-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Todos (Ativos)</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'orcamentos' ? 'active orcamento' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>Leads / Orçamentos</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Em Processo</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'orcamentos' ? 'active orcamento' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>Orçamentos</button>
             <button type="button" className={`chip-btn ${filtroStatus === 'confirmados' ? 'active confirmado' : ''}`} onClick={() => setFiltroStatus('confirmados')}>Confirmados</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'cancelados' ? 'active cancelado' : ''}`} onClick={() => setFiltroStatus('cancelados')}>Lixeira / Leads Perdidos</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'finalizados' ? 'active' : ''}`} onClick={() => setFiltroStatus('finalizados')} style={{backgroundColor: filtroStatus === 'finalizados' ? '#0f172a' : '', color: filtroStatus === 'finalizados' ? '#fff' : ''}}>Finalizados</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'cancelados' ? 'active cancelado' : ''}`} onClick={() => setFiltroStatus('cancelados')}>Lixeira / Perdidos</button>
           </div>
         </div>
       </div>
@@ -273,8 +288,8 @@ const Locacoes = () => {
                 const valorTotal = Number(item.valorTotal || 0);
                 const valorPago = Number(item.valorPago || 0);
                 const saldoDevedor = valorTotal - valorPago;
-                const statusStr = (item.status || '').toLowerCase();
-                const isCancelado = statusStr === 'cancelado' || item.isOrcamentoVencido;
+                const statusStr = String(item.status || '').toLowerCase();
+                const isCancelado = statusStr.includes('cancelado') || item.isOrcamentoVencido;
                 const isOrcamento = statusStr.includes('orcam'); 
                 
                 const temAvaria = item.itens?.some(i => i.avaria);
@@ -284,7 +299,7 @@ const Locacoes = () => {
                 let alertaOperacional = null;
                 let corAlerta = '';
 
-                if (item.dataRetirada && !['finalizado', 'cancelado'].includes(statusStr) && !item.isOrcamentoVencido) {
+                if (item.dataRetirada && !statusStr.includes('finalizado') && !statusStr.includes('cancelado') && !item.isOrcamentoVencido) {
                     const hoje = new Date();
                     hoje.setHours(0,0,0,0);
                     
@@ -295,15 +310,15 @@ const Locacoes = () => {
                     const locDate = new Date(item.dataRetirada + 'T00:00:00');
                     const devDate = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDate;
 
-                    if (statusStr === 'confirmado' && locDate.getTime() <= amanha.getTime()) {
+                    if (statusStr.includes('confirmado') && locDate.getTime() <= amanha.getTime()) {
                         alertaOperacional = "📦 Separar Peças!";
                         corAlerta = "#f59e0b"; 
                     }
-                    else if (statusStr === 'preparacao' && locDate.getTime() <= hoje.getTime()) {
+                    else if (statusStr.includes('preparacao') && locDate.getTime() <= hoje.getTime()) {
                         alertaOperacional = "🚚 Entregar Hoje!";
                         corAlerta = "#ef4444"; 
                     }
-                    else if (statusStr === 'entregue' && devDate.getTime() <= hoje.getTime()) {
+                    else if (statusStr.includes('entregue') && devDate.getTime() <= hoje.getTime()) {
                         alertaOperacional = "⏳ Cobrar Devolução!";
                         corAlerta = "#ef4444"; 
                     }
@@ -320,10 +335,12 @@ const Locacoes = () => {
                     <td className="pedido-id-cell">
                       {item.numeroPedido ? (
                         `#${item.numeroPedido}`
+                      ) : item.id ? (
+                        `#${item.id.substring(0,6).toUpperCase()}`
                       ) : item.isOrcamentoVencido ? (
                         <span style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px'}}>LEAD PERDIDO</span>
                       ) : isOrcamento ? (
-                        <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO DO SITE</span>
+                        <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span>
                       ) : (
                         <span style={{color: '#94a3b8', fontWeight: 'bold'}}>#S/N</span>
                       )}
@@ -359,8 +376,8 @@ const Locacoes = () => {
                     </td>
                     
                     <td className="status-cell">
-                      <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr}`}>
-                        {item.isOrcamentoVencido ? 'LEAD PERDIDO' : item.status?.toUpperCase() || 'S/S'}
+                      <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr.replace(' ', '')}`}>
+                        {item.isOrcamentoVencido ? 'LEAD PERDIDO' : item.status?.trim().toUpperCase() || 'S/S'}
                       </span>
                       {alertaOperacional && (
                          <div style={{ marginTop: '6px', fontSize: '0.75rem', fontWeight: '800', color: corAlerta, textTransform: 'uppercase' }}>

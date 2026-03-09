@@ -4,6 +4,61 @@ import './CadastroCliente.css';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, updateDoc, doc, query, getDocs } from 'firebase/firestore';
 
+// 🔥 MÁQUINA DE LAVAR PALAVRAS 🔥
+const formatarNomeCapitalizado = (nomeBruto) => {
+  if (!nomeBruto) return '';
+  
+  const partes = nomeBruto.toLowerCase().split(' ');
+  const conectores = ['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'e'];
+  
+  return partes.map((palavra, index) => {
+      if (palavra === '') return ''; 
+      if (index > 0 && conectores.includes(palavra)) {
+          return palavra;
+      }
+      return palavra.charAt(0).toUpperCase() + palavra.slice(1);
+  }).join(' ');
+};
+
+// 🔥 AS CORES VIBRANTES AGORA ESTÃO NO CADASTRO TAMBÉM 🔥
+const getTagStyle = (tag) => {
+  if (!tag) return { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
+  
+  const normalizedTag = tag.toUpperCase().trim();
+  const styles = {
+    'NOVO': { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe' }, 
+    'VIP': { bg: '#fef08a', color: '#854d0e', border: '#fde047' }, 
+    'PROBLEMÁTICO': { bg: '#fecaca', color: '#991b1b', border: '#fca5a5' }, 
+    'RECORRENTE': { bg: '#bbf7d0', color: '#166534', border: '#86efac' }, 
+    'PECHINCHA': { bg: '#fed7aa', color: '#9a3412', border: '#fdba74' }, 
+    'ECONÔMICO': { bg: '#e9d5ff', color: '#6b21a8', border: '#d8b4fe' }, 
+    'INDECISO': { bg: '#fbcfe8', color: '#9d174d', border: '#f9a8d4' }, 
+    'EXIGENTE': { bg: '#bfdbfe', color: '#1e40af', border: '#93c5fd' }, 
+    'ORGANIZADO': { bg: '#a7f3d0', color: '#065f46', border: '#6ee7b7' }, 
+    'ÚLTIMA HORA': { bg: '#fecdd3', color: '#be123c', border: '#fda4af' }, 
+    'ULTIMA HORA': { bg: '#fecdd3', color: '#be123c', border: '#fda4af' }, 
+    'BÁSICO': { bg: '#e5e7eb', color: '#374151', border: '#d1d5db' }, 
+    'FAMÍLIA': { bg: '#c7d2fe', color: '#3730a3', border: '#a5b4fc' }, 
+    'FAMILIA': { bg: '#c7d2fe', color: '#3730a3', border: '#a5b4fc' }, 
+  };
+  return styles[normalizedTag] || { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff' }; 
+};
+
+// 🔥 LISTA DE TAGS EXCLUSIVAS 🔥
+const TAGS_PERFIL = [
+  'NOVO', 
+  'RECORRENTE', 
+  'VIP', 
+  'ECONÔMICO', 
+  'PECHINCHA',
+  'INDECISO', 
+  'EXIGENTE', 
+  'ORGANIZADO', 
+  'ÚLTIMA HORA',
+  'BÁSICO', 
+  'PROBLEMÁTICO'
+];
+
 const CadastroCliente = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -12,8 +67,8 @@ const CadastroCliente = () => {
   const [tipoPessoa, setTipoPessoa] = useState('fisica');
   const [salvando, setSalvando] = useState(false);
 
-  // 🔥 NOVO ESTADO: TRAVA DEFINITIVA DO STATUS PENDENTE 🔥
-  const [podeSerPendente, setPodeSerPendente] = useState(true);
+  const [podeSerPendente, setPodeSerPendente] = useState(false);
+  const [calculandoFinancas, setCalculandoFinancas] = useState(!!clienteEditando);
 
   const [fotoBase64, setFotoBase64] = useState('');
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
@@ -26,9 +81,10 @@ const CadastroCliente = () => {
     nomeContato: '', cargo: '',
     celular: '', telefoneFixo: '', email: '', origem: '',
     cep: '', logradouro: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '',
-    tags: '', observacoes: '',
+    tags: 'NOVO', 
+    observacoes: '',
     situacaoFinanceira: 'adimplente', 
-    statusCadastro: 'aprovado'
+    statusCadastro: 'aprovado' 
   });
 
   useEffect(() => {
@@ -38,35 +94,44 @@ const CadastroCliente = () => {
       setPosicaoFoto(clienteEditando.posicaoFoto || { x: 50, y: 50 });
       
       const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
-      
-      // Descobre qual é o status real do cliente (mesmo os antigos que não tinham esse campo)
       const statusReal = clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado');
       
       setFormData({
-        nome: clienteEditando.nome || '', cpf: clienteEditando.cpf || '', rg: clienteEditando.rg || '', nascimento: clienteEditando.nascimento || '', sexo: clienteEditando.sexo || '',
-        razaoSocial: clienteEditando.razaoSocial || '', nomeFantasia: clienteEditando.nomeFantasia || '', cnpj: clienteEditando.cnpj || '', inscricaoEstadual: clienteEditando.inscricaoEstadual || '',
-        nomeContato: clienteEditando.nomeContato || '', cargo: clienteEditando.cargo || '',
-        celular: clienteEditando.celular || '', telefoneFixo: clienteEditando.telefoneFixo || '', email: clienteEditando.email || '', origem: clienteEditando.origem || '',
-        cep: clienteEditando.cep || '', logradouro: clienteEditando.logradouro || '', numero: clienteEditando.numero || '', complemento: clienteEditando.complemento || '', bairro: clienteEditando.bairro || '', cidade: clienteEditando.cidade || '', uf: clienteEditando.uf || '',
-        tags: clienteEditando.tags || '', observacoes: clienteEditando.observacoes || '',
-        situacaoFinanceira: eraPendenteAntigo ? 'adimplente' : (clienteEditando.situacaoFinanceira || 'adimplente'),
+        nome: formatarNomeCapitalizado(clienteEditando.nome || ''), 
+        cpf: clienteEditando.cpf || '', rg: clienteEditando.rg || '', nascimento: clienteEditando.nascimento || '', sexo: clienteEditando.sexo || '',
+        razaoSocial: formatarNomeCapitalizado(clienteEditando.razaoSocial || ''), 
+        nomeFantasia: formatarNomeCapitalizado(clienteEditando.nomeFantasia || ''), 
+        cnpj: clienteEditando.cnpj || '', inscricaoEstadual: clienteEditando.inscricaoEstadual || '',
+        nomeContato: formatarNomeCapitalizado(clienteEditando.nomeContato || ''), 
+        cargo: formatarNomeCapitalizado(clienteEditando.cargo || ''),
+        celular: clienteEditando.celular || '', telefoneFixo: clienteEditando.telefoneFixo || '', 
+        email: (clienteEditando.email || '').toLowerCase(), 
+        origem: clienteEditando.origem || '',
+        cep: clienteEditando.cep || '', 
+        logradouro: formatarNomeCapitalizado(clienteEditando.logradouro || ''), 
+        numero: clienteEditando.numero || '', complemento: formatarNomeCapitalizado(clienteEditando.complemento || ''), 
+        bairro: formatarNomeCapitalizado(clienteEditando.bairro || ''), 
+        cidade: formatarNomeCapitalizado(clienteEditando.cidade || ''), 
+        uf: (clienteEditando.uf || '').toUpperCase(),
+        tags: clienteEditando.tags || 'NOVO', 
+        observacoes: clienteEditando.observacoes || '',
+        situacaoFinanceira: clienteEditando.situacaoFinanceira || 'adimplente',
         statusCadastro: statusReal
       });
 
-      // 🔥 A MÁGICA DA TRAVA ACONTECE AQUI 🔥
-      if (statusReal === 'aprovado' || statusReal === 'bloqueado') {
-          setPodeSerPendente(false);
-      } else {
+      if (statusReal === 'pendente') {
           setPodeSerPendente(true);
+      } else {
+          setPodeSerPendente(false);
       }
 
     } else {
-      setFormData(prev => ({...prev, statusCadastro: 'pendente'}));
-      setPodeSerPendente(true);
+      setFormData(prev => ({...prev, statusCadastro: 'aprovado', situacaoFinanceira: 'adimplente', tags: 'NOVO'}));
+      setPodeSerPendente(false); 
+      setCalculandoFinancas(false);
     }
   }, [clienteEditando]);
 
-  // ROBÔ DE INADIMPLÊNCIA AUTOMÁTICA
   useEffect(() => {
     const verificarInadimplencia = async () => {
       if (!clienteEditando?.id) return; 
@@ -79,18 +144,23 @@ const CadastroCliente = () => {
         const hoje = new Date();
         hoje.setHours(0,0,0,0); 
 
-        snap.docs.forEach(doc => {
-          const loc = doc.data();
+        snap.docs.forEach(docSnap => {
+          const loc = docSnap.data();
           
           if (loc.clienteId === clienteEditando.id || loc.cliente?.id === clienteEditando.id) {
-            if (loc.status === 'cancelado' || loc.status === 'orcamento') return;
+            const statusLoc = (loc.status || '').toLowerCase();
+            if (statusLoc === 'cancelado' || statusLoc.includes('orcam')) return;
 
             const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
             if (dataStr) {
               const dataEvento = new Date(dataStr + 'T00:00:00');
               const pagStatus = (loc.statusPagamento || '').toLowerCase();
               
-              if (dataEvento < hoje && pagStatus !== 'pago' && pagStatus !== 'quitado') {
+              const vTotal = Number(loc.valorTotal || loc.total || 0);
+              const vPago = Number(loc.valorPago || 0);
+              const saldoDevedor = vTotal - vPago;
+
+              if (dataEvento < hoje && saldoDevedor > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado') {
                 temDividaVencida = true;
               }
             }
@@ -104,6 +174,8 @@ const CadastroCliente = () => {
 
       } catch(e) {
         console.error("Erro ao verificar inadimplência automática:", e);
+      } finally {
+        setCalculandoFinancas(false);
       }
     };
 
@@ -141,15 +213,20 @@ const CadastroCliente = () => {
     if (name === 'cpf') newValue = maskCPF(value);
     else if (name === 'cnpj') newValue = maskCNPJ(value);
     else if (name === 'celular' || name === 'telefoneFixo') newValue = maskPhone(value);
+    else if (name === 'email') newValue = value.toLowerCase();
+    else if (name === 'uf') newValue = value.toUpperCase().substring(0, 2);
     else {
-      const camposIgnorados = ['email', 'rg', 'inscricaoEstadual', 'numero'];
-      if (!camposIgnorados.includes(name)) {
-        newValue = value.replace(/(^\w{1})|(\s+\w{1})/g, letter => letter.toUpperCase());
-      } else if (name === 'email') {
-        newValue = value.toLowerCase(); 
+      const camposCapitalizados = ['nome', 'razaoSocial', 'nomeFantasia', 'nomeContato', 'cargo', 'logradouro', 'complemento', 'bairro', 'cidade'];
+      if (camposCapitalizados.includes(name)) {
+        newValue = formatarNomeCapitalizado(value);
       }
     }
+    
     setFormData({ ...formData, [name]: newValue });
+  };
+
+  const selecionarTag = (tagEscolhida) => {
+    setFormData({ ...formData, tags: tagEscolhida });
   };
 
   const handleFileChange = (e) => {
@@ -204,15 +281,19 @@ const CadastroCliente = () => {
     let cepDigitado = e.target.value.replace(/\D/g, '');
     let cepMascarado = cepDigitado.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setFormData(prev => ({ ...prev, cep: cepMascarado }));
+    
     if (cepDigitado.length === 8) {
       try {
         const resposta = await fetch(`https://viacep.com.br/ws/${cepDigitado}/json/`);
         const dados = await resposta.json();
         if (!dados.erro) {
-          const formatar = (str) => str ? str.replace(/(^\w{1})|(\s+\w{1})/g, l => l.toUpperCase()) : '';
           setFormData(prev => ({ 
-            ...prev, cep: cepMascarado, logradouro: formatar(dados.logradouro), 
-            bairro: formatar(dados.bairro), cidade: formatar(dados.localidade), uf: dados.uf.toUpperCase() 
+            ...prev, 
+            cep: cepMascarado, 
+            logradouro: formatarNomeCapitalizado(dados.logradouro), 
+            bairro: formatarNomeCapitalizado(dados.bairro), 
+            cidade: formatarNomeCapitalizado(dados.localidade), 
+            uf: dados.uf.toUpperCase() 
           }));
           document.getElementById('numeroInput').focus();
         }
@@ -220,13 +301,74 @@ const CadastroCliente = () => {
     }
   };
 
+  const verificarDuplicidade = async () => {
+      const qClientes = query(collection(db, "clientes"));
+      const snap = await getDocs(qClientes);
+      const todosClientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      const meuCelular = formData.celular ? formData.celular.replace(/\D/g, '') : '';
+      const meuCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
+      const meuCnpj = formData.cnpj ? formData.cnpj.replace(/\D/g, '') : '';
+      const meuNome = (formData.nome || formData.nomeFantasia || '').trim().toLowerCase();
+      const meuNascimento = formData.nascimento || '';
+
+      for (let c of todosClientes) {
+          if (clienteEditando && c.id === clienteEditando.id) continue;
+
+          const bancoCelular = c.celular ? c.celular.replace(/\D/g, '') : '';
+          const bancoCpf = c.cpf ? c.cpf.replace(/\D/g, '') : '';
+          const bancoCnpj = c.cnpj ? c.cnpj.replace(/\D/g, '') : '';
+          const bancoNome = (c.nome || c.nomeFantasia || '').trim().toLowerCase();
+          const bancoNascimento = c.nascimento || '';
+
+          if (tipoPessoa === 'fisica' && meuCpf.length === 11 && meuCpf === bancoCpf) {
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com este mesmo CPF!\n\nNome na agenda: ${c.nome || c.nomeFantasia}`);
+              return true; 
+          }
+          
+          if (tipoPessoa === 'juridica' && meuCnpj.length === 14 && meuCnpj === bancoCnpj) {
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe uma empresa com este mesmo CNPJ!\n\nNome na agenda: ${c.nomeFantasia || c.razaoSocial}`);
+              return true; 
+          }
+
+          if (meuNome && meuNome === bancoNome && meuCelular.length > 8 && meuCelular === bancoCelular) {
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!\n\nVerifique o histórico da cliente antes de recadastrar.`);
+              return true;
+          }
+
+          if (meuNome && meuNome === bancoNome && meuNascimento && meuNascimento === bancoNascimento) {
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e DATA DE NASCIMENTO!\n\nVerifique o histórico da cliente antes de recadastrar.`);
+              return true;
+          }
+      }
+
+      return false; 
+  };
+
   const salvarCliente = async (e) => {
     e.preventDefault();
+    
     if (tipoPessoa === 'fisica' && !formData.nome) return alert("O Nome é obrigatório!");
     if (tipoPessoa === 'juridica' && !formData.nomeFantasia) return alert("O Nome Fantasia é obrigatório!");
+    
     setSalvando(true);
     try {
-      const dadosParaSalvar = { ...formData, tipoPessoa, foto: fotoBase64, posicaoFoto, atualizadoEm: new Date().toISOString() };
+      const temDuplicidade = await verificarDuplicidade();
+      
+      if (temDuplicidade) {
+          setSalvando(false);
+          return;
+      }
+
+      const dadosLimpos = {
+        ...formData,
+        nome: formData.nome.trim(),
+        razaoSocial: formData.razaoSocial.trim(),
+        nomeFantasia: formData.nomeFantasia.trim()
+      };
+
+      const dadosParaSalvar = { ...dadosLimpos, tipoPessoa, foto: fotoBase64, posicaoFoto, atualizadoEm: new Date().toISOString() };
+      
       if (clienteEditando) {
         await updateDoc(doc(db, "clientes", clienteEditando.id), dadosParaSalvar);
         alert("Cliente atualizado com sucesso!");
@@ -235,9 +377,18 @@ const CadastroCliente = () => {
         alert("Novo cliente cadastrado com sucesso!");
       }
       navigate('/clientes');
-    } catch (error) { alert("Erro ao salvar cliente."); } 
-    finally { setSalvando(false); }
+    } catch (error) { 
+      alert("Erro ao salvar cliente."); 
+    } finally { 
+      setSalvando(false); 
+    }
   };
+
+  // 🔥 AQUI ESTÁ A CORREÇÃO: MOSTRA APENAS AS TAGS OFICIAIS (Fantasmas não viram botão!) 🔥
+  const tagsParaExibir = TAGS_PERFIL;
+  
+  // 🔥 VERIFICA SE O CLIENTE TEM UMA TAG QUE NÃO É OFICIAL (FANTASMA)
+  const ehTagAntiga = formData.tags && !TAGS_PERFIL.includes(formData.tags);
 
   return (
     <div className="form-page-container">
@@ -300,8 +451,13 @@ const CadastroCliente = () => {
                 <span className={`badge-status ${formData.statusCadastro}`}>
                   {formData.statusCadastro === 'pendente' ? '⏳ Cadastro Pendente' : formData.statusCadastro === 'bloqueado' ? '🚫 Bloqueado' : '✅ Cadastro Aprovado'}
                 </span>
-                <span className={`badge-financeiro ${formData.situacaoFinanceira}`}>
-                  {formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente'}
+
+                <span className="badge-financeiro" style={{
+                    backgroundColor: calculandoFinancas ? '#f1f5f9' : formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
+                    color: calculandoFinancas ? '#475569' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
+                    border: calculandoFinancas ? '1px solid #cbd5e1' : formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac'
+                }}>
+                  {calculandoFinancas ? '⏳ Calculando...' : (formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente')}
                 </span>
               </div>
 
@@ -380,7 +536,7 @@ const CadastroCliente = () => {
             <div className="form-grid-4">
               <div className="form-group span-1"><label htmlFor="celular">CELULAR / WHATSAPP</label><input id="celular" type="tel" name="celular" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} /></div>
               <div className="form-group span-1"><label htmlFor="telefoneFixo">TELEFONE FIXO</label><input id="telefoneFixo" type="tel" name="telefoneFixo" autoComplete="tel" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label htmlFor="email">E-MAIL</label><input id="email" type="email" name="email" autoComplete="email" value={formData.email} onChange={handleChange} /></div>
+              <div className="form-group span-2"><label htmlFor="email">E-MAIL</label><input id="email" type="email" name="email" autoComplete="email" placeholder="nome@email.com" value={formData.email} onChange={handleChange} /></div>
               <div className="form-group span-2"><label htmlFor="origem">COMO NOS CONHECEU?</label>
                 <select id="origem" name="origem" autoComplete="off" value={formData.origem} onChange={handleChange}>
                   <option value="">Selecione...</option>
@@ -407,7 +563,7 @@ const CadastroCliente = () => {
                 </div>
                 <div className="form-group flex-small">
                   <label htmlFor="uf">UF</label>
-                  <input id="uf" type="text" name="uf" autoComplete="address-level1" value={formData.uf} onChange={handleChange} />
+                  <input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="EX: SP" value={formData.uf} onChange={handleChange} />
                 </div>
               </div>
 
@@ -435,7 +591,6 @@ const CadastroCliente = () => {
                     border: formData.statusCadastro === 'pendente' ? '1px solid #fcd34d' : formData.statusCadastro === 'bloqueado' ? '1px solid #fca5a5' : '1px solid #86efac'
                   }}
                 >
-                  {/* 🔥 TRAVA: Só mostra o Pendente se o estado liberar 🔥 */}
                   {podeSerPendente && (
                     <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>
                   )}
@@ -444,26 +599,26 @@ const CadastroCliente = () => {
                 </select>
               </div>
 
-              {/* 🔥 CAMPO DE INADIMPLÊNCIA BLINDADO PELO SISTEMA 🔥 */}
               <div className="form-group span-2">
-                <label htmlFor="situacaoFinanceira" style={{ color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <label htmlFor="situacaoFinanceira" style={{ color: calculandoFinancas ? '#64748b' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
                   SITUAÇÃO FINANCEIRA <span title="Este campo é automático e não pode ser alterado manualmente">🔒</span>
                 </label>
                 <select 
                   id="situacaoFinanceira"
                   name="situacaoFinanceira" 
                   autoComplete="off"
-                  value={formData.situacaoFinanceira} 
-                  disabled={true} /* TRAVADO */
+                  value={calculandoFinancas ? 'calculando' : formData.situacaoFinanceira} 
+                  disabled={true}
                   className="status-select"
                   style={{
-                    backgroundColor: formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
-                    color: formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
-                    border: formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac',
+                    backgroundColor: calculandoFinancas ? '#f1f5f9' : formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
+                    color: calculandoFinancas ? '#475569' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
+                    border: calculandoFinancas ? '1px solid #cbd5e1' : formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac',
                     cursor: 'not-allowed',
                     opacity: 0.9
                   }}
                 >
+                  <option value="calculando">⏳ Calculando...</option>
                   <option value="adimplente">✅ Nome Limpo (Adimplente)</option>
                   <option value="inadimplente">⚠️ Devendo (Inadimplente)</option>
                 </select>
@@ -472,13 +627,51 @@ const CadastroCliente = () => {
                 </small>
               </div>
 
-              <div className="form-group span-4"><label htmlFor="tags">TAGS (Ex: VIP, Problemático)</label><input id="tags" type="text" name="tags" autoComplete="off" placeholder="Digite as tags..." value={formData.tags} onChange={handleChange} /></div>
+              {/* 🔥 BOTÕES DE TAG COM CORES PERMANENTES E SEM ENGROSSAR A BORDA 🔥 */}
+              <div className="form-group span-4">
+                <label>PERFIL DO CLIENTE (TAG ÚNICA)</label>
+                <div className="tags-selector-chips">
+                  {tagsParaExibir.map(tag => {
+                    const estaSelecionada = formData.tags === tag;
+                    const tagEstilo = getTagStyle(tag); 
+                    
+                    return (
+                      <button 
+                        key={tag}
+                        type="button"
+                        className={`tag-chip-btn ${estaSelecionada ? 'selected' : ''}`}
+                        onClick={() => selecionarTag(tag)}
+                        style={estaSelecionada ? {
+                           backgroundColor: tagEstilo.bg,
+                           color: tagEstilo.color,
+                           borderColor: tagEstilo.color,
+                           // 🔥 O SEGREDO PRA NÃO CORTAR A BORDA É MANTER A ESPESSURA PADRÃO E USAR A SOMBRA! 🔥
+                           boxShadow: `0 0 0 1px ${tagEstilo.color}, 0 4px 8px rgba(0,0,0,0.1)` 
+                        } : {
+                           backgroundColor: tagEstilo.bg,
+                           color: tagEstilo.color,
+                           borderColor: tagEstilo.border,
+                        }}
+                      >
+                        {tag} {estaSelecionada && '✓'}
+                      </button>
+                    )
+                  })}
+                </div>
+                {/* 🔥 AVISO DE FANTASMA PARA DEIXAR O SISTEMA LIMPO 🔥 */}
+                {ehTagAntiga && (
+                   <span style={{fontSize: '0.75rem', color: '#ef4444', display: 'block', marginTop: '8px', fontWeight: '600'}}>
+                     👻 Tag Antiga detectada: "{formData.tags}". Clique em uma das opções acima para atualizar.
+                   </span>
+                )}
+              </div>
+
               <div className="form-group span-4"><label htmlFor="observacoes">OBSERVAÇÕES INTERNAS</label><textarea id="observacoes" name="observacoes" autoComplete="off" rows="2" value={formData.observacoes} onChange={handleChange}></textarea></div>
             </div>
 
             <div className="form-actions mt-compact">
               <Link to="/clientes" className="btn-voltar-link">Cancelar</Link>
-              <button type="submit" className="btn-salvar-form" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Cliente'}</button>
+              <button type="submit" className="btn-salvar-form" disabled={salvando}>{salvando ? 'Aguarde...' : 'Salvar Cliente'}</button>
             </div>
           </div>
         </form>
