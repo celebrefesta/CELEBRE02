@@ -339,3 +339,42 @@
     .auditoria-acoes { width: 100%; flex-direction: column; }
     .btn-abrir-pedido, .btn-resolver { width: 100%; justify-content: center; }
 }
+
+/* =========================================
+   BOTÕES DO MODAL DE CHECKLIST
+   ========================================= */
+.checklist-btn-volta {
+    flex: 1;
+    padding: 10px;
+    border-radius: 6px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #64748b;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.checklist-btn-volta:hover {
+    background: #f8fafc;
+}
+
+/* Estados Ativos */
+.checklist-btn-volta.ok-active {
+    background: #f3e8ff !important;
+    color: #7e22ce !important;
+    border-color: #d8b4fe !important;
+}
+
+.checklist-btn-volta.avaria-active {
+    background: #fef9c3 !important;
+    color: #a16207 !important;
+    border-color: #fde047 !important;
+}
+
+.checklist-btn-volta.sumiu-active {
+    background: #fee2e2 !important;
+    color: #b91c1c !important;
+    border-color: #fca5a5 !important;
+}

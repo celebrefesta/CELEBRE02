@@ -7,20 +7,16 @@ import { collection, addDoc, updateDoc, doc, query, getDocs } from 'firebase/fir
 // 🔥 MÁQUINA DE LAVAR PALAVRAS 🔥
 const formatarNomeCapitalizado = (nomeBruto) => {
   if (!nomeBruto) return '';
-  
   const partes = nomeBruto.toLowerCase().split(' ');
   const conectores = ['da', 'de', 'di', 'do', 'du', 'das', 'dos', 'e'];
-  
   return partes.map((palavra, index) => {
       if (palavra === '') return ''; 
-      if (index > 0 && conectores.includes(palavra)) {
-          return palavra;
-      }
+      if (index > 0 && conectores.includes(palavra)) return palavra;
       return palavra.charAt(0).toUpperCase() + palavra.slice(1);
   }).join(' ');
 };
 
-// 🔥 AS CORES VIBRANTES AGORA ESTÃO NO CADASTRO TAMBÉM 🔥
+// 🔥 AS CORES VIBRANTES PERMANENTES 🔥
 const getTagStyle = (tag) => {
   if (!tag) return { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
   
@@ -44,19 +40,10 @@ const getTagStyle = (tag) => {
   return styles[normalizedTag] || { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff' }; 
 };
 
-// 🔥 LISTA DE TAGS EXCLUSIVAS 🔥
 const TAGS_PERFIL = [
-  'NOVO', 
-  'RECORRENTE', 
-  'VIP', 
-  'ECONÔMICO', 
-  'PECHINCHA',
-  'INDECISO', 
-  'EXIGENTE', 
-  'ORGANIZADO', 
-  'ÚLTIMA HORA',
-  'BÁSICO', 
-  'PROBLEMÁTICO'
+  'NOVO', 'RECORRENTE', 'VIP', 'ECONÔMICO', 'PECHINCHA',
+  'INDECISO', 'EXIGENTE', 'ORGANIZADO', 'ÚLTIMA HORA',
+  'BÁSICO', 'PROBLEMÁTICO'
 ];
 
 const CadastroCliente = () => {
@@ -69,6 +56,10 @@ const CadastroCliente = () => {
 
   const [podeSerPendente, setPodeSerPendente] = useState(false);
   const [calculandoFinancas, setCalculandoFinancas] = useState(!!clienteEditando);
+  
+  // 🔥 ESTADOS PARA O HISTÓRICO DO CLIENTE 🔥
+  const [historicoLocacoes, setHistoricoLocacoes] = useState([]);
+  const [totalGasto, setTotalGasto] = useState(0);
 
   const [fotoBase64, setFotoBase64] = useState('');
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
@@ -132,8 +123,9 @@ const CadastroCliente = () => {
     }
   }, [clienteEditando]);
 
+  // 🔥 O ROBÔ QUE MONTA O HISTÓRICO DE LOCAÇÕES E CALCULA TUDO 🔥
   useEffect(() => {
-    const verificarInadimplencia = async () => {
+    const verificarInadimplenciaEHistorico = async () => {
       if (!clienteEditando?.id) return; 
       
       try {
@@ -141,6 +133,9 @@ const CadastroCliente = () => {
         const snap = await getDocs(qLocacoes);
         
         let temDividaVencida = false;
+        let locsDoCliente = [];
+        let somaGasto = 0;
+
         const hoje = new Date();
         hoje.setHours(0,0,0,0); 
 
@@ -148,24 +143,44 @@ const CadastroCliente = () => {
           const loc = docSnap.data();
           
           if (loc.clienteId === clienteEditando.id || loc.cliente?.id === clienteEditando.id) {
-            const statusLoc = (loc.status || '').toLowerCase();
-            if (statusLoc === 'cancelado' || statusLoc.includes('orcam')) return;
+            
+            // Guarda o pedido na lista para o Histórico visual
+            locsDoCliente.push({ id: docSnap.id, ...loc });
 
-            const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
-            if (dataStr) {
-              const dataEvento = new Date(dataStr + 'T00:00:00');
-              const pagStatus = (loc.statusPagamento || '').toLowerCase();
-              
-              const vTotal = Number(loc.valorTotal || loc.total || 0);
-              const vPago = Number(loc.valorPago || 0);
-              const saldoDevedor = vTotal - vPago;
+            const statusLoc = String(loc.status || '').toLowerCase();
+            const valorTotalLoc = Number(loc.valorTotal || loc.total || 0);
 
-              if (dataEvento < hoje && saldoDevedor > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado') {
-                temDividaVencida = true;
+            // Soma LTV (Total Gasto na empresa) - Ignora Orçamentos e Cancelados
+            if (!statusLoc.includes('cancelado') && !statusLoc.includes('orcam')) {
+                somaGasto += valorTotalLoc;
+            }
+
+            // Verifica Inadimplência
+            if (!statusLoc.includes('cancelado') && !statusLoc.includes('orcam')) {
+              const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
+              if (dataStr) {
+                const dataEvento = new Date(dataStr + 'T00:00:00');
+                const pagStatus = (loc.statusPagamento || '').toLowerCase();
+                const vPago = Number(loc.valorPago || 0);
+                const saldoDevedor = valorTotalLoc - vPago;
+
+                if (dataEvento < hoje && saldoDevedor > 0.01 && !pagStatus.includes('pago') && !pagStatus.includes('quitado')) {
+                  temDividaVencida = true;
+                }
               }
             }
           }
         });
+
+        // Ordena histórico do mais recente para o mais antigo
+        locsDoCliente.sort((a, b) => {
+            const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0;
+            const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 0;
+            return dataB - dataA;
+        });
+
+        setHistoricoLocacoes(locsDoCliente);
+        setTotalGasto(somaGasto);
 
         setFormData(prev => ({
           ...prev,
@@ -173,38 +188,18 @@ const CadastroCliente = () => {
         }));
 
       } catch(e) {
-        console.error("Erro ao verificar inadimplência automática:", e);
+        console.error("Erro ao montar histórico:", e);
       } finally {
         setCalculandoFinancas(false);
       }
     };
 
-    verificarInadimplencia();
+    verificarInadimplenciaEHistorico();
   }, [clienteEditando]);
 
-  const maskCPF = (v) => {
-    v = v.replace(/\D/g, ""); 
-    v = v.replace(/(\d{3})(\d)/, "$1.$2"); 
-    v = v.replace(/(\d{3})(\d)/, "$1.$2"); 
-    v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); 
-    return v.substring(0, 14);
-  };
-
-  const maskCNPJ = (v) => {
-    v = v.replace(/\D/g, "");
-    v = v.replace(/^(\d{2})(\d)/, "$1.$2");
-    v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3");
-    v = v.replace(/\.(\d{3})(\d)/, ".$1/$2");
-    v = v.replace(/(\d{4})(\d)/, "$1-$2");
-    return v.substring(0, 18);
-  };
-
-  const maskPhone = (v) => {
-    v = v.replace(/\D/g, "");
-    v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); 
-    v = v.replace(/(\d)(\d{4})$/, "$1-$2");    
-    return v.substring(0, 15);
-  };
+  const maskCPF = (v) => { v = v.replace(/\D/g, ""); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); return v.substring(0, 14); };
+  const maskCNPJ = (v) => { v = v.replace(/\D/g, ""); v = v.replace(/^(\d{2})(\d)/, "$1.$2"); v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3"); v = v.replace(/\.(\d{3})(\d)/, ".$1/$2"); v = v.replace(/(\d{4})(\d)/, "$1-$2"); return v.substring(0, 18); };
+  const maskPhone = (v) => { v = v.replace(/\D/g, ""); v = v.replace(/^(\d{2})(\d)/g, "($1) $2"); v = v.replace(/(\d)(\d{4})$/, "$1-$2"); return v.substring(0, 15); };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -216,12 +211,10 @@ const CadastroCliente = () => {
     else if (name === 'email') newValue = value.toLowerCase();
     else if (name === 'uf') newValue = value.toUpperCase().substring(0, 2);
     else {
-      const camposCapitalizados = ['nome', 'razaoSocial', 'nomeFantasia', 'nomeContato', 'cargo', 'logradouro', 'complemento', 'bairro', 'cidade'];
-      if (camposCapitalizados.includes(name)) {
+      if (['nome', 'razaoSocial', 'nomeFantasia', 'nomeContato', 'cargo', 'logradouro', 'complemento', 'bairro', 'cidade'].includes(name)) {
         newValue = formatarNomeCapitalizado(value);
       }
     }
-    
     setFormData({ ...formData, [name]: newValue });
   };
 
@@ -257,47 +250,33 @@ const CadastroCliente = () => {
     }
   };
 
-  const handleStart = (clientX, clientY) => {
-    setDragging(true);
-    setStartMouse({ x: clientX, y: clientY });
-  };
-
+  const handleStart = (clientX, clientY) => { setDragging(true); setStartMouse({ x: clientX, y: clientY }); };
   const handleMove = (clientX, clientY) => {
     if (!dragging) return;
     const deltaX = clientX - startMouse.x;
     const deltaY = clientY - startMouse.y;
     setStartMouse({ x: clientX, y: clientY });
-    setPosicaoFoto(prev => ({
-      x: Math.max(0, Math.min(100, prev.x - (deltaX * 0.4))),
-      y: Math.max(0, Math.min(100, prev.y - (deltaY * 0.4)))
-    }));
+    setPosicaoFoto(prev => ({ x: Math.max(0, Math.min(100, prev.x - (deltaX * 0.4))), y: Math.max(0, Math.min(100, prev.y - (deltaY * 0.4))) }));
   };
-
   const handleEnd = () => setDragging(false);
-
   const removerFoto = () => { setFotoBase64(''); setPosicaoFoto({x: 50, y: 50}); };
 
   const buscarCep = async (e) => {
     let cepDigitado = e.target.value.replace(/\D/g, '');
     let cepMascarado = cepDigitado.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setFormData(prev => ({ ...prev, cep: cepMascarado }));
-    
     if (cepDigitado.length === 8) {
       try {
         const resposta = await fetch(`https://viacep.com.br/ws/${cepDigitado}/json/`);
         const dados = await resposta.json();
         if (!dados.erro) {
           setFormData(prev => ({ 
-            ...prev, 
-            cep: cepMascarado, 
-            logradouro: formatarNomeCapitalizado(dados.logradouro), 
-            bairro: formatarNomeCapitalizado(dados.bairro), 
-            cidade: formatarNomeCapitalizado(dados.localidade), 
-            uf: dados.uf.toUpperCase() 
+            ...prev, cep: cepMascarado, logradouro: formatarNomeCapitalizado(dados.logradouro), 
+            bairro: formatarNomeCapitalizado(dados.bairro), cidade: formatarNomeCapitalizado(dados.localidade), uf: dados.uf.toUpperCase() 
           }));
           document.getElementById('numeroInput').focus();
         }
-      } catch (error) { console.error("Erro ao buscar CEP"); }
+      } catch (error) {}
     }
   };
 
@@ -310,55 +289,35 @@ const CadastroCliente = () => {
       const meuCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
       const meuCnpj = formData.cnpj ? formData.cnpj.replace(/\D/g, '') : '';
       const meuNome = (formData.nome || formData.nomeFantasia || '').trim().toLowerCase();
-      const meuNascimento = formData.nascimento || '';
 
       for (let c of todosClientes) {
           if (clienteEditando && c.id === clienteEditando.id) continue;
-
           const bancoCelular = c.celular ? c.celular.replace(/\D/g, '') : '';
           const bancoCpf = c.cpf ? c.cpf.replace(/\D/g, '') : '';
           const bancoCnpj = c.cnpj ? c.cnpj.replace(/\D/g, '') : '';
           const bancoNome = (c.nome || c.nomeFantasia || '').trim().toLowerCase();
-          const bancoNascimento = c.nascimento || '';
 
           if (tipoPessoa === 'fisica' && meuCpf.length === 11 && meuCpf === bancoCpf) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com este mesmo CPF!\n\nNome na agenda: ${c.nome || c.nomeFantasia}`);
-              return true; 
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com este mesmo CPF!\n\nNome: ${c.nome || c.nomeFantasia}`); return true; 
           }
-          
           if (tipoPessoa === 'juridica' && meuCnpj.length === 14 && meuCnpj === bancoCnpj) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe uma empresa com este mesmo CNPJ!\n\nNome na agenda: ${c.nomeFantasia || c.razaoSocial}`);
-              return true; 
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe uma empresa com este mesmo CNPJ!\n\nNome: ${c.nomeFantasia || c.razaoSocial}`); return true; 
           }
-
           if (meuNome && meuNome === bancoNome && meuCelular.length > 8 && meuCelular === bancoCelular) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!\n\nVerifique o histórico da cliente antes de recadastrar.`);
-              return true;
-          }
-
-          if (meuNome && meuNome === bancoNome && meuNascimento && meuNascimento === bancoNascimento) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e DATA DE NASCIMENTO!\n\nVerifique o histórico da cliente antes de recadastrar.`);
-              return true;
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!`); return true;
           }
       }
-
       return false; 
   };
 
   const salvarCliente = async (e) => {
     e.preventDefault();
-    
     if (tipoPessoa === 'fisica' && !formData.nome) return alert("O Nome é obrigatório!");
     if (tipoPessoa === 'juridica' && !formData.nomeFantasia) return alert("O Nome Fantasia é obrigatório!");
     
     setSalvando(true);
     try {
-      const temDuplicidade = await verificarDuplicidade();
-      
-      if (temDuplicidade) {
-          setSalvando(false);
-          return;
-      }
+      if (await verificarDuplicidade()) { setSalvando(false); return; }
 
       const dadosLimpos = {
         ...formData,
@@ -384,57 +343,39 @@ const CadastroCliente = () => {
     }
   };
 
-  // 🔥 AQUI ESTÁ A CORREÇÃO: MOSTRA APENAS AS TAGS OFICIAIS (Fantasmas não viram botão!) 🔥
-  const tagsParaExibir = TAGS_PERFIL;
-  
-  // 🔥 VERIFICA SE O CLIENTE TEM UMA TAG QUE NÃO É OFICIAL (FANTASMA)
+  const tagsParaExibir = [...new Set([...TAGS_PERFIL, formData.tags])].filter(Boolean);
   const ehTagAntiga = formData.tags && !TAGS_PERFIL.includes(formData.tags);
 
   return (
     <div className="form-page-container">
       <div className="form-page-header">
         <div className="header-text">
-          <h1 className="form-page-title">{clienteEditando ? 'EDITAR CLIENTE' : 'NOVO CLIENTE'}</h1>
-          <p className="form-page-subtitle">Preencha os dados de contato e faturamento</p>
+          <h1 className="form-page-title">{clienteEditando ? 'PERFIL DO CLIENTE' : 'NOVO CLIENTE'}</h1>
+          <p className="form-page-subtitle">{clienteEditando ? 'Edite os dados e acompanhe o histórico' : 'Preencha os dados de contato e faturamento'}</p>
         </div>
       </div>
 
       <div className="form-widescreen">
         <form onSubmit={salvarCliente} className="estoque-form-layout" autoComplete="on">
           
+          {/* ================= COLUNA ESQUERDA (FOTO E RESUMO) ================= */}
           <div className="left-photo-col">
-            <h3 className="section-divider" style={{marginTop: 0, textAlign: 'center', width: '100%'}}>PERFIL DO CLIENTE</h3>
+            <h3 className="section-divider" style={{marginTop: 0, textAlign: 'center', width: '100%'}}>IMAGEM</h3>
             
             <div className="main-photo-display">
               {fotoBase64 ? (
                 <>
                   <img 
-                    src={fotoBase64} 
-                    className="main-photo-preview" 
-                    alt="Preview"
-                    style={{ 
-                      objectPosition: `${posicaoFoto.x}% ${posicaoFoto.y}%`,
-                      cursor: dragging ? 'grabbing' : 'grab',
-                      touchAction: 'none'
-                    }}
+                    src={fotoBase64} className="main-photo-preview" alt="Preview"
+                    style={{ objectPosition: `${posicaoFoto.x}% ${posicaoFoto.y}%`, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}
                     onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => handleMove(e.clientX, e.clientY)}
-                    onMouseUp={handleEnd}
-                    onMouseLeave={handleEnd}
-                    onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)}
-                    onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)}
-                    onTouchEnd={handleEnd}
+                    onMouseMove={(e) => handleMove(e.clientX, e.clientY)} onMouseUp={handleEnd} onMouseLeave={handleEnd}
+                    onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)} onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)} onTouchEnd={handleEnd}
                   />
-                  <div className="drag-hint">
-                    <span>Arrastar para enquadrar</span>
-                  </div>
+                  <div className="drag-hint"><span>Arrastar para enquadrar</span></div>
                 </>
               ) : (
-                <label htmlFor="foto-upload" className="photo-upload-label">
-                  <span className="photo-icon">👤</span>
-                  <span className="photo-text">Adicionar Foto</span>
-                  <input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} />
-                </label>
+                <label htmlFor="foto-upload" className="photo-upload-label"><span className="photo-icon">👤</span><span className="photo-text">Adicionar Foto</span><input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} /></label>
               )}
             </div>
             
@@ -451,7 +392,6 @@ const CadastroCliente = () => {
                 <span className={`badge-status ${formData.statusCadastro}`}>
                   {formData.statusCadastro === 'pendente' ? '⏳ Cadastro Pendente' : formData.statusCadastro === 'bloqueado' ? '🚫 Bloqueado' : '✅ Cadastro Aprovado'}
                 </span>
-
                 <span className="badge-financeiro" style={{
                     backgroundColor: calculandoFinancas ? '#f1f5f9' : formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
                     color: calculandoFinancas ? '#475569' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
@@ -467,40 +407,31 @@ const CadastroCliente = () => {
               </div>
 
               {formData.celular && (
-                <a 
-                  href={`https://wa.me/55${formData.celular.replace(/\D/g, '')}`} 
-                  target="_blank" 
-                  rel="noreferrer" 
-                  className="btn-whatsapp-resumo"
-                >
+                <a href={`https://wa.me/55${formData.celular.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="btn-whatsapp-resumo">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="18" height="18" fill="currentColor"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>
                   Chamar no WhatsApp
                 </a>
               )}
 
-              <div className="resumo-footer">
-                <small>📅 Criado em: {clienteEditando?.criadoEm ? new Date(clienteEditando.criadoEm).toLocaleDateString('pt-BR') : 'Hoje'}</small>
+              {/* 🔥 TOTAL GASTO PELO CLIENTE (LTV) 🔥 */}
+              <div className="resumo-footer" style={{display: 'flex', flexDirection: 'column', gap: '8px', borderTop: 'none', paddingTop: 0}}>
+                {clienteEditando && (
+                  <div style={{background: '#f1f5f9', padding: '12px', borderRadius: '8px', color: '#0f172a', fontWeight: '800', display: 'flex', justifyContent: 'space-between', border: '1px solid #e2e8f0'}}>
+                    <span style={{color: '#64748b'}}>Total Gasto:</span>
+                    <span>R$ {totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                  </div>
+                )}
+                <small style={{textAlign: 'center', width: '100%', display: 'block'}}>📅 Cliente desde: {clienteEditando?.criadoEm ? new Date(clienteEditando.criadoEm).toLocaleDateString('pt-BR') : 'Hoje'}</small>
               </div>
             </div>
             
           </div>
 
+          {/* ================= COLUNA DIREITA (DADOS) ================= */}
           <div className="right-data-col">
             <div className="tabs-container">
-              <button 
-                type="button" 
-                className={`tab-btn ${tipoPessoa === 'fisica' ? 'active' : ''}`}
-                onClick={() => setTipoPessoa('fisica')}
-              >
-                👤 Pessoa Física
-              </button>
-              <button 
-                type="button" 
-                className={`tab-btn ${tipoPessoa === 'juridica' ? 'active' : ''}`}
-                onClick={() => setTipoPessoa('juridica')}
-              >
-                🏢 Pessoa Jurídica
-              </button>
+              <button type="button" className={`tab-btn ${tipoPessoa === 'fisica' ? 'active' : ''}`} onClick={() => setTipoPessoa('fisica')}>👤 Pessoa Física</button>
+              <button type="button" className={`tab-btn ${tipoPessoa === 'juridica' ? 'active' : ''}`} onClick={() => setTipoPessoa('juridica')}>🏢 Pessoa Jurídica</button>
             </div>
 
             {tipoPessoa === 'fisica' ? (
@@ -511,11 +442,7 @@ const CadastroCliente = () => {
                   <div className="form-group span-1"><label htmlFor="cpf">CPF</label><input id="cpf" type="text" name="cpf" autoComplete="off" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} /></div>
                   <div className="form-group span-1"><label htmlFor="rg">RG (OPCIONAL)</label><input id="rg" type="text" name="rg" autoComplete="off" placeholder="00.000.000-0" value={formData.rg} onChange={handleChange} /></div>
                   <div className="form-group span-1"><label htmlFor="nascimento">NASCIMENTO</label><input id="nascimento" type="date" name="nascimento" autoComplete="bday" value={formData.nascimento} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label htmlFor="sexo">SEXO</label>
-                    <select id="sexo" name="sexo" autoComplete="sex" value={formData.sexo} onChange={handleChange}>
-                      <option value="">Selecione...</option><option value="Feminino">Feminino</option><option value="Masculino">Masculino</option>
-                    </select>
-                  </div>
+                  <div className="form-group span-1"><label htmlFor="sexo">SEXO</label><select id="sexo" name="sexo" autoComplete="sex" value={formData.sexo} onChange={handleChange}><option value="">Selecione...</option><option value="Feminino">Feminino</option><option value="Masculino">Masculino</option></select></div>
                 </div>
               </>
             ) : (
@@ -537,36 +464,17 @@ const CadastroCliente = () => {
               <div className="form-group span-1"><label htmlFor="celular">CELULAR / WHATSAPP</label><input id="celular" type="tel" name="celular" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} /></div>
               <div className="form-group span-1"><label htmlFor="telefoneFixo">TELEFONE FIXO</label><input id="telefoneFixo" type="tel" name="telefoneFixo" autoComplete="tel" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} /></div>
               <div className="form-group span-2"><label htmlFor="email">E-MAIL</label><input id="email" type="email" name="email" autoComplete="email" placeholder="nome@email.com" value={formData.email} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label htmlFor="origem">COMO NOS CONHECEU?</label>
-                <select id="origem" name="origem" autoComplete="off" value={formData.origem} onChange={handleChange}>
-                  <option value="">Selecione...</option>
-                  <option value="Instagram">Instagram</option>
-                  <option value="WhatsApp">WhatsApp</option>
-                  <option value="Facebook">Facebook</option>
-                  <option value="Pesquisa Google">Pesquisa no Google</option>
-                  <option value="Indicação">Indicação</option>
-                  <option value="Auto-Cadastro (Site)">Auto-Cadastro (Site)</option>
-                  <option value="Outros">Outros</option>
-                </select>
-              </div>
+              <div className="form-group span-2"><label htmlFor="origem">COMO NOS CONHECEU?</label><select id="origem" name="origem" autoComplete="off" value={formData.origem} onChange={handleChange}><option value="">Selecione...</option><option value="Instagram">Instagram</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option><option value="Pesquisa Google">Pesquisa no Google</option><option value="Indicação">Indicação</option><option value="Auto-Cadastro (Site)">Auto-Cadastro (Site)</option><option value="Outros">Outros</option></select></div>
             </div>
 
             <h3 className="section-divider mt-compact">ENDEREÇO</h3>
             <div className="form-grid-4">
               <div className="form-group span-2"><label htmlFor="cep">CEP (BUSCA AUTO)</label><input id="cep" type="text" name="cep" autoComplete="postal-code" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
               <div className="form-group span-2"><label htmlFor="logradouro">LOGRADOURO</label><input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} /></div>
-              
               <div className="form-group-row span-4">
-                <div className="form-group flex-1">
-                  <label htmlFor="numeroInput">NÚMERO</label>
-                  <input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} />
-                </div>
-                <div className="form-group flex-small">
-                  <label htmlFor="uf">UF</label>
-                  <input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="EX: SP" value={formData.uf} onChange={handleChange} />
-                </div>
+                <div className="form-group flex-1"><label htmlFor="numeroInput">NÚMERO</label><input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} /></div>
+                <div className="form-group flex-small"><label htmlFor="uf">UF</label><input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="EX: SP" value={formData.uf} onChange={handleChange} /></div>
               </div>
-
               <div className="form-group span-2"><label htmlFor="bairro">BAIRRO</label><input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} /></div>
               <div className="form-group span-2"><label htmlFor="cidade">CIDADE</label><input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} /></div>
             </div>
@@ -575,104 +483,83 @@ const CadastroCliente = () => {
             <div className="form-grid-4">
               
               <div className="form-group span-2">
-                <label htmlFor="statusCadastro" style={{ color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981', fontWeight: '800' }}>
-                  STATUS DO CADASTRO
-                </label>
-                <select 
-                  id="statusCadastro"
-                  name="statusCadastro" 
-                  autoComplete="off"
-                  value={formData.statusCadastro} 
-                  onChange={handleChange}
-                  className="status-select"
-                  style={{
-                    backgroundColor: formData.statusCadastro === 'pendente' ? '#fef3c7' : formData.statusCadastro === 'bloqueado' ? '#fef2f2' : '#f0fdf4',
-                    color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981',
-                    border: formData.statusCadastro === 'pendente' ? '1px solid #fcd34d' : formData.statusCadastro === 'bloqueado' ? '1px solid #fca5a5' : '1px solid #86efac'
-                  }}
-                >
-                  {podeSerPendente && (
-                    <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>
-                  )}
-                  <option value="aprovado">✔️ Cadastro Aprovado</option>
-                  <option value="bloqueado">🚫 Cadastro Bloqueado</option>
+                <label htmlFor="statusCadastro" style={{ color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981', fontWeight: '800' }}>STATUS DO CADASTRO</label>
+                <select id="statusCadastro" name="statusCadastro" autoComplete="off" value={formData.statusCadastro} onChange={handleChange} className="status-select" style={{ backgroundColor: formData.statusCadastro === 'pendente' ? '#fef3c7' : formData.statusCadastro === 'bloqueado' ? '#fef2f2' : '#f0fdf4', color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981', border: formData.statusCadastro === 'pendente' ? '1px solid #fcd34d' : formData.statusCadastro === 'bloqueado' ? '1px solid #fca5a5' : '1px solid #86efac' }}>
+                  {podeSerPendente && <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>}
+                  <option value="aprovado">✔️ Cadastro Aprovado</option><option value="bloqueado">🚫 Cadastro Bloqueado</option>
                 </select>
               </div>
 
               <div className="form-group span-2">
-                <label htmlFor="situacaoFinanceira" style={{ color: calculandoFinancas ? '#64748b' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  SITUAÇÃO FINANCEIRA <span title="Este campo é automático e não pode ser alterado manualmente">🔒</span>
-                </label>
-                <select 
-                  id="situacaoFinanceira"
-                  name="situacaoFinanceira" 
-                  autoComplete="off"
-                  value={calculandoFinancas ? 'calculando' : formData.situacaoFinanceira} 
-                  disabled={true}
-                  className="status-select"
-                  style={{
-                    backgroundColor: calculandoFinancas ? '#f1f5f9' : formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
-                    color: calculandoFinancas ? '#475569' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
-                    border: calculandoFinancas ? '1px solid #cbd5e1' : formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac',
-                    cursor: 'not-allowed',
-                    opacity: 0.9
-                  }}
-                >
-                  <option value="calculando">⏳ Calculando...</option>
-                  <option value="adimplente">✅ Nome Limpo (Adimplente)</option>
-                  <option value="inadimplente">⚠️ Devendo (Inadimplente)</option>
+                <label htmlFor="situacaoFinanceira" style={{ color: calculandoFinancas ? '#64748b' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>SITUAÇÃO FINANCEIRA <span title="Este campo é automático">🔒</span></label>
+                <select id="situacaoFinanceira" name="situacaoFinanceira" autoComplete="off" value={calculandoFinancas ? 'calculando' : formData.situacaoFinanceira} disabled={true} className="status-select" style={{ backgroundColor: calculandoFinancas ? '#f1f5f9' : formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4', color: calculandoFinancas ? '#475569' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', border: calculandoFinancas ? '1px solid #cbd5e1' : formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac', cursor: 'not-allowed', opacity: 0.9 }}>
+                  <option value="calculando">⏳ Calculando...</option><option value="adimplente">✅ Nome Limpo (Adimplente)</option><option value="inadimplente">⚠️ Devendo (Inadimplente)</option>
                 </select>
-                <small style={{fontSize: '10px', color: '#64748b', marginTop: '4px', display: 'block'}}>
-                  * Atualizado automaticamente pelo módulo de locações.
-                </small>
               </div>
 
-              {/* 🔥 BOTÕES DE TAG COM CORES PERMANENTES E SEM ENGROSSAR A BORDA 🔥 */}
               <div className="form-group span-4">
                 <label>PERFIL DO CLIENTE (TAG ÚNICA)</label>
                 <div className="tags-selector-chips">
                   {tagsParaExibir.map(tag => {
                     const estaSelecionada = formData.tags === tag;
                     const tagEstilo = getTagStyle(tag); 
-                    
                     return (
-                      <button 
-                        key={tag}
-                        type="button"
-                        className={`tag-chip-btn ${estaSelecionada ? 'selected' : ''}`}
-                        onClick={() => selecionarTag(tag)}
-                        style={estaSelecionada ? {
-                           backgroundColor: tagEstilo.bg,
-                           color: tagEstilo.color,
-                           borderColor: tagEstilo.color,
-                           // 🔥 O SEGREDO PRA NÃO CORTAR A BORDA É MANTER A ESPESSURA PADRÃO E USAR A SOMBRA! 🔥
-                           boxShadow: `0 0 0 1px ${tagEstilo.color}, 0 4px 8px rgba(0,0,0,0.1)` 
-                        } : {
-                           backgroundColor: tagEstilo.bg,
-                           color: tagEstilo.color,
-                           borderColor: tagEstilo.border,
-                        }}
+                      <button key={tag} type="button" className={`tag-chip-btn ${estaSelecionada ? 'selected' : ''}`} onClick={() => selecionarTag(tag)}
+                        style={estaSelecionada ? { backgroundColor: tagEstilo.bg, color: tagEstilo.color, borderColor: tagEstilo.color, boxShadow: `0 0 0 1px ${tagEstilo.color}, 0 4px 8px rgba(0,0,0,0.1)` } : { backgroundColor: tagEstilo.bg, color: tagEstilo.color, borderColor: tagEstilo.border }}
                       >
                         {tag} {estaSelecionada && '✓'}
                       </button>
                     )
                   })}
                 </div>
-                {/* 🔥 AVISO DE FANTASMA PARA DEIXAR O SISTEMA LIMPO 🔥 */}
-                {ehTagAntiga && (
-                   <span style={{fontSize: '0.75rem', color: '#ef4444', display: 'block', marginTop: '8px', fontWeight: '600'}}>
-                     👻 Tag Antiga detectada: "{formData.tags}". Clique em uma das opções acima para atualizar.
-                   </span>
-                )}
+                {ehTagAntiga && <span style={{fontSize: '0.75rem', color: '#ef4444', display: 'block', marginTop: '8px', fontWeight: '600'}}>👻 Tag Antiga detectada: "{formData.tags}". Clique em uma das opções acima para atualizar.</span>}
               </div>
 
               <div className="form-group span-4"><label htmlFor="observacoes">OBSERVAÇÕES INTERNAS</label><textarea id="observacoes" name="observacoes" autoComplete="off" rows="2" value={formData.observacoes} onChange={handleChange}></textarea></div>
             </div>
 
-            <div className="form-actions mt-compact">
+            {/* 🔥 O INCRÍVEL HISTÓRICO DE LOCAÇÕES 🔥 */}
+            {clienteEditando && historicoLocacoes.length > 0 && (
+              <div style={{gridColumn: '1 / -1', width: '100%', marginTop: '20px'}}>
+                <h3 className="section-divider mt-compact">📜 HISTÓRICO DE LOCAÇÕES</h3>
+                <div className="historico-grid">
+                  {historicoLocacoes.map(loc => {
+                    const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
+                    const isCancelado = st.includes('cancelado');
+                    return (
+                      <div 
+                        key={loc.id} 
+                        className="historico-card" 
+                        onClick={() => navigate(`/locacoes/editar/${loc.id}`)}
+                      >
+                        <div className="h-info">
+                          <span className="h-title">
+                            Pedido {loc.numeroPedido ? `#${loc.numeroPedido}` : `#${loc.id.substring(0,6).toUpperCase()}`}
+                          </span>
+                          <span className="h-date">
+                            📅 Evento: {loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data'}
+                          </span>
+                        </div>
+                        <div className="h-status-valor">
+                          <span className={`h-badge ${st}`}>
+                            {loc.status?.toUpperCase() || 'S/S'}
+                          </span>
+                          <span className="h-value" style={{textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : '#0f172a'}}>
+                            R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                          </span>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="form-actions mt-compact" style={{gridColumn: '1 / -1'}}>
               <Link to="/clientes" className="btn-voltar-link">Cancelar</Link>
               <button type="submit" className="btn-salvar-form" disabled={salvando}>{salvando ? 'Aguarde...' : 'Salvar Cliente'}</button>
             </div>
+
           </div>
         </form>
       </div>

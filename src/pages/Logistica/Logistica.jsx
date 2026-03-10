@@ -16,7 +16,6 @@ const Logistica = () => {
   const [vistaAtual, setVistaAtual] = useState('kanban');
   const [parametros, setParametros] = useState(null);
   
-  // 🌟 NOVO: Estado para armazenar o texto editável do contrato
   const [textoRelatorio, setTextoRelatorio] = useState('');
 
   const carregarDados = async () => {
@@ -33,11 +32,9 @@ const Logistica = () => {
         setParametros(docSnap.data());
       }
 
-      // 🌟 NOVO: Busca o modelo de texto do Relatório de Avarias
       const contratoRef = doc(db, "contratos", "relatorio_avarias");
       const contratoSnap = await getDoc(contratoRef);
       if (contratoSnap.exists()) {
-        // Tenta pegar o conteúdo. Se você salvou com outro nome lá, ajuste aqui (ex: conteudo, texto, contrato)
         setTextoRelatorio(contratoSnap.data().conteudo || contratoSnap.data().texto || '');
       }
 
@@ -95,12 +92,22 @@ const Logistica = () => {
     try { await updateDoc(doc(db, "locacoes", locId), { itens: novosItens }); } catch (e) {}
   };
 
-  const hoje = new Date().toISOString().split('T')[0];
-  const mesAtual = hoje.substring(0, 7);
+  const hojeStr = new Date().toISOString().split('T')[0];
+  const mesAtual = hojeStr.substring(0, 7);
 
   const locacoesFiltradas = locacoes.filter(loc => {
     if (!loc.dataRetirada) return false;
-    if (filtroTempo === 'hoje') return loc.dataRetirada === hoje;
+
+    const st = String(loc.status || '').toLowerCase().trim();
+
+    // 🔥 O ROBÔ DE FAXINA AQUI: Se a data passou e não foi entregue, ele esconde da Logística 🔥
+    if (loc.dataRetirada < hojeStr) {
+        if (st.includes('orcam') || st.includes('confirmado') || st.includes('preparacao')) {
+            return false; 
+        }
+    }
+
+    if (filtroTempo === 'hoje') return loc.dataRetirada === hojeStr;
     if (filtroTempo === 'mes_atual') return loc.dataRetirada.startsWith(mesAtual);
     return true; 
   });
@@ -171,7 +178,7 @@ const Logistica = () => {
         <ModalRelatorioAvarias 
           loc={relatorioModalLoc} 
           parametros={parametros} 
-          textoBase={textoRelatorio} // 🌟 PASSA O TEXTO PARA O MODAL
+          textoBase={textoRelatorio} 
           onClose={() => setRelatorioModalLoc(null)} 
         />
       )}
@@ -190,7 +197,6 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
     const diffTime = locDate.getTime() - hojeDate.getTime();
     const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    if (diffDias < 0 && loc.status !== 'entregue') return <div className="alerta-urgente atrasado">🔥 ATRASADO!</div>;
     if (diffDias <= 0 && loc.status === 'entregue' && loc.dataDevolucao) {
        const devolucaoDate = new Date(loc.dataDevolucao + 'T00:00:00');
        const diffDev = Math.ceil((devolucaoDate.getTime() - hojeDate.getTime()) / (1000 * 60 * 60 * 24));
@@ -355,7 +361,6 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
     const nomeEmpresa = parametros?.nomeEmpresa || parametros?.nomeFantasia || parametros?.nome || 'NOME DA EMPRESA NÃO CONFIGURADO';
     const logoEmpresa = parametros?.logotipo || parametros?.logo || parametros?.logoUrl || parametros?.foto || null;
     const telefoneEmpresa = parametros?.telefone || parametros?.whatsapp || parametros?.contato || '';
-    const dataBr = loc.dataRetirada ? loc.dataRetirada.split('-').reverse().join('/') : '--/--/----';
 
     const printWindow = window.open('', '_blank');
     printWindow.document.write(`
@@ -382,8 +387,6 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
             .total-box span { color: #dc2626; font-size: 22px; margin-left: 10px;}
             .assinaturas { margin-top: 80px; display: flex; justify-content: space-between; gap: 40px; }
             .assinaturas div { border-top: 1px solid #0f172a; flex: 1; text-align: center; padding-top: 10px; font-weight: bold; color: #0f172a;}
-            
-            /* 🌟 Estilo para o texto dinâmico do contrato */
             .aviso-legal { font-size: 14px; color: #475569; line-height: 1.6; text-align: justify; margin-bottom: 50px; white-space: pre-wrap;}
           </style>
         </head>

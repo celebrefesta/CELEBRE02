@@ -4,44 +4,41 @@ import './Clientes.css';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
 
-// 🔥 DICIONÁRIO DE CORES VIBRANTES DAS TAGS 🔥
 const getTagStyle = (tag) => {
+  if (!tag) return { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
   const normalizedTag = tag.toUpperCase().trim();
   const styles = {
-    'NOVO': { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe' }, // Azul Vibrante
-    'VIP': { bg: '#fef08a', color: '#854d0e', border: '#fde047' }, // Dourado
-    'PROBLEMÁTICO': { bg: '#fecaca', color: '#991b1b', border: '#fca5a5' }, // Vermelho Alerta
-    'RECORRENTE': { bg: '#bbf7d0', color: '#166534', border: '#86efac' }, // Verde Esmeralda
-    'PECHINCHA': { bg: '#fed7aa', color: '#9a3412', border: '#fdba74' }, // Laranja
-    'ECONÔMICO': { bg: '#e9d5ff', color: '#6b21a8', border: '#d8b4fe' }, // Roxo
-    'INDECISO': { bg: '#fbcfe8', color: '#9d174d', border: '#f9a8d4' }, // Rosa Forte
-    'EXIGENTE': { bg: '#bfdbfe', color: '#1e40af', border: '#93c5fd' }, // Azul Royal
-    'ORGANIZADO': { bg: '#a7f3d0', color: '#065f46', border: '#6ee7b7' }, // Verde Menta
-    'ÚLTIMA HORA': { bg: '#fecdd3', color: '#be123c', border: '#fda4af' }, // Cereja
-    'ULTIMA HORA': { bg: '#fecdd3', color: '#be123c', border: '#fda4af' }, // Cereja (sem acento)
-    'BÁSICO': { bg: '#e5e7eb', color: '#374151', border: '#d1d5db' }, // Cinza Escuro
-    
-    // 👻 FANTASMAS DO PASSADO (Tags antigas digitadas manualmente)
-    'FAMÍLIA': { bg: '#c7d2fe', color: '#3730a3', border: '#a5b4fc' }, // Índigo
-    'FAMILIA': { bg: '#c7d2fe', color: '#3730a3', border: '#a5b4fc' }, // Índigo
+    'NOVO': { bg: '#dbeafe', color: '#1e40af', border: '#bfdbfe' }, 
+    'VIP': { bg: '#fef08a', color: '#854d0e', border: '#fde047' }, 
+    'PROBLEMÁTICO': { bg: '#fecaca', color: '#991b1b', border: '#fca5a5' }, 
+    'RECORRENTE': { bg: '#bbf7d0', color: '#166534', border: '#86efac' }, 
+    'PECHINCHA': { bg: '#fed7aa', color: '#9a3412', border: '#fdba74' }, 
+    'ECONÔMICO': { bg: '#e9d5ff', color: '#6b21a8', border: '#d8b4fe' }, 
+    'INDECISO': { bg: '#fbcfe8', color: '#9d174d', border: '#f9a8d4' }, 
+    'EXIGENTE': { bg: '#bfdbfe', color: '#1e40af', border: '#93c5fd' }, 
+    'ORGANIZADO': { bg: '#a7f3d0', color: '#065f46', border: '#6ee7b7' }, 
+    'ÚLTIMA HORA': { bg: '#fecdd3', color: '#be123c', border: '#fda4af' }, 
+    'ULTIMA HORA': { bg: '#fecdd3', color: '#be123c', border: '#fda4af' }, 
+    'BÁSICO': { bg: '#e5e7eb', color: '#374151', border: '#d1d5db' }, 
+    'FAMÍLIA': { bg: '#c7d2fe', color: '#3730a3', border: '#a5b4fc' }, 
+    'FAMILIA': { bg: '#c7d2fe', color: '#3730a3', border: '#a5b4fc' }, 
   };
-  
-  // Se for uma tag muito louca do passado que não mapeamos, ganha um roxinho lindo padrão:
   return styles[normalizedTag] || { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff' }; 
 };
 
 const Clientes = () => {
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
-  
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
-  
   const [menuAberto, setMenuAberto] = useState(null); 
   const [allLocacoes, setAllLocacoes] = useState([]); 
-  
   const [modalAberto, setModalAberto] = useState(false);
   const [detalhesDivida, setDetalhesDivida] = useState({ cliente: '', pendencias: [] });
+
+  // 🔥 ESTADO DO FICHÁRIO 🔥
+  const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
+  const [abaAtiva, setAbaAtiva] = useState('dados'); 
 
   const navigate = useNavigate();
 
@@ -57,9 +54,7 @@ const Clientes = () => {
       const locacoes = snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() }));
       setAllLocacoes(locacoes);
 
-      const hoje = new Date();
-      hoje.setHours(0, 0, 0, 0);
-
+      const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
       const batch = writeBatch(db);
       let precisaAtualizarBanco = false;
 
@@ -70,23 +65,18 @@ const Clientes = () => {
         locsCliente.forEach(loc => {
           if (loc.status === 'cancelado' || loc.status === 'orcamento') return;
           const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
-          
           if (dataStr) {
             const dataEvento = new Date(dataStr + 'T00:00:00');
             const pagStatus = (loc.statusPagamento || '').toLowerCase();
-            
             const vTotal = Number(loc.valorTotal || loc.total || 0);
             const vPago = Number(loc.valorPago || 0);
-            const saldoDevedor = vTotal - vPago;
-
-            if (dataEvento < hoje && saldoDevedor > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado') {
+            if (dataEvento < hoje && (vTotal - vPago) > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado') {
               temDivida = true;
             }
           }
         });
 
         const statusCorreto = temDivida ? 'inadimplente' : 'adimplente';
-
         if (cliente.situacaoFinanceira !== statusCorreto) {
            batch.update(doc(db, "clientes", cliente.id), { situacaoFinanceira: statusCorreto });
            precisaAtualizarBanco = true;
@@ -96,73 +86,90 @@ const Clientes = () => {
       });
 
       if (precisaAtualizarBanco) await batch.commit();
-
       listaClientes.sort((a, b) => (a.nome || a.nomeFantasia || '').localeCompare(b.nome || b.nomeFantasia || ''));
       setClientes(listaClientes);
 
-    } catch (error) { 
-      console.error("Erro ao carregar:", error); 
-    } finally { 
-      setLoading(false); 
-    }
+    } catch (error) { } finally { setLoading(false); }
   };
 
-  const verPorQueInadimplente = (cliente) => {
+  const verPorQueInadimplente = (e, cliente) => {
+    e.stopPropagation(); 
     if (cliente.situacaoFinanceira !== 'inadimplente') return;
 
-    const hoje = new Date();
-    hoje.setHours(0, 0, 0, 0);
+    const hoje = new Date(); hoje.setHours(0, 0, 0, 0);
 
     const pendencias = allLocacoes.filter(loc => {
       if (loc.clienteId !== cliente.id && loc.cliente?.id !== cliente.id) return false;
       if (loc.status === 'cancelado' || loc.status === 'orcamento') return false;
-      
       const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
       if (!dataStr) return false;
-
       const dataEvento = new Date(dataStr + 'T00:00:00');
       const pagStatus = (loc.statusPagamento || '').toLowerCase();
-      
       const vTotal = Number(loc.valorTotal || loc.total || 0);
       const vPago = Number(loc.valorPago || 0);
-      const saldoDevedor = vTotal - vPago;
-      
-      return dataEvento < hoje && saldoDevedor > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado';
+      return dataEvento < hoje && (vTotal - vPago) > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado';
     });
 
-    setDetalhesDivida({
-      cliente: cliente.nome || cliente.nomeFantasia,
-      pendencias: pendencias
-    });
+    setDetalhesDivida({ cliente: cliente.nome || cliente.nomeFantasia, pendencias });
     setModalAberto(true);
   };
 
   const irParaLocacaoEspecifica = (pedidoId) => {
     setModalAberto(false);
-    navigate('/locacoes', { state: { buscarPedidoId: pedidoId } });
+    setClienteVisualizacao(null); // Fecha o modal do cliente
+    navigate(`/locacoes/editar/${pedidoId}`); // Teletransporta pra locação
   };
 
   const excluirCliente = async (id, nome) => {
-    if (window.confirm(`ATENÇÃO: Excluir ${nome} também apagará todos os pedidos vinculados a este cliente. Deseja continuar?`)) {
+    if (window.confirm(`ATENÇÃO: Excluir ${nome} apagará todos os pedidos vinculados. Deseja continuar?`)) {
       try {
         await deleteDoc(doc(db, "clientes", id));
-        const qPedidos = query(collection(db, "locacoes"), where("clienteId", "==", id));
-        const pedidosSnap = await getDocs(qPedidos);
+        const pedidosSnap = await getDocs(query(collection(db, "locacoes"), where("clienteId", "==", id)));
         if (!pedidosSnap.empty) {
             const batch = writeBatch(db);
             pedidosSnap.forEach((docPedido) => batch.delete(docPedido.ref));
             await batch.commit();
         }
         carregarClientes(); 
+        setClienteVisualizacao(null);
       } catch (error) { alert("Erro ao excluir."); }
     }
   };
 
-  const editarCliente = (cliente) => {
+  const getHistoricoDoCliente = (clienteId) => {
+    const historico = allLocacoes.filter(loc => loc.clienteId === clienteId || loc.cliente?.id === clienteId);
+    
+    const totalGasto = historico.reduce((soma, loc) => {
+        const st = String(loc.status || '').toLowerCase();
+        if (!st.includes('cancelado') && !st.includes('orcam')) {
+            return soma + Number(loc.valorTotal || loc.total || 0);
+        }
+        return soma;
+    }, 0);
+
+    historico.sort((a, b) => {
+        const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0;
+        const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 0;
+        return dataB - dataA;
+    });
+
+    return { historico, totalGasto };
+  };
+
+  const abrirFichario = (c) => {
+    setClienteVisualizacao(c);
+    setAbaAtiva('dados'); 
+  };
+
+  const editarCliente = (e, cliente) => {
+    if (e) e.stopPropagation(); 
     navigate('/cadastro-cliente', { state: { clienteEditando: cliente } });
   };
 
-  const toggleMenu = (id) => setMenuAberto(menuAberto === id ? null : id);
+  const toggleMenu = (e, id) => {
+    e.stopPropagation(); 
+    setMenuAberto(menuAberto === id ? null : id);
+  };
 
   const formatarTelefone = (tel) => {
     if (!tel) return '';
@@ -174,8 +181,7 @@ const Clientes = () => {
 
   const formatarNomeCapitalizado = (nomeBruto) => {
     if (!nomeBruto) return '';
-    const nomeLimpo = nomeBruto.trim().toLowerCase();
-    const palavras = nomeLimpo.split(/\s+/);
+    const palavras = nomeBruto.trim().toLowerCase().split(/\s+/);
     const conectores = ['da', 'de', 'do', 'das', 'dos', 'e'];
     return palavras.map((palavra, index) => {
         if (index > 0 && conectores.includes(palavra)) return palavra;
@@ -186,7 +192,6 @@ const Clientes = () => {
   const clientesFiltrados = clientes.filter(c => {
     const termo = busca.toLowerCase();
     const matchBusca = (c.nome?.toLowerCase().includes(termo)) || (c.nomeFantasia?.toLowerCase().includes(termo)) || (c.cpf?.includes(termo)) || (c.cnpj?.includes(termo));
-    
     if (filtroStatus === 'adimplentes') return matchBusca && c.situacaoFinanceira === 'adimplente';
     if (filtroStatus === 'inadimplentes') return matchBusca && c.situacaoFinanceira === 'inadimplente';
     return matchBusca;
@@ -204,41 +209,17 @@ const Clientes = () => {
       </header>
 
       <div className="dashboard-cards">
-        <div className="dash-card neutral">
-          <div className="dash-icon" style={{background: '#e2e8f0', color: '#475569'}}>👥</div>
-          <div className="dash-info">
-            <h3 style={{color: '#64748b'}}>Total na Carteira</h3>
-            <h2 style={{color: '#0f172a'}}>{clientes.length}</h2>
-          </div>
-        </div>
-        <div className="dash-card success">
-          <div className="dash-icon">✅</div>
-          <div className="dash-info">
-            <h3>Adimplentes (Tudo OK)</h3>
-            <h2>{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</h2>
-          </div>
-        </div>
-        <div className="dash-card danger">
-          <div className="dash-icon" style={{background: '#fef2f2', color: '#ef4444'}}>⚠️</div>
-          <div className="dash-info">
-            <h3 style={{color: '#b91c1c'}}>Com Pendências</h3>
-            <h2 style={{color: '#991b1b'}}>{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</h2>
-          </div>
-        </div>
+        <div className="dash-card neutral"><div className="dash-icon" style={{background: '#e2e8f0', color: '#475569'}}>👥</div><div className="dash-info"><h3 style={{color: '#64748b'}}>Total na Carteira</h3><h2 style={{color: '#0f172a'}}>{clientes.length}</h2></div></div>
+        <div className="dash-card success"><div className="dash-icon">✅</div><div className="dash-info"><h3>Adimplentes (Tudo OK)</h3><h2>{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</h2></div></div>
+        <div className="dash-card danger"><div className="dash-icon" style={{background: '#fef2f2', color: '#ef4444'}}>⚠️</div><div className="dash-info"><h3 style={{color: '#b91c1c'}}>Com Pendências</h3><h2 style={{color: '#991b1b'}}>{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</h2></div></div>
       </div>
 
       <div className="advanced-filter-bar">
         <div className="filter-main-row">
           <div className="search-group" style={{ flex: 2 }}>
             <span className="search-icon">🔍</span>
-            <input 
-              type="text" 
-              placeholder="Buscar cliente por nome, CPF ou CNPJ..." 
-              value={busca} 
-              onChange={e => setBusca(e.target.value)} 
-            />
+            <input type="text" placeholder="Buscar cliente por nome, CPF ou CNPJ..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
-          
           <div className="select-group" style={{ flex: 1 }}>
             <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} style={{width: '100%'}}>
               <option value="todos">📊 Todos os Status</option>
@@ -268,39 +249,19 @@ const Clientes = () => {
                  <tr><td colSpan="5" style={{textAlign: "center", padding: "40px", color: "#94a3b8"}}>Nenhum cliente encontrado com estes filtros.</td></tr>
               ) : (
                 clientesFiltrados.map(c => {
-                  const nomePuro = c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome;
-                  const nomeBonito = formatarNomeCapitalizado(nomePuro || '?');
+                  const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
                   const tagColorida = c.tags ? getTagStyle(c.tags) : null;
 
                   return (
-                    <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover"> 
+                    <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover" onClick={() => abrirFichario(c)} style={{cursor: 'pointer'}}> 
                       <td className="cliente-cell">
                         <div className="cliente-info-wrapper">
-                          {c.foto ? (
-                            <img src={c.foto} className="avatar-quadrado" alt={nomeBonito} />
-                          ) : (
-                            <div className="avatar-quadrado" style={{background: '#f1f5f9', color: '#0f172a'}}>
-                                {nomeBonito.charAt(0)}
-                            </div>
-                          )}
+                          {c.foto ? (<img src={c.foto} className="avatar-quadrado" alt={nomeBonito} />) : (<div className="avatar-quadrado" style={{background: '#f1f5f9', color: '#0f172a'}}>{nomeBonito.charAt(0)}</div>)}
                           <div className="user-details">
                             <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'}}>
                                 <strong style={{color: '#0f172a', fontSize: '15px'}}>{nomeBonito}</strong>
-                                
-                                {/* 🔥 A PÍLULA AGORA TEM COR FORTE E MAIS DESTAQUE 🔥 */}
                                 {tagColorida && (
-                                    <span style={{
-                                        backgroundColor: tagColorida.bg,
-                                        color: tagColorida.color,
-                                        border: `1px solid ${tagColorida.border}`,
-                                        padding: '3px 10px',
-                                        borderRadius: '12px',
-                                        fontSize: '0.68rem',
-                                        fontWeight: '800',
-                                        textTransform: 'uppercase',
-                                        letterSpacing: '0.5px',
-                                        whiteSpace: 'nowrap'
-                                    }}>
+                                    <span style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}`, padding: '3px 10px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
                                         {c.tags}
                                     </span>
                                 )}
@@ -310,7 +271,7 @@ const Clientes = () => {
                         </div>
                       </td>
 
-                      <td className="info-cell mobile-stack">
+                      <td className="info-cell mobile-stack" onClick={e => e.stopPropagation()}>
                         {c.celular ? (
                           <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
                             <span style={{fontWeight: '600', color: '#334155'}}>{formatarTelefone(c.celular)}</span>
@@ -322,39 +283,23 @@ const Clientes = () => {
                       </td>
 
                       <td className="info-cell mobile-stack">
-                        {c.cidade ? (
-                           <span style={{display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#475569'}}>
-                             📍 {c.cidade}{c.uf ? `/${c.uf}` : ''}
-                           </span>
-                        ) : '--'}
+                        {c.cidade ? (<span style={{display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#475569'}}>📍 {c.cidade}{c.uf ? `/${c.uf}` : ''}</span>) : '--'}
                       </td>
 
                       <td className="status-cell text-center mobile-stack">
-                        <span 
-                          onClick={() => verPorQueInadimplente(c)}
-                          className={`badge-status ${c.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`}
-                          style={{
-                            cursor: c.situacaoFinanceira === 'inadimplente' ? 'pointer' : 'default',
-                            display: 'inline-flex', alignItems: 'center', gap: '6px',
-                            boxShadow: c.situacaoFinanceira === 'inadimplente' ? '0 2px 8px rgba(239, 68, 68, 0.2)' : 'none',
-                            transition: '0.2s'
-                          }}
-                        >
-                          {c.situacaoFinanceira === 'inadimplente' ? (
-                            <><span>⚠️</span> VER PENDÊNCIAS</>
-                          ) : (
-                            <><span>✅</span> ADIMPLENTE</>
-                          )}
+                        <span onClick={(e) => verPorQueInadimplente(e, c)} className={`badge-status ${c.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`} style={{ cursor: c.situacaoFinanceira === 'inadimplente' ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: c.situacaoFinanceira === 'inadimplente' ? '0 2px 8px rgba(239, 68, 68, 0.2)' : 'none', transition: '0.2s' }}>
+                          {c.situacaoFinanceira === 'inadimplente' ? (<><span>⚠️</span> PENDÊNCIAS</>) : (<><span>✅</span> ADIMPLENTE</>)}
                         </span>
                       </td>
 
                       <td className="actions-cell">
                         <div className="dropdown-container">
-                          <button className="btn-pontinhos" onClick={() => toggleMenu(c.id)}>⋮</button>
+                          <button className="btn-pontinhos" onClick={(e) => toggleMenu(e, c.id)}>⋮</button>
                           {menuAberto === c.id && (
                             <div className="menu-suspenso">
-                              <button onClick={() => editarCliente(c)} className="item-menu">✏️ Editar Cliente</button>
-                              <button onClick={() => excluirCliente(c.id, c.nome || c.nomeFantasia)} className="item-menu item-excluir">🗑️ Excluir Cliente</button>
+                              <button onClick={() => abrirFichario(c)} className="item-menu">👁️ Ver Perfil</button>
+                              <button onClick={(e) => editarCliente(e, c)} className="item-menu">✏️ Editar Cadastro</button>
+                              <button onClick={(e) => { e.stopPropagation(); excluirCliente(c.id, c.nome || c.nomeFantasia) }} className="item-menu item-excluir">🗑️ Excluir Cliente</button>
                             </div>
                           )}
                         </div>
@@ -368,48 +313,172 @@ const Clientes = () => {
         </div>
       )}
 
+      {/* 🔥 FICHÁRIO COMPLETO DO CLIENTE (VISUALIZAÇÃO E HISTÓRICO) 🔥 */}
+      {clienteVisualizacao && (() => {
+          const nomeBonito = formatarNomeCapitalizado(clienteVisualizacao.tipoPessoa === 'juridica' ? clienteVisualizacao.nomeFantasia : clienteVisualizacao.nome || '?');
+          const tagColorida = clienteVisualizacao.tags ? getTagStyle(clienteVisualizacao.tags) : null;
+          const { historico, totalGasto } = getHistoricoDoCliente(clienteVisualizacao.id);
+
+          return (
+            <div className="modal-overlay-perfil" onClick={() => setClienteVisualizacao(null)}>
+              <div className="modal-content-perfil-large" onClick={e => e.stopPropagation()}>
+                <button className="btn-fechar-perfil" onClick={() => setClienteVisualizacao(null)}>×</button>
+
+                <div className="perfil-layout-split">
+                  
+                  {/* LADO ESQUERDO: FOTO E RESUMO */}
+                  <div className="perfil-left-col custom-scrollbar">
+                    <div className="perfil-foto-container">
+                      {clienteVisualizacao.foto ? (
+                          <img src={clienteVisualizacao.foto} className="perfil-foto-max" alt={nomeBonito} />
+                      ) : (
+                          <div className="perfil-foto-max placeholder-foto-max">{nomeBonito.charAt(0)}</div>
+                      )}
+                    </div>
+                    
+                    <h2 className="perfil-nome-titulo">{nomeBonito}</h2>
+                    {tagColorida && (
+                        <span className="perfil-tag-destaque" style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}`}}>
+                            {clienteVisualizacao.tags}
+                        </span>
+                    )}
+
+                    <div className="perfil-mini-stats">
+                       <div className="stat-line"><span>💰 LTV (Gasto):</span> <strong>R$ {totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
+                       <div className="stat-line"><span>📦 Locações:</span> <strong>{historico.length}</strong></div>
+                       <div className="stat-line"><span>📅 Cliente Desde:</span> <strong>{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</strong></div>
+                    </div>
+
+                    <button className="btn-editar-perfil-full" onClick={() => { setClienteVisualizacao(null); editarCliente(null, clienteVisualizacao); }}>
+                      ✏️ Editar Cadastro
+                    </button>
+                  </div>
+
+                  {/* LADO DIREITO: ABAS E CONTEÚDO */}
+                  <div className="perfil-right-col">
+                     <div className="perfil-tabs-header custom-scrollbar">
+                        <button className={`ptab ${abaAtiva === 'dados' ? 'active' : ''}`} onClick={() => setAbaAtiva('dados')}>👤 Dados Cadastrais</button>
+                        <button className={`ptab ${abaAtiva === 'registros' ? 'active' : ''}`} onClick={() => setAbaAtiva('registros')}>📜 Histórico de Locações</button>
+                     </div>
+                     
+                     <div className="perfil-tab-body custom-scrollbar">
+                        
+                        {/* CONTEÚDO ABA 1: DADOS */}
+                        {abaAtiva === 'dados' && (
+                            <div className="perfil-dados-grid fade-in">
+                               <div className="d-group span-2"><label>{clienteVisualizacao.tipoPessoa === 'juridica' ? 'Razão Social' : 'Nome Completo'}</label><span>{clienteVisualizacao.nome || clienteVisualizacao.razaoSocial || '-'}</span></div>
+                               <div className="d-group"><label>{clienteVisualizacao.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}</label><span>{clienteVisualizacao.cpf || clienteVisualizacao.cnpj || '-'}</span></div>
+                               <div className="d-group"><label>{clienteVisualizacao.tipoPessoa === 'juridica' ? 'Inscrição Estadual' : 'RG'}</label><span>{clienteVisualizacao.rg || clienteVisualizacao.inscricaoEstadual || '-'}</span></div>
+                               
+                               <div className="d-group"><label>Celular / WhatsApp</label><span>{formatarTelefone(clienteVisualizacao.celular) || '-'}</span></div>
+                               <div className="d-group"><label>Telefone Fixo</label><span>{formatarTelefone(clienteVisualizacao.telefoneFixo) || '-'}</span></div>
+                               <div className="d-group span-2"><label>Email</label><span>{clienteVisualizacao.email || '-'}</span></div>
+                               
+                               <div className="d-group"><label>Nascimento</label><span>{clienteVisualizacao.nascimento ? new Date(clienteVisualizacao.nascimento + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span></div>
+                               <div className="d-group"><label>Como nos conheceu?</label><span>{clienteVisualizacao.origem || '-'}</span></div>
+                               
+                               <div className="d-group span-2">
+                                  <label>Endereço Completo</label>
+                                  <span>
+                                    {clienteVisualizacao.logradouro ? 
+                                    `${clienteVisualizacao.logradouro}, ${clienteVisualizacao.numero || 'S/N'} - ${clienteVisualizacao.complemento ? clienteVisualizacao.complemento + ' - ' : ''}${clienteVisualizacao.bairro}, ${clienteVisualizacao.cidade}/${clienteVisualizacao.uf} (CEP: ${clienteVisualizacao.cep})` 
+                                    : 'Endereço não cadastrado.'}
+                                  </span>
+                               </div>
+                               
+                               <div className="d-group span-2 obs-box"><label>Observações Internas</label><p>{clienteVisualizacao.observacoes || 'Nenhuma observação registrada.'}</p></div>
+                            </div>
+                        )}
+
+                        {/* 🔥 CONTEÚDO ABA 2: REGISTROS COM SERVIÇO E TEMA 🔥 */}
+                        {abaAtiva === 'registros' && (
+                            <div className="perfil-registros-lista fade-in">
+                               {historico.length === 0 ? (
+                                   <div className="historico-vazio">Nenhuma locação encontrada para este cliente.</div>
+                               ) : (
+                                   <table className="table-historico-simples">
+                                     <thead>
+                                       <tr>
+                                         <th>Data do Evento</th>
+                                         <th>ID do Pedido</th>
+                                         <th>Tema / Serviço</th>
+                                         <th>Valor Total</th>
+                                         <th>Status</th>
+                                       </tr>
+                                     </thead>
+                                     <tbody>
+                                       {historico.map(loc => {
+                                         const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
+                                         const isCancelado = st.includes('cancelado') || loc.isOrcamentoVencido;
+                                         
+                                         // 🔥 Extrai o Serviço
+                                         let tipoServico = "DECORAÇÃO";
+                                         if (loc.tipoServico || loc.modalidade) {
+                                            tipoServico = String(loc.tipoServico || loc.modalidade).toUpperCase();
+                                         } else if (loc.logistica && String(loc.logistica.tipoFrete || loc.logistica.frete).toUpperCase().includes('RETIRADA')) {
+                                            tipoServico = "PEGUE E MONTE";
+                                         }
+
+                                         // 🔥 Extrai o Tema Blindado (Procura em todas as chaves possíveis)
+                                         const temaFesta = loc.tema || loc.temaDaFesta || loc.temaFesta || loc.nomeTema || 'Sem tema definido';
+
+                                         return (
+                                         <tr key={loc.id} onClick={() => irParaLocacaoEspecifica(loc.id)} title="Abrir Locação">
+                                            <td>{loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td>
+                                            <td><strong>#{loc.numeroPedido || loc.id.substring(0,6).toUpperCase()}</strong></td>
+                                            
+                                            {/* 🔥 COLUNA TEMA / SERVIÇO EMPILHADA 🔥 */}
+                                            <td style={{maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
+                                                <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }}>
+                                                    {tipoServico}
+                                                </span>
+                                                <span style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '700' }}>
+                                                    {temaFesta}
+                                                </span>
+                                            </td>
+
+                                            <td style={{textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : '#0f172a'}}>
+                                              R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                                            </td>
+                                            <td><span className={`h-badge-mini ${st}`}>{loc.status?.toUpperCase() || 'S/S'}</span></td>
+                                         </tr>
+                                       )})}
+                                     </tbody>
+                                   </table>
+                               )}
+                            </div>
+                        )}
+                     </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          );
+      })()}
+
       {modalAberto && (
         <div className="modal-overlay-financeiro">
           <div className="modal-content-financeiro">
             <div className="modal-header-fin">
-              <div className="header-icon-title">
-                <div className="icon-warning">⚠️</div>
-                <div>
-                  <h2>Análise de Pendência</h2>
-                  <p className="modal-subtitle">{detalhesDivida.cliente}</p>
-                </div>
-              </div>
+              <div className="header-icon-title"><div className="icon-warning">⚠️</div><div><h2>Análise de Pendência</h2><p className="modal-subtitle">{detalhesDivida.cliente}</p></div></div>
               <button onClick={() => setModalAberto(false)} className="btn-close-modal" title="Fechar janela">×</button>
             </div>
-            
             <div className="modal-body-fin">
-              <div className="alerta-explicativo">
-                <strong>Por que consta como inadimplente?</strong>
-                <p>O sistema identificou locações que <b>já passaram da data</b>, mas o pagamento ainda não foi marcado como <b>PAGO</b> ou <b>QUITADO</b>.</p>
-              </div>
-
+              <div className="alerta-explicativo"><strong>Por que consta como inadimplente?</strong><p>O sistema identificou locações que <b>já passaram da data</b>, mas o pagamento ainda não foi marcado como <b>PAGO</b> ou <b>QUITADO</b>.</p></div>
               <div className="lista-pendencias">
                 {detalhesDivida.pendencias.map(p => {
                   const vTotal = Number(p.valorTotal || p.total || 0);
                   const vPago = Number(p.valorPago || 0);
                   const saldoDevedor = vTotal - vPago;
-
                   return (
                     <div key={p.id} className="card-pendencia-detalhada">
-                      <div className="p-header">
-                        <span className="p-id">PEDIDO {p.numeroPedido ? `#${p.numeroPedido}` : `#${p.id.substring(0,6).toUpperCase()}`}</span>
-                      </div>
+                      <div className="p-header"><span className="p-id">PEDIDO {p.numeroPedido ? `#${p.numeroPedido}` : `#${p.id.substring(0,6).toUpperCase()}`}</span></div>
                       <div className="p-detalhes">
                         <p>📅 <strong>Vencimento:</strong> {p.dataRetirada || p.dataEvento}</p>
                         <p>💰 <strong>Valor Total:</strong> R$ {vTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         <p>🔴 <strong>Falta Pagar:</strong> <span style={{color: '#e53e3e', fontWeight: 'bold'}}>R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
                       </div>
-                      <button 
-                        onClick={() => irParaLocacaoEspecifica(p.id)} 
-                        className="btn-ir-locacao-destaque"
-                      >
-                        Localizar e Receber 🔍
-                      </button>
+                      <button onClick={() => irParaLocacaoEspecifica(p.id)} className="btn-ir-locacao-destaque">Localizar e Receber 🔍</button>
                     </div>
                   );
                 })}

@@ -32,7 +32,6 @@ const EditarLocacao = () => {
   const [statusAtual, setStatusAtual] = useState('');
   const [valorJaPago, setValorJaPago] = useState(0); 
 
-  // --- ESTADOS DO SINAL E CATRACA ---
   const [modalSinalAberto, setModalSinalAberto] = useState(false);
   const [valorSinal, setValorSinal] = useState('');
   const [formaPagtoSinal, setFormaPagtoSinal] = useState('Pix');
@@ -61,7 +60,7 @@ const EditarLocacao = () => {
             setNumeroPedido(data.numeroPedido || '');
             setStatusAtual(data.status || 'orcamento'); 
             setClienteSelecionado(data.clienteId || '');
-            setTemaFesta(data.temaFesta || '');
+            setTemaFesta(data.temaFesta || data.tema || '');
             setTipoServico(data.tipoServico || 'PEGUE E MONTE');
             setDatas({ retirada: data.dataRetirada || '', devolucao: data.dataDevolucao || '' });
             setValorJaPago(Number(data.valorPago || 0));
@@ -111,8 +110,39 @@ const EditarLocacao = () => {
     if (existe) {
       setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
     } else {
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem }]);
+      // 🔥 AGORA CRIA COM AS MESMAS CHAVES DA LOGÍSTICA 🔥
+      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
     }
+  };
+
+  // 🔥 SINCRONIZAÇÃO COM A LÓGICA DA LOGÍSTICA 🔥
+  const marcarIda = (itemId) => {
+    if (isFinalizado) return;
+    setCarrinho(prev => prev.map(item => {
+      if (item.id === itemId) return { ...item, checkedSeparacao: !item.checkedSeparacao };
+      return item;
+    }));
+  };
+
+  const marcarVolta = (itemId, status) => {
+    if (isFinalizado) return;
+    setCarrinho(prev => prev.map(item => {
+      if (item.id === itemId) {
+        if (status === 'ok') {
+          const jaTavaOk = item.checkedDevolucao && !item.avaria && !item.faltou;
+          return { ...item, checkedDevolucao: !jaTavaOk, avaria: false, faltou: false };
+        }
+        if (status === 'avaria') {
+          const jaTavaAvaria = item.avaria;
+          return { ...item, checkedDevolucao: !jaTavaAvaria, avaria: !jaTavaAvaria, faltou: false };
+        }
+        if (status === 'faltou') {
+          const jaTavaFaltou = item.faltou;
+          return { ...item, checkedDevolucao: !jaTavaFaltou, avaria: false, faltou: !jaTavaFaltou };
+        }
+      }
+      return item;
+    }));
   };
 
   const getFreteNumerico = () => {
@@ -149,7 +179,7 @@ const EditarLocacao = () => {
           }));
           setTimeout(() => document.getElementById('numeroInput').focus(), 100);
         }
-      } catch (e) { console.error("Erro ao buscar CEP"); }
+      } catch (e) {}
     }
   };
 
@@ -168,8 +198,14 @@ const EditarLocacao = () => {
     if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data de retirada!");
     
     if (novoStatus === 'finalizado') {
-        const confirmacao = window.confirm("Checklist de Volta OK? Esta ação marca as peças como devolvidas e finaliza o pedido.");
-        if (!confirmacao) return;
+        const temItemSemVolta = carrinho.some(i => !i.checkedDevolucao);
+        if (temItemSemVolta) {
+             const confirmacaoExtra = window.confirm("⚠️ ALERTA DE CONFERÊNCIA:\n\nExistem itens no pedido que NÃO foram marcados como devolvidos (📥 VOLTA, ⚠️ AVARIA ou ❌ FALTA).\n\nTem certeza que deseja finalizar este pedido assim mesmo?");
+             if (!confirmacaoExtra) return;
+        } else {
+             const confirmacao = window.confirm("Finalizar o Pedido? Certifique-se que todos os itens foram conferidos no check-in da tela.");
+             if (!confirmacao) return;
+        }
     }
 
     const statusFinalDesejado = novoStatus || statusAtual;
@@ -188,7 +224,6 @@ const EditarLocacao = () => {
     try {
       const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente';
       const logisticaParaSalvar = { ...logistica, frete: getFreteNumerico() };
-      
       const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
 
       const docRef = doc(db, "locacoes", id);
@@ -199,7 +234,7 @@ const EditarLocacao = () => {
         tipoServico, 
         dataRetirada: datas.retirada,
         dataDevolucao: datas.devolucao,
-        itens: carrinho,
+        itens: carrinho, 
         logistica: logisticaParaSalvar,
         obsInternas,
         desconto: Number(desconto),
@@ -221,15 +256,17 @@ const EditarLocacao = () => {
             createdAt: serverTimestamp(),
             descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`
         });
+        setValorJaPago(novoValorPagoTotal); 
       }
+      
+      setStatusAtual(statusFinal); 
       
       if (statusFinal && statusFinal !== statusAtual) {
-          alert(`✅ Pedido avançou para: ${statusFinal.toUpperCase()}`);
+          alert(`✅ Pedido salvo! Avançou para a etapa: ${statusFinal.toUpperCase()}`);
       } else {
-          alert(`Alterações salvas com sucesso!`);
+          alert(`✅ Alterações salvas com sucesso!`);
       }
       
-      navigate('/locacoes');
     } catch (e) { 
       alert("Erro ao atualizar o pedido."); 
     } finally {
@@ -311,7 +348,7 @@ const EditarLocacao = () => {
                 {badgeInfo.txt}
             </span>
         </div>
-        <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar</button>
+        <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar à Lista</button>
       </header>
 
       {isFinalizado && (
@@ -345,6 +382,9 @@ const EditarLocacao = () => {
                 <label>Cliente *</label>
                 <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)} disabled={isFinalizado}>
                   <option value="">Selecione um cliente cadastrado...</option>
+                  <option value={clienteSelecionado} disabled hidden>
+                    {clientes.find(c => String(c.id) === String(clienteSelecionado))?.nome || 'Carregando...'}
+                  </option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia}</option>)}
                 </select>
               </div>
@@ -392,6 +432,65 @@ const EditarLocacao = () => {
               <p className="texto-aviso-logistica mt-15">⚠️ O cliente fará a retirada e devolução dos itens diretamente no local.</p>
             )}
           </div>
+
+          {/* =========================================================================
+              🔥 NOVA SEÇÃO: CHECK-IN E CONFERÊNCIA (IDA E VOLTA) 🔥 
+              ========================================================================= */}
+          {statusAtual !== 'orcamento' && carrinho.length > 0 && (
+            <div className="card-secao">
+              <h3 className="section-divider" style={{marginTop: 0, border: 'none', marginBottom: '8px'}}>📋 CHECK-IN E CONFERÊNCIA (IDA / VOLTA)</h3>
+              <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '15px'}}>
+                Marque as peças que saíram e voltaram. Caso marque <b>Avaria</b> ou <b>Falta</b>, o Termo de Ocorrência será habilitado.
+              </p>
+
+              <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
+                {carrinho.map(item => {
+                  const temProblema = item.avaria || item.faltou; 
+                  const taMarcadoOk = item.checkedDevolucao && !item.avaria && !item.faltou;
+
+                  return (
+                  <div key={item.id} style={{display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: temProblema ? '#fef2f2' : '#f8fafc', border: `1px solid ${temProblema ? '#fca5a5' : '#e2e8f0'}`, borderRadius: '10px'}}>
+                    
+                    <div style={{flex: '1 1 200px'}}>
+                      <strong style={{color: '#0f172a', fontSize: '14px', display: 'block'}}>{item.nome}</strong>
+                      <span style={{fontSize: '11px', color: '#64748b', fontWeight: 'bold'}}>QUANTIDADE: {item.qtd} un.</span>
+                    </div>
+
+                    <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                      {/* BOTÃO IDA LENDO checkedSeparacao */}
+                      <button 
+                         type="button" onClick={() => marcarIda(item.id)} disabled={isFinalizado} 
+                         style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.checkedSeparacao ? '#dcfce7' : '#fff', color: item.checkedSeparacao ? '#166534' : '#64748b', borderColor: item.checkedSeparacao ? '#86efac' : '#cbd5e1', transition: '0.2s'}}>
+                        📤 IDA
+                      </button>
+
+                      {/* BOTÃO VOLTA LENDO checkedDevolucao */}
+                      <button 
+                         type="button" onClick={() => marcarVolta(item.id, 'ok')} disabled={isFinalizado} 
+                         style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: taMarcadoOk ? '#dbeafe' : '#fff', color: taMarcadoOk ? '#1e40af' : '#64748b', borderColor: taMarcadoOk ? '#93c5fd' : '#cbd5e1', transition: '0.2s'}}>
+                        📥 VOLTA
+                      </button>
+
+                      {/* BOTÃO AVARIA */}
+                      <button 
+                         type="button" onClick={() => marcarVolta(item.id, 'avaria')} disabled={isFinalizado} 
+                         style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.avaria ? '#fef9c3' : '#fff', color: item.avaria ? '#a16207' : '#64748b', borderColor: item.avaria ? '#fde047' : '#cbd5e1', transition: '0.2s'}}>
+                        ⚠️ AVARIA
+                      </button>
+
+                      {/* BOTÃO FALTA */}
+                      <button 
+                         type="button" onClick={() => marcarVolta(item.id, 'faltou')} disabled={isFinalizado} 
+                         style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.faltou ? '#fee2e2' : '#fff', color: item.faltou ? '#b91c1c' : '#64748b', borderColor: item.faltou ? '#fca5a5' : '#cbd5e1', transition: '0.2s'}}>
+                        ❌ FALTA
+                      </button>
+                    </div>
+
+                  </div>
+                )})}
+              </div>
+            </div>
+          )}
 
           <div className="card-secao">
             <div className="header-com-botoes">
@@ -616,6 +715,7 @@ const EditarLocacao = () => {
         </div>
       )}
 
+      {/* CATÁLOGO OTIMIZADO */}
       {modalAberto && !isFinalizado && (
         <div className="modal-overlay-premium">
           <div className="modal-box-premium catalogo-modal">

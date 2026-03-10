@@ -457,3 +457,79 @@
 .tag-chip-btn.selected:hover {
   filter: brightness(0.92);
 }
+
+/* =========================================
+   HISTÓRICO DE LOCAÇÕES (PERFIL)
+   ========================================= */
+.historico-grid { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px; 
+  margin-bottom: 10px; 
+}
+
+.historico-card { 
+  display: flex; 
+  justify-content: space-between; 
+  align-items: center; 
+  padding: 14px 18px; 
+  background: #f8fafc; 
+  border: 1px solid #e2e8f0; 
+  border-radius: 12px; 
+  transition: all 0.2s ease; 
+  cursor: pointer;
+}
+
+.historico-card:hover { 
+  background: #ffffff; 
+  border-color: #cbd5e1; 
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05); 
+  transform: translateY(-2px); 
+}
+
+.h-info { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+}
+
+.h-title { 
+  font-weight: 800; 
+  color: #0f172a; 
+  font-size: 0.95rem; 
+}
+
+.h-date { 
+  font-size: 0.8rem; 
+  color: #64748b; 
+  font-weight: 500; 
+}
+
+.h-status-valor { 
+  display: flex; 
+  flex-direction: column; 
+  align-items: flex-end; 
+  gap: 6px; 
+}
+
+.h-value { 
+  font-weight: 800; 
+  font-size: 1.05rem; 
+}
+
+.h-badge { 
+  font-size: 0.65rem; 
+  font-weight: 800; 
+  padding: 4px 10px; 
+  border-radius: 8px; 
+  text-transform: uppercase; 
+  letter-spacing: 0.5px; 
+}
+
+/* Cores das Pílulas do Histórico */
+.h-badge.finalizado { background: #0f172a; color: #ffffff; }
+.h-badge.confirmado { background: #dcfce7; color: #166534; }
+.h-badge.orcamento { background: #fef9c3; color: #a16207; }
+.h-badge.preparacao { background: #dbeafe; color: #1e40af; }
+.h-badge.entregue { background: #f3e8ff; color: #7e22ce; }
+.h-badge.cancelado { background: #fee2e2; color: #b91c1c; }
