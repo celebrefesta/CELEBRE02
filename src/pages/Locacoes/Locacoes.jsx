@@ -23,12 +23,6 @@ const Locacoes = () => {
   const [pagamento, setPagamento] = useState({ valor: '', formaPagto: 'Pix', data: new Date().toISOString().split('T')[0] });
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
 
-  const [modalChecklist, setModalChecklist] = useState(false);
-  const [pedidoChecklist, setPedidoChecklist] = useState(null);
-  const [itensChecklist, setItensChecklist] = useState([]);
-  const [modoChecklist, setModoChecklist] = useState('ida'); 
-  const [salvandoChecklist, setSalvandoChecklist] = useState(false);
-
   useEffect(() => {
     if (location.state && location.state.buscarPedidoId) {
       const idCurto = location.state.buscarPedidoId.substring(0, 6);
@@ -43,21 +37,23 @@ const Locacoes = () => {
       const dicionarioClientes = {};
       clientesSnapshot.forEach(doc => {
           const cData = doc.data();
-          dicionarioClientes[doc.id] = cData.nome || cData.nomeCompleto || cData.razaoSocial || "Sem Nome";
+          // 🔥 CORREÇÃO: AGORA ELE BUSCA O NOME FANTASIA PRIMEIRO 🔥
+          dicionarioClientes[doc.id] = cData.nome || cData.nomeFantasia || cData.razaoSocial || cData.nomeCompleto || "Sem Nome";
       });
 
       const querySnapshot = await getDocs(collection(db, "locacoes"));
-      const hoje = new Date(); hoje.setHours(0,0,0,0);
+      const hojeStr = new Date().toISOString().split('T')[0];
 
       const dados = querySnapshot.docs.map(doc => {
         const data = doc.data();
+
         let nomeDoClienteReal = data.clienteNome || data.nomeCliente || "Cliente";
         const idSalvo = data.clienteId || data.idCliente || (typeof data.cliente === 'string' ? data.cliente : null);
 
         if (idSalvo && dicionarioClientes[idSalvo]) {
             nomeDoClienteReal = dicionarioClientes[idSalvo];
         } else if (data.cliente && typeof data.cliente === 'object') {
-            nomeDoClienteReal = data.cliente.nome || nomeDoClienteReal;
+            nomeDoClienteReal = data.cliente.nome || data.cliente.nomeFantasia || nomeDoClienteReal;
         }
 
         let tipoServico = "DECORAÇÃO";
@@ -68,25 +64,37 @@ const Locacoes = () => {
         }
         
         let timestampCriacao = 0;
-        if (data.criadoEm) { timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime(); }
+        if (data.criadoEm) {
+            timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
+        }
 
-        let statusReal = String(data.status || '').toLowerCase();
+        let statusReal = String(data.status || '').toLowerCase().trim();
         let isVencido = false;
 
-        if (statusReal.includes('orcam') && data.dataRetirada) {
-            const locDate = new Date(data.dataRetirada + 'T00:00:00');
-            if (locDate.getTime() < hoje.getTime()) isVencido = true;
+        // Se a data já passou E o pedido não foi pra rua (entregue) nem devolvido (finalizado)
+        if (data.dataRetirada && data.dataRetirada < hojeStr) {
+            if (statusReal.includes('orcam') || statusReal.includes('confirmado') || statusReal.includes('preparacao')) {
+                isVencido = true;
+            }
         }
 
         return { 
-            id: doc.id, ...data, status: statusReal, isOrcamentoVencido: isVencido,
-            clienteNome: nomeDoClienteReal, tipoServicoFormatado: tipoServico, createdAtMs: timestampCriacao 
+            id: doc.id, 
+            ...data, 
+            status: statusReal, 
+            isOrcamentoVencido: isVencido,
+            clienteNome: nomeDoClienteReal, 
+            tipoServicoFormatado: tipoServico, 
+            createdAtMs: timestampCriacao 
         };
       });
 
       setLista(dados);
       setLoading(false);
-    } catch (error) { setLoading(false); }
+    } catch (error) { 
+        console.error(error); 
+        setLoading(false); 
+    }
   };
 
   const handleExcluir = async (id) => {
@@ -113,42 +121,6 @@ const Locacoes = () => {
     } catch (e) { alert("Erro"); } finally { setSalvandoPagamento(false); }
   };
 
-  const abrirModalChecklist = (pedido, modo) => {
-    setPedidoChecklist(pedido);
-    setModoChecklist(modo);
-    const itensMapeados = (pedido.itens || []).map(i => ({
-        ...i, 
-        idaOk: i.idaOk || false, 
-        voltaStatus: i.voltaStatus || 'pendente' 
-    }));
-    setItensChecklist(itensMapeados);
-    setModalChecklist(true);
-    setMenuAberto(null);
-  };
-
-  const toggleIda = (itemId) => {
-      setItensChecklist(prev => prev.map(i => i.id === itemId ? {...i, idaOk: !i.idaOk} : i));
-  };
-
-  const setStatusVolta = (itemId, statusStr) => {
-      setItensChecklist(prev => prev.map(i => i.id === itemId ? {...i, voltaStatus: statusStr} : i));
-  };
-
-  const salvarChecklistNoBanco = async () => {
-      setSalvandoChecklist(true);
-      try {
-          await updateDoc(doc(db, "locacoes", pedidoChecklist.id), {
-              itens: itensChecklist
-          });
-          setModalChecklist(false); // Fecha o modal após salvar o checklist da logística
-          carregarLocacoes(); 
-      } catch (error) {
-          alert("Erro ao salvar checklist");
-      } finally {
-          setSalvandoChecklist(false);
-      }
-  };
-
   let filtrados = [...lista];
   if (busca) {
     const termo = busca.toLowerCase();
@@ -156,38 +128,68 @@ const Locacoes = () => {
       const nomeMatch = (i.clienteNome || '').toLowerCase().includes(termo);
       const numeroAppMatch = (i.numeroPedido || '').includes(termo);
       const idRealMatch = (i.id || '').toLowerCase().includes(termo); 
+      
       return nomeMatch || numeroAppMatch || idRealMatch;
     });
   }
 
   if (filtroStatus === 'todos') {
-      filtrados = filtrados.filter(i => !i.status.includes('cancelado') && !i.status.includes('finalizado') && !i.isOrcamentoVencido);
+      filtrados = filtrados.filter(i => {
+          const st = String(i.status || '').toLowerCase();
+          return !st.includes('cancelado') && !st.includes('finalizado') && !i.isOrcamentoVencido;
+      });
   } else if (filtroStatus === 'orcamentos') {
-      filtrados = filtrados.filter(i => i.status.includes('orcam') && !i.isOrcamentoVencido);
+      filtrados = filtrados.filter(i => {
+          const st = String(i.status || '').toLowerCase();
+          return st.includes('orcam') && !i.isOrcamentoVencido;
+      });
   } else if (filtroStatus === 'confirmados') {
-      filtrados = filtrados.filter(i => !i.status.includes('orcam') && !i.status.includes('cancelado') && !i.status.includes('finalizado') && !i.isOrcamentoVencido);
+      filtrados = filtrados.filter(i => {
+          const st = String(i.status || '').toLowerCase();
+          return !st.includes('orcam') && !st.includes('cancelado') && !st.includes('finalizado') && !i.isOrcamentoVencido;
+      });
   } else if (filtroStatus === 'finalizados') {
-      filtrados = filtrados.filter(i => i.status.includes('finalizado'));
+      filtrados = filtrados.filter(i => {
+          const st = String(i.status || '').toLowerCase();
+          return st.includes('finalizado');
+      });
   } else if (filtroStatus === 'cancelados') {
-      filtrados = filtrados.filter(i => i.status.includes('cancelado') || i.isOrcamentoVencido);
+      filtrados = filtrados.filter(i => {
+          const st = String(i.status || '').toLowerCase();
+          return st.includes('cancelado') || i.isOrcamentoVencido;
+      });
   }
 
-  if (filtroServico === 'pegue') filtrados = filtrados.filter(i => i.tipoServicoFormatado.includes('PEGUE'));
-  else if (filtroServico === 'decoracao') filtrados = filtrados.filter(i => !i.tipoServicoFormatado.includes('PEGUE'));
+  if (filtroServico === 'pegue') {
+      filtrados = filtrados.filter(i => i.tipoServicoFormatado.includes('PEGUE'));
+  } else if (filtroServico === 'decoracao') {
+      filtrados = filtrados.filter(i => !i.tipoServicoFormatado.includes('PEGUE'));
+  }
 
   filtrados.sort((a, b) => {
     const getPriority = (item) => {
-        if (item.status.includes('cancelado') || item.isOrcamentoVencido) return 3; 
-        if (item.status.includes('finalizado')) return 2; 
+        const st = String(item.status || '').toLowerCase();
+        if (st.includes('cancelado') || item.isOrcamentoVencido) return 3; 
+        if (st.includes('finalizado')) return 2; 
         return 1; 
     };
+
     const pA = getPriority(a);
     const pB = getPriority(b);
+
     if (pA !== pB) return pA - pB;
-    if (filtroOrdenacao === 'proximos') return (a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999) - (b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999);
-    if (filtroOrdenacao === 'maiorValor') return Number(b.valorTotal || 0) - Number(a.valorTotal || 0);
-    if (filtroOrdenacao === 'menorValor') return Number(a.valorTotal || 0) - Number(b.valorTotal || 0);
-    return b.createdAtMs - a.createdAtMs; 
+
+    if (filtroOrdenacao === 'proximos') {
+      const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
+      const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
+      return dataA - dataB;
+    } else if (filtroOrdenacao === 'maiorValor') {
+      return Number(b.valorTotal || 0) - Number(a.valorTotal || 0);
+    } else if (filtroOrdenacao === 'menorValor') {
+      return Number(a.valorTotal || 0) - Number(b.valorTotal || 0);
+    } else {
+      return b.createdAtMs - a.createdAtMs; 
+    }
   });
 
   return (
@@ -200,22 +202,50 @@ const Locacoes = () => {
         <button className="btn-primary-celebre" onClick={() => navigate('/locacoes/nova')}>+ NOVA LOCAÇÃO</button>
       </header>
 
+      <div className="dashboard-cards">
+        <div className="dash-card success">
+          <div className="dash-icon">✅</div>
+          <div className="dash-info">
+            <h3>Ativos (Em Processo)</h3>
+            <h2>{lista.filter(i => {
+                const s = String(i.status || '').toLowerCase();
+                return !s.includes('orcam') && !s.includes('cancelado') && !s.includes('finalizado') && !i.isOrcamentoVencido;
+            }).length}</h2>
+          </div>
+        </div>
+        <div className="dash-card warning">
+          <div className="dash-icon">📂</div>
+          <div className="dash-info">
+            <h3>Orçamentos Futuros</h3>
+            <h2>{lista.filter(i => String(i.status || '').toLowerCase().includes('orcam') && !i.isOrcamentoVencido).length}</h2>
+          </div>
+        </div>
+      </div>
+
       <div className="advanced-filter-bar">
         <div className="filter-main-row">
           <div className="search-group">
             <span className="search-icon">🔍</span>
-            <input type="text" placeholder="Buscar por cliente ou pedido..." value={busca} onChange={e => setBusca(e.target.value)} />
+            <input 
+              type="text" 
+              placeholder="Buscar por cliente ou pedido..." 
+              value={busca} 
+              onChange={e => setBusca(e.target.value)} 
+            />
           </div>
+          
           <div className="select-group">
             <select value={filtroServico} onChange={(e) => setFiltroServico(e.target.value)}>
               <option value="todos">🔧 Todos os Serviços</option>
               <option value="pegue">📦 Apenas Pegue e Monte</option>
               <option value="decoracao">✨ Apenas Decoração</option>
             </select>
+
             <select value={filtroOrdenacao} onChange={(e) => setFiltroOrdenacao(e.target.value)}>
               <option value="recentes">🌟 Mais Recentes / Novos</option>
               <option value="proximos">📅 Eventos Mais Próximos</option>
               <option value="maiorValor">💰 Maior Valor</option>
+              <option value="menorValor">📉 Menor Valor</option>
             </select>
           </div>
         </div>
@@ -249,7 +279,7 @@ const Locacoes = () => {
             {loading ? (
               <tr><td colSpan="7" className="loading-td">Carregando locações...</td></tr>
             ) : filtrados.length === 0 ? (
-              <tr><td colSpan="7" style={{textAlign: "center", padding: "40px", color: "#94a3b8"}}>Nenhum pedido encontrado.</td></tr>
+              <tr><td colSpan="7" style={{textAlign: "center", padding: "40px", color: "#94a3b8"}}>Nenhum pedido encontrado nesta filtragem.</td></tr>
             ) : (
               filtrados.map(item => {
                 const valorTotal = Number(item.valorTotal || 0);
@@ -259,18 +289,19 @@ const Locacoes = () => {
                 const isCancelado = statusStr.includes('cancelado') || item.isOrcamentoVencido;
                 const isOrcamento = statusStr.includes('orcam'); 
                 
-                const temProblema = item.itens?.some(i => i.voltaStatus === 'avaria' || i.voltaStatus === 'sumiu' || i.avaria || i.faltou);
+                const temAvaria = item.itens?.some(i => i.avaria);
+                const temFalta = item.itens?.some(i => i.faltou);
+                const temAlertas = temAvaria || temFalta;
 
                 let alertaOperacional = null;
                 let corAlerta = '';
 
-                // 🔥 REGRA MATEMÁTICA DOS 4 DIAS APLICADA AQUI 🔥
                 if (item.dataRetirada && !statusStr.includes('finalizado') && !statusStr.includes('cancelado') && !item.isOrcamentoVencido) {
-                    const hoje = new Date(); hoje.setHours(0,0,0,0);
-                    const locDate = new Date(item.dataRetirada + 'T00:00:00');
-                    const devDate = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDate;
+                    const hojeObj = new Date(); hojeObj.setHours(0,0,0,0);
+                    const locDateObj = new Date(item.dataRetirada + 'T00:00:00');
+                    const devDateObj = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDateObj;
 
-                    const diffMs = locDate.getTime() - hoje.getTime();
+                    const diffMs = locDateObj.getTime() - hojeObj.getTime();
                     const diasParaFesta = Math.ceil(diffMs / (1000 * 3600 * 24));
 
                     if (statusStr.includes('confirmado') && diasParaFesta <= 4 && diasParaFesta >= 0) {
@@ -279,55 +310,126 @@ const Locacoes = () => {
                     } else if (statusStr.includes('preparacao') && diasParaFesta <= 0) {
                         alertaOperacional = "🚚 Entregar Hoje!"; 
                         corAlerta = "#ef4444"; 
-                    } else if (statusStr.includes('entregue') && devDate.getTime() <= hoje.getTime()) {
+                    } else if (statusStr.includes('entregue') && devDateObj.getTime() <= hojeObj.getTime()) {
                         alertaOperacional = "⏳ Cobrar Devolução!"; 
                         corAlerta = "#ef4444"; 
                     }
                 }
 
                 return (
-                  <tr key={item.id} className={temProblema ? 'linha-alerta' : ''} style={{ opacity: isCancelado ? 0.6 : 1, cursor: 'pointer' }} onClick={() => navigate(`/locacoes/editar/${item.id}`)}>
+                  <tr 
+                    key={item.id} 
+                    className={temAlertas ? 'linha-alerta' : ''} 
+                    style={{ opacity: isCancelado ? 0.6 : 1, cursor: 'pointer' }}
+                    onClick={() => navigate(`/locacoes/editar/${item.id}`)}
+                    title="Clique para abrir detalhes do pedido"
+                  >
                     <td className="pedido-id-cell">
-                      {item.numeroPedido ? `#${item.numeroPedido}` : item.id ? `#${item.id.substring(0,6).toUpperCase()}` : item.isOrcamentoVencido ? <span style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px'}}>PERDIDO</span> : isOrcamento ? <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span> : <span style={{color: '#94a3b8', fontWeight: 'bold'}}>#S/N</span>}
+                      {item.numeroPedido ? (
+                        `#${item.numeroPedido}`
+                      ) : item.id ? (
+                        `#${item.id.substring(0,6).toUpperCase()}`
+                      ) : item.isOrcamentoVencido ? (
+                        <span style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px'}}>PERDIDO</span>
+                      ) : isOrcamento ? (
+                        <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span>
+                      ) : (
+                        <span style={{color: '#94a3b8', fontWeight: 'bold'}}>#S/N</span>
+                      )}
                     </td>
                     <td className="cliente-info-cell">
-                      <strong style={{textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '15px'}}>{item.clienteNome}</strong>
+                      <strong style={{textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '15px'}}>
+                        {item.clienteNome}
+                      </strong>
                       <div className="tags-row">
-                        <span className={`tag-servico ${item.tipoServicoFormatado.includes('PEGUE') ? 'pegue' : 'deco'}`}>{item.tipoServicoFormatado}</span>
-                        {temProblema && <span className="tag-alerta erro">B.O. NA DEVOLUÇÃO</span>}
+                        <span className={`tag-servico ${item.tipoServicoFormatado.includes('PEGUE') ? 'pegue' : 'deco'}`}>
+                          {item.tipoServicoFormatado}
+                        </span>
+                        {temFalta && <span className="tag-alerta erro">FALTAM PEÇAS</span>}
+                        {temAvaria && <span className="tag-alerta aviso">AVARIAS</span>}
                       </div>
                     </td>
-                    <td className="mobile-stack"><span className="mobile-label">DATA:</span><span>{item.dataRetirada ? new Date(item.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span></td>
-                    <td className="mobile-stack"><span className="mobile-label">TOTAL:</span><span className="valor-total">R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></td>
-                    <td className="mobile-stack"><span className="mobile-label">A RECEBER:</span><span className={saldoDevedor > 0 ? "txt-perigo" : "txt-sucesso"}>{saldoDevedor > 0 ? `R$ ${saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '✅ PAGO'}</span></td>
-                    <td className="status-cell">
-                      <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr.replace(' ', '')}`}>{item.isOrcamentoVencido ? 'PERDIDO' : item.status?.trim().toUpperCase() || 'S/S'}</span>
-                      {alertaOperacional && <div style={{ marginTop: '6px', fontSize: '0.75rem', fontWeight: '800', color: corAlerta, textTransform: 'uppercase' }}>{alertaOperacional}</div>}
+                    
+                    <td className="mobile-stack">
+                      <span className="mobile-label">DATA EVENTO:</span>
+                      <span>{item.dataRetirada ? new Date(item.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span>
                     </td>
+                    
+                    <td className="mobile-stack">
+                      <span className="mobile-label">VALOR TOTAL:</span>
+                      <span className="valor-total">R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                    </td>
+                    
+                    <td className="mobile-stack">
+                      <span className="mobile-label">A RECEBER:</span> 
+                      <span className={saldoDevedor > 0 ? "txt-perigo" : "txt-sucesso"}>
+                        {saldoDevedor > 0 ? `R$ ${saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '✅ PAGO'}
+                      </span>
+                    </td>
+                    
+                    <td className="status-cell">
+                      <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr.replace(' ', '')}`}>
+                        {item.isOrcamentoVencido ? 'PERDIDO / ABANDONADO' : item.status?.trim().toUpperCase() || 'S/S'}
+                      </span>
+                      {alertaOperacional && (
+                         <div style={{ marginTop: '6px', fontSize: '0.75rem', fontWeight: '800', color: corAlerta, textTransform: 'uppercase' }}>
+                            {alertaOperacional}
+                         </div>
+                      )}
+                    </td>
+                    
                     <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                       <div className="dropdown-container">
-                        <button className="btn-pontinhos" onClick={(e) => { e.stopPropagation(); setMenuAberto(menuAberto === item.id ? null : item.id); }}>⋮</button>
+                        <button 
+                          className="btn-pontinhos" 
+                          onClick={(e) => { 
+                            e.stopPropagation(); 
+                            setMenuAberto(menuAberto === item.id ? null : item.id); 
+                          }}
+                        >
+                          ⋮
+                        </button>
                         
                         {menuAberto === item.id && (
                           <div className="menu-suspenso">
-                            {saldoDevedor > 0 && !isCancelado && !isOrcamento && (
-                              <button onClick={(e) => { e.stopPropagation(); setPedidoSelecionado(item); setModalPagamento(true); setMenuAberto(null); }} className="item-menu">💰 Receber Pagamento</button>
-                            )}
-
-                            {!isOrcamento && !isCancelado && !statusStr.includes('finalizado') && (
-                              <button onClick={(e) => { e.stopPropagation(); abrirModalChecklist(item, statusStr.includes('entregue') ? 'volta' : 'ida'); }} className="item-menu" style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}>
-                                {statusStr.includes('entregue') ? '📥 Checklist de Devolução' : '📦 Checklist de Saída'}
-                              </button>
-                            )}
                             
-                            {statusStr.includes('finalizado') && (
-                              <button onClick={(e) => { e.stopPropagation(); abrirModalChecklist(item, 'volta'); }} className="item-menu" style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}>
-                                🔎 Ver Conferência (Checklist)
+                            {saldoDevedor > 0 && !isCancelado && !isOrcamento && (
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  setPedidoSelecionado(item); 
+                                  setPagamento({ valor: '', formaPagto: 'Pix', data: new Date().toISOString().split('T')[0] });
+                                  setModalPagamento(true); 
+                                  setMenuAberto(null); 
+                                }} 
+                                className="item-menu"
+                              >
+                                💰 Receber Pagamento
                               </button>
                             )}
 
-                            {temProblema && (
-                              <button onClick={(e) => { e.stopPropagation(); navigate(`/termo-ocorrencia/${item.id}`); }} className="item-menu" style={{ backgroundColor: '#fef2f2', color: '#b91c1c', fontWeight: '700' }}>
+                            {!isOrcamento && !isCancelado && (
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  navigate(`/logistica`); 
+                                }} 
+                                className="item-menu"
+                                style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}
+                              >
+                                📦 Check-in / Logística
+                              </button>
+                            )}
+
+                            {temAlertas && (
+                              <button 
+                                onClick={(e) => { 
+                                  e.stopPropagation(); 
+                                  navigate(`/termo-ocorrencia/${item.id}`); 
+                                }} 
+                                className="item-menu"
+                                style={{ backgroundColor: '#fef2f2', color: '#b91c1c', fontWeight: '700' }}
+                              >
                                 ⚠️ Imprimir Termo (Avaria/Falta)
                               </button>
                             )}
@@ -346,89 +448,10 @@ const Locacoes = () => {
         </table>
       </div>
 
-      {modalChecklist && pedidoChecklist && (
-        <div className="modal-overlay-v2" onClick={() => setModalChecklist(false)}>
-            <div className="modal-box-v2" style={{maxWidth: '550px', padding: '0', overflow: 'hidden'}} onClick={e => e.stopPropagation()}>
-                
-                <div style={{padding: '20px 25px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start'}}>
-                   <div>
-                       <h3 style={{margin: '0 0 5px 0', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '18px'}}>
-                           📝 Checklist {modoChecklist === 'ida' ? 'de Saída' : 'de Devolução'}
-                       </h3>
-                       <span style={{color: '#64748b', fontSize: '13px'}}>
-                           {pedidoChecklist.clienteNome} • {pedidoChecklist.status.toUpperCase()}
-                       </span>
-                   </div>
-                   <button onClick={() => setModalChecklist(false)} style={{background: 'none', border: 'none', fontSize: '24px', color: '#94a3b8', cursor: 'pointer'}}>×</button>
-                </div>
-
-                <div style={{padding: '20px 25px', maxHeight: '60vh', overflowY: 'auto', background: '#f8fafc'}}>
-                    {itensChecklist.length === 0 ? (
-                        <p style={{textAlign: 'center', color: '#94a3b8'}}>Nenhum item neste pedido.</p>
-                    ) : (
-                        itensChecklist.map(item => (
-                            <div key={item.id} style={{background: '#fff', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '15px', marginBottom: '12px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
-                                
-                                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
-                                    {modoChecklist === 'ida' && (
-                                        <input 
-                                            type="checkbox" 
-                                            checked={item.idaOk} 
-                                            onChange={() => toggleIda(item.id)}
-                                            style={{width: '22px', height: '22px', cursor: 'pointer', accentColor: '#3b82f6'}}
-                                        />
-                                    )}
-                                    <div style={{width: '45px', height: '45px', background: '#f1f5f9', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, overflow: 'hidden'}}>
-                                        {item.foto ? <img src={item.foto} style={{width:'100%', height:'100%', objectFit:'cover'}} alt=""/> : <span style={{fontSize: '20px'}}>📷</span>}
-                                    </div>
-                                    <strong style={{color: '#0f172a', fontSize: '15px'}}>{item.qtd}x {item.nome}</strong>
-                                </div>
-
-                                {modoChecklist === 'volta' && (
-                                    <div style={{display: 'flex', gap: '8px', marginTop: '15px'}}>
-                                        <button 
-                                            onClick={() => setStatusVolta(item.id, 'ok')}
-                                            className={`checklist-btn-volta ${item.voltaStatus === 'ok' ? 'ok-active' : ''}`}
-                                        >
-                                            ✔ OK
-                                        </button>
-                                        <button 
-                                            onClick={() => setStatusVolta(item.id, 'avaria')}
-                                            className={`checklist-btn-volta ${item.voltaStatus === 'avaria' ? 'avaria-active' : ''}`}
-                                        >
-                                            ⚠️ AVARIA
-                                        </button>
-                                        <button 
-                                            onClick={() => setStatusVolta(item.id, 'sumiu')}
-                                            className={`checklist-btn-volta ${item.voltaStatus === 'sumiu' ? 'sumiu-active' : ''}`}
-                                        >
-                                            ❌ SUMIU
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-                        ))
-                    )}
-                </div>
-
-                <div style={{padding: '20px 25px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', background: '#fff'}}>
-                    <button 
-                        onClick={salvarChecklistNoBanco} 
-                        disabled={salvandoChecklist}
-                        style={{background: '#0f172a', color: '#fff', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', fontSize: '15px', cursor: salvandoChecklist ? 'not-allowed' : 'pointer'}}
-                    >
-                        {salvandoChecklist ? 'Salvando...' : 'Salvar e Fechar'}
-                    </button>
-                </div>
-
-            </div>
-        </div>
-      )}
-
       {modalPagamento && pedidoSelecionado && (
          <div className="modal-overlay-v2">
             <div className="modal-box-v2 pagamento-box">
-                 <div className="modal-header">
+                <div className="modal-header">
                   <h3>💰 Registrar Pagamento</h3>
                   <button className="btn-fechar" onClick={() => setModalPagamento(false)}>X</button>
                 </div>

@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './NovaLocacao.css'; 
 import { db } from '../../firebaseConfig'; 
 import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
+// 🔥 IMPORTANDO O NOSSO DICIONÁRIO DE TEMAS 🔥
+import { CATALOGO_TEMAS } from '../../catalogoDeTemas'; 
 
 const EditarLocacao = () => {
   const navigate = useNavigate();
@@ -18,10 +20,16 @@ const EditarLocacao = () => {
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
   
   const [clienteSelecionado, setClienteSelecionado] = useState('');
-  const [temaFesta, setTemaFesta] = useState('');
   const [tipoServico, setTipoServico] = useState('PEGUE E MONTE'); 
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
   
+  // 🔥 ESTADOS PARA A CASCATA DE TEMAS 🔥
+  const [categoriaTema, setCategoriaTema] = useState('');
+  const [subcategoriaTema, setSubcategoriaTema] = useState('');
+  const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
+  const [temaFesta, setTemaFesta] = useState('');
+  const [temaDigitadoPersonalizado, setTemaDigitadoPersonalizado] = useState('');
+
   const [logistica, setLogistica] = useState({ 
     tipo: 'entrega', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', obsTransporte: '' 
   });
@@ -60,10 +68,43 @@ const EditarLocacao = () => {
             setNumeroPedido(data.numeroPedido || '');
             setStatusAtual(data.status || 'orcamento'); 
             setClienteSelecionado(data.clienteId || '');
-            setTemaFesta(data.temaFesta || data.tema || '');
             setTipoServico(data.tipoServico || 'PEGUE E MONTE');
             setDatas({ retirada: data.dataRetirada || '', devolucao: data.dataDevolucao || '' });
             setValorJaPago(Number(data.valorPago || 0));
+
+            // 🔥 TENTA ENCONTRAR DE ONDE VEIO ESSE TEMA PARA PREENCHER OS SELECTS AUTOMATICAMENTE 🔥
+            let temaSalvo = data.temaFesta || data.tema || '';
+            let achouCategoria = '';
+            let achouSub = '';
+            let achouGrupo = '';
+            let achouTema = '';
+
+            for (const cat in CATALOGO_TEMAS) {
+                for (const sub in CATALOGO_TEMAS[cat]) {
+                    for (const grup in CATALOGO_TEMAS[cat][sub]) {
+                        if (CATALOGO_TEMAS[cat][sub][grup].includes(temaSalvo)) {
+                            achouCategoria = cat;
+                            achouSub = sub;
+                            achouGrupo = grup;
+                            achouTema = temaSalvo;
+                            break;
+                        }
+                    }
+                    if (achouTema) break;
+                }
+                if (achouTema) break;
+            }
+
+            if (achouTema) {
+                setCategoriaTema(achouCategoria);
+                setSubcategoriaTema(achouSub);
+                setGrupoTemaSelecionado(achouGrupo);
+                setTemaFesta(achouTema);
+            } else if (temaSalvo) {
+                // Se não achou no catálogo, joga pro "Outro Tema"
+                setTemaFesta('OUTRO_TEMA');
+                setTemaDigitadoPersonalizado(temaSalvo);
+            }
             
             const log = data.logistica || {};
             let freteFormatado = '';
@@ -101,7 +142,24 @@ const EditarLocacao = () => {
     carregarDados();
   }, [id]);
 
-  const categoriasUnicas = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
+  const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
+
+  // =========================================================================
+  // 🔥 LÓGICA DO EFEITO CASCATA (LENDO DO ARQUIVO JS) 🔥
+  // =========================================================================
+  const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
+  
+  const subcategoriasDisponiveis = categoriaTema 
+      ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) 
+      : [];
+
+  const gruposDisponiveis = (categoriaTema && subcategoriaTema)
+      ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) 
+      : [];
+
+  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado)
+      ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || []
+      : [];
 
   const addCarrinho = (item) => {
     if (isFinalizado) return; 
@@ -110,23 +168,31 @@ const EditarLocacao = () => {
     if (existe) {
       setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
     } else {
-      // 🔥 AGORA CRIA COM AS MESMAS CHAVES DA LOGÍSTICA 🔥
       setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
     }
   };
 
-  // 🔥 SINCRONIZAÇÃO COM A LÓGICA DA LOGÍSTICA 🔥
+  const salvarChecklistImediato = async (novosItens) => {
+    try {
+        await updateDoc(doc(db, "locacoes", id), { itens: novosItens });
+    } catch (e) {
+        console.error("Erro ao salvar checklist no banco:", e);
+    }
+  };
+
   const marcarIda = (itemId) => {
     if (isFinalizado) return;
-    setCarrinho(prev => prev.map(item => {
+    const novosItens = carrinho.map(item => {
       if (item.id === itemId) return { ...item, checkedSeparacao: !item.checkedSeparacao };
       return item;
-    }));
+    });
+    setCarrinho(novosItens);
+    salvarChecklistImediato(novosItens); 
   };
 
   const marcarVolta = (itemId, status) => {
     if (isFinalizado) return;
-    setCarrinho(prev => prev.map(item => {
+    const novosItens = carrinho.map(item => {
       if (item.id === itemId) {
         if (status === 'ok') {
           const jaTavaOk = item.checkedDevolucao && !item.avaria && !item.faltou;
@@ -134,15 +200,17 @@ const EditarLocacao = () => {
         }
         if (status === 'avaria') {
           const jaTavaAvaria = item.avaria;
-          return { ...item, checkedDevolucao: !jaTavaAvaria, avaria: !jaTavaAvaria, faltou: false };
+          return { ...item, checkedDevolucao: !jaTavaAvaria ? true : false, avaria: !jaTavaAvaria, faltou: false };
         }
         if (status === 'faltou') {
           const jaTavaFaltou = item.faltou;
-          return { ...item, checkedDevolucao: !jaTavaFaltou, avaria: false, faltou: !jaTavaFaltou };
+          return { ...item, checkedDevolucao: !jaTavaFaltou ? true : false, avaria: false, faltou: !jaTavaFaltou };
         }
       }
       return item;
-    }));
+    });
+    setCarrinho(novosItens);
+    salvarChecklistImediato(novosItens); 
   };
 
   const getFreteNumerico = () => {
@@ -197,7 +265,21 @@ const EditarLocacao = () => {
   const interceptarSalvamento = (novoStatus) => {
     if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data de retirada!");
     
+    if (temaFesta === 'OUTRO_TEMA' && !temaDigitadoPersonalizado) {
+        return alert("Por favor, digite o nome do tema personalizado!");
+    } else if (!temaFesta) {
+        return alert("Selecione o Tema da Festa!");
+    }
+
+    const hojeStr = new Date().toISOString().split('T')[0];
+
     if (novoStatus === 'finalizado') {
+        const dataComparacao = datas.devolucao || datas.retirada;
+        if (dataComparacao > hojeStr) {
+            alert(`🚫 BLOQUEADO:\n\nVocê não pode receber as peças de volta (DEVOLUÇÃO) de um evento marcado para ${dataComparacao.split('-').reverse().join('/')}. Aguarde a data do evento para finalizar.`);
+            return;
+        }
+        
         const temItemSemVolta = carrinho.some(i => !i.checkedDevolucao);
         if (temItemSemVolta) {
              const confirmacaoExtra = window.confirm("⚠️ ALERTA DE CONFERÊNCIA:\n\nExistem itens no pedido que NÃO foram marcados como devolvidos (📥 VOLTA, ⚠️ AVARIA ou ❌ FALTA).\n\nTem certeza que deseja finalizar este pedido assim mesmo?");
@@ -206,6 +288,11 @@ const EditarLocacao = () => {
              const confirmacao = window.confirm("Finalizar o Pedido? Certifique-se que todos os itens foram conferidos no check-in da tela.");
              if (!confirmacao) return;
         }
+    }
+
+    if (novoStatus === 'entregue' && datas.retirada > hojeStr) {
+        const confirmacaoAntecipada = window.confirm(`⚠️ ATENÇÃO!\n\nA data do evento é ${datas.retirada.split('-').reverse().join('/')}, mas você está marcando como ENTREGUE hoje.\n\nTem certeza que o cliente já retirou as peças antecipadamente?`);
+        if (!confirmacaoAntecipada) return;
     }
 
     const statusFinalDesejado = novoStatus || statusAtual;
@@ -222,15 +309,19 @@ const EditarLocacao = () => {
   const executarSalvamentoFinal = async (statusFinal, valorSinalEntrandoNoCaixa = 0, valorSinalNegociado = 0) => {
     setSalvandoPedido(true);
     try {
-      const nomeCliente = clientes.find(c => c.id === clienteSelecionado)?.nome || 'Cliente';
+      const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
+      const nomeCliente = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || clienteEncontrado.razaoSocial || 'Cliente') : 'Cliente';
+      
       const logisticaParaSalvar = { ...logistica, frete: getFreteNumerico() };
       const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
+
+      const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
 
       const docRef = doc(db, "locacoes", id);
       await updateDoc(docRef, {
         clienteId: clienteSelecionado,
         clienteNome: nomeCliente,
-        temaFesta,
+        temaFesta: temaFinalParaSalvar,
         tipoServico, 
         dataRetirada: datas.retirada,
         dataDevolucao: datas.devolucao,
@@ -294,7 +385,7 @@ const EditarLocacao = () => {
 
   const abrirWhatsAppCobranca = () => {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
-      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto || '') : '';
+      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || '') : '';
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
@@ -314,18 +405,6 @@ const EditarLocacao = () => {
     return (item.nome || '').toLowerCase().includes(busca.toLowerCase()) && 
            (filtroCategoria === 'Todos' || item.categoria === filtroCategoria);
   });
-
-  const getBadgeStatus = () => {
-    switch(statusAtual) {
-      case 'orcamento': return { txt: '📝 ORÇAMENTO', cor: '#64748b' };
-      case 'confirmado': return { txt: '✔ PEDIDO CONFIRMADO', cor: '#3b82f6' };
-      case 'preparacao': return { txt: '📦 EM SEPARAÇÃO', cor: '#f59e0b' };
-      case 'entregue': return { txt: '🚚 ENTREGUE / COM O CLIENTE', cor: '#8b5cf6' };
-      case 'finalizado': return { txt: '✅ FINALIZADO (DEVOLVIDO)', cor: '#10b981' };
-      case 'cancelado': return { txt: '❌ CANCELADO', cor: '#ef4444' };
-      default: return { txt: 'Desconhecido', cor: '#ccc' };
-    }
-  };
 
   const maskCurrency = (value) => {
     let v = value.replace(/\D/g, ""); 
@@ -385,16 +464,84 @@ const EditarLocacao = () => {
                   <option value={clienteSelecionado} disabled hidden>
                     {clientes.find(c => String(c.id) === String(clienteSelecionado))?.nome || 'Carregando...'}
                   </option>
-                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia}</option>)}
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia || c.razaoSocial}</option>)}
                 </select>
               </div>
-              <div className="form-group flex-2">
-                <label>Tema da Festa</label>
-                <input type="text" placeholder="Ex: Safari, Casamento..." value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={isFinalizado}/>
-              </div>
             </div>
+
+            {/* ========================================================================= */}
+            {/* 🔥 OS 4 NÍVEIS DE TEMA EM CASCATA 🔥 */}
+            {/* ========================================================================= */}
             
-            <div className="form-row">
+            <div className="form-row mt-10">
+                <div className="form-group flex-1">
+                    <label>Categoria do Tema *</label>
+                    <select value={categoriaTema} onChange={e => {
+                        setCategoriaTema(e.target.value);
+                        setSubcategoriaTema('');
+                        setGrupoTemaSelecionado('');
+                        setTemaFesta('');
+                    }} disabled={isFinalizado}>
+                        <option value="">Selecione a Categoria...</option>
+                        {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                </div>
+                
+                <div className="form-group flex-1">
+                    <label>Subcategoria do Tema *</label>
+                    <select value={subcategoriaTema} onChange={e => {
+                        setSubcategoriaTema(e.target.value);
+                        setGrupoTemaSelecionado('');
+                        setTemaFesta('');
+                    }} disabled={!categoriaTema || isFinalizado}>
+                        <option value="">Selecione a Subcategoria...</option>
+                        {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="form-row mt-10">
+                <div className="form-group flex-1">
+                    <label>Grupo de Tema *</label>
+                    <select value={grupoTemaSelecionado} onChange={e => {
+                        setGrupoTemaSelecionado(e.target.value);
+                        setTemaFesta('');
+                    }} disabled={!subcategoriaTema || isFinalizado}>
+                        <option value="">Selecione o Grupo...</option>
+                        {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
+                    </select>
+                </div>
+
+                <div className="form-group flex-1">
+                    <label>Tema Específico *</label>
+                    <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={(!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA') || isFinalizado}>
+                        <option value="">Selecione o Tema...</option>
+                        {temasDisponiveis.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
+                        <option value="OUTRO_TEMA" style={{fontWeight: 'bold', color: '#3b82f6'}}>✏️ Outro (Digitar Novo Tema)</option>
+                    </select>
+                </div>
+            </div>
+
+            {temaFesta === 'OUTRO_TEMA' && (
+                <div className="form-row" style={{animation: 'fadeIn 0.3s'}}>
+                    <div className="form-group flex-1" style={{background: '#eff6ff', padding: '15px', borderRadius: '8px', border: '1px dashed #3b82f6'}}>
+                        <label style={{color: '#1d4ed8'}}>Digite o nome do novo tema *</label>
+                        <input 
+                            type="text" 
+                            placeholder="Ex: Bailarina Rosa com Ouro..." 
+                            value={temaDigitadoPersonalizado} 
+                            onChange={e => setTemaDigitadoPersonalizado(e.target.value)} 
+                            style={{borderColor: '#bfdbfe'}}
+                            disabled={isFinalizado}
+                            autoFocus
+                        />
+                    </div>
+                </div>
+            )}
+            
+            <div className="form-row mt-10">
               <div className="form-group flex-1"><label>Data de Retirada / Evento *</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} disabled={isFinalizado}/></div>
               <div className="form-group flex-1"><label>Data de Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} disabled={isFinalizado}/></div>
             </div>
@@ -433,14 +580,11 @@ const EditarLocacao = () => {
             )}
           </div>
 
-          {/* =========================================================================
-              🔥 NOVA SEÇÃO: CHECK-IN E CONFERÊNCIA (IDA E VOLTA) 🔥 
-              ========================================================================= */}
           {statusAtual !== 'orcamento' && carrinho.length > 0 && (
             <div className="card-secao">
               <h3 className="section-divider" style={{marginTop: 0, border: 'none', marginBottom: '8px'}}>📋 CHECK-IN E CONFERÊNCIA (IDA / VOLTA)</h3>
               <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '15px'}}>
-                Marque as peças que saíram e voltaram. Caso marque <b>Avaria</b> ou <b>Falta</b>, o Termo de Ocorrência será habilitado.
+                Marque as peças que saíram e voltaram. As alterações são <b>salvas automaticamente</b>.
               </p>
 
               <div style={{display: 'flex', flexDirection: 'column', gap: '10px'}}>
@@ -457,28 +601,24 @@ const EditarLocacao = () => {
                     </div>
 
                     <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
-                      {/* BOTÃO IDA LENDO checkedSeparacao */}
                       <button 
                          type="button" onClick={() => marcarIda(item.id)} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.checkedSeparacao ? '#dcfce7' : '#fff', color: item.checkedSeparacao ? '#166534' : '#64748b', borderColor: item.checkedSeparacao ? '#86efac' : '#cbd5e1', transition: '0.2s'}}>
                         📤 IDA
                       </button>
 
-                      {/* BOTÃO VOLTA LENDO checkedDevolucao */}
                       <button 
                          type="button" onClick={() => marcarVolta(item.id, 'ok')} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: taMarcadoOk ? '#dbeafe' : '#fff', color: taMarcadoOk ? '#1e40af' : '#64748b', borderColor: taMarcadoOk ? '#93c5fd' : '#cbd5e1', transition: '0.2s'}}>
                         📥 VOLTA
                       </button>
 
-                      {/* BOTÃO AVARIA */}
                       <button 
                          type="button" onClick={() => marcarVolta(item.id, 'avaria')} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.avaria ? '#fef9c3' : '#fff', color: item.avaria ? '#a16207' : '#64748b', borderColor: item.avaria ? '#fde047' : '#cbd5e1', transition: '0.2s'}}>
                         ⚠️ AVARIA
                       </button>
 
-                      {/* BOTÃO FALTA */}
                       <button 
                          type="button" onClick={() => marcarVolta(item.id, 'faltou')} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.faltou ? '#fee2e2' : '#fff', color: item.faltou ? '#b91c1c' : '#64748b', borderColor: item.faltou ? '#fca5a5' : '#cbd5e1', transition: '0.2s'}}>
@@ -630,9 +770,7 @@ const EditarLocacao = () => {
         </aside>
       </div>
 
-      {/* =========================================================================
-          🔥 NOVO MODAL INTELIGENTE DE SINAL (FIXO E UNIFICADO) 🔥 
-          ========================================================================= */}
+      {/* MODAL DE SINAL */}
       {modalSinalAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
           <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
@@ -688,7 +826,6 @@ const EditarLocacao = () => {
 
               <hr style={{border: 'none', borderTop: '1px solid #e2e8f0', margin: '25px 0'}} />
 
-              {/* BOTOES DE AÇÃO */}
               {valorDigitadoNum > 0 ? (
                   <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                      <button type="button" onClick={salvarSinalRecebido} disabled={salvandoPedido} style={{padding: '16px', background: '#0f172a', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
@@ -696,7 +833,7 @@ const EditarLocacao = () => {
                      </button>
                      
                      <button type="button" onClick={salvarAguardandoPagamento} disabled={salvandoPedido} style={{padding: '16px', background: '#fffbeb', border: '2px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
-                       {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter como Orçamento)'}
+                       {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
                      </button>
                   </div>
                ) : (
@@ -727,7 +864,7 @@ const EditarLocacao = () => {
             <div className="catalogo-filtros">
               <input type="text" className="search-input-clean" style={{border: '1px solid var(--borda)', padding: '10px', borderRadius: '8px'}} placeholder="🔎 Buscar peça..." value={busca} onChange={e => setBusca(e.target.value)} />
               <div className="chips-categorias">
-                {categoriasUnicas.map(cat => (
+                {categoriasUnicasEstoque.map(cat => (
                   <button key={cat} type="button" className={`chip-cat ${filtroCategoria === cat ? 'active' : ''}`} onClick={() => setFiltroCategoria(cat)}>
                     {cat}
                   </button>

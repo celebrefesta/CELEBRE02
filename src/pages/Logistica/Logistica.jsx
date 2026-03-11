@@ -53,6 +53,29 @@ const Logistica = () => {
   }, []);
 
   const moverCard = async (id, novoStatus) => {
+    const locacaoAlvo = locacoes.find(l => l.id === id);
+    const hojeStr = new Date().toISOString().split('T')[0];
+
+    // 🔥 NOVA LÓGICA DE TRAVA DA LOGÍSTICA (PERMITE DEVOLUÇÃO NO MESMO DIA) 🔥
+    if (novoStatus === 'finalizado') {
+        
+        // 1. Bloqueia apenas se a festa for no futuro
+        if (locacaoAlvo.dataRetirada > hojeStr) {
+            alert(`🚫 BLOQUEADO:\nA data do evento é ${locacaoAlvo.dataRetirada.split('-').reverse().join('/')}. Você não pode receber peças de volta de uma festa que ainda nem aconteceu!`);
+            return; 
+        }
+
+        // 2. Avisa se for uma devolução antecipada (Festa hoje, Devolução amanhã, mas entregou hoje)
+        if (locacaoAlvo.dataDevolucao && locacaoAlvo.dataDevolucao > hojeStr) {
+            const confAntecipada = window.confirm(`⚠️ DEVOLUÇÃO ANTECIPADA:\nA devolução estava marcada para ${locacaoAlvo.dataDevolucao.split('-').reverse().join('/')}, mas o cliente devolveu hoje. Confirmar o recebimento no galpão?`);
+            if (!confAntecipada) return;
+        } else {
+            // Fluxo normal
+            const confirmacao = window.confirm('O material chegou no galpão? Ele irá para a coluna de Devolvidos para conferência final.');
+            if (!confirmacao) return;
+        }
+    }
+
     try {
       await updateDoc(doc(db, "locacoes", id), { status: novoStatus });
       setLocacoes(prev => prev.map(loc => loc.id === id ? { ...loc, status: novoStatus } : loc));
@@ -100,7 +123,6 @@ const Logistica = () => {
 
     const st = String(loc.status || '').toLowerCase().trim();
 
-    // 🔥 O ROBÔ DE FAXINA AQUI: Se a data passou e não foi entregue, ele esconde da Logística 🔥
     if (loc.dataRetirada < hojeStr) {
         if (st.includes('orcam') || st.includes('confirmado') || st.includes('preparacao')) {
             return false; 
@@ -159,7 +181,7 @@ const Logistica = () => {
         </div>
         <div className="kanban-col">
           <div className="col-header"><span className="dot" style={{background: '#8b5cf6'}}></span><h3>4. Na Rua / Evento</h3><span className="badge-count">{colunas.entregue.length}</span></div>
-          <div className="col-body">{colunas.entregue.map(loc => <CartaoKanban key={loc.id} loc={loc} navigate={navigate} onAvancar={() => { if(window.confirm('O material chegou no galpão? Ele irá para a coluna de Devolvidos para conferência.')) moverCard(loc.id, 'finalizado'); }} btnTxt="Receber ➔" btnCor="#10b981" onAbrirChecklist={() => setChecklistModalId(loc.id)} onAbrirRelatorio={() => setRelatorioModalLoc(loc)} isModoLista={vistaAtual === 'lista'} />)}</div>
+          <div className="col-body">{colunas.entregue.map(loc => <CartaoKanban key={loc.id} loc={loc} navigate={navigate} onAvancar={() => moverCard(loc.id, 'finalizado')} btnTxt="Receber ➔" btnCor="#10b981" onAbrirChecklist={() => setChecklistModalId(loc.id)} onAbrirRelatorio={() => setRelatorioModalLoc(loc)} isModoLista={vistaAtual === 'lista'} />)}</div>
         </div>
         <div className="kanban-col">
           <div className="col-header"><span className="dot" style={{background: '#10b981'}}></span><h3>5. Devolvidos</h3><span className="badge-count">{colunas.finalizado.length}</span></div>
@@ -197,6 +219,7 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
     const diffTime = locDate.getTime() - hojeDate.getTime();
     const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+    if (diffDias < 0 && loc.status !== 'entregue') return <div className="alerta-urgente atrasado">🔥 ATRASADO!</div>;
     if (diffDias <= 0 && loc.status === 'entregue' && loc.dataDevolucao) {
        const devolucaoDate = new Date(loc.dataDevolucao + 'T00:00:00');
        const diffDev = Math.ceil((devolucaoDate.getTime() - hojeDate.getTime()) / (1000 * 60 * 60 * 24));

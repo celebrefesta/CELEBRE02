@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import './NovaLocacao.css'; 
 import { db } from '../../firebaseConfig'; 
 import { collection, getDocs, addDoc, getCountFromServer, serverTimestamp } from 'firebase/firestore'; 
+// 🔥 IMPORTANDO O NOSSO DICIONÁRIO DE TEMAS 🔥
+import { CATALOGO_TEMAS } from '../../catalogoDeTemas'; 
 
 const NovaLocacao = () => {
   const navigate = useNavigate();
@@ -18,10 +20,16 @@ const NovaLocacao = () => {
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
   
   const [clienteSelecionado, setClienteSelecionado] = useState('');
-  const [temaFesta, setTemaFesta] = useState('');
   const [tipoServico, setTipoServico] = useState('PEGUE E MONTE');
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
   
+  // 🔥 ESTADOS PARA A CASCATA DE TEMAS 🔥
+  const [categoriaTema, setCategoriaTema] = useState('');
+  const [subcategoriaTema, setSubcategoriaTema] = useState('');
+  const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
+  const [temaFesta, setTemaFesta] = useState('');
+  const [temaDigitadoPersonalizado, setTemaDigitadoPersonalizado] = useState('');
+
   const [logistica, setLogistica] = useState({ 
     tipo: 'retirada', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', referencia: '', obsTransporte: '' 
   });
@@ -40,7 +48,6 @@ const NovaLocacao = () => {
   const [salvandoCompra, setSalvandoCompra] = useState(false);
   const [acaoSalvar, setAcaoSalvar] = useState('fechar');
 
-  // --- ESTADOS DO SINAL E CATRACA ---
   const [modalSinalAberto, setModalSinalAberto] = useState(false);
   const [valorSinal, setValorSinal] = useState('');
   const [formaPagtoSinal, setFormaPagtoSinal] = useState('Pix');
@@ -53,8 +60,9 @@ const NovaLocacao = () => {
         const [snapCli, snapEst, snapLoc] = await Promise.all([
           getDocs(collection(db, "clientes")),
           getDocs(collection(db, "estoque")),
-          getDocs(collection(db, "locacoes")) 
+          getDocs(collection(db, "locacoes"))
         ]);
+        
         setClientes(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
         setEstoque(snapEst.docs.map(d => ({ id: d.id, ...d.data() })));
         setTodasLocacoes(snapLoc.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -67,7 +75,25 @@ const NovaLocacao = () => {
     carregarDados();
   }, []);
 
-  const categoriasUnicas = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
+  const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
+
+  // =========================================================================
+  // 🔥 LÓGICA DO EFEITO CASCATA (LENDO DO ARQUIVO JS) 🔥
+  // =========================================================================
+  const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
+  
+  const subcategoriasDisponiveis = categoriaTema 
+      ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) 
+      : [];
+
+  const gruposDisponiveis = (categoriaTema && subcategoriaTema)
+      ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) 
+      : [];
+
+  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado)
+      ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || []
+      : [];
+
 
   const isOverlapping = (start1, end1, start2, end2) => {
       if (!start1 || !end1 || !start2 || !end2) return false;
@@ -206,7 +232,7 @@ const NovaLocacao = () => {
           dispararCompraAutomatica(item);
           return;
       }
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, qtdOriginal: qtdFisicaTotal, qtdLivreNestaData: qtdLivreNaData }]); 
+      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, qtdOriginal: qtdFisicaTotal, qtdLivreNestaData: qtdLivreNaData, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]); 
     }
   };
 
@@ -286,7 +312,13 @@ const NovaLocacao = () => {
 
   const interceptarSalvamento = (status) => {
     if (!clienteSelecionado) return alert("Selecione o Cliente!");
-    if (!temaFesta) return alert("Preencha o Tema da Festa!");
+    
+    if (temaFesta === 'OUTRO_TEMA' && !temaDigitadoPersonalizado) {
+        return alert("Por favor, digite o nome do tema personalizado!");
+    } else if (!temaFesta) {
+        return alert("Selecione o Tema da Festa!");
+    }
+
     if (!datas.retirada) return alert("Preencha a Data de Retirada!");
     if (!datas.devolucao) return alert("Preencha a Data de Devolução!");
     
@@ -326,13 +358,15 @@ const NovaLocacao = () => {
       const codigo = `${new Date().getFullYear()}-${count.toString().padStart(3, '0')}`;
 
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
-      const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto || clienteEncontrado.razaoSocial) : "Cliente";
+      const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || clienteEncontrado.razaoSocial || "Cliente") : "Cliente";
+
+      const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
 
       await addDoc(coll, {
         numeroPedido: codigo, 
         clienteId: clienteSelecionado, 
         clienteNome: nomeClienteReal, 
-        temaFesta, 
+        temaFesta: temaFinalParaSalvar, 
         tipoServico, 
         dataRetirada: datas.retirada, 
         dataDevolucao: datas.devolucao, 
@@ -390,7 +424,7 @@ const NovaLocacao = () => {
 
   const abrirWhatsAppCobranca = () => {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
-      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto || '') : '';
+      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || '') : '';
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
@@ -422,8 +456,10 @@ const NovaLocacao = () => {
     setSalvandoCompra(true);
     try {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
-      const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeCompleto) : 'Cliente Não Identificado';
-      const nomeVinculo = temaFesta ? `${temaFesta} - ${nomeClienteReal}` : `Pedido em Criação de ${nomeClienteReal}`;
+      const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia) : 'Cliente Não Identificado';
+      
+      const nomeTemaFinal = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
+      const nomeVinculo = nomeTemaFinal ? `${nomeTemaFinal} - ${nomeClienteReal}` : `Pedido em Criação de ${nomeClienteReal}`;
       
       let valorCusto = formCompra.valorEstimado ? Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
       let valorAluguel = formCompra.valorAluguel ? Number(formCompra.valorAluguel.replace(/\./g, "").replace(",", ".")) : 0;
@@ -482,16 +518,84 @@ const NovaLocacao = () => {
                 <label>Cliente *</label>
                 <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)}>
                   <option value="">Selecione um cliente cadastrado...</option>
-                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia}</option>)}
+                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia || c.razaoSocial}</option>)}
                 </select>
-              </div>
-              <div className="form-group flex-2">
-                <label>Tema da Festa *</label>
-                <input type="text" placeholder="Ex: Safari, Casamento..." value={temaFesta} onChange={e => setTemaFesta(e.target.value)} />
               </div>
             </div>
 
-            <div className="form-row">
+            {/* ========================================================================= */}
+            {/* 🔥 OS 4 NÍVEIS DE TEMA EM CASCATA 🔥 */}
+            {/* ========================================================================= */}
+            
+            <div className="form-row mt-10">
+                <div className="form-group flex-1">
+                    <label>Categoria do Tema *</label>
+                    <select value={categoriaTema} onChange={e => {
+                        setCategoriaTema(e.target.value);
+                        setSubcategoriaTema('');
+                        setGrupoTemaSelecionado('');
+                        setTemaFesta('');
+                    }}>
+                        <option value="">Selecione a Categoria...</option>
+                        {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                    </select>
+                </div>
+                
+                <div className="form-group flex-1">
+                    <label>Subcategoria do Tema *</label>
+                    <select value={subcategoriaTema} onChange={e => {
+                        setSubcategoriaTema(e.target.value);
+                        setGrupoTemaSelecionado('');
+                        setTemaFesta('');
+                    }} disabled={!categoriaTema}>
+                        <option value="">Selecione a Subcategoria...</option>
+                        {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                    </select>
+                </div>
+            </div>
+
+            <div className="form-row mt-10">
+                <div className="form-group flex-1">
+                    <label>Grupo de Tema *</label>
+                    <select value={grupoTemaSelecionado} onChange={e => {
+                        setGrupoTemaSelecionado(e.target.value);
+                        setTemaFesta('');
+                    }} disabled={!subcategoriaTema}>
+                        <option value="">Selecione o Grupo...</option>
+                        {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
+                    </select>
+                </div>
+
+                <div className="form-group flex-1">
+                    <label>Tema Específico *</label>
+                    <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA'}>
+                        <option value="">Selecione o Tema...</option>
+                        {temasDisponiveis.map(t => (
+                            <option key={t} value={t}>{t}</option>
+                        ))}
+                        <option value="OUTRO_TEMA" style={{fontWeight: 'bold', color: '#3b82f6'}}>✏️ Outro (Digitar Novo Tema)</option>
+                    </select>
+                </div>
+            </div>
+
+            {temaFesta === 'OUTRO_TEMA' && (
+                <div className="form-row" style={{animation: 'fadeIn 0.3s'}}>
+                    <div className="form-group flex-1" style={{background: '#eff6ff', padding: '15px', borderRadius: '8px', border: '1px dashed #3b82f6'}}>
+                        <label style={{color: '#1d4ed8'}}>Digite o nome do novo tema *</label>
+                        <input 
+                            type="text" 
+                            placeholder="Ex: Bailarina Rosa com Ouro..." 
+                            value={temaDigitadoPersonalizado} 
+                            onChange={e => setTemaDigitadoPersonalizado(e.target.value)} 
+                            style={{borderColor: '#bfdbfe'}}
+                            autoFocus
+                        />
+                    </div>
+                </div>
+            )}
+
+
+            <div className="form-row mt-10">
               <div className="form-group flex-1">
                 <label>Data de Retirada / Evento *</label>
                 <input type="date" value={datas.retirada} onChange={handleDataRetiradaChange} />
@@ -572,7 +676,7 @@ const NovaLocacao = () => {
                             <td style={{padding: '12px 10px'}}>
                                <div style={{display: 'flex', alignItems: 'center', gap: '15px'}}>
                                   <div style={{width: '45px', height: '45px', backgroundColor: '#f8fafc', borderRadius: '8px', overflow: 'hidden', flexShrink: 0, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-                                     {item.foto ? <img src={item.foto} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <span style={{fontSize:'20px'}}>📷</span>}
+                                      {item.foto ? <img src={item.foto} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <span style={{fontSize:'20px'}}>📷</span>}
                                   </div>
                                   <div style={{display: 'flex', flexDirection: 'column'}}>
                                      <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>{item.nome}</strong>
@@ -654,9 +758,6 @@ const NovaLocacao = () => {
         </aside>
       </div>
 
-      {/* =========================================================================
-          🔥 NOVO MODAL INTELIGENTE DE SINAL (FIXO E UNIFICADO) 🔥 
-          ========================================================================= */}
       {modalSinalAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
           <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
@@ -712,6 +813,7 @@ const NovaLocacao = () => {
 
               <hr style={{border: 'none', borderTop: '1px solid #e2e8f0', margin: '25px 0'}} />
 
+              {/* BOTOES DE AÇÃO */}
               {valorDigitadoNum > 0 ? (
                   <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
                      <button type="button" onClick={salvarSinalRecebido} disabled={salvandoPedido} style={{padding: '16px', background: '#0f172a', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
@@ -739,90 +841,6 @@ const NovaLocacao = () => {
       )}
 
       {/* CATÁLOGO OTIMIZADO */}
-      {modalAberto && (
-        <div className="modal-overlay-premium" style={{ zIndex: 9999 }}>
-          <div className="modal-box-premium catalogo-modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
-            
-            <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
-              <h3 style={{ margin: 0, fontSize: '18px' }}>📦 Catálogo de Peças <span style={{color: '#64748b', fontWeight: 'normal'}}>(Livre dia {datas.retirada.split('-').reverse().join('/')})</span></h3>
-              <button className="btn-fechar" onClick={() => setModalAberto(false)}>X</button>
-            </div>
-            
-            <div className="catalogo-filtros" style={{ padding: '15px 30px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-              <input 
-                type="text" 
-                placeholder="🔎 Buscar peça pelo nome..." 
-                value={busca} 
-                onChange={e => setBusca(e.target.value)} 
-                style={{ 
-                    width: '100%', maxWidth: '500px', padding: '14px 18px', 
-                    borderRadius: '8px', border: '2px solid #cbd5e1', 
-                    fontSize: '15px', outline: 'none', transition: 'border-color 0.2s',
-                    backgroundColor: '#fff'
-                }} 
-                onFocus={e => e.target.style.borderColor = '#0f172a'}
-                onBlur={e => e.target.style.borderColor = '#cbd5e1'}
-              />
-              <div className="chips-categorias" style={{ marginTop: '15px', gap: '8px' }}>
-                {categoriasUnicas.map(cat => (
-                  <button key={cat} type="button" className={`chip-cat ${filtroCategoria === cat ? 'active' : ''}`} onClick={() => setFiltroCategoria(cat)}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="catalogo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', overflowY: 'auto', padding: '20px 30px', background: '#f1f5f9', flexGrow: 1 }}>
-              {itensFiltrados.map(item => {
-                const qtdFisica = parseInt(item.quantidade || 0) || parseInt(item.estoque || 0) || 0;
-                const qtdManutencao = parseInt(item.manutencao || 0) || parseInt(item.emManutencao || 0) || parseInt(item.qtdManutencao || 0) || parseInt(item.avariadas || 0) || parseInt(item.defeito || 0) || parseInt(item.quebradas || 0) || 0;
-                
-                const totalFisicoReal = Math.max(0, qtdFisica - qtdManutencao);
-                const qtdLivre = getQuantidadeDisponivel(item.id);
-                const esgotado = qtdLivre <= 0;
-
-                return (
-                  <div key={item.id} onClick={() => { if(!esgotado) addCarrinho(item) }} style={{ background: '#fff', border: esgotado ? '2px solid #fecaca' : '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '310px', cursor: esgotado ? 'not-allowed' : 'pointer', opacity: esgotado ? 0.7 : 1, boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }} onMouseEnter={e => { if(!esgotado) { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; } }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; }}>
-                    
-                    <div style={{ height: '140px', width: '100%', flexShrink: 0, backgroundColor: '#f8fafc', position: 'relative', borderBottom: '1px solid #f1f5f9' }}>
-                        {item.foto ? <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <div style={{display:'flex', alignItems:'center', justifyContent:'center', height:'100%', fontSize:'35px'}}>📷</div>}
-                        {esgotado && <div style={{position: 'absolute', inset: 0, backgroundColor: 'rgba(255,255,255,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center'}}><span style={{background: '#ef4444', color: 'white', padding: '6px 12px', borderRadius: '6px', fontWeight: 'bold', fontSize: '12px', transform: 'rotate(-10deg)', letterSpacing: '1px'}}>❌ ALUGADA</span></div>}
-                    </div>
-                    
-                    <div style={{ padding: '12px', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
-                        <div>
-                            <strong style={{ fontSize: '14px', color: '#0f172a', marginBottom: '2px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', textOverflow: 'ellipsis' }} title={item.nome}>{item.nome}</strong>
-                            <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: '800' }}>{item.categoria}</span>
-                        </div>
-                        
-                        <div style={{ display: 'flex', gap: '8px', margin: '10px 0' }}>
-                            <div style={{ flex: 1, background: '#f1f5f9', borderRadius: '6px', padding: '5px 2px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                                <span style={{ display: 'block', fontSize: '9px', color: '#475569', fontWeight: 'bold' }}>TOTAL</span>
-                                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{totalFisicoReal}</strong>
-                            </div>
-                            <div style={{ flex: 1, background: esgotado ? '#fef2f2' : '#f0fdf4', borderRadius: '6px', padding: '5px 2px', textAlign: 'center', border: esgotado ? '1px solid #fca5a5' : '1px solid #86efac' }}>
-                                <span style={{ display: 'block', fontSize: '9px', color: esgotado ? '#ef4444' : '#16a34a', fontWeight: 'bold' }}>LIVRES</span>
-                                <strong style={{ fontSize: '14px', color: esgotado ? '#ef4444' : '#16a34a' }}>{qtdLivre}</strong>
-                            </div>
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span style={{ fontSize: '16px', fontWeight: '900', color: esgotado ? '#ef4444' : '#10b981' }}>R$ {item.financeiro?.valorAluguel || 0}</span>
-                            <button style={{ width: '32px', height: '32px', background: esgotado ? '#f1f5f9' : '#0f172a', color: esgotado ? '#cbd5e1' : 'white', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: 'none', cursor: esgotado ? 'not-allowed' : 'pointer' }} disabled={esgotado}>
-                                {esgotado ? '✕' : '+'}
-                            </button>
-                        </div>
-                    </div>
-                  </div>
-                );
-              })}
-              {itensFiltrados.length === 0 && <p style={{ color: '#64748b', gridColumn: '1 / -1', textAlign: 'center', marginTop: '30px', fontSize: '15px' }}>Nenhuma peça encontrada com este nome ou categoria.</p>}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* MODAL DE COMPRA */}
       {modalCompraAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
           <div className="modal-box-premium" style={{maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto'}}>
