@@ -11,6 +11,7 @@ const CadastroEstoque = () => {
   const location = useLocation();
   const itemEditando = location.state?.itemEditando || null;
   const itemDuplicando = location.state?.itemDuplicando || null; 
+  // 🔥 A MOCHILA QUE VEIO DA LISTA DE COMPRAS 🔥
   const dadosCompra = location.state?.dadosCompra || null; 
 
   const [salvando, setSalvando] = useState(false);
@@ -189,13 +190,15 @@ const CadastroEstoque = () => {
       else if (itemBase.foto) setFotos([itemBase.foto]);
     
     } else if (dadosCompra) {
+      // 🔥 PREENCHIMENTO AUTOMÁTICO SE VIER DAS COMPRAS 🔥
       setNome(dadosCompra.nome || '');
       setQuantidade(dadosCompra.quantidade || 1);
       if (dadosCompra.valorEstimado) setValorCompra(Number(dadosCompra.valorEstimado).toFixed(2).replace('.', ','));
       if (dadosCompra.valorAluguel) setValorAluguel(Number(dadosCompra.valorAluguel).toFixed(2).replace('.', ','));
       setFornecedor(dadosCompra.fornecedor || '');
       setObservacoes(dadosCompra.obs || '');
-      setStatus('pintura'); 
+      setStatus('ok'); 
+      if (dadosCompra.formato === 'kit') setTipoCadastro('kit');
     }
   }, [itemEditando, itemDuplicando, dadosCompra]);
 
@@ -493,7 +496,6 @@ const CadastroEstoque = () => {
         return alert("❌ Selecione o Tema/Filtro Específico.");
     }
     
-    // 🔥 TRAVA DE SEGURANÇA OBRIGATÓRIA PARA AS FILHAS 🔥
     if (isKitNovo && pecasKitNovas.some(p => (!p.tamanho.trim() && !p.cor.trim()))) {
         return alert("❌ OBRIGATÓRIO: Preencha o TAMANHO ou a COR de todas as peças filhas do Kit para o sistema não gerar nomes duplicados!");
     }
@@ -513,7 +515,6 @@ const CadastroEstoque = () => {
       const subCatFinal = isDecoracao ? 'Pacote' : subCategoria;
       const temaFinalParaSalvar = temaSelecionado === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaSelecionado;
 
-      // 🔥 INTELIGÊNCIA DO NOME DO PAI 🔥
       const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ? `KIT ${nome.trim()}` : nome.trim();
 
       const dados = {
@@ -577,7 +578,6 @@ const CadastroEstoque = () => {
                 if (peca.nome.trim() || peca.tamanho.trim() || peca.cor.trim()) {
                     const valPeca = Number(peca.valorAluguel.replace(',', '.'));
                     
-                    // NOME LIMPO DO PAI PARA USAR NA FILHA
                     let nomePaiPrefixo = nome.trim();
                     if (nomePaiPrefixo.toUpperCase().startsWith('KIT ')) {
                          nomePaiPrefixo = nomePaiPrefixo.substring(4).trim();
@@ -638,11 +638,23 @@ const CadastroEstoque = () => {
             }
         }
 
+        // 🔥 SE VEIO DA LISTA DE COMPRAS, ELE MARCA COMO 'CHEGOU' LÁ AUTOMATICAMENTE 🔥
+        if (dadosCompra && dadosCompra.id) {
+             const compraRef = doc(db, "lista_compras", dadosCompra.id);
+             await updateDoc(compraRef, {
+                 status: 'chegou',
+                 dataChegada: new Date().toISOString()
+             });
+        }
+
         if (isDecoracao) alert(`✨ ${tipoPacote} salvo! Pronto para o catálogo.`);
         else if (isKitNovo) alert("📦 Conjunto salvo e peças desmembradas com sucesso no estoque!");
         else alert(itemDuplicando ? "📋 Peça duplicada com sucesso!" : "🧩 Peça avulsa adicionada com sucesso!");
       }
-      navigate('/estoque');
+      
+      // Se veio das Compras, devolve para as Compras! Se não, vai para o Estoque normal.
+      navigate(dadosCompra ? '/compras' : '/estoque');
+
     } catch (error) { alert("Erro ao salvar."); } 
     finally { setSalvando(false); }
   };
