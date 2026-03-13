@@ -31,12 +31,14 @@ const Clientes = () => {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
+  
+  const [ordemAlfabetica, setOrdemAlfabetica] = useState('A-Z');
+
   const [menuAberto, setMenuAberto] = useState(null); 
   const [allLocacoes, setAllLocacoes] = useState([]); 
   const [modalAberto, setModalAberto] = useState(false);
   const [detalhesDivida, setDetalhesDivida] = useState({ cliente: '', pendencias: [] });
 
-  // 🔥 ESTADO DO FICHÁRIO 🔥
   const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('dados'); 
 
@@ -86,7 +88,6 @@ const Clientes = () => {
       });
 
       if (precisaAtualizarBanco) await batch.commit();
-      listaClientes.sort((a, b) => (a.nome || a.nomeFantasia || '').localeCompare(b.nome || b.nomeFantasia || ''));
       setClientes(listaClientes);
 
     } catch (error) { } finally { setLoading(false); }
@@ -116,8 +117,8 @@ const Clientes = () => {
 
   const irParaLocacaoEspecifica = (pedidoId) => {
     setModalAberto(false);
-    setClienteVisualizacao(null); // Fecha o modal do cliente
-    navigate(`/locacoes/editar/${pedidoId}`); // Teletransporta pra locação
+    setClienteVisualizacao(null); 
+    navigate(`/locacoes/editar/${pedidoId}`); 
   };
 
   const excluirCliente = async (id, nome) => {
@@ -189,12 +190,22 @@ const Clientes = () => {
     }).join(' ');
   };
 
-  const clientesFiltrados = clientes.filter(c => {
+  let clientesFiltrados = clientes.filter(c => {
     const termo = busca.toLowerCase();
     const matchBusca = (c.nome?.toLowerCase().includes(termo)) || (c.nomeFantasia?.toLowerCase().includes(termo)) || (c.cpf?.includes(termo)) || (c.cnpj?.includes(termo));
     if (filtroStatus === 'adimplentes') return matchBusca && c.situacaoFinanceira === 'adimplente';
     if (filtroStatus === 'inadimplentes') return matchBusca && c.situacaoFinanceira === 'inadimplente';
     return matchBusca;
+  });
+
+  // Ordenação
+  clientesFiltrados.sort((a, b) => {
+      const nomeA = (a.tipoPessoa === 'juridica' ? a.nomeFantasia : a.nome || '').toLowerCase();
+      const nomeB = (b.tipoPessoa === 'juridica' ? b.nomeFantasia : b.nome || '').toLowerCase();
+      
+      if (ordemAlfabetica === 'A-Z') return nomeA.localeCompare(nomeB);
+      if (ordemAlfabetica === 'Z-A') return nomeB.localeCompare(nomeA);
+      return 0;
   });
 
   return (
@@ -215,18 +226,39 @@ const Clientes = () => {
       </div>
 
       <div className="advanced-filter-bar">
-        <div className="filter-main-row">
+        <div className="filter-main-row" style={{ display: 'flex', gap: '15px' }}>
+          
+          {/* 🔥 BARRA DE PESQUISA ORIGINAL RESTAURADA 🔥 */}
           <div className="search-group" style={{ flex: 2 }}>
             <span className="search-icon">🔍</span>
             <input type="text" placeholder="Buscar cliente por nome, CPF ou CNPJ..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
+
+          {/* 🔥 BOTÃO DE ORDEM SEPARADO, ELEGANTE E ALINHADO 🔥 */}
+          <button 
+              onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')}
+              style={{ 
+                  flex: '0 0 auto', padding: '0 20px', background: '#fff', border: '1px solid #cbd5e1', 
+                  borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', 
+                  color: '#475569', display: 'flex', alignItems: 'center', gap: '8px',
+                  transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  height: '42px'
+              }}
+              onMouseEnter={e => {e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#0f172a';}}
+              onMouseLeave={e => {e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569';}}
+              title="Mudar Ordem Alfabética"
+          >
+              {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
+          </button>
+
           <div className="select-group" style={{ flex: 1 }}>
-            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} style={{width: '100%'}}>
+            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} style={{width: '100%', height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1'}}>
               <option value="todos">📊 Todos os Status</option>
               <option value="adimplentes">✅ Apenas Adimplentes (Sem dívidas)</option>
               <option value="inadimplentes">⚠️ Apenas Inadimplentes (Com dívidas)</option>
             </select>
           </div>
+
         </div>
       </div>
 
@@ -411,7 +443,6 @@ const Clientes = () => {
                                          const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
                                          const isCancelado = st.includes('cancelado') || loc.isOrcamentoVencido;
                                          
-                                         // 🔥 Extrai o Serviço
                                          let tipoServico = "DECORAÇÃO";
                                          if (loc.tipoServico || loc.modalidade) {
                                             tipoServico = String(loc.tipoServico || loc.modalidade).toUpperCase();
@@ -419,7 +450,6 @@ const Clientes = () => {
                                             tipoServico = "PEGUE E MONTE";
                                          }
 
-                                         // 🔥 Extrai o Tema Blindado (Procura em todas as chaves possíveis)
                                          const temaFesta = loc.tema || loc.temaDaFesta || loc.temaFesta || loc.nomeTema || 'Sem tema definido';
 
                                          return (
@@ -427,7 +457,6 @@ const Clientes = () => {
                                             <td>{loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</td>
                                             <td><strong>#{loc.numeroPedido || loc.id.substring(0,6).toUpperCase()}</strong></td>
                                             
-                                            {/* 🔥 COLUNA TEMA / SERVIÇO EMPILHADA 🔥 */}
                                             <td style={{maxWidth: '200px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>
                                                 <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#94a3b8', display: 'block', marginBottom: '2px', textTransform: 'uppercase' }}>
                                                     {tipoServico}

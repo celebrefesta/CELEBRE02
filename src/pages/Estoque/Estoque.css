@@ -132,7 +132,7 @@
 .status-pill.disponivel { background: rgba(16, 185, 129, 0.1); color: #10b981; border: 1px solid #bbf7d0;} 
 .status-pill.manutencao { background: rgba(217, 119, 6, 0.1); color: #d97706; border: 1px solid #fde68a;}
 .status-pill.esgotado { background: #ef4444; color: #ffffff; border: 1px solid #b91c1c; box-shadow: 0 2px 4px rgba(239,68,68,0.2);}
-.status-pill.sem-estoque { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; } /* NOVA PÍLULA CINZA */
+.status-pill.sem-estoque { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 /* BOTÕES DE AÇÃO */
 .dropdown-container { display: flex; justify-content: flex-end; gap: 6px; position: relative;}
@@ -167,7 +167,7 @@
 @keyframes zoomIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
 
 /* =========================================
-   📱 RESPONSIVIDADE MOBILE (BLINDAGEM TOTAL)
+   📱 RESPONSIVIDADE MOBILE (A MÁGICA ACONTECE AQUI)
 ========================================= */
 @media (max-width: 1000px) {
     /* 1. ELIMINA ESPAÇOS LATERAIS E SUPERIORES INÚTEIS */
@@ -197,7 +197,7 @@
     .barra-pesquisa { width: 100%; min-width: 0;}
     
     /* =======================================
-       🔴 3. CORREÇÃO DA TABELA E BOTÕES VOADORES 🔴
+       🔴 3. CORREÇÃO DA TABELA E BOTÕES FLUTUANTES 🔴
        ======================================= */
     .table-container { background: transparent !important; border: none !important; padding: 0 6px !important; box-shadow: none !important;}
     
@@ -209,17 +209,24 @@
     .table-pro tr {
         display: flex !important; flex-direction: column !important; width: 100% !important;
         background: var(--branco) !important; border-radius: 12px !important; border: 1px solid var(--borda) !important;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; overflow: hidden !important;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05) !important; 
+        /* 🔥 A CURA: Permitir que o menu saia do limite do cartão 🔥 */
+        overflow: visible !important; 
         padding: 0 !important; margin: 0 !important; height: auto !important; position: relative !important;
     }
     
+    /* Arredonda o topo e o fundo manualmente porque tiramos o overflow hidden */
+    .table-pro td:first-child { border-radius: 12px 12px 0 0 !important; }
+
     /* As Células (Td) */
     .table-pro td {
         display: flex !important; flex-direction: column !important; align-items: flex-start !important; justify-content: center !important;
         padding: 12px 15px !important; border: none !important; border-bottom: 1px solid #f1f5f9 !important; 
-        width: 100% !important; text-align: left !important; border-radius: 0 !important;
-        position: static !important; /* MATA qualquer posicionamento absoluto fantasma */
+        width: 100% !important; text-align: left !important; 
+        position: static !important; 
         height: auto !important;
+        /* 🔥 Garante que a célula também não corte nada 🔥 */
+        overflow: visible !important; 
     }
     .table-pro td:last-child { border-bottom: none !important; }
 
@@ -235,35 +242,29 @@
     .status-cell { align-items: stretch !important; padding: 12px 15px !important; }
     .status-pill { display: block !important; width: 100% !important; text-align: center !important; padding: 10px !important;}
 
-    /* 🔴 RODAPÉ COM OS BOTÕES (A Cura) */
+    /* 🔴 RODAPÉ COM OS BOTÕES */
     .table-pro td.actions-cell { 
         background: #f1f5f9 !important; 
         padding: 15px !important; 
-        flex-direction: row !important; /* Força ser uma linha horizontal */
-        justify-content: center !important;
+        flex-direction: row !important; 
+        justify-content: flex-end !important;
         align-items: center !important;
-        order: 99 !important; /* Joga obrigatoriamente para o fundo */
+        order: 99 !important; 
+        border-radius: 0 0 12px 12px !important; /* Arredonda a base */
+        /* 🔥 Essencial para o Z-Index funcionar 🔥 */
+        position: relative !important; 
+        z-index: 10 !important; 
     }
+    
     .table-pro td.actions-cell .dropdown-container { 
         display: flex !important; 
-        flex-direction: row !important; /* Força os botões um do lado do outro */
-        justify-content: center !important; 
+        flex-direction: row !important; 
+        justify-content: flex-end !important; 
         align-items: center !important;
         width: 100% !important; 
-        gap: 15px !important; 
+        gap: 10px !important; 
         height: auto !important; 
-        position: static !important; /* Anula a caixa invisível gigante */
-    }
-    .table-pro td.actions-cell .action-icon { 
-        display: flex !important; 
-        justify-content: center !important; 
-        align-items: center !important;
-        width: 45px !important; 
-        height: 45px !important; 
-        font-size: 18px !important; 
-        border: 1px solid #cbd5e1 !important;
-        background: white !important; 
-        position: static !important;
-        margin: 0 !important;
+        position: relative !important; 
+        overflow: visible !important;
     }
 }

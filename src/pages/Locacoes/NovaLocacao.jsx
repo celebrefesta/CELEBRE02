@@ -89,29 +89,41 @@ const NovaLocacao = () => {
       return s1 <= e2 && e1 >= s2;
   };
 
-  const getQuantidadeDisponivel = (pecaId) => {
+  const getDisponibilidade = (pecaId) => {
       const peca = estoque.find(e => e.id === pecaId);
-      if (!peca) return 0;
+      if (!peca) return { livresReais: 0, livresMaximos: 0, retornaNoDia: 0 };
+      
       const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
       const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
-      let livres = Math.max(0, qtdFisica - qtdManutencao);
+      let disponiveisTotais = Math.max(0, qtdFisica - qtdManutencao);
+
+      let qtdReservadaForte = 0;
+      let qtdRetornaNoDia = 0;
 
       if (datas.retirada && datas.devolucao) {
-          let qtdReservada = 0;
           todasLocacoes.forEach(loc => {
               const status = (loc.status || '').toLowerCase();
               if (['confirmado', 'preparacao', 'entregue'].includes(status)) {
                   if (isOverlapping(datas.retirada, datas.devolucao, loc.dataRetirada, loc.dataDevolucao)) {
                       const itemNoPedido = loc.itens?.find(i => i.id === pecaId);
                       if (itemNoPedido) {
-                          qtdReservada += (parseInt(itemNoPedido.qtd) || 0);
+                          const qtdAlugada = parseInt(itemNoPedido.qtd) || 0;
+                          
+                          if (loc.dataDevolucao === datas.retirada) {
+                              qtdRetornaNoDia += qtdAlugada;
+                          } else {
+                              qtdReservadaForte += qtdAlugada;
+                          }
                       }
                   }
               }
           });
-          livres = Math.max(0, livres - qtdReservada);
       }
-      return livres;
+
+      const livresReais = Math.max(0, disponiveisTotais - qtdReservadaForte - qtdRetornaNoDia);
+      const livresMaximos = Math.max(0, disponiveisTotais - qtdReservadaForte);
+
+      return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia };
   };
 
   const abrirCatalogo = () => {
@@ -132,8 +144,8 @@ const NovaLocacao = () => {
     const temaAtual = normalize(temaFesta); 
 
     let similares = estoque.map(peca => {
-        const qtdLivre = getQuantidadeDisponivel(peca.id);
-        if (peca.id === itemFaltante.id || qtdLivre <= 0) return { ...peca, score: -1 };
+        const disp = getDisponibilidade(peca.id);
+        if (peca.id === itemFaltante.id || disp.livresMaximos <= 0) return { ...peca, score: -1 };
 
         let score = 0;
         const nomePecaNorm = normalize(peca.nome);
@@ -146,7 +158,7 @@ const NovaLocacao = () => {
             if (nomePecaNorm.includes(palavra) && palavra !== palavraPrincipal) score += 5;
         });
 
-        return { ...peca, score, qtdLivre };
+        return { ...peca, score, qtdLivre: disp.livresMaximos };
     });
 
     similares = similares.filter(p => p.score >= 10);
@@ -177,9 +189,9 @@ const NovaLocacao = () => {
   };
 
   const addCarrinho = (item, isSubstituicao = false) => {
+    const disp = getDisponibilidade(item.id);
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
     const qtdFisicaTotal = Number(item.quantidade) || 1; 
-    const qtdLivreNaData = getQuantidadeDisponivel(item.id);
     const existe = carrinho.find(i => i.id === item.id);
     
     if (existe) {
@@ -188,19 +200,31 @@ const NovaLocacao = () => {
           return;
       }
 
-      if (existe.qtd >= qtdLivreNaData && !existe.isPendenteCompra) {
-          alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê só tem ${qtdLivreNaData} unidade(s) livre(s) de "${item.nome}" para esta data.\n\nVamos buscar um Plano B!`);
+      if (existe.qtd >= disp.livresMaximos && !existe.isPendenteCompra) {
+          alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê possui o limite absoluto de ${disp.livresMaximos} unidade(s) de "${item.nome}" para esta data.\n\nVamos buscar um Plano B!`);
           dispararCompraAutomatica(item);
           return;
       }
-      setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
+
+      if (existe.qtd >= disp.livresReais && disp.retornaNoDia > 0 && !existe.jaAvisouBateVolta) {
+          const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar a peça mesmo assim?`);
+          if (!querMesmo) return;
+      }
+
+      setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1, jaAvisouBateVolta: disp.retornaNoDia > 0 ? true : i.jaAvisouBateVolta } : i));
     } else {
-      if (qtdLivreNaData < 1 && !isSubstituicao) {
-          alert(`⚠️ PEÇA INDISPONÍVEL!\nEsta peça está em manutenção ou já alugada para esta data.\n\nVamos ver alternativas no acervo!`);
+      if (disp.livresMaximos < 1 && !isSubstituicao) {
+          alert(`⚠️ PEÇA INDISPONÍVEL!\nEsta peça está em manutenção ou o limite máximo já foi atingido para esta data.\n\nVamos ver alternativas no acervo!`);
           dispararCompraAutomatica(item);
           return;
       }
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, qtdOriginal: qtdFisicaTotal, qtdLivreNestaData: qtdLivreNaData, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]); 
+      
+      if (disp.livresReais < 1 && disp.retornaNoDia > 0) {
+          const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar a peça mesmo assim?`);
+          if (!querMesmo) return;
+      }
+
+      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, isBateVolta: disp.retornaNoDia > 0, jaAvisouBateVolta: disp.retornaNoDia > 0, qtdOriginal: qtdFisicaTotal, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]); 
     }
   };
 
@@ -217,11 +241,11 @@ const NovaLocacao = () => {
       }
 
       if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
-          const livresAgora = getQuantidadeDisponivel(itemId);
+          const disp = getDisponibilidade(itemId);
 
-          if (qtdDesejada > livresAgora) {
-              alert(`⚠️ OPERAÇÃO BLOQUEADA!\nO limite absoluto para "${itemCarrinho.nome}" nesta data é: ${livresAgora} unidade(s).\n\nO sistema corrigiu o valor para o máximo permitido.`);
-              setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: livresAgora} : i));
+          if (qtdDesejada > disp.livresMaximos) {
+              alert(`⚠️ LIMITE ABSOLUTO ATINGIDO!\nO limite para "${itemCarrinho.nome}" nesta data é: ${disp.livresMaximos} unidade(s).\n\nO sistema corrigiu o valor.`);
+              setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: disp.livresMaximos} : i));
           } else {
               setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
           }
@@ -292,9 +316,9 @@ const NovaLocacao = () => {
 
     for (let item of carrinho) {
         if (item.isPendenteCompra) continue;
-        const livresAgora = getQuantidadeDisponivel(item.id);
+        const disp = getDisponibilidade(item.id);
         const qtdNoCarrinho = Number(item.qtd) || 1;
-        if (qtdNoCarrinho > livresAgora) return alert(`⛔ ERRO GRAVE DE ESTOQUE:\nA peça "${item.nome}" possui apenas ${livresAgora} unidade(s) livre(s) para esta data.\nDiminua a quantidade antes de salvar.`);
+        if (qtdNoCarrinho > disp.livresMaximos) return alert(`⛔ ERRO GRAVE DE ESTOQUE:\nA peça "${item.nome}" possui apenas ${disp.livresMaximos} unidade(s) permitida(s) para esta data.\nDiminua a quantidade antes de salvar.`);
     }
 
     setStatusParaSalvar(status);
@@ -459,9 +483,6 @@ const NovaLocacao = () => {
               </div>
             </div>
 
-            {/* ========================================================================= */}
-            {/* 🔥 OS 4 NÍVEIS DE TEMA EM CASCATA COM AUTO-PREENCHIMENTO E UX DINÂMICA 🔥 */}
-            {/* ========================================================================= */}
             <div className="form-row mt-10">
                 <div className="form-group flex-1">
                     <label>Categoria do Tema *</label>
@@ -615,7 +636,10 @@ const NovaLocacao = () => {
                                       {item.foto ? <img src={item.foto} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <span style={{fontSize:'20px'}}>📷</span>}
                                   </div>
                                   <div style={{display: 'flex', flexDirection: 'column'}}>
-                                     <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>{item.nome}</strong>
+                                     <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>
+                                        {item.nome}
+                                        {item.isBateVolta && <span style={{color: '#f59e0b', fontSize: '10px', marginLeft: '6px', background: '#fef3c7', padding: '2px 4px', borderRadius: '4px'}}>⚠️ Bate e Volta (Retorna no Dia)</span>}
+                                     </strong>
                                      <span style={{color: '#64748b', fontSize: '12px'}}>R$ {Number(item.preco).toFixed(2)} un.</span>
                                      {item.isPendenteCompra ? <span style={{color: '#d97706', fontSize: '10px', fontWeight: 'bold', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', width: 'max-content', marginTop: '4px'}}>⏳ COMPRA PENDENTE</span> : <span style={{color: '#10b981', fontSize: '10px', fontWeight: 'bold', marginTop: '4px'}}>📦 Confirmado!</span>}
                                   </div>
@@ -628,9 +652,9 @@ const NovaLocacao = () => {
                                 <button type="button" onClick={() => {
                                     if (item.isPendenteCompra) handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) + 1);
                                     else {
-                                        const livresAgora = getQuantidadeDisponivel(item.id);
-                                        if ((Number(item.qtd) || 1) >= livresAgora) {
-                                            alert(`⚠️ LIMITE ATINGIDO!\nVocê possui apenas ${livresAgora} unidade(s) livre(s) de "${item.nome}".`);
+                                        const disp = getDisponibilidade(item.id);
+                                        if ((Number(item.qtd) || 1) >= disp.livresMaximos) {
+                                            alert(`⚠️ LIMITE ATINGIDO!\nVocê possui apenas ${disp.livresMaximos} unidade(s) livre(s) de "${item.nome}".`);
                                             dispararCompraAutomatica(item);
                                         } else handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) + 1);
                                     }
@@ -718,101 +742,57 @@ const NovaLocacao = () => {
         </div>
       )}
 
-      {/* CATÁLOGO OTIMIZADO */}
-      {modalCompraAberto && (
-        <div className="modal-overlay-premium" style={{zIndex: 99999}}>
-          <div className="modal-box-premium" style={{maxWidth: '750px', maxHeight: '90vh', overflowY: 'auto'}}>
-            <div className="modal-header" style={{borderBottom: 'none', paddingBottom: '0'}}>
-              <h3>🛒 Faltou a peça?</h3>
-              <button className="btn-fechar" onClick={() => setModalCompraAberto(false)}>X</button>
+      {/* CATÁLOGO DE PEÇAS - EXIBINDO OS SELOS */}
+      {modalAberto && (
+        <div className="modal-overlay-premium">
+          <div className="modal-box-premium catalogo-modal">
+            <div className="modal-header">
+              <h3>📦 Catálogo de Peças</h3>
+              <button className="btn-fechar" onClick={() => setModalAberto(false)}>X</button>
             </div>
             
-            {pecasSimilaresPlanoB.length > 0 && (
-                <div style={{margin: '15px 30px', padding: '15px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px'}}>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '15px'}}><span style={{fontSize: '24px'}}>💡</span><div><strong style={{color: '#0f172a', display: 'block', fontSize: '15px'}}>Plano B: Salve a venda!</strong><span style={{color: '#475569', fontSize: '13px'}}>O sistema encontrou opções COERENTES e LIVRES NESTA DATA:</span></div></div>
-                    {previewPlanoB ? (
-                        <div style={{background: '#fff', border: '2px solid #10b981', borderRadius: '10px', padding: '20px', textAlign: 'center', boxShadow: '0 10px 25px rgba(16, 185, 129, 0.15)', animation: 'fadeIn 0.3s'}}>
-                           <p style={{fontSize: '13px', color: '#64748b', marginBottom: '10px'}}>Você está substituindo <b>{formCompra.nome}</b> por:</p>
-                           <div style={{width: '180px', height: '180px', background: '#f1f5f9', borderRadius: '10px', margin: '0 auto 15px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px', overflow: 'hidden'}}>{previewPlanoB.foto ? <img src={previewPlanoB.foto} alt="" style={{width: '100%', height: '100%', objectFit: 'cover'}}/> : '📷'}</div>
-                           <h3 style={{margin: '0 0 10px 0', color: '#0f172a', fontSize: '20px'}}>{previewPlanoB.nome}</h3>
-                           <span style={{background: '#dcfce7', color: '#166534', padding: '6px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold'}}>📦 {previewPlanoB.qtdLivre} livres p/ esta data</span>
-                           <div style={{display: 'flex', gap: '15px', justifyContent: 'center', marginTop: '20px'}}>
-                               <button type="button" onClick={() => setPreviewPlanoB(null)} style={{padding: '12px 20px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#475569'}}>← Cancelar e Voltar</button>
-                               <button type="button" onClick={() => aceitarSugestaoPlanoB(previewPlanoB)} style={{padding: '12px 20px', background: '#10b981', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#fff', boxShadow: '0 4px 10px rgba(16, 185, 129, 0.3)'}}>✅ Confirmar Substituição</button>
-                           </div>
-                        </div>
-                    ) : (
-                        <div style={{display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px'}}>
-                            {pecasSimilaresPlanoB.map(pecaB => (
-                                <div key={pecaB.id} style={{minWidth: '130px', background: 'white', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '12px', textAlign: 'center', transition: '0.2s', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
-                                    <div style={{width: '60px', height: '60px', background: '#f1f5f9', borderRadius: '8px', margin: '0 auto 10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'}}>{pecaB.foto ? <img src={pecaB.foto} alt="" style={{width: '100%', height: '100%', objectFit: 'cover', borderRadius: '8px'}}/> : '📷'}</div>
-                                    <strong style={{fontSize: '12px', display: 'block', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginBottom: '8px'}} title={pecaB.nome}>{pecaB.nome}</strong>
-                                    <button type="button" onClick={() => setPreviewPlanoB(pecaB)} style={{background: '#0f172a', color: 'white', border: 'none', padding: '8px 10px', borderRadius: '6px', fontSize: '11px', cursor: 'pointer', width: '100%', fontWeight: 'bold', transition: '0.2s'}} onMouseEnter={e => e.currentTarget.style.backgroundColor = '#1e293b'} onMouseLeave={e => e.currentTarget.style.backgroundColor = '#0f172a'}>🔎 Ver & Trocar</button>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            )}
-            <p style={{fontSize: '13px', color: 'var(--texto-secundario)', marginBottom: '15px', padding: '0 30px'}}>O cliente faz questão da peça original? Preencha abaixo para solicitar a COMPRA dela.</p>
-            <form onSubmit={handleSalvarCompraRapida} className="form-pagamento" style={{padding: '0 30px 30px 30px', opacity: previewPlanoB ? 0.3 : 1, pointerEvents: previewPlanoB ? 'none' : 'auto'}}>
-              <div className="form-group-pag" style={{position: 'relative'}}>
-                <label>Nome do Item que será comprado *</label>
-                <input id="compraNomeInput" type="text" required autoComplete="off" value={formCompra.nome} 
-                  onChange={(e) => {
-                    const val = e.target.value;
-                    setFormCompra({...formCompra, nome: val});
-                    if(val.length >= 2) { const filtrados = estoque.filter(item => item.nome.toLowerCase().includes(val.toLowerCase())); setSugestoesCompra(filtrados); } else { setSugestoesCompra([]); }
-                  }} 
-                  onBlur={() => setTimeout(() => setSugestoesCompra([]), 200)}
-                />
-                {sugestoesCompra.length > 0 && (
-                   <div style={{position: 'absolute', top: '100%', left: 0, right: 0, backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '6px', zIndex: 100, maxHeight: '180px', overflowY: 'auto', boxShadow: '0 4px 15px rgba(0,0,0,0.1)'}}>
-                      {sugestoesCompra.map(item => {
-                         const livres = getQuantidadeDisponivel(item.id);
-                         return (
-                         <div 
-                           key={item.id} 
-                           onMouseDown={() => { 
-                              let valorAlg = item.financeiro?.valorAluguel || "0,00";
-                              if (typeof valorAlg === 'number') valorAlg = valorAlg.toFixed(2).replace(".", ",");
-                              setFormCompra({...formCompra, nome: item.nome, categoria: item.categoria || "acervo", valorAluguel: valorAlg});
-                              setSugestoesCompra([]);
-                           }}
-                           style={{padding: '10px 15px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}
-                           onMouseEnter={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                           onMouseLeave={e => e.currentTarget.style.backgroundColor = '#fff'}
-                         >
-                           <span style={{fontWeight: 'bold', color: '#0f172a', fontSize: '13px'}}>{item.nome} {livres <= 0 && '(ALUGADO)'}</span>
-                           <span style={{fontSize: '11px', color: livres > 0 ? '#166534' : '#ef4444', backgroundColor: livres > 0 ? '#dcfce7' : '#fee2e2', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold'}}>Livres: {livres}</span>
-                         </div>
-                      )})}
-                   </div>
-                )}
+            <div className="catalogo-filtros">
+              <input type="text" className="search-input-clean" style={{border: '1px solid var(--borda)', padding: '10px', borderRadius: '8px'}} placeholder="🔎 Buscar peça..." value={busca} onChange={e => setBusca(e.target.value)} />
+              <div className="chips-categorias">
+                {categoriasUnicasEstoque.map(cat => (
+                  <button key={cat} type="button" className={`chip-cat ${filtroCategoria === cat ? 'active' : ''}`} onClick={() => setFiltroCategoria(cat)}>
+                    {cat}
+                  </button>
+                ))}
               </div>
-              <div className="form-group-row mt-10">
-                <div className="form-group-pag" style={{width: '80px'}}><label>Qtd *</label><input type="number" min="1" required value={formCompra.quantidade} onChange={e => setFormCompra({...formCompra, quantidade: e.target.value})} /></div>
-                <div className="form-group-pag flex-1"><label title="Quanto você vai gastar na loja">Custo Est. (R$)</label><input type="text" placeholder="0,00" value={formCompra.valorEstimado} onChange={e => setFormCompra({...formCompra, valorEstimado: maskCurrency(e.target.value)})} /></div>
-                <div className="form-group-pag flex-1"><label title="Quanto vai custar para o cliente alugar">Cobrar Aluguel</label><input type="text" placeholder="0,00" style={{borderColor: '#c5a059', backgroundColor: '#fffbeb'}} value={formCompra.valorAluguel} onChange={e => setFormCompra({...formCompra, valorAluguel: maskCurrency(e.target.value)})} /></div>
-              </div>
-              <div className="form-group-row">
-                <div className="form-group-pag flex-1"><label>Data Limite (Chegada)</label><input type="date" value={formCompra.prazo} onChange={e => setFormCompra({...formCompra, prazo: e.target.value})} /></div>
-                <div className="form-group-pag flex-2"><label>Fornecedor (Nome ou Link)</label><input type="text" placeholder="Ex: Mercado Livre..." value={formCompra.fornecedor} onChange={e => setFormCompra({...formCompra, fornecedor: e.target.value})} /></div>
-              </div>
-              <div className="form-group-pag">
-                <label>Categoria</label>
-                <select value={formCompra.categoria} onChange={e => setFormCompra({...formCompra, categoria: e.target.value})}>
-                  <option value="material">Material de Consumo (Bexiga, Fita...)</option>
-                  <option value="acervo">Peça de Acervo (Vaso, Móvel...)</option>
-                </select>
-              </div>
-              <div className="form-group-pag"><label>Observação (Cor, tamanho, etc)</label><textarea rows="2" value={formCompra.obs} onChange={e => setFormCompra({...formCompra, obs: e.target.value})}></textarea></div>
-              <div className="modal-actions" style={{flexWrap: 'wrap', marginTop: '20px'}}>
-                <button type="button" className="btn-cancel" style={{flex: 1}} onClick={() => setModalCompraAberto(false)}>Cancelar</button>
-                <button type="submit" className="btn-secundario-alerta" style={{flex: 1, padding: '12px', border: '1px solid #fde68a'}} onClick={() => setAcaoSalvar('continuar')} disabled={salvandoCompra}>{salvandoCompra && acaoSalvar === 'continuar' ? 'Salvando...' : '+ Salvar e Novo'}</button>
-                <button type="submit" className="btn-salvar-form" style={{flex: 1, padding: '12px'}} onClick={() => setAcaoSalvar('fechar')} disabled={salvandoCompra}>{salvandoCompra && acaoSalvar === 'fechar' ? 'Salvando...' : 'Salvar e Inserir'}</button>
-              </div>
-            </form>
+            </div>
+
+            <div className="catalogo-grid">
+              {itensFiltrados.map(item => {
+                  const disp = getDisponibilidade(item.id);
+                  const estaEsgotado = disp.livresMaximos <= 0;
+                  const ehBateVolta = disp.livresReais <= 0 && disp.retornaNoDia > 0;
+
+                  return (
+                    <div key={item.id} className="peca-card" onClick={() => { if(!estaEsgotado) addCarrinho(item); }} style={{opacity: estaEsgotado ? 0.5 : 1, cursor: estaEsgotado ? 'not-allowed' : 'pointer'}}>
+                      <div className="peca-img" style={{position: 'relative'}}>
+                          {item.foto ? <img src={item.foto} alt=""/> : '📷'}
+                          
+                          {estaEsgotado ? (
+                              <span style={{position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>ALUGADO</span>
+                          ) : ehBateVolta ? (
+                              <span style={{position: 'absolute', top: 5, left: 5, background: '#f59e0b', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
+                          ) : (
+                              <span style={{position: 'absolute', top: 5, left: 5, background: '#10b981', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>Livres: {disp.livresReais}</span>
+                          )}
+
+                          {!estaEsgotado && <button className="btn-add-peca">+</button>}
+                      </div>
+                      <div className="peca-info">
+                        <strong>{item.nome}</strong>
+                        <span>{item.categoria}</span>
+                        <b className="txt-sucesso">R$ {item.financeiro?.valorAluguel || item.preco || 0}</b>
+                      </div>
+                    </div>
+                  );
+              })}
+              {itensFiltrados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada.</p>}
+            </div>
           </div>
         </div>
       )}

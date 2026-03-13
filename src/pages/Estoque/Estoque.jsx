@@ -4,9 +4,9 @@ import './Estoque.css';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, query, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
 
-// 🔥 IMPORTANDO A BIBLIOTECA DE PDF PARA IMPRESSÃO 🔥
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
 
 const Estoque = () => {
   const navigate = useNavigate();
@@ -18,14 +18,21 @@ const Estoque = () => {
   const [dataFiltro, setDataFiltro] = useState(''); 
   const [categoriaFiltro, setCategoriaFiltro] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
-  
-  // 🔥 NOVO ESTADO: FILTRO DE LOCALIZAÇÃO 🔥
   const [localizacaoFiltro, setLocalizacaoFiltro] = useState('');
+  
+  const [ordemAlfabetica, setOrdemAlfabetica] = useState('A-Z'); 
 
   const [imagemAmpliada, setImagemAmpliada] = useState(null);
   const [modalManutencao, setModalManutencao] = useState(false);
   const [itemParaManutencao, setItemParaManutencao] = useState(null);
   const [qtdMaint, setQtdMaint] = useState(1);
+
+  const [modalAddPedidoAberto, setModalAddPedidoAberto] = useState(false);
+  const [itemParaPedido, setItemParaPedido] = useState(null);
+  const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState('');
+  const [adicionandoAoPedido, setAdicionandoAoPedido] = useState(false);
+
+  const [menuAberto, setMenuAberto] = useState(null);
 
   useEffect(() => { carregarDados(); }, []);
 
@@ -78,7 +85,7 @@ const Estoque = () => {
     if (!itemParaManutencao) return;
     const valor = parseInt(qtdMaint);
     if (isNaN(valor) || valor < 0 || valor > itemParaManutencao.quantidade) {
-      alert("Quantidade inválida! Verifique o total do item.");
+      alert("Quantidade inválida!");
       return;
     }
     try {
@@ -88,9 +95,58 @@ const Estoque = () => {
       });
       setModalManutencao(false);
       carregarDados();
-    } catch (error) {
-      alert("Erro ao atualizar a manutenção.");
-    }
+    } catch (error) { alert("Erro ao atualizar."); }
+  };
+
+  const salvarItemNoPedido = async () => {
+      if (!pedidoSelecionadoId) return alert("Por favor, selecione um pedido na lista!");
+      setAdicionandoAoPedido(true);
+
+      try {
+          const locacaoAlvo = locacoes.find(l => l.id === pedidoSelecionadoId);
+          if (!locacaoAlvo) throw new Error("Pedido não encontrado.");
+
+          const precoItem = Number(itemParaPedido.financeiro?.valorAluguel || 0);
+
+          const novoItemFormatado = {
+              ...itemParaPedido,
+              qtd: 1,
+              preco: precoItem,
+              foto: itemParaPedido.foto || itemParaPedido.fotos?.[0] || '',
+              qtdOriginal: Number(itemParaPedido.quantidade) || 1,
+              checkedSeparacao: false,
+              checkedDevolucao: false,
+              avaria: false,
+              faltou: false
+          };
+
+          let itensAtualizados = [...(locacaoAlvo.itens || [])];
+          const indexExistente = itensAtualizados.findIndex(i => i.id === itemParaPedido.id);
+
+          if (indexExistente >= 0) {
+              itensAtualizados[indexExistente].qtd += 1;
+          } else {
+              itensAtualizados.push(novoItemFormatado);
+          }
+
+          const novoSubtotal = itensAtualizados.reduce((acc, item) => acc + (Number(item.preco) * Number(item.qtd)), 0);
+          const frete = Number(locacaoAlvo.logistica?.frete) || 0;
+          const desconto = Number(locacaoAlvo.desconto) || 0;
+          const novoTotal = Math.max(0, novoSubtotal + frete - desconto);
+
+          await updateDoc(doc(db, "locacoes", pedidoSelecionadoId), {
+              itens: itensAtualizados,
+              valorTotal: novoTotal
+          });
+
+          alert(`✅ A peça "${itemParaPedido.nome}" foi adicionada com sucesso ao pedido de ${locacaoAlvo.clienteNome}!`);
+          setModalAddPedidoAberto(false);
+          carregarDados(); 
+      } catch(e) {
+          alert("Erro ao adicionar peça.");
+      } finally {
+          setAdicionandoAoPedido(false);
+      }
   };
 
   const limparFiltroData = () => {
@@ -109,7 +165,7 @@ const Estoque = () => {
           const pedidosNessaData = locacoes.filter(loc => 
               loc.dataRetirada === dataFiltro && 
               loc.status !== 'cancelado' && 
-              loc.status !== 'devolvido'
+              loc.status !== 'finalizado'
           );
 
           pedidosNessaData.forEach(pedido => {
@@ -129,9 +185,10 @@ const Estoque = () => {
       };
   };
 
-  const categoriasUnicas = Array.from(new Set(itens.map(i => i.categoria).filter(Boolean))).sort();
+  const dbCategorias = itens.map(i => i.categoria).filter(Boolean);
+  const padraoCategorias = Object.keys(CATEGORIAS_FISICAS);
+  const categoriasUnicas = Array.from(new Set([...padraoCategorias, ...dbCategorias])).sort();
   
-  // 🔥 EXTRAI TODAS AS LOCALIZAÇÕES EXISTENTES PARA O FILTRO 🔥
   const localizacoesUnicas = Array.from(new Set(itens.map(i => i.localizacao).filter(Boolean))).sort();
 
   const totalItens = itens.length;
@@ -140,8 +197,18 @@ const Estoque = () => {
   const visiveis = itens.filter(i => i.configuracao?.visivelCatalogo !== false).length;
   const percentualVisivel = totalItens > 0 ? Math.round((visiveis / totalItens) * 100) : 0;
 
-  // 🔥 O FILTRO AGORA PROCESSA A LOCALIZAÇÃO TAMBÉM 🔥
-  const itensFiltrados = itens
+  const pedidosAtivos = locacoes.filter(loc => {
+      const s = String(loc.status || '').toLowerCase();
+      return s.includes('confirmado') || s.includes('preparacao');
+  });
+
+  pedidosAtivos.sort((a,b) => {
+      const dA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
+      const dB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
+      return dA - dB;
+  });
+
+  let itensFiltrados = itens
     .filter(i => {
         const termo = busca.toLowerCase();
         return i.nome?.toLowerCase().includes(termo) || i.codigo?.toLowerCase().includes(termo);
@@ -162,7 +229,15 @@ const Estoque = () => {
         return true;
     });
 
-  // 🔥 FUNÇÃO DE IMPRESSÃO (PDF) 🔥
+  // Ordenação Alfabética
+  itensFiltrados.sort((a, b) => {
+      const nomeA = (a.nome || '').toLowerCase();
+      const nomeB = (b.nome || '').toLowerCase();
+      if (ordemAlfabetica === 'A-Z') return nomeA.localeCompare(nomeB);
+      if (ordemAlfabetica === 'Z-A') return nomeB.localeCompare(nomeA);
+      return 0;
+  });
+
   const imprimirListaFiltrada = () => {
       const doc = new jsPDF();
       const dataHoje = new Date().toLocaleDateString('pt-BR');
@@ -196,33 +271,29 @@ const Estoque = () => {
           head: colunas,
           body: linhas,
           startY: 38,
-          theme: 'grid', // Grid deixa as linhas evidentes para facilitar a conferência no papel
+          theme: 'grid', 
           headStyles: { fillColor: [15, 23, 42] },
           styles: { fontSize: 9 }
       });
 
-      // Ao invés de só baixar, ele abre o arquivo direto para imprimir!
       doc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}.pdf`);
   };
 
   return (
-    <div className="estoque-premium">
+    <div className="estoque-premium" onClick={() => setMenuAberto(null)}>
       <div className="header-top">
         <div className="titulo-bloco">
           <h1>Gestão de Acervo e Estoque</h1>
           <p>Controle logístico, financeiro e catálogo online.</p>
         </div>
         <div className="acoes-top" style={{ display: 'flex', gap: '10px' }}>
-          {/* 🔥 NOVO BOTÃO DE IMPRIMIR 🔥 */}
           <button 
             className="btn-dark-blue" 
             onClick={imprimirListaFiltrada} 
             style={{ background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1' }}
-            title="Gera um PDF com a lista que está na tela"
           >
             🖨️ Imprimir Lista
           </button>
-          
           <button className="btn-dark-blue" onClick={() => irParaCadastro()}>+ Novo Item</button>
         </div>
       </div>
@@ -235,9 +306,31 @@ const Estoque = () => {
       </div>
 
       <div className="filtros-inteligentes-container">
+          
+          {/* 🔥 BARRA DE PESQUISA RESTAURADA 🔥 */}
           <div className="filtro-grupo barra-pesquisa">
               <span className="filtro-icone">🔍</span>
               <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
+          </div>
+
+          {/* 🔥 BOTÃO DE ORDENAÇÃO SEPARADO (IGUAL AOS OUTROS FILTROS) 🔥 */}
+          <div className="filtro-grupo">
+              <span className="filtro-label">ORDEM:</span>
+              <button 
+                  onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')}
+                  style={{ 
+                      height: '42px', width: '100%', background: '#fff', 
+                      border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', 
+                      fontSize: '13px', fontWeight: 'bold', color: '#475569', 
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s',
+                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                  }}
+                  onMouseEnter={e => {e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#0f172a';}}
+                  onMouseLeave={e => {e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569';}}
+                  title="Alterar Ordem Alfabética"
+              >
+                  {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
+              </button>
           </div>
 
           <div className="filtro-grupo barra-select">
@@ -250,7 +343,6 @@ const Estoque = () => {
               </select>
           </div>
 
-          {/* 🔥 NOVO FILTRO: PRATELEIRA / LOCALIZAÇÃO 🔥 */}
           <div className="filtro-grupo barra-select">
               <span className="filtro-label">📍 LOCAL:</span>
               <select className="filtro-select" value={localizacaoFiltro} onChange={e => setLocalizacaoFiltro(e.target.value)}>
@@ -286,16 +378,16 @@ const Estoque = () => {
       {loading ? (
           <div style={{padding: '50px', textAlign: 'center', color: '#64748b'}}>Carregando acervo...</div>
       ) : (
-          <div className="table-container">
-            <table className="table-pro">
+          <div className="table-container" style={{overflow: 'visible'}}> 
+            <table className="table-pro" style={{ borderSpacing: '0', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px', overflow: 'visible', width: '100%' }}>
               <thead>
-                <tr>
-                  <th width="30%">PRODUTO</th>
-                  <th>CATEGORIA</th>
-                  <th>VALOR LOCAÇÃO</th>
-                  <th style={{textAlign: 'center'}}>{dataFiltro ? 'DISPONIBILIDADE NO DIA' : 'ESTOQUE'}</th>
-                  <th style={{textAlign: 'center'}}>STATUS</th>
-                  <th style={{textAlign:'right'}}>AÇÕES</th>
+                <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
+                  <th style={{padding: '15px 20px', textAlign: 'left'}}>PRODUTO</th>
+                  <th style={{padding: '15px', textAlign: 'left'}}>CATEGORIA</th>
+                  <th style={{padding: '15px', textAlign: 'left'}}>VALOR LOCAÇÃO</th>
+                  <th style={{padding: '15px', textAlign: 'center'}}>{dataFiltro ? 'NO DIA' : 'ESTOQUE'}</th>
+                  <th style={{padding: '15px', textAlign: 'center'}}>STATUS</th>
+                  <th style={{padding: '15px', textAlign: 'right'}}>AÇÕES</th>
                 </tr>
               </thead>
               <tbody>
@@ -303,81 +395,105 @@ const Estoque = () => {
                   
                   const { qtdBase, disponivelTotal, alugados, emManutencao, tudoQuebrado, estaTotalmenteAlugado, isDeco } = calcularDisponibilidadeNaData(item);
 
-                  let labelPill = '✅ DISPONÍVEL';
-                  let classPill = 'disponivel';
+                  let labelPill = 'DISPONÍVEL';
+                  let bgPill = '#f0fdf4'; let colorPill = '#166534'; let borderPill = '#bbf7d0';
 
                   if (estaTotalmenteAlugado) { 
-                      labelPill = '🚫 ALUGADO'; 
-                      classPill = 'esgotado'; 
+                      labelPill = 'ALUGADO'; 
+                      bgPill = '#fef2f2'; colorPill = '#b91c1c'; borderPill = '#fecaca';
                   } else if (tudoQuebrado) { 
-                      labelPill = '🛠️ EM REPARO'; 
-                      classPill = 'manutencao'; 
+                      labelPill = 'EM REPARO'; 
+                      bgPill = '#fffbeb'; colorPill = '#b45309'; borderPill = '#fde68a';
                   } else if (qtdBase === 0 && !isDeco) {
-                      labelPill = '⚪ S/ ESTOQUE'; 
-                      classPill = 'sem-estoque'; 
+                      labelPill = 'S/ ESTOQUE'; 
+                      bgPill = '#f8fafc'; colorPill = '#64748b'; borderPill = '#e2e8f0';
                   }
 
                   const estoqueBaixo = !dataFiltro && item.configuracao?.alertaEstoque === 'Avisar' && qtdBase > 0 && disponivelTotal <= item.estoqueMinimo;
                   const valorAluguelFormatado = item.financeiro?.valorAluguel ? Number(item.financeiro.valorAluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
                   const posImg = item.posicoesFoco?.[0];
+                  
+                  const isMenuOpen = menuAberto === item.id;
 
                   return (
-                    <tr key={item.id} className={estaTotalmenteAlugado ? 'linha-esgotada' : ''}>
-                      <td className="item-info-cell">
-                        <div className="prod-detail">
-                          <div className="thumb-wrapper">
+                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: estaTotalmenteAlugado ? 0.6 : 1 }}>
+                      
+                      <td style={{ padding: '15px 20px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                          <div style={{ width: '45px', height: '45px', backgroundColor: '#f8fafc', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0 }}>
                               {item.foto ? (
-                                <img src={item.foto} className="thumb-img clickable-thumb" style={{ objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} onClick={() => setImagemAmpliada(item.foto)} title="Clique para ampliar"/>
-                              ) : ( <div className="no-thumb">📷</div> )}
-                              {estaTotalmenteAlugado && <div className="selo-foto-esgotado">ALUGADO</div>}
-                              {tudoQuebrado && !dataFiltro && <div className="selo-foto-esgotado" style={{background: '#d97706'}}>REPARO</div>}
+                                <img src={item.foto} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} onClick={(e) => { e.stopPropagation(); setImagemAmpliada(item.foto); }} title="Ampliar"/>
+                              ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
                           </div>
-                          <div>
-                              <strong>{item.nome}</strong>
-                              <span className="sub-text">
+                          <div style={{ display: 'flex', flexDirection: 'column' }}>
+                              <strong style={{ color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap' }}>{item.nome}</strong>
+                              <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
                                   CÓD: {item.codigo || 'S/N'} 
-                                  {item.localizacao ? <span style={{color: '#c5a059', fontWeight: 'bold'}}> • 📍 {item.localizacao}</span> : ''}
+                                  {item.localizacao ? ` • 📍 ${item.localizacao}` : ''}
                               </span>
                           </div>
                         </div>
                       </td>
-                      <td className="mobile-stack">
-                        <span className="mobile-label">CATEGORIA:</span>
-                        <span className="tag-loc">{item.categoria || 'Sem categoria'}</span>
+                      
+                      <td style={{ color: '#475569', fontSize: '13px', padding: '15px' }}>
+                        {item.categoria || '-'}
                       </td>
-                      <td className="mobile-stack">
-                        <span className="mobile-label">VALOR LOCAÇÃO:</span>
-                        <span style={{fontWeight: '800', color: '#0f172a', fontSize: '15px'}}>R$ {valorAluguelFormatado}</span>
+                      
+                      <td style={{ padding: '15px' }}>
+                        <strong style={{ color: '#0f172a', fontSize: '14px' }}>R$ {valorAluguelFormatado}</strong>
                       </td>
-                      <td className="mobile-stack stock-cell-center">
-                        <span className="mobile-label">{dataFiltro ? 'DISPONÍVEL NO DIA:' : 'ESTOQUE REAL:'}</span>
-                        <div className="stock-info-blocos">
-                            {estaTotalmenteAlugado ? ( 
-                                <span className="estoque-alerta-zero">0 {isDeco ? 'Kits' : 'Peças'} Livres</span> 
-                            ) : tudoQuebrado ? ( 
-                                <span className="estoque-alerta-zero" style={{color: '#d97706', textDecoration: 'none'}}>0 {isDeco ? 'Kits' : 'Peças'} Livres</span> 
-                            ) : qtdBase === 0 && !isDeco ? (
-                                <span className="estoque-alerta-zero" style={{color: '#64748b', textDecoration: 'none'}}>0 Peças Livres</span>
-                            ) : ( 
-                                <span className="estoque-livre-verde">
-                                    {disponivelTotal} {isDeco ? 'Kit Livre' : (disponivelTotal === 1 ? 'Peça Livre' : 'Peças Livres')}
-                                </span> 
-                            )}
-                            
-                            {dataFiltro && alugados > 0 && <span className="estoque-alugado-dica">🛍️ {alugados} alugados na data</span>}
-                            {emManutencao > 0 && <span className="estoque-maint-dica">🛠️ {emManutencao} em reparo</span>}
-                            {estoqueBaixo && <span className="estoque-baixo-dica">⚠️ Estoque Baixo</span>}
+                      
+                      <td style={{ textAlign: 'center', padding: '15px' }}>
+                        <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
+                            <strong style={{ fontSize: '14px', color: (estaTotalmenteAlugado || tudoQuebrado || (qtdBase===0 && !isDeco)) ? '#94a3b8' : '#334155' }}>
+                                {disponivelTotal} <span style={{fontSize: '12px', fontWeight: 'normal'}}>{isDeco ? 'kit' : 'un'}</span>
+                            </strong>
+                            {estoqueBaixo && <span style={{fontSize: '10px', color: '#ea580c', background: '#ffedd5', padding: '2px 6px', borderRadius: '4px', marginTop: '4px'}}>Baixo</span>}
                         </div>
                       </td>
-                      <td className="status-cell cell-center">
-                        <span className={`status-pill ${classPill}`}>{labelPill}</span>
+                      
+                      <td style={{ textAlign: 'center', padding: '15px' }}>
+                        <span style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}`, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>
+                            {labelPill}
+                        </span>
                       </td>
-                      <td className="actions-cell">
-                        <div className="dropdown-container">
-                            <button className="action-icon" title="Duplicar Peça (Cor/Tamanho diferente)" onClick={() => duplicarItem(item)}>📋</button>
-                            <button className="action-icon" title="Gerenciar Manutenção" onClick={() => abrirModalManutencao(item)}>🛠️</button>
-                            <button className="action-icon" title="Editar" onClick={() => irParaCadastro(item)}>✏️</button>
-                            <button className="action-icon delete" title="Excluir" onClick={() => { if(window.confirm("Certeza que deseja excluir permanentemente do acervo?")) deleteDoc(doc(db, "estoque", item.id)).then(carregarDados) }}>🗑️</button>
+                      
+                      <td style={{ textAlign: 'right', padding: '15px', position: 'relative' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                            
+                            <button 
+                                onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }}
+                                style={{ background: '#fff', color: '#10b981', border: '1px solid #10b981', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', transition: '0.2s' }}
+                                title="Inserir direto num Pedido"
+                                onMouseEnter={e => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = '#fff'; }}
+                                onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#10b981'; }}
+                            >
+                                🛒
+                            </button>
+
+                            <div style={{ position: 'relative' }}>
+                                <button 
+                                    onClick={(e) => { 
+                                        e.stopPropagation(); 
+                                        setMenuAberto(isMenuOpen ? null : item.id); 
+                                    }}
+                                    style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '6px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                    onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
+                                >
+                                    ⋮
+                                </button>
+                                
+                                {isMenuOpen && (
+                                    <div style={{ position: 'absolute', top: '100%', right: '0', marginTop: '5px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 99999, minWidth: '150px', display: 'flex', flexDirection: 'column', padding: '5px' }}>
+                                        <button onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>✏️ Editar</button>
+                                        <button onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>📋 Duplicar</button>
+                                        <button onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); setMenuAberto(null); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>🛠️ Manutenção</button>
+                                        <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }}></div>
+                                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm("Excluir permanentemente do acervo?")) deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#ef4444', textAlign: 'left', fontWeight: 'bold', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#fef2f2'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>🗑️ Excluir</button>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                       </td>
                     </tr>
@@ -395,6 +511,89 @@ const Estoque = () => {
               </tbody>
             </table>
           </div>
+      )}
+
+      {modalAddPedidoAberto && (
+        <div className="modal-overlay-blur">
+          <div className="modal-maintenance-card" style={{maxWidth: '550px'}}>
+            <div className="modal-maintenance-header">
+              <h3 style={{margin: 0, display: 'flex', alignItems: 'center', gap: '10px'}}>🛒 Adicionar ao Pedido</h3>
+              <button className="close-btn-modern" onClick={() => setModalAddPedidoAberto(false)}>×</button>
+            </div>
+            
+            <div className="modal-maintenance-body" style={{padding: '20px'}}>
+              <p style={{marginBottom: '20px', color: '#475569', fontSize: '14px', lineHeight: '1.5'}}>
+                  Escolha abaixo em qual festa/pedido você quer inserir a peça:<br/>
+                  <strong style={{color: '#0f172a', fontSize: '16px'}}>✨ {itemParaPedido?.nome}</strong>
+              </p>
+              
+              <div className="lista-pedidos-moderna" style={{ display: 'flex', flexDirection: 'column', gap: '10px', maxHeight: '300px', overflowY: 'auto', paddingRight: '5px' }}>
+                {pedidosAtivos.length === 0 ? (
+                    <div style={{textAlign: 'center', padding: '20px', background: '#f1f5f9', borderRadius: '8px', color: '#64748b'}}>
+                        Nenhum pedido "Em Preparação" ou "Confirmado" no momento.
+                    </div>
+                ) : (
+                    pedidosAtivos.map(p => {
+                        const ehPreparacao = String(p.status).toLowerCase().includes('preparacao');
+                        const isSelected = pedidoSelecionadoId === p.id;
+
+                        return (
+                            <div 
+                                key={p.id}
+                                onClick={() => setPedidoSelecionadoId(p.id)}
+                                style={{
+                                    padding: '12px 15px',
+                                    border: isSelected ? '2px solid #3b82f6' : '1px solid #cbd5e1',
+                                    backgroundColor: isSelected ? '#eff6ff' : '#fff',
+                                    borderRadius: '8px',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    justifyContent: 'space-between',
+                                    alignItems: 'center',
+                                    transition: 'all 0.2s',
+                                    boxShadow: isSelected ? '0 4px 10px rgba(59, 130, 246, 0.1)' : 'none'
+                                }}
+                            >
+                                <div>
+                                    <strong style={{ display: 'block', color: isSelected ? '#1d4ed8' : '#0f172a', fontSize: '14px' }}>
+                                        👤 {p.clienteNome}
+                                    </strong>
+                                    <span style={{ fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '4px' }}>
+                                        📅 {p.dataRetirada ? p.dataRetirada.split('-').reverse().join('/') : 'Sem data'}
+                                    </span>
+                                </div>
+                                <span style={{
+                                    fontSize: '10px',
+                                    fontWeight: 'bold',
+                                    padding: '4px 10px',
+                                    borderRadius: '6px',
+                                    backgroundColor: ehPreparacao ? '#ede9fe' : '#dcfce7',
+                                    color: ehPreparacao ? '#7c3aed' : '#166534',
+                                    textTransform: 'uppercase',
+                                    border: `1px solid ${ehPreparacao ? '#c4b5fd' : '#86efac'}`
+                                }}>
+                                    {p.status}
+                                </span>
+                            </div>
+                        )
+                    })
+                )}
+              </div>
+            </div>
+
+            <div className="modal-maintenance-footer" style={{display: 'flex', gap: '10px', padding: '20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0'}}>
+              <button className="btn-modal-cancel" style={{flex: 1, padding: '12px'}} onClick={() => setModalAddPedidoAberto(false)}>Cancelar</button>
+              <button 
+                  className="btn-modal-save" 
+                  style={{flex: 2, padding: '12px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', opacity: (!pedidoSelecionadoId || adicionandoAoPedido) ? 0.5 : 1}} 
+                  onClick={salvarItemNoPedido} 
+                  disabled={adicionandoAoPedido || !pedidoSelecionadoId}
+              >
+                  {adicionandoAoPedido ? 'Salvando...' : 'Adicionar ao Pedido'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
       {modalManutencao && (
@@ -422,6 +621,7 @@ const Estoque = () => {
           </div>
         </div>
       )}
+
       {imagemAmpliada && (
         <div className="image-zoom-overlay" onClick={() => setImagemAmpliada(null)}>
           <img src={imagemAmpliada} className="image-zoom-content" alt="Zoom" />

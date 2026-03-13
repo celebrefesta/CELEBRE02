@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom';
 import './NovaLocacao.css'; 
 import { db } from '../../firebaseConfig'; 
 import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
-// 🔥 IMPORTANDO O NOSSO DICIONÁRIO DE TEMAS 🔥
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas'; 
 
 const EditarLocacao = () => {
@@ -13,6 +12,7 @@ const EditarLocacao = () => {
 
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
+  const [todasLocacoes, setTodasLocacoes] = useState([]); 
   const [carrinho, setCarrinho] = useState([]);
   
   const [modalAberto, setModalAberto] = useState(false);
@@ -23,7 +23,6 @@ const EditarLocacao = () => {
   const [tipoServico, setTipoServico] = useState('PEGUE E MONTE'); 
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
   
-  // 🔥 ESTADOS PARA A CASCATA DE TEMAS 🔥
   const [categoriaTema, setCategoriaTema] = useState('');
   const [subcategoriaTema, setSubcategoriaTema] = useState('');
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
@@ -51,12 +50,15 @@ const EditarLocacao = () => {
   useEffect(() => {
     const carregarDados = async () => {
       try {
-        const [snapCli, snapEst] = await Promise.all([
+        const [snapCli, snapEst, snapLoc] = await Promise.all([
           getDocs(collection(db, "clientes")),
-          getDocs(collection(db, "estoque"))
+          getDocs(collection(db, "estoque")),
+          getDocs(collection(db, "locacoes"))
         ]);
+        
         setClientes(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
         setEstoque(snapEst.docs.map(d => ({ id: d.id, ...d.data() })));
+        setTodasLocacoes(snapLoc.docs.map(d => ({ id: d.id, ...d.data() })));
 
         if (id) {
           const docRef = doc(db, "locacoes", id);
@@ -72,7 +74,6 @@ const EditarLocacao = () => {
             setDatas({ retirada: data.dataRetirada || '', devolucao: data.dataDevolucao || '' });
             setValorJaPago(Number(data.valorPago || 0));
 
-            // 🔥 TENTA ENCONTRAR DE ONDE VEIO ESSE TEMA PARA PREENCHER OS SELECTS AUTOMATICAMENTE 🔥
             let temaSalvo = data.temaFesta || data.tema || '';
             let achouCategoria = '';
             let achouSub = '';
@@ -101,7 +102,6 @@ const EditarLocacao = () => {
                 setGrupoTemaSelecionado(achouGrupo);
                 setTemaFesta(achouTema);
             } else if (temaSalvo) {
-                // Se não achou no catálogo, joga pro "Outro Tema"
                 setTemaFesta('OUTRO_TEMA');
                 setTemaDigitadoPersonalizado(temaSalvo);
             }
@@ -144,32 +144,108 @@ const EditarLocacao = () => {
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
 
-  // =========================================================================
-  // 🔥 LÓGICA DO EFEITO CASCATA (LENDO DO ARQUIVO JS) 🔥
-  // =========================================================================
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
-  
-  const subcategoriasDisponiveis = categoriaTema 
-      ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) 
-      : [];
+  const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
+  const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
+  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
 
-  const gruposDisponiveis = (categoriaTema && subcategoriaTema)
-      ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) 
-      : [];
+  const isOverlapping = (start1, end1, start2, end2) => {
+      if (!start1 || !end1 || !start2 || !end2) return false;
+      const s1 = new Date(start1 + 'T00:00:00').getTime();
+      const e1 = new Date(end1 + 'T00:00:00').getTime();
+      const s2 = new Date(start2 + 'T00:00:00').getTime();
+      const e2 = new Date(end2 + 'T00:00:00').getTime();
+      return s1 <= e2 && e1 >= s2;
+  };
 
-  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado)
-      ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || []
-      : [];
+  const getDisponibilidade = (pecaId) => {
+      const peca = estoque.find(e => e.id === pecaId);
+      if (!peca) return { livresReais: 0, livresMaximos: 0, retornaNoDia: 0 };
+      
+      const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
+      const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
+      let disponiveisTotais = Math.max(0, qtdFisica - qtdManutencao);
+
+      let qtdReservadaForte = 0;
+      let qtdRetornaNoDia = 0;
+
+      if (datas.retirada && datas.devolucao) {
+          todasLocacoes.forEach(loc => {
+              if (loc.id === id) return; 
+              
+              const status = (loc.status || '').toLowerCase();
+              if (['confirmado', 'preparacao', 'entregue'].includes(status)) {
+                  if (isOverlapping(datas.retirada, datas.devolucao, loc.dataRetirada, loc.dataDevolucao)) {
+                      const itemNoPedido = loc.itens?.find(i => i.id === pecaId);
+                      if (itemNoPedido) {
+                          const qtdAlugada = parseInt(itemNoPedido.qtd) || 0;
+                          
+                          if (loc.dataDevolucao === datas.retirada) {
+                              qtdRetornaNoDia += qtdAlugada;
+                          } else {
+                              qtdReservadaForte += qtdAlugada;
+                          }
+                      }
+                  }
+              }
+          });
+      }
+
+      const livresReais = Math.max(0, disponiveisTotais - qtdReservadaForte - qtdRetornaNoDia);
+      const livresMaximos = Math.max(0, disponiveisTotais - qtdReservadaForte);
+
+      // 🔥 AQUI ESTAVA O ERRO! Ajustado de retornaNoDia para qtdRetornaNoDia 🔥
+      return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia };
+  };
 
   const addCarrinho = (item) => {
     if (isFinalizado) return; 
+    const disp = getDisponibilidade(item.id);
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
     const existe = carrinho.find(i => i.id === item.id);
+    
     if (existe) {
-      setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
+      if (existe.qtd >= disp.livresMaximos) {
+          alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê possui o limite absoluto de ${disp.livresMaximos} unidade(s) de "${item.nome}" para esta data.`);
+          return;
+      }
+      if (existe.qtd >= disp.livresReais && disp.retornaNoDia > 0 && !existe.jaAvisouBateVolta) {
+           const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar mesmo assim?`);
+           if(!querMesmo) return;
+      }
+      setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1, jaAvisouBateVolta: disp.retornaNoDia > 0 ? true : i.jaAvisouBateVolta } : i));
     } else {
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
+      if (disp.livresMaximos < 1) {
+          alert(`⚠️ PEÇA INDISPONÍVEL!\nEsta peça está em manutenção ou já alugada para esta data.`);
+          return;
+      }
+      if (disp.livresReais < 1 && disp.retornaNoDia > 0) {
+           const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar mesmo assim?`);
+           if(!querMesmo) return;
+      }
+      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, isBateVolta: disp.retornaNoDia > 0, jaAvisouBateVolta: disp.retornaNoDia > 0, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
     }
+  };
+
+  const handleChangeQtdCarrinho = (itemId, novaQtd) => {
+      if (isFinalizado) return;
+      const itemCarrinho = carrinho.find(i => i.id === itemId);
+      if (!itemCarrinho) return;
+
+      let qtdDesejada = parseInt(novaQtd);
+      if (isNaN(qtdDesejada)) qtdDesejada = ''; 
+
+      if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
+          const disp = getDisponibilidade(itemId);
+          if (qtdDesejada > disp.livresMaximos) {
+              alert(`⚠️ LIMITE ABSOLUTO ATINGIDO!\nVocê possui apenas ${disp.livresMaximos} unidade(s) permitidas de "${itemCarrinho.nome}" para esta data.`);
+              setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: disp.livresMaximos} : i));
+          } else {
+              setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
+          }
+      } else {
+           setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
+      }
   };
 
   const salvarChecklistImediato = async (novosItens) => {
@@ -412,6 +488,16 @@ const EditarLocacao = () => {
     return (v / 100).toFixed(2).replace(".", ",").replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,").replace(/(\d)(\d{3}),/g, "$1.$2,");
   };
 
+  const getBadgeStatus = () => {
+      if (statusAtual === 'orcamento') return { txt: '📝 Orçamento', cor: '#f59e0b' };
+      if (statusAtual === 'confirmado') return { txt: '✅ Confirmado', cor: '#3b82f6' };
+      if (statusAtual === 'preparacao') return { txt: '📦 Em Preparação', cor: '#8b5cf6' };
+      if (statusAtual === 'entregue') return { txt: '🚚 Na Rua (Entregue)', cor: '#10b981' };
+      if (statusAtual === 'finalizado') return { txt: '✔️ Finalizado', cor: '#0f172a' };
+      if (statusAtual === 'cancelado') return { txt: '🗑️ Cancelado', cor: '#ef4444' };
+      return { txt: 'Desconhecido', cor: '#64748b' };
+  };
+
   const badgeInfo = getBadgeStatus();
   const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
 
@@ -468,10 +554,6 @@ const EditarLocacao = () => {
                 </select>
               </div>
             </div>
-
-            {/* ========================================================================= */}
-            {/* 🔥 OS 4 NÍVEIS DE TEMA EM CASCATA 🔥 */}
-            {/* ========================================================================= */}
             
             <div className="form-row mt-10">
                 <div className="form-group flex-1">
@@ -658,7 +740,10 @@ const EditarLocacao = () => {
                             {item.foto ? <img src={item.foto} alt="Peça"/> : <div className="img-placeholder">📷</div>}
                           </td>
                           <td className="carrinho-info">
-                            <strong>{item.nome}</strong>
+                            <strong>
+                              {item.nome}
+                              {item.isBateVolta && <span style={{color: '#f59e0b', fontSize: '10px', marginLeft: '6px', background: '#fef3c7', padding: '2px 4px', borderRadius: '4px'}}>⚠️ Bate e Volta (Retorna no Dia)</span>}
+                            </strong>
                             <span>R$ {precoExibicao.toFixed(2)} un</span>
                           </td>
                           <td className="text-center">
@@ -666,9 +751,9 @@ const EditarLocacao = () => {
                                 <div style={{fontWeight: 'bold', fontSize: '14px', background: '#f1f5f9', padding: '4px 12px', borderRadius: '6px', display: 'inline-block'}}>{item.qtd}x</div>
                             ) : (
                                 <div className="controle-qtd">
-                                  <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd-1)} : i))}>-</button>
+                                  <button type="button" onClick={() => handleChangeQtdCarrinho(item.id, item.qtd - 1)}>-</button>
                                   <span>{item.qtd}</span>
-                                  <button type="button" onClick={() => setCarrinho(carrinho.map(i => i.id === item.id ? {...i, qtd: i.qtd+1} : i))}>+</button>
+                                  <button type="button" onClick={() => handleChangeQtdCarrinho(item.id, item.qtd + 1)}>+</button>
                                 </div>
                             )}
                           </td>
@@ -770,7 +855,6 @@ const EditarLocacao = () => {
         </aside>
       </div>
 
-      {/* MODAL DE SINAL */}
       {modalSinalAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
           <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
@@ -852,7 +936,6 @@ const EditarLocacao = () => {
         </div>
       )}
 
-      {/* CATÁLOGO OTIMIZADO */}
       {modalAberto && !isFinalizado && (
         <div className="modal-overlay-premium">
           <div className="modal-box-premium catalogo-modal">
@@ -873,19 +956,34 @@ const EditarLocacao = () => {
             </div>
 
             <div className="catalogo-grid">
-              {itensFiltrados.map(item => (
-                <div key={item.id} className="peca-card" onClick={() => addCarrinho(item)}>
-                  <div className="peca-img">
-                      {item.foto ? <img src={item.foto} alt=""/> : '📷'}
-                      <button className="btn-add-peca">+</button>
-                  </div>
-                  <div className="peca-info">
-                    <strong>{item.nome}</strong>
-                    <span>{item.categoria}</span>
-                    <b className="txt-sucesso">R$ {item.financeiro?.valorAluguel || item.preco || 0}</b>
-                  </div>
-                </div>
-              ))}
+              {itensFiltrados.map(item => {
+                  const disp = getDisponibilidade(item.id);
+                  const estaEsgotado = disp.livresMaximos <= 0;
+                  const ehBateVolta = disp.livresReais <= 0 && disp.retornaNoDia > 0;
+
+                  return (
+                    <div key={item.id} className="peca-card" onClick={() => { if(!estaEsgotado) addCarrinho(item); }} style={{opacity: estaEsgotado ? 0.5 : 1, cursor: estaEsgotado ? 'not-allowed' : 'pointer'}}>
+                      <div className="peca-img" style={{position: 'relative'}}>
+                          {item.foto ? <img src={item.foto} alt=""/> : '📷'}
+                          
+                          {estaEsgotado ? (
+                              <span style={{position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>ALUGADO</span>
+                          ) : ehBateVolta ? (
+                              <span style={{position: 'absolute', top: 5, left: 5, background: '#f59e0b', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
+                          ) : (
+                              <span style={{position: 'absolute', top: 5, left: 5, background: '#10b981', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>Livres: {disp.livresReais}</span>
+                          )}
+
+                          {!estaEsgotado && <button className="btn-add-peca">+</button>}
+                      </div>
+                      <div className="peca-info">
+                        <strong>{item.nome}</strong>
+                        <span>{item.categoria}</span>
+                        <b className="txt-sucesso">R$ {item.financeiro?.valorAluguel || item.preco || 0}</b>
+                      </div>
+                    </div>
+                  );
+              })}
               {itensFiltrados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada.</p>}
             </div>
           </div>

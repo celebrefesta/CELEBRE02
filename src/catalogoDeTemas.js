@@ -77,13 +77,13 @@ export const CATALOGO_TEMAS = {
     }
   },
   "Chá de Bebê": {
-    "Menino": {
+    "Masculino": {
       "Ursinhos": ["Urso Aviador", "Ursinho Príncipe", "Ursinho Baloeiro", "Urso Marinheiro"],
       "Cores Lisas": ["Azul e Branco", "Verde e Branco", "Bege e Branco", "Só Branco"],
       "Animais Baby": ["Safari Baby", "Elefantinho", "Bosque"],
       "Céu / Sonhos": ["Nuvem", "Balões e Nuvens", "Estrelinhas"]
     },
-    "Menina": {
+    "Feminino": {
       "Ursinhas": ["Ursinha Princesa", "Ursinha Baloeira", "Ursinha Floral"],
       "Cores Lisas": ["Rosa e Branco", "Verde e Lilás", "Lilás e Branco", "Bege e Branco", "Só Branco"],
       "Animais Baby": ["Safari Rosa", "Elefantinha", "Bosque Encantado"],
@@ -163,5 +163,98 @@ export const CATALOGO_TEMAS = {
       "Final do Ano": ["Dia das Crianças", "Natal", "Réveillon / Ano Novo"],
       "Eventos de Conscientização": ["Outubro Rosa", "Novembro Azul", "Setembro Amarelo"]
     }
+  },
+
+  // =========================================================================
+  // 🔥 CATEGORIA NOVA EXCLUSIVA PARA CAPAS LISAS E GLITTERS 🔥
+  // =========================================================================
+  "Capas Lisas e Cores": {
+    "Painéis": {
+      "Painel Redondo": ["Capa Lisa", "Capa Glitter / Paetê", "Capa Texturizada"],
+      "Painel Romano / Arco": ["Capa Lisa", "Capa Glitter / Paetê", "Capa Texturizada"],
+      "Painel Retangular": ["Capa Lisa", "Capa Glitter / Paetê", "Capa Texturizada"]
+    },
+    "Cilindros e Cubos": {
+      "Cilindros (Kit ou Avulso)": ["Capa Lisa", "Capa Glitter / Paetê", "Capa Texturizada"],
+      "Cubos (Kit ou Avulso)": ["Capa Lisa", "Capa Texturizada"]
+    },
+    "Kits Completos": {
+      "Painel + Cilindros": ["Kit Liso (Mesma Cor)", "Kit Mesclado (Cores Diferentes)", "Kit Glitter e Liso"]
+    }
+  },
+
+  // =========================================================================
+  // 🔥 ESTRUTURAS E PEÇAS AVULSAS (VITRINE) 🔥
+  // =========================================================================
+  "Móveis e Estruturas": {
+    "Painéis e Fundos": {
+      "MDF / Madeira Liso": ["Painel Redondo", "Painel Romano / Arco", "Painel Retangular", "Meio Arco / Bojudo"],
+      "Ferro / Vazado": ["Estrutura Redonda (Desmontável)", "Estrutura Romana (Desmontável)", "Painel Treliça"],
+      "Rústico / Pallet": ["Painel Pallet", "Painel Ripado Rústico", "Painel de Pinus"]
+    },
+    "Mesas e Aparadores": {
+      "Madeira / Rústico": ["Mesa Cavalete", "Mesa Maciça / Luiz XV", "Mesa Carroça / Carrinho"],
+      "Ferro / Industrial": ["Mesa Aramada", "Carrinho Gourmet de Ferro"],
+      "MDF Pintado / Liso": ["Mesa Clássica Lisa", "Mesa Bojuda", "Aparador Reto"],
+      "Acrílico / Transparente": ["Mesa Acrílica"]
+    },
+    "Cilindros e Cubos": {
+      "MDF / Madeira Liso": ["Cilindro Tradicional", "Cubo Reto", "Sextavado / Geométrico"],
+      "Ferro / Vazado": ["Cilindro Aramado", "Cubo Aramado"],
+      "Acrílico / Transparente": ["Cilindro Acrílico", "Cubo Acrílico"]
+    }
+  },
+  "Acessórios e Decoração": {
+    "Bandejas e Suportes": {
+      "Cerâmica / Louça": ["Boleira / Suporte Alto", "Bandeja Redonda", "Bandeja Retangular", "Vaso para Pirulito / Doces"],
+      "MDF / Madeira": ["Boleira / Suporte Alto", "Bandeja Redonda", "Bandeja Retangular", "Escadinha de Mesa", "Caixote de Mesa"],
+      "Ferro / Metal": ["Boleira / Suporte Alto", "Bandeja Redonda", "Bandeja Espelhada Metal", "Gaiola Decorativa", "Suporte Aramado"],
+      "Acrílico / Plástico": ["Boleira", "Bandeja Lisa", "Piruliteira / Porta Tubetes"]
+    },
+    "Vasos": {
+      "Cerâmica / Louça": ["Vaso de Mesa", "Vaso de Chão", "Taça / Ânfora"],
+      "Vidro / Espelhado": ["Vaso de Vidro", "Taça de Vidro"],
+      "Metal / Pedraria": ["Vaso de Metal", "Vaso com Pedrarias"]
+    },
+    "Florais e Natureza": {
+      "Arranjos Artificiais": ["Arranjo Grande (Chão/Painel)", "Arranjo Médio (Mesa)", "Arranjo Pequeno (Vasinhos)"],
+      "Muros e Placas": ["Muro Inglês", "Placas de Folhagem", "Jardim Vertical"],
+      "Folhagens Soltas": ["Samambaias / Pendentes", "Pampas / Secas", "Buxinhos / Bolas de Grama"],
+      "Flores Soltas": ["Rosas", "Girassóis", "Orquídeas", "Peônias"]
+    },
+    "Tapetes e Pisos": {
+      "Tapetes Lisos": ["Tapete Redondo Liso", "Tapete Retangular Liso"],
+      "Tapetes Estampados": ["Tapete Redondo Sublimado", "Tapete Retangular Sublimado"],
+      "Especiais": ["Tapete de Pelúcia", "Tapete de Grama Sintética"],
+      "Lonas e Passadeiras": ["Lona Fotográfica de Chão", "Passadeira (Casamento/15 Anos)"]
+    },
+    "Mesas e Cortinas": {
+      "Têxtil de Mesa": ["Toalha de Mesa", "Trilho / Caminho de Mesa"],
+      "Cortinas e Fundos": ["Cortina de Led", "Cortina de Voil", "Fundo de Paetê"]
+    },
+    "Complementos e Iluminação": {
+      "Objetos Decorativos": ["Maleta Decorativa", "Bicicleta / Triciclo", "Banquinhos de Madeira", "Caixote Grande"],
+      "Iluminação": ["Letreiro Neon (Frases)", "Letreiro Neon (Números / Idade)", "Refletor de LED", "Cordão de Luz / Fita LED", "Luminária de Mesa"]
+    },
+    "Itens de Tema": {
+      "Personagens e Bonecos": ["Pelúcia", "Feltro / Tecido", "Resina / Cerâmica / Biscuit", "Displays de Chão (MDF)", "Displays de Mesa (MDF)"]
+    }
   }
+};
+
+// =========================================================================
+// 🔥 LISTA DE CATEGORIAS FÍSICAS PARA ORGANIZAÇÃO DO GALPÃO 🔥
+// =========================================================================
+export const CATEGORIAS_FISICAS = {
+  "Móveis": ["Mesas", "Cilindros", "Cubos", "Carrinhos", "Aparadores", "Estantes / Escadas"],
+  "Painéis e Estruturas": ["Painel Redondo", "Painel Romano / Arco", "Painel Retangular", "Painel Vazado", "Treliça / Muro Inglês", "Estruturas de Ferro"],
+  "Bandejas e Suportes": ["Boleiras / Suportes Altos", "Bandejas Retangulares", "Bandejas Redondas", "Porta Doces / Piruliteiras", "Escadinhas de Mesa"],
+  "Personagens e Displays": ["Pelúcias", "Bonecos de Feltro", "Bonecos de Resina / Biscuit", "Displays de Chão (MDF)", "Displays de Mesa (MDF)"],
+  "Vasos": ["Vasos de Mesa", "Vasos de Chão", "Taças / Ânforas"],
+  "Florais e Natureza": ["Arranjos Artificiais", "Folhagens / Ramos", "Muro Inglês / Placas", "Flores Avulsas"],
+  "Tapetes e Pisos": ["Tapetes Redondos", "Tapetes Retangulares", "Lonas de Chão", "Passadeiras"],
+  "Capas e Têxteis": ["Capas de Painel", "Capas de Cilindro", "Kits de Capas (Painel + Cilindros)", "Toalhas / Trilhos de Mesa", "Cortinas / Tecidos"],
+  "Iluminação": ["Letreiros Neon", "Refletores", "Fitas de LED / Fio de Fada", "Luminárias"],
+  "Complementos de Chão": ["Caixotes", "Maletas", "Bicicletas / Triciclos", "Banquinhos", "Cestos"],
+  "Utensílios de Festa": ["Taças / Copos", "Pratos", "Talheres", "Suqueiras", "Garrafas Térmicas"]
 };

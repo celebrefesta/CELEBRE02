@@ -14,6 +14,8 @@ const Locacoes = () => {
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
   const [filtroServico, setFiltroServico] = useState('todos'); 
   const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes'); 
+  // 🔥 NOVO ESTADO: FILTRO DE DATA 🔥
+  const [filtroDataEvento, setFiltroDataEvento] = useState(''); 
   
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
@@ -37,7 +39,6 @@ const Locacoes = () => {
       const dicionarioClientes = {};
       clientesSnapshot.forEach(doc => {
           const cData = doc.data();
-          // 🔥 CORREÇÃO: AGORA ELE BUSCA O NOME FANTASIA PRIMEIRO 🔥
           dicionarioClientes[doc.id] = cData.nome || cData.nomeFantasia || cData.razaoSocial || cData.nomeCompleto || "Sem Nome";
       });
 
@@ -71,7 +72,6 @@ const Locacoes = () => {
         let statusReal = String(data.status || '').toLowerCase().trim();
         let isVencido = false;
 
-        // Se a data já passou E o pedido não foi pra rua (entregue) nem devolvido (finalizado)
         if (data.dataRetirada && data.dataRetirada < hojeStr) {
             if (statusReal.includes('orcam') || statusReal.includes('confirmado') || statusReal.includes('preparacao')) {
                 isVencido = true;
@@ -122,6 +122,7 @@ const Locacoes = () => {
   };
 
   let filtrados = [...lista];
+  
   if (busca) {
     const termo = busca.toLowerCase();
     filtrados = filtrados.filter(i => {
@@ -131,6 +132,11 @@ const Locacoes = () => {
       
       return nomeMatch || numeroAppMatch || idRealMatch;
     });
+  }
+
+  // 🔥 APLICAÇÃO DO FILTRO DE DATA 🔥
+  if (filtroDataEvento) {
+      filtrados = filtrados.filter(i => i.dataRetirada === filtroDataEvento);
   }
 
   if (filtroStatus === 'todos') {
@@ -223,8 +229,9 @@ const Locacoes = () => {
       </div>
 
       <div className="advanced-filter-bar">
-        <div className="filter-main-row">
-          <div className="search-group">
+        <div className="filter-main-row" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+          
+          <div className="search-group" style={{ flex: '1 1 250px' }}>
             <span className="search-icon">🔍</span>
             <input 
               type="text" 
@@ -234,7 +241,27 @@ const Locacoes = () => {
             />
           </div>
           
-          <div className="select-group">
+          {/* 🔥 NOVO CAMPO: BUSCA POR DATA 🔥 */}
+          <div className="date-filter-group" style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 5px' }}>
+             <span style={{ padding: '0 10px', color: '#64748b' }}>📅 Data:</span>
+             <input 
+               type="date" 
+               value={filtroDataEvento} 
+               onChange={e => setFiltroDataEvento(e.target.value)} 
+               style={{ border: 'none', padding: '10px', outline: 'none', background: 'transparent' }}
+             />
+             {filtroDataEvento && (
+                <button 
+                  onClick={() => setFiltroDataEvento('')} 
+                  style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}
+                  title="Limpar Data"
+                >
+                  ✕
+                </button>
+             )}
+          </div>
+          
+          <div className="select-group" style={{ flex: '1 1 auto', justifyContent: 'flex-end' }}>
             <select value={filtroServico} onChange={(e) => setFiltroServico(e.target.value)}>
               <option value="todos">🔧 Todos os Serviços</option>
               <option value="pegue">📦 Apenas Pegue e Monte</option>
