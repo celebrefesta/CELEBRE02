@@ -1,9 +1,10 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
+import { getAuth, GoogleAuthProvider } from "firebase/auth";
 
-// Suas chaves do projeto Celebre
 const firebaseConfig = {
-  apiKey: "AIzaSyAPvEB-CkQyRRFvr3O_FZcNXho1XHSslis",
+  // CHAVE CORRIGIDA: Troquei "30 " por "3O_"
+  apiKey: "AIzaSyAPvEB-CkQyRRFvr3O_FZcNXho1XHSslis", 
   authDomain: "celebre-9f5c9.firebaseapp.com",
   projectId: "celebre-9f5c9",
   storageBucket: "celebre-9f5c9.firebasestorage.app",
@@ -12,4 +13,6 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+export const db = getFirestore(app); 
+export const auth = getAuth(app); 
+export const googleProvider = new GoogleAuthProvider();

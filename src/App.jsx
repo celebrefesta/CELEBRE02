@@ -3,15 +3,17 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 
 // --- MENU & TOPBAR ---
 import Navbar from './components/Navbar';
-import Topbar from './components/Topbar'; // 🔥 IMPORTAÇÃO DA BARRA SUPERIOR AQUI 🔥
+import Topbar from './components/Topbar'; 
 import './App.css';
+
+// --- AUTENTICAÇÃO (LOGIN & CADASTRO) 🔥 ---
+import Login from './pages/Auth/Login';
+import Cadastro from './pages/Auth/Cadastro';
 
 // --- PÁGINAS ---
 import Dashboard from './pages/Dashboard/Dashboard';
 import Clientes from './pages/Clientes/Clientes';
 import CadastroCliente from './pages/Clientes/CadastroCliente'; 
-
-// 🔥 CAMINHO 100% CORRIGIDO BASEADO NA SUA FOTO 🔥
 import AutoCadastro from './pages/Clientes/AutoCadastro'; 
 
 import Estoque from './pages/Estoque/Estoque';
@@ -52,11 +54,13 @@ import Notificacoes from './pages/Notificacoes/Notificacoes';
 const AppContent = () => {
   const location = useLocation();
   
-  // 🌟 Esconde o menu mestre na Assinatura, Catálogo, Visualizar e AUTOCADASTRO 🌟
+  // 🌟 Esconde o menu mestre em telas isoladas (Auth, Assinatura, Catálogo, Visualizar e AutoCadastro) 🌟
   const showNavbar = !location.pathname.includes('/assinatura') && 
                      !location.pathname.includes('/catalogo') &&
                      !location.pathname.includes('/visualizar') &&
-                     !location.pathname.includes('/autocadastro'); 
+                     !location.pathname.includes('/autocadastro') &&
+                     location.pathname !== '/login' &&    // 🔥 Esconde no Login
+                     location.pathname !== '/cadastro';   // 🔥 Esconde no Cadastro (usando !== para não bugar o /cadastro-cliente)
 
   return (
     <div className={`App ${!showNavbar ? 'no-navbar' : ''}`}>
@@ -64,15 +68,17 @@ const AppContent = () => {
       
       <main className="main-content">
         
-        {/* 🔥 BARRA SUPERIOR EXIBIDA AQUI (Só aparece se o menu lateral também estiver visível) 🔥 */}
+        {/* BARRA SUPERIOR EXIBIDA AQUI */}
         {showNavbar && <Topbar />}
 
         <Routes>
+          {/* 🔥 ROTAS DE AUTENTICAÇÃO 🔥 */}
+          <Route path="/login" element={<Login />} />
+          <Route path="/cadastro" element={<Cadastro />} />
+
           <Route path="/" element={<Dashboard />} />
           <Route path="/clientes" element={<Clientes />} />
           <Route path="/cadastro-cliente" element={<CadastroCliente />} />
-          
-          {/* 🔥 ROTA OFICIAL DO CATÁLOGO PARA O CLIENTE 🔥 */}
           <Route path="/autocadastro" element={<AutoCadastro />} /> 
           
           <Route path="/estoque" element={<Estoque />} />
@@ -101,8 +107,6 @@ const AppContent = () => {
           <Route path="/catalogo" element={<Catalogo />} />
           <Route path="/configuracoes" element={<Configuracoes />} />
           <Route path="/perfil" element={<Perfil />} />
-          
-          {/* 🔥 ROTA DE NOTIFICAÇÕES AQUI 🔥 */}
           <Route path="/notificacoes" element={<Notificacoes />} /> 
         </Routes>
       </main>
