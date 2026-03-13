@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Estoque.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, query, orderBy, deleteDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, query, orderBy, deleteDoc, updateDoc, writeBatch, where } from 'firebase/firestore';
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -13,6 +13,7 @@ const Estoque = () => {
   const [itens, setItens] = useState([]);
   const [locacoes, setLocacoes] = useState([]); 
   const [loading, setLoading] = useState(true);
+  const [limpandoNomes, setLimandoNomes] = useState(false);
   
   const [busca, setBusca] = useState('');
   const [dataFiltro, setDataFiltro] = useState(''); 
@@ -54,6 +55,84 @@ const Estoque = () => {
     } finally { 
         setLoading(false); 
     }
+  };
+
+  // 🔥 ROBÔ FAXINEIRO INTELIGENTE 4.0 (FORÇA A LEITURA PELO CÓDIGO -P) 🔥
+  const corrigirNomesDuplicados = async () => {
+      setLimandoNomes(true);
+      try {
+          const q = query(collection(db, "estoque"));
+          const snap = await getDocs(q);
+          const batch = writeBatch(db);
+          let alterados = 0;
+
+          snap.forEach(docSnap => {
+              const item = docSnap.data();
+              let nomeAtual = item.nome || '';
+              let nomeNovo = nomeAtual;
+
+              const ehKit = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit && item.especificacoes?.pecasKit.length > 0);
+              
+              // Se não tiver a tag de filha, mas o código terminar com -P1, -P2, -P3, força a ser filha!
+              const ehFilha = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKit);
+
+              if (ehKit) {
+                  if (!nomeAtual.toUpperCase().includes('KIT')) {
+                      nomeNovo = `KIT ${nomeAtual}`;
+                  }
+              } else if (ehFilha) {
+                  let pai = nomeAtual;
+                  if (nomeAtual.includes(' - ')) pai = nomeAtual.split(' - ')[0].trim();
+                  if (pai.toUpperCase().startsWith('KIT ')) pai = pai.substring(4).trim();
+
+                  const tam = item.especificacoes?.tamanho || '';
+                  const cor = item.especificacoes?.cor || '';
+                  
+                  let sufixos = [];
+                  if (tam) sufixos.push(tam.trim());
+                  if (cor) sufixos.push(cor.trim());
+                  
+                  if (sufixos.length > 0) {
+                      nomeNovo = `${pai} - ${sufixos.join(' ')}`;
+                  } else {
+                      let filhaLimpa = '';
+                      if (nomeAtual.includes(' - ')) {
+                          let filha = nomeAtual.split(' - ').slice(1).join(' - ').trim();
+                          let regexPai = new RegExp(pai, "ig");
+                          filhaLimpa = filha.replace(regexPai, "").replace(/^[- ]+/g, "").replace(/cilindro/ig, "").replace(/painel/ig, "").trim();
+                      }
+
+                      if (!filhaLimpa || /^P\d+$/i.test(filhaLimpa)) {
+                          nomeNovo = `${pai} - ⚠️ Sem Medida (Edite)`; 
+                      } else {
+                          nomeNovo = `${pai} - ${filhaLimpa}`;
+                      }
+                  }
+              }
+
+              if (nomeNovo && nomeNovo !== nomeAtual) {
+                  batch.update(docSnap.ref, { 
+                      nome: nomeNovo,
+                      // Força a colocar a marcação no banco para nunca mais dar erro!
+                      ...(ehFilha ? { "especificacoes.isSubPeca": true } : {}) 
+                  });
+                  alterados++;
+              }
+          });
+
+          if (alterados > 0) {
+              await batch.commit();
+              alert(`✅ Mágica Feita! O robô arrumou os nomes de ${alterados} peças e kits! Verifique as que ficaram com o aviso "Sem Medida".`);
+              carregarDados();
+          } else {
+              alert("✨ Tudo já está perfeitamente organizado!");
+          }
+      } catch(e) {
+          console.error("Erro ao limpar nomes:", e);
+          alert("Erro ao executar a limpeza.");
+      } finally {
+          setLimandoNomes(false);
+      }
   };
 
   const irParaCadastro = (item = null) => {
@@ -229,7 +308,6 @@ const Estoque = () => {
         return true;
     });
 
-  // Ordenação Alfabética
   itensFiltrados.sort((a, b) => {
       const nomeA = (a.nome || '').toLowerCase();
       const nomeB = (b.nome || '').toLowerCase();
@@ -287,6 +365,16 @@ const Estoque = () => {
           <p>Controle logístico, financeiro e catálogo online.</p>
         </div>
         <div className="acoes-top" style={{ display: 'flex', gap: '10px' }}>
+          
+          <button 
+            onClick={corrigirNomesDuplicados} 
+            style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
+            disabled={limpandoNomes}
+            title="Adiciona 'KIT' nos pacotes e puxa as características das filhas"
+          >
+            {limpandoNomes ? '⏳ Ajustando...' : '🧹 Ajustar Nomes (Kits e Peças)'}
+          </button>
+
           <button 
             className="btn-dark-blue" 
             onClick={imprimirListaFiltrada} 
@@ -307,13 +395,11 @@ const Estoque = () => {
 
       <div className="filtros-inteligentes-container">
           
-          {/* 🔥 BARRA DE PESQUISA RESTAURADA 🔥 */}
           <div className="filtro-grupo barra-pesquisa">
               <span className="filtro-icone">🔍</span>
               <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
 
-          {/* 🔥 BOTÃO DE ORDENAÇÃO SEPARADO (IGUAL AOS OUTROS FILTROS) 🔥 */}
           <div className="filtro-grupo">
               <span className="filtro-label">ORDEM:</span>
               <button 
@@ -414,6 +500,10 @@ const Estoque = () => {
                   const posImg = item.posicoesFoco?.[0];
                   
                   const isMenuOpen = menuAberto === item.id;
+                  
+                  // 🔥 IDENTIFICADORES VISUAIS PARA A TABELA (AGORA IDENTIFICA PELO CÓDIGO TAMBÉM) 🔥
+                  const ehKitPai = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit && item.especificacoes?.pecasKit.length > 0);
+                  const ehSubPeca = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKitPai);
 
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: estaTotalmenteAlugado ? 0.6 : 1 }}>
@@ -426,8 +516,15 @@ const Estoque = () => {
                               ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <strong style={{ color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap' }}>{item.nome}</strong>
-                              <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '2px' }}>
+                              
+                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                  {item.nome}
+                                  {ehKitPai && <span style={{background: '#1d4ed8', color: '#fff', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px'}}>📦 KIT PAI</span>}
+                                  {ehSubPeca && <span style={{background: '#f1f5f9', color: '#475569', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px', border: '1px solid #cbd5e1'}}>🧩 PEÇA FILHA</span>}
+                                  {isDeco && <span style={{background: '#b45309', color: '#fff', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px'}}>✨ DECORAÇÃO</span>}
+                              </strong>
+                              
+                              <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
                                   CÓD: {item.codigo || 'S/N'} 
                                   {item.localizacao ? ` • 📍 ${item.localizacao}` : ''}
                               </span>

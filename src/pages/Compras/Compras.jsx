@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig"; 
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs } from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import "./Compras.css";
 
@@ -9,6 +9,8 @@ const Compras = () => {
   const [itens, setItens] = useState([]);
   const [totais, setTotais] = useState({ pendente: 0, urgente: 0, realizado: 0 });
   const [filtroStatus, setFiltroStatus] = useState("todos");
+  const [busca, setBusca] = useState('');
+  const [ordemAlfabetica, setOrdemAlfabetica] = useState('Data'); 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -52,59 +54,42 @@ const Compras = () => {
     return () => unsubscribe();
   }, []);
 
+  // 🔥 LÓGICA CORRIGIDA: PERGUNTA SE QUER IR PRO ACERVO E TELETRANSPORTA 🔥
   const handleStatusChange = async (item, novoStatus) => {
     try {
-      const qEstoque = query(collection(db, "estoque"), where("nome", "==", item.nome));
-      const snapshotEstoque = await getDocs(qEstoque);
-      const qtdComprada = Number(item.quantidade) || 1;
-
       let updatePayload = { status: novoStatus };
 
       if (novoStatus === 'chegou') {
         updatePayload.dataChegada = new Date().toISOString(); 
+        
+        // Salva na lista de compras que a caixa chegou!
+        const itemRef = doc(db, "lista_compras", item.id);
+        await updateDoc(itemRef, updatePayload);
 
-        if (!snapshotEstoque.empty) {
-          const docExistente = snapshotEstoque.docs[0];
-          const qtdAtual = Number(docExistente.data().quantidade) || 0;
-          await updateDoc(doc(db, "estoque", docExistente.id), {
-            quantidade: qtdAtual + (item.formato === 'kit' && item.quantidadePecasKit ? item.quantidadePecasKit : qtdComprada),
-            atualizadoEm: new Date().toISOString()
-          });
-          alert(`📦 Caixa recebida! Peças adicionadas ao acervo com sucesso.`);
+        if (item.categoria === "material") {
+             alert(`📦 Material de consumo recebido e baixado da lista!`);
         } else {
-          if (item.categoria !== "material") {
-             const itemRef = doc(db, "lista_compras", item.id);
-             await updateDoc(itemRef, updatePayload);
-             alert(`✨ Peça Nova Chegou na loja!\n\nVamos cadastrar a foto e os detalhes dela no seu Acervo.`);
-             navigate('/cadastro-estoque', { state: { dadosCompra: item } });
-             return; 
-          }
+             // Pergunta ao invés de forçar, caso você esteja dando baixa em várias caixas ao mesmo tempo
+             const querCadastrarAgora = window.confirm(`✨ A caixa de "${item.nome}" chegou!\n\nEle já foi marcado como 'No Acervo' na sua lista de compras.\n\nDeseja ir para a tela de Estoque AGORA para colocar a foto, a prateleira e salvar a peça no catálogo?`);
+             
+             if (querCadastrarAgora) {
+                 navigate('/cadastro-estoque', { state: { dadosCompra: item } });
+             }
         }
+        return; 
       } 
       else if (novoStatus === 'pendente') {
         updatePayload.dataCompra = null;
         updatePayload.dataChegada = null;
-
-        if (item.status === 'chegou' && !snapshotEstoque.empty) {
-          const docExistente = snapshotEstoque.docs[0];
-          const qtdAtual = Number(docExistente.data().quantidade) || 0;
-          const qtdRemover = item.formato === 'kit' && item.quantidadePecasKit ? item.quantidadePecasKit : qtdComprada;
-          const novaQtd = Math.max(0, qtdAtual - qtdRemover); 
-          
-          await updateDoc(doc(db, "estoque", docExistente.id), {
-            quantidade: novaQtd,
-            atualizadoEm: new Date().toISOString()
-          });
-          alert(`↩️ Desfeito! As peças foram removidas do estoque e as datas foram zeradas.`);
-        }
+        const itemRef = doc(db, "lista_compras", item.id);
+        await updateDoc(itemRef, updatePayload);
       }
       else if (novoStatus === 'comprado') {
         updatePayload.dataCompra = new Date().toISOString(); 
+        const itemRef = doc(db, "lista_compras", item.id);
+        await updateDoc(itemRef, updatePayload);
         alert(`🛒 Maravilha! A compra foi registrada. O sistema vai rastrear a entrega a partir de hoje.`);
       }
-
-      const itemRef = doc(db, "lista_compras", item.id);
-      await updateDoc(itemRef, updatePayload);
 
     } catch (error) {
       console.error("Erro ao atualizar status:", error);
@@ -120,10 +105,22 @@ const Compras = () => {
     }
   };
 
-  const itensFiltrados = itens.filter(item => {
-    if (filtroStatus === "todos") return true;
-    return item.status === filtroStatus;
+  let itensFiltrados = itens.filter(item => {
+    const termo = busca.toLowerCase();
+    const matchBusca = (item.nome || '').toLowerCase().includes(termo) || (item.vinculo || '').toLowerCase().includes(termo);
+    const matchStatus = filtroStatus === "todos" ? true : item.status === filtroStatus;
+    return matchBusca && matchStatus;
   });
+
+  itensFiltrados.sort((a, b) => {
+      if (ordemAlfabetica === 'A-Z') return (a.nome || '').localeCompare(b.nome || '');
+      if (ordemAlfabetica === 'Z-A') return (b.nome || '').localeCompare(a.nome || '');
+      return 0; 
+  });
+
+  const alternarOrdem = () => {
+      setOrdemAlfabetica(prev => prev === 'Data' ? 'A-Z' : prev === 'A-Z' ? 'Z-A' : 'Data');
+  };
 
   return (
     <div className="compras-container dashboard-container">
@@ -131,7 +128,7 @@ const Compras = () => {
       <div className="dashboard-header">
         <div className="header-text">
           <h1>LISTA DE COMPRAS</h1>
-          <p>Gerencie aquisições vinculadas aos pedidos e ao acervo da Ágape Decorações.</p>
+          <p>Gerencie aquisições vinculadas aos pedidos e ao acervo.</p>
         </div>
         <button className="btn-novo-cliente" onClick={() => navigate("/compras/nova")}>
           + Adicionar Item
@@ -177,22 +174,43 @@ const Compras = () => {
       </div>
 
       <div className="tabela-secao">
-        <div className="filtros-area">
-          <div className="search-box">
-            <span className="search-icon">🔍</span>
-            <input type="text" placeholder="Buscar por item ou pedido..." />
-          </div>
+        <div className="filtros-area" style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
           
-          <select 
-            className="filter-select" 
-            value={filtroStatus} 
-            onChange={(e) => setFiltroStatus(e.target.value)}
+          <div className="search-box" style={{ flex: 2, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <span className="search-icon">🔍</span>
+            <input type="text" placeholder="Buscar por item ou pedido..." value={busca} onChange={e => setBusca(e.target.value)} style={{ flex: 1, border: 'none', outline: 'none', background: 'transparent' }} />
+          </div>
+
+          <button 
+              onClick={alternarOrdem}
+              style={{ 
+                  flex: '0 0 auto', padding: '0 20px', background: '#fff', border: '1px solid #cbd5e1', 
+                  borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', 
+                  color: '#475569', display: 'flex', alignItems: 'center', gap: '8px',
+                  transition: 'all 0.2s', boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                  height: '42px'
+              }}
+              onMouseEnter={e => {e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#0f172a';}}
+              onMouseLeave={e => {e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569';}}
+              title="Mudar Ordem"
           >
-            <option value="todos">Status: Todos</option>
-            <option value="pendente">Falta Comprar (Pendente)</option>
-            <option value="comprado">A Caminho (Comprado)</option>
-            <option value="chegou">No Acervo (Chegou)</option>
-          </select>
+              {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : ordemAlfabetica === 'Z-A' ? '⬆️ Z - A' : '📅 Recentes'}
+          </button>
+          
+          <div style={{ flex: 1 }}>
+            <select 
+              className="filter-select" 
+              style={{ width: '100%', height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1' }}
+              value={filtroStatus} 
+              onChange={(e) => setFiltroStatus(e.target.value)}
+            >
+              <option value="todos">📊 Status: Todos</option>
+              <option value="pendente">⏳ Falta Comprar</option>
+              <option value="comprado">🚚 A Caminho</option>
+              <option value="chegou">📦 No Acervo</option>
+            </select>
+          </div>
+
         </div>
 
         <div className="tabela-wrapper">
@@ -225,7 +243,6 @@ const Compras = () => {
                   let labelPrazo = 'PRAZO:';
                   let dataExibicao = 'S/D';
 
-                  // 🔥 LÓGICA DE EXIBIÇÃO LIMPA E PRECISA 🔥
                   if (item.status === 'pendente') {
                       if (isPedido && item.prazo) {
                           const dataPrazo = new Date(item.prazo + 'T00:00:00');
@@ -250,12 +267,10 @@ const Compras = () => {
                       labelPrazo = '🚚 Previsão Entrega:';
                       
                       let previsaoDate = null;
-                      // Calcula a previsão real: Data da Compra + Dias de Frete (Salvos no banco!)
                       if (item.dataCompra && item.diasFrete !== undefined) {
                           previsaoDate = new Date(item.dataCompra);
                           previsaoDate.setDate(previsaoDate.getDate() + Number(item.diasFrete));
                       } else if (!isPedido && item.prazo) {
-                          // Fallback para itens bem antigos do sistema
                           previsaoDate = new Date(item.prazo + 'T00:00:00');
                       }
 
@@ -269,7 +284,7 @@ const Compras = () => {
                       } else {
                           dataExibicao = 'Aguardando Chegada';
                           alertaClasse = '';
-                          alertaTexto = ''; // 🔥 ISSO MATA O "A CAMINHO" DUPLICADO QUE VOCÊ RELATOU! 🔥
+                          alertaTexto = ''; 
                       }
                   } 
                   else if (item.status === 'chegou') {
@@ -335,7 +350,6 @@ const Compras = () => {
                               </span>
                           )}
 
-                          {/* Se a mensagem de alerta estiver vazia, a caixinha some! Limpeza visual total! */}
                           {item.status !== 'chegou' && alertaTexto && (
                               <span className={`alerta-logistica ${alertaClasse}`}>
                                 {alertaTexto}

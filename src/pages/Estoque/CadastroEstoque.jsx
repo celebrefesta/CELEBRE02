@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroEstoque.css';
 import { db } from '../../firebaseConfig';
-// 🔥 IMPORTAÇÃO ATUALIZADA COM O setDoc 🔥
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, getDoc, query, setDoc } from 'firebase/firestore';
 
 import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
@@ -79,7 +78,6 @@ const CadastroEstoque = () => {
   const [voltagem, setVoltagem] = useState('Bivolt');
   const [observacoes, setObservacoes] = useState('');
 
-  // 🔥 NOVOS ESTADOS PARA O MODAL DE PRATELEIRAS 🔥
   const [modalLocalizacaoAberto, setModalLocalizacaoAberto] = useState(false);
   const [novaLocalizacaoText, setNovaLocalizacaoText] = useState('');
   const [localizacoesEditaveis, setLocalizacoesEditaveis] = useState([]);
@@ -138,7 +136,10 @@ const CadastroEstoque = () => {
     const itemBase = itemEditando || itemDuplicando;
 
     if (itemBase) {
-      setNome(itemDuplicando ? `${itemBase.nome} (Cópia)` : itemBase.nome || ''); 
+      let nomeLimpo = itemBase.nome || '';
+      if (nomeLimpo.toUpperCase().startsWith('KIT ')) nomeLimpo = nomeLimpo.substring(4).trim();
+      setNome(itemDuplicando ? `${nomeLimpo} (Cópia)` : nomeLimpo); 
+      
       setCodigo(itemEditando ? itemBase.codigo || '' : ''); 
       
       setCategoria(itemBase.categoria || ''); 
@@ -429,7 +430,6 @@ const CadastroEstoque = () => {
       return itensDoKit.reduce((acc, item) => acc + (item.precoOriginal * item.qtd), 0);
   };
 
-  // 🔥 FUNÇÕES DO NOVO MODAL DE LOCALIZAÇÕES 🔥
   const abrirModalLocalizacao = () => {
       setLocalizacoesEditaveis([...listasSistema.localizacoes]);
       setNovaLocalizacaoText('');
@@ -454,7 +454,6 @@ const CadastroEstoque = () => {
       setSalvandoLocalizacoes(true);
       try {
           const docRef = doc(db, "sistema", "parametros");
-          // Usa o setDoc com merge: true, assim se o doc não existir ele cria sem dar erro!
           await setDoc(docRef, { localizacoes: localizacoesEditaveis }, { merge: true });
           
           setListasSistema(prev => ({ ...prev, localizacoes: localizacoesEditaveis }));
@@ -494,8 +493,12 @@ const CadastroEstoque = () => {
         return alert("❌ Selecione o Tema/Filtro Específico.");
     }
     
-    if (isKitNovo && pecasKitNovas.some(p => !p.nome.trim() || !p.valorAluguel.trim())) {
-        return alert("❌ Preencha o nome e o valor de aluguel de TODAS as peças do Conjunto Físico, ou remova as linhas vazias.");
+    // 🔥 TRAVA DE SEGURANÇA OBRIGATÓRIA PARA AS FILHAS 🔥
+    if (isKitNovo && pecasKitNovas.some(p => (!p.tamanho.trim() && !p.cor.trim()))) {
+        return alert("❌ OBRIGATÓRIO: Preencha o TAMANHO ou a COR de todas as peças filhas do Kit para o sistema não gerar nomes duplicados!");
+    }
+    if (isKitNovo && pecasKitNovas.some(p => !p.valorAluguel.trim())) {
+        return alert("❌ Todas as peças filhas precisam ter um valor de aluguel preenchido.");
     }
 
     if (isDecoracao && itensDoKit.length === 0) {
@@ -510,8 +513,12 @@ const CadastroEstoque = () => {
       const subCatFinal = isDecoracao ? 'Pacote' : subCategoria;
       const temaFinalParaSalvar = temaSelecionado === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaSelecionado;
 
+      // 🔥 INTELIGÊNCIA DO NOME DO PAI 🔥
+      const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ? `KIT ${nome.trim()}` : nome.trim();
+
       const dados = {
-        nome, codigo, 
+        nome: nomePrincipalFormatado, 
+        codigo, 
         categoria: catFinal, 
         subCategoria: subCatFinal, 
         
@@ -566,11 +573,47 @@ const CadastroEstoque = () => {
         if (isKitNovo && pecasKitNovas.length > 0) {
             for (let i = 0; i < pecasKitNovas.length; i++) {
                 const peca = pecasKitNovas[i];
-                if (peca.nome.trim()) {
+                
+                if (peca.nome.trim() || peca.tamanho.trim() || peca.cor.trim()) {
                     const valPeca = Number(peca.valorAluguel.replace(',', '.'));
+                    
+                    // NOME LIMPO DO PAI PARA USAR NA FILHA
+                    let nomePaiPrefixo = nome.trim();
+                    if (nomePaiPrefixo.toUpperCase().startsWith('KIT ')) {
+                         nomePaiPrefixo = nomePaiPrefixo.substring(4).trim();
+                    }
+                    
+                    const nomePaiLimpoLower = nomePaiPrefixo.toLowerCase();
+                    let sufixos = [];
+
+                    if (peca.nome.trim()) {
+                        let nomePecaLimpo = peca.nome.trim();
+                        let nomePecaLower = nomePecaLimpo.toLowerCase();
+                        
+                        if (nomePecaLower !== nomePaiLimpoLower && !nomePecaLower.includes('cilindro') && !nomePecaLower.includes('painel')) {
+                            if (nomePecaLower.startsWith(nomePaiLimpoLower)) {
+                                let cortado = nomePecaLimpo.substring(nomePaiLimpoLower.length).trim();
+                                if (cortado.startsWith('-')) cortado = cortado.substring(1).trim();
+                                if (cortado) sufixos.push(cortado);
+                            } else {
+                                 sufixos.push(nomePecaLimpo);
+                            }
+                        }
+                    }
+
+                    if (peca.tamanho.trim()) sufixos.push(peca.tamanho.trim());
+                    if (peca.cor.trim()) sufixos.push(peca.cor.trim());
+
+                    let nomeFinalDaPeca = nomePaiPrefixo;
+                    if (sufixos.length > 0) {
+                        nomeFinalDaPeca = `${nomePaiPrefixo} - ${sufixos.join(' ')}`;
+                    } else {
+                        nomeFinalDaPeca = `${nomePaiPrefixo} - P${i+1}`;
+                    }
+
                     const pecaDados = {
                         ...dados, 
-                        nome: `${nome} - ${peca.nome}`, 
+                        nome: nomeFinalDaPeca, 
                         codigo: `${codigo}-P${i+1}`, 
                         financeiro: { ...dados.financeiro, valorAluguel: isNaN(valPeca) ? 0 : valPeca, valorCompra: 0, valorReposicao: 0 },
                         especificacoes: { 
@@ -816,7 +859,7 @@ const CadastroEstoque = () => {
               
               <h3 className="section-divider" style={{marginTop: 0}}>INFORMAÇÕES DO ITEM</h3>
               <div className="form-grid-4">
-                <div className="form-group span-3"><label>NOME DA {tipoCadastro === 'decoracao' ? 'DECORAÇÃO / PACOTE' : tipoCadastro === 'kit' ? 'COMPOSIÇÃO / KIT' : 'PEÇA'} *</label><input value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Bandeja de Cerâmica Lisa"} style={{fontSize: '16px', fontWeight: 'bold'}} /></div>
+                <div className="form-group span-3"><label>NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label><input value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} style={{fontSize: '16px', fontWeight: 'bold'}} /></div>
                 
                 <div className="form-group span-1">
                     <label>CÓDIGO SKU</label>
@@ -971,29 +1014,40 @@ const CadastroEstoque = () => {
                 </div>
               )}
 
+              {/* 🔥 MÓDULO INTELIGENTE DO KIT: OBRIGATORIEDADE ATIVADA 🔥 */}
               {tipoCadastro === 'kit' && (
                 <div style={{marginTop: '30px', border: '2px dashed #93c5fd', padding: '20px', borderRadius: '10px', backgroundColor: '#eff6ff'}}>
-                  <h3 style={{margin: '0 0 5px 0', color: '#1d4ed8'}}>📦 DESMEMBRAR CONJUNTO</h3>
-                  <p style={{fontSize: '12px', color: '#3b82f6', marginBottom: '15px'}}>
-                    Adicione abaixo as peças filhas. Ex: "Cilindro P", "Cilindro M". Elas herdarão as fotos e categorias que você definiu acima.
+                  <h3 style={{margin: '0 0 5px 0', color: '#1d4ed8'}}>📦 DESMEMBRAR CONJUNTO (PEÇAS FILHAS)</h3>
+                  <p style={{fontSize: '12px', color: '#ef4444', marginBottom: '15px', fontWeight: 'bold'}}>
+                    ⚠️ Obrigatório: Defina o Tamanho ou a Cor de cada peça para que o sistema possa diferenciá-las.
                   </p>
                   
                   {pecasKitNovas.map((p, idx) => (
                     <div key={p.id} style={{background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
-                      <div style={{display: 'flex', gap: '10px', marginBottom: '10px'}}>
-                        <div style={{flex: 2}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>NOME DA PEÇA FILHA *</label>
-                          <input type="text" placeholder={`Ex: Cilindro Tamanho P`} value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '14px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box'}} />
+                      
+                      <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap'}}>
+                        <div style={{flex: 2, minWidth: '120px'}}>
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>NOME (Ex: Tampo, Base)</label>
+                          <input type="text" placeholder="Pode ficar vazio..." value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box'}} />
                         </div>
-                        <div style={{flex: 1}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>VALOR ALUGUEL (R$) *</label>
+                        <div style={{flex: 1, minWidth: '80px'}}>
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#1d4ed8'}}>TAMANHO *</label>
+                          <input type="text" placeholder="Ex: P, M, 2x2" value={p.tamanho} onChange={e => atualizarPecaKitNova(idx, 'tamanho', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #93c5fd', boxSizing: 'border-box'}} />
+                        </div>
+                        <div style={{flex: 1, minWidth: '80px'}}>
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#1d4ed8'}}>COR *</label>
+                          <input type="text" placeholder="Ex: Rosa" value={p.cor} onChange={e => atualizarPecaKitNova(idx, 'cor', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #93c5fd', boxSizing: 'border-box'}} />
+                        </div>
+                        <div style={{flex: 1, minWidth: '100px'}}>
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>VALOR (R$) *</label>
                           <input type="text" placeholder="0,00" value={p.valorAluguel} onChange={e => atualizarPecaKitNova(idx, 'valorAluguel', e.target.value)} onBlur={e => {
                               let val = e.target.value.replace(',', '.');
                               const num = parseFloat(val);
                               if(!isNaN(num)) atualizarPecaKitNova(idx, 'valorAluguel', num.toFixed(2).replace('.', ','));
-                          }} style={{width: '100%', padding: '10px', fontSize: '14px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontWeight: 'bold', color: '#1d4ed8'}} />
+                          }} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontWeight: 'bold', color: '#1d4ed8'}} />
                         </div>
-                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', marginTop: '18px', padding: '0 15px', cursor: 'pointer', fontWeight: 'bold'}}>Remover</button>
+                        
+                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', marginTop: '18px', padding: '0 15px', cursor: 'pointer', fontWeight: 'bold', height: '38px'}}>Remover</button>
                       </div>
                     </div>
                   ))}
