@@ -6,9 +6,11 @@ import Navbar from './components/Navbar';
 import Topbar from './components/Topbar'; 
 import './App.css';
 
-// --- AUTENTICAÇÃO (LOGIN & CADASTRO) 🔥 ---
+// --- AUTENTICAÇÃO E VITRINE ---
+import LandingPage from './pages/LandingPage/LandingPage'; // 🔥 NOSSA NOVA TELA INICIAL
 import Login from './pages/Auth/Login';
 import Cadastro from './pages/Auth/Cadastro';
+import RotaPrivada from './components/RotaPrivada'; 
 
 // --- PÁGINAS ---
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -50,64 +52,72 @@ import Moodboard from './pages/Moodboard/Moodboard';
 import Catalogo from './pages/Catalago/Catalago'; 
 import Notificacoes from './pages/Notificacoes/Notificacoes'; 
 
-
 const AppContent = () => {
   const location = useLocation();
   
-  // 🌟 Esconde o menu mestre em telas isoladas (Auth, Assinatura, Catálogo, Visualizar e AutoCadastro) 🌟
-  const showNavbar = !location.pathname.includes('/assinatura') && 
+  // 🔥 Esconde o menu mestre (Navbar preta e Topbar) nas telas públicas
+  const rotasSemMenu = ['/', '/login', '/cadastro'];
+  
+  const showNavbar = !rotasSemMenu.includes(location.pathname) && 
+                     !location.pathname.includes('/assinatura') && 
                      !location.pathname.includes('/catalogo') &&
                      !location.pathname.includes('/visualizar') &&
-                     !location.pathname.includes('/autocadastro') &&
-                     location.pathname !== '/login' &&    // 🔥 Esconde no Login
-                     location.pathname !== '/cadastro';   // 🔥 Esconde no Cadastro (usando !== para não bugar o /cadastro-cliente)
+                     !location.pathname.includes('/autocadastro');
 
   return (
     <div className={`App ${!showNavbar ? 'no-navbar' : ''}`}>
       {showNavbar && <Navbar />}
       
       <main className="main-content">
-        
-        {/* BARRA SUPERIOR EXIBIDA AQUI */}
         {showNavbar && <Topbar />}
 
         <Routes>
-          {/* 🔥 ROTAS DE AUTENTICAÇÃO 🔥 */}
+          {/* 🌍 VITRINE PÚBLICA (Página Inicial Oficial) */}
+          <Route path="/" element={<LandingPage />} />
+
+          {/* 🔓 OUTRAS ROTAS PÚBLICAS */}
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
-
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/clientes" element={<Clientes />} />
-          <Route path="/cadastro-cliente" element={<CadastroCliente />} />
           <Route path="/autocadastro" element={<AutoCadastro />} /> 
-          
-          <Route path="/estoque" element={<Estoque />} />
-          <Route path="/cadastro-estoque" element={<CadastroEstoque />} />
-          
-          <Route path="/locacoes" element={<Locacoes />} />
-          <Route path="/locacoes/nova" element={<NovaLocacao />} />
-          <Route path="/locacoes/editar/:id" element={<EditarLocacao />} />
-          <Route path="/fornecedores" element={<Fornecedores />} />
-          <Route path="/fornecedores/novo" element={<NovoFornecedor />} />
-          <Route path="/compras" element={<Compras />} />
-          <Route path="/compras/nova" element={<NovaCompra />} />
-          <Route path="/compras/editar/:id" element={<NovaCompra />} />
-          <Route path="/financeiro" element={<Financeiro />} />
-          <Route path="/financeiro/novo" element={<NovoLancamento />} />
-          <Route path="/agenda" element={<Agenda />} />
-          <Route path="/logistica" element={<Logistica />} />
-          <Route path="/contratos" element={<Contratos />} />
-          <Route path="/novo-contrato" element={<NovoContrato />} />
-          <Route path="/modelos-contrato" element={<ModelosContrato />} />
-          <Route path="/editar-contrato/:id" element={<EditarContrato />} />
           <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
           <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
-          <Route path="/relatorios" element={<Relatorios />} />
-          <Route path="/moodboard" element={<Moodboard />} />
           <Route path="/catalogo" element={<Catalogo />} />
-          <Route path="/configuracoes" element={<Configuracoes />} />
-          <Route path="/perfil" element={<Perfil />} />
-          <Route path="/notificacoes" element={<Notificacoes />} /> 
+
+          {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Apenas Logados) */}
+          {/* O Dashboard agora mora no /dashboard */}
+          <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
+          
+          <Route path="/clientes" element={<RotaPrivada><Clientes /></RotaPrivada>} />
+          <Route path="/cadastro-cliente" element={<RotaPrivada><CadastroCliente /></RotaPrivada>} />
+          
+          <Route path="/estoque" element={<RotaPrivada><Estoque /></RotaPrivada>} />
+          <Route path="/cadastro-estoque" element={<RotaPrivada><CadastroEstoque /></RotaPrivada>} />
+          
+          <Route path="/locacoes" element={<RotaPrivada><Locacoes /></RotaPrivada>} />
+          <Route path="/locacoes/nova" element={<RotaPrivada><NovaLocacao /></RotaPrivada>} />
+          <Route path="/locacoes/editar/:id" element={<RotaPrivada><EditarLocacao /></RotaPrivada>} />
+          
+          <Route path="/fornecedores" element={<RotaPrivada><Fornecedores /></RotaPrivada>} />
+          <Route path="/fornecedores/novo" element={<RotaPrivada><NovoFornecedor /></RotaPrivada>} />
+          <Route path="/compras" element={<RotaPrivada><Compras /></RotaPrivada>} />
+          <Route path="/compras/nova" element={<RotaPrivada><NovaCompra /></RotaPrivada>} />
+          <Route path="/compras/editar/:id" element={<RotaPrivada><NovaCompra /></RotaPrivada>} />
+          
+          <Route path="/financeiro" element={<RotaPrivada><Financeiro /></RotaPrivada>} />
+          <Route path="/financeiro/novo" element={<RotaPrivada><NovoLancamento /></RotaPrivada>} />
+          
+          <Route path="/agenda" element={<RotaPrivada><Agenda /></RotaPrivada>} />
+          <Route path="/logistica" element={<RotaPrivada><Logistica /></RotaPrivada>} />
+          <Route path="/contratos" element={<RotaPrivada><Contratos /></RotaPrivada>} />
+          <Route path="/novo-contrato" element={<RotaPrivada><NovoContrato /></RotaPrivada>} />
+          <Route path="/modelos-contrato" element={<RotaPrivada><ModelosContrato /></RotaPrivada>} />
+          <Route path="/editar-contrato/:id" element={<RotaPrivada><EditarContrato /></RotaPrivada>} />
+          
+          <Route path="/relatorios" element={<RotaPrivada><Relatorios /></RotaPrivada>} />
+          <Route path="/moodboard" element={<RotaPrivada><Moodboard /></RotaPrivada>} />
+          <Route path="/configuracoes" element={<RotaPrivada><Configuracoes /></RotaPrivada>} />
+          <Route path="/perfil" element={<RotaPrivada><Perfil /></RotaPrivada>} />
+          <Route path="/notificacoes" element={<RotaPrivada><Notificacoes /></RotaPrivada>} /> 
         </Routes>
       </main>
     </div>

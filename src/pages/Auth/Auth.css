@@ -1,181 +1,241 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* =========================================
+   🛡️ BLINDAGEM MÁXIMA DO CONTAINER
+   ========================================= */
 .auth-container {
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background-color: #f8fafc;
-  padding: 20px;
+  display: flex !important;
+  flex-direction: row !important;
+  position: absolute !important; /* Ignora margens do App.css */
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  min-height: 100vh !important;
+  font-family: 'Plus Jakarta Sans', sans-serif !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+}
+
+/* =========================================
+   ⬅️ LADO ESQUERDO (FORMULÁRIO)
+   ========================================= */
+.auth-main {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: center !important;
+  background-color: #f4f7f9 !important; /* Cinza bem clarinho e limpo */
+  padding: 40px 20px !important;
 }
 
 .auth-box {
-  background: #ffffff;
-  padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-  width: 100%;
-  max-width: 420px;
-  border: 1px solid #e2e8f0;
-  animation: fadeIn 0.4s ease-out;
+  width: 100% !important;
+  max-width: 420px !important;
+  background: #ffffff !important;
+  padding: 40px !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
+  text-align: left !important;
 }
 
-.auth-header {
-  text-align: center;
-  margin-bottom: 30px;
+.logo-placeholder {
+  font-weight: 800 !important;
+  font-size: 1.5rem !important;
+  color: #00284A !important;
+  margin-bottom: 30px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
 }
 
-.auth-header h1 {
-  font-size: 1.8rem;
-  color: #0f172a;
-  margin: 0 0 5px 0;
-  font-weight: 900;
+.logo-circle {
+  width: 32px !important;
+  height: 32px !important;
+  background: #00284A !important;
+  border-radius: 8px !important;
 }
 
-.auth-header p {
-  color: #64748b;
-  font-size: 0.95rem;
-  margin: 0;
+.auth-box h2 {
+  font-size: 1.8rem !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+  margin-top: 0 !important;
+  margin-bottom: 8px !important;
 }
 
-.auth-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
+.auth-box p {
+  color: #64748b !important;
+  font-size: 0.95rem !important;
+  margin-bottom: 25px !important;
 }
 
-.auth-input-group label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #475569;
-  text-transform: uppercase;
-  margin-bottom: 6px;
-  letter-spacing: 0.5px;
+/* Campos de Texto Modernos */
+.input-group {
+  display: flex !important;
+  flex-direction: column !important;
+  margin-bottom: 15px !important;
 }
 
-.auth-input-group input {
-  width: 100%;
-  padding: 14px 15px;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  font-size: 1rem;
-  transition: all 0.2s;
-  background-color: #f8fafc;
-  outline: none;
-  box-sizing: border-box;
+.input-row {
+  display: flex !important;
+  gap: 15px !important;
 }
 
-.auth-input-group input:focus {
-  border-color: #3b82f6;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+.input-row .input-group {
+  flex: 1 !important;
 }
 
-.auth-btn {
-  background-color: #0f172a;
-  color: #ffffff;
-  border: none;
-  padding: 15px;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: bold;
-  cursor: pointer;
-  transition: all 0.2s;
-  margin-top: 10px;
+.input-group label {
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  margin-bottom: 6px !important;
+  text-transform: uppercase !important;
 }
 
-.auth-btn:hover {
-  background-color: #1e293b;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+.input-group input {
+  padding: 12px 16px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-size: 1rem !important;
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+  transition: all 0.2s !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-.auth-btn:disabled {
-  background-color: #94a3b8;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
+.input-group input:focus {
+  outline: none !important;
+  border-color: #00284A !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(0, 40, 74, 0.1) !important;
 }
 
-.auth-error {
-  background-color: #fee2e2;
-  color: #b91c1c;
-  padding: 12px;
-  border-radius: 8px;
-  font-size: 0.85rem;
-  font-weight: 600;
-  text-align: center;
-  border: 1px solid #fca5a5;
-  margin-bottom: 15px;
+/* Botões */
+.btn-auth {
+  width: 100% !important;
+  padding: 14px !important;
+  background-color: #00284A !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 8px !important;
+  font-size: 1.05rem !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  margin-top: 10px !important;
+  transition: background-color 0.2s !important;
 }
 
-.auth-footer {
-  margin-top: 25px;
-  text-align: center;
-  font-size: 0.9rem;
-  color: #64748b;
+.btn-auth:hover {
+  background-color: #001f3a !important;
+}
+
+.btn-auth:disabled {
+  background-color: #94a3b8 !important;
+  cursor: not-allowed !important;
+}
+
+.auth-divisor {
+  text-align: center !important;
+  margin: 20px 0 !important;
+  color: #94a3b8 !important;
+  font-size: 0.85rem !important;
+  display: flex !important;
+  align-items: center !important;
+}
+
+.auth-divisor::before,
+.auth-divisor::after {
+  content: '' !important;
+  flex: 1 !important;
+  border-bottom: 1px solid #e2e8f0 !important;
+}
+
+.auth-divisor span {
+  padding: 0 10px !important;
+}
+
+.btn-google {
+  width: 100% !important;
+  padding: 12px !important;
+  background: white !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  font-weight: 600 !important;
+  color: #475569 !important;
+  cursor: pointer !important;
+  font-size: 0.95rem !important;
+}
+
+.btn-google:hover {
+  background: #f8fafc !important;
 }
 
 .auth-link {
-  color: #3b82f6;
-  font-weight: bold;
-  text-decoration: none;
-  cursor: pointer;
+  text-align: center !important;
+  margin-top: 20px !important;
+  font-size: 0.9rem !important;
+  color: #64748b !important;
 }
 
-.auth-link:hover {
-  text-decoration: underline;
+.auth-link a {
+  color: #00284A !important;
+  font-weight: 700 !important;
+  text-decoration: none !important;
 }
 
-/* 🔥 ESTILOS PARA O BOTÃO DO GOOGLE 🔥 */
-.auth-divider {
-  display: flex;
-  align-items: center;
-  text-align: center;
-  margin: 20px 0;
-  color: #94a3b8;
-  font-size: 0.85rem;
-  font-weight: bold;
-  text-transform: uppercase;
+.auth-erro {
+  background-color: #fee2e2 !important;
+  color: #b91c1c !important;
+  padding: 10px !important;
+  border-radius: 8px !important;
+  font-size: 0.85rem !important;
+  font-weight: bold !important;
+  margin-bottom: 15px !important;
+  text-align: center !important;
 }
 
-.auth-divider::before, .auth-divider::after {
-  content: '';
-  flex: 1;
-  border-bottom: 1px solid #e2e8f0;
-}
-.auth-divider::before { margin-right: 10px; }
-.auth-divider::after { margin-left: 10px; }
 
-.auth-btn-google {
-  width: 100%;
-  background-color: #ffffff;
-  color: #334155;
-  border: 1px solid #cbd5e1;
-  padding: 14px;
-  border-radius: 8px;
-  font-size: 0.95rem;
-  font-weight: bold;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  transition: all 0.2s;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+/* =========================================
+   ➡️ LADO DIREITO (PAINEL AZUL PREMIUM)
+   ========================================= */
+.auth-side-panel {
+  flex: 1.1 !important;
+  background-color: #00284A !important; /* Azul escuro inspirado nas suas fotos */
+  background-image: linear-gradient(135deg, #00284A 0%, #004b87 100%) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  padding: 80px 10% !important;
+  color: #ffffff !important;
 }
 
-.auth-btn-google:hover {
-  background-color: #f8fafc;
-  border-color: #94a3b8;
-  transform: translateY(-1px);
+.side-content h1 {
+  font-size: 3.2rem !important;
+  font-weight: 800 !important;
+  line-height: 1.2 !important;
+  margin-bottom: 20px !important;
+  color: #ffffff !important;
 }
 
-.google-icon {
-  width: 20px;
-  height: 20px;
+.side-content p {
+  font-size: 1.15rem !important;
+  color: #93c5fd !important; /* Azul clarinho para contraste */
+  line-height: 1.6 !important;
+  max-width: 450px !important;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+/* Esconde o painel direito no celular */
+@media (max-width: 900px) {
+  .auth-side-panel {
+    display: none !important;
+  }
 }
