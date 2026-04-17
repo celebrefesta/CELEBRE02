@@ -2,20 +2,20 @@ import React, { useState } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useNavigate } from 'react-router-dom';
 
-// 🔥 1. COLOQUE A SUA PUBLIC KEY DE TESTE AQUI 🔥
-// Ela começa com "TEST-..." e você pega no painel de desenvolvedor do Mercado Pago
-initMercadoPago('TEST-COLOQUE-A-SUA-CHAVE-AQUI', { locale: 'pt-BR' });
+// 🔥 CONFIGURAÇÃO DE PRODUÇÃO 🔥
+// Substitua pelo seu Public Key de produção (APP_USR-...) do painel do Mercado Pago
+initMercadoPago('APP_USR-4c525755-f2c1-4e28-8c9e-020787a172a1', { locale: 'pt-BR' });
 
 const Checkout = () => {
   const navigate = useNavigate();
   const [mensagem, setMensagem] = useState('');
 
-  // Configuração do valor do plano (Exemplo: Plano Profissional R$99)
+  // Configuração do valor do plano
   const initialization = {
     amount: 99, 
   };
 
-  // Quais meios de pagamento queremos aceitar?
+  // Meios de pagamento aceitos
   const customization = {
     paymentMethods: {
       pix: 'all',
@@ -23,38 +23,57 @@ const Checkout = () => {
     },
   };
 
-  // O que acontece quando o cliente clica em "Pagar"?
+  // Função que conecta com o seu robô no Google Cloud
   const onSubmit = async ({ selectedPaymentMethod, formData }) => {
-    // 🚧 AQUI ENTRA O NOSSO ROBÔ (BACKEND) DEPOIS 🚧
-    // Por enquanto, vamos só simular que deu certo para você ver a tela!
-    setMensagem('Processando pagamento...');
+    setMensagem('Comunicando com o banco... Aguarde.');
     
-    console.log("Dados prontos para enviar ao robô:", formData);
+    return new Promise(async (resolve, reject) => {
+      try {
+        // O link do seu robô no Google Cloud (Backend)
+        const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
 
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        setMensagem('Pagamento Aprovado! Bem-vindo ao Celebre Premium.');
-        resolve();
-        // Depois de 3 segundos, joga o cliente pro Dashboard
-        setTimeout(() => navigate('/dashboard'), 3000);
-      }, 2000);
+        const resposta = await fetch(URL_DO_SEU_ROBO, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(formData),
+        });
+
+        const resultado = await resposta.json();
+
+        // Verificando a aprovação real
+        if (resultado.status === 'approved' || resultado.status === 'in_process') {
+          setMensagem('Sucesso! Pagamento aprovado. Bem-vinda ao Celebre.');
+          resolve(); 
+          setTimeout(() => navigate('/dashboard'), 3000);
+        } else {
+          setMensagem('O pagamento foi recusado. Verifique os dados ou tente outro meio.');
+          resolve(); 
+        }
+
+      } catch (erro) {
+        console.error("Erro na conexão com o servidor:", erro);
+        setMensagem('Erro de conexão. Verifique sua internet e tente novamente.');
+        reject(); 
+      }
     });
   };
 
   const onError = async (error) => {
     console.error(error);
-    setMensagem('Ocorreu um erro ao carregar o pagamento.');
+    setMensagem('Ocorreu um erro ao carregar o sistema de pagamento.');
   };
 
   const onReady = async () => {
-    /* Callback chamado quando o Brick estiver pronto */
+    /* Brick carregado */
   };
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '40px 20px', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
       <div style={{ maxWidth: '800px', margin: '0 auto', display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
         
-        {/* Lado Esquerdo: Resumo do Pedido */}
+        {/* Resumo do Plano */}
         <div style={{ flex: '1', minWidth: '300px', backgroundColor: '#0f172a', color: 'white', padding: '30px', borderRadius: '16px', height: 'fit-content' }}>
           <h2 style={{ fontSize: '1.5rem', marginBottom: '10px' }}>Plano Profissional</h2>
           <p style={{ color: '#94a3b8', marginBottom: '30px' }}>Assinatura mensal - Celebre Sistemas</p>
@@ -72,21 +91,28 @@ const Checkout = () => {
             <li>✔️ Peças e locações ilimitadas</li>
             <li>✔️ Assinatura digital de contratos</li>
             <li>✔️ Catálogo Online Exclusivo</li>
-            <li>✔️ 7 dias de teste gratuito</li>
+            <li>✔️ Gestão completa de inventário</li>
           </ul>
         </div>
 
-        {/* Lado Direito: A Mágica do Mercado Pago */}
+        {/* Formulário de Pagamento */}
         <div style={{ flex: '1.5', minWidth: '350px', backgroundColor: 'white', padding: '30px', borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
           <h3 style={{ marginBottom: '20px', color: '#0f172a' }}>Finalizar Assinatura</h3>
           
           {mensagem && (
-            <div style={{ padding: '15px', backgroundColor: '#dcfce3', color: '#166534', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', textAlign: 'center' }}>
+            <div style={{ 
+              padding: '15px', 
+              backgroundColor: mensagem.includes('Sucesso') ? '#dcfce3' : '#fee2e2', 
+              color: mensagem.includes('Sucesso') ? '#166534' : '#991b1b', 
+              borderRadius: '8px', 
+              marginBottom: '20px', 
+              fontWeight: 'bold', 
+              textAlign: 'center' 
+            }}>
               {mensagem}
             </div>
           )}
 
-          {/* O COMPONENTE OFICIAL DO MERCADO PAGO */}
           <Payment
             initialization={initialization}
             customization={customization}
@@ -95,7 +121,6 @@ const Checkout = () => {
             onError={onError}
           />
         </div>
-
       </div>
     </div>
   );

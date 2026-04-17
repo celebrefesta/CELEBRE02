@@ -7,9 +7,10 @@ import Topbar from './components/Topbar';
 import './App.css';
 
 // --- AUTENTICAÇÃO E VITRINE ---
-import LandingPage from './pages/LandingPage/LandingPage'; // 🔥 NOSSA NOVA TELA INICIAL
+import LandingPage from './pages/LandingPage/LandingPage'; 
 import Login from './pages/Auth/Login';
 import Cadastro from './pages/Auth/Cadastro';
+import Checkout from './pages/Checkout/Checkout'; // 🔥 IMPORTAMOS O CHECKOUT AQUI
 import RotaPrivada from './components/RotaPrivada'; 
 
 // --- PÁGINAS ---
@@ -55,8 +56,8 @@ import Notificacoes from './pages/Notificacoes/Notificacoes';
 const AppContent = () => {
   const location = useLocation();
   
-  // 🔥 Esconde o menu mestre (Navbar preta e Topbar) nas telas públicas
-  const rotasSemMenu = ['/', '/login', '/cadastro'];
+  // 🔥 ADICIONAMOS O /checkout AQUI PARA ESCONDER O MENU LATERAL NESTA TELA
+  const rotasSemMenu = ['/', '/login', '/cadastro', '/checkout'];
   
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
@@ -78,13 +79,13 @@ const AppContent = () => {
           {/* 🔓 OUTRAS ROTAS PÚBLICAS */}
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
+          <Route path="/checkout" element={<Checkout />} /> {/* 🔥 ADICIONAMOS A ROTA DO CHECKOUT AQUI */}
           <Route path="/autocadastro" element={<AutoCadastro />} /> 
           <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
           <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
           <Route path="/catalogo" element={<Catalogo />} />
 
           {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Apenas Logados) */}
-          {/* O Dashboard agora mora no /dashboard */}
           <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
           
           <Route path="/clientes" element={<RotaPrivada><Clientes /></RotaPrivada>} />
