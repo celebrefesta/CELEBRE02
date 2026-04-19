@@ -1,11 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './LandingPage.css';
 
-// 🔥 O seu logótipo oficial! 🔥
+// 🔥 Importação das imagens oficiais
 import logoImage from '../../assets/LOGO_CELEBRE.png'; 
+import dashboardReal from '../../assets/landingpage.png'; // 📸 Sua imagem real importada aqui!
 
 const LandingPage = () => {
+  // Estado para controlar a janelinha de contato
+  const [modalContatoAberto, setModalContatoAberto] = useState(false);
+
   return (
     <div className="landing-container">
       
@@ -18,8 +22,8 @@ const LandingPage = () => {
         <nav className="landing-nav">
           <a href="#recursos" className="nav-link">Recursos</a>
           <a href="#planos" className="nav-link">Planos</a>
+          <a href="#faq" className="nav-link">Dúvidas</a>
           <Link to="/login" className="nav-link">Entrar</Link>
-          {/* 🔥 Botão do menu atualizado */}
           <Link to="/cadastro" className="nav-btn-destaque">Teste Grátis</Link>
         </nav>
       </header>
@@ -29,23 +33,22 @@ const LandingPage = () => {
         <div className="hero-grid">
           
           <div className="hero-content-left">
-            <div className="hero-badge">✨ O sistema definitivo para o seu acervo</div>
-            <h1>Acelere os lucros da sua locadora em <span className="text-highlight">tempo real.</span></h1>
+            <div className="hero-badge">✨ O fim do desespero com a agenda</div>
+            <h1>O controlo absoluto do seu acervo de <span className="text-highlight">decorações.</span></h1>
             <p className="hero-subtitle">
-              Abandone as planilhas desatualizadas. O Celebre centraliza todo o seu 
-              estoque, contratos, clientes e financeiro numa plataforma única, segura e fácil de usar.
+              Diga adeus ao medo de alugar a mesma peça duas vezes. O Celebre organiza seu estoque, 
+              avisa sobre conflitos de data e gera contratos em PDF num clique. Feito para quem vive de festa.
             </p>
             
             <ul className="hero-benefits">
-              <li><span className="check-icon">✓</span> Controlo exato de onde está cada peça</li>
+              <li><span className="check-icon">✓</span> Bloqueio automático de peças reservadas</li>
               <li><span className="check-icon">✓</span> Assinatura digital de contratos via WhatsApp</li>
-              <li><span className="check-icon">✓</span> Catálogo online para os seus clientes</li>
+              <li><span className="check-icon">✓</span> Catálogo online para a sua cliente escolher</li>
             </ul>
 
             <div className="hero-buttons">
-              {/* 🔥 Botão principal focado nos 7 dias! */}
               <Link to="/cadastro" className="btn-primary-large">Testar Grátis por 7 Dias</Link>
-              <span className="hero-disclaimer">Sem compromisso. Não exige cartão de crédito.</span>
+              <span className="hero-disclaimer">Comece agora. Não exige cartão de crédito.</span>
             </div>
             
             <div className="hero-users">
@@ -54,30 +57,36 @@ const LandingPage = () => {
                 <div className="avatar">👨🏽</div>
                 <div className="avatar">👩🏼‍🦱</div>
               </div>
-              <span>Junte-se a <strong>+500 locadoras</strong> no Brasil</span>
+              <span>A escolha inteligente de <strong>+500 decoradoras</strong></span>
             </div>
           </div>
           
           <div className="hero-image-right">
              <div className="dashboard-wrapper">
+                {/* 📸 AQUI ENTRA O SEU PRINT REAL 📸 */}
                 <img 
-                  src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?q=80&w=2070&auto=format&fit=crop" 
-                  alt="Painel do Celebre" 
+                  src={dashboardReal} 
+                  alt="Painel Real do Celebre" 
                   className="dashboard-img"
+                  // Aumentei a borda e adicionei sombra para destacar seu print
+                  style={{ 
+                    border: '8px solid #ffffff', 
+                    boxShadow: '0 20px 40px rgba(0,0,0,0.1)' 
+                  }} 
                 />
                 
                 <div className="float-card float-1">
-                  <div className="float-icon">💰</div>
+                  <div className="float-icon">📆</div>
                   <div>
-                    <strong>Faturação Mensal</strong>
-                    <span className="float-value">R$ 14.500,00</span>
+                    <strong>Fim de Semana</strong>
+                    <span className="float-value">Sem Overbooking</span>
                   </div>
                 </div>
                 <div className="float-card float-2">
-                  <div className="float-icon">📦</div>
+                  <div className="float-icon">💰</div>
                   <div>
-                    <strong>Estoque Atualizado</strong>
-                    <span className="float-value">Zero falhas</span>
+                    <strong>Contratos Fechados</strong>
+                    <span className="float-value">R$ 4.250,00</span>
                   </div>
                 </div>
              </div>
@@ -86,14 +95,25 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* LOGOS EMPRESAS */}
+      {/* PROVA SOCIAL - CASE REAL (Ágape Decorações) */}
       <section className="social-proof">
-        <p>A ESCOLHA DAS EMPRESAS QUE MOVIMENTAM O MERCADO DE EVENTOS</p>
-        <div className="logos-grid">
-          <div className="fake-logo">Festança Locações</div>
-          <div className="fake-logo">Decor&Arte</div>
-          <div className="fake-logo">Studio Eventos</div>
-          <div className="fake-logo">Acervo Premium</div>
+        <p>DESENVOLVIDO E VALIDADO NA PRÁTICA POR QUEM VIVE DE EVENTOS</p>
+        <div className="logos-grid" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', opacity: '1' }}>
+          
+          <div className="real-logo-destaque" style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: '1.8rem', fontWeight: '800', color: '#0f172a', display: 'block' }}>
+              Ágape Decorações
+            </span>
+            <span style={{ fontSize: '0.9rem', color: '#64748b', fontWeight: '600' }}>
+              Case de Sucesso & Cliente Zero
+            </span>
+          </div>
+
+          <p style={{ maxWidth: '600px', fontSize: '0.95rem', color: '#475569', marginTop: '15px', lineHeight: '1.6', textTransform: 'none', fontWeight: '500' }}>
+            "O Celebre nasceu da nossa própria necessidade de organizar o acervo de Pegue e Monte. 
+            O que antes era controlado em planilhas, hoje é uma máquina de aluguel automatizada."
+          </p>
+
         </div>
       </section>
 
@@ -142,13 +162,11 @@ const LandingPage = () => {
       <section id="planos" className="pricing-section">
         <div className="pricing-header">
           <h2>O investimento certo para o seu crescimento</h2>
-          {/* 🔥 Aviso sobre os 7 dias grátis em todos os planos */}
           <p>Todos os planos incluem <strong>7 dias de teste gratuito</strong>. Cancele quando quiser.</p>
         </div>
 
         <div className="pricing-cards">
           
-          {/* Plano Iniciante */}
           <div className="pricing-card">
             <div className="card-header">
                 <h3>Iniciante</h3>
@@ -163,11 +181,9 @@ const LandingPage = () => {
               <li>✔️ Suporte por E-mail</li>
               <li className="disabled">❌ Catálogo Online</li>
             </ul>
-            {/* 🔥 Botões focados no teste grátis */}
             <Link to="/cadastro" className="btn-pricing-outline">Testar 7 Dias Grátis</Link>
           </div>
 
-          {/* Plano Profissional (Destaque) */}
           <div className="pricing-card popular">
             <div className="popular-badge">Mais escolhido</div>
             <div className="card-header">
@@ -186,7 +202,6 @@ const LandingPage = () => {
             <Link to="/cadastro" className="btn-pricing-solid">Testar 7 Dias Grátis</Link>
           </div>
 
-          {/* Plano Enterprise */}
           <div className="pricing-card">
             <div className="card-header">
                 <h3>Enterprise</h3>
@@ -207,21 +222,106 @@ const LandingPage = () => {
         </div>
       </section>
 
+      {/* DÚVIDAS FREQUENTES */}
+      <section id="faq" className="faq-section">
+        <div className="faq-header">
+          <h2>Dúvidas Frequentes</h2>
+          <p>Tudo o que você precisa saber antes de começar.</p>
+        </div>
+        <div className="faq-grid">
+          <div className="faq-item">
+            <h4>Preciso de cartão de crédito para testar?</h4>
+            <p>Não! Os 7 dias grátis são totalmente sem compromisso. Você só escolhe um plano e insere o pagamento se decidir continuar usando após o teste.</p>
+          </div>
+          <div className="faq-item">
+            <h4>Consigo acessar pelo celular?</h4>
+            <p>Sim. O Celebre é 100% online e responsivo, o que significa que você pode gerenciar seu estoque e contratos direto do navegador do seu celular, de onde estiver.</p>
+          </div>
+          <div className="faq-item">
+            <h4>Como funciona o Catálogo Online?</h4>
+            <p>O sistema gera um link exclusivo com a sua vitrine de peças. A sua cliente acessa, escolhe os itens, e o orçamento chega pronto no seu WhatsApp para você aprovar.</p>
+          </div>
+          <div className="faq-item">
+            <h4>E se eu tiver dúvidas durante o uso?</h4>
+            <p>Temos suporte humanizado via WhatsApp para os planos Profissional e Enterprise, além de vídeo tutoriais ensinando a configurar tudo passo a passo.</p>
+          </div>
+        </div>
+      </section>
+
       {/* FOOTER */}
       <footer className="landing-footer">
         <div className="footer-content">
-          <div className="footer-brand">
+          
+          <div className="footer-col brand-col">
             <div className="landing-logo footer-logo">
               <img src={logoImage} alt="Logótipo Celebre" className="footer-logo-img" />
               <span>Celebre</span>
             </div>
-            <p>A transformar a gestão de locações e eventos no Brasil.</p>
+            <p>O sistema definitivo para locadoras de artigos de festa e decoradoras. Automatize o seu negócio e acelere os seus lucros.</p>
           </div>
-          <div className="footer-bottom">
-            <p>© 2026 Celebre Sistemas. Todos os direitos reservados.</p>
+
+          <div className="footer-col">
+            <h4>Plataforma</h4>
+            <a href="#recursos" className="footer-link">Funcionalidades</a>
+            <a href="#planos" className="footer-link">Planos e Preços</a>
+            <Link to="/cadastro" className="footer-link">Criar Conta Grátis</Link>
+            <Link to="/login" className="footer-link">Entrar no Sistema</Link>
           </div>
+
+          <div className="footer-col">
+            <h4>Ajuda e Legal</h4>
+            <a href="#faq" className="footer-link">Dúvidas Frequentes (FAQ)</a>
+            
+            {/* 🔥 Botão de Contato abre a Janela! 🔥 */}
+            <button className="footer-link footer-link-btn" onClick={() => setModalContatoAberto(true)}>
+              Contato
+            </button>
+            
+            <Link to="/termos" className="footer-link">Termos de Uso</Link>
+            <Link to="/privacidade" className="footer-link">Privacidade e Segurança</Link>
+          </div>
+
+          <div className="footer-col">
+            <h4>Siga o Celebre</h4>
+            <a href="https://instagram.com/celebre" target="_blank" rel="noreferrer" className="footer-link social-link">
+              📱 Instagram
+            </a>
+            <a href="https://facebook.com/celebre" target="_blank" rel="noreferrer" className="footer-link social-link">
+              💻 Facebook
+            </a>
+            <button className="footer-link footer-link-btn social-link" onClick={() => setModalContatoAberto(true)}>
+              💬 Suporte
+            </button>
+          </div>
+
+        </div>
+        
+        <div className="footer-bottom">
+          <p>© 2026 Celebre Sistemas. Todos os direitos reservados.</p>
         </div>
       </footer>
+
+      {/* 🔥 MODAL DE CONTATO ATUALIZADO COM SEUS DADOS 🔥 */}
+      {modalContatoAberto && (
+        <div className="modal-overlay" onClick={() => setModalContatoAberto(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <button className="close-modal" onClick={() => setModalContatoAberto(false)}>×</button>
+            <h3>Como prefere falar com a gente?</h3>
+            <p>Escolha o canal de sua preferência. Nossa equipe comercial está pronta para ajudar a sua locadora!</p>
+            
+            <div className="modal-buttons">
+              <a href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Celebre!" target="_blank" rel="noreferrer" className="btn-whatsapp">
+                📱 Chamar no WhatsApp
+              </a>
+              
+              <a href="mailto:celebrefesta25@gmail.com" className="btn-email">
+                ✉️ Enviar um E-mail
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
