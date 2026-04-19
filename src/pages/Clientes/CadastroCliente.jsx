@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroCliente.css'; 
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, updateDoc, doc, query, getDocs } from 'firebase/firestore';
+// 🔥 IMPORTAÇÃO DO 'where' e do 'auth' PARA BLINDAR OS DADOS 🔥
+import { collection, addDoc, updateDoc, doc, query, getDocs, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 
 // 🔥 MÁQUINA DE LAVAR PALAVRAS 🔥
 const formatarNomeCapitalizado = (nomeBruto) => {
@@ -51,6 +53,10 @@ const CadastroCliente = () => {
   const location = useLocation();
   const clienteEditando = location.state?.clienteEditando || null;
 
+  // 🔥 IDENTIFICAÇÃO DO USUÁRIO LOGADO 🔥
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [tipoPessoa, setTipoPessoa] = useState('fisica');
   const [salvando, setSalvando] = useState(false);
 
@@ -79,6 +85,12 @@ const CadastroCliente = () => {
   });
 
   useEffect(() => {
+    // 🛑 SEGURANÇA BÁSICA
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     if (clienteEditando) {
       setTipoPessoa(clienteEditando.tipoPessoa || 'fisica');
       setFotoBase64(clienteEditando.foto || '');
@@ -121,15 +133,16 @@ const CadastroCliente = () => {
       setPodeSerPendente(false); 
       setCalculandoFinancas(false);
     }
-  }, [clienteEditando]);
+  }, [clienteEditando, usuarioLogado, navigate]);
 
   // 🔥 O ROBÔ QUE MONTA O HISTÓRICO DE LOCAÇÕES E CALCULA TUDO 🔥
   useEffect(() => {
     const verificarInadimplenciaEHistorico = async () => {
-      if (!clienteEditando?.id) return; 
+      if (!clienteEditando?.id || !usuarioLogado) return; 
       
       try {
-        const qLocacoes = query(collection(db, "locacoes"));
+        // 🔥 FILTRO: Só busca nas locações DESTE usuário
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
         const snap = await getDocs(qLocacoes);
         
         let temDividaVencida = false;
@@ -186,7 +199,6 @@ const CadastroCliente = () => {
           ...prev,
           situacaoFinanceira: temDividaVencida ? 'inadimplente' : 'adimplente'
         }));
-
       } catch(e) {
         console.error("Erro ao montar histórico:", e);
       } finally {
@@ -195,7 +207,7 @@ const CadastroCliente = () => {
     };
 
     verificarInadimplenciaEHistorico();
-  }, [clienteEditando]);
+  }, [clienteEditando, usuarioLogado]);
 
   const maskCPF = (v) => { v = v.replace(/\D/g, ""); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); return v.substring(0, 14); };
   const maskCNPJ = (v) => { v = v.replace(/\D/g, ""); v = v.replace(/^(\d{2})(\d)/, "$1.$2"); v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3"); v = v.replace(/\.(\d{3})(\d)/, ".$1/$2"); v = v.replace(/(\d{4})(\d)/, "$1-$2"); return v.substring(0, 18); };
@@ -239,7 +251,8 @@ const CadastroCliente = () => {
           } else {
             if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
           }
-          canvas.width = width; canvas.height = height;
+          canvas.width = width;
+          canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, width, height);
           setFotoBase64(canvas.toDataURL('image/jpeg', 0.8));
@@ -281,7 +294,9 @@ const CadastroCliente = () => {
   };
 
   const verificarDuplicidade = async () => {
-      const qClientes = query(collection(db, "clientes"));
+      if (!usuarioLogado) return false;
+      // 🔥 FILTRO: Só verifica duplicidade nos clientes da pessoa logada
+      const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
       const snap = await getDocs(qClientes);
       const todosClientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -292,19 +307,23 @@ const CadastroCliente = () => {
 
       for (let c of todosClientes) {
           if (clienteEditando && c.id === clienteEditando.id) continue;
+
           const bancoCelular = c.celular ? c.celular.replace(/\D/g, '') : '';
           const bancoCpf = c.cpf ? c.cpf.replace(/\D/g, '') : '';
           const bancoCnpj = c.cnpj ? c.cnpj.replace(/\D/g, '') : '';
           const bancoNome = (c.nome || c.nomeFantasia || '').trim().toLowerCase();
 
           if (tipoPessoa === 'fisica' && meuCpf.length === 11 && meuCpf === bancoCpf) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com este mesmo CPF!\n\nNome: ${c.nome || c.nomeFantasia}`); return true; 
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com este mesmo CPF!\n\nNome: ${c.nome || c.nomeFantasia}`);
+              return true; 
           }
           if (tipoPessoa === 'juridica' && meuCnpj.length === 14 && meuCnpj === bancoCnpj) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe uma empresa com este mesmo CNPJ!\n\nNome: ${c.nomeFantasia || c.razaoSocial}`); return true; 
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe uma empresa com este mesmo CNPJ!\n\nNome: ${c.nomeFantasia || c.razaoSocial}`);
+              return true; 
           }
           if (meuNome && meuNome === bancoNome && meuCelular.length > 8 && meuCelular === bancoCelular) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!`); return true;
+              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!`);
+              return true;
           }
       }
       return false; 
@@ -312,6 +331,8 @@ const CadastroCliente = () => {
 
   const salvarCliente = async (e) => {
     e.preventDefault();
+    if (!usuarioLogado) return alert("Sessão expirada. Faça login novamente.");
+
     if (tipoPessoa === 'fisica' && !formData.nome) return alert("O Nome é obrigatório!");
     if (tipoPessoa === 'juridica' && !formData.nomeFantasia) return alert("O Nome Fantasia é obrigatório!");
     
@@ -326,8 +347,15 @@ const CadastroCliente = () => {
         nomeFantasia: formData.nomeFantasia.trim()
       };
 
-      const dadosParaSalvar = { ...dadosLimpos, tipoPessoa, foto: fotoBase64, posicaoFoto, atualizadoEm: new Date().toISOString() };
-      
+      const dadosParaSalvar = { 
+          ...dadosLimpos, 
+          tipoPessoa, 
+          foto: fotoBase64, 
+          posicaoFoto, 
+          atualizadoEm: new Date().toISOString(),
+          userId: usuarioLogado.uid // 🔥 CARIMBO DO RG DO DONO DA CONTA 🔥
+      };
+
       if (clienteEditando) {
         await updateDoc(doc(db, "clientes", clienteEditando.id), dadosParaSalvar);
         alert("Cliente atualizado com sucesso!");
@@ -336,8 +364,10 @@ const CadastroCliente = () => {
         alert("Novo cliente cadastrado com sucesso!");
       }
       navigate('/clientes');
+
     } catch (error) { 
-      alert("Erro ao salvar cliente."); 
+      console.error(error);
+      alert("Erro ao salvar cliente.");
     } finally { 
       setSalvando(false); 
     }

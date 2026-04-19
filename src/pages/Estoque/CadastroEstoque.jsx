@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroEstoque.css';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, getDoc, query, setDoc } from 'firebase/firestore';
+// 🔥 IMPORTAÇÃO DO 'where' e do 'auth' PARA BLINDAR OS DADOS 🔥
+import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, getDoc, query, setDoc, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
 
 import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
 
@@ -11,8 +13,11 @@ const CadastroEstoque = () => {
   const location = useLocation();
   const itemEditando = location.state?.itemEditando || null;
   const itemDuplicando = location.state?.itemDuplicando || null; 
-  // 🔥 A MOCHILA QUE VEIO DA LISTA DE COMPRAS 🔥
   const dadosCompra = location.state?.dadosCompra || null; 
+
+  // 🔥 IDENTIFICAÇÃO DO USUÁRIO LOGADO 🔥
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
 
   const [salvando, setSalvando] = useState(false);
   const [itensExistentes, setItensExistentes] = useState([]);
@@ -111,8 +116,16 @@ const CadastroEstoque = () => {
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
 
   useEffect(() => {
+    // 🛑 SE NÃO ESTIVER LOGADO, JOGA PRO LOGIN
+    if (!usuarioLogado) {
+      alert("Sessão expirada. Faça login novamente.");
+      navigate('/login');
+      return;
+    }
+
     const fetchItens = async () => {
-      const q = query(collection(db, "estoque"));
+      // 🔥 FILTRO: Só traz os itens cujo 'userId' seja o da pessoa logada
+      const q = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
       const snap = await getDocs(q);
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setItensExistentes(docs);
@@ -121,7 +134,8 @@ const CadastroEstoque = () => {
 
     const fetchConfiguracoes = async () => {
       try {
-        const docRef = doc(db, "sistema", "parametros");
+        // 🔥 ISOLAMENTO: Puxa as prateleiras apenas da conta logada
+        const docRef = doc(db, "parametros_usuarios", usuarioLogado.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const dados = docSnap.data();
@@ -190,7 +204,6 @@ const CadastroEstoque = () => {
       else if (itemBase.foto) setFotos([itemBase.foto]);
     
     } else if (dadosCompra) {
-      // 🔥 PREENCHIMENTO AUTOMÁTICO SE VIER DAS COMPRAS 🔥
       setNome(dadosCompra.nome || '');
       setQuantidade(dadosCompra.quantidade || 1);
       if (dadosCompra.valorEstimado) setValorCompra(Number(dadosCompra.valorEstimado).toFixed(2).replace('.', ','));
@@ -200,7 +213,7 @@ const CadastroEstoque = () => {
       setStatus('ok'); 
       if (dadosCompra.formato === 'kit') setTipoCadastro('kit');
     }
-  }, [itemEditando, itemDuplicando, dadosCompra]);
+  }, [itemEditando, itemDuplicando, dadosCompra, usuarioLogado, navigate]);
 
   const atualizarSKU = (tipo, cat) => {
     let catAlvo = tipo === 'decoracao' ? 'Decoração Completa' : cat;
@@ -454,9 +467,11 @@ const CadastroEstoque = () => {
   };
 
   const handleSaveLocalizacoes = async () => {
+      if (!usuarioLogado) return;
       setSalvandoLocalizacoes(true);
       try {
-          const docRef = doc(db, "sistema", "parametros");
+          // 🔥 ISOLAMENTO: Salva as prateleiras só para esta pessoa!
+          const docRef = doc(db, "parametros_usuarios", usuarioLogado.uid);
           await setDoc(docRef, { localizacoes: localizacoesEditaveis }, { merge: true });
           
           setListasSistema(prev => ({ ...prev, localizacoes: localizacoesEditaveis }));
@@ -479,6 +494,7 @@ const CadastroEstoque = () => {
 
   const salvarItem = async (e) => {
     e.preventDefault();
+    if (!usuarioLogado) return alert("Erro: Você precisa estar logado para salvar peças.");
 
     const isDecoracao = tipoCadastro === 'decoracao';
     const isKitNovo = tipoCadastro === 'kit';
@@ -518,6 +534,9 @@ const CadastroEstoque = () => {
       const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ? `KIT ${nome.trim()}` : nome.trim();
 
       const dados = {
+        // 🔥 O RG DO USUÁRIO LOGADO SALVO JUNTO COM O DADO! 🔥
+        userId: usuarioLogado.uid,
+
         nome: nomePrincipalFormatado, 
         codigo, 
         categoria: catFinal, 
@@ -638,7 +657,6 @@ const CadastroEstoque = () => {
             }
         }
 
-        // 🔥 SE VEIO DA LISTA DE COMPRAS, ELE MARCA COMO 'CHEGOU' LÁ AUTOMATICAMENTE 🔥
         if (dadosCompra && dadosCompra.id) {
              const compraRef = doc(db, "lista_compras", dadosCompra.id);
              await updateDoc(compraRef, {
@@ -652,7 +670,6 @@ const CadastroEstoque = () => {
         else alert(itemDuplicando ? "📋 Peça duplicada com sucesso!" : "🧩 Peça avulsa adicionada com sucesso!");
       }
       
-      // Se veio das Compras, devolve para as Compras! Se não, vai para o Estoque normal.
       navigate(dadosCompra ? '/compras' : '/estoque');
 
     } catch (error) { alert("Erro ao salvar."); } 
@@ -1026,7 +1043,6 @@ const CadastroEstoque = () => {
                 </div>
               )}
 
-              {/* 🔥 MÓDULO INTELIGENTE DO KIT: OBRIGATORIEDADE ATIVADA 🔥 */}
               {tipoCadastro === 'kit' && (
                 <div style={{marginTop: '30px', border: '2px dashed #93c5fd', padding: '20px', borderRadius: '10px', backgroundColor: '#eff6ff'}}>
                   <h3 style={{margin: '0 0 5px 0', color: '#1d4ed8'}}>📦 DESMEMBRAR CONJUNTO (PEÇAS FILHAS)</h3>
@@ -1099,7 +1115,6 @@ const CadastroEstoque = () => {
                     </div>
                     <div className="form-group"><label>ESTOQUE MÍNIMO</label><input type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'}/></div>
                     
-                    {/* 🔥 CAMPO LOCALIZAÇÃO COM BOTÃO DE GERENCIAR 🔥 */}
                     <div className="form-group span-2">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                             <label style={{ margin: 0 }}>LOCALIZAÇÃO NO GALPÃO</label>
@@ -1197,7 +1212,7 @@ const CadastroEstoque = () => {
         </div>
       )}
 
-      {/* 🔥 NOVO MODAL PARA GERENCIAR LOCALIZAÇÕES (PRATELEIRAS) 🔥 */}
+      {/* 🔥 MODAL PARA GERENCIAR LOCALIZAÇÕES BLINDADO POR USER_ID 🔥 */}
       {modalLocalizacaoAberto && (
         <div className="modal-overlay-premium" style={{ zIndex: 100000 }}>
           <div className="modal-box-premium" style={{ maxWidth: '400px', width: '90%', padding: '25px', borderRadius: '12px' }}>

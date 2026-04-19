@@ -2,7 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Estoque.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, query, orderBy, deleteDoc, updateDoc, writeBatch, where } from 'firebase/firestore';
+// 🔥 Removido o orderBy daqui para não travar o Firebase
+import { collection, getDocs, doc, query, deleteDoc, updateDoc, writeBatch, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação para identificar o usuário
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -10,6 +12,11 @@ import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 
 const Estoque = () => {
   const navigate = useNavigate();
+  
+  // 🔥 PUXANDO O USUÁRIO LOGADO 🔥
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [itens, setItens] = useState([]);
   const [locacoes, setLocacoes] = useState([]); 
   const [loading, setLoading] = useState(true);
@@ -35,45 +42,67 @@ const Estoque = () => {
 
   const [menuAberto, setMenuAberto] = useState(null);
 
-  useEffect(() => { carregarDados(); }, []);
+  useEffect(() => { 
+    // 🛑 SE NÃO ESTIVER LOGADO, JOGA PRO LOGIN
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+    carregarDados(); 
+  }, [usuarioLogado, navigate]);
 
   const carregarDados = async () => {
+    if (!usuarioLogado) return;
     setLoading(true);
     try {
-      const qEstoque = query(collection(db, "estoque"), orderBy("criadoEm", "desc"));
+      // 🔥 1. FILTRO BLINDADO NO ESTOQUE (Sem orderBy para não pedir índice no Firebase)
+      const qEstoque = query(
+          collection(db, "estoque"), 
+          where("userId", "==", usuarioLogado.uid)
+      );
       const snapEstoque = await getDocs(qEstoque);
-      const listaEstoque = snapEstoque.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let listaEstoque = snapEstoque.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      const qLocacoes = query(collection(db, "locacoes"));
+      // 🔥 2. ORDENAÇÃO FEITA NO JAVASCRIPT (Os mais novos no topo)
+      listaEstoque.sort((a, b) => {
+          const tempoA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
+          const tempoB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
+          return tempoB - tempoA; 
+      });
+
+      // 🔥 3. FILTRO BLINDADO NAS LOCAÇÕES 🔥
+      const qLocacoes = query(
+          collection(db, "locacoes"),
+          where("userId", "==", usuarioLogado.uid)
+      );
       const snapLocacoes = await getDocs(qLocacoes);
       const listaLocacoes = snapLocacoes.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
       setItens(listaEstoque);
       setLocacoes(listaLocacoes);
     } catch (error) { 
-        console.error(error); 
+        console.error("Erro ao carregar dados:", error);
     } finally { 
         setLoading(false); 
     }
   };
 
-  // 🔥 ROBÔ FAXINEIRO INTELIGENTE 4.0 (FORÇA A LEITURA PELO CÓDIGO -P) 🔥
   const corrigirNomesDuplicados = async () => {
+      if (!usuarioLogado) return;
       setLimandoNomes(true);
       try {
-          const q = query(collection(db, "estoque"));
+          // 🔥 FILTRO BLINDADO NO ROBÔ FAXINEIRO 🔥
+          const q = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
           const snap = await getDocs(q);
           const batch = writeBatch(db);
           let alterados = 0;
-
+          
           snap.forEach(docSnap => {
               const item = docSnap.data();
               let nomeAtual = item.nome || '';
               let nomeNovo = nomeAtual;
 
               const ehKit = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit && item.especificacoes?.pecasKit.length > 0);
-              
-              // Se não tiver a tag de filha, mas o código terminar com -P1, -P2, -P3, força a ser filha!
               const ehFilha = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKit);
 
               if (ehKit) {
@@ -84,7 +113,7 @@ const Estoque = () => {
                   let pai = nomeAtual;
                   if (nomeAtual.includes(' - ')) pai = nomeAtual.split(' - ')[0].trim();
                   if (pai.toUpperCase().startsWith('KIT ')) pai = pai.substring(4).trim();
-
+                  
                   const tam = item.especificacoes?.tamanho || '';
                   const cor = item.especificacoes?.cor || '';
                   
@@ -103,7 +132,7 @@ const Estoque = () => {
                       }
 
                       if (!filhaLimpa || /^P\d+$/i.test(filhaLimpa)) {
-                          nomeNovo = `${pai} - ⚠️ Sem Medida (Edite)`; 
+                          nomeNovo = `${pai} - ⚠️ Sem Medida (Edite)`;
                       } else {
                           nomeNovo = `${pai} - ${filhaLimpa}`;
                       }
@@ -113,13 +142,12 @@ const Estoque = () => {
               if (nomeNovo && nomeNovo !== nomeAtual) {
                   batch.update(docSnap.ref, { 
                       nome: nomeNovo,
-                      // Força a colocar a marcação no banco para nunca mais dar erro!
                       ...(ehFilha ? { "especificacoes.isSubPeca": true } : {}) 
                   });
                   alterados++;
               }
           });
-
+          
           if (alterados > 0) {
               await batch.commit();
               alert(`✅ Mágica Feita! O robô arrumou os nomes de ${alterados} peças e kits! Verifique as que ficaram com o aviso "Sem Medida".`);
@@ -186,7 +214,6 @@ const Estoque = () => {
           if (!locacaoAlvo) throw new Error("Pedido não encontrado.");
 
           const precoItem = Number(itemParaPedido.financeiro?.valorAluguel || 0);
-
           const novoItemFormatado = {
               ...itemParaPedido,
               qtd: 1,
@@ -198,10 +225,10 @@ const Estoque = () => {
               avaria: false,
               faltou: false
           };
-
+          
           let itensAtualizados = [...(locacaoAlvo.itens || [])];
           const indexExistente = itensAtualizados.findIndex(i => i.id === itemParaPedido.id);
-
+          
           if (indexExistente >= 0) {
               itensAtualizados[indexExistente].qtd += 1;
           } else {
@@ -217,10 +244,10 @@ const Estoque = () => {
               itens: itensAtualizados,
               valorTotal: novoTotal
           });
-
+          
           alert(`✅ A peça "${itemParaPedido.nome}" foi adicionada com sucesso ao pedido de ${locacaoAlvo.clienteNome}!`);
           setModalAddPedidoAberto(false);
-          carregarDados(); 
+          carregarDados();
       } catch(e) {
           alert("Erro ao adicionar peça.");
       } finally {
@@ -239,14 +266,13 @@ const Estoque = () => {
       
       const emMaint = item.qtdManutencao !== undefined ? Number(item.qtdManutencao) : (item.status === 'manutencao' ? qtdBase : 0);
       let alugadosNaData = 0;
-
+      
       if (dataFiltro) {
           const pedidosNessaData = locacoes.filter(loc => 
               loc.dataRetirada === dataFiltro && 
               loc.status !== 'cancelado' && 
               loc.status !== 'finalizado'
           );
-
           pedidosNessaData.forEach(pedido => {
               if (pedido.itens && Array.isArray(pedido.itens)) {
                   const itemEncontrado = pedido.itens.find(i => i.id === item.id);
@@ -267,7 +293,6 @@ const Estoque = () => {
   const dbCategorias = itens.map(i => i.categoria).filter(Boolean);
   const padraoCategorias = Object.keys(CATEGORIAS_FISICAS);
   const categoriasUnicas = Array.from(new Set([...padraoCategorias, ...dbCategorias])).sort();
-  
   const localizacoesUnicas = Array.from(new Set(itens.map(i => i.localizacao).filter(Boolean))).sort();
 
   const totalItens = itens.length;
@@ -280,7 +305,7 @@ const Estoque = () => {
       const s = String(loc.status || '').toLowerCase();
       return s.includes('confirmado') || s.includes('preparacao');
   });
-
+  
   pedidosAtivos.sort((a,b) => {
       const dA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
       const dB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
@@ -307,7 +332,7 @@ const Estoque = () => {
         if (statusFiltro === 'manutencao') return emManutencao > 0;
         return true;
     });
-
+    
   itensFiltrados.sort((a, b) => {
       const nomeA = (a.nome || '').toLowerCase();
       const nomeB = (b.nome || '').toLowerCase();
@@ -333,7 +358,6 @@ const Estoque = () => {
       doc.text(`Gerado em: ${dataHoje} | Peças Listadas: ${itensFiltrados.length}`, 14, 30);
 
       const colunas = [["CÓDIGO", "PRODUTO", "CATEGORIA", "LOCALIZAÇÃO", "QTD FÍSICA"]];
-      
       const linhas = itensFiltrados.map(item => {
           const { qtdBase, isDeco } = calcularDisponibilidadeNaData(item);
           return [
@@ -344,7 +368,7 @@ const Estoque = () => {
               isDeco ? "1 Kit" : `${qtdBase} pçs`
           ];
       });
-
+      
       autoTable(doc, {
           head: colunas,
           body: linhas,
@@ -353,7 +377,7 @@ const Estoque = () => {
           headStyles: { fillColor: [15, 23, 42] },
           styles: { fontSize: 9 }
       });
-
+      
       doc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}.pdf`);
   };
 
@@ -480,31 +504,28 @@ const Estoque = () => {
                 {itensFiltrados.map(item => {
                   
                   const { qtdBase, disponivelTotal, alugados, emManutencao, tudoQuebrado, estaTotalmenteAlugado, isDeco } = calcularDisponibilidadeNaData(item);
-
                   let labelPill = 'DISPONÍVEL';
                   let bgPill = '#f0fdf4'; let colorPill = '#166534'; let borderPill = '#bbf7d0';
-
+                  
                   if (estaTotalmenteAlugado) { 
-                      labelPill = 'ALUGADO'; 
+                      labelPill = 'ALUGADO';
                       bgPill = '#fef2f2'; colorPill = '#b91c1c'; borderPill = '#fecaca';
                   } else if (tudoQuebrado) { 
-                      labelPill = 'EM REPARO'; 
+                      labelPill = 'EM REPARO';
                       bgPill = '#fffbeb'; colorPill = '#b45309'; borderPill = '#fde68a';
                   } else if (qtdBase === 0 && !isDeco) {
-                      labelPill = 'S/ ESTOQUE'; 
+                      labelPill = 'S/ ESTOQUE';
                       bgPill = '#f8fafc'; colorPill = '#64748b'; borderPill = '#e2e8f0';
                   }
 
                   const estoqueBaixo = !dataFiltro && item.configuracao?.alertaEstoque === 'Avisar' && qtdBase > 0 && disponivelTotal <= item.estoqueMinimo;
                   const valorAluguelFormatado = item.financeiro?.valorAluguel ? Number(item.financeiro.valorAluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
                   const posImg = item.posicoesFoco?.[0];
-                  
                   const isMenuOpen = menuAberto === item.id;
                   
-                  // 🔥 IDENTIFICADORES VISUAIS PARA A TABELA (AGORA IDENTIFICA PELO CÓDIGO TAMBÉM) 🔥
                   const ehKitPai = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit && item.especificacoes?.pecasKit.length > 0);
                   const ehSubPeca = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKitPai);
-
+                  
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: estaTotalmenteAlugado ? 0.6 : 1 }}>
                       
@@ -571,7 +592,7 @@ const Estoque = () => {
                             <div style={{ position: 'relative' }}>
                                 <button 
                                     onClick={(e) => { 
-                                        e.stopPropagation(); 
+                                        e.stopPropagation();
                                         setMenuAberto(isMenuOpen ? null : item.id); 
                                     }}
                                     style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '6px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}

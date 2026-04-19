@@ -2,11 +2,15 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig'; 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importado para garantir a segurança
 import './AutoCadastro.css';
 
 const AutoCadastro = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // 🔥 Puxa a autenticação para garantir fallback de segurança
+  const auth = getAuth();
   
   const carrinho = location.state?.carrinhoCatalogo || [];
   const empresa = location.state?.empresaConfig || { nome: 'CELEBRE', whats: '' };
@@ -83,11 +87,21 @@ const AutoCadastro = () => {
   const finalizarCadastroE_Pedido = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       const isJuridica = form.documento.length > 14;
       
-      // 1. Salva o cliente oficial no banco de dados como 'pendente'
+      // 🔥 IDENTIFICAÇÃO CRÍTICA DO DONO DA LOJA 🔥
+      // Como o cliente não está logado, nós puxamos o ID da empresa que veio do Catálogo
+      // Se por acaso falhar, tentamos ver se o próprio dono está a testar a página.
+      const idDaLoja = empresa.userId || empresa.id || (auth.currentUser ? auth.currentUser.uid : null);
+
+      if (!idDaLoja) {
+          alert("Erro de segurança: Não foi possível identificar a qual loja este catálogo pertence. O pedido não pode ser enviado cego.");
+          setLoading(false);
+          return;
+      }
+
+      // 1. Salva o cliente oficial no banco de dados como 'pendente' BLINDADO
       const clienteRef = await addDoc(collection(db, "clientes"), {
         nome: form.nome,
         nomeFantasia: isJuridica ? form.nome : '',
@@ -103,10 +117,11 @@ const AutoCadastro = () => {
         situacaoFinanceira: 'pendente', 
         origem: 'Auto-Cadastro (Site)',
         tipoPessoa: isJuridica ? 'juridica' : 'fisica', 
-        criadoEm: serverTimestamp()
+        criadoEm: serverTimestamp(),
+        userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA: Este cliente pertence a você!
       });
 
-      // 2. Se tiver itens no carrinho, salva a lista como Orçamento
+      // 2. Se tiver itens no carrinho, salva a lista como Orçamento BLINDADO
       if (carrinho.length > 0) {
         const total = calcularTotal();
         await addDoc(collection(db, "locacoes"), {
@@ -118,19 +133,19 @@ const AutoCadastro = () => {
           valorTotal: total,
           status: 'orcamento',
           origem: 'catalogo_publico',
-          criadoEm: serverTimestamp()
+          criadoEm: serverTimestamp(),
+          userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA: Este pedido pertence a você!
         });
 
-        // 🔥 Aviso profissional na tela, sem abrir WhatsApp 🔥
+        // 🔥 Aviso profissional na tela
         alert("🎉 Pedido recebido com sucesso!\n\nSua lista e seu cadastro foram enviados para a nossa equipe. Em breve entraremos em contato pelo seu WhatsApp para confirmar a aprovação!");
       } else {
-        // 🔥 Aviso se a pessoa só fez o cadastro sem escolher peças 🔥
+        // 🔥 Aviso se a pessoa só fez o cadastro sem escolher peças
         alert("✅ Cadastro recebido com sucesso!\n\nNossa equipe fará a análise do seu perfil e entraremos em contato.");
       }
 
       // 3. Manda o cliente de volta para o catálogo
       navigate('/catalogo');
-
     } catch (error) {
       console.error("Erro no cadastro:", error);
       alert("Ocorreu um erro ao salvar. Tente novamente.");
