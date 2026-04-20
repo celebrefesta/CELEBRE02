@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 
 // --- IMPORTAÇÕES DO PDF ---
 import { jsPDF } from 'jspdf';
@@ -9,6 +10,10 @@ import autoTable from 'jspdf-autotable';
 import './FinanceiroTab.css'; 
 
 const FinanceiroTab = () => {
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ receitas: 0, despesas: 0, lucro: 0 });
   const [transacoes, setTransacoes] = useState([]);
@@ -24,12 +29,19 @@ const FinanceiroTab = () => {
   });
 
   useEffect(() => {
+    if (!usuarioLogado) return; // Proteção adicional
+
     const buscarDadosFinanceirosEConfigs = async () => {
       try {
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as informações da sua empresa
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        const qCompras = query(collection(db, "lista_compras"), where("userId", "==", usuarioLogado.uid));
+        const qLancamentos = query(collection(db, "financeiro_lancamentos"), where("userId", "==", usuarioLogado.uid));
+
         const [snapLocacoes, snapCompras, snapLancamentos, snapConfig] = await Promise.all([
-          getDocs(collection(db, "locacoes")),
-          getDocs(collection(db, "lista_compras")),
-          getDocs(collection(db, "financeiro_lancamentos")).catch(() => ({ docs: [] })),
+          getDocs(qLocacoes),
+          getDocs(qCompras),
+          getDocs(qLancamentos).catch(() => ({ docs: [] })),
           getDoc(doc(db, "sistema", "parametros"))
         ]);
 
@@ -46,7 +58,7 @@ const FinanceiroTab = () => {
         const locacoes = snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() }));
         const compras = snapCompras.docs.map(d => ({ id: d.id, ...d.data() }));
         const lancamentos = snapLancamentos.docs.map(d => ({ id: d.id, ...d.data() }));
-
+        
         let totalReceitas = 0;
         let totalDespesas = 0;
         const listaTransacoes = [];
@@ -104,11 +116,12 @@ const FinanceiroTab = () => {
         // 2. SAÍDAS (COMPRAS)
         compras.forEach(comp => {
           const statusLimpo = comp.status ? String(comp.status).toLowerCase().trim() : '';
-          if (statusLimpo === 'comprado') {
+          if (statusLimpo === 'comprado' || statusLimpo === 'chegou') {
             let valorLimpoStr = String(comp.valorEstimado || '0').replace(/[^\d.,-]/g, '').replace(',', '.');
             const valorComp = (Number(valorLimpoStr) || 0) * (Number(comp.quantidade) || 1);
             totalDespesas += valorComp;
-            let dataReal = comp.createdAt || comp.prazo || new Date();
+  
+            let dataReal = comp.dataCompra || comp.createdAt || comp.prazo || new Date();
             listaTransacoes.push({
               id: `comp_${comp.id}`,
               dataTimestamp: pegarTimestamp(dataReal),
@@ -125,8 +138,10 @@ const FinanceiroTab = () => {
           let valorLimpo = String(lan.valor || '0').replace(/[^\d,-]/g, '').replace(',', '.');
           const valorLan = Math.abs(Number(valorLimpo)) || 0;
           const isReceita = lan.tipo === 'receita' || lan.categoria === 'Locação' || lan.tipo === 'entrada' || Number(valorLimpo) > 0;
+          
           if (isReceita) totalReceitas += valorLan;
           else totalDespesas += valorLan;
+ 
           listaTransacoes.push({
             id: `lan_${lan.id}`,
             dataTimestamp: pegarTimestamp(lan.data || lan.criadoEm),
@@ -140,7 +155,7 @@ const FinanceiroTab = () => {
         listaTransacoes.sort((a, b) => b.dataTimestamp - a.dataTimestamp);
         setTransacoes(listaTransacoes);
         setMetricas({ receitas: totalReceitas, despesas: totalDespesas, lucro: totalReceitas - totalDespesas });
-
+        
       } catch (error) {
         console.error("Erro ao carregar o financeiro:", error);
       } finally {
@@ -149,9 +164,9 @@ const FinanceiroTab = () => {
     };
 
     buscarDadosFinanceirosEConfigs();
-  }, []);
+  }, [usuarioLogado]);
 
-  // 🔥 LÓGICA DE FILTRO: Só mostra o que o usuário escolheu no botão
+  // 🔥 LÓGICA DE FILTRO: Só mostra o que o utilizador escolheu no botão
   const transacoesFiltradas = transacoes.filter(t => {
     if (filtroTipo === 'todos') return true;
     return t.tipo === filtroTipo;
@@ -164,8 +179,11 @@ const FinanceiroTab = () => {
       const dataHoje = new Date().toLocaleDateString('pt-BR');
       let startY = 25;
 
-      if (dadosEmpresa.logotipo) {
-        doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+      if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
+        try {
+            doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+        } catch(e) {}
+        
         doc.setFontSize(18);
         doc.setTextColor(15, 23, 42);
         doc.text(dadosEmpresa.nomeEmpresa, 48, 20);
@@ -187,6 +205,7 @@ const FinanceiroTab = () => {
 
       doc.setFontSize(12);
       doc.setTextColor(15, 23, 42);
+      
       // Ajusta o título do PDF conforme o filtro selecionado
       let tituloPDF = `DEMONSTRATIVO DE RESULTADOS (DRE)`;
       if (filtroTipo === 'receita') tituloPDF = `RELATÓRIO DE ENTRADAS (RECEITAS)`;
@@ -203,7 +222,7 @@ const FinanceiroTab = () => {
       doc.setTextColor(0);
       doc.text(`Total de Entradas: R$ ${metricas.receitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 8);
       doc.text(`Total de Saídas: R$ ${metricas.despesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 16);
-
+      
       const saldoText = `SALDO EM CAIXA: R$ ${metricas.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`;
       doc.setFont(undefined, 'bold');
       doc.setTextColor(metricas.lucro >= 0 ? 22 : 220, metricas.lucro >= 0 ? 163 : 38, metricas.lucro >= 0 ? 74 : 38);
@@ -218,7 +237,7 @@ const FinanceiroTab = () => {
         t.tipo === 'receita' ? 'Entrada' : 'Saída',
         `${t.tipo === 'receita' ? '+' : '-'} R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
       ]);
-
+      
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
@@ -228,7 +247,7 @@ const FinanceiroTab = () => {
         styles: { fontSize: 9 },
         columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
       });
-
+      
       doc.save(`Relatorio_${filtroTipo}_${dataHoje.replace(/\//g, '-')}.pdf`);
 
     } catch (error) {
@@ -238,7 +257,7 @@ const FinanceiroTab = () => {
   };
 
   if (loading) return <div style={{padding: '40px', textAlign: 'center', color: 'var(--texto-secundario)', fontWeight: 'bold'}}>Calculando DRE do Caixa...</div>;
-
+  
   const totalMovimentado = metricas.receitas + metricas.despesas || 1; 
   const percReceita = Math.max(10, (metricas.receitas / totalMovimentado) * 100);
   const percDespesa = Math.max(10, (metricas.despesas / totalMovimentado) * 100);

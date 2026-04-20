@@ -19,7 +19,6 @@ const Relatorios = () => {
           <p>Acompanhe a saúde financeira e o desempenho do seu acervo.</p>
         </div>
 
-        {/* MENU DE ABAS MOVIDO PARA CÁ */}
         <div className="tabs-relatorios-compacto">
           <button 
             className={activeTab === 'financeiro' ? 'active' : ''} 

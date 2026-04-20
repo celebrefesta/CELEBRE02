@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 import './PedidosTab.css'; 
 
 const PedidosTab = () => {
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ 
     total: 0, 
@@ -25,10 +30,15 @@ const PedidosTab = () => {
   });
 
   useEffect(() => {
+    if (!usuarioLogado) return; // Proteção adicional
+
     const buscarDadosPedidosEConfigs = async () => {
       try {
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as locações do seu utilizador
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+
         const [snapLocacoes, snapConfig] = await Promise.all([
-          getDocs(collection(db, "locacoes")),
+          getDocs(qLocacoes),
           getDoc(doc(db, "sistema", "parametros"))
         ]);
 
@@ -45,7 +55,7 @@ const PedidosTab = () => {
         let faturamentoTotal = 0;
         let eventosFuturosCount = 0;
         const contagemStatus = {};
-        
+     
         let qtdOrcamentos = 0;
         let qtdFechados = 0;
 
@@ -77,7 +87,7 @@ const PedidosTab = () => {
             qtdFechados++;
           }
 
-          let tipoServico = "DECORAÇÃO"; 
+          let tipoServico = "DECORAÇÃO";
           if (loc.tipoServico || loc.tipoDaFesta || loc.modalidade) {
              tipoServico = String(loc.tipoServico || loc.tipoDaFesta || loc.modalidade).toUpperCase();
           } 
@@ -98,22 +108,22 @@ const PedidosTab = () => {
         });
 
         pedidosFormatados.sort((a, b) => (b.dataObj || 0) - (a.dataObj || 0));
-
+        
         const futuros = pedidosFormatados
           .filter(p => p.dataObj && p.dataObj >= hoje && !p.status.includes('CANCELADO'))
           .sort((a, b) => a.dataObj - b.dataObj)
-          .slice(0, 5); 
-
+          .slice(0, 5);
+          
         const statusArray = Object.entries(contagemStatus).sort((a, b) => b[1] - a[1]);
         const totalOportunidades = qtdFechados + qtdOrcamentos;
         const taxa = totalOportunidades > 0 ? (qtdFechados / totalOportunidades) * 100 : 0;
-
+        
         setMetricas({ total: locacoes.length, faturamento: faturamentoTotal, futuros: eventosFuturosCount });
         setStatusContagem(statusArray);
         setProximosEventos(futuros);
         setPedidosLista(pedidosFormatados);
         setTaxaConversao(taxa);
-
+        
       } catch (error) {
         console.error("Erro ao carregar pedidos:", error);
       } finally {
@@ -122,14 +132,14 @@ const PedidosTab = () => {
     };
 
     buscarDadosPedidosEConfigs();
-  }, []);
+  }, [usuarioLogado]);
 
   const getStatusClass = (status) => {
     if (status.includes('ORÇAMENTO') || status.includes('ORCAMENTO') || status.includes('PENDENTE')) return 'status-orcamento';
     if (status.includes('AGENDADO') || status.includes('CONFIRMADO')) return 'status-agendado';
     if (status.includes('ANDAMENTO') || status.includes('RETIRADO') || status.includes('FESTA')) return 'status-andamento';
     if (status.includes('CANCELADO')) return 'status-cancelado';
-    return 'status-concluido'; 
+    return 'status-concluido';
   };
 
   const pedidosFiltrados = pedidosLista.filter(p => {
@@ -148,8 +158,10 @@ const PedidosTab = () => {
       let startY = 25;
       const dataHoje = new Date().toLocaleDateString('pt-BR');
 
-      if (dadosEmpresa.logotipo) {
-        doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+      if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
+        try {
+          doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+        } catch(e) {}
         doc.setFontSize(20);
         doc.setTextColor(15, 23, 42);
         doc.text(dadosEmpresa.nomeEmpresa, 48, 22);
@@ -159,7 +171,7 @@ const PedidosTab = () => {
         startY = 45;
       } else {
         doc.setFontSize(18);
-        doc.setTextColor(15, 23, 42); 
+        doc.setTextColor(15, 23, 42);
         doc.text(`Relatório de Pedidos - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
         doc.setFontSize(11);
         doc.text(`Gerado em: ${dataHoje} | Total Filtrado: ${pedidosFiltrados.length}`, 14, 30);
@@ -180,7 +192,6 @@ const PedidosTab = () => {
         theme: 'striped',
         headStyles: { fillColor: [15, 23, 42] }
       });
-
       doc.save(`Pedidos_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
     } catch (e) { alert("Erro ao gerar PDF"); }
   };
@@ -208,7 +219,6 @@ const PedidosTab = () => {
       </div>
 
       <div className="clientes-layout-split mt-20">
-        
         <div className="col-esquerda">
           <div className="main-card-premium" style={{ marginBottom: '20px' }}>
             <div className="card-header-flex">
@@ -291,7 +301,6 @@ const PedidosTab = () => {
             <button className={`btn-filtro ${filtroAtual === 'DECORACAO' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('DECORACAO')}>Decoração</button>
           </div>
           
-          {/* REMOVIDO: scroll interno para a tabela fluir livremente */}
           <div style={{ paddingRight: '5px' }}>
             <table className="table-pedidos-v4">
               <thead>

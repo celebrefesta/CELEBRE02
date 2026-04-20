@@ -2,12 +2,18 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './NovaLocacao.css'; 
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
+import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore'; 
+import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas'; 
 
 const EditarLocacao = () => {
   const navigate = useNavigate();
   const { id } = useParams(); 
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [loading, setLoading] = useState(true);
 
   const [clientes, setClientes] = useState([]);
@@ -32,6 +38,7 @@ const EditarLocacao = () => {
   const [logistica, setLogistica] = useState({ 
     tipo: 'entrega', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', obsTransporte: '' 
   });
+  
   const [desconto, setDesconto] = useState(0);
   const [obsInternas, setObsInternas] = useState('');
   
@@ -48,12 +55,22 @@ const EditarLocacao = () => {
   const isFinalizado = statusAtual === 'finalizado' || statusAtual === 'cancelado';
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     const carregarDados = async () => {
       try {
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Filtra apenas os dados do seu utilizador logado
+        const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+
         const [snapCli, snapEst, snapLoc] = await Promise.all([
-          getDocs(collection(db, "clientes")),
-          getDocs(collection(db, "estoque")),
-          getDocs(collection(db, "locacoes"))
+          getDocs(qClientes),
+          getDocs(qEstoque),
+          getDocs(qLocacoes)
         ]);
         
         setClientes(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -127,8 +144,8 @@ const EditarLocacao = () => {
               ...item,
               preco: Number(item.preco || item.financeiro?.valorAluguel || 0)
             }));
-            setCarrinho(itensFormatados);
             
+            setCarrinho(itensFormatados);
             setDesconto(data.desconto || 0);
             setObsInternas(data.obsInternas || '');
           }
@@ -140,7 +157,7 @@ const EditarLocacao = () => {
       }
     };
     carregarDados();
-  }, [id]);
+  }, [id, usuarioLogado, navigate]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
 
@@ -148,7 +165,7 @@ const EditarLocacao = () => {
   const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
   const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
-
+  
   const isOverlapping = (start1, end1, start2, end2) => {
       if (!start1 || !end1 || !start2 || !end2) return false;
       const s1 = new Date(start1 + 'T00:00:00').getTime();
@@ -165,7 +182,6 @@ const EditarLocacao = () => {
       const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
       const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
       let disponiveisTotais = Math.max(0, qtdFisica - qtdManutencao);
-
       let qtdReservadaForte = 0;
       let qtdRetornaNoDia = 0;
 
@@ -194,7 +210,6 @@ const EditarLocacao = () => {
       const livresReais = Math.max(0, disponiveisTotais - qtdReservadaForte - qtdRetornaNoDia);
       const livresMaximos = Math.max(0, disponiveisTotais - qtdReservadaForte);
 
-      // 🔥 AQUI ESTAVA O ERRO! Ajustado de retornaNoDia para qtdRetornaNoDia 🔥
       return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia };
   };
 
@@ -233,8 +248,8 @@ const EditarLocacao = () => {
       if (!itemCarrinho) return;
 
       let qtdDesejada = parseInt(novaQtd);
-      if (isNaN(qtdDesejada)) qtdDesejada = ''; 
-
+      if (isNaN(qtdDesejada)) qtdDesejada = '';
+      
       if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
           const disp = getDisponibilidade(itemId);
           if (qtdDesejada > disp.livresMaximos) {
@@ -302,13 +317,13 @@ const EditarLocacao = () => {
     const total = subtotal + getFreteNumerico() - Number(desconto || 0);
     return { subtotal, total: Math.max(0, total) };
   };
-
+  
   const handleCepChange = async (e) => {
     if (isFinalizado) return;
     let value = e.target.value.replace(/\D/g, "");
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setLogistica(prev => ({ ...prev, cep: cepFormatado }));
-
+    
     if (value.length === 8) {
       try {
         const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
@@ -329,9 +344,9 @@ const EditarLocacao = () => {
 
   const handleFreteChange = (e) => {
     if (isFinalizado) return;
-    let v = e.target.value.replace(/\D/g, ""); 
+    let v = e.target.value.replace(/\D/g, "");
     if (!v) { setLogistica({ ...logistica, frete: "" }); return; }
-    v = (v / 100).toFixed(2) + ""; 
+    v = (v / 100).toFixed(2) + "";
     v = v.replace(".", ","); 
     v = v.replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,"); 
     v = v.replace(/(\d)(\d{3}),/g, "$1.$2,");
@@ -372,7 +387,7 @@ const EditarLocacao = () => {
     }
 
     const statusFinalDesejado = novoStatus || statusAtual;
-
+    
     if (statusAtual === 'orcamento' && statusFinalDesejado === 'confirmado') {
         setStatusParaSalvar('confirmado');
         setModalSinalAberto(true);
@@ -392,7 +407,7 @@ const EditarLocacao = () => {
       const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
 
       const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
-
+      
       const docRef = doc(db, "locacoes", id);
       await updateDoc(docRef, {
         clienteId: clienteSelecionado,
@@ -410,8 +425,10 @@ const EditarLocacao = () => {
         sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
         status: statusFinal,
         atualizadoEm: new Date()
+        // userId: Não precisa alterar o userId num update, ele já é seu.
       });
 
+      // 🔥 BLINDAGEM: Se entrar dinheiro, grava com o seu userId!
       if (valorSinalEntrandoNoCaixa > 0) {
         await addDoc(collection(db, "financeiro_lancamentos"), {
             tipo: 'entrada', 
@@ -421,12 +438,13 @@ const EditarLocacao = () => {
             data: new Date().toISOString().split('T')[0], 
             status: 'pago', 
             createdAt: serverTimestamp(),
-            descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`
+            descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`,
+            userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
         });
         setValorJaPago(novoValorPagoTotal); 
       }
       
-      setStatusAtual(statusFinal); 
+      setStatusAtual(statusFinal);
       
       if (statusFinal && statusFinal !== statusAtual) {
           alert(`✅ Pedido salvo! Avançou para a etapa: ${statusFinal.toUpperCase()}`);
@@ -435,7 +453,7 @@ const EditarLocacao = () => {
       }
       
     } catch (e) { 
-      alert("Erro ao atualizar o pedido."); 
+      alert("Erro ao atualizar o pedido.");
     } finally {
       setSalvandoPedido(false);
       setModalSinalAberto(false);
@@ -466,8 +484,8 @@ const EditarLocacao = () => {
       
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
       const vSinalFormatado = valorSinal || '0,00';
-
-      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui. Muito obrigada! 🥰`;
+      
+      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
 
       const msgEncoded = encodeURIComponent(texto);
       const url = telefoneC 
@@ -510,7 +528,7 @@ const EditarLocacao = () => {
         <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
             <h1 className="page-title">{isFinalizado ? '🔎 Visualizar Pedido' : 'Editar Pedido'} {numeroPedido && <span style={{color: 'var(--dourado)'}}>#{numeroPedido}</span>}</h1>
             <span style={{background: badgeInfo.cor, color: 'white', padding: '6px 14px', borderRadius: '20px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase'}}>
-                {badgeInfo.txt}
+               {badgeInfo.txt}
             </span>
         </div>
         <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar à Lista</button>
@@ -690,26 +708,29 @@ const EditarLocacao = () => {
                       </button>
 
                       <button 
-                         type="button" onClick={() => marcarVolta(item.id, 'ok')} disabled={isFinalizado} 
+                         type="button" 
+                         onClick={() => marcarVolta(item.id, 'ok')} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: taMarcadoOk ? '#dbeafe' : '#fff', color: taMarcadoOk ? '#1e40af' : '#64748b', borderColor: taMarcadoOk ? '#93c5fd' : '#cbd5e1', transition: '0.2s'}}>
                         📥 VOLTA
                       </button>
 
                       <button 
-                         type="button" onClick={() => marcarVolta(item.id, 'avaria')} disabled={isFinalizado} 
+                         type="button" 
+                         onClick={() => marcarVolta(item.id, 'avaria')} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.avaria ? '#fef9c3' : '#fff', color: item.avaria ? '#a16207' : '#64748b', borderColor: item.avaria ? '#fde047' : '#cbd5e1', transition: '0.2s'}}>
                         ⚠️ AVARIA
                       </button>
 
                       <button 
-                         type="button" onClick={() => marcarVolta(item.id, 'faltou')} disabled={isFinalizado} 
+                         type="button" 
+                         onClick={() => marcarVolta(item.id, 'faltou')} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.faltou ? '#fee2e2' : '#fff', color: item.faltou ? '#b91c1c' : '#64748b', borderColor: item.faltou ? '#fca5a5' : '#cbd5e1', transition: '0.2s'}}>
                         ❌ FALTA
                       </button>
                     </div>
 
                   </div>
-                )})}
+                  )})}
               </div>
             </div>
           )}
@@ -858,7 +879,6 @@ const EditarLocacao = () => {
       {modalSinalAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
           <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
-            
             <div style={{background: '#f8fafc', padding: '25px', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
                <h3 style={{margin: 0, color: '#0f172a', fontSize: '22px'}}>💰 Confirmação e Sinal</h3>
                
@@ -917,7 +937,7 @@ const EditarLocacao = () => {
                      </button>
                      
                      <button type="button" onClick={salvarAguardandoPagamento} disabled={salvandoPedido} style={{padding: '16px', background: '#fffbeb', border: '2px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
-                       {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
+                        {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
                      </button>
                   </div>
                ) : (

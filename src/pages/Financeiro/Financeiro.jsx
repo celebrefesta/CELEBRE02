@@ -1,18 +1,50 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom"; // <-- IMPORTANTE: Navegação adicionada
+import { useNavigate } from "react-router-dom"; 
 import { db } from "../../firebaseConfig"; 
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, onSnapshot, deleteDoc, doc, where } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import "./Financeiro.css";
 
 const Financeiro = () => {
-  const navigate = useNavigate(); // <-- Habilita a troca de página
+  const navigate = useNavigate(); 
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [transacoes, setTransacoes] = useState([]);
 
-  // Busca as transações do banco de dados em tempo real
   useEffect(() => {
-    const q = query(collection(db, "financeiro_lancamentos"), orderBy("data", "desc"));
-    return onSnapshot(q, (snap) => setTransacoes(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
-  }, []);
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
+    // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as transações da sua empresa
+    const q = query(collection(db, "financeiro_lancamentos"), where("userId", "==", usuarioLogado.uid));
+    
+    const unsubscribe = onSnapshot(q, (snap) => {
+      let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // 🔥 ORDENAÇÃO SEGURA: Ordena por data do mais recente para o mais antigo 
+      // (Feito aqui para evitar erro de índice composto no Firebase)
+      lista.sort((a, b) => {
+         const dataA = a.data ? new Date(a.data).getTime() : 0;
+         const dataB = b.data ? new Date(b.data).getTime() : 0;
+         // Se a data for igual, ordena pela data de criação
+         if (dataB === dataA) {
+             const criacaoA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+             const criacaoB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+             return criacaoB - criacaoA;
+         }
+         return dataB - dataA;
+      });
+
+      setTransacoes(lista);
+    });
+
+    return () => unsubscribe();
+  }, [usuarioLogado, navigate]);
 
   // Cálculos dos Cards
   const totalEntradas = transacoes.filter(t => t.tipo === 'entrada').reduce((acc, t) => acc + Number(t.valor), 0);
@@ -27,10 +59,10 @@ const Financeiro = () => {
         <header className="fin-header-modern">
           <div className="fin-title-area">
             <h1>Financeiro</h1>
-            <p>Controle completo de fluxo de caixa da Ágape Decorações</p>
+            <p>Controle completo de fluxo de caixa da empresa</p>
           </div>
+        
           <div className="fin-action-buttons">
-            {/* Botão Único de Novo Lançamento */}
             <button className="btn-novo-lancamento-unico" onClick={() => navigate('/financeiro/novo')}>
               + Novo Lançamento
             </button>
@@ -65,7 +97,7 @@ const Financeiro = () => {
           </div>
         </div>
 
-        {/* TABELA DE TRANSAÇÕES ATUALIZADA */}
+        {/* TABELA DE TRANSAÇÕES */}
         <div className="fin-table-container">
           <table className="fin-table-modern">
             <thead>

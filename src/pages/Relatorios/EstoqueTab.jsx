@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 import './EstoqueTab.css'; 
 
 const EstoqueTab = () => {
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ 
     totalPecas: 0, 
@@ -26,7 +31,6 @@ const EstoqueTab = () => {
 
   const [radarPrecos, setRadarPrecos] = useState([]);
   
-  // 🔥 NOVOS ESTADOS PARA O MODAL DO RADAR 🔥
   const [modalRadarAberto, setModalRadarAberto] = useState(false);
   const [categoriaSelecionadaRadar, setCategoriaSelecionadaRadar] = useState(null);
 
@@ -36,11 +40,17 @@ const EstoqueTab = () => {
   });
 
   useEffect(() => {
+    if (!usuarioLogado) return; // Proteção extra
+
     const buscarDadosEstoqueEConfigs = async () => {
       try {
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS o seu estoque e as suas locações
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+
         const [snapEstoque, snapLocacoes, snapConfig] = await Promise.all([
-          getDocs(collection(db, "estoque")),
-          getDocs(collection(db, "locacoes")),
+          getDocs(qEstoque),
+          getDocs(qLocacoes),
           getDoc(doc(db, "sistema", "parametros"))
         ]);
 
@@ -56,6 +66,7 @@ const EstoqueTab = () => {
         const locacoes = snapLocacoes.docs.map(d => d.data());
 
         const ultimaLocacaoItem = {};
+  
         locacoes.forEach(loc => {
           const dataLoc = loc.dataRetirada ? new Date(loc.dataRetirada) : (loc.criadoEm?.toDate ? loc.criadoEm.toDate() : new Date(0));
           const itensAlugados = loc.itens || loc.produtos || loc.pecas || [];
@@ -73,7 +84,7 @@ const EstoqueTab = () => {
 
         const seisMesesAtras = new Date();
         seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
-
+        
         let totalPecas = 0;
         let emManutencao = 0;
         const contagemCategorias = {}; 
@@ -83,13 +94,11 @@ const EstoqueTab = () => {
         let investMesAtual = 0;
         const mapGastosCat = {};
         const mapGastosMes = {};
-        
-        // Mapa detalhado para o histórico do Radar
         const mapVariacaoPrecos = {};
-
+        
         const dataHoje = new Date();
         const mesAtualTag = `${String(dataHoje.getMonth() + 1).padStart(2, '0')}/${dataHoje.getFullYear()}`;
-
+        
         const estoqueFormatado = estoque.map(item => {
           const isDeco = item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa';
           const qtd = Number(item.quantidade) || 0;
@@ -109,7 +118,7 @@ const EstoqueTab = () => {
           const keyNome = item.nome || item.descricao;
           const ultimaLoc = ultimaLocacaoItem[keyId] || ultimaLocacaoItem[keyNome];
           const dataCriacao = item.criadoEm?.toDate ? item.criadoEm.toDate() : new Date(item.criadoEm || 0);
-
+          
           let isOcioso = false;
           if (!ultimaLoc) {
              if (dataCriacao < seisMesesAtras && dataCriacao.getFullYear() > 1970) isOcioso = true;
@@ -119,12 +128,11 @@ const EstoqueTab = () => {
           if (isOcioso) statsOciosidade[cat].ociosos += qtd; 
 
           const valorCompra = Number(item.financeiro?.valorCompra) || 0;
-          const qtdBaseCusto = qtd > 0 ? qtd : (isDeco ? 0 : 1); 
+          const qtdBaseCusto = qtd > 0 ? qtd : (isDeco ? 0 : 1);
           const custoItem = qtdBaseCusto * valorCompra;
 
           if (custoItem > 0) {
               investTotal += custoItem;
-              
               const mesAnoCadastro = `${String(dataCriacao.getMonth() + 1).padStart(2, '0')}/${dataCriacao.getFullYear()}`;
               if (mesAnoCadastro === mesAtualTag) investMesAtual += custoItem;
 
@@ -133,7 +141,6 @@ const EstoqueTab = () => {
               mapGastosMes[mesAnoCadastro] = (mapGastosMes[mesAnoCadastro] || 0) + custoItem;
           }
 
-          // 🔥 GRAVANDO A HISTÓRIA COMPLETA DA PEÇA PARA O RADAR 🔥
           if (valorCompra > 0 && !isDeco) {
               const catNome = item.categoria || 'Sem Categoria';
               if (!mapVariacaoPrecos[catNome]) {
@@ -160,7 +167,7 @@ const EstoqueTab = () => {
           if (!a.precisaReparo && b.precisaReparo) return 1;
           return a.quantidade - b.quantidade;
         });
-
+        
         const contagemTemas = {};
         locacoes.forEach(loc => {
           if (loc.temaFesta) {
@@ -168,9 +175,10 @@ const EstoqueTab = () => {
             if(tema !== "") contagemTemas[tema] = (contagemTemas[tema] || 0) + 1;
           }
         });
+        
         const topTemas = Object.entries(contagemTemas).sort((a, b) => b[1] - a[1]).slice(0, 4); 
         const topCategorias = Object.entries(contagemCategorias).sort((a, b) => b[1] - a[1]).slice(0, 5);
-
+        
         const rankingOciosidade = Object.entries(statsOciosidade)
           .map(([cat, stats]) => {
              const taxa = stats.total > 0 ? (stats.ociosos / stats.total) * 100 : 0;
@@ -179,12 +187,12 @@ const EstoqueTab = () => {
           .filter(c => c.ociosos > 0) 
           .sort((a, b) => b.taxa - a.taxa)
           .slice(0, 4);
-
+          
         const gastosCategoria = Object.entries(mapGastosCat)
             .map(([nome, valor]) => ({ nome, valor }))
             .sort((a, b) => b.valor - a.valor)
             .slice(0, 5);
-
+            
         const gastosMes = Object.entries(mapGastosMes)
             .map(([nome, valor]) => ({ nome, valor }))
             .sort((a, b) => {
@@ -194,12 +202,9 @@ const EstoqueTab = () => {
             })
             .slice(0, 5);
 
-        // 🔥 CALCULANDO O RADAR E ORDENANDO O HISTÓRICO 🔥
         const radarCalculado = Object.entries(mapVariacaoPrecos)
             .map(([cat, dados]) => {
-                // Ordena o histórico da compra mais antiga para a mais nova
                 const historicoOrdenado = dados.historico.sort((a, b) => a.data - b.data);
-                
                 const valores = historicoOrdenado.map(h => h.valor);
                 const min = Math.min(...valores);
                 const max = Math.max(...valores);
@@ -219,7 +224,7 @@ const EstoqueTab = () => {
         setEstoqueLista(estoqueFormatado);
         setFinanceiroAcervo({ totalInvestido: investTotal, totalEsteMes: investMesAtual, gastosCategoria, gastosMes });
         setRadarPrecos(radarCalculado);
-
+        
       } catch (error) {
         console.error("Erro ao carregar relatórios de estoque:", error);
       } finally {
@@ -228,7 +233,7 @@ const EstoqueTab = () => {
     };
 
     buscarDadosEstoqueEConfigs();
-  }, []);
+  }, [usuarioLogado]);
 
   const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   
@@ -236,25 +241,25 @@ const EstoqueTab = () => {
       if (!data || data.getFullYear() <= 1970) return "S/ Data";
       return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
-
+  
   const exportarPDFEstoque = () => {
     try {
       const doc = new jsPDF();
       let startY = 25; 
       const dataHoje = new Date().toLocaleDateString('pt-BR');
 
-      if (dadosEmpresa.logotipo) {
-        doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+      if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
+        try { doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30); } catch(e) {}
         doc.setFontSize(20);
         doc.setTextColor(15, 23, 42);
         doc.text(dadosEmpresa.nomeEmpresa, 48, 22);
         doc.setFontSize(11);
         doc.setTextColor(100, 116, 139);
         doc.text(`Inventário de Acervo | Gerado em: ${dataHoje} | Total de Peças: ${metricas.totalPecas}`, 48, 30);
-        startY = 45; 
+        startY = 45;
       } else {
         doc.setFontSize(18);
-        doc.setTextColor(15, 23, 42); 
+        doc.setTextColor(15, 23, 42);
         doc.text(`Inventário de Acervo - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
         doc.setFontSize(11);
         doc.setTextColor(100);
@@ -274,7 +279,7 @@ const EstoqueTab = () => {
         theme: 'striped',
         headStyles: { fillColor: [15, 23, 42] }
       });
-
+      
       doc.save(`Inventario_Estoque_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
     } catch (e) { alert("Erro ao gerar PDF"); }
   };
@@ -283,7 +288,7 @@ const EstoqueTab = () => {
   const maxMesFinanceiro = Math.max(...financeiroAcervo.gastosMes.map(m => m.valor), 1);
 
   if (loading) return <div className="loading-v3">Analisando inteligência de acervo...</div>;
-
+  
   return (
     <div className="fade-in">
       
@@ -321,12 +326,12 @@ const EstoqueTab = () => {
 
       {/* GRÁFICOS FINANCEIROS */}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px', marginBottom: '20px' }}>
-         
          <div className="main-card-premium">
             <div className="card-header-flex"><h3>💰 Onde está o seu dinheiro?</h3></div>
             <p style={{fontSize: '11px', color: '#64748b', marginBottom: '20px', marginTop: '-10px'}}>Acervo ordenado por volume de investimento.</p>
             
-            {financeiroAcervo.gastosCategoria.length === 0 ? <p style={{color: '#94a3b8', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
+            {financeiroAcervo.gastosCategoria.length === 0 ?
+              <p style={{color: '#94a3b8', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
               financeiroAcervo.gastosCategoria.map((cat, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: '15px', gap: '15px' }}>
                    <div style={{ width: '100px', fontSize: '12px', fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.nome}</div>
@@ -343,7 +348,8 @@ const EstoqueTab = () => {
             <div className="card-header-flex"><h3>📅 Histórico de Compras</h3></div>
             <p style={{fontSize: '11px', color: '#64748b', marginBottom: '20px', marginTop: '-10px'}}>Evolução de aquisição de acervo por mês.</p>
             
-            {financeiroAcervo.gastosMes.length === 0 ? <p style={{color: '#94a3b8', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
+            {financeiroAcervo.gastosMes.length === 0 ?
+              <p style={{color: '#94a3b8', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
               financeiroAcervo.gastosMes.map((mes, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: '15px', gap: '15px' }}>
                    <div style={{ width: '100px', fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Mês {mes.nome}</div>
@@ -355,7 +361,6 @@ const EstoqueTab = () => {
               ))
             }
          </div>
-
       </div>
 
       <div className="clientes-layout-split mt-20">
@@ -495,7 +500,7 @@ const EstoqueTab = () => {
                             📈 Histórico de Custo: {categoriaSelecionadaRadar.categoria}
                         </h3>
                         <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#7f1d1d' }}>
-                            Acompanhe a variação de preço dos itens comprados nesta categoria.
+                           Acompanhe a variação de preço dos itens comprados nesta categoria.
                         </p>
                     </div>
                     <button onClick={() => setModalRadarAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#991b1b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '50%' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(153, 27, 27, 0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -507,7 +512,6 @@ const EstoqueTab = () => {
                 <div style={{ padding: '20px 25px', overflowY: 'auto', flexGrow: 1, background: '#f8fafc' }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         {categoriaSelecionadaRadar.historico.map((hist, idx) => {
-                            // Identifica se é o valor mais barato ou mais caro para destacar
                             const isMaisCaro = hist.valor === categoriaSelecionadaRadar.max;
                             const isMaisBarato = hist.valor === categoriaSelecionadaRadar.min;
                             

@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc } from 'firebase/firestore'; 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, where } from 'firebase/firestore'; 
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Agenda.css';
@@ -12,7 +14,7 @@ const TIPOS = {
   visita:    { label: 'Visita Técnica', cor: '#22c55e', dot: 'green'  },
   pagamento: { label: 'Cobrança/Pgto', cor: '#eab308', dot: 'yellow' },
   tarefa:    { label: 'Tarefa Interna', cor: '#64748b', dot: 'gray'   },
-  bloqueio:  { label: 'Bloqueio de Data', cor: '#ef4444', dot: 'red'    },
+  bloqueio:  { label: 'Bloqueio de Data', cor: '#ef4444', dot: 'red'  },
 };
 
 const FORM_VAZIO = {
@@ -34,32 +36,36 @@ const dmaParaISO = (dia, mes, ano) =>
   `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
 const Agenda = () => {
+  const navigate = useNavigate();
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [dataAtual, setDataAtual] = useState(new Date());
-  const [viewPrincipal, setViewPrincipal] = useState('calendario'); 
+  const [viewPrincipal, setViewPrincipal] = useState('calendario');
   const [viewLista, setViewLista] = useState('semana');
 
   const [clientes, setClientes]   = useState([]);
   const [locacoes, setLocacoes]   = useState([]);
   const [compras, setCompras]     = useState([]);
-  const [eventosManual, setEventosManual] = useState([]); 
-  
+  const [eventosManual, setEventosManual] = useState([]);
   const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Ágape Decorações', logotipo: '' });
 
   const [loadingFB, setLoadingFB] = useState(true);
   const [salvando, setSalvando]   = useState(false); 
   const [toastMsg, setToastMsg] = useState('');
-
-  const [filtroAtivo, setFiltroAtivo]     = useState('todos');
-  const [busca, setBusca]                 = useState('');
-
+  
+  const [filtroAtivo, setFiltroAtivo] = useState('todos');
+  const [busca, setBusca] = useState('');
   const [buscaClienteModal, setBuscaClienteModal] = useState('');
   const [mostrarDropdownModal, setMostrarDropdownModal] = useState(false);
 
-  const [modalFormAberto, setModalFormAberto]     = useState(false);
-  const [modalListaAberto, setModalListaAberto]   = useState(false);
-  const [diaSelecionado, setDiaSelecionado]       = useState(null);
+  const [modalFormAberto, setModalFormAberto] = useState(false);
+  const [modalListaAberto, setModalListaAberto] = useState(false);
+  const [diaSelecionado, setDiaSelecionado] = useState(null);
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
-  const [formData, setFormData]                   = useState(FORM_VAZIO);
+  const [formData, setFormData] = useState(FORM_VAZIO);
 
   const mostrarToast = (msg) => {
     setToastMsg(msg);
@@ -67,25 +73,38 @@ const Agenda = () => {
   };
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     const carregarDados = async () => {
       setLoadingFB(true);
       try {
-        const sc = await getDocs(collection(db, 'clientes'));
+        // 🔥 BLINDAGEM: Busca apenas clientes da sua loja
+        const qCli = query(collection(db, 'clientes'), where("userId", "==", usuarioLogado.uid));
+        const sc = await getDocs(qCli);
         setClientes(sc.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Clientes:', e); }
 
       try {
-        const sl = await getDocs(collection(db, 'locacoes'));
+        // 🔥 BLINDAGEM: Busca apenas locações da sua loja
+        const qLoc = query(collection(db, 'locacoes'), where("userId", "==", usuarioLogado.uid));
+        const sl = await getDocs(qLoc);
         setLocacoes(sl.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Locações:', e); }
 
       try {
-        const sco = await getDocs(collection(db, 'lista_compras'));
+        // 🔥 BLINDAGEM: Busca apenas compras da sua loja
+        const qComp = query(collection(db, 'lista_compras'), where("userId", "==", usuarioLogado.uid));
+        const sco = await getDocs(qComp);
         setCompras(sco.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Compras:', e); }
 
       try {
-        const sa = await getDocs(collection(db, 'agenda_eventos'));
+        // 🔥 BLINDAGEM: Busca apenas a agenda da sua loja
+        const qAg = query(collection(db, 'agenda_eventos'), where("userId", "==", usuarioLogado.uid));
+        const sa = await getDocs(qAg);
         setEventosManual(sa.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) {
         const backupLocal = JSON.parse(localStorage.getItem('agenda_eventos_v3')) || [];
@@ -107,7 +126,7 @@ const Agenda = () => {
     };
 
     carregarDados();
-  }, []);
+  }, [usuarioLogado, navigate]);
 
   const eventosLocacao = useMemo(() => {
     const evs = [];
@@ -137,7 +156,7 @@ const Agenda = () => {
 
   const todosEventos = useMemo(() => [...eventosManual, ...eventosLocacao], [eventosManual, eventosLocacao]);
 
-  const getDiasNoMes       = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+  const getDiasNoMes = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   const getDiaSemanaInicio = (d) => new Date(d.getFullYear(), d.getMonth(), 1).getDay();
   
   let nomeMes = dataAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
@@ -167,7 +186,10 @@ const Agenda = () => {
 
   const handleDiaClick = (dia) => {
     const evs = eventosDoDia(dia);
-    if (evs.length > 0) { setDiaSelecionado(dia); setModalListaAberto(true); }
+    if (evs.length > 0) { 
+      setDiaSelecionado(dia); 
+      setModalListaAberto(true);
+    }
     else abrirModalForm(dia);
   };
 
@@ -182,7 +204,7 @@ const Agenda = () => {
     } else {
       setEventoSelecionado(null);
       setFormData({ ...FORM_VAZIO, dataISO: dmaParaISO(dia, dataAtual.getMonth(), dataAtual.getFullYear()) });
-      setBuscaClienteModal(''); 
+      setBuscaClienteModal('');
     }
     setModalFormAberto(true);
   };
@@ -192,11 +214,19 @@ const Agenda = () => {
     setSalvando(true);
     const [anoStr, mesStr, diaStr] = formData.dataISO.split('-');
     const cli = clientes.find(c => c.id === formData.clienteId || (c.nome || c.nomeFantasia) === buscaClienteModal);
-    
+
     const evParaSalvar = {
-      titulo: formData.titulo, clienteId: cli ? cli.id : '', clienteNome: cli ? (cli.nome || cli.nomeFantasia) : buscaClienteModal,
-      tipo: formData.tipo, horario: formData.horario, observacoes: formData.observacoes, origem: 'manual',
-      dia: parseInt(diaStr), mes: parseInt(mesStr) - 1, ano: parseInt(anoStr),
+      titulo: formData.titulo, 
+      clienteId: cli ? cli.id : '', 
+      clienteNome: cli ? (cli.nome || cli.nomeFantasia) : buscaClienteModal,
+      tipo: formData.tipo, 
+      horario: formData.horario, 
+      observacoes: formData.observacoes, 
+      origem: 'manual',
+      dia: parseInt(diaStr), 
+      mes: parseInt(mesStr) - 1, 
+      ano: parseInt(anoStr),
+      userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
     };
 
     try {
@@ -223,10 +253,11 @@ const Agenda = () => {
       }
       setModalFormAberto(false);
     } catch (err) {
-      console.error(err); 
+      console.error(err);
       const novaLista = eventoSelecionado 
         ? eventosManual.map(x => x.id === eventoSelecionado.id ? {id: eventoSelecionado.id, ...evParaSalvar} : x)
         : [...eventosManual, {id: Date.now().toString(), ...evParaSalvar}];
+      
       setEventosManual(novaLista);
       localStorage.setItem('agenda_eventos_v3', JSON.stringify(novaLista));
       mostrarToast('⚠️ Salvo offline.');
@@ -261,7 +292,6 @@ const Agenda = () => {
       let tituloRelatorio = '';
       let subtituloRelatorio = '';
 
-      // Tabela de Cores Específicas para o PDF (Fundo claro e texto escuro, igual tela)
       const PDF_COLORS = {
         entrega:   { bg: '#eff6ff', text: '#1e3a8a' },
         devolucao: { bg: '#fff7ed', text: '#9a3412' },
@@ -283,15 +313,14 @@ const Agenda = () => {
                 c.valorEstimado ? `R$ ${Number(c.valorEstimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
                 {
                     content: c.prazo ? new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '-',
-                    // Datas de compras atrasadas ficam em vermelho negrito no PDF!
                     styles: urgente ? { textColor: '#ef4444', fontStyle: 'bold' } : {}
                 },
                 c.vinculo || '-'
             ];
         });
-
       } else {
         let eventosFiltrados = [];
+        
         if (viewPrincipal === 'calendario' || (viewPrincipal === 'lista' && viewLista === 'mes')) {
           eventosFiltrados = eventosMesAtual.filter(eventoVisivel);
           tituloRelatorio = `Agenda Mensal: ${nomeMes}`;
@@ -329,7 +358,6 @@ const Agenda = () => {
               `${String(e.dia).padStart(2, '0')}/${String(e.mes + 1).padStart(2, '0')}`,
               e.horario || '--:--',
               { 
-                  // Pílula com fundo e cor específica injetada no PDF!
                   content: TIPOS[e.tipo]?.label || '', 
                   styles: { fillColor: cor.bg, textColor: cor.text, fontStyle: 'bold', halign: 'center' } 
               },
@@ -344,7 +372,8 @@ const Agenda = () => {
         try { docPDF.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 25, 25); startXTexto = 45; } catch(e) {}
       }
 
-      docPDF.setFontSize(22); docPDF.setTextColor(15, 23, 42); docPDF.setFont("helvetica", "bold");
+      docPDF.setFontSize(22);
+      docPDF.setTextColor(15, 23, 42); docPDF.setFont("helvetica", "bold");
       docPDF.text(dadosEmpresa.nomeEmpresa.toUpperCase(), startXTexto, 22);
 
       docPDF.setFontSize(10); docPDF.setTextColor(150, 150, 150); docPDF.setFont("helvetica", "normal");
@@ -358,19 +387,19 @@ const Agenda = () => {
       
       if (subtituloRelatorio) { docPDF.text(subtituloRelatorio, 14, 56); startY = 65; } else { startY = 60; }
 
-      docPDF.setLineWidth(0.5); docPDF.setDrawColor(200, 200, 200); docPDF.line(14, startY - 4, 196, startY - 4);
+      docPDF.setLineWidth(0.5); docPDF.setDrawColor(200, 200, 200);
+      docPDF.line(14, startY - 4, 196, startY - 4);
 
       let colunasDef = [["Data", "Horário", "Tipo", "Título do Evento", "Cliente"]];
       if (filtroAtivo === 'compras') colunasDef = [["Item", "Qtd", "Valor Est.", "Prazo", "Referência / Vínculo"]];
-
+      
       autoTable(docPDF, {
         startY: startY, head: colunasDef, body: listaExportacao, theme: 'striped',
         headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' }, 
-        // valign: 'middle' garante que a pílula colorida fique centralizada e bonita
         styles: { fontSize: 9, cellPadding: 5, valign: 'middle' }, 
         alternateRowStyles: { fillColor: [248, 250, 252] },
       });
-
+      
       const nomeArquivoSafe = dadosEmpresa.nomeEmpresa.replace(/[^a-z0-9]/gi, '_');
       docPDF.save(`${nomeArquivoSafe}_${tituloRelatorio.replace(/[^a-z0-9]/gi, '_')}.pdf`);
       mostrarToast('📄 PDF gerado com sucesso!');
@@ -414,11 +443,14 @@ const Agenda = () => {
     const hojeD = new Date();
     const MAX = 3;
     const dias = [];
+    
     for (let i = 0; i < diaInicio; i++) dias.push(<div key={`e${i}`} className="day-cell empty" />);
+    
     for (let dia = 1; dia <= totalDias; dia++) {
       const evsDia = eventosDoDia(dia).filter(eventoVisivel);
       const isHoje = hojeD.getDate() === dia && hojeD.getMonth() === dataAtual.getMonth() && hojeD.getFullYear() === dataAtual.getFullYear();
       const extra  = evsDia.length - MAX;
+      
       dias.push(
         <div key={dia} className={`day-cell${isHoje ? ' today' : ''}`} onClick={() => handleDiaClick(dia)}>
           <div className="day-header-cell">
@@ -435,6 +467,7 @@ const Agenda = () => {
         </div>
       );
     }
+    
     return (
       <div className="calendar-wrapper">
         <div className="calendar-grid-header">
@@ -452,13 +485,13 @@ const Agenda = () => {
       if (a.dia !== b.dia) return a.dia - b.dia;
       return (a.horario || '99:99').localeCompare(b.horario || '99:99');
     });
-
+    
     if (listaAno.length === 0) return <div className="vista-vazia">Nenhum evento agendado para {anoAtual}.</div>;
     
     let ultimoMes = null;
     let ultimoDia = null;
     const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-
+    
     return (
       <div className="list-view-container">
         {listaAno.map(ev => {
@@ -482,8 +515,10 @@ const Agenda = () => {
       if (a.dia !== b.dia) return a.dia - b.dia;
       return (a.horario || '99:99').localeCompare(b.horario || '99:99');
     });
+    
     if (lista.length === 0) return <div className="vista-vazia">Nenhum evento este mês.</div>;
     let ultimoDia = null;
+    
     return (
       <div className="list-view-container">
         {lista.map(ev => {
@@ -504,7 +539,7 @@ const Agenda = () => {
     const diaSemana = dataAtual.getDay();
     const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
     const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
-
+    
     const listaSemana = todosEventos.filter(e => {
       if (!eventoVisivel(e)) return false;
       const dataEv = new Date(e.ano, e.mes, e.dia);
@@ -518,8 +553,9 @@ const Agenda = () => {
     });
 
     if (listaSemana.length === 0) return <div className="vista-vazia">Nenhum evento agendado para esta semana.</div>;
-
+    
     let ultimoDia = null;
+    
     return (
       <div className="list-view-container">
         {listaSemana.map(ev => {
@@ -544,6 +580,7 @@ const Agenda = () => {
   const renderDia = () => {
     const evsDia = eventosDoDia(dataAtual.getDate()).filter(eventoVisivel).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99'));
     const tituloData = dataAtual.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
+    
     return (
       <div className="vista-dia-container">
         <div className="vista-dia-titulo">{tituloData}</div>
@@ -557,6 +594,7 @@ const Agenda = () => {
 
   const renderCompras = () => {
     if (comprasPendentes.length === 0) return <div className="vista-vazia">✅ Nenhuma compra pendente!</div>;
+    
     return (
       <div className="list-view-container">
         <div className="compras-legenda">
@@ -595,16 +633,18 @@ const Agenda = () => {
     let titulo = ''; let navEsq, navDir;
 
     if (filtroAtivo === 'compras') {
-      titulo = 'Lista de Compras'; 
+      titulo = 'Lista de Compras';
       navEsq = () => {}; navDir = () => {};
     } else if (viewPrincipal === 'calendario') {
-      titulo = nomeMes; navEsq = () => mudarMes(-1); navDir = () => mudarMes(1);
+      titulo = nomeMes; navEsq = () => mudarMes(-1);
+      navDir = () => mudarMes(1);
     } else {
       if (viewLista === 'ano') {
         titulo = dataAtual.getFullYear().toString();
         navEsq = () => mudarAno(-1); navDir = () => mudarAno(1);
       } else if (viewLista === 'mes') {
-        titulo = nomeMes; navEsq = () => mudarMes(-1); navDir = () => mudarMes(1);
+        titulo = nomeMes;
+        navEsq = () => mudarMes(-1); navDir = () => mudarMes(1);
       } else if (viewLista === 'semana') {
         const hojeD = new Date(dataAtual);
         const dom = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate() - hojeD.getDay());
@@ -667,7 +707,7 @@ const Agenda = () => {
   const renderModalForm = () => {
     const ehLocacao = formData.origem === 'locacao';
     const saldo = ehLocacao ? Number(formData.valorTotal || 0) - Number(formData.valorPago || 0) : 0;
-
+    
     return (
       <div className="modal-overlay" onClick={() => !salvando && setModalFormAberto(false)}>
         <div className="modal-content modal-form-content" onClick={e => e.stopPropagation()}>
@@ -698,6 +738,7 @@ const Agenda = () => {
                 <div className="form-group"><label>Data *</label><input type="date" value={formData.dataISO} onChange={e => setFormData({ ...formData, dataISO: e.target.value })} required disabled={salvando}/></div>
                 <div className="form-group"><label>Horário</label><input type="time" value={formData.horario} onChange={e => setFormData({ ...formData, horario: e.target.value })} disabled={salvando}/></div>
               </div>
+    
               <div className="form-group"><label>Título do Compromisso *</label><input autoFocus type="text" value={formData.titulo} onChange={e => setFormData({ ...formData, titulo: e.target.value })} placeholder="Ex: Reunião de alinhamento com a noiva" required disabled={salvando}/></div>
               
               <div className="form-group">
@@ -749,6 +790,7 @@ const Agenda = () => {
                     <option value="bloqueio">🚫 Bloqueio de Data</option>
                   </select>
                 </div>
+         
                 {!eventoSelecionado && (
                   <div className="form-group">
                     <label>Repetir Lembrete</label>
@@ -760,6 +802,7 @@ const Agenda = () => {
                   </div>
                 )}
               </div>
+              
               <div className="form-group">
                 <label>Detalhes Adicionais</label>
                 <textarea 
@@ -770,6 +813,7 @@ const Agenda = () => {
                   disabled={salvando}
                 />
               </div>
+              
               <div className="modal-actions">
                 {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar</button>}
                 <button type="button" className="btn-cancelar-modal" onClick={() => setModalFormAberto(false)} disabled={salvando}>Cancelar</button>
@@ -805,7 +849,7 @@ const Agenda = () => {
         </div>
 
         <nav className="sidebar-menu">
-            <div className={`menu-item highlight ${filtroAtivo === 'todos' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('todos'); if(viewPrincipal === 'calendario' && filtroAtivo === 'compras') setViewPrincipal('lista'); }}>
+            <div className={`menu-item highlight ${filtroAtivo === 'todos' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('todos'); if(viewPrincipal === 'calendario' && filtroAtivo === 'compras') setViewPrincipal('lista');}}>
                 <span className="menu-icon">📅</span>
                 <span className="menu-label">Visão Geral</span>
             </div>
@@ -877,11 +921,11 @@ const Agenda = () => {
               {eventosDoDia(diaSelecionado).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99')).map(ev => (
                 <div key={ev.id} className={`item-detalhe-card ${ev.tipo}${ev.origem === 'locacao' ? ' card-locacao' : ''}`} onClick={() => abrirModalForm(diaSelecionado, ev)}>
                   <div className="detalhe-info">
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {ev.horario && <span className="detalhe-horario">{ev.horario}</span>}
                       <h4>{ev.titulo}</h4>
                       {ev.origem === 'locacao' && <span className="badge-locacao-origem">🔗</span>}
-                    </div>
+                     </div>
                     {ev.clienteNome && <span>👤 {ev.clienteNome}</span>}
                     {ev.tipoServico  && <span style={{ fontSize: '0.78rem' }}>📦 {ev.tipoServico}</span>}
                   </div>

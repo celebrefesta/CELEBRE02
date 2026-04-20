@@ -1,13 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom'; 
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, getDocs, serverTimestamp, query, orderBy, doc, getDoc, updateDoc } from 'firebase/firestore'; 
+import { collection, addDoc, getDocs, serverTimestamp, query, doc, getDoc, updateDoc, where } from 'firebase/firestore'; 
+import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
 import './NovaCompra.css';
 
 const NovaCompra = () => {
   const navigate = useNavigate();
   const { id } = useParams(); 
   const isEditing = !!id; 
+
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
 
   const [salvando, setSalvando] = useState(false);
   const [carregandoEdicao, setCarregandoEdicao] = useState(isEditing);
@@ -28,7 +33,7 @@ const NovaCompra = () => {
   // LOGÍSTICA
   const [tipoEntrega, setTipoEntrega] = useState('10'); 
   const [diasPersonalizados, setDiasPersonalizados] = useState('');
-  const [erroPrazo, setErroPrazo] = useState(false); 
+  const [erroPrazo, setErroPrazo] = useState(false);
   const [mensagemPrazo, setMensagemPrazo] = useState(''); 
   const [prazo, setPrazo] = useState(''); 
   const [permitirSimulador, setPermitirSimulador] = useState(!isEditing); 
@@ -43,18 +48,32 @@ const NovaCompra = () => {
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     carregarPedidosFuturos();
     if (isEditing) {
         carregarDadosEdicao();
     }
-  }, [id]);
+  }, [id, usuarioLogado]);
 
   const carregarDadosEdicao = async () => {
     try {
         const docRef = doc(db, "lista_compras", id);
         const snap = await getDoc(docRef);
+        
         if (snap.exists()) {
             const data = snap.data();
+            
+            // Verifica se a compra pertence ao usuário (Segurança Extra)
+            if (data.userId && data.userId !== usuarioLogado.uid) {
+                alert("Acesso negado: Esta compra pertence a outra conta.");
+                navigate('/compras');
+                return;
+            }
+
             setNome(data.nome || '');
             setQuantidade(data.quantidade || 1);
 
@@ -64,13 +83,13 @@ const NovaCompra = () => {
             setCategoria(data.categoria || 'acervo');
             setFormato(data.formato || 'unidade');
             setQuantidadePecasKit(data.quantidadePecasKit || 2);
+            
             setCondicao(data.condicaoChegada || 'pronto');
             setDestino(data.vinculoTipo || 'geral');
             setPrazo(data.prazo || '');
             setFornecedor(data.fornecedor || '');
             setObservacoes(data.obs || '');
-            
-            // 🔥 CARREGA OS DADOS DO FRETE SALVOS 🔥
+
             if (data.tipoEntrega) setTipoEntrega(data.tipoEntrega);
             if (data.diasFrete !== undefined && data.tipoEntrega === 'outro') {
                 setDiasPersonalizados(String(data.diasFrete));
@@ -97,13 +116,26 @@ const NovaCompra = () => {
   };
 
   const carregarPedidosFuturos = async () => {
+    if (!usuarioLogado) return;
     try {
-      const q = query(collection(db, "locacoes"), orderBy("dataRetirada", "desc"));
+      // 🔥 BLINDAGEM: Busca apenas os SEUS pedidos
+      const q = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
       const snapshot = await getDocs(q);
-      const locacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      let locacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Ordena na memória para evitar problemas de índice no Firebase
+      locacoes.sort((a, b) => {
+          const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0;
+          const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 0;
+          return dataB - dataA; // Mais recentes primeiro
+      });
+
       const pedidosAtivos = locacoes.filter(loc => !['cancelado', 'finalizado'].includes((loc.status || '').toLowerCase()));
       setPedidosDisponiveis(pedidosAtivos);
-    } catch (error) { console.error("Erro ao buscar pedidos:", error); }
+    } catch (error) { 
+      console.error("Erro ao buscar pedidos:", error);
+    }
   };
 
   useEffect(() => {
@@ -160,7 +192,7 @@ const NovaCompra = () => {
     if (!nome.trim()) return alert("Digite o nome do item!");
     if (destino === 'pedido' && !pedidoSelecionado) return alert("Selecione o pedido para vincular a compra!");
     if (erroPrazo && destino === 'pedido') return alert("O sistema bloqueou a operação: O item não chegará a tempo da festa!");
-
+    
     setSalvando(true);
     try {
       const custoNum = valorEstimado ? Number(valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
@@ -176,7 +208,6 @@ const NovaCompra = () => {
         idVinculo = pedidoSelecionado.id;
       }
 
-      // 🔥 SALVA OS DIAS DE FRETE EXATOS NO BANCO 🔥
       const diasDeEntrega = tipoEntrega === 'outro' ? (Number(diasPersonalizados) || 0) : Number(tipoEntrega);
 
       const dadosDaCompra = {
@@ -206,10 +237,12 @@ const NovaCompra = () => {
           });
           alert("Solicitação atualizada com sucesso!");
       } else {
+          // 🔥 BLINDAGEM MULTI-EMPRESA: Salva a nova compra com o seu userId
           await addDoc(collection(db, "lista_compras"), {
             ...dadosDaCompra,
             status: "pendente",
-            createdAt: serverTimestamp()
+            createdAt: serverTimestamp(),
+            userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
           });
           alert("Nova solicitação de compra criada!");
       }

@@ -1,11 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig"; 
-import { collection, query, orderBy, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import "./Compras.css";
 
 const Compras = () => {
   const navigate = useNavigate();
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [itens, setItens] = useState([]);
   const [totais, setTotais] = useState({ pendente: 0, urgente: 0, realizado: 0 });
   const [filtroStatus, setFiltroStatus] = useState("todos");
@@ -14,10 +18,24 @@ const Compras = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const q = query(collection(db, "lista_compras"), orderBy("createdAt", "desc"));
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
+    // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as compras da sua conta
+    const q = query(collection(db, "lista_compras"), where("userId", "==", usuarioLogado.uid));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      
+      // Ordena em memória por data mais recente (evita erro de índice no banco de dados)
+      lista.sort((a, b) => {
+         const dataA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+         const dataB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+         return dataB - dataA;
+      });
+
       setItens(lista);
 
       let p = 0; 
@@ -39,9 +57,8 @@ const Compras = () => {
           
           if (item.prazo && item.vinculoTipo === 'pedido') {
             const dataPrazo = new Date(item.prazo + 'T00:00:00');
-            const diffTime = dataPrazo - hoje;
+            const diffTime = dataPrazo.getTime() - hoje.getTime();
             const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
             if (diffDias <= 5) u++; 
           }
         }
@@ -52,11 +69,12 @@ const Compras = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [usuarioLogado, navigate]);
 
   const handleStatusChange = async (item, novoStatus) => {
     try {
-      const qEstoque = query(collection(db, "estoque"), where("nome", "==", item.nome));
+      // 🔥 BLINDAGEM NO ESTOQUE: Procura a peça, mas APENAS no SEU estoque, para não misturar com o de outras pessoas!
+      const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid), where("nome", "==", item.nome));
       const snapshotEstoque = await getDocs(qEstoque);
       const qtdComprada = Number(item.quantidade) || 1;
 
@@ -65,30 +83,31 @@ const Compras = () => {
       if (novoStatus === 'chegou') {
         
         if (!snapshotEstoque.empty) {
-          updatePayload.dataChegada = new Date().toISOString(); 
+          updatePayload.dataChegada = new Date().toISOString();
           const itemRef = doc(db, "lista_compras", item.id);
           await updateDoc(itemRef, updatePayload);
 
           const docExistente = snapshotEstoque.docs[0];
           const qtdAtual = Number(docExistente.data().quantidade) || 0;
+          
           await updateDoc(doc(db, "estoque", docExistente.id), {
             quantidade: qtdAtual + (item.formato === 'kit' && item.quantidadePecasKit ? item.quantidadePecasKit : qtdComprada),
             atualizadoEm: new Date().toISOString()
           });
+          
           alert(`📦 Caixa recebida!\n\nA peça "${item.nome}" já existe no seu acervo. A quantidade no estoque foi somada automaticamente!`);
         } else {
           if (item.categoria === "material") {
-             updatePayload.dataChegada = new Date().toISOString(); 
+             updatePayload.dataChegada = new Date().toISOString();
              const itemRef = doc(db, "lista_compras", item.id);
              await updateDoc(itemRef, updatePayload);
              alert(`📦 Material de consumo recebido e baixado da lista!`);
           } else {
              const querCadastrarAgora = window.confirm(`✨ A caixa de "${item.nome}" chegou!\n\nMas atenção: Como é uma peça INÉDITA, ela só vai constar como "No Acervo" após você preencher a foto e os detalhes dela.\n\nDeseja ir para a tela de Cadastro de Estoque AGORA?`);
-             
              if (querCadastrarAgora) {
                  navigate('/cadastro-estoque', { state: { dadosCompra: item } });
              }
-             return; 
+             return;
           }
         }
       } 
@@ -111,7 +130,7 @@ const Compras = () => {
         await updateDoc(itemRef, updatePayload);
       }
       else if (novoStatus === 'comprado') {
-        updatePayload.dataCompra = new Date().toISOString(); 
+        updatePayload.dataCompra = new Date().toISOString();
         const itemRef = doc(db, "lista_compras", item.id);
         await updateDoc(itemRef, updatePayload);
         alert(`🛒 Maravilha! A compra foi registrada. O sistema vai rastrear a entrega a partir de hoje.`);
@@ -127,7 +146,9 @@ const Compras = () => {
     if (window.confirm("Tem certeza que deseja remover este item da lista?")) {
       try {
         await deleteDoc(doc(db, "lista_compras", id));
-      } catch (error) { alert("Erro ao excluir item."); }
+      } catch (error) { 
+        alert("Erro ao excluir item."); 
+      }
     }
   };
 
@@ -200,7 +221,6 @@ const Compras = () => {
       </div>
 
       <div className="tabela-secao">
-        
         <div className="filtros-area">
           <div className="search-box-container">
             <span className="search-icon">🔍</span>
@@ -254,16 +274,22 @@ const Compras = () => {
                   if (item.status === 'pendente') {
                       if (isPedido && item.prazo) {
                           const dataPrazo = new Date(item.prazo + 'T00:00:00');
-                          const diasParaPrazo = Math.ceil((dataPrazo - hoje) / (1000 * 60 * 60 * 24));
+                          const diasParaPrazo = Math.ceil((dataPrazo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
                           
                           labelPrazo = '🎯 Limite:';
                           dataExibicao = item.prazo.split('-').reverse().join('/');
                           
-                          if (diasParaPrazo < 0) { alertaClasse = 'alerta-vencido'; alertaTexto = '☠️ ATRASADA'; } 
-                          else if (diasParaPrazo === 0) { alertaClasse = 'alerta-urgente'; alertaTexto = '🚨 HOJE!'; } 
-                          else if (diasParaPrazo <= 5) { alertaClasse = 'alerta-urgente'; alertaTexto = `🚨 ${diasParaPrazo} dias`; } 
-                          else if (diasParaPrazo <= 10) { alertaClasse = 'alerta-atencao'; alertaTexto = `⚠️ ${diasParaPrazo} dias`; } 
-                          else { alertaClasse = 'alerta-seguro'; alertaTexto = `✅ Seguro`; }
+                          if (diasParaPrazo < 0) { 
+                              alertaClasse = 'alerta-vencido'; alertaTexto = '☠️ ATRASADA'; 
+                          } else if (diasParaPrazo === 0) { 
+                              alertaClasse = 'alerta-urgente'; alertaTexto = '🚨 HOJE!'; 
+                          } else if (diasParaPrazo <= 5) { 
+                              alertaClasse = 'alerta-urgente'; alertaTexto = `🚨 ${diasParaPrazo} dias`; 
+                          } else if (diasParaPrazo <= 10) { 
+                              alertaClasse = 'alerta-atencao'; alertaTexto = `⚠️ ${diasParaPrazo} dias`; 
+                          } else { 
+                              alertaClasse = 'alerta-seguro'; alertaTexto = `✅ Seguro`; 
+                          }
                       } else {
                           labelPrazo = '⏳ Prazo:';
                           dataExibicao = 'Livre';
@@ -274,6 +300,7 @@ const Compras = () => {
                   else if (item.status === 'comprado') {
                       labelPrazo = '🚚 Previsão:';
                       let previsaoDate = null;
+                      
                       if (item.dataCompra && item.diasFrete !== undefined) {
                           previsaoDate = new Date(item.dataCompra);
                           previsaoDate.setDate(previsaoDate.getDate() + Number(item.diasFrete));
@@ -283,11 +310,15 @@ const Compras = () => {
 
                       if (previsaoDate) {
                           dataExibicao = previsaoDate.toLocaleDateString('pt-BR');
-                          const diasParaChegar = Math.ceil((previsaoDate - hoje) / (1000 * 60 * 60 * 24));
-
-                          if (diasParaChegar < 0) { alertaClasse = 'alerta-urgente'; alertaTexto = '🚨 ATRASADO'; } 
-                          else if (diasParaChegar === 0) { alertaClasse = 'alerta-seguro'; alertaTexto = '📦 HOJE!'; } 
-                          else { alertaClasse = 'alerta-a-caminho'; alertaTexto = `📦 ${diasParaChegar} dias`; }
+                          const diasParaChegar = Math.ceil((previsaoDate.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+                          
+                          if (diasParaChegar < 0) { 
+                              alertaClasse = 'alerta-urgente'; alertaTexto = '🚨 ATRASADO'; 
+                          } else if (diasParaChegar === 0) { 
+                              alertaClasse = 'alerta-seguro'; alertaTexto = '📦 HOJE!'; 
+                          } else { 
+                              alertaClasse = 'alerta-a-caminho'; alertaTexto = `📦 ${diasParaChegar} dias`; 
+                          }
                       } else {
                           dataExibicao = 'Aguardando';
                           alertaClasse = '';
@@ -310,8 +341,6 @@ const Compras = () => {
 
                   return (
                     <tr key={item.id} className={item.status === 'chegou' ? 'linha-comprado' : ''}>
-                      
-                      {/* SETOR 1 (100% largura no Mobile) */}
                       <td>
                         <span className="nome-produto" style={{ textDecoration: item.status === 'chegou' ? 'line-through' : 'none' }}>
                           {item.nome} {item.formato === 'kit' && <span style={{fontSize: '10px', color: '#c5a059', fontWeight: 'bold'}}>(KIT)</span>}
@@ -321,12 +350,10 @@ const Compras = () => {
                         </div>
                       </td>
                       
-                      {/* SETOR 2 (50% Esquerda no Mobile) */}
                       <td data-label="Quantidade">
                           <strong style={{fontSize: '15px', color: '#0f172a'}}>{item.quantidade}x</strong>
                       </td>
                       
-                      {/* SETOR 3 (50% Direita no Mobile) */}
                       <td data-label="Valor Total">
                           <div className="preco-real">
                             R$ {subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
@@ -336,7 +363,6 @@ const Compras = () => {
                           </small>
                       </td>
                       
-                      {/* SETOR 4 (50% Esquerda no Mobile) */}
                       <td data-label="Status Atual">
                         <span className={`badge ${item.status}`}>
                           {item.status === 'pendente' && 'Pendente'}
@@ -345,7 +371,6 @@ const Compras = () => {
                         </span>
                       </td>
 
-                      {/* SETOR 5 (50% Direita no Mobile) */}
                       <td data-label="Logística">
                         <div style={{display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', textAlign: 'right'}}>
                           <span className="prazo-badge" style={{background: isPedido ? '#f0fdf4' : '#f8fafc', border: isPedido ? '1px solid #bbf7d0' : '1px solid #e2e8f0', color: isPedido ? '#166534' : '#475569', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800'}}>
@@ -364,7 +389,6 @@ const Compras = () => {
                         </div>
                       </td>
 
-                      {/* SETOR 6: BOTÕES (100% na base no Mobile) */}
                       <td>
                         <div className="botoes-acao-container">
                           
@@ -395,13 +419,11 @@ const Compras = () => {
                                </button>
                           )}
 
-                          {/* Lápis e Lixeira LIVRES das antigas amarras */}
                           <button className="btn-action edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar">✏️</button>
                           <button className="btn-action delete" onClick={() => handleExcluir(item.id)} title="Excluir">🗑️</button>
                         
                         </div>
                       </td>
-
                     </tr>
                   );
                 })

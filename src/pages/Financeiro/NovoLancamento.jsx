@@ -1,13 +1,18 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { db } from "../../firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import "./NovoLancamento.css";
 
 const NovoLancamento = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const tipoInicial = location.state?.tipo || "entrada";
 
   const [novo, setNovo] = useState({
@@ -18,11 +23,17 @@ const NovoLancamento = () => {
     categoria: tipoInicial === "entrada" ? "Locação" : "Compra para Estoque",
     formaPagto: "Pix",
     status: "pago",
-    parcelas: 1,       // NOVO: Quantidade de parcelas
-    acrescimo: ""      // NOVO: Valor dos juros
+    parcelas: 1,       // Quantidade de parcelas
+    acrescimo: ""      // Valor dos juros
   });
 
   const [salvando, setSalvando] = useState(false);
+
+  useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+    }
+  }, [usuarioLogado, navigate]);
 
   const categoriasEntrada = [
     "Locação",
@@ -45,22 +56,26 @@ const NovoLancamento = () => {
 
   const handleSalvar = async (e) => {
     e.preventDefault();
+    if (!usuarioLogado) return alert("Erro: Utilizador não identificado.");
     if (!novo.descricao || !novo.valor) return alert("Preencha descrição e valor!");
-    
+
     setSalvando(true);
     try {
       // Se tiver acréscimo de juros, converte para número, senão é 0
       const valorAcrescimo = Number(novo.acrescimo) || 0;
       const valorBase = Number(novo.valor);
       
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o lançamento com o userId
       await addDoc(collection(db, "financeiro_lancamentos"), {
         ...novo,
         valor: valorBase,
         acrescimo: valorAcrescimo,
         valorTotal: valorBase + valorAcrescimo, // Salva o valor base + juros
         parcelas: Number(novo.parcelas),
-        createdAt: serverTimestamp()
+        createdAt: serverTimestamp(),
+        userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
       });
+
       alert("Lançamento salvo com sucesso!");
       navigate("/financeiro");
     } catch (error) {

@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Locacoes.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore'; 
+import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore'; 
+import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
 
 const Locacoes = () => {
   const navigate = useNavigate();
   const location = useLocation(); 
+
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
 
   const [lista, setLista] = useState([]);
   const [busca, setBusca] = useState('');
@@ -14,7 +19,6 @@ const Locacoes = () => {
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
   const [filtroServico, setFiltroServico] = useState('todos'); 
   const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes'); 
-  // 🔥 NOVO ESTADO: FILTRO DE DATA 🔥
   const [filtroDataEvento, setFiltroDataEvento] = useState(''); 
   
   const [loading, setLoading] = useState(true);
@@ -26,23 +30,34 @@ const Locacoes = () => {
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     if (location.state && location.state.buscarPedidoId) {
       const idCurto = location.state.buscarPedidoId.substring(0, 6);
       setBusca(idCurto);
     }
     carregarLocacoes();
-  }, [location]);
+  }, [location, usuarioLogado]);
 
   const carregarLocacoes = async () => {
+    if (!usuarioLogado) return;
+    setLoading(true);
     try {
-      const clientesSnapshot = await getDocs(collection(db, "clientes"));
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os seus clientes
+      const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
+      const clientesSnapshot = await getDocs(qClientes);
       const dicionarioClientes = {};
       clientesSnapshot.forEach(doc => {
           const cData = doc.data();
           dicionarioClientes[doc.id] = cData.nome || cData.nomeFantasia || cData.razaoSocial || cData.nomeCompleto || "Sem Nome";
       });
 
-      const querySnapshot = await getDocs(collection(db, "locacoes"));
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os seus pedidos
+      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+      const querySnapshot = await getDocs(qLocacoes);
       const hojeStr = new Date().toISOString().split('T')[0];
 
       const dados = querySnapshot.docs.map(doc => {
@@ -90,17 +105,21 @@ const Locacoes = () => {
       });
 
       setLista(dados);
-      setLoading(false);
     } catch (error) { 
         console.error(error); 
+    } finally { 
         setLoading(false); 
     }
   };
 
   const handleExcluir = async (id) => {
     if (window.confirm("Apagar pedido definitivamente?")) {
-      await deleteDoc(doc(db, "locacoes", id));
-      setLista(lista.filter(i => i.id !== id));
+      try {
+        await deleteDoc(doc(db, "locacoes", id));
+        setLista(lista.filter(i => i.id !== id));
+      } catch (error) {
+        alert("Erro ao excluir.");
+      }
     }
   };
 
@@ -110,15 +129,28 @@ const Locacoes = () => {
     try {
       const novoValorPago = Number(pedidoSelecionado.valorPago || 0) + Number(pagamento.valor);
       await updateDoc(doc(db, "locacoes", pedidoSelecionado.id), { valorPago: novoValorPago });
+      
+      // 🔥 BLINDAGEM NO FINANCEIRO: Salva a entrada com o seu userId
       await addDoc(collection(db, "financeiro_lancamentos"), {
-        tipo: 'entrada', categoria: 'Locação', valor: Number(pagamento.valor), formaPagto: pagamento.formaPagto,
-        data: pagamento.data, status: 'pago', createdAt: serverTimestamp(),
-        descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6)} - ${pedidoSelecionado.clienteNome}`
+        tipo: 'entrada', 
+        categoria: 'Locação', 
+        valor: Number(pagamento.valor), 
+        formaPagto: pagamento.formaPagto,
+        data: pagamento.data, 
+        status: 'pago', 
+        createdAt: serverTimestamp(),
+        descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6)} - ${pedidoSelecionado.clienteNome}`,
+        userId: usuarioLogado.uid // Cadeado
       });
-      alert("Recebido!");
+
+      alert("Recebido com sucesso!");
       carregarLocacoes();
       setModalPagamento(false);
-    } catch (e) { alert("Erro"); } finally { setSalvandoPagamento(false); }
+    } catch (e) { 
+      alert("Erro ao salvar pagamento."); 
+    } finally { 
+      setSalvandoPagamento(false); 
+    }
   };
 
   let filtrados = [...lista];
@@ -129,7 +161,6 @@ const Locacoes = () => {
       const nomeMatch = (i.clienteNome || '').toLowerCase().includes(termo);
       const numeroAppMatch = (i.numeroPedido || '').includes(termo);
       const idRealMatch = (i.id || '').toLowerCase().includes(termo); 
-      
       return nomeMatch || numeroAppMatch || idRealMatch;
     });
   }
@@ -240,7 +271,7 @@ const Locacoes = () => {
               onChange={e => setBusca(e.target.value)} 
             />
           </div>
-          
+         
           {/* 🔥 NOVO CAMPO: BUSCA POR DATA 🔥 */}
           <div className="date-filter-group" style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 5px' }}>
              <span style={{ padding: '0 10px', color: '#64748b' }}>📅 Data:</span>
@@ -303,12 +334,17 @@ const Locacoes = () => {
             </tr>
           </thead>
           <tbody>
-            {loading ? (
+            
+            {/* 🔥 HTML BLINDADO (SEM ENROLAÇÕES DE SINTAXE) 🔥 */}
+            {loading && (
               <tr><td colSpan="7" className="loading-td">Carregando locações...</td></tr>
-            ) : filtrados.length === 0 ? (
+            )}
+
+            {!loading && filtrados.length === 0 && (
               <tr><td colSpan="7" style={{textAlign: "center", padding: "40px", color: "#94a3b8"}}>Nenhum pedido encontrado nesta filtragem.</td></tr>
-            ) : (
-              filtrados.map(item => {
+            )}
+
+            {!loading && filtrados.length > 0 && filtrados.map(item => {
                 const valorTotal = Number(item.valorTotal || 0);
                 const valorPago = Number(item.valorPago || 0);
                 const saldoDevedor = valorTotal - valorPago;
@@ -324,21 +360,21 @@ const Locacoes = () => {
                 let corAlerta = '';
 
                 if (item.dataRetirada && !statusStr.includes('finalizado') && !statusStr.includes('cancelado') && !item.isOrcamentoVencido) {
-                    const hojeObj = new Date(); hojeObj.setHours(0,0,0,0);
+                    const hojeObj = new Date();
+                    hojeObj.setHours(0,0,0,0);
                     const locDateObj = new Date(item.dataRetirada + 'T00:00:00');
                     const devDateObj = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDateObj;
-
                     const diffMs = locDateObj.getTime() - hojeObj.getTime();
                     const diasParaFesta = Math.ceil(diffMs / (1000 * 3600 * 24));
 
                     if (statusStr.includes('confirmado') && diasParaFesta <= 4 && diasParaFesta >= 0) {
                         alertaOperacional = `📦 Separar Peças! (${diasParaFesta === 0 ? 'É Hoje!' : `Faltam ${diasParaFesta} dias`})`; 
-                        corAlerta = "#f59e0b"; 
+                        corAlerta = "#f59e0b";
                     } else if (statusStr.includes('preparacao') && diasParaFesta <= 0) {
-                        alertaOperacional = "🚚 Entregar Hoje!"; 
+                        alertaOperacional = "🚚 Entregar Hoje!";
                         corAlerta = "#ef4444"; 
                     } else if (statusStr.includes('entregue') && devDateObj.getTime() <= hojeObj.getTime()) {
-                        alertaOperacional = "⏳ Cobrar Devolução!"; 
+                        alertaOperacional = "⏳ Cobrar Devolução!";
                         corAlerta = "#ef4444"; 
                     }
                 }
@@ -410,7 +446,7 @@ const Locacoes = () => {
                         <button 
                           className="btn-pontinhos" 
                           onClick={(e) => { 
-                            e.stopPropagation(); 
+                            e.stopPropagation();
                             setMenuAberto(menuAberto === item.id ? null : item.id); 
                           }}
                         >
@@ -419,7 +455,6 @@ const Locacoes = () => {
                         
                         {menuAberto === item.id && (
                           <div className="menu-suspenso">
-                            
                             {saldoDevedor > 0 && !isCancelado && !isOrcamento && (
                               <button 
                                 onClick={(e) => { 
@@ -438,7 +473,7 @@ const Locacoes = () => {
                             {!isOrcamento && !isCancelado && (
                               <button 
                                 onClick={(e) => { 
-                                  e.stopPropagation(); 
+                                  e.stopPropagation();
                                   navigate(`/logistica`); 
                                 }} 
                                 className="item-menu"
@@ -469,8 +504,7 @@ const Locacoes = () => {
                     </td>
                   </tr>
                 );
-              })
-            )}
+            })}
           </tbody>
         </table>
       </div>

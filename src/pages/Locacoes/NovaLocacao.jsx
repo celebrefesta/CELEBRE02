@@ -2,11 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NovaLocacao.css'; 
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, addDoc, getCountFromServer, serverTimestamp } from 'firebase/firestore'; 
+import { collection, getDocs, addDoc, getCountFromServer, serverTimestamp, query, where } from 'firebase/firestore'; 
+import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas'; 
 
 const NovaLocacao = () => {
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [loading, setLoading] = useState(true);
 
   const [clientes, setClientes] = useState([]);
@@ -27,10 +33,11 @@ const NovaLocacao = () => {
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
   const [temaFesta, setTemaFesta] = useState('');
   const [temaDigitadoPersonalizado, setTemaDigitadoPersonalizado] = useState('');
-
+  
   const [logistica, setLogistica] = useState({ 
     tipo: 'retirada', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', referencia: '', obsTransporte: '' 
   });
+  
   const [desconto, setDesconto] = useState(0);
   const [obsInternas, setObsInternas] = useState('');
 
@@ -49,16 +56,27 @@ const NovaLocacao = () => {
   const [modalSinalAberto, setModalSinalAberto] = useState(false);
   const [valorSinal, setValorSinal] = useState('');
   const [formaPagtoSinal, setFormaPagtoSinal] = useState('Pix');
+  
   const [salvandoPedido, setSalvandoPedido] = useState(false);
-  const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
+  const [statusParaSalvar, setStatusParaSalvar] = useState('');
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     const carregarDados = async () => {
       try {
+        // 🔥 BLINDAGEM MULTI-EMPRESAS: Puxa só os dados desta loja
+        const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+
         const [snapCli, snapEst, snapLoc] = await Promise.all([
-          getDocs(collection(db, "clientes")),
-          getDocs(collection(db, "estoque")),
-          getDocs(collection(db, "locacoes"))
+          getDocs(qClientes),
+          getDocs(qEstoque),
+          getDocs(qLocacoes)
         ]);
         
         setClientes(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -71,7 +89,7 @@ const NovaLocacao = () => {
       }
     };
     carregarDados();
-  }, []);
+  }, [usuarioLogado, navigate]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
 
@@ -79,7 +97,7 @@ const NovaLocacao = () => {
   const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
   const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
-
+  
   const isOverlapping = (start1, end1, start2, end2) => {
       if (!start1 || !end1 || !start2 || !end2) return false;
       const s1 = new Date(start1 + 'T00:00:00').getTime();
@@ -96,7 +114,7 @@ const NovaLocacao = () => {
       const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
       const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
       let disponiveisTotais = Math.max(0, qtdFisica - qtdManutencao);
-
+      
       let qtdReservadaForte = 0;
       let qtdRetornaNoDia = 0;
 
@@ -108,7 +126,6 @@ const NovaLocacao = () => {
                       const itemNoPedido = loc.itens?.find(i => i.id === pecaId);
                       if (itemNoPedido) {
                           const qtdAlugada = parseInt(itemNoPedido.qtd) || 0;
-                          
                           if (loc.dataDevolucao === datas.retirada) {
                               qtdRetornaNoDia += qtdAlugada;
                           } else {
@@ -125,7 +142,7 @@ const NovaLocacao = () => {
 
       return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia };
   };
-
+  
   const abrirCatalogo = () => {
       if (!datas.retirada || !datas.devolucao) {
           alert("📅 ATENÇÃO: Por favor, preencha as DATAS DE RETIRADA e DEVOLUÇÃO no topo da tela primeiro!\n\nO sistema precisa das datas para calcular o que está livre.");
@@ -138,11 +155,11 @@ const NovaLocacao = () => {
     if (!itemFaltante || !itemFaltante.nome) return [];
     const normalize = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
     const palavrasAlvo = normalize(itemFaltante.nome).split(' ').filter(p => p.length > 2 && !['com', 'para', 'das', 'dos', 'kit', 'par', 'festa', 'tema', 'locacao'].includes(p));
-
+    
     if (palavrasAlvo.length === 0) return [];
     const palavraPrincipal = palavrasAlvo[0]; 
-    const temaAtual = normalize(temaFesta); 
-
+    const temaAtual = normalize(temaFesta);
+    
     let similares = estoque.map(peca => {
         const disp = getDisponibilidade(peca.id);
         if (peca.id === itemFaltante.id || disp.livresMaximos <= 0) return { ...peca, score: -1 };
@@ -160,21 +177,20 @@ const NovaLocacao = () => {
 
         return { ...peca, score, qtdLivre: disp.livresMaximos };
     });
-
+    
     similares = similares.filter(p => p.score >= 10);
     similares.sort((a, b) => b.score - a.score);
     return similares.slice(0, 4);
   };
-
+  
   const dispararCompraAutomatica = (item) => {
     let valorAlg = item.financeiro?.valorAluguel || "0,00";
     if (typeof valorAlg === 'number') valorAlg = valorAlg.toFixed(2).replace(".", ",");
     else if (!valorAlg && item.preco) valorAlg = Number(item.preco).toFixed(2).replace(".", ",");
-
+    
     setFormCompra({
         nome: item.nome, quantidade: 1, valorEstimado: "", valorAluguel: valorAlg, categoria: item.categoria || "acervo", prazo: datas.retirada || "", fornecedor: "", obs: "Falta de estoque para esta data."
     });
-
     setPreviewPlanoB(null);
     const planoB = buscarSimilaresNoEstoque(item);
     setPecasSimilaresPlanoB(planoB);
@@ -182,16 +198,16 @@ const NovaLocacao = () => {
   };
 
   const aceitarSugestaoPlanoB = (pecaSubstituta) => {
-      addCarrinho(pecaSubstituta, true); 
+      addCarrinho(pecaSubstituta, true);
       setModalCompraAberto(false);
       setPreviewPlanoB(null);
       alert(`✅ Excelente! A peça "${pecaSubstituta.nome}" foi adicionada ao pedido!`);
   };
-
+  
   const addCarrinho = (item, isSubstituicao = false) => {
     const disp = getDisponibilidade(item.id);
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
-    const qtdFisicaTotal = Number(item.quantidade) || 1; 
+    const qtdFisicaTotal = Number(item.quantidade) || 1;
     const existe = carrinho.find(i => i.id === item.id);
     
     if (existe) {
@@ -224,7 +240,7 @@ const NovaLocacao = () => {
           if (!querMesmo) return;
       }
 
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, isBateVolta: disp.retornaNoDia > 0, jaAvisouBateVolta: disp.retornaNoDia > 0, qtdOriginal: qtdFisicaTotal, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]); 
+      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, isBateVolta: disp.retornaNoDia > 0, jaAvisouBateVolta: disp.retornaNoDia > 0, qtdOriginal: qtdFisicaTotal, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
     }
   };
 
@@ -233,8 +249,8 @@ const NovaLocacao = () => {
       if (!itemCarrinho) return;
 
       let qtdDesejada = parseInt(novaQtd);
-      if (isNaN(qtdDesejada)) qtdDesejada = ''; 
-
+      if (isNaN(qtdDesejada)) qtdDesejada = '';
+      
       if (itemCarrinho.isPendenteCompra) {
            setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
            return;
@@ -242,7 +258,6 @@ const NovaLocacao = () => {
 
       if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
           const disp = getDisponibilidade(itemId);
-
           if (qtdDesejada > disp.livresMaximos) {
               alert(`⚠️ LIMITE ABSOLUTO ATINGIDO!\nO limite para "${itemCarrinho.nome}" nesta data é: ${disp.livresMaximos} unidade(s).\n\nO sistema corrigiu o valor.`);
               setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: disp.livresMaximos} : i));
@@ -264,12 +279,12 @@ const NovaLocacao = () => {
     const total = subtotal + getFreteNumerico() - Number(desconto);
     return { subtotal, total: Math.max(0, total) };
   };
-
+  
   const handleCepChange = async (e) => {
-    let value = e.target.value.replace(/\D/g, ""); 
+    let value = e.target.value.replace(/\D/g, "");
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setLogistica(prev => ({ ...prev, cep: cepFormatado }));
-
+    
     if (value.length === 8) {
       try {
         const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
@@ -285,13 +300,13 @@ const NovaLocacao = () => {
   };
 
   const handleFreteChange = (e) => {
-    let v = e.target.value.replace(/\D/g, ""); 
+    let v = e.target.value.replace(/\D/g, "");
     if (!v) return setLogistica({ ...logistica, frete: "" });
-    v = (v / 100).toFixed(2) + ""; 
+    v = (v / 100).toFixed(2) + "";
     v = v.replace(".", ",").replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,").replace(/(\d)(\d{3}),/g, "$1.$2,");
     setLogistica({ ...logistica, frete: v });
   };
-
+  
   const handleDataRetiradaChange = (e) => {
     const novaData = e.target.value;
     setDatas(prev => {
@@ -311,9 +326,8 @@ const NovaLocacao = () => {
     if (!datas.devolucao) return alert("Preencha a Data de Devolução!");
     
     if (datas.devolucao && datas.retirada > datas.devolucao) return alert("A data de devolução não pode ser menor que a data de retirada!");
-
     if (carrinho.length === 0) return alert("Você precisa adicionar pelo menos 1 peça no pedido!");
-
+    
     for (let item of carrinho) {
         if (item.isPendenteCompra) continue;
         const disp = getDisponibilidade(item.id);
@@ -322,10 +336,13 @@ const NovaLocacao = () => {
     }
 
     setStatusParaSalvar(status);
-    if (status === 'orcamento') { executarSalvamentoFinal('orcamento', 0, 0); } 
-    else { setModalSinalAberto(true); }
+    if (status === 'orcamento') { 
+        executarSalvamentoFinal('orcamento', 0, 0);
+    } else { 
+        setModalSinalAberto(true); 
+    }
   };
-
+  
   const executarSalvamentoFinal = async (statusFinal, valorRecebidoNoCaixa = 0, valorSinalNegociado = 0) => {
     setSalvandoPedido(true);
     try {
@@ -336,9 +353,9 @@ const NovaLocacao = () => {
 
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
       const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || clienteEncontrado.razaoSocial || "Cliente") : "Cliente";
-
       const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
-
+      
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o pedido com o userId
       await addDoc(coll, {
         numeroPedido: codigo, 
         clienteId: clienteSelecionado, 
@@ -355,25 +372,28 @@ const NovaLocacao = () => {
         valorPago: valorRecebidoNoCaixa, 
         sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
         status: statusFinal, 
-        criadoEm: serverTimestamp()
+        criadoEm: serverTimestamp(),
+        userId: usuarioLogado.uid 
       });
-
+      
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o financeiro com o userId
       if (valorRecebidoNoCaixa > 0) {
         await addDoc(collection(db, "financeiro_lancamentos"), {
             tipo: 'entrada', categoria: 'Locação', valor: valorRecebidoNoCaixa, formaPagto: formaPagtoSinal,
-            data: new Date().toISOString().split('T')[0], status: 'pago', createdAt: serverTimestamp(), descricao: `SINAL - Pedido #${codigo} - ${nomeClienteReal}`
+            data: new Date().toISOString().split('T')[0], status: 'pago', createdAt: serverTimestamp(), descricao: `SINAL - Pedido #${codigo} - ${nomeClienteReal}`,
+            userId: usuarioLogado.uid 
         });
       }
       alert(`✅ Pedido ${codigo} salvo com sucesso!`);
       navigate('/locacoes');
     } catch (e) { 
-        alert("Erro ao salvar o pedido."); 
+        alert("Erro ao salvar o pedido.");
     } finally {
         setSalvandoPedido(false);
         setModalSinalAberto(false);
     }
   };
-
+  
   const salvarSinalRecebido = () => {
       const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
       executarSalvamentoFinal('confirmado', valorDigitadoNum, valorDigitadoNum);
@@ -396,17 +416,19 @@ const NovaLocacao = () => {
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
       const vSinalFormatado = valorSinal || '0,00';
-      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui. Muito obrigada! 🥰`;
+      
+      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
+      
       const msgEncoded = encodeURIComponent(texto);
       const url = telefoneC ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` : `https://api.whatsapp.com/send?text=${msgEncoded}`;
       window.open(url, '_blank');
   };
-
+  
   const itensFiltrados = estoque.filter(item => {
     return (item.nome || '').toLowerCase().includes(busca.toLowerCase()) && 
            (filtroCategoria === 'Todos' || item.categoria === filtroCategoria);
   });
-
+  
   const maskCurrency = (value) => {
     let v = value.replace(/\D/g, ""); 
     if (!v) return "";
@@ -423,17 +445,19 @@ const NovaLocacao = () => {
       const nomeVinculo = nomeTemaFinal ? `${nomeTemaFinal} - ${nomeClienteReal}` : `Pedido em Criação de ${nomeClienteReal}`;
       let valorCusto = formCompra.valorEstimado ? Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
       let valorAluguel = formCompra.valorAluguel ? Number(formCompra.valorAluguel.replace(/\./g, "").replace(",", ".")) : 0;
-
+      
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva a compra pendente com o userId
       const novaCompraRef = await addDoc(collection(db, "lista_compras"), {
         nome: formCompra.nome, quantidade: Number(formCompra.quantidade), valorEstimado: valorCusto, categoria: formCompra.categoria, 
         prazo: formCompra.prazo || datas.retirada || "", fornecedor: formCompra.fornecedor, obs: formCompra.obs, vinculoTipo: "pedido", vinculoId: "pendente_salvamento", 
-        vinculo: nomeVinculo, status: "pendente", createdAt: serverTimestamp()
+        vinculo: nomeVinculo, status: "pendente", createdAt: serverTimestamp(),
+        userId: usuarioLogado.uid 
       });
-
+      
       const itemParaCarrinho = {
         id: novaCompraRef.id, nome: formCompra.nome, categoria: formCompra.categoria, foto: '', preco: valorAluguel, qtd: Number(formCompra.quantidade), qtdOriginal: Number(formCompra.quantidade), isPendenteCompra: true 
       };
-
+      
       setCarrinho(prev => [...prev, itemParaCarrinho]);
       setFormCompra({ nome: "", quantidade: 1, valorEstimado: "", valorAluguel: "", categoria: "material", prazo: "", fornecedor: "", obs: "" });
       setSugestoesCompra([]);
@@ -447,7 +471,7 @@ const NovaLocacao = () => {
       }
     } catch (err) { alert("Erro ao salvar compra."); } finally { setSalvandoCompra(false); }
   };
-
+  
   const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
 
   if (loading) return <div className="loading-state">Carregando formulário...</div>;
@@ -511,7 +535,7 @@ const NovaLocacao = () => {
                         {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
-                
+                 
                 <div className="form-group flex-1">
                     <label>Subcategoria do Tema *</label>
                     <select value={subcategoriaTema} onChange={e => {
@@ -525,7 +549,6 @@ const NovaLocacao = () => {
                             setGrupoTemaSelecionado('');
                         }
                         setTemaFesta('');
-
                     }} disabled={!categoriaTema || subcategoriasDisponiveis.length === 1}>
                         <option value="" disabled hidden>{!categoriaTema ? 'Escolha a Categoria antes...' : 'Selecione a Subcategoria...'}</option>
                         {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
@@ -534,7 +557,7 @@ const NovaLocacao = () => {
             </div>
 
             <div className="form-row mt-10">
-                <div className="form-group flex-1">
+              <div className="form-group flex-1">
                     <label>Grupo de Tema *</label>
                     <select value={grupoTemaSelecionado} onChange={e => {
                         setGrupoTemaSelecionado(e.target.value);
@@ -738,7 +761,7 @@ const NovaLocacao = () => {
                )}
                <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>Cancelar e Voltar</button>
             </form>
-          </div>
+        </div>
         </div>
       )}
 
