@@ -2,31 +2,50 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../../firebaseConfig";
 import { doc, getDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import "./VisualizarContrato.css";
 
 const VisualizarContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [contrato, setContrato] = useState(null);
   const [empresa, setEmpresa] = useState(null);
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     const buscarDados = async () => {
       try {
         // Busca o Contrato
         const docSnap = await getDoc(doc(db, "contratos", id));
         if (docSnap.exists()) {
-          setContrato(docSnap.data());
+          const data = docSnap.data();
+
+          // 🔥 BLINDAGEM: Verifica se o contrato pertence à sua empresa
+          if (data.userId && data.userId !== usuarioLogado.uid) {
+              alert("Acesso negado: Este contrato pertence a outra empresa.");
+              navigate('/contratos');
+              return;
+          }
+
+          setContrato(data);
         } else {
           alert("Contrato não encontrado!");
           navigate("/contratos");
           return;
         }
 
-        // Busca os dados da Empresa (Logo, CNPJ, etc) nas Configurações
-        const configSnap = await getDoc(doc(db, "sistema", "parametros"));
+        // 🔥 BLINDAGEM: Busca os dados da Empresa (Logo, CNPJ, etc) no seu cofre pessoal
+        const configSnap = await getDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid));
         if (configSnap.exists()) {
           setEmpresa(configSnap.data());
         }
@@ -37,9 +56,12 @@ const VisualizarContrato = () => {
       }
     };
     buscarDados();
-  }, [id, navigate]);
+  }, [id, navigate, usuarioLogado]);
 
   if (carregando) return <div className="loading-screen">Gerando documento...</div>;
+
+  // 🔥 NOME DINÂMICO DA EMPRESA
+  const nomeEmpresaDinamico = empresa?.nomeEmpresa || empresa?.nome || "Sua Empresa";
 
   return (
     <div className="visualizar-container">
@@ -54,7 +76,7 @@ const VisualizarContrato = () => {
         {/* CABEÇALHO DO DOCUMENTO */}
         <header className="doc-header">
           <div className="doc-empresa-info">
-            <h2>{empresa?.nomeEmpresa || "ÁGAPE DECORAÇÕES"}</h2>
+            <h2>{nomeEmpresaDinamico.toUpperCase()}</h2>
             <p>{empresa?.cnpj ? `CNPJ: ${empresa.cnpj}` : ""}</p>
             <p>{empresa?.telefone ? `WhatsApp: ${empresa.telefone}` : ""}</p>
             <p>{empresa?.endereco || ""}</p>
@@ -98,11 +120,11 @@ const VisualizarContrato = () => {
 
           <div className="box-assinatura">
             {contrato.assinaturaAgape ? (
-              <img src={contrato.assinaturaAgape} alt="Assinatura Ágape" className="img-assinatura" />
+              <img src={contrato.assinaturaAgape} alt="Assinatura Empresa" className="img-assinatura" />
             ) : (
               <div className="linha-em-branco"></div>
             )}
-            <p><strong>{empresa?.nomeEmpresa || "Ágape Decorações"}</strong></p>
+            <p><strong>{nomeEmpresaDinamico}</strong></p>
             <span>Contratada</span>
           </div>
         </div>

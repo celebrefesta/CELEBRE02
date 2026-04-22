@@ -2,17 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 import './Notificacoes.css';
 
 const Notificacoes = () => {
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [listaUnificada, setListaUnificada] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const carregarDados = async () => {
+    if (!usuarioLogado) return;
+
     setLoading(true);
     try {
-      const qClientes = query(collection(db, "clientes"), where("situacaoFinanceira", "==", "pendente"));
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os SEUS novos clientes pendentes
+      const qClientes = query(collection(db, "clientes"), where("situacaoFinanceira", "==", "pendente"), where("userId", "==", usuarioLogado.uid));
       const snapClientes = await getDocs(qClientes);
       const listaC = snapClientes.docs.map(d => ({ 
           id: d.id, 
@@ -21,7 +30,8 @@ const Notificacoes = () => {
           timestampOrdenacao: d.data().criadoEm?.toMillis ? d.data().criadoEm.toMillis() : Date.now() 
       }));
 
-      const qPedidos = query(collection(db, "locacoes"), where("origem", "==", "catalogo_publico"), where("status", "==", "orcamento"));
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os SEUS novos orçamentos do catálogo
+      const qPedidos = query(collection(db, "locacoes"), where("origem", "==", "catalogo_publico"), where("status", "==", "orcamento"), where("userId", "==", usuarioLogado.uid));
       const snapPedidos = await getDocs(qPedidos);
       const listaP = snapPedidos.docs.map(d => ({ 
           id: d.id, 
@@ -40,8 +50,12 @@ const Notificacoes = () => {
   };
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
     carregarDados();
-  }, []);
+  }, [usuarioLogado, navigate]);
 
   const aprovarCliente = async (id) => {
     try {
@@ -69,7 +83,7 @@ const Notificacoes = () => {
       <div className="notificacoes-max-width">
         <div className="notificacoes-header">
           <h1>Caixa de Entrada 📥</h1>
-          <p>Gerencie novos clientes e pedidos que acabaram de chegar.</p>
+          <p>Gerencie novos clientes e pedidos que acabaram de chegar na sua empresa.</p>
         </div>
 
         {loading ? (

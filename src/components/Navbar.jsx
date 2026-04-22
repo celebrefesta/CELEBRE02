@@ -1,10 +1,15 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import "./Navbar.css"; 
+import { getAuth } from 'firebase/auth'; // 🔥 Importado para pegar o seu ID para o Catálogo
+import "./Navbar.css";
 
 const Navbar = () => {
   // 🌟 Estado para controlar se o menu está aberto no celular
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // 🔥 Identifica o usuário logado
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
 
   // Função para abrir/fechar o menu
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
@@ -33,7 +38,9 @@ const Navbar = () => {
         </div>
 
         <nav className="sidebar-nav">
-          <NavLink to="/" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          
+          {/* 🔥 CORREÇÃO 1: "Início" agora aponta para o painel de controlo (Dashboard) */}
+          <NavLink to="/dashboard" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
             <i className="fas fa-th-large"></i> <span>Início</span>
           </NavLink>
 
@@ -83,7 +90,8 @@ const Navbar = () => {
             <i className="fas fa-palette"></i> <span>Moodboard</span>
           </NavLink>
 
-          <NavLink to="/catalogo" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          {/* 🔥 CORREÇÃO 2: "Catálogo" agora constrói o link usando o seu ID de empresa */}
+          <NavLink to={usuarioLogado ? `/catalogo/${usuarioLogado.uid}` : "/catalogo"} onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
             <i className="fas fa-store"></i> <span>Catálogo</span>
           </NavLink>
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig'; 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; // 🔥 Importado para garantir a segurança
@@ -8,6 +8,9 @@ import './AutoCadastro.css';
 const AutoCadastro = () => {
   const location = useLocation();
   const navigate = useNavigate();
+  
+  // 🔥 NOVO: Apanha o ID da loja diretamente do Link Mágico
+  const { idEmpresa } = useParams(); 
   
   // 🔥 Puxa a autenticação para garantir fallback de segurança
   const auth = getAuth();
@@ -87,13 +90,13 @@ const AutoCadastro = () => {
   const finalizarCadastroE_Pedido = async (e) => {
     e.preventDefault();
     setLoading(true);
+
     try {
       const isJuridica = form.documento.length > 14;
-      
+
       // 🔥 IDENTIFICAÇÃO CRÍTICA DO DONO DA LOJA 🔥
-      // Como o cliente não está logado, nós puxamos o ID da empresa que veio do Catálogo
-      // Se por acaso falhar, tentamos ver se o próprio dono está a testar a página.
-      const idDaLoja = empresa.userId || empresa.id || (auth.currentUser ? auth.currentUser.uid : null);
+      // Usa o idEmpresa do Link Mágico (1ª opção super segura)
+      const idDaLoja = idEmpresa || empresa.userId || empresa.id || (auth.currentUser ? auth.currentUser.uid : null);
 
       if (!idDaLoja) {
           alert("Erro de segurança: Não foi possível identificar a qual loja este catálogo pertence. O pedido não pode ser enviado cego.");
@@ -118,12 +121,13 @@ const AutoCadastro = () => {
         origem: 'Auto-Cadastro (Site)',
         tipoPessoa: isJuridica ? 'juridica' : 'fisica', 
         criadoEm: serverTimestamp(),
-        userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA: Este cliente pertence a você!
+        userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA
       });
 
       // 2. Se tiver itens no carrinho, salva a lista como Orçamento BLINDADO
       if (carrinho.length > 0) {
         const total = calcularTotal();
+
         await addDoc(collection(db, "locacoes"), {
           clienteId: clienteRef.id,
           clienteNome: form.nome,
@@ -134,18 +138,17 @@ const AutoCadastro = () => {
           status: 'orcamento',
           origem: 'catalogo_publico',
           criadoEm: serverTimestamp(),
-          userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA: Este pedido pertence a você!
+          userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA
         });
 
-        // 🔥 Aviso profissional na tela
         alert("🎉 Pedido recebido com sucesso!\n\nSua lista e seu cadastro foram enviados para a nossa equipe. Em breve entraremos em contato pelo seu WhatsApp para confirmar a aprovação!");
       } else {
-        // 🔥 Aviso se a pessoa só fez o cadastro sem escolher peças
         alert("✅ Cadastro recebido com sucesso!\n\nNossa equipe fará a análise do seu perfil e entraremos em contato.");
       }
 
-      // 3. Manda o cliente de volta para o catálogo
-      navigate('/catalogo');
+      // 3. Manda o cliente de volta para o catálogo (usando o Link Mágico)
+      navigate(`/catalogo/${idDaLoja}`);
+
     } catch (error) {
       console.error("Erro no cadastro:", error);
       alert("Ocorreu um erro ao salvar. Tente novamente.");

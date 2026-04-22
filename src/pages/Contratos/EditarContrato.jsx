@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../../firebaseConfig";
-import { doc, getDoc, updateDoc, collection, getDocs } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import "./NovoContrato.css"; // Usa o mesmo CSS bonito da página de Novo Contrato
 
 const EditarContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [carregando, setCarregando] = useState(true);
   const [meusModelos, setMeusModelos] = useState([]);
 
@@ -26,6 +32,11 @@ const EditarContrato = () => {
 
   // 1. Carrega os dados do contrato existente e os modelos
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     const carregarDados = async () => {
       try {
         // Busca o contrato específico pelo ID
@@ -33,14 +44,25 @@ const EditarContrato = () => {
         const docSnap = await getDoc(docRef);
 
         if (docSnap.exists()) {
-          setForm(docSnap.data());
+          const data = docSnap.data();
+          
+          // 🔥 BLINDAGEM: Verifica se o contrato pertence à sua empresa
+          if (data.userId && data.userId !== usuarioLogado.uid) {
+              alert("Acesso negado: Este contrato pertence a outra empresa.");
+              navigate('/contratos');
+              return;
+          }
+          
+          setForm(data);
         } else {
           alert("Contrato não encontrado!");
           navigate("/contratos");
+          return;
         }
 
-        // Busca modelos (caso queira adicionar mais texto)
-        const snapModelos = await getDocs(collection(db, "modelosContrato"));
+        // 🔥 BLINDAGEM: Busca APENAS os seus modelos de contrato
+        const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", usuarioLogado.uid));
+        const snapModelos = await getDocs(qModelos);
         setMeusModelos(snapModelos.docs.map(d => ({ id: d.id, ...d.data() })));
 
       } catch (error) {
@@ -49,8 +71,9 @@ const EditarContrato = () => {
         setCarregando(false);
       }
     };
+    
     carregarDados();
-  }, [id, navigate]);
+  }, [id, usuarioLogado, navigate]);
 
   // 2. Aplica modelo (Adiciona texto ao final sem apagar o que já tem)
   const aplicarModelo = (e) => {

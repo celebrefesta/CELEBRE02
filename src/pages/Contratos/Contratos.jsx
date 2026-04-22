@@ -1,14 +1,20 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, query, orderBy, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { collection, query, onSnapshot, deleteDoc, doc, where, getDoc } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import jsPDF from "jspdf"; 
 import "./Contratos.css";
 
 const Contratos = () => {
   const [contratos, setContratos] = useState([]);
   const [menuAberto, setMenuAberto] = useState(null); 
+  const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Sua Empresa' });
   const navigate = useNavigate();
+
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
 
   // Fecha o menu se clicar fora dele
   useEffect(() => {
@@ -17,14 +23,41 @@ const Contratos = () => {
     return () => window.removeEventListener('click', fecharMenu);
   }, []);
 
-  // Monitora os contratos em tempo real
+  // Monitora os contratos e busca os dados da empresa
   useEffect(() => {
-    const q = query(collection(db, "contratos"), orderBy("createdAt", "desc"));
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
+    // 1. Busca as configurações da empresa para o PDF
+    const fetchConfig = async () => {
+        try {
+            const snap = await getDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid));
+            if (snap.exists()) {
+                setDadosEmpresa({ nomeEmpresa: snap.data().nomeEmpresa || snap.data().nome || 'Sua Empresa' });
+            }
+        } catch (e) { console.error("Erro ao buscar dados da empresa", e); }
+    };
+    fetchConfig();
+
+    // 2. 🔥 BLINDAGEM MULTI-EMPRESA: Busca APENAS os seus contratos
+    const q = query(collection(db, "contratos"), where("userId", "==", usuarioLogado.uid));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      setContratos(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      
+      // Ordenação em memória para evitar erros de Índice no Firebase
+      lista.sort((a, b) => {
+         const dataA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
+         const dataB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
+         return dataB - dataA;
+      });
+      
+      setContratos(lista);
     });
+    
     return () => unsubscribe();
-  }, []);
+  }, [usuarioLogado, navigate]);
 
   // Alterna a visibilidade do menu de um item específico
   const toggleMenu = (e, id) => {
@@ -34,133 +67,138 @@ const Contratos = () => {
 
   // FUNÇÃO: Gerar PDF Completo (Com Assinaturas)
   const gerarPDF = (item) => {
-    const doc = new jsPDF();
-    
+    const docPdf = new jsPDF();
     const margin = 20;
     let y = 20; 
-    const pageHeight = doc.internal.pageSize.height;
-    const pageWidth = doc.internal.pageSize.width;
-    
+    const pageHeight = docPdf.internal.pageSize.height;
+    const pageWidth = docPdf.internal.pageSize.width;
+
     // --- CABEÇALHO ---
-    doc.setFillColor(241, 245, 249);
-    doc.rect(0, 0, pageWidth, 40, 'F'); 
+    docPdf.setFillColor(241, 245, 249);
+    docPdf.rect(0, 0, pageWidth, 40, 'F'); 
     
-    doc.setTextColor(15, 23, 42); 
-    doc.setFontSize(22);
-    doc.setFont("helvetica", "bold");
-    doc.text("ÁGAPE DECORAÇÕES", 105, 20, null, null, "center");
+    docPdf.setTextColor(15, 23, 42); 
+    docPdf.setFontSize(22);
+    docPdf.setFont("helvetica", "bold");
+    // 🔥 PDF DINÂMICO: Usa o nome da sua empresa configurada
+    docPdf.text(dadosEmpresa.nomeEmpresa.toUpperCase(), 105, 20, null, null, "center");
     
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.text("Locação de Peças e Decoração de Eventos", 105, 28, null, null, "center");
+    docPdf.setFontSize(10);
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text("Locação de Peças e Decoração de Eventos", 105, 28, null, null, "center");
     
     y = 55;
 
     // --- DADOS DO CLIENTE ---
-    doc.setDrawColor(200); 
-    doc.setFillColor(255, 255, 255);
-    doc.roundedRect(margin, 45, 170, 45, 3, 3); 
-    
+    docPdf.setDrawColor(200); 
+    docPdf.setFillColor(255, 255, 255);
+    docPdf.roundedRect(margin, 45, 170, 45, 3, 3);
+
     const dataFormatada = item.dataEvento ? item.dataEvento.split('-').reverse().join('/') : "--/--/----";
     const valorFormatado = Number(item.valorTotal || 0).toLocaleString('pt-BR', {style: 'currency', currency: 'BRL'});
-    
+
     // Linha 1
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("LOCATÁRIO(A):", margin + 5, y);
-    doc.setFont("helvetica", "normal");
-    doc.text((item.cliente || "Consumidor").toUpperCase(), margin + 35, y);
+    docPdf.setFontSize(10);
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text("LOCATÁRIO(A):", margin + 5, y);
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text((item.cliente || "Consumidor").toUpperCase(), margin + 35, y);
     
     // Linha 2
     y += 10;
-    doc.setFont("helvetica", "bold");
-    doc.text("DATA DO EVENTO:", margin + 5, y);
-    doc.text(dataFormatada, margin + 42, y);
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text("DATA DO EVENTO:", margin + 5, y);
+    docPdf.text(dataFormatada, margin + 42, y);
     
-    doc.text("VALOR TOTAL:", margin + 90, y);
-    doc.setTextColor(5, 150, 105); 
-    doc.text(valorFormatado, margin + 120, y);
-    doc.setTextColor(0); 
+    docPdf.text("VALOR TOTAL:", margin + 90, y);
+    docPdf.setTextColor(5, 150, 105); 
+    docPdf.text(valorFormatado, margin + 120, y);
+    docPdf.setTextColor(0); 
 
     // Linha 3
     y += 10;
-    doc.setFont("helvetica", "bold");
-    doc.text("ENDEREÇO:", margin + 5, y);
-    doc.setFont("helvetica", "normal");
-    doc.text(item.endereco || "Local a definir / Retirada", margin + 30, y);
-    
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text("ENDEREÇO:", margin + 5, y);
+    docPdf.setFont("helvetica", "normal");
+    docPdf.text(item.endereco || "Local a definir / Retirada", margin + 30, y);
+
     y += 25; 
 
     // --- CORPO DO TEXTO ---
-    doc.setFontSize(12);
-    doc.setFont("helvetica", "bold");
-    doc.text("DESCRIÇÃO DOS ITENS E TERMOS DE LOCAÇÃO", 105, y, null, null, "center");
-    doc.line(margin, y + 2, 190, y + 2); 
+    docPdf.setFontSize(12);
+    docPdf.setFont("helvetica", "bold");
+    docPdf.text("DESCRIÇÃO DOS ITENS E TERMOS DE LOCAÇÃO", 105, y, null, null, "center");
+    docPdf.line(margin, y + 2, 190, y + 2);
+
     y += 10;
     
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    docPdf.setFont("helvetica", "normal");
+    docPdf.setFontSize(10);
     
     const textoCompleto = item.descricao || "Nenhuma descrição informada.";
-    const linhas = doc.splitTextToSize(textoCompleto, 170);
-    
+    const linhas = docPdf.splitTextToSize(textoCompleto, 170);
+
     linhas.forEach(linha => {
         if (y > pageHeight - 50) { 
-            doc.addPage(); 
+            docPdf.addPage(); 
             y = 20; 
-            doc.setFontSize(8);
-            doc.text(`Contrato - ${item.cliente} (Continuação)`, 105, 10, null, null, "center");
-            doc.setFontSize(10);
+            docPdf.setFontSize(8);
+            docPdf.text(`Contrato - ${item.cliente} (Continuação)`, 105, 10, null, null, "center");
+            docPdf.setFontSize(10);
         }
-        doc.text(linha, margin, y);
+   
+        docPdf.text(linha, margin, y);
         y += 5; 
     });
-    
+
     // --- ASSINATURAS (DUPLAS) ---
     if (y > pageHeight - 60) {
-        doc.addPage();
+        docPdf.addPage();
         y = 40;
     } else {
-        y += 30; 
+        y += 30;
     }
 
-    // Assinatura Ágape (Esquerda)
+    // Assinatura Ágape/Empresa (Esquerda)
     if (item.assinaturaAgape) {
         try {
-            doc.addImage(item.assinaturaAgape, 'PNG', margin + 15, y - 15, 50, 15);
-        } catch (e) { console.error("Erro img Agape", e); }
+            docPdf.addImage(item.assinaturaAgape, 'PNG', margin + 15, y - 15, 50, 15);
+        } catch (e) { console.error("Erro img Empresa", e); }
     }
 
     // Assinatura Cliente (Direita)
     if (item.assinaturaCliente) {
         try {
-            doc.addImage(item.assinaturaCliente, 'PNG', margin + 105, y - 15, 50, 15);
+            docPdf.addImage(item.assinaturaCliente, 'PNG', margin + 105, y - 15, 50, 15);
         } catch (e) { console.error("Erro img Cliente", e); }
     }
     
     // Linhas
-    doc.setDrawColor(0);
-    doc.line(margin + 10, y, margin + 80, y); 
-    doc.line(margin + 100, y, margin + 170, y); 
+    docPdf.setDrawColor(0);
+    docPdf.line(margin + 10, y, margin + 80, y); 
+    docPdf.line(margin + 100, y, margin + 170, y); 
     
     y += 5;
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "bold");
-    doc.text("ÁGAPE DECORAÇÕES", margin + 20, y);
-    doc.text("LOCATÁRIO(A)", margin + 115, y);
+    docPdf.setFontSize(9);
+    docPdf.setFont("helvetica", "bold");
+    // 🔥 PDF DINÂMICO
+    docPdf.text(dadosEmpresa.nomeEmpresa.toUpperCase(), margin + 20, y);
+    docPdf.text("LOCATÁRIO(A)", margin + 115, y);
     
     y += 10;
-    doc.setFont("helvetica", "normal");
-    
+    docPdf.setFont("helvetica", "normal");
+
     // Verifica data
     const dataEmissao = new Date().toLocaleDateString('pt-BR');
+
     const infoData = item.dataAssinatura 
         ? `Assinado digitalmente em: ${new Date(item.dataAssinatura).toLocaleDateString('pt-BR')}`
         : `Emitido para conferência em: ${dataEmissao}`;
 
-    doc.text(infoData, 105, y, null, null, "center");
+    docPdf.text(infoData, 105, y, null, null, "center");
 
-    doc.save(`Contrato_${item.cliente}.pdf`);
+    const nomeArquivoSeguro = dadosEmpresa.nomeEmpresa.replace(/[^a-z0-9]/gi, '_');
+    docPdf.save(`Contrato_${nomeArquivoSeguro}_${item.cliente}.pdf`);
     setMenuAberto(null); // Fecha o menu após a ação
   };
 
@@ -169,7 +207,7 @@ const Contratos = () => {
       <div className="header-top">
         <div>
           <h1>Gestão de Contratos</h1>
-          <p>Documentos profissionais da Ágape Decorações.</p>
+          <p>Documentos profissionais da {dadosEmpresa.nomeEmpresa}.</p>
         </div>
         <div className="header-actions">
           <button className="btn-secondary" onClick={() => navigate("/modelos-contrato")}>

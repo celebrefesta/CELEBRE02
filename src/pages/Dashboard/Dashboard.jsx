@@ -2,11 +2,16 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 import AuditoriaEstoque from './AuditoriaEstoque'; 
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
   
   const [estatisticas, setEstatisticas] = useState({ acervo: 0, ativas: 0, eventos: 0, aReceber: 0, ticketMedio: 0 });
   const [atividades, setAtividades] = useState([]);
@@ -22,13 +27,23 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     const carregarDados = async () => {
       try {
         const hojeISO = new Date().toISOString().split('T')[0];
         const mesAtual = hojeISO.substring(0, 7);
 
-        const estSnap = await getDocs(collection(db, "estoque"));
-        const locSnap = await getDocs(collection(db, "locacoes"));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS o seu estoque e os seus pedidos
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+
+        const estSnap = await getDocs(qEstoque);
+        const locSnap = await getDocs(qLocacoes);
+        
         const locs = locSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         
         const confirmadas = locs.filter(l => l.status === 'confirmado' || l.status === 'preparacao' || l.status === 'entregue' || l.status === 'finalizado');
@@ -51,7 +66,7 @@ const Dashboard = () => {
         setStatusChart({
           orcamento: cOrcamento, confirmado: cConfirmado, preparacao: cPreparacao, entregue: cEntregue, finalizado: cFinalizado, total: cOrcamento + cConfirmado + cPreparacao + cEntregue + cFinalizado
         });
-
+        
         setValoresPorStatus({ orcamento: vOrcamento, confirmado: vConfirmado });
 
         const fatSemanal = [0, 0, 0, 0];
@@ -145,7 +160,7 @@ const Dashboard = () => {
             aReceber: totalAReceber,
             ticketMedio: qtdVendasGeral > 0 ? (faturamentoGeral / qtdVendasGeral) : 0
         });
-        
+
         setFaturamentoData(fatSemanal);
         setAtividades(recents);
         setProximosEventos(proximos);
@@ -153,17 +168,20 @@ const Dashboard = () => {
         setTopPecas(rankingPecas);
         setCobrancasAtrasadas(atrasados.sort((a, b) => b.valor - a.valor).slice(0, 5));
 
-      } catch (e) { console.error("Erro dashboard:", e); } 
-      finally { setLoading(false); }
+      } catch (e) { 
+          console.error("Erro dashboard:", e);
+      } finally { 
+          setLoading(false); 
+      }
     };
+    
     carregarDados();
-  }, []);
+  }, [usuarioLogado]);
 
   if (loading) return <div className="loading-v3">Atualizando central de comando...</div>;
 
   const maxFat = Math.max(...faturamentoData, 1); 
-  const totalG = statusChart.total || 1; 
-  
+  const totalG = statusChart.total || 1;
   const p1 = (statusChart.orcamento / totalG) * 100;
   const p2 = (statusChart.confirmado / totalG) * 100;
   const p3 = (statusChart.preparacao / totalG) * 100;
@@ -212,11 +230,8 @@ const Dashboard = () => {
         
         {/* ================= COLUNA 1: MÉTRICAS E FINANCEIRO ================= */}
         <div className="dash-column">
-          
-          {/* 🔥 NOVO DESIGN DA CAIXA DO GRÁFICO 🔥 */}
           <section className="dash-card-wide flex-grow" style={{ display: 'flex', flexDirection: 'column' }}>
             <h3>📊 Status e Volume</h3>
-            
             <div className="chart-circle-container">
               <svg viewBox="0 0 36 36" className="circular-chart">
                 <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4" />
@@ -232,7 +247,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* 🔥 LEGENDA EM FORMATO DE "PÍLULAS" 🔥 */}
             <div className="chart-legend-pills">
               <div><span style={{background: '#f59e0b'}}></span> Orçamentos <b>{statusChart.orcamento}</b></div>
               <div><span style={{background: '#10b981'}}></span> Confirmados <b>{statusChart.confirmado}</b></div>
@@ -241,7 +255,6 @@ const Dashboard = () => {
               <div><span style={{background: '#3b82f6'}}></span> Finalizados <b>{statusChart.finalizado}</b></div>
             </div>
 
-            {/* 🔥 NOVO CARTÃO DO PIPELINE FINANCEIRO 🔥 */}
             <div className="dash-financial-summary">
                 <h4><span style={{fontSize: '14px'}}>💰</span> PIPELINE FINANCEIRO</h4>
                 <div className="summary-item warning-text">
@@ -269,7 +282,6 @@ const Dashboard = () => {
               ))}
             </div>
           </section>
-
         </div>
 
         {/* ================= COLUNA 2: VENDAS E INTELIGÊNCIA ================= */}
@@ -308,7 +320,6 @@ const Dashboard = () => {
 
         {/* ================= COLUNA 3: OPERACIONAL E ALERTAS ================= */}
         <div className="dash-column">
-          
           <section className="dash-card-wide border-top-red flex-grow">
             <h3>🚨 Radar de Cobrança</h3>
             <p className="card-subtitle" style={{marginBottom: '10px'}}>A festa passou e o pagamento não concluiu.</p>
@@ -340,7 +351,6 @@ const Dashboard = () => {
               )) : <p className="empty-feed">Dados insuficientes.</p>}
             </div>
           </section>
-
         </div>
 
       </div>

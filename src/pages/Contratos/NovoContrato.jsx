@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import "./NovoContrato.css";
 
 const NovoContrato = () => {
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
   
   // Estados para dados e controle visual
   const [listaPedidos, setListaPedidos] = useState([]);
@@ -21,27 +26,34 @@ const NovoContrato = () => {
 
   // 1. Carrega Pedidos e Modelos ao abrir a página
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     const carregarDados = async () => {
       try {
-        // Busca Locações (Pedidos)
-        const snapPedidos = await getDocs(collection(db, "locacoes"));
+        // 🔥 BLINDAGEM: Busca apenas as suas Locações (Pedidos)
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        const snapPedidos = await getDocs(qLocacoes);
         const listaP = snapPedidos.docs.map(d => ({ id: d.id, ...d.data() }));
+        
         // Ordena por data (mais recente primeiro)
         listaP.sort((a, b) => new Date(b.dataEvento || 0) - new Date(a.dataEvento || 0));
         setListaPedidos(listaP);
 
-        // Busca Modelos de Contrato
-        const snapModelos = await getDocs(collection(db, "modelosContrato"));
+        // 🔥 BLINDAGEM: Busca apenas os seus Modelos de Contrato
+        const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", usuarioLogado.uid));
+        const snapModelos = await getDocs(qModelos);
         setMeusModelos(snapModelos.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) { console.error("Erro ao carregar dados:", err); }
     };
     carregarDados();
-  }, []);
+  }, [usuarioLogado, navigate]);
 
   // 2. Importa os dados do Pedido selecionado no Modal
   const importarDados = (pedido) => {
     const descItens = pedido.itens ? pedido.itens.map(i => `${i.qtd || 1}x ${i.nome || i.produto}`).join("\n") : "";
-    
     setForm({
       ...form,
       cliente: pedido.clienteNome || pedido.cliente || "",
@@ -74,11 +86,14 @@ const NovoContrato = () => {
   const handleSalvar = async (e) => {
     e.preventDefault();
     try {
+      // 🔥 BLINDAGEM: Salva o contrato com o seu userId
       await addDoc(collection(db, "contratos"), { 
         ...form, 
         valorTotal: Number(form.valorTotal), 
-        createdAt: serverTimestamp() 
+        createdAt: serverTimestamp(),
+        userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
       });
+      alert("Contrato salvo com sucesso!");
       navigate("/contratos");
     } catch (err) { alert("Erro ao salvar: " + err.message); }
   };

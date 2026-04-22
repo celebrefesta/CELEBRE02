@@ -10,7 +10,7 @@ import './App.css';
 import LandingPage from './pages/LandingPage/LandingPage'; 
 import Login from './pages/Auth/Login';
 import Cadastro from './pages/Auth/Cadastro';
-import Checkout from './pages/Checkout/Checkout'; // 🔥 IMPORTAMOS O CHECKOUT AQUI
+import Checkout from './pages/Checkout/Checkout'; 
 import RotaPrivada from './components/RotaPrivada'; 
 
 // --- PÁGINAS ---
@@ -30,7 +30,7 @@ import EditarLocacao from './pages/Locacoes/EditarLocacao';
 // --- FINANCEIRO & COMPRAS ---
 import Fornecedores from './pages/Fornecedores/Fornecedores';
 import NovoFornecedor from './pages/Fornecedores/NovoFornecedor';
-import Compras from './pages/Compras/Compras'; 
+import Compras from './pages/Compras/Compras';
 import NovaCompra from './pages/Compras/NovaCompra';
 import Financeiro from './pages/Financeiro/Financeiro';
 import NovoLancamento from './pages/Financeiro/NovoLancamento';
@@ -51,14 +51,12 @@ import Configuracoes from './pages/Configuracoes/Configuracoes';
 import Perfil from './pages/Perfil/Perfil';
 import Moodboard from './pages/Moodboard/Moodboard';
 import Catalogo from './pages/Catalago/Catalago'; 
-import Notificacoes from './pages/Notificacoes/Notificacoes'; 
+import Notificacoes from './pages/Notificacoes/Notificacoes';
 
 const AppContent = () => {
   const location = useLocation();
-  
-  // 🔥 ADICIONAMOS O /checkout AQUI PARA ESCONDER O MENU LATERAL NESTA TELA
+
   const rotasSemMenu = ['/', '/login', '/cadastro', '/checkout'];
-  
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
                      !location.pathname.includes('/catalogo') &&
@@ -79,11 +77,14 @@ const AppContent = () => {
           {/* 🔓 OUTRAS ROTAS PÚBLICAS */}
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/checkout" element={<Checkout />} /> {/* 🔥 ADICIONAMOS A ROTA DO CHECKOUT AQUI */}
-          <Route path="/autocadastro" element={<AutoCadastro />} /> 
+          <Route path="/checkout" element={<Checkout />} /> 
+          
+          {/* 🔥 ROTAS MÁGICAS: Agora recebem o :idEmpresa na URL */}
+          <Route path="/autocadastro/:idEmpresa" element={<AutoCadastro />} /> 
+          <Route path="/catalogo/:idEmpresa" element={<Catalogo />} />
+          
           <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
           <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
-          <Route path="/catalogo" element={<Catalogo />} />
 
           {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Apenas Logados) */}
           <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
@@ -100,6 +101,9 @@ const AppContent = () => {
           
           <Route path="/fornecedores" element={<RotaPrivada><Fornecedores /></RotaPrivada>} />
           <Route path="/fornecedores/novo" element={<RotaPrivada><NovoFornecedor /></RotaPrivada>} />
+          {/* 🔥 ROTA CORRIGIDA: Permite editar os fornecedores */}
+          <Route path="/fornecedores/editar/:id" element={<RotaPrivada><NovoFornecedor /></RotaPrivada>} />
+          
           <Route path="/compras" element={<RotaPrivada><Compras /></RotaPrivada>} />
           <Route path="/compras/nova" element={<RotaPrivada><NovaCompra /></RotaPrivada>} />
           <Route path="/compras/editar/:id" element={<RotaPrivada><NovaCompra /></RotaPrivada>} />
@@ -109,6 +113,7 @@ const AppContent = () => {
           
           <Route path="/agenda" element={<RotaPrivada><Agenda /></RotaPrivada>} />
           <Route path="/logistica" element={<RotaPrivada><Logistica /></RotaPrivada>} />
+          
           <Route path="/contratos" element={<RotaPrivada><Contratos /></RotaPrivada>} />
           <Route path="/novo-contrato" element={<RotaPrivada><NovoContrato /></RotaPrivada>} />
           <Route path="/modelos-contrato" element={<RotaPrivada><ModelosContrato /></RotaPrivada>} />

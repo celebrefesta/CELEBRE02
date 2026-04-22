@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import './Logistica.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, updateDoc, getDoc } from 'firebase/firestore'; 
+import { collection, getDocs, doc, updateDoc, getDoc, query, where } from 'firebase/firestore'; 
 import { useNavigate } from 'react-router-dom';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 
 const Logistica = () => {
   const navigate = useNavigate();
+
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [locacoes, setLocacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroTempo, setFiltroTempo] = useState('mes_atual');
@@ -21,56 +27,60 @@ const Logistica = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      const snap = await getDocs(collection(db, "locacoes"));
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as suas locações
+      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+      const snap = await getDocs(qLocacoes);
       const dados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const ordenados = dados.sort((a, b) => (a.dataRetirada || '').localeCompare(b.dataRetirada || ''));
       setLocacoes(ordenados);
 
-      const docRef = doc(db, "sistema", "parametros");
+      // 🔥 BLINDAGEM: Puxa o seu cofre de configurações
+      const docRef = doc(db, "configuracoes_empresa", usuarioLogado.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setParametros(docSnap.data());
       }
 
-      const contratoRef = doc(db, "contratos", "relatorio_avarias");
+      // 🔥 BLINDAGEM: Puxa o seu texto de relatório de avarias
+      const contratoRef = doc(db, "relatorio_avarias", usuarioLogado.uid);
       const contratoSnap = await getDoc(contratoRef);
       if (contratoSnap.exists()) {
         setTextoRelatorio(contratoSnap.data().conteudo || contratoSnap.data().texto || '');
       }
 
     } catch (e) {
-      console.error("Erro ao carregar sistema:", e);
+      console.error("Erro ao carregar logística:", e);
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+
     carregarDados();
     if (window.innerWidth <= 800) {
       setVistaAtual('lista');
     }
-  }, []);
+  }, [usuarioLogado, navigate]);
 
   const moverCard = async (id, novoStatus) => {
     const locacaoAlvo = locacoes.find(l => l.id === id);
     const hojeStr = new Date().toISOString().split('T')[0];
 
-    // 🔥 NOVA LÓGICA DE TRAVA DA LOGÍSTICA (PERMITE DEVOLUÇÃO NO MESMO DIA) 🔥
+    // NOVA LÓGICA DE TRAVA DA LOGÍSTICA
     if (novoStatus === 'finalizado') {
-        
-        // 1. Bloqueia apenas se a festa for no futuro
         if (locacaoAlvo.dataRetirada > hojeStr) {
             alert(`🚫 BLOQUEADO:\nA data do evento é ${locacaoAlvo.dataRetirada.split('-').reverse().join('/')}. Você não pode receber peças de volta de uma festa que ainda nem aconteceu!`);
             return; 
         }
-
-        // 2. Avisa se for uma devolução antecipada (Festa hoje, Devolução amanhã, mas entregou hoje)
         if (locacaoAlvo.dataDevolucao && locacaoAlvo.dataDevolucao > hojeStr) {
             const confAntecipada = window.confirm(`⚠️ DEVOLUÇÃO ANTECIPADA:\nA devolução estava marcada para ${locacaoAlvo.dataDevolucao.split('-').reverse().join('/')}, mas o cliente devolveu hoje. Confirmar o recebimento no galpão?`);
             if (!confAntecipada) return;
         } else {
-            // Fluxo normal
             const confirmacao = window.confirm('O material chegou no galpão? Ele irá para a coluna de Devolvidos para conferência final.');
             if (!confirmacao) return;
         }
@@ -92,7 +102,6 @@ const Logistica = () => {
       if (idx === itemIndex) return { ...item, [tipo]: !item[tipo] };
       return item;
     });
-
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
     try { await updateDoc(doc(db, "locacoes", locId), { itens: novosItens }); } catch (e) {}
   };
@@ -110,7 +119,6 @@ const Logistica = () => {
       }
       return item;
     });
-
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
     try { await updateDoc(doc(db, "locacoes", locId), { itens: novosItens }); } catch (e) {}
   };
@@ -202,6 +210,7 @@ const Logistica = () => {
           parametros={parametros} 
           textoBase={textoRelatorio} 
           onClose={() => setRelatorioModalLoc(null)} 
+          usuarioLogadoId={usuarioLogado.uid}
         />
       )}
     </div>
@@ -311,15 +320,16 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
   );
 };
 
-
-const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
+const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLogadoId }) => {
   const [itensProblema, setItensProblema] = useState([]);
   const [carregandoValores, setCarregandoValores] = useState(true);
 
   useEffect(() => {
     const buscarValoresNoEstoque = async () => {
       try {
-        const estoqueSnap = await getDocs(collection(db, "estoque"));
+        // 🔥 BLINDAGEM: Busca apenas no seu próprio estoque
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogadoId));
+        const estoqueSnap = await getDocs(qEstoque);
         const estoqueData = estoqueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         const itensBase = loc.itens.filter(i => i.avaria || i.faltou);
@@ -342,14 +352,13 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
             
             let valorString = String(valorBruto).replace(/[R$\s]/g, '');
             if (valorString.includes('.') && valorString.includes(',')) {
-               valorString = valorString.replace(/\./g, ''); 
+               valorString = valorString.replace(/\./g, '');
             }
             valorString = valorString.replace(',', '.'); 
             precoEncontrado = parseFloat(valorString);
           }
 
           const valorFinalValido = (!precoEncontrado || isNaN(precoEncontrado)) ? 0 : precoEncontrado;
-
           return {
             ...item,
             valorBaseEstoque: valorFinalValido, 
@@ -366,7 +375,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
     };
 
     buscarValoresNoEstoque();
-  }, [loc]);
+  }, [loc, usuarioLogadoId]);
 
   const handleValorChange = (index, value) => {
     const novosItens = [...itensProblema];
@@ -375,11 +384,11 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
   };
 
   const totalCobrar = itensProblema.reduce((acc, item) => acc + (parseFloat(item.valorCobrado || 0) * item.qtd), 0);
-
+  
   const formatarMoeda = (valor) => {
     return parseFloat(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   };
-
+  
   const gerarTermoPDF = () => {
     const nomeEmpresa = parametros?.nomeEmpresa || parametros?.nomeFantasia || parametros?.nome || 'NOME DA EMPRESA NÃO CONFIGURADO';
     const logoEmpresa = parametros?.logotipo || parametros?.logo || parametros?.logoUrl || parametros?.foto || null;
@@ -450,7 +459,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
           <div class="total-box"> VALOR TOTAL A PAGAR: <span>${formatarMoeda(totalCobrar)}</span> </div>
 
           <div class="aviso-legal">
-            ${textoBase || 'Declaramos para os devidos fins que os itens listados acima apresentaram avarias ou ausências descritas. Nossa equipe entrará em contato.'}
+            ${textoBase || 'Declaramos para os devidos fins que os itens listados acima apresentaram avarias ou ausências descritas.\nNossa equipe entrará em contato.'}
           </div>
 
           <div class="assinaturas">
@@ -465,7 +474,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
     setTimeout(() => { printWindow.print(); }, 800);
     onClose(); 
   };
-
+  
   return (
     <div className="modal-overlay-v3" onClick={onClose}>
       <div className="modal-content-v3" style={{maxWidth: '750px', width: '95vw', padding: '0'}} onClick={e => e.stopPropagation()}>
@@ -505,6 +514,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose }) => {
 const ModalChecklist = ({ loc, onClose, onToggleChecklist, onRegistrarRetorno }) => {
   const isFaseSeparacao = loc.status === 'preparacao';
   const isFaseDevolucao = loc.status === 'finalizado'; 
+  
   return (
     <div className="modal-overlay-v3" onClick={onClose}>
       <div className="modal-content-v3 modal-checklist-large" onClick={e => e.stopPropagation()}>

@@ -1,14 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useNavigate } from 'react-router-dom';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 
 // 🔥 CONFIGURAÇÃO DE PRODUÇÃO 🔥
-// Substitua pelo seu Public Key de produção (APP_USR-...) do painel do Mercado Pago
 initMercadoPago('APP_USR-4c525755-f2c1-4e28-8c9e-020787a172a1', { locale: 'pt-BR' });
 
 const Checkout = () => {
   const navigate = useNavigate();
   const [mensagem, setMensagem] = useState('');
+
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
+  useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+    }
+  }, [usuarioLogado, navigate]);
 
   // Configuração do valor do plano
   const initialization = {
@@ -29,15 +39,21 @@ const Checkout = () => {
     
     return new Promise(async (resolve, reject) => {
       try {
-        // O link do seu robô no Google Cloud (Backend)
         const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
+
+        // 🔥 BLINDAGEM: Envia a identificação da empresa para o backend ativar a conta certa!
+        const payload = {
+            ...formData,
+            userId: usuarioLogado.uid,
+            userEmail: usuarioLogado.email
+        };
 
         const resposta = await fetch(URL_DO_SEU_ROBO, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(payload),
         });
 
         const resultado = await resposta.json();
@@ -82,6 +98,7 @@ const Checkout = () => {
             <span>Valor do plano</span>
             <strong>R$ 99,00</strong>
           </div>
+          
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '1.2rem' }}>
             <strong>Total a pagar hoje</strong>
             <strong>R$ 99,00</strong>

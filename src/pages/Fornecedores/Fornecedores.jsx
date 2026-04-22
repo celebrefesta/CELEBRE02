@@ -1,63 +1,66 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { db } from '../../firebaseConfig'; 
+import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 import './Fornecedores.css';
 
 const Fornecedores = () => {
   const navigate = useNavigate();
 
-  // Dados de Exemplo (Simulando o banco de dados)
-  const [fornecedores] = useState([
-    {
-      id: 1,
-      nome: 'Magazine 25 de Março',
-      subtexto: 'CNPJ: 12.345.678/0001-90',
-      contato: '(11) 98888-0000',
-      email: 'vendas@mag25.com.br',
-      categoria: 'Atacado Geral',
-      catClass: 'badge-blue',
-      stars: 4.5,
-      link: 'Visitar',
-      icone: 'fas fa-store',
-      iconeBg: '#e0f2fe',
-      iconeColor: '#0284c7'
-    },
-    {
-      id: 2,
-      nome: 'Ateliê da Juju',
-      subtexto: 'CPF: 333.444.555-66',
-      contato: '(19) 97777-1234',
-      local: 'Campinas - SP',
-      categoria: 'Artesanato/Bolo Fake',
-      catClass: 'badge-purple',
-      stars: 5,
-      link: 'Instagram',
-      linkIcon: 'fab fa-instagram',
-      icone: 'fas fa-paint-brush',
-      iconeBg: '#f3e8ff',
-      iconeColor: '#7e22ce'
-    },
-    {
-      id: 3,
-      nome: 'Expresso Transportes',
-      subtexto: 'Serviço Terceirizado',
-      contato: '(19) 3333-4444',
-      categoria: 'Logística',
-      catClass: 'badge-orange',
-      stars: 3,
-      link: null,
-      icone: 'fas fa-shipping-fast',
-      iconeBg: '#fff7ed',
-      iconeColor: '#c2410c'
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
+  const [fornecedores, setFornecedores] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [busca, setBusca] = useState('');
+
+  useEffect(() => {
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
     }
-  ]);
+
+    const carregarFornecedores = async () => {
+      try {
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS os seus fornecedores
+        const q = query(collection(db, "fornecedores"), where("userId", "==", usuarioLogado.uid));
+        const querySnapshot = await getDocs(q);
+        const lista = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        setFornecedores(lista);
+      } catch (error) {
+        console.error("Erro ao buscar fornecedores:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarFornecedores();
+  }, [usuarioLogado, navigate]);
+
+  const handleDelete = async (id) => {
+      if(window.confirm("Deseja realmente excluir este fornecedor?")) {
+          try {
+              await deleteDoc(doc(db, "fornecedores", id));
+              setFornecedores(prev => prev.filter(f => f.id !== id));
+          } catch (e) {
+              alert("Erro ao excluir fornecedor.");
+          }
+      }
+  };
 
   // Função para desenhar as estrelinhas
   const renderStars = (score) => {
+    const numScore = Number(score) || 0;
     const stars = [];
     for (let i = 1; i <= 5; i++) {
-      if (i <= score) {
+      if (i <= numScore) {
         stars.push(<i key={i} className="fas fa-star filled"></i>);
-      } else if (i === Math.ceil(score) && !Number.isInteger(score)) {
+      } else if (i === Math.ceil(numScore) && !Number.isInteger(numScore)) {
         stars.push(<i key={i} className="fas fa-star-half-alt filled"></i>);
       } else {
         stars.push(<i key={i} className="far fa-star"></i>);
@@ -66,16 +69,19 @@ const Fornecedores = () => {
     return stars;
   };
 
+  const fornecedoresFiltrados = fornecedores.filter(f =>
+      (f.nome || '').toLowerCase().includes(busca.toLowerCase()) ||
+      (f.categoria || '').toLowerCase().includes(busca.toLowerCase())
+  );
+
   return (
     <div className="fornecedores-page">
-      
       {/* Cabeçalho */}
       <header className="page-header">
         <div className="page-title">
           <h1>Meus Fornecedores</h1>
           <p>Parceiros de compras e serviços</p>
         </div>
-        {/* AQUI ESTÁ A CORREÇÃO DO BOTÃO: */}
         <button className="btn btn-accent" onClick={() => navigate('/novo-fornecedor')}>
           <i className="fas fa-plus"></i> Novo Fornecedor
         </button>
@@ -86,7 +92,13 @@ const Fornecedores = () => {
         <div className="filter-grid">
           <div className="form-group">
             <label>Buscar Fornecedor</label>
-            <input type="text" className="form-control" placeholder="Nome, CNPJ ou Produto..." />
+            <input 
+                type="text" 
+                className="form-control" 
+                placeholder="Nome, CNPJ ou Produto..." 
+                value={busca}
+                onChange={(e) => setBusca(e.target.value)}
+            />
           </div>
           <div className="form-group">
             <label>Categoria</label>
@@ -99,15 +111,7 @@ const Fornecedores = () => {
             </select>
           </div>
           <div className="form-group">
-            <label>Avaliação</label>
-            <select className="form-control">
-              <option>Todas</option>
-              <option>5 Estrelas</option>
-              <option>Problemáticos</option>
-            </select>
-          </div>
-          <div className="form-group">
-            <button className="btn btn-primary full-width">
+            <button className="btn btn-primary full-width" style={{marginTop: '24px'}}>
               <i className="fas fa-search"></i> Filtrar
             </button>
           </div>
@@ -116,6 +120,9 @@ const Fornecedores = () => {
 
       {/* Tabela */}
       <div className="table-card">
+        {loading ? (
+            <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>Carregando os seus fornecedores...</div>
+        ) : (
         <table>
           <thead>
             <tr>
@@ -128,27 +135,32 @@ const Fornecedores = () => {
             </tr>
           </thead>
           <tbody>
-            {fornecedores.map((item) => (
+            {fornecedoresFiltrados.length === 0 ? (
+                <tr>
+                    <td colSpan="6" style={{textAlign: 'center', padding: '40px', color: '#94a3b8'}}>Nenhum fornecedor cadastrado.</td>
+                </tr>
+            ) : (
+            fornecedoresFiltrados.map((item) => (
               <tr key={item.id}>
                 <td>
                   <div className="supplier-info">
-                    <div className="supplier-icon" style={{backgroundColor: item.iconeBg, color: item.iconeColor}}>
-                      <i className={item.icone}></i>
+                    <div className="supplier-icon" style={{backgroundColor: item.iconeBg || '#e0f2fe', color: item.iconeColor || '#0284c7'}}>
+                      <i className={item.icone || 'fas fa-store'}></i>
                     </div>
                     <div>
                       <div className="supplier-name">{item.nome}</div>
-                      <div className="supplier-sub">{item.subtexto}</div>
+                      <div className="supplier-sub">{item.subtexto || item.cnpj}</div>
                     </div>
                   </div>
                 </td>
                 <td>
                   <div className="contact-info">
-                    <div><i className="fab fa-whatsapp"></i> {item.contato}</div>
+                    {item.contato && <div><i className="fab fa-whatsapp"></i> {item.contato}</div>}
                     {item.email && <div><i className="far fa-envelope"></i> {item.email}</div>}
                     {item.local && <div><i className="fas fa-map-marker-alt"></i> {item.local}</div>}
                   </div>
                 </td>
-                <td><span className={`badge ${item.catClass}`}>{item.categoria}</span></td>
+                <td><span className={`badge ${item.catClass || 'badge-blue'}`}>{item.categoria || 'Geral'}</span></td>
                 <td>
                   <div className="stars">
                     {renderStars(item.stars)}
@@ -156,30 +168,27 @@ const Fornecedores = () => {
                 </td>
                 <td>
                   {item.link ? (
-                    <a href="#" className="link-btn">
-                      <i className={item.linkIcon || "fas fa-external-link-alt"}></i> {item.link}
+                    <a href={item.link.startsWith('http') ? item.link : `https://${item.link}`} target="_blank" rel="noreferrer" className="link-btn">
+                      <i className={item.linkIcon || "fas fa-external-link-alt"}></i> Visitar
                     </a>
                   ) : (
                     <span className="no-link">-</span>
                   )}
                 </td>
-                <td style={{textAlign: 'right'}}>
-                  <button className="action-btn"><i className="fas fa-pen"></i></button>
-                  <button className="action-btn"><i className="fas fa-history"></i></button>
+                <td style={{textAlign: 'right', display: 'flex', gap: '8px', justifyContent: 'flex-end'}}>
+                  <button className="action-btn" title="Editar" onClick={() => navigate(`/fornecedores/editar/${item.id}`)}>
+                    <i className="fas fa-pen"></i>
+                  </button>
+                  <button className="action-btn" title="Excluir" style={{color: '#ef4444', backgroundColor: '#fef2f2'}} onClick={() => handleDelete(item.id)}>
+                    <i className="fas fa-trash"></i>
+                  </button>
                 </td>
               </tr>
-            ))}
+            )))}
           </tbody>
         </table>
-
-        {/* Paginação */}
-        <div className="pagination">
-            <button className="btn btn-outline small">Anterior</button>
-            <button className="btn btn-primary small">1</button>
-            <button className="btn btn-outline small">Próxima</button>
-        </div>
+        )}
       </div>
-
     </div>
   );
 };

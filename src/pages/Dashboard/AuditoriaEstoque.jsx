@@ -1,22 +1,33 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 import './AuditoriaEstoque.css';
 
 const AuditoriaEstoque = () => {
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [pedidosComProblema, setPedidosComProblema] = useState([]);
   const [loading, setLoading] = useState(true);
   const [visivel, setVisivel] = useState(false);
 
   useEffect(() => {
+    if (!usuarioLogado) return; // Se não tiver logado, nem tenta auditar
+
     const realizarAuditoriaUnificada = async () => {
       try {
         const tzoffset = (new Date()).getTimezoneOffset() * 60000;
         const hoje = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
 
-        const snap = await getDocs(collection(db, "locacoes"));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Audita APENAS os seus pedidos
+        const q = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        const snap = await getDocs(q);
+        
         const anomalias = [];
 
         snap.docs.forEach(docSnap => {
@@ -56,12 +67,13 @@ const AuditoriaEstoque = () => {
           // 5. Avarias e Faltas
           const temAvaria = item.itens?.some(i => i.avaria);
           const temFalta = item.itens?.some(i => i.faltou);
+          
           if (temAvaria) { alertas.push({ tipo: 'avaria', texto: 'Peça Avariada' }); permiteAcaoRapida = false; }
           if (temFalta) { alertas.push({ tipo: 'falta', texto: 'Peça Faltando' }); permiteAcaoRapida = false; }
 
           // Se tiver alerta e o status for finalizado, só mostra se tiver BO de dinheiro/avaria
           if (statusStr === 'finalizado' && !temAvaria && !temFalta && saldoDevedor <= 0) return;
-
+          
           if (alertas.length > 0) {
             anomalias.push({ ...item, alertas, permiteAcaoRapida });
           }
@@ -79,7 +91,7 @@ const AuditoriaEstoque = () => {
     };
 
     realizarAuditoriaUnificada();
-  }, []);
+  }, [usuarioLogado]);
 
   const handleResolverRapido = async (id, novoStatus) => {
     try {
@@ -111,7 +123,7 @@ const AuditoriaEstoque = () => {
             <div key={pedido.id} className="auditoria-card">
               <div className="auditoria-info">
                 <h3>{pedido.clienteNome || 'Cliente não informado'} <span className="pedido-id">#{pedido.id.slice(-4)}</span></h3>
-                
+        
                 <div className="auditoria-detalhes">
                     <span className="badge-data">📅 Data: {pedido.dataRetirada?.split('-').reverse().join('/') || 'S/D'}</span>
                     <span className="badge-status">Status: {pedido.status?.toUpperCase()}</span>

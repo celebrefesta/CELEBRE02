@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
 import './Catalago.css';
 
 const ESTRUTURA_TEMAS = {
@@ -14,52 +15,70 @@ const ESTRUTURA_TEMAS = {
 
 const Catalogo = () => {
   const navigate = useNavigate();
+
+  // 🔥 BLINDAGEM MULTI-EMPRESA E LINK MÁGICO [cite: 4, 35, 138]
+  const { idEmpresa } = useParams();
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+  
+  const tenantId = idEmpresa || (usuarioLogado ? usuarioLogado.uid : null);
+
   const [estoque, setEstoque] = useState([]);
   const [empresa, setEmpresa] = useState({ 
     nome: 'CELEBRE', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '' 
   });
   const [loading, setLoading] = useState(true);
+  const [lojaInvalida, setLojaInvalida] = useState(false);
   
   const [filtroModalidade, setFiltroModalidade] = useState('Todas');
-  const [filtroMenu, setFiltroMenu] = useState('Todos'); 
+  const [filtroMenu, setFiltroMenu] = useState('Todos');
   const [busca, setBusca] = useState('');
   const [carrinho, setCarrinho] = useState([]);
   
   const [modalFinalizar, setModalFinalizar] = useState(false);
   const [dadosCliente, setDadosCliente] = useState({ nome: '', whats: '', dataEvento: '' });
-  const [tipoFluxo, setTipoFluxo] = useState('orcamento'); 
+  const [tipoFluxo, setTipoFluxo] = useState('orcamento');
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   const [produtoDetalhe, setProdutoDetalhe] = useState(null);
 
-  // 🔥 1. CARREGA OS DADOS DA EMPRESA (INCLUINDO O PIXEL) 🔥
   useEffect(() => {
     const inicializar = async () => {
+      if (!tenantId) {
+          setLojaInvalida(true);
+          setLoading(false);
+          return;
+      }
+
       try {
-        const docRef = doc(db, "sistema", "parametros");
+        const docRef = doc(db, "configuracoes_empresa", tenantId);
         const docSnap = await getDoc(docRef);
+        
         if (docSnap.exists()) {
           const d = docSnap.data();
           setEmpresa({
             nome: d.nomeEmpresa || d.nome || 'CELEBRE',
-            logo: d.logoUrl || d.logo || '',
+            logo: d.logoUrl || d.logo || d.logotipo || '',
             whats: d.whatsapp || d.telefone || '',
             endereco: d.endereco || '',
             insta: d.instagram || '',
-            pixelFacebook: d.pixelFacebook || d.pixel || '' // Busca o Pixel no banco
+            pixelFacebook: d.pixelFacebook || d.pixel || '' 
           });
         }
 
-        const snap = await getDocs(collection(db, "estoque"));
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
+        const snap = await getDocs(qEstoque);
         const itens = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => i.status !== 'manutencao'); 
         setEstoque(itens);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) { 
+        console.error(e);
+      } finally { 
+        setLoading(false); 
+      }
     };
     inicializar();
-  }, []);
+  }, [tenantId]);
 
-  // 🔥 2. INSTALADOR SILENCIOSO DO FACEBOOK PIXEL 🔥
   useEffect(() => {
     if (empresa.pixelFacebook) {
       !function(f,b,e,v,n,t,s)
@@ -72,11 +91,10 @@ const Catalogo = () => {
       'https://connect.facebook.net/en_US/fbevents.js');
       
       window.fbq('init', empresa.pixelFacebook);
-      window.fbq('track', 'PageView'); // Avisa o Facebook que alguém entrou no site
+      window.fbq('track', 'PageView'); 
     }
   }, [empresa.pixelFacebook]);
 
-  // Função disparadora de eventos do Pixel
   const dispararPixel = (nomeEvento, dados = {}) => {
     if (window.fbq && empresa.pixelFacebook) {
       window.fbq('track', nomeEvento, dados);
@@ -84,7 +102,7 @@ const Catalogo = () => {
   };
 
   const categoriasDinamicas = [...new Set(estoque.map(i => i.categoria ? String(i.categoria) : "").filter(c => c !== ""))].sort();
-
+  
   const formatarDimensoes = (dim) => {
     if (!dim) return null;
     if (typeof dim === 'string') return dim;
@@ -114,7 +132,6 @@ const Catalogo = () => {
       setCarrinho(carrinho.filter(i => i.id !== item.id));
     } else {
       setCarrinho([...carrinho, { ...item, qtd: 1 }]);
-      // 📡 DISPARA O PIXEL: O cliente colocou algo no carrinho!
       dispararPixel('AddToCart', { 
           content_name: item.nome, 
           value: Number(item.financeiro?.valorAluguel || 0), 
@@ -124,22 +141,20 @@ const Catalogo = () => {
   };
 
   const isNoCarrinho = (id) => carrinho.some(i => i.id === id);
-
   const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * i.qtd), 0);
-
+  
   const abrirCarrinho = () => {
       setModalFinalizar(true);
-      // 📡 DISPARA O PIXEL: O cliente abriu o carrinho para ver o resumo
       dispararPixel('InitiateCheckout', { value: calcularTotal(), currency: 'BRL' });
   };
 
   const enviarOrcamento = async (e) => {
     e.preventDefault();
     if (carrinho.length === 0) return alert("Seu carrinho está vazio!");
-
+    
     const total = calcularTotal();
     const resumoItens = carrinho.map(i => `- ${i.qtd}x ${i.nome} (R$ ${Number(i.financeiro?.valorAluguel || 0).toFixed(2)})`).join('\n');
-
+    
     try {
       await addDoc(collection(db, "locacoes"), {
         clienteNome: dadosCliente.nome,
@@ -150,13 +165,14 @@ const Catalogo = () => {
         valorTotal: total,
         status: 'orcamento',
         origem: 'catalogo_publico',
-        criadoEm: serverTimestamp()
+        criadoEm: serverTimestamp(),
+        userId: tenantId 
       });
-
-      // 📡 DISPARA O PIXEL: Golaço! O cliente enviou o orçamento (Virou um Lead de Valor)
+      
       dispararPixel('Lead', { value: total, currency: 'BRL' });
-
-      const whatsDestino = empresa.whats.replace(/\D/g, '') || "5519999999999"; 
+      
+      const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : "5519999999999";
+      
       const texto = `🌟 *NOVO ORÇAMENTO* 🌟\n\n*Cliente:* ${dadosCliente.nome}\n*Data do Evento:* ${dadosCliente.dataEvento}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}\n\nOlá! Vim pelo catálogo e gostaria de verificar a disponibilidade destas peças!`;
       
       window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(texto)}`, '_blank');
@@ -164,7 +180,7 @@ const Catalogo = () => {
       setModalFinalizar(false);
     } catch (err) { 
         console.error(err);
-        alert("Erro ao processar o orçamento. Tente novamente."); 
+        alert("Erro ao processar o orçamento. Tente novamente.");
     }
   };
 
@@ -177,7 +193,7 @@ const Catalogo = () => {
            (filtroMenu === 'Todos' || catI.includes(String(filtroMenu).toLowerCase()) || temaI.includes(String(filtroMenu).toLowerCase())) &&
            (filtroModalidade === 'Todas' || String(i.modalidade || '').toLowerCase().includes(String(filtroModalidade).toLowerCase()));
   });
-
+  
   const selecionarFiltro = (tipo, valor) => {
     if (tipo === 'modalidade') setFiltroModalidade(valor);
     if (tipo === 'menu') setFiltroMenu(valor);
@@ -197,7 +213,15 @@ const Catalogo = () => {
   };
 
   if (loading) return <div className="loader-catalogo">Carregando Acervo...</div>;
-
+  
+  if (lojaInvalida) return (
+      <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', fontFamily: 'sans-serif', textAlign: 'center', padding: '20px'}}>
+          <h1 style={{fontSize: '40px', marginBottom: '10px'}}>🏪</h1>
+          <h2>Loja não encontrada</h2>
+          <p style={{color: '#64748b'}}>Por favor, solicite o link correto à decoradora para aceder ao catálogo de produtos.</p>
+      </div>
+  );
+  
   return (
     <div className="catalogo-publico">
       <header className="cat-header">
@@ -211,7 +235,7 @@ const Catalogo = () => {
             </div>
           </div>
         </div>
-        <button className="btn-admin-login" onClick={() => navigate('/')}>🔒 Restrito</button>
+        <button className="btn-admin-login" onClick={() => navigate(usuarioLogado ? '/dashboard' : '/login')}>🔒 Restrito</button>
       </header>
 
       <div className="cat-container-main">
@@ -219,6 +243,7 @@ const Catalogo = () => {
         {menuMobileAberto && <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>}
 
         <aside className={`cat-sidebar ${menuMobileAberto ? 'open' : ''}`}>
+ 
           <div className="sidebar-mobile-header">
              <h3>Filtros</h3>
              <button className="btn-fechar-menu" onClick={() => setMenuMobileAberto(false)}>✕</button>
@@ -226,17 +251,6 @@ const Catalogo = () => {
 
           {empresa.logo && <img src={empresa.logo} className="sidebar-logo-img" alt="Logo" />}
           
-          <div className="sidebar-section">
-            <h3 className="sidebar-title">Modalidade</h3>
-            <ul className="sidebar-list">
-              <li className={filtroModalidade === 'Todas' ? 'active' : ''} onClick={() => selecionarFiltro('modalidade', 'Todas')}>✓ Todas</li>
-              <li className={filtroModalidade === 'Pegue e Monte' ? 'active' : ''} onClick={() => selecionarFiltro('modalidade', 'Pegue e Monte')}>📦 Pegue e Monte</li>
-              <li className={filtroModalidade === 'Decoração Completa' ? 'active' : ''} onClick={() => selecionarFiltro('modalidade', 'Decoração Completa')}>✨ Decoração</li>
-            </ul>
-          </div>
-
-          <div className="sidebar-divider"></div>
-
           <div className="sidebar-section">
             <h3 className="sidebar-title">Acervo</h3>
             <ul className="sidebar-list">
@@ -263,6 +277,75 @@ const Catalogo = () => {
         </aside>
 
         <main className="cat-content">
+          
+          {/* 🔥 BOTÕES DE MODALIDADE CENTRALIZADOS E MODERNOS [cite: 53] */}
+          <div style={{ 
+            display: 'flex', 
+            gap: '10px', 
+            marginBottom: '20px', 
+            flexWrap: 'wrap', 
+            justifyContent: 'center', 
+            width: '100%',
+            padding: '0 10px'
+          }}>
+             <button 
+                onClick={() => selecionarFiltro('modalidade', 'Todas')}
+                style={{ 
+                  padding: '10px 20px', 
+                  borderRadius: '25px', 
+                  border: '1px solid #cbd5e1', 
+                  background: filtroModalidade === 'Todas' ? '#0f172a' : '#fff', 
+                  color: filtroModalidade === 'Todas' ? '#fff' : '#475569', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer', 
+                  transition: '0.3s ease',
+                  fontSize: '14px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '5px'
+                }}
+             >
+                {filtroModalidade === 'Todas' && <span>✓</span>} Todas
+             </button>
+
+             <button 
+                onClick={() => selecionarFiltro('modalidade', 'Pegue e Monte')}
+                style={{ 
+                  padding: '10px 20px', 
+                  borderRadius: '25px', 
+                  border: '1px solid #cbd5e1', 
+                  background: filtroModalidade === 'Pegue e Monte' ? '#0f172a' : '#fff', 
+                  color: filtroModalidade === 'Pegue e Monte' ? '#fff' : '#475569', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer', 
+                  transition: '0.3s ease',
+                  fontSize: '14px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+             >
+                📦 Pegue e Monte
+             </button>
+
+             <button 
+                onClick={() => selecionarFiltro('modalidade', 'Decoração Completa')}
+                style={{ 
+                  padding: '10px 20px', 
+                  borderRadius: '25px', 
+                  border: '1px solid #cbd5e1', 
+                  background: filtroModalidade === 'Decoração Completa' ? '#0f172a' : '#fff', 
+                  color: filtroModalidade === 'Decoração Completa' ? '#fff' : '#475569', 
+                  fontWeight: 'bold', 
+                  cursor: 'pointer', 
+                  transition: '0.3s ease',
+                  fontSize: '14px',
+                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
+                }}
+             >
+                ✨ Decoração
+             </button>
+          </div>
+
           <div className="cat-top-controls">
               <div className="cat-search-bar">
                 <input type="text" placeholder="O que você procura para sua festa?" value={busca} onChange={e => setBusca(e.target.value)} />
@@ -272,7 +355,7 @@ const Catalogo = () => {
           {window.innerWidth <= 900 && (filtroMenu !== 'Todos' || filtroModalidade !== 'Todas') && (
               <div className="active-filters-mobile">
                   Mostrando: <strong>{filtroModalidade}</strong> • <strong>{filtroMenu}</strong>
-                  <button onClick={() => { setFiltroModalidade('Todas'); setFiltroMenu('Todos'); }}>Limpar</button>
+                 <button onClick={() => { setFiltroModalidade('Todas'); setFiltroMenu('Todos'); }}>Limpar</button>
               </div>
           )}
 
@@ -313,9 +396,14 @@ const Catalogo = () => {
         </div>
       </footer>
 
+      {/* 🔥 BOTÃO FLUTUANTE DO MENU (CORRIGIDO PARA ABRIR/FECHAR) [cite: 71] */}
       {window.innerWidth <= 900 && (
-          <button className="btn-mobile-filtros-fab" onClick={() => setMenuMobileAberto(true)}>
-             ☰
+          <button 
+            className="btn-mobile-filtros-fab" 
+            onClick={() => setMenuMobileAberto(!menuMobileAberto)}
+            style={{ zIndex: 999999, position: 'fixed' }}
+          >
+             {menuMobileAberto ? '✕' : '☰'}
           </button>
       )}
 
@@ -326,11 +414,9 @@ const Catalogo = () => {
         </div>
       )}
 
-      {/* =========================================================
-          🔥 MODAL E-COMMERCE PREMIUM (DETALHES DO PRODUTO) 🔥
-      ========================================================= */}
+      {/* MODAL E-COMMERCE PREMIUM (DETALHES DO PRODUTO) [cite: 73, 105] */}
       {produtoDetalhe && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 99999, padding: '20px', boxSizing: 'border-box', opacity: 1, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setProdutoDetalhe(null)}>
+        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '20px', boxSizing: 'border-box', opacity: 1, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setProdutoDetalhe(null)}>
           <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '950px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={e => e.stopPropagation()}>
             
             <button onClick={() => setProdutoDetalhe(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '50%', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', zIndex: 10, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -341,7 +427,6 @@ const Catalogo = () => {
                    {produtoDetalhe.foto ? <img src={produtoDetalhe.foto} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={produtoDetalhe.nome}/> : <span style={{fontSize:'50px'}}>📷</span>}
                </div>
 
-               {/* 🔥 ÁREA REESCRITA COM TEXTO LIMPO 🔥 */}
                {produtoDetalhe.especificacoes?.isDecoracao && produtoDetalhe.especificacoes?.itensDecoracao?.length > 0 && (
                    <div style={{ width: '100%', marginTop: '30px', borderTop: '2px dashed #cbd5e1', paddingTop: '20px' }}>
                        <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px'}}>
@@ -350,7 +435,6 @@ const Catalogo = () => {
                                Peças inclusas nesta decoração:
                            </span>
                        </div>
-                       
                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'flex-start' }}>
                            {produtoDetalhe.especificacoes.itensDecoracao.map((peca, idx) => (
                                <div key={idx} style={{ width: 'calc(33.33% - 10px)', minWidth: '80px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
@@ -366,7 +450,7 @@ const Catalogo = () => {
                )}
             </div>
 
-            {/* LADO DIREITO: DADOS, FICHA TÉCNICA E PREÇO */}
+            {/* LADO DIREITO: DADOS E PREÇO */}
             <div style={{ width: window.innerWidth < 768 ? '100%' : '50%', padding: '30px', display: 'flex', flexDirection: 'column' }}>
                <div style={{ marginBottom: '5px' }}>
                    <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -423,11 +507,8 @@ const Catalogo = () => {
                <div style={{ flexGrow: 1 }}></div>
 
                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '10px' }}>
-                   
-                   {/* 🔥 A NOVA CAIXA COM A FRASE DE VENDAS 🔥 */}
                    {(() => {
                        const { precoAtual, precoSomaAvulso, desconto, isVantajoso } = calcularAncoragemKit(produtoDetalhe);
-                       
                        if (isVantajoso) {
                            return (
                                <div style={{ marginBottom: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '15px', borderRadius: '10px' }}>
@@ -477,27 +558,27 @@ const Catalogo = () => {
 
       {modalFinalizar && (
         <div className="modal-overlay-catalogo" onClick={() => setModalFinalizar(false)}>
-          <div className="modal-content-catalogo" onClick={e => e.stopPropagation()}>
+           <div className="modal-content-catalogo" onClick={e => e.stopPropagation()}>
             
             <div className="modal-header-catalogo">
               <h2>Sua Lista de Peças</h2>
               <button className="btn-close-modal" onClick={() => setModalFinalizar(false)}>✕</button>
             </div>
             
-            <div className="modal-body-catalogo">
+             <div className="modal-body-catalogo">
               <div className="resumo-carrinho">
                 <h3>Itens Selecionados ({carrinho.length})</h3>
                 <ul>
                   {carrinho.map(item => (
                     <li key={item.id}>
-                      <span>{item.qtd}x {item.nome}</span>
+                       <span>{item.qtd}x {item.nome}</span>
                       <span>R$ {(Number(item.financeiro?.valorAluguel || 0) * item.qtd).toFixed(2)}</span>
                     </li>
                   ))}
                 </ul>
                 <div className="resumo-total">
                   <span>Total Estimado:</span>
-                  <strong>R$ {calcularTotal().toFixed(2)}</strong>
+                   <strong>R$ {calcularTotal().toFixed(2)}</strong>
                 </div>
               </div>
 
@@ -509,34 +590,30 @@ const Catalogo = () => {
                  >
                    Apenas Orçamento
                  </button>
-                 <button 
+                   <button 
                    className={tipoFluxo === 'cadastro' ? 'active' : ''} 
                    onClick={() => setTipoFluxo('cadastro')}
                    type="button"
                  >
                    Virar Cliente 🌟
                  </button>
-              </div>
+               </div>
 
               {tipoFluxo === 'orcamento' ? (
                   <form onSubmit={enviarOrcamento} className="form-orcamento">
                     <h3>Orçamento Rápido</h3>
-                    
                     <label>Seu Nome</label>
                     <input type="text" placeholder="Como podemos te chamar?" required 
-                      value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})}
+                        value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})}
                     />
-                    
                     <label>Seu WhatsApp</label>
                     <input type="text" placeholder="(11) 99999-9999" required 
                       value={dadosCliente.whats} onChange={e => setDadosCliente({...dadosCliente, whats: e.target.value})}
                     />
-                    
                     <label>Data da Festa / Evento</label>
                     <input type="date" required 
                       value={dadosCliente.dataEvento} onChange={e => setDadosCliente({...dadosCliente, dataEvento: e.target.value})}
                     />
-                    
                     <button type="submit" className="btn-enviar-zap">
                       <span>🟢</span> Enviar no WhatsApp
                     </button>
@@ -544,17 +621,15 @@ const Catalogo = () => {
               ) : (
                   <div className="form-cadastro-call">
                     <p>Faça o seu cadastro oficial para agilizar sua locação, ter acesso ao histórico de pedidos e aprovações mais rápidas!</p>
-                    
                     <button 
                         type="button" 
-                        className="btn-ir-cadastro" 
-                        onClick={() => navigate('/autocadastro', { state: { carrinhoCatalogo: carrinho, empresaConfig: empresa } })} 
+                         className="btn-ir-cadastro" 
+                        onClick={() => navigate(`/autocadastro/${tenantId}`, { state: { carrinhoCatalogo: carrinho, empresaConfig: empresa, empresaId: tenantId } })} 
                     >
                         Ir para Tela de Cadastro ➔
-                    </button>
+                     </button>
                   </div>
               )}
-
             </div>
           </div>
         </div>

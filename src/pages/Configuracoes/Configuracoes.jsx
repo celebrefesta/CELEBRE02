@@ -1,12 +1,19 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, getDocs, where, writeBatch } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 import SignatureCanvas from 'react-signature-canvas'; 
 import './Configuracoes.css';
 
 import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 
 const Configuracoes = () => {
+  const navigate = useNavigate();
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [abaAtiva, setAbaAtiva] = useState('listas'); 
   
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
@@ -37,7 +44,7 @@ const Configuracoes = () => {
   const [inputGrupoVitrine, setInputGrupoVitrine] = useState('');
   const [inputTemaVitrine, setInputTemaVitrine] = useState('');
 
-  const [inputLoc, setInputLoc] = useState(''); 
+  const [inputLoc, setInputLoc] = useState('');
   const [inputTam, setInputTam] = useState('');
 
   const [catFisicaSelecionada, setCatFisicaSelecionada] = useState('');
@@ -69,11 +76,21 @@ const Configuracoes = () => {
     setTimeout(() => { window.location.reload(); }, 300);
   };
 
-  useEffect(() => { buscarConfiguracoes(); }, []);
+  useEffect(() => { 
+    if (!usuarioLogado) {
+        navigate('/login');
+        return;
+    }
+    buscarConfiguracoes(); 
+  }, [usuarioLogado, navigate]);
+
+  // 🔥 Helper para obter a referência do cofre da empresa logada
+  const getDocConfigRef = () => doc(db, "configuracoes_empresa", usuarioLogado.uid);
 
   const sincronizarComArquivoJS = async () => {
+    if (!usuarioLogado) return;
     try {
-        const docRef = doc(db, "sistema", "parametros");
+        const docRef = getDocConfigRef();
         const docSnap = await getDoc(docRef);
         let dados = docSnap.exists() ? docSnap.data() : {};
 
@@ -83,7 +100,6 @@ const Configuracoes = () => {
         let dbCatVitrine = dados.catalogoVitrine;
 
         let precisaAtualizarDB = false;
-
         if (dbCatFis.length === 0 && Object.keys(CATEGORIAS_FISICAS).length > 0) {
             dbCatFis = Object.keys(CATEGORIAS_FISICAS);
             dbSubCatFis = CATEGORIAS_FISICAS;
@@ -91,12 +107,13 @@ const Configuracoes = () => {
         }
 
         if (!dbCatVitrine || Object.keys(dbCatVitrine).length === 0) {
-            dbCatVitrine = CATALOGO_TEMAS; 
+            dbCatVitrine = CATALOGO_TEMAS;
             precisaAtualizarDB = true;
         }
 
         const newState = {
             ...dados,
+            userId: usuarioLogado.uid, // 🔥 Grava a posse do documento
             categoriasFisicas: dbCatFis,
             subcategoriasFisicas: dbSubCatFis,
             tamanhosPorCategoria: dbTamCat,
@@ -117,19 +134,30 @@ const Configuracoes = () => {
   };
 
   const verificarUsoNoEstoque = async (nomeDoCampoDeBusca, valorProcurado) => {
-      const q = query(collection(db, "estoque"), where(nomeDoCampoDeBusca, "==", valorProcurado));
+      if (!usuarioLogado) return 0;
+      // 🔥 BLINDAGEM: Procura apenas no seu estoque
+      const q = query(
+          collection(db, "estoque"), 
+          where("userId", "==", usuarioLogado.uid),
+          where(nomeDoCampoDeBusca, "==", valorProcurado)
+      );
       const snap = await getDocs(q);
       return snap.size; 
   };
 
   const atualizarNomeNoEstoqueEmLote = async (campoBanco, valorAntigo, valorNovo) => {
-      if (!campoBanco) return;
+      if (!campoBanco || !usuarioLogado) return;
       try {
-          const q = query(collection(db, "estoque"), where(campoBanco, "==", valorAntigo));
+          // 🔥 BLINDAGEM: Atualiza apenas o seu estoque
+          const q = query(
+              collection(db, "estoque"), 
+              where("userId", "==", usuarioLogado.uid),
+              where(campoBanco, "==", valorAntigo)
+          );
           const snap = await getDocs(q);
           if (snap.empty) return; 
 
-          const batch = writeBatch(db); 
+          const batch = writeBatch(db);
           snap.forEach(docSnap => {
               batch.update(docSnap.ref, { [campoBanco]: valorNovo });
           });
@@ -137,15 +165,13 @@ const Configuracoes = () => {
       } catch(e) { console.error("Erro ao atualizar lote de estoque:", e); }
   };
 
-
   // ========================================================
   // LÓGICA DA VITRINE
   // ========================================================
   const adicionarVitrine = async (nivel, valor) => {
-      if (!valor.trim()) return;
-      const docRef = doc(db, "sistema", "parametros");
+      if (!valor.trim() || !usuarioLogado) return;
+      const docRef = getDocConfigRef();
       let novaVitrine = JSON.parse(JSON.stringify(config.catalogoVitrine || {}));
-      
       try {
           if (nivel === 1) { 
               if (novaVitrine[valor.trim()]) { alert("Esta Categoria já existe!"); return; }
@@ -179,7 +205,7 @@ const Configuracoes = () => {
       if (nivel === 2) campoBanco = 'subcategoriaTema';
       if (nivel === 3) campoBanco = 'grupoTema';
       if (nivel === 4) campoBanco = 'tema';
-      
+
       if (campoBanco) {
           const emUso = await verificarUsoNoEstoque(campoBanco, valor);
           if (emUso > 0) { 
@@ -189,10 +215,8 @@ const Configuracoes = () => {
       }
 
       if (!window.confirm(`Tem certeza que deseja apagar "${valor}"?`)) return;
-
-      const docRef = doc(db, "sistema", "parametros");
+      const docRef = getDocConfigRef();
       let novaVitrine = JSON.parse(JSON.stringify(config.catalogoVitrine || {}));
-      
       try {
           if (nivel === 1) {
               delete novaVitrine[valor];
@@ -225,7 +249,7 @@ const Configuracoes = () => {
       if (nivel === 3) campoBanco = 'grupoTema';
       if (nivel === 4) campoBanco = 'tema';
 
-      const docRef = doc(db, "sistema", "parametros");
+      const docRef = getDocConfigRef();
       let novaVitrine = JSON.parse(JSON.stringify(config.catalogoVitrine || {}));
 
       try {
@@ -261,10 +285,10 @@ const Configuracoes = () => {
   // LÓGICA FÍSICA
   // ========================================================
   const adicionarFisicoOuTamanho = async (campoPrincipal, campoSub, chavePai, valorNovo) => {
-      if (!valorNovo.trim()) return;
+      if (!valorNovo.trim() || !usuarioLogado) return;
       if (!chavePai && campoSub) { alert("Selecione um item acima primeiro!"); return; }
       
-      const docRef = doc(db, "sistema", "parametros");
+      const docRef = getDocConfigRef();
       try {
           if (campoSub) {
               const objetoAtual = { ...config[campoSub] };
@@ -300,8 +324,7 @@ const Configuracoes = () => {
       }
 
       if (!window.confirm(`Tem certeza que deseja remover "${valorRemover}"?`)) return;
-      
-      const docRef = doc(db, "sistema", "parametros");
+      const docRef = getDocConfigRef();
       try {
           if (campoSub) {
               const objetoAtual = { ...config[campoSub] };
@@ -311,7 +334,8 @@ const Configuracoes = () => {
           } else {
               await updateDoc(docRef, { [campoPrincipal]: arrayRemove(valorRemover) });
               if (campoPrincipal === 'categoriasFisicas' && catFisicaSelecionada === valorRemover) {
-                  setCatFisicaSelecionada(''); setSubCatFisicaSelecionada('');
+                  setCatFisicaSelecionada('');
+                  setSubCatFisicaSelecionada('');
               }
           }
           buscarConfiguracoes();
@@ -328,8 +352,7 @@ const Configuracoes = () => {
       else if (campoSub === 'subcategoriasFisicas') campoBanco = 'subCategoria';
       else if (campoSub === 'tamanhosPorCategoria') campoBanco = 'especificacoes.tamanho';
 
-      const docRef = doc(db, "sistema", "parametros");
-
+      const docRef = getDocConfigRef();
       try {
           if (campoPrincipal === 'categoriasFisicas') {
               if (config.categoriasFisicas.includes(novoTrim)) { alert("Já existe!"); return; }
@@ -351,7 +374,6 @@ const Configuracoes = () => {
               const objetoAtual = { ...config[campoSub] };
               if (objetoAtual[chavePai].includes(novoTrim)) { alert("Já existe!"); return; }
               objetoAtual[chavePai] = objetoAtual[chavePai].map(i => i === valorAntigo ? novoTrim : i);
-              
               let dadosParaSalvar = { [campoSub]: objetoAtual };
               
               if(campoSub === 'subcategoriasFisicas'){
@@ -365,17 +387,15 @@ const Configuracoes = () => {
 
           buscarConfiguracoes();
           await atualizarNomeNoEstoqueEmLote(campoBanco, valorAntigo, novoTrim);
-
       } catch (e) { alert("Erro ao editar."); console.error(e); }
   };
-
 
   // ========================================================
   // LÓGICA LOCALIZAÇÕES
   // ========================================================
   const adicionarLocalizacao = async (valor) => {
-    if (!valor.trim()) return;
-    const docRef = doc(db, "sistema", "parametros");
+    if (!valor.trim() || !usuarioLogado) return;
+    const docRef = getDocConfigRef();
     try {
         await updateDoc(docRef, { localizacoes: arrayUnion(valor.trim()) });
         setInputLoc('');
@@ -390,7 +410,7 @@ const Configuracoes = () => {
          return;
     }
     if (!window.confirm(`Remover prateleira/local "${valor}"?`)) return;
-    const docRef = doc(db, "sistema", "parametros");
+    const docRef = getDocConfigRef();
     try {
         await updateDoc(docRef, { localizacoes: arrayRemove(valor) });
         buscarConfiguracoes();
@@ -404,7 +424,7 @@ const Configuracoes = () => {
 
       if(config.localizacoes.includes(novoTrim)) { alert("Esta localização já existe!"); return; }
 
-      const docRef = doc(db, "sistema", "parametros");
+      const docRef = getDocConfigRef();
       try {
           await updateDoc(docRef, { localizacoes: arrayRemove(valorAntigo) });
           await updateDoc(docRef, { localizacoes: arrayUnion(novoTrim) });
@@ -417,55 +437,64 @@ const Configuracoes = () => {
   // Funções Gerais da Empresa
   const handleConfigChange = (campo, valor) => setConfig(prev => ({ ...prev, [campo]: valor }));
   const salvarConfigTextual = async (campo, valor) => {
-    try { await updateDoc(doc(db, "sistema", "parametros"), { [campo]: valor }); } catch (e) { console.error(e); }
+    if (!usuarioLogado) return;
+    try { await updateDoc(getDocConfigRef(), { [campo]: valor });
+    } catch (e) { console.error(e); }
   };
+  
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
-    if (!file) return;
+    if (!file || !usuarioLogado) return;
     const reader = new FileReader();
     reader.onload = (event) => {
       const img = new Image();
       img.onload = async () => {
-        const canvas = document.createElement('canvas'); const MAX_SIZE = 400;
+        const canvas = document.createElement('canvas');
+        const MAX_SIZE = 400;
         let w = img.width, h = img.height;
-        if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } } else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+        if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } } 
+        else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
         canvas.width = w; canvas.height = h;
-        const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0, w, h);
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
         const base64Logo = canvas.toDataURL('image/png', 0.9);
         setConfig(prev => ({ ...prev, logotipo: base64Logo }));
-        try { await updateDoc(doc(db, "sistema", "parametros"), { logotipo: base64Logo }); } catch (e) { console.error(e); }
+        try { await updateDoc(getDocConfigRef(), { logotipo: base64Logo }); } catch (e) { console.error(e); }
       };
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
   };
+
   const removerLogo = async () => {
     if(!window.confirm("Remover logotipo?")) return;
     setConfig(prev => ({ ...prev, logotipo: '' }));
-    try { await updateDoc(doc(db, "sistema", "parametros"), { logotipo: '' }); } catch (e) { console.error(e); }
+    try { await updateDoc(getDocConfigRef(), { logotipo: '' }); } catch (e) { console.error(e); }
   };
+
   const limparAssinatura = () => { if(sigGlobal.current) sigGlobal.current.clear(); };
   const salvarAssinaturaGlobal = async () => {
     if (sigGlobal.current.isEmpty()) { alert("⚠️ Por favor, desenhe sua assinatura antes de salvar."); return; }
     const base64Sig = sigGlobal.current.getCanvas().toDataURL("image/png");
     setConfig(prev => ({ ...prev, assinatura: base64Sig }));
-    try { await updateDoc(doc(db, "sistema", "parametros"), { assinatura: base64Sig }); alert("✅ Assinatura padrão salva com sucesso!"); } catch (e) { console.error(e); }
+    try { await updateDoc(getDocConfigRef(), { assinatura: base64Sig }); alert("✅ Assinatura padrão salva com sucesso!");
+    } catch (e) { console.error(e); }
   };
+
   const removerAssinaturaGlobal = async () => {
     if(!window.confirm("Tem certeza que deseja apagar a assinatura padrão?")) return;
     setConfig(prev => ({ ...prev, assinatura: '' }));
-    try { await updateDoc(doc(db, "sistema", "parametros"), { assinatura: '' }); } catch (e) { console.error(e); }
+    try { await updateDoc(getDocConfigRef(), { assinatura: '' });
+    } catch (e) { console.error(e); }
   };
 
   if (loading) return <div className="loading-config">Carregando painel de controle...</div>;
-
   const categoriasVitrineArr = Object.keys(config.catalogoVitrine || {});
   const subcategoriasVitrineArr = catVitrineSelecionada ? Object.keys(config.catalogoVitrine[catVitrineSelecionada] || {}) : [];
   const gruposVitrineArr = (catVitrineSelecionada && subCatVitrineSelecionada) ? Object.keys(config.catalogoVitrine[catVitrineSelecionada][subCatVitrineSelecionada] || {}) : [];
   const temasVitrineArr = (catVitrineSelecionada && subCatVitrineSelecionada && grupoVitrineSelecionado) ? (config.catalogoVitrine[catVitrineSelecionada][subCatVitrineSelecionada][grupoVitrineSelecionado] || []) : [];
 
   const alvoTamanhoFisico = subCatFisicaSelecionada || catFisicaSelecionada;
-
   return (
     <div className="config-container fade-in">
       <header className="config-header-top">
@@ -710,7 +739,6 @@ const Configuracoes = () => {
           </div>
         )}
 
-        {/* ... (Aba Empresa e Aba Aparência continuam iguais) ... */}
         {abaAtiva === 'empresa' && (
           <div className="config-empresa-grid">
             <div className="config-card">

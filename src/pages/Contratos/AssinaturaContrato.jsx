@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom"; 
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import SignatureCanvas from "react-signature-canvas";
 import "./AssinaturaContrato.css";
 
@@ -9,15 +10,19 @@ const AssinaturaContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [searchParams] = useSearchParams();
   const isExternal = searchParams.get("external") === "true"; 
   
-  // 🔥 CORREÇÃO 1: Inicializando as referências como "null" para evitar o curto-circuito
   const sigCliente = useRef(null);
   const sigAgape = useRef(null);
   
   const [contrato, setContrato] = useState(null);
   const [assinaturaGlobal, setAssinaturaGlobal] = useState(null); 
+  const [nomeEmpresa, setNomeEmpresa] = useState("Nossa Empresa"); // 🔥 Nome Dinâmico
   const [carregando, setCarregando] = useState(true);
   const [status, setStatus] = useState("pronto"); 
 
@@ -26,32 +31,55 @@ const AssinaturaContrato = () => {
       try {
         const docSnap = await getDoc(doc(db, "contratos", id));
         if (docSnap.exists()) {
-          setContrato(docSnap.data());
+          const data = docSnap.data();
+
+          // 🔥 BLINDAGEM MULTI-EMPRESA INTELIGENTE
+          // Se não for o cliente abrindo de fora, exige que seja o dono logado
+          if (!isExternal) {
+              if (!usuarioLogado) {
+                  navigate('/login');
+                  return;
+              }
+              if (data.userId && data.userId !== usuarioLogado.uid) {
+                  alert("Acesso negado: Este contrato pertence a outra empresa.");
+                  navigate("/contratos");
+                  return;
+              }
+          }
+
+          setContrato(data);
+
+          // 🔥 BUSCA O COFRE CERTO: Puxa a assinatura e o nome da empresa que criou o contrato
+          const donoId = data.userId || (usuarioLogado ? usuarioLogado.uid : null);
+          if (donoId) {
+              const configRef = doc(db, "configuracoes_empresa", donoId);
+              const configSnap = await getDoc(configRef);
+              
+              if (configSnap.exists()) {
+                  const dadosConfig = configSnap.data();
+                  if (dadosConfig.assinatura) setAssinaturaGlobal(dadosConfig.assinatura);
+                  if (dadosConfig.nomeEmpresa || dadosConfig.nome) setNomeEmpresa(dadosConfig.nomeEmpresa || dadosConfig.nome);
+              }
+          }
         } else {
           alert("Contrato não encontrado");
-          navigate("/contratos");
-          return;
+          if (!isExternal) navigate("/contratos");
         }
-
-        const configRef = doc(db, "sistema", "parametros");
-        const configSnap = await getDoc(configRef);
-        
-        if (configSnap.exists()) {
-            const dadosConfig = configSnap.data();
-            if (dadosConfig.assinatura) {
-                setAssinaturaGlobal(dadosConfig.assinatura);
-            }
-        }
-
-      } catch (err) { console.error("Erro ao buscar dados:", err); } 
-      finally { setCarregando(false); }
+      } catch (err) { 
+        console.error("Erro ao buscar dados:", err); 
+      } finally { 
+        setCarregando(false); 
+      }
     };
+
     buscarDados();
-  }, [id, navigate]);
+  }, [id, navigate, isExternal, usuarioLogado]);
 
   const enviarWhatsapp = () => {
     const linkAssinatura = `${window.location.origin}/assinatura/${id}?external=true`;
-    const textoBruto = `Olá ${contrato.cliente}! ✨\n\nAqui está o link para a assinatura digital do seu contrato da *Ágape Decorações*:\n\n👉 ${linkAssinatura}\n\nÉ só clicar, desenhar sua assinatura na tela e salvar!`;
+    
+    // 🔥 MENSAGEM DINÂMICA: Usa o nome real da sua empresa!
+    const textoBruto = `Olá ${contrato.cliente}!\n\nAqui está o link para a assinatura digital do seu contrato da *${nomeEmpresa}*:\n\n👉 ${linkAssinatura}\n\nÉ só clicar, desenhar sua assinatura na tela e salvar!`;
     const mensagem = encodeURIComponent(textoBruto);
     const fone = contrato.telefone ? String(contrato.telefone).replace(/\D/g, "") : "";
     
@@ -65,19 +93,17 @@ const AssinaturaContrato = () => {
     window.open(urlZap, "_blank");
   };
 
-  // 🔥 CORREÇÃO 2: Verificações seguras para limpar o quadro
   const limparCliente = () => { 
-      if(sigCliente.current && typeof sigCliente.current.clear === 'function') sigCliente.current.clear(); 
+      if(sigCliente.current && typeof sigCliente.current.clear === 'function') sigCliente.current.clear();
   };
   const limparAgape = () => { 
-      if(sigAgape.current && typeof sigAgape.current.clear === 'function') sigAgape.current.clear(); 
+      if(sigAgape.current && typeof sigAgape.current.clear === 'function') sigAgape.current.clear();
   };
 
   const salvarAssinaturas = async () => {
     let novaAssinaturaCliente = null;
     let novaAssinaturaAgape = null;
 
-    // 🔥 CORREÇÃO 3: O PULO DO GATO. Só verifica se está vazio SE o quadro existir de fato na tela!
     if (sigCliente.current && typeof sigCliente.current.isEmpty === 'function' && !sigCliente.current.isEmpty()) {
         novaAssinaturaCliente = sigCliente.current.getCanvas().toDataURL("image/png");
     }
@@ -99,7 +125,7 @@ const AssinaturaContrato = () => {
 
       if (novaAssinaturaCliente) atualizacao.assinaturaCliente = novaAssinaturaCliente;
       if (novaAssinaturaAgape) atualizacao.assinaturaAgape = novaAssinaturaAgape;
-
+      
       if (!contrato.assinaturaAgape && assinaturaGlobal) {
           atualizacao.assinaturaAgape = assinaturaGlobal;
       }
@@ -119,7 +145,6 @@ const AssinaturaContrato = () => {
         alert("✅ Assinatura salva com sucesso!");
         window.location.reload(); 
       }, 500);
-
     } catch (error) {
       console.error(error);
       setStatus("erro");
@@ -178,11 +203,11 @@ const AssinaturaContrato = () => {
         </div>
 
         <div className="canvas-wrapper agape-wrapper">
-          <label className="label-assinatura ouro">✍️ ASSINATURA ÁGAPE DECORAÇÕES:</label>
+          <label className="label-assinatura ouro">✍️ ASSINATURA {nomeEmpresa.toUpperCase()}:</label>
           {imagemAgape ? (
              <div className="assinatura-trancada ouro-border">
                  <div className="selo-ok">✅ ASSINATURA PADRÃO</div>
-                 <img src={imagemAgape} alt="Assinatura Ágape" />
+                 <img src={imagemAgape} alt="Assinatura da Empresa" />
              </div>
           ) : (
             <>
