@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { collection, getDocs, getDoc, updateDoc, setDoc, query, addDoc, deleteDoc, doc, where } from 'firebase/firestore';
 import { useNavigate } from 'react-router-dom'; 
 import { db } from '../../firebaseConfig';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from 'firebase/auth'; 
 import html2canvas from 'html2canvas'; 
 import './Moodboard.css';
 
@@ -48,24 +48,23 @@ const Moodboard = () => {
   const [texturasChao, setTexturasChao] = useState([
     { nome: 'Madeira Clara', url: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=1974&auto=format&fit=crop' }
   ]);
-  
+
   const [modalSalvarAberto, setModalSalvarAberto] = useState(false);
   const [modalAbrirAberto, setModalAbrirAberto] = useState(false);
   const [nomeProjeto, setNomeProjeto] = useState("");
   const [projetosSalvos, setProjetosSalvos] = useState([]);
-  
   const boardRef = useRef(null);
   const [expandedCats, setExpandedCats] = useState({});
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
-  
+
   const fontesDisponiveis = [ { nome: 'Moderna (Poppins)', valor: "'Poppins', sans-serif" }, { nome: 'Clássica (Playfair)', valor: "'Playfair Display', serif" }, { nome: 'Elegante (Great Vibes)', valor: "'Great Vibes', cursive" }, { nome: 'Manuscrita (Dancing)', valor: "'Dancing Script', cursive" }, { nome: 'Divertida (Pacifico)', valor: "'Pacifico', cursive" }, { nome: 'Simples (Montserrat)', valor: "'Montserrat', sans-serif" } ];
-  
+
   const grouped = useMemo(() => {
     const mapa = {};
     estoqueReal.forEach(i => { const c = i.categoria || 'Sem Categoria'; if (!mapa[c]) mapa[c] = []; mapa[c].push(i); });
     return mapa;
   }, [estoqueReal]);
-  
+
   const interactionMode = useRef('none');
   const activeItemId = useRef(null);
   const resizeDir = useRef(null);
@@ -82,7 +81,7 @@ const Moodboard = () => {
         // 🔥 BLINDAGEM: Carrega APENAS o estoque da sua empresa
         const q = query(collection(db, 'estoque'), where("userId", "==", usuarioLogado.uid));
         const snap = await getDocs(q);
-        
+  
         let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         // Ordena na memória
         lista.sort((a, b) => {
@@ -125,7 +124,6 @@ const Moodboard = () => {
                 const MAX_WIDTH = 800; 
                 let width = img.width;
                 let height = img.height;
-                
                 if (width > MAX_WIDTH) {
                     height *= MAX_WIDTH / width;
                     width = MAX_WIDTH;
@@ -139,7 +137,6 @@ const Moodboard = () => {
                 const base64 = canvas.toDataURL('image/jpeg', 0.7);
                 const nome = prompt("Nome para este fundo (ex: Painel Redondo Rosa):");
                 if (!nome) return;
-                
                 const nova = { nome, url: base64 };
                 try {
                     // 🔥 BLINDAGEM: Salva a textura APENAS nas configurações da sua empresa
@@ -203,7 +200,7 @@ const Moodboard = () => {
         alert("Projeto salvo com sucesso! ✅");
         setModalSalvarAberto(false);
     } catch (error) { 
-        alert("Erro ao salvar projeto."); 
+        alert("Erro ao salvar projeto.");
     }
   };
 
@@ -216,11 +213,10 @@ const Moodboard = () => {
         let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         // Ordena na memória por data
         lista.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        
         setProjetosSalvos(lista);
         setModalAbrirAberto(true);
     } catch (error) { 
-        alert("Erro ao buscar projetos."); 
+        alert("Erro ao buscar projetos.");
     }
   };
 
@@ -245,13 +241,13 @@ const Moodboard = () => {
   };
 
   const handleContextMenu = (e, id) => { 
-      e.preventDefault(); 
+      e.preventDefault();
       setSelecionadoId(id);
       setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id }); 
   };
-  
+
   const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
-  
+
   const bringToFront = (targetId = null) => { 
       const id = targetId || contextMenu.itemId;
       if (!id) return; 
@@ -286,7 +282,7 @@ const Moodboard = () => {
   };
   
   const toggleCategory = (cat) => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
-  
+
   const adicionarAoCanvas = (item) => {
     const novoItem = { ...item, type: 'image', uniqueId: `img_${Date.now()}`, x: 50, y: 50, width: 150, height: 150, rotation: 0, flipH: false, locked: false, opacity: 100, brightness: 100, contrast: 100, shadow: 0 };
     setItensCanvas(prev => [...prev, novoItem]); setSelecionadoId(novoItem.uniqueId); setAbaAtiva('efeitos');
@@ -318,7 +314,7 @@ const Moodboard = () => {
     const estiloFinal = valor.startsWith('data:image') || valor.startsWith('http') ? `url(${valor})` : valor;
     if (activeSurface === 'wall') setWallBackground(estiloFinal); else setFloorBackground(estiloFinal);
   };
-  
+
   const handleClearProject = () => { 
       if (window.confirm("⚠️ Tem certeza que deseja limpar a tela?")) { 
           setItensCanvas([]);
@@ -354,13 +350,12 @@ const Moodboard = () => {
         lastPos.current = { x: e.clientX, y: e.clientY };
     }
   };
-  
+
   const handlePointerMove = (e) => {
     if (interactionMode.current === 'none' || !activeItemId.current) return;
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
     lastPos.current = { x: e.clientX, y: e.clientY };
-    
     let scale = 1;
     if (boardRef.current) scale = boardRef.current.getBoundingClientRect().width / boardRef.current.offsetWidth;
     
@@ -374,11 +369,13 @@ const Moodboard = () => {
         }
         if (interactionMode.current === 'resize') {
             if (item.type === 'text') {
+       
                 let sizeChange = (adjDx + adjDy) * 0.4; 
                 let newFontSize = (item.fontSize || 48) + sizeChange;
                 return { ...item, fontSize: Math.max(12, Math.round(newFontSize)) };
             } else {
                 let newW = item.width; let newH = item.height;
+ 
                 if (resizeDir.current.includes('e')) newW += adjDx;
                 if (resizeDir.current.includes('s')) newH += adjDy;
                 return { ...item, width: Math.max(30, newW), height: Math.max(30, newH) };
@@ -395,7 +392,7 @@ const Moodboard = () => {
     activeItemId.current = null;
     resizeDir.current = null;
   };
-  
+
   const handleCanvasClick = () => {
       if (selecionadoId) {
           setAbaAtiva('acervo');
@@ -404,13 +401,12 @@ const Moodboard = () => {
       setEditingTextId(null); 
       closeContextMenu();
   };
-  
+
   const atualizarItem = (id, alt) => setItensCanvas(prev => prev.map(i => i.uniqueId === id ? { ...i, ...alt } : i));
   const deleteItem = (id) => { setItensCanvas(prev => prev.filter(i => i.uniqueId !== id)); setSelecionadoId(null); };
-  
   const itemSelecionado = itensCanvas.find(i => i.uniqueId === selecionadoId);
   const getStyle = (valor) => (!valor ? { background: '#fff' } : valor.startsWith('url') ? { backgroundImage: valor, backgroundSize: 'cover', backgroundPosition: 'center' } : { backgroundColor: valor });
-  
+
   return (
     <div className="studio-page" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onClick={handleCanvasClick}>
       
@@ -441,11 +437,12 @@ const Moodboard = () => {
                        {grouped[cat].map(item => (
                          <div key={item.id} className="acervo-card" onClick={() => adicionarAoCanvas(item)}>
                            <div className="card-thumb"><img src={item.imagem || 'https://via.placeholder.com/120'} crossOrigin="anonymous" alt={item.nome} /></div>
-                    
+           
                            <div className="card-name">{item.nome}</div>
                          </div>
                        ))}
-                     </div>
+               
+                      </div>
                    )}
     
                  </div>
@@ -454,21 +451,25 @@ const Moodboard = () => {
            </div>
         )}
 
-        {abaAtiva === 'efeitos' && (
+       
+         {abaAtiva === 'efeitos' && (
             <div className="panel-content">
                
                 <h3 className="panel-title">EFEITOS & AJUSTES</h3>
                 
                 <button 
+               
                     className="btn-primary-action" 
                     style={{ backgroundColor: '#c5a059', color: '#0f172a', marginBottom: '15px', boxShadow: '0 4px 6px rgba(0,0,0,0.1)' }} 
          
-                    onClick={() => { setSelecionadoId(null); setAbaAtiva('acervo'); }}
+                    onClick={() => { setSelecionadoId(null);
+                        setAbaAtiva('acervo'); }}
                 >
                     + Adicionar Mais Itens
                 </button>
 
-                {itemSelecionado ? (
+                {itemSelecionado ?
+                    (
                     <div className="effects-tools">
                         <div className="selected-preview"><span>Editando: {itemSelecionado.nome || (itemSelecionado.type === 'text' ? 'Texto' : 'Item')}</span></div>
                         
@@ -476,12 +477,14 @@ const Moodboard = () => {
                         {itemSelecionado.type === 'image' && (
                           <>
                             <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
-                             
+        
                                 <label>Brilho ({itemSelecionado.brightness}%)</label>
                                 <input type="range" min="0" max="200" value={itemSelecionado.brightness || 100} 
-                                    onChange={e => atualizarItem(selecionadoId, {brightness: Number(e.target.value)})} 
+       
+                                     onChange={e => atualizarItem(selecionadoId, {brightness: Number(e.target.value)})} 
                 
                                     onDoubleClick={() => atualizarItem(selecionadoId, {brightness: 100})} 
+         
                                 />
                             </div>
                
@@ -494,10 +497,12 @@ const Moodboard = () => {
                                 />
                             </div>
                           </>
+              
                         )}
         
                          <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
                             <label>Opacidade ({itemSelecionado.opacity}%)</label>
+                  
                             <input type="range" min="10" max="100" value={itemSelecionado.opacity || 100} 
                                 onChange={e => atualizarItem(selecionadoId, {opacity: Number(e.target.value)})} 
                                 onDoubleClick={() => atualizarItem(selecionadoId, {opacity: 100})}
@@ -505,6 +510,7 @@ const Moodboard = () => {
                             />
                         </div>
                         <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
+              
                             <label>Sombra ({itemSelecionado.shadow}px) {itemSelecionado.shadow === 0 && <small>(Off)</small>}</label>
       
                             <input type="range" min="0" max="50" value={itemSelecionado.shadow || 0} 
@@ -514,10 +520,12 @@ const Moodboard = () => {
                             />
                         </div>
                         
+                        
                         <div className="action-buttons-grid" style={{marginTop: '10px'}}>
                        
                             <button className="btn-secondary" onClick={() => bringToFront(selecionadoId)}><Icons.ArrowUp width={14} /> Frente</button>
                             <button className="btn-secondary" onClick={() => sendToBack(selecionadoId)}><Icons.ArrowDown width={14} /> Trás</button>
+    
                         </div>
 
                         <div className="action-buttons-grid">
@@ -538,12 +546,13 @@ const Moodboard = () => {
                 <h3 className="panel-title">ESTILO DO TEXTO</h3>
                 <div className="text-tools">
                     <div style={{display: 'flex', gap: '10px', marginBottom: '15px'}}>
-             
+            
                         <button className="btn-primary-action" style={{marginBottom: 0}} onClick={adicionarTexto}>+ Novo Texto</button>
                         <button className="btn-secondary" style={{flex: 1, padding: '12px', borderRadius: '8px', fontWeight: 'bold'}} onClick={() => { setSelecionadoId(null); setAbaAtiva('acervo'); }}>Ver Peças</button>
                     </div>
                     
-                    {itemSelecionado?.type === 'text' ? (
+                    {itemSelecionado?.type === 'text' ?
+                        (
                         <div className="edit-box">
                             <p className="hint-text" style={{margin: '0 0 10px 0', color: '#0f172a', fontWeight: 'bold'}}>💡 Dê 2 cliques no texto na tela para editar!</p>
                             
@@ -553,29 +562,35 @@ const Moodboard = () => {
  
                             <div className="style-controls-row">
                                 <button className={`btn-style ${itemSelecionado.fontWeight === 'bold' ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {fontWeight: itemSelecionado.fontWeight === 'bold' ? 'normal' : 'bold'})}><Icons.Bold /></button>
+                   
                                 <button className={`btn-style ${itemSelecionado.fontStyle === 'italic' ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {fontStyle: itemSelecionado.fontStyle === 'italic' ? 'normal' : 'italic'})}><Icons.Italic /></button>
                                 <div className="divider-v"></div>
                                 <label className="color-picker-wrapper">
                     
                                 Cor: <input type="color" className="color-input-mini" value={itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {color: e.target.value})} />
                                 </label>
+                          
                             </div>
 
               
                             <div className="slider-group" style={{marginTop: '10px'}} title="Dê 2 cliques para voltar ao normal">
                                 <label>Tamanho da Fonte ({itemSelecionado.fontSize}px)</label>
-                                <input type="range" min="12" max="150" value={itemSelecionado.fontSize} 
+           
+                                 <input type="range" min="12" max="150" value={itemSelecionado.fontSize} 
     
                                     onChange={e => atualizarItem(selecionadoId, {fontSize: Number(e.target.value)})} 
+                             
                                     onDoubleClick={() => atualizarItem(selecionadoId, {fontSize: 48})}
                        
                                 />
                             </div>
 
+      
                             <div className="slider-group" style={{marginTop: '15px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
                       
                                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
-                                    <label style={{color: '#c5a059', margin: 0}} title="Dê 2 cliques na bolinha abaixo para desligar">🌟 Efeito LED ({(itemSelecionado.neonGlow || 0)}px)</label>
+   
+                                     <label style={{color: '#c5a059', margin: 0}} title="Dê 2 cliques na bolinha abaixo para desligar">🌟 Efeito LED ({(itemSelecionado.neonGlow || 0)}px)</label>
                                     
                                     <label className="color-picker-wrapper" style={{fontSize: '10px', cursor: 'pointer'}}>
                        
@@ -591,6 +606,7 @@ const Moodboard = () => {
                             </div>
 
                         </div>
+                
                     ) : <p className="hint-text">Crie ou selecione um texto.</p>}
        
                  </div>
@@ -600,14 +616,17 @@ const Moodboard = () => {
         {abaAtiva === 'fundo' && (
              <div className="panel-content">
                 <h3 className="panel-title">CENÁRIO</h3>
+  
                 <div className="surface-switcher"><button className={`switch-btn ${activeSurface === 'wall' ? 'active' : ''}`} onClick={() => setActiveSurface('wall')}>🧱 PAREDE</button><button className={`switch-btn ${activeSurface === 'floor' ? 'active' : ''}`} onClick={() => setActiveSurface('floor')}>🟧 CHÃO</button></div>
                 
                 <div className="bg-tools">
                     <div className="bg-options-grid" style={{ justifyContent: 'center' }}>
-                        <div className="color-picker-btn" style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} title="Escolha qualquer cor">
+   
+                         <div className="color-picker-btn" style={{ background: 'conic-gradient(red, yellow, lime, aqua, blue, magenta, red)' }} title="Escolha qualquer cor">
                             <input type="color" className="invisible-color-input" onChange={(e) => aplicarAoFundo(e.target.value)} />
                         </div>
-                    </div>
+       
+                     </div>
              
                     <div className="adm-header-flex">
                         <h4>Texturas Salvas</h4>
@@ -623,6 +642,7 @@ const Moodboard = () => {
                                 <div className="btn-del-bg" onClick={(e) => { e.stopPropagation(); removerTextura(activeSurface, bg.url); }}>✕</div>
                             </div>
                         ))}
+        
                     </div>
                 
                 </div>
@@ -643,7 +663,8 @@ const Moodboard = () => {
                  <button className="btn-header-action primary" onClick={handleExportImage}><Icons.Download /> <span className="btn-text">BAIXAR PROJETO (PNG)</span></button>
                  <div className="header-divider"></div>
                  
-                 <button className="btn-header-action" style={{backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold'}} onClick={() => navigate('/')}>
+                 {/* 🔥 CORREÇÃO APLICADA AQUI: O Botão SAIR agora volta para o Dashboard dentro do sistema 🔥 */}
+                 <button className="btn-header-action" style={{backgroundColor: '#ef4444', color: 'white', fontWeight: 'bold'}} onClick={() => navigate('/dashboard')}>
                      ✕ <span className="btn-text">SAIR</span>
                  </button>
              </div>
@@ -677,7 +698,8 @@ const Moodboard = () => {
                 >
                 
                 {/* LÓGICA DE TEXTO APRIMORADA */}
-                {item.type === 'text' ? (
+                {item.type === 'text' ?
+                (
                     editingTextId === item.uniqueId ? (
                         <textarea
                             autoFocus
@@ -685,13 +707,15 @@ const Moodboard = () => {
                             wrap="off" 
                             onFocus={(e) => {
                                 const val = e.target.value;
-                              
+      
                                 e.target.setSelectionRange(val.length, val.length);
                             }}
+               
                             value={item.content}
                             onChange={(e) => {
            
                                 e.target.style.width = '100px'; 
+           
                                 e.target.style.width = (e.target.scrollWidth + 10) + 'px';
                                 e.target.style.height = 'auto';
     
@@ -700,6 +724,7 @@ const Moodboard = () => {
                             }}
     
                             onBlur={(e) => {
+ 
                                 setEditingTextId(null);
                                 if(!e.target.value.trim()) deleteItem(item.uniqueId); 
                             }} 
@@ -711,6 +736,7 @@ const Moodboard = () => {
                             
                                 fontWeight: item.fontWeight, fontStyle: item.fontStyle, textAlign: item.textAlign,
                                 background: 'rgba(255,255,255,0.9)', border: '2px dashed #0f172a', borderRadius: '6px',
+                        
                                 outline: 'none', resize: 'none', overflow: 'hidden', padding: '5px 10px',
             
                                 lineHeight: '1.2', whiteSpace: 'pre',
@@ -722,11 +748,12 @@ const Moodboard = () => {
                         <div 
                             onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(item.uniqueId); }}
                             style={{ 
+             
                                 width:'max-content', height: 'max-content', 
   
                                 fontSize: `${item.fontSize}px`, color: item.color, 
                                 fontFamily: item.fontFamily, fontWeight: item.fontWeight, 
-                              
+    
                                 fontStyle: item.fontStyle, textAlign: item.textAlign, cursor: 'text',
                                 whiteSpace: 'pre-wrap', padding: '5px 10px', lineHeight: '1.2',
                                 textShadow: item.neonGlow > 0 ? `0 0 5px ${item.neonColor || item.color}, 0 0 ${item.neonGlow}px ${item.neonColor || item.color}, 0 0 ${item.neonGlow * 2}px ${item.neonColor || item.color}` : 'none'
@@ -744,15 +771,18 @@ const Moodboard = () => {
                     <>
                         <div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} />
                         <div className="selection-border" />
+                     
                         {item.type === 'text' && window.innerWidth < 900 && (
   
                             <div 
                                 onPointerDown={(e) => e.stopPropagation()} 
+                       
                                 onClick={(e) => { e.stopPropagation(); setEditingTextId(item.uniqueId); }}
                                 onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setEditingTextId(item.uniqueId); }}
                                 style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '6px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 6px rgba(0,0,0,0.2)', zIndex: 1000 }}
                             >
-                                ✏️ Editar
+     
+                               ✏️ Editar
                             </div>
                         )}
                     
@@ -764,11 +794,13 @@ const Moodboard = () => {
 
         {/* MENU DE CONTEXTO */}
         {contextMenu.visible && (
+        
             <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
       
                 <div className="ctx-item" onClick={() => bringToFront()}><Icons.Layers style={{transform: 'rotate(180deg)'}} width={16} /> Trazer p/ Frente</div>
                 <div className="ctx-item" onClick={() => sendToBack()}><Icons.Layers width={16} /> Enviar p/ Trás</div>
                 <div className="ctx-divider"></div>
+           
                 <div className="ctx-item" onClick={() => toggleLock()}><Icons.Lock /> {itensCanvas.find(i => i.uniqueId === contextMenu.itemId)?.locked ? 'Desbloquear' : 'Bloquear'}</div>
                 <div className="ctx-divider"></div>
                 <div className="ctx-item delete" onClick={() => { deleteItem(contextMenu.itemId); closeContextMenu(); }}><Icons.Trash /> Excluir</div>
@@ -784,6 +816,7 @@ const Moodboard = () => {
                     <input type="text" placeholder="Nome do Projeto" value={nomeProjeto} onChange={(e) => setNomeProjeto(e.target.value)} autoFocus />
                     <div className="modal-actions">
                         <button className="btn-cancel" onClick={() => setModalSalvarAberto(false)}>Cancelar</button>
+                     
                         <button className="btn-confirm" onClick={salvarProjeto}>Salvar</button>
  
                     </div>
@@ -793,6 +826,7 @@ const Moodboard = () => {
 
         {modalAbrirAberto && (
             <div className="overlay">
+               
                 <div className="modal-content large">
     
                     <h3>Projetos Salvos</h3>
@@ -804,6 +838,7 @@ const Moodboard = () => {
                                 <button onClick={() => deletarProjetoSalvo(proj.id)} className="btn-icon-del"><Icons.Trash /></button>
                             </div>
                         ))}
+           
                     </div>
                     
                     <button className="btn-cancel full" onClick={() => setModalAbrirAberto(false)}>Fechar</button>
@@ -811,7 +846,8 @@ const Moodboard = () => {
             </div>
         )}
       </div>
-    </div>
+    
+</div>
   );
 };
 

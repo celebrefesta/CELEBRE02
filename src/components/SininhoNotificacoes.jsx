@@ -2,10 +2,16 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../firebaseConfig'; 
 import { collection, query, where, onSnapshot } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
 import './SininhoNotificacoes.css';
 
 const SininhoNotificacoes = () => {
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação e Blindagem
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [clientesPendentes, setClientesPendentes] = useState([]);
   const [pedidosPendentes, setPedidosPendentes] = useState([]);
   const [menuAberto, setMenuAberto] = useState(false);
@@ -23,15 +29,30 @@ const SininhoNotificacoes = () => {
     return () => document.removeEventListener("mousedown", handleClickFora);
   }, []);
 
-  // 1. SENSOR QUE BUSCA TUDO O QUE ESTÁ PENDENTE NO BANCO
+  // 1. SENSOR QUE BUSCA TUDO O QUE ESTÁ PENDENTE NO BANCO (AGORA COM BLINDAGEM!)
   useEffect(() => {
-    const qClientes = query(collection(db, "clientes"), where("situacaoFinanceira", "==", "pendente"));
+    if (!usuarioLogado) return; // 🔥 Só permite a busca se o utilizador estiver logado
+
+    // 🔥 BLINDAGEM: Busca apenas os clientes da SUA loja
+    const qClientes = query(
+        collection(db, "clientes"), 
+        where("userId", "==", usuarioLogado.uid),
+        where("situacaoFinanceira", "==", "pendente")
+    );
+    
     const unsubscribeClientes = onSnapshot(qClientes, (snapshot) => {
       const listaC = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setClientesPendentes(listaC);
     });
 
-    const qPedidos = query(collection(db, "locacoes"), where("origem", "==", "catalogo_publico"), where("status", "==", "orcamento"));
+    // 🔥 BLINDAGEM: Busca apenas os orçamentos da SUA loja
+    const qPedidos = query(
+        collection(db, "locacoes"), 
+        where("userId", "==", usuarioLogado.uid),
+        where("origem", "==", "catalogo_publico"), 
+        where("status", "==", "orcamento")
+    );
+    
     const unsubscribePedidos = onSnapshot(qPedidos, (snapshot) => {
       const listaP = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setPedidosPendentes(listaP);
@@ -41,17 +62,12 @@ const SininhoNotificacoes = () => {
       unsubscribeClientes();
       unsubscribePedidos();
     };
-  }, []);
+  }, [usuarioLogado]);
 
   // 2. LÓGICA DE VIZUALIZAÇÃO (ESTILO INSTAGRAM)
   useEffect(() => {
-    // Junta todos os itens atuais em uma lista só
     const todosItens = [...clientesPendentes, ...pedidosPendentes];
-    
-    // Puxa do navegador os IDs que você já clicou para ver no passado
     const idsVistos = JSON.parse(localStorage.getItem('notificacoesVistasIds') || '[]');
-    
-    // Filtra apenas os itens que chegaram agora e que você ainda NÃO viu
     const novosItens = todosItens.filter(item => !idsVistos.includes(item.id));
     
     setQuantidadeNova(novosItens.length);
@@ -60,15 +76,11 @@ const SininhoNotificacoes = () => {
   // 3. AÇÃO DE LER AS NOTIFICAÇÕES
   const handleAbrirMenu = () => {
     if (!menuAberto) {
-      // Quando você clica para abrir o sininho, o sistema pega o ID de TODAS as pendências atuais
-      // e salva no navegador dizendo: "A Camila já viu que esses caras existem".
       const todosItens = [...clientesPendentes, ...pedidosPendentes];
       const todosIds = todosItens.map(item => item.id);
       
       localStorage.setItem('notificacoesVistasIds', JSON.stringify(todosIds));
-      
-      // Zera a bolinha vermelha na hora, trazendo paz de espírito!
-      setQuantidadeNova(0);
+      setQuantidadeNova(0); // Zera a bolinha vermelha
     }
     setMenuAberto(!menuAberto);
   };

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, where } from 'firebase/firestore'; 
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from 'firebase/auth'; 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Agenda.css';
@@ -17,9 +17,11 @@ const TIPOS = {
   bloqueio:  { label: 'Bloqueio de Data', cor: '#ef4444', dot: 'red'  },
 };
 
+// 🔥 Removido o linkMaps, agora tudo funciona direto pelo "local"
 const FORM_VAZIO = {
   id: null, titulo: '', clienteId: '', clienteNome: '', tipo: 'reuniao',
-  dataISO: '', horario: '', observacoes: '', recorrencia: 'nenhuma', origem: 'manual',
+  dataISO: '', horario: '', local: '', observacoes: '', recorrencia: 'nenhuma', 
+  status: 'pendente', origem: 'manual',
 };
 
 const isoParaDMA = (iso) => {
@@ -38,14 +40,12 @@ const dmaParaISO = (dia, mes, ano) =>
 const Agenda = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
   const [dataAtual, setDataAtual] = useState(new Date());
   const [viewPrincipal, setViewPrincipal] = useState('calendario');
   const [viewLista, setViewLista] = useState('semana');
-
   const [clientes, setClientes]   = useState([]);
   const [locacoes, setLocacoes]   = useState([]);
   const [compras, setCompras]     = useState([]);
@@ -81,28 +81,24 @@ const Agenda = () => {
     const carregarDados = async () => {
       setLoadingFB(true);
       try {
-        // 🔥 BLINDAGEM: Busca apenas clientes da sua loja
         const qCli = query(collection(db, 'clientes'), where("userId", "==", usuarioLogado.uid));
         const sc = await getDocs(qCli);
         setClientes(sc.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Clientes:', e); }
 
       try {
-        // 🔥 BLINDAGEM: Busca apenas locações da sua loja
         const qLoc = query(collection(db, 'locacoes'), where("userId", "==", usuarioLogado.uid));
         const sl = await getDocs(qLoc);
         setLocacoes(sl.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Locações:', e); }
 
       try {
-        // 🔥 BLINDAGEM: Busca apenas compras da sua loja
         const qComp = query(collection(db, 'lista_compras'), where("userId", "==", usuarioLogado.uid));
         const sco = await getDocs(qComp);
         setCompras(sco.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Compras:', e); }
 
       try {
-        // 🔥 BLINDAGEM: Busca apenas a agenda da sua loja
         const qAg = query(collection(db, 'agenda_eventos'), where("userId", "==", usuarioLogado.uid));
         const sa = await getDocs(qAg);
         setEventosManual(sa.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -138,6 +134,7 @@ const Agenda = () => {
         origem: 'locacao', locacaoId: loc.id,
         numeroPedido: loc.numeroPedido, tipoServico: loc.tipoServico,
         valorTotal: loc.valorTotal, valorPago: loc.valorPago, status: loc.status,
+        local: loc.enderecoEntrega || '', 
       };
       
       if (loc.dataRetirada && !['cancelado'].includes((loc.status || '').toLowerCase())) {
@@ -158,7 +155,7 @@ const Agenda = () => {
 
   const getDiasNoMes = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   const getDiaSemanaInicio = (d) => new Date(d.getFullYear(), d.getMonth(), 1).getDay();
-  
+
   let nomeMes = dataAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
   nomeMes = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
 
@@ -221,12 +218,14 @@ const Agenda = () => {
       clienteNome: cli ? (cli.nome || cli.nomeFantasia) : buscaClienteModal,
       tipo: formData.tipo, 
       horario: formData.horario, 
+      local: formData.local || '', 
+      status: formData.status || 'pendente', 
       observacoes: formData.observacoes, 
       origem: 'manual',
       dia: parseInt(diaStr), 
       mes: parseInt(mesStr) - 1, 
       ano: parseInt(anoStr),
-      userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
+      userId: usuarioLogado.uid
     };
 
     try {
@@ -257,7 +256,6 @@ const Agenda = () => {
       const novaLista = eventoSelecionado 
         ? eventosManual.map(x => x.id === eventoSelecionado.id ? {id: eventoSelecionado.id, ...evParaSalvar} : x)
         : [...eventosManual, {id: Date.now().toString(), ...evParaSalvar}];
-      
       setEventosManual(novaLista);
       localStorage.setItem('agenda_eventos_v3', JSON.stringify(novaLista));
       mostrarToast('⚠️ Salvo offline.');
@@ -284,7 +282,20 @@ const Agenda = () => {
     }
   };
 
-  // 🔥 FUNÇÃO DE PDF ATUALIZADA COM CORES 🔥
+  // 🔥 MAGIA DO GOOGLE MAPS SUPER INTELIGENTE 🔥
+  const abrirGoogleMaps = (endereco) => {
+      if (!endereco) return;
+      // Se você colar um link do maps por engano, ele abre direto
+      const isLink = endereco.startsWith('http://') || endereco.startsWith('https://');
+      
+      // Se for apenas o texto (ex: "Salão X, Rua Y"), ele gera a pesquisa no Maps
+      const url = isLink 
+        ? endereco 
+        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
+        
+      window.open(url, '_blank');
+  };
+
   const exportarPDF = () => {
     try {
       const docPDF = new jsPDF();
@@ -320,7 +331,6 @@ const Agenda = () => {
         });
       } else {
         let eventosFiltrados = [];
-        
         if (viewPrincipal === 'calendario' || (viewPrincipal === 'lista' && viewLista === 'mes')) {
           eventosFiltrados = eventosMesAtual.filter(eventoVisivel);
           tituloRelatorio = `Agenda Mensal: ${nomeMes}`;
@@ -369,7 +379,8 @@ const Agenda = () => {
 
       let startY = 35; let startXTexto = 14;
       if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
-        try { docPDF.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 25, 25); startXTexto = 45; } catch(e) {}
+        try { docPDF.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 25, 25);
+        startXTexto = 45; } catch(e) {}
       }
 
       docPDF.setFontSize(22);
@@ -385,21 +396,22 @@ const Agenda = () => {
       docPDF.setFontSize(9); docPDF.setTextColor(100); docPDF.setFont("helvetica", "normal");
       docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 51);
       
-      if (subtituloRelatorio) { docPDF.text(subtituloRelatorio, 14, 56); startY = 65; } else { startY = 60; }
+      if (subtituloRelatorio) { docPDF.text(subtituloRelatorio, 14, 56); startY = 65;
+      } else { startY = 60; }
 
       docPDF.setLineWidth(0.5); docPDF.setDrawColor(200, 200, 200);
       docPDF.line(14, startY - 4, 196, startY - 4);
 
       let colunasDef = [["Data", "Horário", "Tipo", "Título do Evento", "Cliente"]];
       if (filtroAtivo === 'compras') colunasDef = [["Item", "Qtd", "Valor Est.", "Prazo", "Referência / Vínculo"]];
-      
+
       autoTable(docPDF, {
         startY: startY, head: colunasDef, body: listaExportacao, theme: 'striped',
         headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' }, 
         styles: { fontSize: 9, cellPadding: 5, valign: 'middle' }, 
         alternateRowStyles: { fillColor: [248, 250, 252] },
       });
-      
+
       const nomeArquivoSafe = dadosEmpresa.nomeEmpresa.replace(/[^a-z0-9]/gi, '_');
       docPDF.save(`${nomeArquivoSafe}_${tituloRelatorio.replace(/[^a-z0-9]/gi, '_')}.pdf`);
       mostrarToast('📄 PDF gerado com sucesso!');
@@ -418,13 +430,29 @@ const Agenda = () => {
         <div className={`list-left-bar bar-${ev.tipo}`} />
         <div className="list-info">
           <div className="list-item-header">
-            <h4>{ev.titulo}</h4>
+            <h4>
+                {ev.status === 'concluido' ? '✅ ' : ''}
+                {ev.status === 'cancelado' ? '❌ ' : ''}
+                <span style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>{ev.titulo}</span>
+            </h4>
             {ev.horario && <span className="list-horario">🕐 {ev.horario}</span>}
             {ev.origem === 'locacao' && <span className="badge-locacao-origem">🔗 Locação</span>}
           </div>
           {ev.clienteNome && <span className="list-cliente">👤 {ev.clienteNome}</span>}
+          
+          {/* 🔥 Botão Maps na Listagem 🔥 */}
+          {ev.local && (
+              <span 
+                className="link-maps-card" 
+                onClick={(e) => { e.stopPropagation(); abrirGoogleMaps(ev.local); }}
+              >
+                  📍 {ev.local}
+              </span>
+          )}
+
           {ev.tipoServico  && <span className="list-obs">📦 {ev.tipoServico}</span>}
           {ev.observacoes  && <span className="list-obs">📝 {ev.observacoes}</span>}
+          
           {saldo !== null && Number(ev.valorTotal) > 0 && (
             <span className="list-financeiro">
               💰 R$ {Number(ev.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·{' '}
@@ -443,9 +471,9 @@ const Agenda = () => {
     const hojeD = new Date();
     const MAX = 3;
     const dias = [];
-    
+
     for (let i = 0; i < diaInicio; i++) dias.push(<div key={`e${i}`} className="day-cell empty" />);
-    
+
     for (let dia = 1; dia <= totalDias; dia++) {
       const evsDia = eventosDoDia(dia).filter(eventoVisivel);
       const isHoje = hojeD.getDate() === dia && hojeD.getMonth() === dataAtual.getMonth() && hojeD.getFullYear() === dataAtual.getFullYear();
@@ -459,7 +487,12 @@ const Agenda = () => {
           <div className="eventos-container">
             {evsDia.slice(0, MAX).map(ev => (
               <div key={ev.id} className={`event-tag tag-${ev.tipo}${ev.origem === 'locacao' ? ' tag-locacao-origem' : ''}`} onClick={e => { e.stopPropagation(); abrirModalForm(dia, ev); }}>
-                <span className="event-titulo">{ev.titulo}</span>
+                {ev.horario && <span className="event-time">{ev.horario}</span>}
+                <span className="event-titulo" style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>
+                    {ev.status === 'concluido' && '✅ '}
+                    {ev.status === 'cancelado' && '❌ '}
+                    {ev.titulo}
+                </span>
               </div>
             ))}
             {extra > 0 && <div className="event-tag tag-mais" onClick={e => { e.stopPropagation(); setDiaSelecionado(dia); setModalListaAberto(true); }}>+ {extra} a mais</div>}
@@ -485,13 +518,13 @@ const Agenda = () => {
       if (a.dia !== b.dia) return a.dia - b.dia;
       return (a.horario || '99:99').localeCompare(b.horario || '99:99');
     });
-    
+
     if (listaAno.length === 0) return <div className="vista-vazia">Nenhum evento agendado para {anoAtual}.</div>;
     
     let ultimoMes = null;
     let ultimoDia = null;
     const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-    
+
     return (
       <div className="list-view-container">
         {listaAno.map(ev => {
@@ -515,10 +548,10 @@ const Agenda = () => {
       if (a.dia !== b.dia) return a.dia - b.dia;
       return (a.horario || '99:99').localeCompare(b.horario || '99:99');
     });
-    
+
     if (lista.length === 0) return <div className="vista-vazia">Nenhum evento este mês.</div>;
     let ultimoDia = null;
-    
+
     return (
       <div className="list-view-container">
         {lista.map(ev => {
@@ -539,7 +572,7 @@ const Agenda = () => {
     const diaSemana = dataAtual.getDay();
     const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
     const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
-    
+
     const listaSemana = todosEventos.filter(e => {
       if (!eventoVisivel(e)) return false;
       const dataEv = new Date(e.ano, e.mes, e.dia);
@@ -553,7 +586,6 @@ const Agenda = () => {
     });
 
     if (listaSemana.length === 0) return <div className="vista-vazia">Nenhum evento agendado para esta semana.</div>;
-    
     let ultimoDia = null;
     
     return (
@@ -580,7 +612,7 @@ const Agenda = () => {
   const renderDia = () => {
     const evsDia = eventosDoDia(dataAtual.getDate()).filter(eventoVisivel).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99'));
     const tituloData = dataAtual.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-    
+
     return (
       <div className="vista-dia-container">
         <div className="vista-dia-titulo">{tituloData}</div>
@@ -594,7 +626,7 @@ const Agenda = () => {
 
   const renderCompras = () => {
     if (comprasPendentes.length === 0) return <div className="vista-vazia">✅ Nenhuma compra pendente!</div>;
-    
+
     return (
       <div className="list-view-container">
         <div className="compras-legenda">
@@ -630,6 +662,7 @@ const Agenda = () => {
 
   const renderHeader = () => {
     const btnNav = (label, onClick) => <button className="btn-nav" onClick={onClick}>{label}</button>;
+
     let titulo = ''; let navEsq, navDir;
 
     if (filtroAtivo === 'compras') {
@@ -711,8 +744,9 @@ const Agenda = () => {
     return (
       <div className="modal-overlay" onClick={() => !salvando && setModalFormAberto(false)}>
         <div className="modal-content modal-form-content" onClick={e => e.stopPropagation()}>
+          
           <div className="modal-header">
-            <h3>{ehLocacao ? '🔗 Detalhe da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : 'Novo Compromisso')}</h3>
+            <h3>{ehLocacao ? '🔗 Detalhe da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : '📝 Novo Compromisso')}</h3>
             <button className="btn-close" onClick={() => !salvando && setModalFormAberto(false)}>×</button>
           </div>
 
@@ -721,6 +755,16 @@ const Agenda = () => {
               <div className="locacao-detalhe-row"><span>Cliente</span><strong>👤 {formData.clienteNome}</strong></div>
               <div className="locacao-detalhe-row"><span>Pedido</span><strong>#{formData.numeroPedido || '-'}</strong></div>
               {formData.tipoServico && <div className="locacao-detalhe-row"><span>Modalidade</span><strong>{formData.tipoServico}</strong></div>}
+              
+              {formData.local && (
+                <div className="locacao-detalhe-row">
+                    <span>Local</span>
+                    <span className="link-maps-card" style={{cursor:'pointer'}} onClick={() => abrirGoogleMaps(formData.local)}>
+                        📍 {formData.local}
+                    </span>
+                </div>
+              )}
+
               <div className="locacao-detalhe-row"><span>Evento</span><span className={`list-tipo-badge badge-${formData.tipo}`}>{TIPOS[formData.tipo]?.label}</span></div>
               {formData.status && <div className="locacao-detalhe-row"><span>Status</span><strong className={`status-locacao ${formData.status}`}>{formData.status.toUpperCase()}</strong></div>}
               {Number(formData.valorTotal) > 0 && (
@@ -734,88 +778,137 @@ const Agenda = () => {
             </div>
           ) : (
             <form onSubmit={salvarEvento} className="modal-form">
-              <div className="form-row">
-                <div className="form-group"><label>Data *</label><input type="date" value={formData.dataISO} onChange={e => setFormData({ ...formData, dataISO: e.target.value })} required disabled={salvando}/></div>
-                <div className="form-group"><label>Horário</label><input type="time" value={formData.horario} onChange={e => setFormData({ ...formData, horario: e.target.value })} disabled={salvando}/></div>
-              </div>
-    
-              <div className="form-group"><label>Título do Compromisso *</label><input autoFocus type="text" value={formData.titulo} onChange={e => setFormData({ ...formData, titulo: e.target.value })} placeholder="Ex: Reunião de alinhamento com a noiva" required disabled={salvando}/></div>
               
-              <div className="form-group">
-                <label>Vincular a um Cliente <span className="label-hint">(Opcional)</span></label>
-                <div className="custom-autocomplete-container">
-                  <input
-                    type="text"
-                    placeholder="Digitar nome do cliente..."
-                    value={buscaClienteModal}
-                    onFocus={() => setMostrarDropdownModal(true)}
-                    onChange={(e) => {
-                      setBuscaClienteModal(e.target.value);
-                      if (e.target.value === '') setFormData({...formData, clienteId: ''});
-                    }}
-                    disabled={salvando}
-                    className="modal-input"
-                  />
-                  {mostrarDropdownModal && buscaClienteModal.length > 0 && (
-                    <ul className="autocomplete-results" style={{maxHeight: '150px'}}>
-                      {clientes
-                        .filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase()))
-                        .sort((a, b) => (a.nome || a.nomeFantasia || '').localeCompare(b.nome || b.nomeFantasia || ''))
-                        .map(c => (
-                          <li key={c.id} onClick={() => {
-                            setFormData({...formData, clienteId: c.id});
-                            setBuscaClienteModal(c.nome || c.nomeFantasia);
-                            setMostrarDropdownModal(false);
-                          }}>
-                            {c.nome || c.nomeFantasia}
-                          </li>
-                        ))}
-                        {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
-                          <li style={{ color: 'var(--texto-secundario)', cursor: 'default' }}>Manter como nome avulso: "{buscaClienteModal}"</li>
+              <div className="form-section">
+                  <div className="form-row">
+                    <div className="form-group">
+                        <label>📅 Data *</label>
+                        <input type="date" value={formData.dataISO} onChange={e => setFormData({ ...formData, dataISO: e.target.value })} required disabled={salvando}/>
+                    </div>
+                    <div className="form-group">
+                        <label>⏰ Horário <span className="label-hint">(Opcional)</span></label>
+                        <input type="time" value={formData.horario} onChange={e => setFormData({ ...formData, horario: e.target.value })} disabled={salvando}/>
+                    </div>
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>📌 Título do Compromisso *</label>
+                    <input autoFocus type="text" value={formData.titulo} onChange={e => setFormData({ ...formData, titulo: e.target.value })} placeholder="Ex: Visita técnica no salão" required disabled={salvando}/>
+                  </div>
+              </div>
+              
+              <div className="form-section">
+                  <div className="form-row">
+                    <div className="form-group">
+                      <label>💼 Tipo de Tarefa</label>
+                      <select value={formData.tipo} onChange={e => setFormData({ ...formData, tipo: e.target.value })} disabled={salvando}>
+                        <option value="reuniao">🤝 Reunião com Cliente</option>
+                        <option value="visita">📍 Visita Técnica / Local</option>
+                        <option value="pagamento">💰 Lembrete Financeiro</option>
+                        <option value="tarefa">📌 Tarefa Administrativa</option>
+                        <option value="bloqueio">🚫 Bloqueio de Data</option>
+                      </select>
+                    </div>
+             
+                    {!eventoSelecionado ? (
+                      <div className="form-group">
+                        <label>🔄 Repetir Lembrete</label>
+                        <select value={formData.recorrencia} onChange={e => setFormData({ ...formData, recorrencia: e.target.value })} disabled={salvando}>
+                          <option value="nenhuma">Apenas nesta data</option>
+                          <option value="semanal">Semanalmente (3x)</option>
+                          <option value="mensal">Mensalmente (3x)</option>
+                        </select>
+                      </div>
+                    ) : (
+                      <div className="form-group">
+                        <label>📋 Status</label>
+                        <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} disabled={salvando}>
+                          <option value="pendente">⏳ Pendente</option>
+                          <option value="concluido">✅ Concluído</option>
+                          <option value="cancelado">❌ Cancelado</option>
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="form-group">
+                    <label>👤 Vincular Cliente <span className="label-hint">(Opcional)</span></label>
+                    <div className="custom-autocomplete-container">
+                      <input
+                        type="text"
+                        placeholder="Pesquisar nome do cliente..."
+                        value={buscaClienteModal}
+                        onFocus={() => setMostrarDropdownModal(true)}
+                        onChange={(e) => {
+                          setBuscaClienteModal(e.target.value);
+                          if (e.target.value === '') setFormData({...formData, clienteId: ''});
+                        }}
+                        disabled={salvando}
+                      />
+                      {mostrarDropdownModal && buscaClienteModal.length > 0 && (
+                        <ul className="autocomplete-results" style={{maxHeight: '150px'}}>
+                          {clientes
+                            .filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase()))
+                            .sort((a, b) => (a.nome || a.nomeFantasia || '').localeCompare(b.nome || b.nomeFantasia || ''))
+                            .map(c => (
+                              <li key={c.id} onClick={() => {
+                                setFormData({...formData, clienteId: c.id});
+                                setBuscaClienteModal(c.nome || c.nomeFantasia);
+                                setMostrarDropdownModal(false);
+                              }}>
+                                {c.nome || c.nomeFantasia}
+                              </li>
+                            ))}
+                            {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
+                              <li style={{ color: 'var(--texto-secundario)', cursor: 'default' }}>Usar nome avulso: "{buscaClienteModal}"</li>
+                            )}
+                        </ul>
+                      )}
+                      {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
+                    </div>
+                  </div>
+
+                  {/* 🔥 A NOVA ÁREA DE LOCALIZAÇÃO SUPER PRÁTICA 🔥 */}
+                  <div className="form-group">
+                    <label>📍 Local / Endereço</label>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                        <input 
+                            type="text" 
+                            value={formData.local} 
+                            onChange={e => setFormData({ ...formData, local: e.target.value })} 
+                            placeholder="Ex: Espaço Vida - Rua X, 123" 
+                            disabled={salvando}
+                            style={{ flex: 1 }}
+                        />
+                        {formData.local && (
+                            <button 
+                                type="button" 
+                                className="btn-maps" 
+                                title="Pesquisar no Google Maps"
+                                onClick={() => abrirGoogleMaps(formData.local)}
+                            >
+                                📍 Abrir Maps
+                            </button>
                         )}
-                    </ul>
-                  )}
-                  {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
-                </div>
+                    </div>
+                  </div>
               </div>
 
-              <div className="form-row">
-                <div className="form-group">
-                  <label>Tipo de Tarefa</label>
-                  <select value={formData.tipo} onChange={e => setFormData({ ...formData, tipo: e.target.value })} disabled={salvando}>
-                    <option value="reuniao">🤝 Reunião com Cliente</option>
-                    <option value="visita">📍 Visita Técnica / Local</option>
-                    <option value="pagamento">💰 Lembrete Financeiro</option>
-                    <option value="tarefa">📌 Tarefa Administrativa</option>
-                    <option value="bloqueio">🚫 Bloqueio de Data</option>
-                  </select>
-                </div>
-         
-                {!eventoSelecionado && (
+              <div className="form-section" style={{marginBottom: 0}}>
                   <div className="form-group">
-                    <label>Repetir Lembrete</label>
-                    <select value={formData.recorrencia} onChange={e => setFormData({ ...formData, recorrencia: e.target.value })} disabled={salvando}>
-                      <option value="nenhuma">Apenas nesta data</option>
-                      <option value="semanal">Semanalmente (3x)</option>
-                      <option value="mensal">Mensalmente (3x)</option>
-                    </select>
+                    <label>📝 Observações Extra</label>
+                    <textarea 
+                      value={formData.observacoes} 
+                      onChange={e => setFormData({ ...formData, observacoes: e.target.value })} 
+                      placeholder="Links, referências de peças ou notas importantes..." 
+                      rows={2} 
+                      disabled={salvando}
+                    />
                   </div>
-                )}
-              </div>
-              
-              <div className="form-group">
-                <label>Detalhes Adicionais</label>
-                <textarea 
-                  value={formData.observacoes} 
-                  onChange={e => setFormData({ ...formData, observacoes: e.target.value })} 
-                  placeholder="Endereço do local, links de inspiração, valores a cobrar..." 
-                  rows={3} 
-                  disabled={salvando}
-                />
               </div>
               
               <div className="modal-actions">
-                {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar</button>}
+                {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar Compromisso</button>}
                 <button type="button" className="btn-cancelar-modal" onClick={() => setModalFormAberto(false)} disabled={salvando}>Cancelar</button>
                 <button type="submit" className="btn-salvar-modal" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Compromisso'}</button>
               </div>
@@ -871,11 +964,11 @@ const Agenda = () => {
             <div className="menu-section">
                 <h4 className="menu-section-title">Administrativo</h4>
                 {[
-                  ['reuniao',  'purple', 'Reuniões',       contadores.reuniao],
+                  ['reuniao',  'purple', 'Reuniões',    contadores.reuniao],
                   ['visita',   'green',  'Visitas Técnicas', contadores.visita],
                   ['pagamento','yellow', 'Cobranças',      contadores.pagamento],
                   ['tarefa',   'gray',   'Tarefas Internas', contadores.tarefa],
-                  ['bloqueio', 'red',    'Bloqueios de Data',contadores.bloqueio],
+                  ['bloqueio', 'red',  'Bloqueios de Data',contadores.bloqueio],
                 ].map(([tipo, cor, label, count]) => (
                   <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
                     <span className={`dot bg-${cor}`} />
@@ -921,9 +1014,13 @@ const Agenda = () => {
               {eventosDoDia(diaSelecionado).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99')).map(ev => (
                 <div key={ev.id} className={`item-detalhe-card ${ev.tipo}${ev.origem === 'locacao' ? ' card-locacao' : ''}`} onClick={() => abrirModalForm(diaSelecionado, ev)}>
                   <div className="detalhe-info">
-                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {ev.horario && <span className="detalhe-horario">{ev.horario}</span>}
-                      <h4>{ev.titulo}</h4>
+                      <h4>
+                          {ev.status === 'concluido' && '✅ '}
+                          {ev.status === 'cancelado' && '❌ '}
+                          <span style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>{ev.titulo}</span>
+                      </h4>
                       {ev.origem === 'locacao' && <span className="badge-locacao-origem">🔗</span>}
                      </div>
                     {ev.clienteNome && <span>👤 {ev.clienteNome}</span>}
