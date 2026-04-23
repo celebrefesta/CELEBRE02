@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, query, where } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
-import AuditoriaEstoque from './AuditoriaEstoque'; 
+import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
+import AuditoriaEstoque from './AuditoriaEstoque';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -19,12 +19,14 @@ const Dashboard = () => {
   const [proximosEventos, setProximosEventos] = useState([]);
   const [orcamentosPendentes, setOrcamentosPendentes] = useState([]);
   const [statusChart, setStatusChart] = useState({ orcamento: 0, confirmado: 0, preparacao: 0, entregue: 0, finalizado: 0, total: 0 });
-  
   const [valoresPorStatus, setValoresPorStatus] = useState({ orcamento: 0, confirmado: 0 });
   const [topPecas, setTopPecas] = useState([]);
   const [cobrancasAtrasadas, setCobrancasAtrasadas] = useState([]);
-
   const [loading, setLoading] = useState(true);
+
+  // 🔥 Lógica do Ciclo de Vida do SaaS
+  const [diasTeste, setDiasTeste] = useState(1);
+  const [statusConta, setStatusConta] = useState('ativo'); // 'ativo', 'bloqueado' ou 'excluido'
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -37,7 +39,36 @@ const Dashboard = () => {
         const hojeISO = new Date().toISOString().split('T')[0];
         const mesAtual = hojeISO.substring(0, 7);
 
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS o seu estoque e os seus pedidos
+        // 🔥 CÁLCULO DOS DIAS E BLOQUEIOS
+        const userDocRef = doc(db, "usuarios", usuarioLogado.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        
+        if (userDocSnap.exists()) {
+            const userData = userDocSnap.data();
+            if (userData.dataCadastro) {
+                const dataCadastro = new Date(userData.dataCadastro);
+                const hoje = new Date();
+                const diffTime = Math.abs(hoje - dataCadastro);
+                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
+                
+                setDiasTeste(diffDays);
+                
+                // Se não for pagante, verifica os bloqueios de tempo
+                if (userData.plano !== 'pago') {
+                    if (diffDays > 180) { // 6 Meses
+                        setStatusConta('excluido');
+                        setLoading(false);
+                        return; // Aborta carregamento
+                    } else if (diffDays > 7) { // 8º Dia
+                        setStatusConta('bloqueado');
+                        setLoading(false);
+                        return; // Aborta carregamento
+                    }
+                }
+            }
+        }
+
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS o seu estoque e pedidos
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
 
@@ -48,7 +79,7 @@ const Dashboard = () => {
         
         const confirmadas = locs.filter(l => l.status === 'confirmado' || l.status === 'preparacao' || l.status === 'entregue' || l.status === 'finalizado');
         const orcamentos = locs.filter(l => (l.status || '').toLowerCase() === 'orcamento');
-
+        
         let cOrcamento = 0, cConfirmado = 0, cPreparacao = 0, cEntregue = 0, cFinalizado = 0;
         let vOrcamento = 0, vConfirmado = 0;
         
@@ -62,7 +93,7 @@ const Dashboard = () => {
           else if (s === 'entregue') { cEntregue++; }
           else if (s === 'finalizado') { cFinalizado++; }
         });
-
+        
         setStatusChart({
           orcamento: cOrcamento, confirmado: cConfirmado, preparacao: cPreparacao, entregue: cEntregue, finalizado: cFinalizado, total: cOrcamento + cConfirmado + cPreparacao + cEntregue + cFinalizado
         });
@@ -75,7 +106,7 @@ const Dashboard = () => {
         let qtdVendasGeral = 0;
         const contagemItens = {};
         const atrasados = [];
-
+        
         confirmadas.forEach(l => {
             const valorTotal = Number(l.valorTotal || 0);
             const valorPago = Number(l.valorPago || 0);
@@ -120,7 +151,7 @@ const Dashboard = () => {
             .sort((a, b) => b[1] - a[1])
             .slice(0, 5)
             .map(entry => ({ nome: entry[0], qtd: entry[1] }));
-
+            
         const recents = confirmadas
             .sort((a, b) => {
                 const dataA = a.criadoEm?.seconds ? a.criadoEm.seconds : 0;
@@ -133,7 +164,7 @@ const Dashboard = () => {
                 txt: `${l.clienteNome || 'Cliente Não Informado'}`, 
                 valor: l.valorTotal ? `R$ ${Number(l.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : ''
             }));
-
+            
         const proximos = confirmadas
             .filter(l => l.dataRetirada && l.dataRetirada >= hojeISO && (l.status === 'confirmado' || l.status === 'preparacao'))
             .sort((a, b) => a.dataRetirada.localeCompare(b.dataRetirada))
@@ -144,7 +175,7 @@ const Dashboard = () => {
                 data: l.dataRetirada.split('-').reverse().join('/'),
                 cidade: l.logistica?.cidade || 'Retirada na Loja'
             }));
-
+            
         const orcamentosRecentes = orcamentos
             .sort((a, b) => {
                 const dataA = a.criadoEm?.seconds ? a.criadoEm.seconds : 0;
@@ -152,7 +183,7 @@ const Dashboard = () => {
                 return dataB - dataA; 
             })
             .slice(0, 5);
-
+            
         setEstatisticas({
             acervo: estSnap.size,
             ativas: confirmadas.filter(l => l.status === 'confirmado' || l.status === 'preparacao').length,
@@ -160,14 +191,14 @@ const Dashboard = () => {
             aReceber: totalAReceber,
             ticketMedio: qtdVendasGeral > 0 ? (faturamentoGeral / qtdVendasGeral) : 0
         });
-
+        
         setFaturamentoData(fatSemanal);
         setAtividades(recents);
         setProximosEventos(proximos);
         setOrcamentosPendentes(orcamentosRecentes);
         setTopPecas(rankingPecas);
         setCobrancasAtrasadas(atrasados.sort((a, b) => b.valor - a.valor).slice(0, 5));
-
+        
       } catch (e) { 
           console.error("Erro dashboard:", e);
       } finally { 
@@ -194,8 +225,51 @@ const Dashboard = () => {
   const off4 = 100 - (p1 + p2 + p3);
   const off5 = 100 - (p1 + p2 + p3 + p4);
 
+  // 🚫 CENÁRIO 1: EXCLUÍDO (Mais de 6 meses inativo)
+  if (statusConta === 'excluido') {
+      return (
+          <div className="dash-wide-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center' }}>
+              <div style={{ background: '#fff', padding: '40px', borderRadius: '15px', border: '1px solid #fee2e2', maxWidth: '500px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                  <h2 style={{ color: '#991b1b', marginBottom: '15px' }}>🚫 Conta Desativada</h2>
+                  <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '25px' }}>
+                      Seu período de inatividade ultrapassou <strong>6 meses</strong>. Por segurança e limpeza do sistema, o acesso a esta conta foi suspenso e os dados programados para exclusão.
+                  </p>
+                  <p style={{ color: '#64748b', fontSize: '14px' }}>
+                      Dúvidas? Entre em contato com o suporte: contato@celebreapp.com
+                  </p>
+              </div>
+          </div>
+      );
+  }
+
+  // 🔴 CENÁRIO 2: BLOQUEADO (Dias 8 a 180 - Exige Pagamento)
+  if (statusConta === 'bloqueado') {
+      return (
+          <div className="dash-wide-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center' }}>
+              <div style={{ background: '#fff', padding: '40px', borderRadius: '15px', border: '1px solid #e2e8f0', maxWidth: '500px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                  <h2 style={{ color: '#0f172a', marginBottom: '15px' }}>⏳ Seu período de teste voou!</h2>
+                  <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '25px' }}>
+                      Esperamos que o <strong>Celebre</strong> tenha ajudado a organizar suas festas nestes últimos dias. Para destravar seu painel e não perder nenhum dado importante, escolha o seu plano.
+                  </p>
+                  <button onClick={() => navigate('/planos')} style={{ background: '#0f172a', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', width: '100%', cursor: 'pointer', border: 'none' }}>
+                      Ver Planos e Assinar
+                  </button>
+              </div>
+          </div>
+      );
+  }
+
+  // 🟢 CENÁRIO 3: ATIVO (Dias 1 a 7 OU Pagante)
   return (
     <div className="dash-wide-container fade-in">
+      
+      {/* Faixa do Soft Gate para não-pagantes dentro dos 7 dias */}
+      {diasTeste <= 7 && (
+        <div style={{ background: '#fef3c7', color: '#b45309', padding: '12px', textAlign: 'center', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', border: '1px solid #fde68a' }}>
+          ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito do Celebre. Aproveite!
+        </div>
+      )}
+
       <AuditoriaEstoque />
 
       <header className="dash-wide-header">
@@ -290,7 +364,8 @@ const Dashboard = () => {
             <h3>📝 Orçamentos Pendentes</h3>
             <p className="card-subtitle">Negócios abertos aguardando fechamento.</p>
             <div className="activity-feed">
-              {orcamentosPendentes.length > 0 ? orcamentosPendentes.map((orc, i) => (
+              {orcamentosPendentes.length > 0 ?
+              orcamentosPendentes.map((orc, i) => (
                 <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${orc.id}`)}>
                   <div className="feed-icon warning-icon">🔔</div>
                   <div className="feed-info">
@@ -305,7 +380,8 @@ const Dashboard = () => {
           <section className="dash-card-wide flex-grow">
             <h3>🛒 Últimas Vendas Confirmadas</h3>
             <div className="activity-feed">
-              {atividades.length > 0 ? atividades.map((a, i) => (
+              {atividades.length > 0 ?
+              atividades.map((a, i) => (
                 <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${a.id}`)}>
                   <div className="feed-icon blue-icon">🛍️</div>
                   <div className="feed-info">
@@ -324,7 +400,8 @@ const Dashboard = () => {
             <h3>🚨 Radar de Cobrança</h3>
             <p className="card-subtitle" style={{marginBottom: '10px'}}>A festa passou e o pagamento não concluiu.</p>
             <div className="activity-feed">
-              {cobrancasAtrasadas.length > 0 ? cobrancasAtrasadas.map((cob, i) => (
+              {cobrancasAtrasadas.length > 0 ?
+              cobrancasAtrasadas.map((cob, i) => (
                 <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${cob.id}`)}>
                   <div className="feed-icon danger-icon">⚠️</div>
                   <div className="feed-info">
@@ -340,7 +417,8 @@ const Dashboard = () => {
           <section className="dash-card-wide flex-grow">
             <h3>📈 Ranking de Peças (Top 5)</h3>
             <div className="activity-feed">
-              {topPecas.length > 0 ? topPecas.map((peca, i) => (
+              {topPecas.length > 0 ?
+              topPecas.map((peca, i) => (
                 <div key={i} className="feed-row-moderno cursor-default">
                   <div className="feed-icon" style={{background: '#f8fafc', color: '#64748b', fontSize: '14px', fontWeight: 'bold'}}>{i+1}º</div>
                   <div className="feed-info">

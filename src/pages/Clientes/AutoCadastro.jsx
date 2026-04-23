@@ -2,17 +2,14 @@ import React, { useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig'; 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importado para garantir a segurança
+import { getAuth } from 'firebase/auth';
 import './AutoCadastro.css';
 
 const AutoCadastro = () => {
   const location = useLocation();
   const navigate = useNavigate();
   
-  // 🔥 NOVO: Apanha o ID da loja diretamente do Link Mágico
-  const { idEmpresa } = useParams(); 
-  
-  // 🔥 Puxa a autenticação para garantir fallback de segurança
+  const { idEmpresa } = useParams();
   const auth = getAuth();
   
   const carrinho = location.state?.carrinhoCatalogo || [];
@@ -20,12 +17,12 @@ const AutoCadastro = () => {
 
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    nome: '', documento: '', contato: '', email: '',
+    nome: '', documento: '', contato: '', email: '', // 🔥 Email já estava aqui no estado
     cep: '', logradouro: '', numero: '', bairro: '', cidade: '', dataEvento: ''
   });
 
   const maskCPFOrCNPJ = (v) => {
-    v = v.replace(/\D/g, ""); 
+    v = v.replace(/\D/g, "");
     if (v.length <= 11) {
       v = v.replace(/(\d{3})(\d)/, "$1.$2");
       v = v.replace(/(\d{3})(\d)/, "$1.$2");
@@ -89,13 +86,17 @@ const AutoCadastro = () => {
 
   const finalizarCadastroE_Pedido = async (e) => {
     e.preventDefault();
+    
+    // Verificação de segurança rápida para o E-mail
+    if (!form.email) {
+      alert("Por favor, preencha o seu e-mail para receber a confirmação!");
+      return;
+    }
+
     setLoading(true);
 
     try {
       const isJuridica = form.documento.length > 14;
-
-      // 🔥 IDENTIFICAÇÃO CRÍTICA DO DONO DA LOJA 🔥
-      // Usa o idEmpresa do Link Mágico (1ª opção super segura)
       const idDaLoja = idEmpresa || empresa.userId || empresa.id || (auth.currentUser ? auth.currentUser.uid : null);
 
       if (!idDaLoja) {
@@ -104,7 +105,7 @@ const AutoCadastro = () => {
           return;
       }
 
-      // 1. Salva o cliente oficial no banco de dados como 'pendente' BLINDADO
+      // 1. Salva o cliente
       const clienteRef = await addDoc(collection(db, "clientes"), {
         nome: form.nome,
         nomeFantasia: isJuridica ? form.nome : '',
@@ -121,13 +122,12 @@ const AutoCadastro = () => {
         origem: 'Auto-Cadastro (Site)',
         tipoPessoa: isJuridica ? 'juridica' : 'fisica', 
         criadoEm: serverTimestamp(),
-        userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA
+        userId: idDaLoja 
       });
 
-      // 2. Se tiver itens no carrinho, salva a lista como Orçamento BLINDADO
+      // 2. Salva o orçamento
       if (carrinho.length > 0) {
         const total = calcularTotal();
-
         await addDoc(collection(db, "locacoes"), {
           clienteId: clienteRef.id,
           clienteNome: form.nome,
@@ -138,17 +138,47 @@ const AutoCadastro = () => {
           status: 'orcamento',
           origem: 'catalogo_publico',
           criadoEm: serverTimestamp(),
-          userId: idDaLoja // 🔥 CARIMBO DE SEGURANÇA
+          userId: idDaLoja
         });
+      }
 
+      // 🔥 MÁGICA: DISPARO DO E-MAIL PARA A CLIENTE DO CATÁLOGO 🔥
+      await addDoc(collection(db, 'mail'), {
+        to: form.email,
+        message: {
+          subject: `Oba! Recebemos seu cadastro na ${empresa.nome} 🎉`,
+          html: `
+            <div style="font-family: sans-serif; color: #333; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin: 0 auto;">
+              <div style="background-color: #0f172a; padding: 25px; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">${empresa.nome}</h1>
+              </div>
+              <div style="padding: 30px;">
+                <h2 style="color: #0f172a; font-size: 20px;">Olá, ${form.nome.split(' ')[0]}!</h2>
+                <p style="font-size: 16px; line-height: 1.5;">Que alegria ter você por aqui! O seu cadastro foi concluído com sucesso e já está no nosso sistema.</p>
+                
+                ${carrinho.length > 0 ? `
+                  <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                    <p style="margin: 0; font-weight: bold; color: #1e40af;">🛍️ Sobre o seu pedido:</p>
+                    <p style="margin: 8px 0 0 0; font-size: 15px; color: #1e3a8a;">Nossa equipe já recebeu a sua lista com os ${carrinho.length} itens desejados. Em breve, entraremos em contato pelo WhatsApp para confirmar a disponibilidade, passar o orçamento final e fechar todos os detalhes da sua festa!</p>
+                  </div>
+                ` : ''}
+
+                <p style="font-size: 16px; line-height: 1.5;">Se tiver qualquer dúvida até lá, basta nos chamar.</p>
+                <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>Equipe ${empresa.nome}</strong></p>
+              </div>
+            </div>
+          `
+        }
+      });
+
+      if (carrinho.length > 0) {
         alert("🎉 Pedido recebido com sucesso!\n\nSua lista e seu cadastro foram enviados para a nossa equipe. Em breve entraremos em contato pelo seu WhatsApp para confirmar a aprovação!");
       } else {
         alert("✅ Cadastro recebido com sucesso!\n\nNossa equipe fará a análise do seu perfil e entraremos em contato.");
       }
 
-      // 3. Manda o cliente de volta para o catálogo (usando o Link Mágico)
       navigate(`/catalogo/${idDaLoja}`);
-
+      
     } catch (error) {
       console.error("Erro no cadastro:", error);
       alert("Ocorreu um erro ao salvar. Tente novamente.");
@@ -178,6 +208,12 @@ const AutoCadastro = () => {
           <div className="form-group full">
             <label>Nome Completo *</label>
             <input type="text" name="nome" placeholder="Ex: Maria Silva" required onChange={handleChange} />
+          </div>
+
+          {/* 🔥 ADICIONADO: Campo de E-mail vital para a automação funcionar! */}
+          <div className="form-group full">
+            <label>E-mail *</label>
+            <input type="email" name="email" placeholder="seu.email@exemplo.com" value={form.email} required onChange={handleChange} />
           </div>
           
           <div className="form-dupla">
@@ -227,7 +263,7 @@ const AutoCadastro = () => {
                   <label>Data da Festa / Retirada *</label>
                   <input type="date" name="dataEvento" required onChange={handleChange} />
                 </div>
-             </>
+            </>
           )}
 
           <button type="submit" className="btn-finalizar-tudo" disabled={loading}>

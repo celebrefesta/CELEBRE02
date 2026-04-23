@@ -42,7 +42,7 @@ const Cadastro = () => {
         nomeCompleto: nome,
         email: email,
         dataCadastro: new Date().toISOString(),
-        perfil: 'admin' 
+        role: 'owner' 
       });
 
       // 🔥 MÁGICA: DISPARO DO E-MAIL DE BOAS-VINDAS (7 DIAS DE TESTE)
