@@ -12,6 +12,8 @@ import Login from './pages/Auth/Login';
 import Cadastro from './pages/Auth/Cadastro';
 import Checkout from './pages/Checkout/Checkout'; 
 import RotaPrivada from './components/RotaPrivada'; 
+import RotaAdmin from './components/RotaAdmin'; 
+import RotaProtegida from './components/RotaProtegida'; // 🔥 A nossa nova Trava de Segurança!
 
 // --- PÁGINAS ---
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -43,7 +45,7 @@ import NovoContrato from "./pages/Contratos/NovoContrato";
 import EditarContrato from "./pages/Contratos/EditarContrato";
 import AssinaturaContrato from "./pages/Contratos/AssinaturaContrato";
 import ModelosContrato from "./pages/Contratos/ModelosContrato";
-import VisualizarContrato from "./pages/Contratos/VisualizarContrato"; 
+import VisualizarContrato from "./pages/Contratos/VisualizarContrato";
 
 // --- GESTÃO ---
 import Relatorios from './pages/Relatorios/Relatorios';
@@ -53,10 +55,15 @@ import Moodboard from './pages/Moodboard/Moodboard';
 import Catalogo from './pages/Catalago/Catalago'; 
 import Notificacoes from './pages/Notificacoes/Notificacoes';
 
+// --- PLANOS & ASSINATURA ---
+import Planos from './pages/Planos/Planos';
+import AdminPlanos from './pages/Planos/AdminPlanos';
+import PaginaUpgrade from './pages/Planos/PaginaUpgrade'; // 🔥 Página para onde o cliente vai se não tiver o plano
+
 const AppContent = () => {
   const location = useLocation();
+  const rotasSemMenu = ['/', '/login', '/cadastro', '/checkout', '/planos', '/upgrade'];
 
-  const rotasSemMenu = ['/', '/login', '/cadastro', '/checkout'];
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
                      !location.pathname.includes('/catalogo') &&
@@ -71,7 +78,7 @@ const AppContent = () => {
         {showNavbar && <Topbar />}
 
         <Routes>
-          {/* 🌍 VITRINE PÚBLICA (Página Inicial Oficial) */}
+          {/* 🌍 VITRINE PÚBLICA */}
           <Route path="/" element={<LandingPage />} />
 
           {/* 🔓 OUTRAS ROTAS PÚBLICAS */}
@@ -79,46 +86,55 @@ const AppContent = () => {
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/checkout" element={<Checkout />} /> 
           
-          {/* 🔥 ROTAS MÁGICAS: Agora recebem o :idEmpresa na URL */}
           <Route path="/autocadastro/:idEmpresa" element={<AutoCadastro />} /> 
           <Route path="/catalogo/:idEmpresa" element={<Catalogo />} />
-          
           <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
           <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
 
-          {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Apenas Logados) */}
+          {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Base) */}
           <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
+          <Route path="/planos" element={<RotaPrivada><Planos /></RotaPrivada>} />
+          <Route path="/upgrade" element={<RotaPrivada><PaginaUpgrade /></RotaPrivada>} />
           
+          {/* ⚙️ ROTA ADMIN EXCLUSIVA */}
+          <Route path="/admin-planos" element={<RotaAdmin><AdminPlanos /></RotaAdmin>} />
+          
+          {/* 👥 CLIENTES */}
           <Route path="/clientes" element={<RotaPrivada><Clientes /></RotaPrivada>} />
           <Route path="/cadastro-cliente" element={<RotaPrivada><CadastroCliente /></RotaPrivada>} />
           
-          <Route path="/estoque" element={<RotaPrivada><Estoque /></RotaPrivada>} />
-          <Route path="/cadastro-estoque" element={<RotaPrivada><CadastroEstoque /></RotaPrivada>} />
+          {/* 📦 ESTOQUE (🔒 PROTEGIDO PELO PLANO) */}
+          <Route path="/estoque" element={<RotaPrivada><RotaProtegida recursoExigido="Estoque"><Estoque /></RotaProtegida></RotaPrivada>} />
+          <Route path="/cadastro-estoque" element={<RotaPrivada><RotaProtegida recursoExigido="Estoque"><CadastroEstoque /></RotaProtegida></RotaPrivada>} />
           
+          {/* 📅 LOCAÇÕES */}
           <Route path="/locacoes" element={<RotaPrivada><Locacoes /></RotaPrivada>} />
           <Route path="/locacoes/nova" element={<RotaPrivada><NovaLocacao /></RotaPrivada>} />
           <Route path="/locacoes/editar/:id" element={<RotaPrivada><EditarLocacao /></RotaPrivada>} />
           
+          {/* 🤝 FORNECEDORES E COMPRAS */}
           <Route path="/fornecedores" element={<RotaPrivada><Fornecedores /></RotaPrivada>} />
           <Route path="/fornecedores/novo" element={<RotaPrivada><NovoFornecedor /></RotaPrivada>} />
-          {/* 🔥 ROTA CORRIGIDA: Permite editar os fornecedores */}
           <Route path="/fornecedores/editar/:id" element={<RotaPrivada><NovoFornecedor /></RotaPrivada>} />
-          
           <Route path="/compras" element={<RotaPrivada><Compras /></RotaPrivada>} />
           <Route path="/compras/nova" element={<RotaPrivada><NovaCompra /></RotaPrivada>} />
           <Route path="/compras/editar/:id" element={<RotaPrivada><NovaCompra /></RotaPrivada>} />
           
+          {/* 💰 FINANCEIRO */}
           <Route path="/financeiro" element={<RotaPrivada><Financeiro /></RotaPrivada>} />
           <Route path="/financeiro/novo" element={<RotaPrivada><NovoLancamento /></RotaPrivada>} />
           
+          {/* 🚚 LOGÍSTICA (🔒 PROTEGIDA PELO PLANO) */}
           <Route path="/agenda" element={<RotaPrivada><Agenda /></RotaPrivada>} />
-          <Route path="/logistica" element={<RotaPrivada><Logistica /></RotaPrivada>} />
+          <Route path="/logistica" element={<RotaPrivada><RotaProtegida recursoExigido="Logística"><Logistica /></RotaProtegida></RotaPrivada>} />
           
-          <Route path="/contratos" element={<RotaPrivada><Contratos /></RotaPrivada>} />
-          <Route path="/novo-contrato" element={<RotaPrivada><NovoContrato /></RotaPrivada>} />
-          <Route path="/modelos-contrato" element={<RotaPrivada><ModelosContrato /></RotaPrivada>} />
-          <Route path="/editar-contrato/:id" element={<RotaPrivada><EditarContrato /></RotaPrivada>} />
+          {/* 📝 CONTRATOS (🔒 PROTEGIDO PELO PLANO) */}
+          <Route path="/contratos" element={<RotaPrivada><RotaProtegida recursoExigido="Contratos"><Contratos /></RotaProtegida></RotaPrivada>} />
+          <Route path="/novo-contrato" element={<RotaPrivada><RotaProtegida recursoExigido="Contratos"><NovoContrato /></RotaProtegida></RotaPrivada>} />
+          <Route path="/modelos-contrato" element={<RotaPrivada><RotaProtegida recursoExigido="Contratos"><ModelosContrato /></RotaProtegida></RotaPrivada>} />
+          <Route path="/editar-contrato/:id" element={<RotaPrivada><RotaProtegida recursoExigido="Contratos"><EditarContrato /></RotaProtegida></RotaPrivada>} />
           
+          {/* 📊 GESTÃO */}
           <Route path="/relatorios" element={<RotaPrivada><Relatorios /></RotaPrivada>} />
           <Route path="/moodboard" element={<RotaPrivada><Moodboard /></RotaPrivada>} />
           <Route path="/configuracoes" element={<RotaPrivada><Configuracoes /></RotaPrivada>} />

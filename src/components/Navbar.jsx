@@ -1,36 +1,32 @@
 import React, { useState } from "react";
 import { NavLink } from "react-router-dom";
-import { getAuth } from 'firebase/auth'; // 🔥 Importado para pegar o seu ID para o Catálogo
+import { getAuth } from 'firebase/auth';
 import "./Navbar.css";
 
 const Navbar = () => {
-  // 🌟 Estado para controlar se o menu está aberto no celular
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
-  // 🔥 Identifica o usuário logado
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const emailAdmin = "celebrefesta25@gmail.com";
 
-  // Função para abrir/fechar o menu
+  // Verifica se quem está logado é a Camila (Dona)
+  const isSuperAdmin = usuarioLogado?.email === emailAdmin;
+
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
-
-  // Função para fechar o menu ao clicar em um link
   const closeMenu = () => setIsMobileMenuOpen(false);
 
   return (
     <>
-      {/* 🌟 BOTÃO HAMBÚRGUER (Aparece apenas no mobile via CSS) */}
       <button className="mobile-menu-btn" onClick={toggleMenu}>
         <i className={isMobileMenuOpen ? "fas fa-times" : "fas fa-bars"}></i>
       </button>
 
-      {/* 🌟 OVERLAY (Fundo escuro que fecha o menu ao clicar fora) */}
       <div 
         className={`sidebar-overlay ${isMobileMenuOpen ? "active" : ""}`} 
         onClick={closeMenu}
       ></div>
 
-      {/* 🌟 SIDEBAR (Recebe a classe mobile-open se o estado for true) */}
       <div className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         
         <div className="sidebar-logo">
@@ -38,8 +34,7 @@ const Navbar = () => {
         </div>
 
         <nav className="sidebar-nav">
-          
-          {/* 🔥 CORREÇÃO 1: "Início" agora aponta para o painel de controlo (Dashboard) */}
+          {/* LINKS COMUNS A TODOS */}
           <NavLink to="/dashboard" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
             <i className="fas fa-th-large"></i> <span>Início</span>
           </NavLink>
@@ -90,10 +85,48 @@ const Navbar = () => {
             <i className="fas fa-palette"></i> <span>Moodboard</span>
           </NavLink>
 
-          {/* 🔥 CORREÇÃO 2: "Catálogo" agora constrói o link usando o seu ID de empresa */}
-          <NavLink to={usuarioLogado ? `/catalogo/${usuarioLogado.uid}` : "/catalogo"} onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+          <NavLink to={usuarioLogado ? `/catalogo/${usuarioLogado.uid}` : "/catalogo"} 
+            onClick={closeMenu} 
+            className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
             <i className="fas fa-store"></i> <span>Catálogo</span>
           </NavLink>
+
+          {/* ------------------------------------------------------------------- */}
+          {/* LÓGICA DE VISIBILIDADE CONDICIONAL */}
+          {/* ------------------------------------------------------------------- */}
+
+          {!isSuperAdmin ? (
+            // O QUE O CLIENTE VÊ (Assinatura/Teste)
+            <>
+              <div className="sidebar-divider"></div>
+              <NavLink to="/planos" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
+                <i className="fas fa-star"></i> <span>Assinatura</span>
+              </NavLink>
+            </>
+          ) : (
+            // O QUE SÓ A CAMILA VÊ (Centro do Sistema)
+            <>
+              <div className="sidebar-divider" style={{ borderTop: '2px solid #c5a059' }}></div>
+              <p style={{ color: '#c5a059', fontSize: '11px', marginLeft: '20px', fontWeight: 'bold' }}>PAINEL MASTER</p>
+              
+              <NavLink 
+                to="/admin-planos" 
+                onClick={closeMenu} 
+                className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}
+                style={{ color: '#c5a059' }}
+              >
+                <i className="fas fa-tools"></i> <span>Gerenciar Planos</span>
+              </NavLink>
+
+              <NavLink 
+                to="/gestao-usuarios" // Exemplo: se quiser criar uma futura página de ver todos os clientes
+                onClick={closeMenu} 
+                className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}
+              >
+                <i className="fas fa-user-shield"></i> <span>Controle Geral</span>
+              </NavLink>
+            </>
+          )}
 
         </nav>
       </div>
