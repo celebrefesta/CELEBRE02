@@ -1,12 +1,15 @@
 import './Auth.css'; 
 import React, { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, collection, addDoc } from 'firebase/firestore'; // 🔥 Adicionado collection e addDoc
+import { doc, setDoc, collection, addDoc } from 'firebase/firestore'; 
 import { auth, db } from '../../firebaseConfig'; 
 
 const Cadastro = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const planoEscolhido = searchParams.get('plano');
+
   const [nome, setNome] = useState('');
   const [email, setEmail] = useState('');
   const [senha, setSenha] = useState('');
@@ -19,10 +22,10 @@ const Cadastro = () => {
     setErro('');
 
     if (senha !== confirmarSenha) {
-      return setErro('As senhas não coincidem.');
+      return setErro('As palavras-passe não coincidem.');
     }
     if (senha.length < 6) {
-      return setErro('A senha deve ter pelo menos 6 caracteres.');
+      return setErro('A palavra-passe deve ter pelo menos 6 caracteres.');
     }
 
     try {
@@ -31,25 +34,28 @@ const Cadastro = () => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
       const user = userCredential.user;
 
-      // Salva o nome no Auth do Firebase
-      await updateProfile(user, {
-        displayName: nome
-      });
+      await updateProfile(user, { displayName: nome });
 
-      // Cria a ficha do usuário no Firestore (Banco de Dados)
+      // 🔥 LÓGICA VIP: CALCULA OS 7 DIAS DE TESTE
+      const dataAtual = new Date();
+      const dataFimTeste = new Date(dataAtual);
+      dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+
       await setDoc(doc(db, 'usuarios', user.uid), {
         uid: user.uid,
         nomeCompleto: nome,
         email: email,
-        dataCadastro: new Date().toISOString(),
-        role: 'owner' 
+        dataCadastro: dataAtual.toISOString(),
+        dataFimTeste: dataFimTeste.toISOString(), // 👈 Carimbo VIP de 7 dias!
+        role: 'owner',
+        planoId: planoEscolhido || 'plano_basico' // Guarda a intenção de plano dela
       });
 
-      // 🔥 MÁGICA: DISPARO DO E-MAIL DE BOAS-VINDAS (7 DIAS DE TESTE)
+      // DISPARO DO E-MAIL
       await addDoc(collection(db, 'mail'), {
         to: email,
         message: {
-          subject: '🎉 Bem-vinda ao Celebre! Seu teste de 7 dias começou.',
+          subject: '🎉 Bem-vinda ao Celebre! O seu teste de 7 dias começou.',
           html: `
             <div style="font-family: sans-serif; color: #1e293b; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden;">
               <div style="background-color: #16a34a; padding: 20px; text-align: center;">
@@ -57,15 +63,12 @@ const Cadastro = () => {
               </div>
               <div style="padding: 30px;">
                 <h2 style="color: #0f172a;">Olá, ${nome}!</h2>
-                <p>Que alegria ter você conosco! Sua conta no <strong>Celebre</strong> foi criada com sucesso.</p>
-                
+                <p>Que alegria tê-la connosco! A sua conta no <strong>Celebre</strong> foi criada com sucesso.</p>
                 <div style="background-color: #f0fdf4; border-left: 4px solid #16a34a; padding: 15px; margin: 20px 0;">
-                  <p style="margin: 0; font-weight: bold; color: #166534;">⏳ Período de Teste Ativo</p>
-                  <p style="margin: 5px 0 0 0; font-size: 14px; color: #166534;">Você tem <strong>7 dias gratuitos</strong> para explorar todas as ferramentas, cadastrar seu acervo e organizar seus eventos.</p>
+                  <p style="margin: 0; font-weight: bold; color: #166534;">⏳ VIP: Acesso Total Liberado</p>
+                  <p style="margin: 5px 0 0 0; font-size: 14px; color: #166534;">Você tem <strong>7 dias de acesso Premium</strong> para explorar absolutamente todas as ferramentas do Celebre.</p>
                 </div>
-
-                <p>Dúvidas? Basta responder a este e-mail que nossa equipe te ajudará.</p>
-                <p style="margin-top: 30px;">Sucesso nos seus eventos!<br><strong>Equipe Celebre</strong></p>
+                <p>Sucesso nos seus eventos!<br><strong>Equipa Celebre</strong></p>
               </div>
             </div>
           `
@@ -75,9 +78,9 @@ const Cadastro = () => {
       navigate('/dashboard'); 
       
     } catch (error) {
-      console.error("Erro detalhado do Firebase:", error);
+      console.error("Erro no cadastro:", error);
       if (error.code === 'auth/email-already-in-use') {
-        setErro('Esse e-mail já está cadastrado. Faça login!');
+        setErro('Esse e-mail já está registado. Faça login!');
       } else {
         setErro('Erro ao criar conta. Verifique os dados e tente novamente.');
       }
@@ -93,9 +96,11 @@ const Cadastro = () => {
           <div className="logo-placeholder">
             <div className="logo-circle"></div> Celebre
           </div>
-          <h2>Crie sua conta ✨</h2>
-          <p>Rápido e fácil. Comece a gerenciar seu acervo.</p>
+          <h2>Crie a sua conta ✨</h2>
+          <p>Rápido e fácil. 7 dias grátis com acesso TOTAL.</p>
+          
           {erro && <div className="auth-erro">{erro}</div>}
+          
           <form onSubmit={handleCadastro}>
             <div className="input-group">
               <label>NOME COMPLETO</label>
@@ -107,27 +112,29 @@ const Cadastro = () => {
             </div>
             <div className="input-row">
               <div className="input-group">
-                <label>SENHA</label>
+                <label>PALAVRA-PASSE</label>
                 <input type="password" placeholder="••••••••" value={senha} onChange={(e) => setSenha(e.target.value)} required />
               </div>
               <div className="input-group">
-                <label>REPETIR SENHA</label>
+                <label>REPETIR PALAVRA-PASSE</label>
                 <input type="password" placeholder="••••••••" value={confirmarSenha} onChange={(e) => setConfirmarSenha(e.target.value)} required />
               </div>
             </div>
             <button type="submit" disabled={loading} className="btn-auth">
-              {loading ? 'Criando conta...' : 'Cadastrar e Entrar'}
+              {loading ? 'A criar conta...' : 'Começar meu Teste Grátis'}
             </button>
           </form>
+          
           <p className="auth-link" style={{ marginTop: '20px' }}>
             Já tem uma conta? <Link to="/login">Fazer login</Link>
           </p>
         </div>
       </main>
+      
       <aside className="auth-side-panel">
         <div className="side-content">
-          <h1>O primeiro passo <br/> para escalar <br/> seu negócio.</h1>
-          <p>Junte-se a profissionais que já transformaram a gestão de seus eventos e locações com o Celebre.</p>
+          <h1>Tudo liberado <br/> por 7 dias.</h1>
+          <p>Experimente o potencial máximo do Celebre e descubra por que os maiores profissionais do mercado já não vivem sem ele.</p>
         </div>
       </aside>
     </div>

@@ -1,72 +1,91 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { db } from '../firebaseConfig';
+import { auth, db } from '../firebaseConfig';
 import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const RotaProtegida = ({ recursoExigido, children }) => {
     const [temAcesso, setTemAcesso] = useState(null);
 
     useEffect(() => {
-        const verificarAcesso = async () => {
-            try {
-                // ⚠️ AQUI ENTRA A SUA LÓGICA DE LOGIN 
-                // Você precisa pegar o ID do usuário que acabou de logar no sistema.
-                // Exemplo se você salva no LocalStorage ao logar:
-                // const userId = localStorage.getItem("uid"); 
-                
-                const userId = "COLOQUE_AQUI_A_VARIAVEL_DO_SEU_USUARIO_LOGADO"; 
-                
-                if (!userId || userId === "COLOQUE_AQUI_A_VARIAVEL_DO_SEU_USUARIO_LOGADO") {
-                     // Se não tem usuário logado, vamos fingir que tem acesso falso só para não quebrar sua tela agora
-                     console.warn("Lógica de usuário não conectada na RotaProtegida");
-                     setTemAcesso(true); // Mude para false quando arrumar o Login
-                     return;
-                }
+        const unsubscribe = onAuthStateChanged(auth, async (user) => {
+            if (!user) {
+                setTemAcesso(false);
+                return;
+            }
 
-                // 1. Vai no Firebase e olha quem é o usuário
-                const userRef = doc(db, "usuarios", userId);
+            try {
+                const userRef = doc(db, "usuarios", user.uid);
                 const userSnap = await getDoc(userRef);
-                
+
                 if (userSnap.exists()) {
-                    const idPlanoDoUsuario = userSnap.data().planoId;
-                    
-                    // 2. Vai no Firebase e olha o plano que ele assina (Que você edita no AdminPlanos!)
-                    const planoRef = doc(db, "planos", idPlanoDoUsuario);
-                    const planoSnap = await getDoc(planoRef);
-                    
-                    if (planoSnap.exists()) {
-                        const beneficios = planoSnap.data().beneficios || [];
-                        
-                        // 3. A MÁGICA: Ele olha se o nome da linha (ex: "Contratos") está com o Check Verde no plano dele
-                        const acessoLiberado = beneficios.some(b => 
-                            b.toLowerCase().includes(recursoExigido.toLowerCase())
-                        );
-                        
-                        setTemAcesso(acessoLiberado);
+                    const dadosUsuario = userSnap.data();
+
+                    // 1. VERIFICA O TESTE DE 7 DIAS
+                    let testeAtivo = false;
+                    if (dadosUsuario.dataFimTeste) {
+                        const dataFim = new Date(dadosUsuario.dataFimTeste);
+                        const agora = new Date();
+                        if (agora <= dataFim) {
+                            testeAtivo = true;
+                        }
+                    }
+
+                    // 🔥 2. A NOVA REGRA DE CONGELAMENTO 🔥
+                    // Verifica se o cliente realmente pagou o plano
+                    const assinaturaAtiva = dadosUsuario.assinaturaAtiva === true; 
+
+                    // Se o teste acabou E ele não pagou, CONGELA O SISTEMA.
+                    if (!testeAtivo && !assinaturaAtiva) {
+                        setTemAcesso(false);
+                        return; 
+                    }
+
+                    // 3. Se está no teste grátis, é VIP e tem passe livre
+                    if (testeAtivo) {
+                        setTemAcesso(true);
                         return;
                     }
+
+                    // 4. Se o teste acabou MAS ELE PAGOU, verifica as regras do plano
+                    const planoId = dadosUsuario.planoId;
+                    if (planoId && assinaturaAtiva) {
+                        const planoRef = doc(db, "planos", planoId);
+                        const planoSnap = await getDoc(planoRef);
+                        
+                        if (planoSnap.exists()) {
+                            const beneficios = planoSnap.data().beneficios || [];
+                            const acessoLiberado = beneficios.includes(recursoExigido);
+                            
+                            setTemAcesso(acessoLiberado);
+                            return;
+                        }
+                    }
                 }
+                
                 setTemAcesso(false);
             } catch (error) {
                 console.error("Erro ao verificar proteção de rota:", error);
                 setTemAcesso(false);
             }
-        };
+        });
 
-        verificarAcesso();
+        return () => unsubscribe();
     }, [recursoExigido]);
 
-    // Tela de carregamento enquanto o sistema "pensa"
     if (temAcesso === null) {
-        return <div className="loading-screen" style={{ textAlign: 'center', marginTop: '100px', fontWeight: 'bold', color: '#0f172a' }}>Verificando permissões do plano...</div>;
+        return (
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#64748b', fontFamily: 'sans-serif' }}>
+                <h3>A validar acesso seguro do Celebre...</h3>
+            </div>
+        );
     }
 
-    // Se ele NÃO TEM a linha marcada de verde no Admin Planos, é expulso para a tela de Upgrade!
+    // 🔒 CONGELADO: Envia para a tela de Assinatura/Upgrade
     if (temAcesso === false) {
         return <Navigate to="/upgrade" replace />;
     }
 
-    // Se está verdinho lá no Admin Planos, a página abre normalmente!
     return children;
 };
 

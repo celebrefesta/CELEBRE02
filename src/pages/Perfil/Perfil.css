@@ -1,168 +1,585 @@
-/* =========================================
-   PÁGINA MEU PERFIL (CLARO / ESCURO)
-   ========================================= */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-.perfil-page { 
-    width: 100%; 
-    animation: fadeIn 0.4s ease-out; 
-    padding: 20px 40px; /* Garante um respiro nas laterais */
+/* =========================================
+   BASE DA PÁGINA E LAYOUT
+   ========================================= */
+.perfil-page {
+    padding: 40px 30px;
+    background: #f8fafc;
+    min-height: 100vh;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.fade-in {
+    animation: fadeIn 0.4s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.perfil-header {
+    max-width: 1500px;
+    margin: 0 auto 30px;
+}
+
+.perfil-header h1 {
+    font-size: 32px;
+    color: #0f172a;
+    font-weight: 800;
+    margin-bottom: 5px;
+    letter-spacing: -0.5px;
+}
+
+.perfil-header p {
+    color: #64748b;
+    font-size: 15px;
+    font-weight: 500;
 }
 
 .perfil-container {
-    display: grid; grid-template-columns: 280px 1fr; gap: 30px; margin-top: 20px;
+    display: flex;
+    gap: 30px;
+    max-width: 1500px;
+    margin: 0 auto;
+    align-items: flex-start;
 }
 
 /* =========================================
-   SIDEBAR (Foto e Resumo)
+   SIDEBAR (ESQUERDA)
    ========================================= */
 .perfil-sidebar {
-    background: var(--branco); 
-    padding: 30px; 
-    border-radius: 15px; 
+    width: 350px;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    border: 1px solid #e2e8f0;
     text-align: center;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05); 
-    height: fit-content;
-    border: 1px solid var(--borda);
-    transition: 0.3s;
-}
-
-/* Ajuste caso você tenha o nome h2 ou h3 debaixo da foto */
-.perfil-sidebar h2, .perfil-sidebar h3 {
-    color: var(--texto-principal);
-    margin-top: 15px;
-    margin-bottom: 5px;
+    position: sticky;
+    top: 30px;
 }
 
 .avatar-large {
-    width: 100px; height: 100px; 
-    background: var(--dourado); 
-    color: white; /* Garante que a letra C fique visível */
-    border-radius: 50%; display: flex; align-items: center; justify-content: center;
-    font-size: 3rem; font-weight: 800; margin: 0 auto 15px;
+    width: 110px;
+    height: 110px;
+    background: #0f172a;
+    color: #c5a059;
+    font-size: 42px;
+    font-weight: 800;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    box-shadow: 0 8px 20px rgba(15, 23, 42, 0.15);
+}
+
+.perfil-sidebar h3 {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 8px;
 }
 
 .badge-admin {
-    background: rgba(3, 105, 161, 0.1); 
-    color: #0369a1; 
-    padding: 6px 16px;
-    border-radius: 20px; 
-    font-size: 0.75rem; 
-    font-weight: 700;
     display: inline-block;
-    border: 1px solid #bae6fd;
+    background: #fef3c7;
+    color: #b45309;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
-/* No escuro, o azul claro precisa brilhar um pouco mais */
-[data-theme='dark'] .badge-admin {
-    color: #38bdf8;
-    border-color: transparent;
+.perfil-sidebar hr {
+    border: none;
+    border-top: 1px solid #e2e8f0;
+    margin: 25px 0;
+}
+
+.btn-change-photo {
+    width: 100%;
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    padding: 10px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+}
+
+.btn-change-photo:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
 }
 
 /* =========================================
-   FORMULÁRIO PRINCIPAL
+   FORMULÁRIO E INPUTS GERAIS (DIREITA)
    ========================================= */
 .perfil-form {
-    background: var(--branco); 
-    padding: 40px; 
-    border-radius: 15px;
-    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-    border: 1px solid var(--borda);
-    transition: 0.3s;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 25px;
 }
 
-.form-section { margin-bottom: 30px; }
-
-.form-section h3 { 
-    font-size: 1.1rem; 
-    color: var(--texto-principal); 
-    margin-bottom: 20px; 
-    border-bottom: 1px solid var(--borda); 
-    padding-bottom: 10px; 
+.form-section {
+    background: #ffffff;
+    padding: 35px;
+    border-radius: 16px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.03);
+    border: 1px solid #e2e8f0;
 }
 
-.input-row { display: flex; gap: 20px; flex-wrap: wrap; }
-
-.input-group { margin-bottom: 15px; flex: 1; min-width: 250px; }
-
-.input-group label { 
-    display: block; 
-    font-size: 0.85rem; 
-    font-weight: 600; 
-    color: var(--texto-secundario); 
-    margin-bottom: 5px; 
+.form-section h3 {
+    font-size: 18px;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 25px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    border-bottom: 2px solid #f1f5f9;
+    padding-bottom: 15px;
 }
 
-.input-group input { 
-    width: 100%; 
-    padding: 12px; 
-    border: 1px solid var(--borda); 
-    border-radius: 8px; 
-    background: var(--fundo-cinza);
-    color: var(--texto-principal);
-    font-family: inherit;
-    outline: none;
-    transition: 0.2s;
+.form-section h3 i {
+    color: #c5a059;
+    font-size: 20px;
 }
 
-/* Destaque dourado ao clicar no input */
-.input-group input:focus {
-    border-color: var(--dourado);
-    background: var(--branco);
-    box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
+.input-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
 }
 
-/* =========================================
-   BOTÃO SALVAR
-   ========================================= */
-.btn-save-perfil {
-    background: #0f172a; 
-    color: white; 
-    border: none; 
-    padding: 14px 30px;
-    border-radius: 8px; 
-    font-weight: 700; 
-    cursor: pointer; 
-    transition: 0.2s;
-    margin-top: 10px;
+.input-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
 }
 
-.btn-save-perfil:hover { 
-    background: #1e293b; 
-    transform: translateY(-2px); 
-}
-
-/* No escuro, o botão vira dourado para não sumir */
-[data-theme='dark'] .btn-save-perfil {
-    background: var(--dourado);
-}
-[data-theme='dark'] .btn-save-perfil:hover {
-    background: #b48a3c;
-}
-
-/* Botões e links específicos para seção Assinatura / Empresa */
-.btn-edit-config {
-    background: transparent;
-    border: 1px dashed var(--borda);
-    padding: 8px 12px;
-    border-radius: 8px;
-    color: var(--texto-principal);
-    text-decoration: none;
+.input-group label {
+    font-size: 12px;
     font-weight: 700;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
-.btn-edit-config:hover { background: rgba(0,0,0,0.03); }
 
-.btn-change-plan, .btn-update-payment {
+.input-group input {
+    padding: 14px 16px;
+    border: 1px solid #cbd5e1;
+    border-radius: 10px;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-size: 15px;
+    color: #0f172a;
+    font-weight: 500;
+    transition: 0.2s;
+    outline: none;
+    background: #ffffff;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.input-group input:focus {
+    border-color: #c5a059;
+    box-shadow: 0 0 0 4px rgba(197, 160, 89, 0.1);
+}
+
+.input-group input::placeholder {
+    color: #94a3b8;
+}
+
+.btn-edit-config, .btn-change-plan {
+    padding: 14px 24px;
+    background: #f1f5f9;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: 0.2s;
+    font-family: inherit;
+}
+
+.btn-edit-config:hover, .btn-change-plan:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.btn-save-perfil {
+    width: 100%;
+    padding: 16px;
     background: #0f172a;
     color: white;
     border: none;
-    padding: 10px 14px;
-    border-radius: 8px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 16px;
     cursor: pointer;
-    font-weight: 700;
+    transition: 0.3s;
+    box-shadow: 0 10px 20px rgba(15, 23, 42, 0.1);
+    margin-top: 10px;
+    font-family: inherit;
 }
-.btn-change-plan:hover, .btn-update-payment:hover { transform: translateY(-2px); }
 
-@media (max-width: 900px) {
-  .perfil-container { grid-template-columns: 1fr; }
-  .input-row { flex-direction: column; }
+.btn-save-perfil:hover {
+    background: #c5a059;
+    box-shadow: 0 10px 20px rgba(197, 160, 89, 0.2);
+    transform: translateY(-2px);
+}
+
+.btn-save-perfil:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* =========================================
+   CARTÃO DE ASSINATURA VIP
+   ========================================= */
+.assinatura-card {
+    padding: 25px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+}
+
+.assinatura-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.assinatura-titulo h4 {
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.preco-assinatura {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: baseline;
+    gap: 4px;
+}
+
+.preco-assinatura span {
+    font-size: 13px;
+    opacity: 0.8;
+}
+
+.status-badge {
+    padding: 6px 16px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.assinatura-card hr {
+    border: none;
+    border-top: 1px dashed;
+    margin: 20px 0;
+}
+
+.assinatura-details {
+    display: flex;
+    gap: 40px;
+}
+
+.detail-item label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 6px;
+    display: block;
+}
+
+.detail-item p {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* =========================================
+   BOTÃO DO COFRE (SEGURANÇA)
+   ========================================= */
+.btn-abrir-cofre {
+    padding: 14px 24px;
+    background: #ffffff;
+    color: #0f172a;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-weight: 800;
+    font-size: 14px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: 0.3s;
+    font-family: inherit;
+}
+
+.btn-abrir-cofre i {
+    color: #64748b;
+}
+
+.btn-abrir-cofre:hover {
+    background: #f8fafc;
+    border-color: #0f172a;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+.btn-abrir-cofre:hover i {
+    color: #0f172a;
+}
+
+/* =========================================
+   MODAL DO COFRE (SEGURANÇA VIP)
+   ========================================= */
+.modal-overlay-senha {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(4px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    animation: fadeIn 0.2s ease-in-out;
+}
+
+.modal-senha-content {
+    background: #ffffff;
+    width: 100%;
+    max-width: 450px;
+    border-radius: 20px;
+    box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+    overflow: hidden;
+    animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.modal-senha-header {
+    background: #0f172a;
+    padding: 30px;
+    text-align: center;
+    color: white;
+}
+
+.icon-cofre {
+    width: 60px;
+    height: 60px;
+    background: #1e293b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 15px;
+    font-size: 24px;
+    color: #c5a059;
+    border: 2px solid #334155;
+}
+
+.modal-senha-header h2 {
+    font-size: 20px;
+    font-weight: 800;
+    margin-bottom: 5px;
+}
+
+.modal-senha-header p {
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.modal-senha-body {
+    padding: 30px;
+}
+
+.senha-divider {
+    height: 1px;
+    background: #e2e8f0;
+    margin: 25px 0;
+}
+
+.modal-senha-footer {
+    display: flex;
+    gap: 15px;
+    margin-top: 30px;
+}
+
+.btn-cancelar-senha {
+    flex: 1;
+    padding: 14px;
+    background: #f1f5f9;
+    color: #64748b;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+}
+
+.btn-cancelar-senha:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+}
+
+.btn-confirmar-senha {
+    flex: 1;
+    padding: 14px;
+    background: #0f172a;
+    color: white;
+    border: none;
+    border-radius: 8px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: 0.2s;
+    font-family: inherit;
+}
+
+.btn-confirmar-senha:hover {
+    background: #c5a059;
+}
+
+.btn-confirmar-senha:disabled {
+    background: #94a3b8;
+    cursor: not-allowed;
+}
+
+/* =========================================
+   🔥 NOVO: OLHINHO E CRITÉRIOS DE SENHA 🔥
+   ========================================= */
+.password-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.password-wrapper input {
+    width: 100%;
+    padding-right: 45px;
+}
+
+.btn-toggle-password {
+    position: absolute;
+    right: 12px;
+    background: none;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 16px;
+    padding: 5px;
+    transition: color 0.2s;
+}
+
+.btn-toggle-password:hover {
+    color: #0f172a;
+}
+
+.senha-criterios {
+    margin-top: 12px;
+    background: #f8fafc;
+    padding: 12px 15px;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.senha-criterios p {
+    font-size: 11px;
+    font-weight: 800;
+    color: #64748b;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+}
+
+.senha-criterios ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.senha-criterios li {
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 5px;
+    font-weight: 600;
+    transition: all 0.3s ease;
+}
+
+.criterio-falha {
+    color: #94a3b8;
+}
+
+.criterio-falha i {
+    font-size: 12px;
+}
+
+.criterio-ok {
+    color: #10b981;
+}
+
+.criterio-ok i {
+    font-size: 14px;
+}
+
+/* =========================================
+   RESPONSIVIDADE
+   ========================================= */
+@media (max-width: 850px) {
+    .perfil-container {
+        flex-direction: column;
+    }
+
+    .perfil-sidebar {
+        width: 100%;
+        position: relative;
+        top: 0;
+    }
+
+    .input-row {
+        grid-template-columns: 1fr;
+        gap: 0;
+    }
+
+    .assinatura-header {
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .assinatura-details {
+        flex-direction: column;
+        gap: 20px;
+    }
 }

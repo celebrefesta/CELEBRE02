@@ -1,14 +1,72 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { db } from '../../firebaseConfig';
+import { collection, getDocs, query, orderBy } from 'firebase/firestore';
 import './LandingPage.css';
 
 // 🔥 Importação das imagens oficiais
 import logoImage from '../../assets/LOGO_CELEBRE.png'; 
-import dashboardReal from '../../assets/landingpage.png'; // 📸 Sua imagem real importada aqui!
+import dashboardReal from '../../assets/landingpage.png'; 
 
 const LandingPage = () => {
-  // Estado para controlar a janelinha de contato
   const [modalContatoAberto, setModalContatoAberto] = useState(false);
+  
+  // 🔥 ESTADOS PARA PUXAR OS PLANOS DO FIREBASE
+  const [planos, setPlanos] = useState([]);
+  const [recursosGlobais, setRecursosGlobais] = useState([]);
+  const [loadingPlanos, setLoadingPlanos] = useState(true);
+
+  const isRecursoNumerico = (nome) => {
+      const n = nome.toLowerCase();
+      return n.includes('usuário') || n.includes('variedade') || n.includes('qtd') || n.includes('contrato');
+  };
+
+  const recursosPadrao = [
+      "Usuários",
+      "Variedade Produtos",
+      "Gestão Clientes",
+      "Gestão de Estoque",
+      "Gestão de Pedidos/ Orçamentos",
+      "Gestão de Logística",
+      "Gestão de Contratos",
+      "Gestão Fornecedores",
+      "Gestão Financeira",
+      "Gestão de Relatórios",
+      "Gestão de Veículos",
+      "Assinatura Digital",
+      "Emissão de Etiquetas",
+      "Agenda",
+      "Catalago Digital",
+      "Moodboard- Projeto Digital"
+  ];
+
+  useEffect(() => {
+    const buscarPlanos = async () => {
+      try {
+        const q = query(collection(db, "planos"), orderBy("ordem", "asc"));
+        const snap = await getDocs(q);
+        const planosData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        const recursosSet = new Set(recursosPadrao); 
+        planosData.forEach(p => {
+            if (Array.isArray(p.beneficios)) {
+                p.beneficios.forEach(b => recursosSet.add(b));
+            }
+            if (p.limites) {
+                Object.keys(p.limites).forEach(l => recursosSet.add(l));
+            }
+        });
+        
+        setRecursosGlobais(Array.from(recursosSet));
+        setPlanos(planosData);
+      } catch (error) {
+        console.error("Erro ao buscar planos:", error);
+      } finally {
+        setLoadingPlanos(false);
+      }
+    };
+    buscarPlanos();
+  }, []);
 
   return (
     <div className="landing-container">
@@ -36,8 +94,9 @@ const LandingPage = () => {
             <div className="hero-badge">✨ O fim do desespero com a agenda</div>
             <h1>O controlo absoluto do seu acervo de <span className="text-highlight">decorações.</span></h1>
             <p className="hero-subtitle">
-              Diga adeus ao medo de alugar a mesma peça duas vezes. O Celebre organiza seu estoque, 
-              avisa sobre conflitos de data e gera contratos em PDF num clique. Feito para quem vive de festa.
+              Diga adeus ao medo de alugar a mesma peça duas vezes.
+              O Celebre organiza seu estoque, avisa sobre conflitos de data e gera contratos em PDF num clique.
+              Feito para quem vive de festa.
             </p>
             
             <ul className="hero-benefits">
@@ -63,12 +122,10 @@ const LandingPage = () => {
           
           <div className="hero-image-right">
              <div className="dashboard-wrapper">
-                {/* 📸 AQUI ENTRA O SEU PRINT REAL 📸 */}
                 <img 
                   src={dashboardReal} 
                   alt="Painel Real do Celebre" 
                   className="dashboard-img"
-                  // Aumentei a borda e adicionei sombra para destacar seu print
                   style={{ 
                     border: '8px solid #ffffff', 
                     boxShadow: '0 20px 40px rgba(0,0,0,0.1)' 
@@ -95,7 +152,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* PROVA SOCIAL - CASE REAL (Ágape Decorações) */}
+      {/* PROVA SOCIAL - CASE REAL */}
       <section className="social-proof">
         <p>DESENVOLVIDO E VALIDADO NA PRÁTICA POR QUEM VIVE DE EVENTOS</p>
         <div className="logos-grid" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '10px', opacity: '1' }}>
@@ -158,7 +215,7 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* PLANOS E PREÇOS */}
+      {/* 🔥 PLANOS E PREÇOS DINÂMICOS DO FIREBASE 🔥 */}
       <section id="planos" className="pricing-section">
         <div className="pricing-header">
           <h2>O investimento certo para o seu crescimento</h2>
@@ -166,59 +223,67 @@ const LandingPage = () => {
         </div>
 
         <div className="pricing-cards">
-          
-          <div className="pricing-card">
-            <div className="card-header">
-                <h3>Iniciante</h3>
-                <p className="pricing-desc">Para quem está a começar a organizar.</p>
+          {loadingPlanos ? (
+            <div style={{ textAlign: 'center', width: '100%', padding: '40px', color: '#64748b' }}>
+              Carregando planos...
             </div>
-            <div className="price">R$ 49<span>/mês</span></div>
-            <ul className="pricing-features">
-              <li>✔️ Até 200 peças no acervo</li>
-              <li>✔️ Gestão de Clientes</li>
-              <li>✔️ Até 30 locações por mês</li>
-              <li>✔️ Geração de Contratos PDF</li>
-              <li>✔️ Suporte por E-mail</li>
-              <li className="disabled">❌ Catálogo Online</li>
-            </ul>
-            <Link to="/cadastro" className="btn-pricing-outline">Testar 7 Dias Grátis</Link>
-          </div>
+          ) : (
+            planos.map(p => (
+              <div key={p.id} className={`pricing-card ${String(p.destaque) === "true" ? 'popular' : ''}`}>
+                
+                {String(p.destaque) === "true" && <div className="popular-badge">Mais escolhido</div>}
+                
+                <div className="card-header">
+                    <h3>{p.nome}</h3>
+                    <p className="pricing-desc">O plano ideal para a sua estrutura.</p>
+                </div>
+                
+                <div className="price">R$ {p.preco}<span>/mês</span></div>
+                
+                <ul className="pricing-features">
+                  {recursosGlobais.map((rec, idx) => {
+                    const numerico = isRecursoNumerico(rec);
 
-          <div className="pricing-card popular">
-            <div className="popular-badge">Mais escolhido</div>
-            <div className="card-header">
-                <h3>Profissional</h3>
-                <p className="pricing-desc">Para locadoras em pleno crescimento.</p>
-            </div>
-            <div className="price">R$ 99<span>/mês</span></div>
-            <ul className="pricing-features">
-              <li>✔️ Peças ilimitadas</li>
-              <li>✔️ Gestão de Clientes ilimitada</li>
-              <li>✔️ Locações ilimitadas</li>
-              <li>✔️ Assinatura Digital de Contratos</li>
-              <li>✔️ Catálogo Online Exclusivo</li>
-              <li>✔️ Suporte por WhatsApp</li>
-            </ul>
-            <Link to="/cadastro" className="btn-pricing-solid">Testar 7 Dias Grátis</Link>
-          </div>
+                    if (numerico) {
+                        const valorBanco = p.limites?.[rec];
+                        const valor = (valorBanco === undefined || valorBanco === "") ? "Ilimitado" : String(valorBanco);
+                        
+                        // 🛠️ MÁGICA VISUAL: Formatação de texto premium para SaaS
+                        if (rec === "Gestão de Contratos") {
+                            return <li key={idx}>✔️ <strong>{valor}</strong> de Contratos</li>;
+                        }
+                        if (rec === "Usuários") {
+                            const textoUsuario = valor === "1" ? "Usuário" : "Usuários";
+                            return <li key={idx}>✔️ <strong>{valor}</strong> {textoUsuario}</li>;
+                        }
+                        if (rec === "Variedade Produtos") {
+                            return <li key={idx}>✔️ <strong>{valor}</strong> Produtos no Acervo</li>;
+                        }
 
-          <div className="pricing-card">
-            <div className="card-header">
-                <h3>Enterprise</h3>
-                <p className="pricing-desc">Para operações complexas e múltiplas.</p>
-            </div>
-            <div className="price">R$ 199<span>/mês</span></div>
-            <ul className="pricing-features">
-              <li>✔️ Tudo do Profissional</li>
-              <li>✔️ Múltiplas Filiais/Contas</li>
-              <li>✔️ API para Integrações</li>
-              <li>✔️ Relatórios Customizados</li>
-              <li>✔️ Gestor de Conta Dedicado</li>
-              <li>✔️ Suporte VIP 24h</li>
-            </ul>
-            <Link to="/cadastro" className="btn-pricing-outline">Testar 7 Dias Grátis</Link>
-          </div>
-
+                        // Formatação padrão para novos itens numéricos que você criar
+                        return (
+                          <li key={idx}>✔️ <strong>{valor}</strong> {rec}</li>
+                        );
+                    } else {
+                        const tem = Array.isArray(p.beneficios) && p.beneficios.includes(rec);
+                        if (tem) {
+                          return <li key={idx}>✔️ {rec}</li>;
+                        } else {
+                          return <li key={idx} className="disabled">❌ {rec}</li>;
+                        }
+                    }
+                  })}
+                </ul>
+                
+                <Link 
+                  to={`/cadastro?plano=${p.id}`} 
+                  className={String(p.destaque) === "true" ? "btn-pricing-solid" : "btn-pricing-outline"}
+                >
+                  Testar 7 Dias Grátis
+                </Link>
+              </div>
+            ))
+          )}
         </div>
       </section>
 
@@ -271,12 +336,9 @@ const LandingPage = () => {
           <div className="footer-col">
             <h4>Ajuda e Legal</h4>
             <a href="#faq" className="footer-link">Dúvidas Frequentes (FAQ)</a>
-            
-            {/* 🔥 Botão de Contato abre a Janela! 🔥 */}
             <button className="footer-link footer-link-btn" onClick={() => setModalContatoAberto(true)}>
               Contato
             </button>
-            
             <Link to="/termos" className="footer-link">Termos de Uso</Link>
             <Link to="/privacidade" className="footer-link">Privacidade e Segurança</Link>
           </div>
@@ -301,7 +363,7 @@ const LandingPage = () => {
         </div>
       </footer>
 
-      {/* 🔥 MODAL DE CONTATO ATUALIZADO COM SEUS DADOS 🔥 */}
+      {/* 🔥 MODAL DE CONTATO 🔥 */}
       {modalContatoAberto && (
         <div className="modal-overlay" onClick={() => setModalContatoAberto(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
@@ -313,7 +375,6 @@ const LandingPage = () => {
               <a href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Celebre!" target="_blank" rel="noreferrer" className="btn-whatsapp">
                 📱 Chamar no WhatsApp
               </a>
-              
               <a href="mailto:celebrefesta25@gmail.com" className="btn-email">
                 ✉️ Enviar um E-mail
               </a>

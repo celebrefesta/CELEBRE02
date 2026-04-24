@@ -64,15 +64,15 @@
     border-right: 1px solid #e2e8f0;
     vertical-align: top;
     min-width: 240px;
-    background: #f1f5f9; /* 🎨 Corzinha suave (Cinza Azulado) para os planos normais */
-    border-top: 4px solid transparent; /* Espaço invisível para não dar salto quando virar destaque */
+    background: #f1f5f9; 
+    border-top: 4px solid transparent; 
     transition: 0.3s background-color;
 }
 
-/* O PLANO EM DESTAQUE (Idêntico à vitrine) */
+/* O PLANO EM DESTAQUE */
 .th-plano.is-destaque { 
     background: #ffffff; 
-    border-top: 4px solid #0f172a; /* Linha Azul Naval no topo */
+    border-top: 4px solid #0f172a;
 }
 
 /* =========================================
@@ -82,9 +82,14 @@
 .th-top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 
 .pos-control { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #94a3b8; }
-.pos-control input {
-    width: 40px; padding: 4px; border: 1px solid #e2e8f0; border-radius: 6px;
-    text-align: center; color: #0f172a; font-weight: bold; background: white; outline: none;
+
+/* Atualizado para Select em vez de Input */
+.pos-control select {
+    width: 45px; padding: 4px; border: 1px solid #e2e8f0; border-radius: 6px;
+    text-align: center; color: #0f172a; font-weight: bold; background: white; outline: none; cursor: pointer;
+}
+.th-plano.is-destaque .pos-control select { 
+    background: #1e293b; color: #ffffff; border-color: #334155; 
 }
 
 .btn-trash-col { background: #fff1f2; color: #f43f5e; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
@@ -92,17 +97,43 @@
 
 .plano-nome-input {
     width: 100%; text-align: center; font-size: 22px; font-weight: 800; color: #0f172a;
-    border: none; background: transparent; outline: none; margin-bottom: 10px;
+    border: none; background: transparent; outline: none; margin-bottom: 5px;
 }
 .plano-nome-input:focus { border-bottom: 2px solid #c5a059; }
 
-.plano-preco-wrapper { display: flex; justify-content: center; align-items: baseline; gap: 4px; margin-bottom: 15px; }
-.cifrao { font-size: 16px; font-weight: 800; color: #0f172a; }
-.mes { font-size: 14px; color: #94a3b8; font-weight: 600; }
+/* 💎 BLOCO DE PREÇOS CORRIGIDO */
+.plano-preco-wrapper { 
+    display: flex; 
+    justify-content: center; 
+    align-items: baseline; 
+    gap: 2px; 
+    margin-bottom: 15px; 
+}
+
+.cifrao { 
+    font-size: 16px; 
+    font-weight: 800; 
+    color: #0f172a; 
+    transform: translateY(-2px); 
+}
+
+.mes { 
+    font-size: 14px; 
+    color: #94a3b8; 
+    font-weight: 600; 
+}
 
 .plano-preco-input {
-    width: 80px; text-align: center; font-size: 36px; font-weight: 800; color: #0f172a;
-    border: none; background: transparent; outline: none;
+    width: 160px; /* 👈 Aumentado para garantir espaço */
+    padding: 0; /* 👈 Removido o espaço interno */
+    text-align: center; 
+    font-size: 38px; 
+    font-weight: 800; 
+    color: #0f172a;
+    border: none; 
+    background: transparent; 
+    outline: none;
+    letter-spacing: -1px; 
 }
 .plano-preco-input:focus { border-bottom: 2px solid #c5a059; }
 
@@ -142,6 +173,36 @@
 
 .check-on { color: #10b981; font-size: 24px; }
 .check-off { color: #e2e8f0; font-size: 20px; }
+
+/* 🔢 NOVOS INPUTS NUMÉRICOS (LIMITES) */
+.td-numerico {
+    padding: 10px 15px;
+    cursor: default; 
+}
+
+.input-limite {
+    width: 110px; 
+    padding: 8px;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    text-align: center;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+    font-weight: 700;
+    color: #0f172a;
+    outline: none;
+    transition: 0.2s;
+}
+
+.input-limite:focus {
+    border-color: #c5a059;
+    box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
+}
+
+.input-limite::placeholder {
+    color: #94a3b8;
+    font-weight: 600;
+    font-size: 13px;
+}
 
 
 /* =========================================

@@ -1,97 +1,187 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
 
 .planos-public-wrapper {
-    padding: 60px 20px;
-    background-color: #f8fafc;
+    padding: 50px 30px;
+    background: #f8fafc;
     min-height: 100vh;
     font-family: 'Plus Jakarta Sans', sans-serif;
+    transition: margin-left 0.3s ease;
 }
 
-.planos-public-header { text-align: center; margin-bottom: 40px; }
-.planos-public-header h1 { font-size: 28px; font-weight: 800; color: #0f172a; margin-bottom: 5px; }
-.planos-public-header p { color: #64748b; font-size: 15px; }
-.fa-android { color: #a4c639; margin: 0 4px; }
-.fa-apple { color: #555555; }
+/* 🔥 SE O NAVBAR ESTIVER PRESENTE (Telas grandes) 🔥 */
+@media (min-width: 851px) {
+    .planos-public-wrapper.com-sidebar {
+        margin-left: 260px; /* Mesma largura do seu Navbar */
+    }
+}
+
+.planos-public-header {
+    text-align: center;
+    margin-bottom: 40px;
+    position: relative;
+}
+
+.btn-voltar-painel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    padding: 10px 16px;
+    background: #e2e8f0;
+    color: #0f172a;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: 0.2s;
+}
+
+.btn-voltar-painel:hover {
+    background: #cbd5e1;
+}
+
+.planos-public-header h1 {
+    font-size: 32px; 
+    color: #0f172a; 
+    font-weight: 800;
+}
+
+.planos-public-header p {
+    color: #64748b; 
+    font-size: 16px; 
+    margin-top: 10px;
+}
 
 .matrix-public-container {
-    max-width: 1200px;
-    margin: 0 auto;
     overflow-x: auto;
     background: white;
     border-radius: 16px;
-    box-shadow: 0 10px 25px rgba(0,0,0,0.03);
+    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
     border: 1px solid #e2e8f0;
+    max-width: 1200px;
+    margin: 0 auto;
 }
 
-.matrix-public-table { width: 100%; border-collapse: collapse; }
+.matrix-public-table {
+    width: 100%; 
+    border-collapse: collapse; 
+    text-align: center;
+}
 
-/* COLUNA AZUL NAVAL - ALINHADA */
 .th-recursos-public {
     background: #0f172a;
-    color: #ffffff;
-    width: 240px;
-    min-width: 240px;
-    padding: 20px;
+    color: white;
     text-align: left;
-    font-size: 11px;
+    padding: 20px;
+    font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
-    vertical-align: bottom; /* Empurra o texto para baixo, alinhando com os planos */
-    border-right: 1px solid #1e293b;
-    border-bottom: 1px solid #1e293b;
+    border-right: 1px solid #e2e8f0;
+    vertical-align: bottom;
+    width: 250px;
 }
 
-/* CABEÇALHOS DOS PLANOS - MENORES */
 .th-plano-public {
-    padding: 25px 20px; /* Reduzido */
-    text-align: center;
+    padding: 30px 20px;
     border-bottom: 1px solid #e2e8f0;
-    border-right: 1px solid #f1f5f9;
-    vertical-align: top;
+    border-right: 1px solid #e2e8f0;
     background: #ffffff;
     position: relative;
-    border-top: 4px solid transparent; /* Impede desalinhamento */
+    vertical-align: top;
+    min-width: 250px;
 }
 
-/* O PLANO DESTAQUE */
-.th-plano-public.is-destaque {
-    background: #f8fafc;
-    border-top: 4px solid #0f172a;
+.th-plano-public h3 {
+    font-size: 20px; 
+    font-weight: 800; 
+    color: #0f172a; 
+    margin-bottom: 15px; 
+    text-transform: uppercase;
 }
 
 .tag-destaque {
-    display: inline-block;
-    font-size: 10px;
+    position: absolute; 
+    top: 0; 
+    left: 50%; 
+    transform: translateX(-50%);
+    background: #c5a059; 
+    color: white; 
+    font-size: 10px; 
     font-weight: 800;
-    color: #c5a059;
-    margin-bottom: 5px;
-    text-transform: uppercase;
+    padding: 4px 12px; 
+    border-radius: 0 0 8px 8px; 
     letter-spacing: 1px;
 }
 
-.th-plano-public h3 { font-size: 18px; margin: 0 0 10px 0; color: #0f172a; font-weight: 800; text-transform: uppercase;}
+.preco-box {
+    display: flex; 
+    justify-content: center; 
+    align-items: baseline; 
+    gap: 2px; 
+    margin-bottom: 20px;
+}
 
-.preco-box { display: flex; justify-content: center; align-items: baseline; gap: 4px; margin-bottom: 15px; }
-.preco-box .moeda { color: #64748b; font-size: 14px; font-weight: 700; }
-.preco-box .valor { font-size: 42px; font-weight: 800; color: #0f172a; letter-spacing: -1.5px; line-height: 1; }
-.preco-box .periodo { color: #64748b; font-size: 13px; font-weight: 600; }
+.preco-box .moeda { 
+    font-size: 16px; 
+    font-weight: 800; 
+    color: #0f172a; 
+    transform: translateY(-2px); 
+}
+
+.preco-box .valor { 
+    font-size: 42px; 
+    font-weight: 800; 
+    color: #0f172a; 
+    letter-spacing: -1px; 
+}
+
+.preco-box .periodo { 
+    font-size: 14px; 
+    color: #94a3b8; 
+    font-weight: 600; 
+}
 
 .btn-selecionar {
-    background: #0f172a; color: white; border: none; padding: 12px 0; width: 100%;
-    border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s; font-size: 13px;
+    background: #0f172a; 
+    color: white; 
+    border: none; 
+    padding: 12px 20px; 
+    width: 100%;
+    border-radius: 8px; 
+    font-weight: 700; 
+    cursor: pointer; 
+    transition: 0.3s;
 }
-.btn-selecionar:hover { background: #c5a059; }
 
-/* LINHAS DO CORPO */
+.btn-selecionar:hover { 
+    background: #c5a059; 
+}
+
 .td-recurso-nome {
-    background: #ffffff; font-weight: 700; font-size: 14px; color: #334155; 
-    padding: 16px 20px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #e2e8f0; text-align: left;
+    text-align: left; 
+    padding: 18px 20px; 
+    font-size: 15px; 
+    font-weight: 600; 
+    color: #334155;
+    border-bottom: 1px solid #f1f5f9; 
+    border-right: 1px solid #e2e8f0;
 }
 
-.td-check-public { text-align: center; padding: 16px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f1f5f9;}
+.td-check-public {
+    padding: 18px; 
+    border-bottom: 1px solid #f1f5f9; 
+    border-right: 1px solid #f8fafc;
+}
 
-.check-sim { color: #10b981; font-size: 22px; }
-.check-nao { color: #e2e8f0; font-size: 18px; }
+.check-sim { 
+    color: #10b981; 
+    font-size: 20px; 
+}
 
-.matrix-public-table tbody tr:hover td { background: #f8fafc; }
+.check-nao { 
+    color: #e2e8f0; 
+    font-size: 20px; 
+}

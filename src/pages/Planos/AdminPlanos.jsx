@@ -8,10 +8,29 @@ const AdminPlanos = () => {
     const [loading, setLoading] = useState(true);
     const [recursos, setRecursos] = useState([]);
 
+    // ✨ REGRA ATUALIZADA: "contrato" agora também é campo de texto!
+    const isRecursoNumerico = (nome) => {
+        const n = nome.toLowerCase();
+        return n.includes('usuário') || n.includes('variedade') || n.includes('qtd') || n.includes('contrato');
+    };
+
     const recursosPadrao = [
-        "Qtd. Usuários", "Variedade Produtos", "Catálogo Digital", 
-        "Gestão Estoque", "Etiquetas/QR", "Logística", 
-        "Contratos", "Assinatura Digital"
+        "Usuários",
+        "Variedade Produtos",
+        "Gestão Clientes",
+        "Gestão de Estoque",
+        "Gestão de Pedidos/ Orçamentos",
+        "Gestão de Logística",
+        "Gestão de Contratos",
+        "Gestão Fornecedores",
+        "Gestão Financeira",
+        "Gestão de Relatórios",
+        "Gestão de Veículos",
+        "Assinatura Digital",
+        "Emissão de Etiquetas",
+        "Agenda",
+        "Catalago Digital",
+        "Moodboard- Projeto Digital"
     ];
 
     const carregarDados = async () => {
@@ -26,8 +45,11 @@ const AdminPlanos = () => {
                 if (Array.isArray(p.beneficios)) {
                     p.beneficios.forEach(b => recursosEncontrados.add(b));
                 }
+                if (p.limites) {
+                    Object.keys(p.limites).forEach(l => recursosEncontrados.add(l));
+                }
             });
-
+            
             setRecursos(Array.from(recursosEncontrados));
             setPlanos(planosCarregados);
         } catch (error) {
@@ -38,17 +60,29 @@ const AdminPlanos = () => {
 
     useEffect(() => { carregarDados(); }, []);
 
-    // 🔄 EDIÇÃO DOS PLANOS (COLUNAS)
+    const mudarOrdem = (planoId, novaOrdem) => {
+        setPlanos(planosAtuais => {
+            const planoAlterado = planosAtuais.find(p => p.id === planoId);
+            const ordemAntiga = Number(planoAlterado.ordem);
+
+            return planosAtuais.map(p => {
+                if (p.id === planoId) return { ...p, ordem: novaOrdem };
+                if (Number(p.ordem) === novaOrdem) return { ...p, ordem: ordemAntiga };
+                return p;
+            });
+        });
+    };
+
     const updateLocalPlano = (id, campo, valor) => {
         setPlanos(planos.map(p => p.id === id ? { ...p, [campo]: valor } : p));
     };
 
-    // 🔄 CLIQUE NAS CÉLULAS (CHECK / BAN)
     const toggleBeneficio = (planoId, recursoNome) => {
         setPlanos(planos.map(p => {
             if (p.id === planoId) {
                 const beneficiosArray = Array.isArray(p.beneficios) ? p.beneficios : [];
                 const existe = beneficiosArray.includes(recursoNome);
+              
                 const novosBen = existe 
                     ? beneficiosArray.filter(b => b !== recursoNome)
                     : [...beneficiosArray, recursoNome];
@@ -58,32 +92,51 @@ const AdminPlanos = () => {
         }));
     };
 
-    // ✏️ EDITAR NOME DA FUNCIONALIDADE (LINHAS)
+    const atualizarLimite = (planoId, recursoNome, valor) => {
+        setPlanos(planos.map(p => {
+            if (p.id === planoId) {
+                const novosLimites = { ...(p.limites || {}) };
+                novosLimites[recursoNome] = valor;
+                return { ...p, limites: novosLimites };
+            }
+            return p;
+        }));
+    };
+
     const atualizarNomeRecurso = (oldName, newName) => {
         const nomeLimpo = newName.trim();
         if (oldName === nomeLimpo || nomeLimpo === '') return;
         
-        // Evitar duplicatas
         if (recursos.includes(nomeLimpo)) {
             alert("Esta funcionalidade já existe.");
             return;
         }
 
-        // Atualiza na lista da esquerda
         setRecursos(recursos.map(r => r === oldName ? nomeLimpo : r));
-
-        // Atualiza dentro de todos os planos para não quebrar os checks
-        setPlanos(planos.map(p => ({
-            ...p,
-            beneficios: Array.isArray(p.beneficios) 
-                ? p.beneficios.map(b => b === oldName ? nomeLimpo : b) 
-                : []
-        })));
+        
+        setPlanos(planos.map(p => {
+            const novoPlano = { ...p };
+            if (Array.isArray(novoPlano.beneficios)) {
+                novoPlano.beneficios = novoPlano.beneficios.map(b => b === oldName ? nomeLimpo : b);
+            }
+            if (novoPlano.limites && novoPlano.limites[oldName] !== undefined) {
+                novoPlano.limites[nomeLimpo] = novoPlano.limites[oldName];
+                delete novoPlano.limites[oldName];
+            }
+            return novoPlano;
+        }));
     };
 
-    // ➕ / 🗑️ ADICIONAR E REMOVER
     const adicionarPlano = async () => {
-        const novo = { nome: "Novo Plano", preco: "0", descricao: "", ordem: planos.length + 1, destaque: false, beneficios: [] };
+        const novo = { 
+            nome: "Novo Plano", 
+            preco: "0", 
+            descricao: "", 
+            ordem: planos.length + 1, 
+            destaque: false, 
+            beneficios: [],
+            limites: {} 
+        };
         const docRef = await addDoc(collection(db, "planos"), novo);
         setPlanos([...planos, { id: docRef.id, ...novo }]);
     };
@@ -105,14 +158,19 @@ const AdminPlanos = () => {
     const deletarRecurso = (recursoNome) => {
         if (window.confirm(`Remover a funcionalidade "${recursoNome}" da matriz?`)) {
             setRecursos(recursos.filter(r => r !== recursoNome));
-            setPlanos(planos.map(p => ({
-                ...p,
-                beneficios: Array.isArray(p.beneficios) ? p.beneficios.filter(b => b !== recursoNome) : []
-            })));
+            setPlanos(planos.map(p => {
+                const novoPlano = { ...p };
+                if (Array.isArray(novoPlano.beneficios)) {
+                    novoPlano.beneficios = novoPlano.beneficios.filter(b => b !== recursoNome);
+                }
+                if (novoPlano.limites) {
+                    delete novoPlano.limites[recursoNome];
+                }
+                return novoPlano;
+            }));
         }
     };
 
-    // 💾 SALVAR BANCO DE DADOS
     const salvarTudo = async () => {
         try {
             for (const plano of planos) {
@@ -120,7 +178,8 @@ const AdminPlanos = () => {
                 await updateDoc(doc(db, "planos", id), {
                     ...dados,
                     ordem: Number(dados.ordem),
-                    destaque: String(dados.destaque) === "true"
+                    destaque: String(dados.destaque) === "true",
+                    limites: dados.limites || {} 
                 });
             }
             alert("Matriz salva com sucesso! 💎");
@@ -147,24 +206,28 @@ const AdminPlanos = () => {
                     <thead>
                         <tr>
                             <th className="th-recursos">RECURSOS & FUNCIONALIDADES</th>
-                            {planos.map(p => (
+                            {planos.map((p) => (
                                 <th key={p.id} className={`th-plano ${String(p.destaque) === "true" ? 'is-destaque' : ''}`}>
-                                    
                                     <div className="th-top-bar">
                                         <div className="pos-control">
-                                            <span>Pos:</span>
-                                            <input type="number" value={p.ordem} onChange={(e) => updateLocalPlano(p.id, 'ordem', e.target.value)} />
+                                            <span>POS:</span>
+                                            <select 
+                                                value={p.ordem} 
+                                                onChange={(e) => mudarOrdem(p.id, Number(e.target.value))}
+                                            >
+                                                {planos.map((_, i) => (
+                                                    <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <button className="btn-trash-col" onClick={() => deletarPlano(p.id)}><i className="fas fa-trash"></i></button>
                                     </div>
-
                                     <input 
                                         className="plano-nome-input"
                                         value={p.nome} 
                                         onChange={(e) => updateLocalPlano(p.id, 'nome', e.target.value)}
                                         placeholder="Nome do Plano"
                                     />
-                                    
                                     <div className="plano-preco-wrapper">
                                         <span className="cifrao">R$</span>
                                         <input 
@@ -174,7 +237,6 @@ const AdminPlanos = () => {
                                         />
                                         <span className="mes">/mês</span>
                                     </div>
-                                    
                                     <div className="plano-destaque-wrapper">
                                         <label>Destaque?</label>
                                         <select value={p.destaque} onChange={(e) => updateLocalPlano(p.id, 'destaque', e.target.value)}>
@@ -187,31 +249,49 @@ const AdminPlanos = () => {
                         </tr>
                     </thead>
                     <tbody>
-                        {recursos.map(rec => (
-                            <tr key={rec}>
-                                <td className="td-recurso">
-                                    <div className="td-recurso-content">
-                                        <input 
-                                            className="recurso-nome-input"
-                                            defaultValue={rec}
-                                            onBlur={(e) => atualizarNomeRecurso(rec, e.target.value)}
-                                            placeholder="Nome do Recurso"
-                                        />
-                                        <button className="btn-trash-row" onClick={() => deletarRecurso(rec)}>
-                                            <i className="fas fa-times"></i>
-                                        </button>
-                                    </div>
-                                </td>
-                                {planos.map(p => {
-                                    const tem = Array.isArray(p.beneficios) && p.beneficios.includes(rec);
-                                    return (
-                                        <td key={p.id} className="td-check" onClick={() => toggleBeneficio(p.id, rec)}>
-                                            <i className={`fas ${tem ? 'fa-check-circle check-on' : 'fa-ban check-off'}`}></i>
-                                        </td>
-                                    );
-                                })}
-                            </tr>
-                        ))}
+                        {recursos.map(rec => {
+                            const numerico = isRecursoNumerico(rec);
+                            return (
+                                <tr key={rec}>
+                                    <td className="td-recurso">
+                                        <div className="td-recurso-content">
+                                            <input 
+                                                className="recurso-nome-input"
+                                                defaultValue={rec}
+                                                onBlur={(e) => atualizarNomeRecurso(rec, e.target.value)}
+                                                placeholder="Nome do Recurso"
+                                            />
+                                            <button className="btn-trash-row" onClick={() => deletarRecurso(rec)}>
+                                                <i className="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                    {planos.map(p => {
+                                        if (numerico) {
+                                            const valorLimite = p.limites?.[rec] || '';
+                                            return (
+                                                <td key={p.id} className="td-check td-numerico">
+                                                    <input 
+                                                        type="text" 
+                                                        className="input-limite"
+                                                        placeholder="Ilimitado"
+                                                        value={valorLimite}
+                                                        onChange={(e) => atualizarLimite(p.id, rec, e.target.value)}
+                                                    />
+                                                </td>
+                                            );
+                                        } else {
+                                            const tem = Array.isArray(p.beneficios) && p.beneficios.includes(rec);
+                                            return (
+                                                <td key={p.id} className="td-check" onClick={() => toggleBeneficio(p.id, rec)}>
+                                                    <i className={`fas ${tem ? 'fa-check-circle check-on' : 'fa-ban check-off'}`}></i>
+                                                </td>
+                                            );
+                                        }
+                                    })}
+                                </tr>
+                            );
+                        })}
                     </tbody>
                     <tfoot>
                         <tr>
