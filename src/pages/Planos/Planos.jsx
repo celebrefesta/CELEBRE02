@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, query, orderBy, doc, updateDoc } from 'firebase/firestore'; // 🔥 Adicionado doc e updateDoc
+import { collection, getDocs, query, orderBy } from 'firebase/firestore'; 
 import { getAuth } from 'firebase/auth'; 
 import Navbar from '../../components/Navbar'; 
 import './Planos.css';
@@ -10,7 +10,6 @@ const Planos = () => {
   const [planos, setPlanos] = useState([]);
   const [recursosGlobais, setRecursosGlobais] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [processando, setProcessando] = useState(false); // 🔥 Estado para o botão de pagamento
   const navigate = useNavigate();
 
   const auth = getAuth();
@@ -68,29 +67,14 @@ const Planos = () => {
     buscarPlanos();
   }, []);
 
-  // 🔥 FUNÇÃO DE ATIVAÇÃO DE PLANO (SIMULAÇÃO DE PAGAMENTO) 🔥
-  const handleAtualizarPlano = async (planoSelecionadoId) => {
-      if (!usuarioLogado) return;
-      
-      setProcessando(true);
-      try {
-          const userRef = doc(db, 'usuarios', usuarioLogado.uid);
-          
-          // Atualiza o Firebase: Muda o plano e diz que a pessoa pagou!
-          await updateDoc(userRef, {
-              planoId: planoSelecionadoId,
-              assinaturaAtiva: true, // Isso aqui DESCONGELA o sistema imediatamente
-              dataAtualizacaoPlano: new Date().toISOString()
-          });
-
-          alert('🎉 Pagamento aprovado! O seu plano foi atualizado e o sistema está totalmente libertado.');
-          navigate('/dashboard'); // Leva a pessoa de volta pro painel desbloqueado
-          
-      } catch (error) {
-          console.error("Erro ao processar assinatura:", error);
-          alert('Ocorreu um erro ao tentar processar a atualização do plano.');
-      } finally {
-          setProcessando(false);
+  // 🔥 AGORA SIM: ENVIA PARA O SEU CHECKOUT REAL PASSANDO O PLANO 🔥
+  const handleSelecionarPlano = (planoSelecionado) => {
+      if (usuarioLogado) {
+          // Passa os dados do plano clicado para a rota /checkout
+          navigate('/checkout', { state: { plano: planoSelecionado } });
+      } else {
+          // Se não tiver conta, vai primeiro para o cadastro
+          navigate(`/cadastro?plano=${planoSelecionado.id}`);
       }
   };
 
@@ -130,19 +114,11 @@ const Planos = () => {
                       <span className="periodo">/mês</span>
                     </div>
                     
-                    {/* 🔥 BOTÃO INTELIGENTE ATUALIZADO 🔥 */}
                     <button 
                         className="btn-selecionar" 
-                        disabled={processando}
-                        onClick={() => {
-                            if (usuarioLogado) {
-                                handleAtualizarPlano(p.id);
-                            } else {
-                                navigate(`/cadastro?plano=${p.id}`);
-                            }
-                        }}
+                        onClick={() => handleSelecionarPlano(p)}
                     >
-                      {processando ? 'Processando...' : (usuarioLogado ? 'Atualizar Plano' : 'Começar agora')}
+                      {usuarioLogado ? 'Assinar Este Plano' : 'Começar agora'}
                     </button>
 
                   </th>
@@ -157,11 +133,9 @@ const Planos = () => {
                   <tr key={idx}>
                     <td className="td-recurso-nome">{rec}</td>
                     {planos.map(p => {
-                      
                       if (numerico) {
                           const valorBanco = p.limites?.[rec];
                           const valor = (valorBanco === undefined || valorBanco === "") ? "Ilimitado" : valorBanco;
-                          
                           return (
                               <td key={p.id} className="td-check-public" style={{ fontWeight: '800', color: '#0f172a', fontSize: '15px' }}>
                                   {valor}
