@@ -1,20 +1,20 @@
 /* eslint-disable */
 const functions = require("firebase-functions");
 const cors = require("cors")({ origin: true });
-const { MercadoPagoConfig, Payment } = require("mercadopago");
+const { MercadoPagoConfig, PreApproval, Payment } = require("mercadopago");
 
-// 🔥 Importações necessárias para o Robô de Limpeza
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const admin = require("firebase-admin");
-admin.initializeApp();
+
+if (admin.apps.length === 0) {
+    admin.initializeApp();
+}
 const db = admin.firestore();
 
 // ============================================================================
-// 💰 FUNÇÃO 1: GATEWAY DE PAGAMENTO (MERCADO PAGO)
+// 💰 FUNÇÃO 1: GATEWAY DE PAGAMENTO (RECORRÊNCIA E AVULSO)
 // ============================================================================
 
-// 🔥 TROCADO PARA PRODUÇÃO 🔥
-// Cole abaixo o seu Access Token de Produção do painel do Mercado Pago
 const client = new MercadoPagoConfig({ 
   accessToken: "APP_USR-3626101868283261-041714-787f6d6687f899ca426df63ee41ec903-3201169000" 
 });
@@ -26,22 +26,72 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
     }
 
     try {
-      const paymentData = req.body; 
+      const { token, payment_method_id, transaction_amount, payer, userId } = req.body; 
 
-      const payment = new Payment(client);
+      // 🔀 BIFURCAÇÃO 1: É PIX ou Boleto? (Pagamento Único de 30 dias)
+      if (payment_method_id === 'pix' || payment_method_id === 'bolbradesco') {
+          const payment = new Payment(client);
+          const result = await payment.create({
+              body: {
+                  transaction_amount: Number(transaction_amount),
+                  description: "Acesso de 30 dias - Celebre Sistemas",
+                  payment_method_id: payment_method_id,
+                  payer: { 
+                      email: payer.email,
+                      first_name: "Camila", // 🔥 NOME REAL PREENCHIDO
+                      last_name: "Vichinhsk", // 🔥 SOBRENOME REAL PREENCHIDO
+                      identification: {
+                          type: "CPF",
+                          number: "44157485890" // 🔥 SUBSTITUA PELO SEU CPF (SÓ NÚMEROS)
+                      }
+                  }
+              }
+          });
+
+          // Deixa o status do usuário como pendente até o cliente pagar
+          if (result.id) {
+              await db.collection("usuarios").doc(userId).update({
+                  statusPagamentoVulso: "pendente",
+                  idPagamento: result.id
+              });
+          }
+
+          return res.status(200).send(result);
+      } 
       
-      // O Mercado Pago processará agora cobranças reais com este token
-      const resultado = await payment.create({ body: paymentData });
+      // 🔀 BIFURCAÇÃO 2: Se não é PIX/Boleto, é Cartão (Assinatura Mensal Automática)
+      else {
+          const preApproval = new PreApproval(client);
+          const subscriptionData = {
+              body: {
+                  preapproval_plan_id: "3ea107b1310c447898e274a0eec43d7f",
+                  reason: "Assinatura Celebre Sistemas",
+                  external_reference: userId, 
+                  payer_email: payer.email,
+                  card_token_id: token, 
+                  status: "authorized"
+              }
+          };
 
-      res.status(200).send(resultado);
- 
+          const resultado = await preApproval.create(subscriptionData);
+
+          if (resultado.status === "authorized") {
+              await db.collection("usuarios").doc(userId).update({
+                  plano: "pago",
+                  statusAssinatura: "ativa",
+                  dataPagamento: new Date().toISOString(),
+                  subscriptionId: resultado.id 
+              });
+          }
+          return res.status(200).send(resultado);
+      }
+
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
       res.status(500).send({ message: "Erro interno no servidor de pagamentos", error });
     }
   });
 });
-
 
 // ============================================================================
 // 🤖 FUNÇÃO 2: ROBÔ DE FAXINA (CONTAS EXPIRADAS HÁ 180 DIAS)
@@ -56,7 +106,6 @@ exports.limpezaDeContasExpiradas = onSchedule(
         const limiteDias = 180;
         
         try {
-            // 1. Busca todos os usuários que NÃO são pagantes
             const usuariosRef = db.collection("usuarios");
             const snapshot = await usuariosRef.where("plano", "!=", "pago").get();
 
@@ -65,13 +114,10 @@ exports.limpezaDeContasExpiradas = onSchedule(
                 return;
             }
 
-            // 2. Analisa cada usuário
             const promessas = [];
 
             snapshot.forEach((doc) => {
                 const userData = doc.data();
-                
-                // Evita processar quem já foi deletado
                 if (userData.status === 'deletado_definitivamente') return;
 
                 if (userData.dataCadastro) {
@@ -79,15 +125,10 @@ exports.limpezaDeContasExpiradas = onSchedule(
                     const diffTime = Math.abs(hoje - dataCadastro);
                     const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-                    // 3. Se passou de 180 dias, executa a exclusão dos dados
                     if (diffDays > limiteDias) {
                         const uid = doc.id;
-                        console.log(`Excluindo dados do usuário: ${uid} (Inativo há ${diffDays} dias)`);
-
-                        // Deleta os dados atrelados a este usuário nas outras coleções
                         promessas.push(deletarDadosDoUsuario(uid));
 
-                        // 4. Atualiza a ficha do usuário para 'deletado', mas MANTÉM o documento 
                         promessas.push(usuariosRef.doc(uid).update({
                             status: 'deletado_definitivamente',
                             dataExclusao: hoje.toISOString(),
@@ -106,7 +147,6 @@ exports.limpezaDeContasExpiradas = onSchedule(
         }
 });
 
-// 🧹 Função Auxiliar do Robô
 async function deletarDadosDoUsuario(uid) {
     const colecoesParaLimpar = ["estoque", "locacoes", "clientes", "compras"];
     

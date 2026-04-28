@@ -59,13 +59,11 @@ import Notificacoes from './pages/Notificacoes/Notificacoes';
 import Planos from './pages/Planos/Planos';
 import AdminPlanos from './pages/Planos/AdminPlanos';
 import PaginaUpgrade from './pages/Planos/PaginaUpgrade';
-import CriarPlano from './pages/Planos/criarPlano'; // 🔥 NOSSO GERADOR IMPORTADO AQUI
 
 const AppContent = () => {
   const location = useLocation();
-  
-  // 🔥 Adicionei a nossa rota secreta (/gerar-plano-secreto) aqui para a tela ficar limpa, sem o menu lateral
-  const rotasSemMenu = ['/', '/login', '/cadastro', '/checkout', '/planos', '/upgrade', '/gerar-plano-secreto'];
+
+  const rotasSemMenu = ['/', '/login', '/cadastro', '/checkout', '/planos', '/upgrade'];
 
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
@@ -88,9 +86,6 @@ const AppContent = () => {
           <Route path="/login" element={<Login />} />
           <Route path="/cadastro" element={<Cadastro />} />
           <Route path="/checkout" element={<Checkout />} /> 
-          
-          {/* 🔥 NOSSA ROTA SECRETA TEMPORÁRIA */}
-          <Route path="/gerar-plano-secreto" element={<CriarPlano />} /> 
           
           <Route path="/autocadastro/:idEmpresa" element={<AutoCadastro />} /> 
           <Route path="/catalogo/:idEmpresa" element={<Catalogo />} />

@@ -10,11 +10,13 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mensagem, setMensagem] = useState('');
-  
-  // 🔥 CONTROLE DE ABAS: cartao, pix ou boleto
+
   const [metodoAtivo, setMetodoAtivo] = useState('cartao');
-  const [qrCodeGerado, setQrCodeGerado] = useState(false);
-  const [boletoGerado, setBoletoGerado] = useState(false); // 👈 O estado do boleto
+  
+  // 🔥 ESTADOS PARA ARMAZENAR DADOS REAIS DO PIX/BOLETO 🔥
+  const [carregandoAlternativo, setCarregandoAlternativo] = useState(false);
+  const [dadosPix, setDadosPix] = useState(null); 
+  const [dadosBoleto, setDadosBoleto] = useState(null);
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -31,33 +33,23 @@ const Checkout = () => {
 
   const initialization = {
     amount: valorPlano,
-    payer: {
-        email: usuarioLogado.email,
-        entityType: 'individual'
-    }
+    payer: { email: usuarioLogado.email, entityType: 'individual' }
   };
 
   const customization = {
-    paymentMethods: {
-      creditCard: 'all',   
-      debitCard: 'all',    
-    },
-    visual: {
-        style: { theme: 'default' }
-    }
+    paymentMethods: { creditCard: 'all', debitCard: 'all' },
+    visual: { style: { theme: 'default' } }
   };
 
+  // Processamento do Cartão (Assinatura Recorrente)
   const onSubmit = async ({ selectedPaymentMethod, formData }) => {
     setMensagem('A processar pagamento seguro...');
-    
     return new Promise(async (resolve, reject) => {
       try {
         const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
-
         const payload = {
             ...formData,
             userId: usuarioLogado.uid,
-            userEmail: usuarioLogado.email,
             planoId: planoSelecionado.id
         };
 
@@ -68,9 +60,8 @@ const Checkout = () => {
         });
 
         const resultado = await resposta.json();
-
-        if (resultado.status === 'approved' || resultado.status === 'in_process') {
-          setMensagem('✅ Sucesso! Plano ativado.');
+        if (resultado.status === 'authorized' || resultado.status === 'approved' || resultado.status === 'in_process') {
+          setMensagem('✅ Sucesso! Assinatura ativada.');
           resolve(); 
           setTimeout(() => navigate('/dashboard'), 3000);
         } else {
@@ -82,6 +73,49 @@ const Checkout = () => {
         reject(); 
       }
     });
+  };
+
+  // 🔥 Processamento Real do PIX e Boleto 🔥
+  const gerarPagamentoAlternativo = async (metodo) => {
+    setCarregandoAlternativo(true);
+    setMensagem('A comunicar com o banco...');
+    
+    try {
+        const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
+        const payload = {
+            payment_method_id: metodo,
+            transaction_amount: valorPlano,
+            payer: { email: usuarioLogado.email },
+            userId: usuarioLogado.uid
+        };
+
+        const resposta = await fetch(URL_DO_SEU_ROBO, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        const resultado = await resposta.json();
+
+        if (metodo === 'pix' && resultado.point_of_interaction) {
+            setDadosPix({
+                qrCodeBase64: resultado.point_of_interaction.transaction_data.qr_code_base64,
+                copiaECola: resultado.point_of_interaction.transaction_data.qr_code
+            });
+            setMensagem('');
+        } else if (metodo === 'bolbradesco' && resultado.transaction_details) {
+            setDadosBoleto({
+                link: resultado.transaction_details.external_resource_url
+            });
+            setMensagem('');
+        } else {
+            setMensagem('❌ Erro ao gerar código. Tente novamente.');
+        }
+    } catch (erro) {
+        setMensagem('Erro de ligação ao servidor.');
+    } finally {
+        setCarregandoAlternativo(false);
+    }
   };
 
   return (
@@ -127,57 +161,63 @@ const Checkout = () => {
             </div>
           )}
 
+          {/* ABA CARTÃO */}
           {metodoAtivo === 'cartao' && (
               <div className="fade-in">
                   <Payment initialization={initialization} customization={customization} onSubmit={onSubmit} />
               </div>
           )}
 
+          {/* ABA PIX */}
           {metodoAtivo === 'pix' && (
               <div style={{ textAlign: 'center', padding: '20px' }} className="fade-in">
-                  {!qrCodeGerado ? (
-                      <button onClick={() => setQrCodeGerado(true)} style={{ background: '#32bcad', color: 'white', padding: '16px', border: 'none', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: 'pointer' }}>
-                        Gerar QR Code PIX agora
+                  {!dadosPix ? (
+                      <button onClick={() => gerarPagamentoAlternativo('pix')} disabled={carregandoAlternativo} style={{ background: '#32bcad', color: 'white', padding: '16px', border: 'none', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: carregandoAlternativo ? 'not-allowed' : 'pointer', opacity: carregandoAlternativo ? 0.7 : 1 }}>
+                        {carregandoAlternativo ? 'A comunicar com o banco...' : 'Gerar QR Code PIX agora'}
                       </button>
                   ) : (
                       <div className="fade-in">
-                          <div style={{ width: '180px', height: '180px', background: '#f1f5f9', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <i className="fas fa-qrcode" style={{ fontSize: '100px', color: '#0f172a' }}></i>
+                          <div style={{ width: '220px', height: '220px', background: 'white', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px', border: '2px dashed #cbd5e1', padding: '10px' }}>
+                              <img src={`data:image/jpeg;base64,${dadosPix.qrCodeBase64}`} alt="QR Code PIX Real" style={{ width: '100%', height: '100%', borderRadius: '8px' }} />
                           </div>
-                          <p style={{ fontSize: '13px', color: '#64748b' }}>Escaneie o código no app do seu banco.</p>
+                          <p style={{ fontSize: '14px', color: '#64748b', fontWeight: '500', marginBottom: '15px' }}>Escaneie o código no app do seu banco.</p>
+                          <button onClick={() => navigator.clipboard.writeText(dadosPix.copiaECola)} style={{ background: '#f1f5f9', color: '#0f172a', padding: '10px 20px', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' }}>
+                              <i className="far fa-copy" style={{ marginRight: '5px' }}></i> Copiar PIX Copia e Cola
+                          </button>
                       </div>
                   )}
               </div>
           )}
 
-          {/* 🔥 BOLETO CORRIGIDO AQUI 🔥 */}
+          {/* ABA BOLETO */}
           {metodoAtivo === 'boleto' && (
               <div style={{ textAlign: 'center', padding: '20px' }} className="fade-in">
-                  {!boletoGerado ? (
+                  {!dadosBoleto ? (
                       <>
                           <i className="fas fa-file-invoice-dollar" style={{ fontSize: '40px', color: '#0f172a', marginBottom: '15px' }}></i>
-                          <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px' }}>O boleto tem um prazo de compensação de até 3 dias úteis. O acesso será libertado após o banco confirmar o pagamento.</p>
-                          <button onClick={() => setBoletoGerado(true)} style={{ background: '#0f172a', color: 'white', padding: '16px', border: 'none', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: 'pointer' }}>
-                            Gerar Boleto Bancário
+                          <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px', lineHeight: '1.5' }}>O boleto tem um prazo de compensação de até 3 dias úteis.</p>
+                          <button onClick={() => gerarPagamentoAlternativo('bolbradesco')} disabled={carregandoAlternativo} style={{ background: '#0f172a', color: 'white', padding: '16px', border: 'none', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: carregandoAlternativo ? 'not-allowed' : 'pointer', opacity: carregandoAlternativo ? 0.7 : 1 }}>
+                            {carregandoAlternativo ? 'A comunicar com o banco...' : 'Gerar Boleto Bancário'}
                           </button>
                       </>
                   ) : (
                       <div className="fade-in">
-                          <h4 style={{ color: '#10b981', marginBottom: '15px' }}><i className="fas fa-check-circle"></i> Boleto Gerado com Sucesso!</h4>
-                          <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', padding: '20px', borderRadius: '8px', wordBreak: 'break-all', fontSize: '16px', fontWeight: '800', color: '#0f172a', marginBottom: '20px', letterSpacing: '1px' }}>
-                              34191.09008 63571.277308 71444.640008 5 9000000004990
-                          </div>
-                          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>Vencimento em 3 dias úteis. Copie o código acima e pague no seu banco.</p>
-                          <button style={{ background: '#e2e8f0', color: '#0f172a', padding: '12px 20px', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                              <i className="far fa-copy"></i> Copiar Código de Barras
-                          </button>
+                          <h4 style={{ color: '#059669', marginBottom: '15px', fontSize: '1.1rem' }}>
+                            <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i> Boleto Gerado com Sucesso!
+                          </h4>
+                          
+                          <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>Vencimento em 3 dias úteis. Clique no botão abaixo para ver e imprimir o seu boleto oficial.</p>
+                          
+                          <a href={dadosBoleto.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: '#0f172a', color: 'white', padding: '14px 20px', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold', width: '100%', boxSizing: 'border-box' }}>
+                              <i className="fas fa-external-link-alt" style={{ marginRight: '8px' }}></i> Abrir Boleto para Pagamento
+                          </a>
                       </div>
                   )}
               </div>
           )}
           
-          <div style={{ textAlign: 'center', marginTop: '30px', color: '#94a3b8', fontSize: '11px' }}>
-            <i className="fas fa-lock"></i> Pagamento processado pelo Mercado Pago.
+          <div style={{ textAlign: 'center', marginTop: '30px', color: '#94a3b8', fontSize: '12px', fontWeight: '500' }}>
+            <i className="fas fa-lock" style={{ marginRight: '5px' }}></i> Pagamento processado de forma segura pelo Mercado Pago.
           </div>
         </div>
       </div>
