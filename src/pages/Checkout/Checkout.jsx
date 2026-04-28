@@ -10,13 +10,13 @@ const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [mensagem, setMensagem] = useState('');
-
   const [metodoAtivo, setMetodoAtivo] = useState('cartao');
   
-  // 🔥 ESTADOS PARA ARMAZENAR DADOS REAIS DO PIX/BOLETO 🔥
+  // 🔥 ESTADOS PARA ARMAZENAR DADOS REAIS 🔥
   const [carregandoAlternativo, setCarregandoAlternativo] = useState(false);
   const [dadosPix, setDadosPix] = useState(null); 
   const [dadosBoleto, setDadosBoleto] = useState(null);
+  const [cpfCliente, setCpfCliente] = useState(''); // NOVO: Estado para guardar o CPF
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -77,6 +77,13 @@ const Checkout = () => {
 
   // 🔥 Processamento Real do PIX e Boleto 🔥
   const gerarPagamentoAlternativo = async (metodo) => {
+    // Validação de Segurança do CPF
+    const cpfLimpo = cpfCliente.replace(/\D/g, ''); // Tira pontos e traços
+    if (cpfLimpo.length !== 11) {
+        setMensagem('⚠️ Por favor, digite um CPF válido com 11 números para emissão do documento.');
+        return;
+    }
+
     setCarregandoAlternativo(true);
     setMensagem('A comunicar com o banco...');
     
@@ -85,7 +92,10 @@ const Checkout = () => {
         const payload = {
             payment_method_id: metodo,
             transaction_amount: valorPlano,
-            payer: { email: usuarioLogado.email },
+            payer: { 
+                email: usuarioLogado.email,
+                identification: { type: "CPF", number: cpfLimpo } // NOVO: Enviando o CPF real para o robô
+            },
             userId: usuarioLogado.uid
         };
 
@@ -172,9 +182,17 @@ const Checkout = () => {
           {metodoAtivo === 'pix' && (
               <div style={{ textAlign: 'center', padding: '20px' }} className="fade-in">
                   {!dadosPix ? (
-                      <button onClick={() => gerarPagamentoAlternativo('pix')} disabled={carregandoAlternativo} style={{ background: '#32bcad', color: 'white', padding: '16px', border: 'none', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: carregandoAlternativo ? 'not-allowed' : 'pointer', opacity: carregandoAlternativo ? 0.7 : 1 }}>
-                        {carregandoAlternativo ? 'A comunicar com o banco...' : 'Gerar QR Code PIX agora'}
-                      </button>
+                      <>
+                          {/* CAMPO DE CPF ADICIONADO AQUI */}
+                          <div style={{ textAlign: 'left', marginBottom: '25px' }}>
+                            <label style={{ display: 'block', color: '#64748b', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>CPF para emissão do comprovante *</label>
+                            <input type="text" placeholder="Apenas números" value={cpfCliente} onChange={(e) => setCpfCliente(e.target.value)} maxLength="14" style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px', boxSizing: 'border-box' }} />
+                          </div>
+
+                          <button onClick={() => gerarPagamentoAlternativo('pix')} disabled={carregandoAlternativo} style={{ background: '#32bcad', color: 'white', padding: '16px', border: 'none', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: carregandoAlternativo ? 'not-allowed' : 'pointer', opacity: carregandoAlternativo ? 0.7 : 1 }}>
+                            {carregandoAlternativo ? 'A comunicar com o banco...' : 'Gerar QR Code PIX agora'}
+                          </button>
+                      </>
                   ) : (
                       <div className="fade-in">
                           <div style={{ width: '220px', height: '220px', background: 'white', margin: '0 auto 20px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRadius: '16px', border: '2px dashed #cbd5e1', padding: '10px' }}>
@@ -194,6 +212,12 @@ const Checkout = () => {
               <div style={{ textAlign: 'center', padding: '20px' }} className="fade-in">
                   {!dadosBoleto ? (
                       <>
+                          {/* CAMPO DE CPF ADICIONADO AQUI */}
+                          <div style={{ textAlign: 'left', marginBottom: '25px' }}>
+                            <label style={{ display: 'block', color: '#64748b', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>CPF para registro do boleto *</label>
+                            <input type="text" placeholder="Apenas números" value={cpfCliente} onChange={(e) => setCpfCliente(e.target.value)} maxLength="14" style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px', boxSizing: 'border-box' }} />
+                          </div>
+
                           <i className="fas fa-file-invoice-dollar" style={{ fontSize: '40px', color: '#0f172a', marginBottom: '15px' }}></i>
                           <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px', lineHeight: '1.5' }}>O boleto tem um prazo de compensação de até 3 dias úteis.</p>
                           <button onClick={() => gerarPagamentoAlternativo('bolbradesco')} disabled={carregandoAlternativo} style={{ background: '#0f172a', color: 'white', padding: '16px', border: 'none', borderRadius: '10px', fontWeight: 'bold', width: '100%', cursor: carregandoAlternativo ? 'not-allowed' : 'pointer', opacity: carregandoAlternativo ? 0.7 : 1 }}>
@@ -205,9 +229,7 @@ const Checkout = () => {
                           <h4 style={{ color: '#059669', marginBottom: '15px', fontSize: '1.1rem' }}>
                             <i className="fas fa-check-circle" style={{ marginRight: '8px' }}></i> Boleto Gerado com Sucesso!
                           </h4>
-                          
                           <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>Vencimento em 3 dias úteis. Clique no botão abaixo para ver e imprimir o seu boleto oficial.</p>
-                          
                           <a href={dadosBoleto.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: '#0f172a', color: 'white', padding: '14px 20px', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold', width: '100%', boxSizing: 'border-box' }}>
                               <i className="fas fa-external-link-alt" style={{ marginRight: '8px' }}></i> Abrir Boleto para Pagamento
                           </a>

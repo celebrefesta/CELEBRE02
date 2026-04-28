@@ -34,15 +34,16 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
           const result = await payment.create({
               body: {
                   transaction_amount: Number(transaction_amount),
-                  description: "Acesso de 30 dias - Celebre Sistemas",
+                  description: "Acesso de 30 dias - Celebre",
                   payment_method_id: payment_method_id,
                   payer: { 
                       email: payer.email,
-                      first_name: "Camila", // 🔥 NOME REAL PREENCHIDO
-                      last_name: "Vichinhsk", // 🔥 SOBRENOME REAL PREENCHIDO
+                      first_name: "Camila", // 🔥 Seu nome real colocado aqui
+                      last_name: "Vichinhsk", // 🔥 Seu sobrenome real colocado aqui
                       identification: {
                           type: "CPF",
-                          number: "44157485890" // 🔥 SUBSTITUA PELO SEU CPF (SÓ NÚMEROS)
+                          // 🔥 A MÁGICA ACONTECE AQUI: Puxando o CPF dinâmico da tela do React!
+                          number: payer.identification.number 
                       }
                   }
               }
@@ -65,7 +66,7 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
           const subscriptionData = {
               body: {
                   preapproval_plan_id: "3ea107b1310c447898e274a0eec43d7f",
-                  reason: "Assinatura Celebre Sistemas",
+                  reason: "Assinatura Celebre",
                   external_reference: userId, 
                   payer_email: payer.email,
                   card_token_id: token, 
