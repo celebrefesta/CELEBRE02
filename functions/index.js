@@ -11,10 +11,6 @@ if (admin.apps.length === 0) {
 }
 const db = admin.firestore();
 
-// ============================================================================
-// 💰 FUNÇÃO 1: GATEWAY DE PAGAMENTO (RECORRÊNCIA E AVULSO)
-// ============================================================================
-
 const client = new MercadoPagoConfig({ 
   accessToken: "APP_USR-3626101868283261-041714-787f6d6687f899ca426df63ee41ec903-3201169000" 
 });
@@ -28,9 +24,9 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
     try {
       const { token, payment_method_id, transaction_amount, payer, userId } = req.body; 
 
-      // 🔀 BIFURCAÇÃO 1: É PIX ou Boleto? (Pagamento Único de 30 dias)
       if (payment_method_id === 'pix' || payment_method_id === 'bolbradesco') {
           const payment = new Payment(client);
+          
           const result = await payment.create({
               body: {
                   transaction_amount: Number(transaction_amount),
@@ -38,18 +34,25 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
                   payment_method_id: payment_method_id,
                   payer: { 
                       email: payer.email,
-                      first_name: "Camila", // 🔥 Seu nome real colocado aqui
-                      last_name: "Vichinhsk", // 🔥 Seu sobrenome real colocado aqui
+                      first_name: "Camila", 
+                      last_name: "Vichinhsk", 
                       identification: {
                           type: "CPF",
-                          // 🔥 A MÁGICA ACONTECE AQUI: Puxando o CPF dinâmico da tela do React!
                           number: payer.identification.number 
+                      },
+                      // 🔥 O ENDEREÇO OBRIGATÓRIO ESTÁ AQUI:
+                      address: {
+                        zip_code: "01001000",
+                        street_name: "Praca da Se",
+                        street_number: "1",
+                        neighborhood: "Se",
+                        city: "Sao Paulo",
+                        federal_unit: "SP"
                       }
                   }
               }
           });
 
-          // Deixa o status do usuário como pendente até o cliente pagar
           if (result.id) {
               await db.collection("usuarios").doc(userId).update({
                   statusPagamentoVulso: "pendente",
@@ -60,7 +63,6 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
           return res.status(200).send(result);
       } 
       
-      // 🔀 BIFURCAÇÃO 2: Se não é PIX/Boleto, é Cartão (Assinatura Mensal Automática)
       else {
           const preApproval = new PreApproval(client);
           const subscriptionData = {
@@ -89,47 +91,29 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
 
     } catch (error) {
       console.error("Erro ao processar pagamento:", error);
-      res.status(500).send({ message: "Erro interno no servidor de pagamentos", error });
+      res.status(500).send({ message: "Erro interno no servidor", error });
     }
   });
 });
 
-// ============================================================================
-// 🤖 FUNÇÃO 2: ROBÔ DE FAXINA (CONTAS EXPIRADAS HÁ 180 DIAS)
-// ============================================================================
-
 exports.limpezaDeContasExpiradas = onSchedule(
     { schedule: "every day 00:00", timeZone: "America/Sao_Paulo" }, 
     async (event) => {
-        console.log("Iniciando varredura de contas inativas...");
-
         const hoje = new Date();
         const limiteDias = 180;
-        
         try {
             const usuariosRef = db.collection("usuarios");
             const snapshot = await usuariosRef.where("plano", "!=", "pago").get();
-
-            if (snapshot.empty) {
-                console.log("Nenhuma conta inadimplente encontrada hoje.");
-                return;
-            }
-
             const promessas = [];
-
             snapshot.forEach((doc) => {
                 const userData = doc.data();
                 if (userData.status === 'deletado_definitivamente') return;
-
                 if (userData.dataCadastro) {
                     const dataCadastro = new Date(userData.dataCadastro);
-                    const diffTime = Math.abs(hoje - dataCadastro);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
+                    const diffDays = Math.ceil(Math.abs(hoje - dataCadastro) / (1000 * 60 * 60 * 24));
                     if (diffDays > limiteDias) {
                         const uid = doc.id;
                         promessas.push(deletarDadosDoUsuario(uid));
-
                         promessas.push(usuariosRef.doc(uid).update({
                             status: 'deletado_definitivamente',
                             dataExclusao: hoje.toISOString(),
@@ -139,27 +123,71 @@ exports.limpezaDeContasExpiradas = onSchedule(
                     }
                 }
             });
-
             await Promise.all(promessas);
-            console.log("Faxina concluída com sucesso!");
-
         } catch (error) {
-            console.error("Erro ao executar a limpeza:", error);
+            console.error("Erro na limpeza:", error);
         }
 });
 
 async function deletarDadosDoUsuario(uid) {
     const colecoesParaLimpar = ["estoque", "locacoes", "clientes", "compras"];
-    
     for (const nomeColecao of colecoesParaLimpar) {
-        const colecaoRef = db.collection(nomeColecao);
-        const snapshot = await colecaoRef.where("userId", "==", uid).get();
-        
+        const snapshot = await db.collection(nomeColecao).where("userId", "==", uid).get();
         const batch = db.batch();
-        snapshot.docs.forEach((doc) => {
-            batch.delete(doc.ref);
-        });
-        
+        snapshot.docs.forEach((doc) => batch.delete(doc.ref));
         await batch.commit();
     }
 }
+
+// ============================================================================
+// 🔔 FUNÇÃO 3: WEBHOOK - ESCUTA APROVAÇÕES DE PAGAMENTO DO MERCADO PAGO
+// ============================================================================
+
+exports.webhookMercadoPago = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    try {
+      // O Mercado Pago pode enviar o ID do pagamento no corpo (body) ou na URL (query)
+      const paymentId = req.body?.data?.id || req.query['data.id'];
+      const action = req.body?.action || req.body?.type;
+
+      // Se não tiver ID ou não for uma atualização de pagamento, ignoramos e damos OK
+      if (!paymentId || (action !== 'payment.created' && action !== 'payment.updated' && action !== 'payment')) {
+        return res.status(200).send("Aviso ignorado ou sem ID");
+      }
+
+      console.log(`Recebido aviso sobre o pagamento ID: ${paymentId}`);
+
+      // Vamos perguntar ao Mercado Pago o status oficial desse pagamento
+      const payment = new Payment(client);
+      const pagamentoOficial = await payment.get({ id: paymentId });
+
+      // Se o status for "approved" (Boleto compensado ou PIX pago)
+      if (pagamentoOficial.status === 'approved') {
+          const usuariosRef = db.collection("usuarios");
+          
+          // Procuramos qual cliente do Celebre tem esse Boleto/PIX atrelado
+          const snapshot = await usuariosRef.where("idPagamento", "==", Number(paymentId)).get();
+
+          if (!snapshot.empty) {
+              const batch = db.batch();
+              snapshot.docs.forEach((doc) => {
+                  batch.update(doc.ref, {
+                      plano: "pago",
+                      statusPagamentoVulso: "aprovado",
+                      dataPagamento: new Date().toISOString()
+                  });
+              });
+              await batch.commit();
+              console.log("✅ Acesso liberado com sucesso para a cliente!");
+          }
+      }
+
+      // É OBRIGATÓRIO devolver status 200 rápido para o Mercado Pago não tentar enviar de novo
+      res.status(200).send("Webhook recebido com sucesso");
+
+    } catch (error) {
+      console.error("Erro no processamento do webhook:", error);
+      res.status(500).send("Erro interno");
+    }
+  });
+});
