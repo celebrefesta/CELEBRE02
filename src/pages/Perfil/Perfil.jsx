@@ -13,10 +13,11 @@ const Perfil = () => {
 
   const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
 
-  // 🔥 ESTADOS PARA O OLHINHO (VISIBILIDADE)
+  // 🔥 ESTADOS PARA O OLHINHO E CANCELAMENTO
   const [mostrarSenhaAtual, setMostrarSenhaAtual] = useState(false);
   const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
+  const [cancelando, setCancelando] = useState(false);
 
   const [dados, setDados] = useState({
     nome: '',
@@ -37,6 +38,8 @@ const Perfil = () => {
     corTexto: '#64748b',
     metodoPagamento: 'Nenhum',
     emailCobranca: '-',
+    subscriptionId: null, // ID do contrato no Mercado Pago
+    isActive: false // Para saber se mostramos o botão de cancelar
   });
 
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
@@ -73,29 +76,33 @@ const Perfil = () => {
             let corBg = "#fef2f2"; 
             let corTexto = "#991b1b"; 
             let textoMetodo = "Nenhum método cadastrado";
+            let isActive = false;
 
             let testeAtivo = false;
             if (uData.dataFimTeste) {
                 testeAtivo = new Date() <= new Date(uData.dataFimTeste);
             }
 
-            if (uData.assinaturaAtiva) {
+            // Verifica se a assinatura está ativa pelos campos que o Webhook preenche
+            if (uData.assinaturaAtiva || uData.statusAssinatura === 'ativa' || uData.plano === 'pago') {
                 statusReal = "Assinatura Ativa";
                 corBg = "#f0fdf4"; 
                 corTexto = "#166534"; 
                 textoMetodo = uData.metodoPagamento || "Cartão de Crédito";
+                isActive = true;
             } else if (testeAtivo) {
                 statusReal = "Em Período de Teste (VIP)";
                 corBg = "#fffbeb"; 
                 corTexto = "#b45309"; 
             } else {
-                statusReal = "Congelada (Teste Expirado)";
+                statusReal = "Cancelada / Inativa";
                 corBg = "#fef2f2"; 
                 corTexto = "#991b1b"; 
             }
 
-            let nomeDoPlano = "Plano Básico";
-            let precoDoPlano = "49,90";
+            // 🔥 O PADRÃO AGORA É NENHUM PLANO
+            let nomeDoPlano = "Nenhum Plano";
+            let precoDoPlano = "0,00";
             if (uData.planoId) {
                 const planoSnap = await getDoc(doc(db, "planos", uData.planoId));
                 if (planoSnap.exists()) {
@@ -112,11 +119,35 @@ const Perfil = () => {
                 corBg: corBg,
                 corTexto: corTexto,
                 metodoPagamento: textoMetodo,
-                emailCobranca: uData.email || usuarioLogado.email
+                emailCobranca: uData.email || usuarioLogado.email,
+                subscriptionId: uData.subscriptionId || null,
+                isActive: isActive
+            }));
+        } else {
+            // 🔥 Se a conta não tiver registro de plano no banco ainda
+            setAssinatura(prev => ({
+                ...prev,
+                planoNome: 'Nenhum Plano',
+                precoMensal: '0,00',
+                status: 'Sem Assinatura',
+                corBg: '#fef2f2',
+                corTexto: '#991b1b',
+                metodoPagamento: 'Nenhum',
+                emailCobranca: usuarioLogado.email,
+                isActive: false
             }));
         }
       } catch (e) { 
           console.error('Erro ao buscar dados do perfil:', e);
+          // 🔥 PREVENÇÃO DE ERROS
+          setAssinatura(prev => ({
+              ...prev,
+              planoNome: 'Não foi possível carregar',
+              status: 'Erro de conexão',
+              corBg: '#fef2f2',
+              corTexto: '#991b1b',
+              isActive: false
+          }));
       }
     };
     
@@ -200,6 +231,50 @@ const Perfil = () => {
     }
   };
 
+  // 🔥 NOVA FUNÇÃO DE CANCELAMENTO 🔥
+  const handleCancelarAssinatura = async () => {
+    if (!assinatura.subscriptionId) {
+        alert("Não foi possível encontrar o ID da assinatura para cancelar.");
+        return;
+    }
+
+    const confirmar = window.confirm("Tem certeza que deseja cancelar a sua assinatura? Perderá o acesso às ferramentas premium no final do período.");
+    if (!confirmar) return;
+
+    setCancelando(true);
+    try {
+      // Cole aqui o link da Função 4 gerada no terminal do Firebase:
+      const URL_FUNCAO_CANCELAR = 'https://us-central1-celebre-9f5c9.cloudfunctions.net/cancelarAssinatura';
+      
+      const resposta = await fetch(URL_FUNCAO_CANCELAR, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          userId: usuarioLogado.uid, 
+          subscriptionId: assinatura.subscriptionId 
+        })
+      });
+
+      if (resposta.ok) {
+        alert("Assinatura cancelada com sucesso.");
+        // Atualiza a tela imediatamente para mostrar o novo status
+        setAssinatura(prev => ({ 
+            ...prev, 
+            status: 'Cancelada / Inativa', 
+            corBg: '#fef2f2', 
+            corTexto: '#991b1b',
+            isActive: false 
+        }));
+      } else {
+        alert("Não foi possível cancelar no momento. Tente novamente.");
+      }
+    } catch (error) {
+      alert("Erro de conexão ao tentar cancelar a assinatura.");
+    } finally {
+      setCancelando(false);
+    }
+  };
+
   return (
     <div className="perfil-page fade-in">
       <div className="perfil-header">
@@ -257,7 +332,9 @@ const Perfil = () => {
 
           <section className="form-section">
             <h3><i className="fas fa-crown"></i> Assinatura e Faturamento</h3>
-            <div className="assinatura-card" style={{ background: assinatura.corBg, border: `1px solid ${assinatura.corTexto}40` }}>
+            
+            {/* 🔥 CORREÇÃO DE FORÇA BRUTA NO LAYOUT: display block e minWidth 100% adicionados direto no estilo inline */}
+            <div className="assinatura-card" style={{ display: 'block', width: '100%', minWidth: '100%', boxSizing: 'border-box', background: assinatura.corBg, border: `1px solid ${assinatura.corTexto}40` }}>
                 <div className="assinatura-header">
                     <div className="assinatura-titulo">
                         <h4 style={{ color: assinatura.corTexto }}>{assinatura.planoNome}</h4>
@@ -281,11 +358,34 @@ const Perfil = () => {
                     </div>
                 </div>
             </div>
-            <div style={{display:'flex', marginTop: 20}}>
-              {/* 🔥 CORREÇÃO AQUI: navigate('/planos') em vez de '/upgrade' 🔥 */}
+            
+            <div style={{display:'flex', gap: '15px', marginTop: 20, flexWrap: 'wrap'}}>
               <button type="button" className="btn-change-plan" onClick={() => navigate('/planos')}>
                  Gerenciar Plano e Pagamentos <i className="fas fa-arrow-right" style={{marginLeft: '8px'}}></i>
               </button>
+              
+              {/* 🔥 BOTÃO DE CANCELAMENTO CONDICIONAL 🔥 */}
+              {assinatura.isActive && (
+                <button 
+                  type="button" 
+                  onClick={handleCancelarAssinatura}
+                  disabled={cancelando}
+                  style={{
+                    padding: '12px 20px',
+                    backgroundColor: 'transparent',
+                    border: '1px solid #ef4444',
+                    color: '#ef4444',
+                    borderRadius: '8px',
+                    fontWeight: 'bold',
+                    cursor: cancelando ? 'not-allowed' : 'pointer',
+                    transition: '0.2s',
+                    opacity: cancelando ? 0.6 : 1
+                  }}
+                >
+                  <i className="fas fa-ban" style={{marginRight: '8px'}}></i>
+                  {cancelando ? 'Cancelando...' : 'Cancelar Assinatura'}
+                </button>
+              )}
             </div>
           </section>
 

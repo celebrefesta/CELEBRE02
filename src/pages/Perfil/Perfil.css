@@ -257,6 +257,9 @@
     padding: 25px;
     border-radius: 14px;
     margin-bottom: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    display: block;
 }
 
 .assinatura-header {

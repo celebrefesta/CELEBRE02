@@ -1,27 +1,45 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { signOut, onAuthStateChanged } from 'firebase/auth'; // 🔥 Importamos funções do Firebase
-import { auth } from '../firebaseConfig'; // 🔥 Sua config do Firebase
+import { signOut, onAuthStateChanged } from 'firebase/auth'; 
+import { doc, getDoc } from 'firebase/firestore'; // 🔥 Precisamos do Firestore para verificar o cargo
+import { auth, db } from '../firebaseConfig'; // 🔥 Importando o db junto com o auth
 import SininhoNotificacoes from './SininhoNotificacoes';
 import './Topbar.css';
 
 const Topbar = () => {
   const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
-  const [usuario, setUsuario] = useState(null); // Vai guardar os dados de quem tá logado
+  const [usuario, setUsuario] = useState(null); 
+  const [isAdminConta, setIsAdminConta] = useState(false); // 🔥 Estado para saber se é a Dona da conta
   const menuRef = useRef(null);
 
-  // Fica vigiando para ver quem está logado no sistema
+  // Fica vigiando para ver quem está logado no sistema e verifica o cargo
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUsuario({
           nome: user.displayName || "Admin Celebre",
           foto: user.photoURL || null,
           email: user.email
         });
+
+        // 🔥 Lógica para descobrir se é a Dona da Conta ou Funcionário
+        try {
+          const userRef = doc(db, 'usuarios', user.uid);
+          const userSnap = await getDoc(userRef);
+          
+          if (userSnap.exists()) {
+            setIsAdminConta(true); // É a Dona!
+          } else {
+            setIsAdminConta(false); // É funcionário!
+          }
+        } catch (error) {
+          console.error("Erro ao verificar nível de acesso do topbar:", error);
+        }
+
       } else {
         setUsuario(null);
+        setIsAdminConta(false);
       }
     });
     return () => unsubscribe();
@@ -47,8 +65,8 @@ const Topbar = () => {
   // 🔥 Função Oficial de Sair do Sistema 🔥
   const handleSair = async () => {
     try {
-      await signOut(auth); // Desloga no servidor do Google/Firebase
-      navigate('/login'); // Joga a pessoa para a tela de login
+      await signOut(auth); 
+      navigate('/login'); 
     } catch (error) {
       console.error("Erro ao sair:", error);
       alert("Houve um erro ao tentar sair do sistema.");
@@ -100,10 +118,19 @@ const Topbar = () => {
                 Meu Perfil
               </button>
               
-              <button className="dropdown-item" onClick={() => irPara('/configuracoes')}>
-                <i className="fas fa-cog"></i> 
-                Configurações
-              </button>
+              {/* 🔥 A MÁGICA AQUI: Equipe e Configurações SÓ aparecem se for a Dona da conta! */}
+              {isAdminConta && (
+                <>
+                  <button className="dropdown-item" onClick={() => irPara('/usuarios')}>
+                    <i className="fas fa-users-cog"></i> 
+                    Equipe
+                  </button>
+                  <button className="dropdown-item" onClick={() => irPara('/configuracoes')}>
+                    <i className="fas fa-cog"></i> 
+                    Configurações
+                  </button>
+                </>
+              )}
               
               <div className="dropdown-divisor"></div>
               

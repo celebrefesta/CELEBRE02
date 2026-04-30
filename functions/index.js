@@ -140,54 +140,116 @@ async function deletarDadosDoUsuario(uid) {
 }
 
 // ============================================================================
-// 🔔 FUNÇÃO 3: WEBHOOK - ESCUTA APROVAÇÕES DE PAGAMENTO DO MERCADO PAGO
+// 🔔 FUNÇÃO 3: WEBHOOK - ESCUTA PAGAMENTOS E ASSINATURAS DO MERCADO PAGO
 // ============================================================================
 
 exports.webhookMercadoPago = functions.https.onRequest((req, res) => {
   cors(req, res, async () => {
     try {
-      // O Mercado Pago pode enviar o ID do pagamento no corpo (body) ou na URL (query)
-      const paymentId = req.body?.data?.id || req.query['data.id'];
+      // Pega a ação (o que aconteceu) e o ID (de quem é)
       const action = req.body?.action || req.body?.type;
+      const dataId = req.body?.data?.id || req.query['data.id'];
 
-      // Se não tiver ID ou não for uma atualização de pagamento, ignoramos e damos OK
-      if (!paymentId || (action !== 'payment.created' && action !== 'payment.updated' && action !== 'payment')) {
-        return res.status(200).send("Aviso ignorado ou sem ID");
+      if (!dataId || !action) {
+        return res.status(200).send("Aviso ignorado: Sem ID ou ação");
       }
 
-      console.log(`Recebido aviso sobre o pagamento ID: ${paymentId}`);
+      console.log(`Webhook recebido. Ação: ${action}, ID: ${dataId}`);
 
-      // Vamos perguntar ao Mercado Pago o status oficial desse pagamento
-      const payment = new Payment(client);
-      const pagamentoOficial = await payment.get({ id: paymentId });
+      // 💰 ROTA 1: DINHEIRO ENTRANDO (Boleto, PIX ou cobrança mensal do cartão)
+      if (action === 'payment.created' || action === 'payment.updated' || action === 'payment') {
+          const payment = new Payment(client);
+          const pagamentoOficial = await payment.get({ id: dataId });
 
-      // Se o status for "approved" (Boleto compensado ou PIX pago)
-      if (pagamentoOficial.status === 'approved') {
-          const usuariosRef = db.collection("usuarios");
-          
-          // Procuramos qual cliente do Celebre tem esse Boleto/PIX atrelado
-          const snapshot = await usuariosRef.where("idPagamento", "==", Number(paymentId)).get();
+          if (pagamentoOficial.status === 'approved') {
+              const usuariosRef = db.collection("usuarios");
+              const snapshot = await usuariosRef.where("idPagamento", "==", Number(dataId)).get();
 
-          if (!snapshot.empty) {
-              const batch = db.batch();
-              snapshot.docs.forEach((doc) => {
-                  batch.update(doc.ref, {
-                      plano: "pago",
-                      statusPagamentoVulso: "aprovado",
-                      dataPagamento: new Date().toISOString()
+              if (!snapshot.empty) {
+                  const batch = db.batch();
+                  snapshot.docs.forEach((doc) => {
+                      batch.update(doc.ref, {
+                          plano: "pago",
+                          statusPagamentoVulso: "aprovado",
+                          dataPagamento: new Date().toISOString()
+                      });
                   });
-              });
-              await batch.commit();
-              console.log("✅ Acesso liberado com sucesso para a cliente!");
+                  await batch.commit();
+                  console.log("✅ Pagamento aprovado! Acesso liberado.");
+              }
+          }
+      } 
+      
+      // 📝 ROTA 2: STATUS DO CONTRATO (Assinatura Cancelada ou Pausada)
+      else if (action === 'subscription_preapproval' || action === 'subscription_preapproval.updated') {
+          const preApproval = new PreApproval(client);
+          const assinaturaOficial = await preApproval.get({ id: dataId });
+          
+          // Se a cliente cancelar ou o cartão não tiver limite e pausar
+          if (assinaturaOficial.status === 'cancelled' || assinaturaOficial.status === 'paused') {
+              const usuariosRef = db.collection("usuarios");
+              
+              // Busca a cliente usando o número do contrato da assinatura
+              const snapshot = await usuariosRef.where("subscriptionId", "==", dataId).get();
+
+              if (!snapshot.empty) {
+                  const batch = db.batch();
+                  snapshot.docs.forEach((doc) => {
+                      batch.update(doc.ref, {
+                          statusAssinatura: assinaturaOficial.status, // Grava "cancelled" ou "paused"
+                          dataCancelamento: new Date().toISOString()
+                      });
+                  });
+                  await batch.commit();
+                  console.log(`⚠️ Assinatura alterada para ${assinaturaOficial.status}. Registrado no banco.`);
+              }
           }
       }
 
-      // É OBRIGATÓRIO devolver status 200 rápido para o Mercado Pago não tentar enviar de novo
-      res.status(200).send("Webhook recebido com sucesso");
+      // Devolve OK para o Mercado Pago parar de enviar o aviso
+      res.status(200).send("Webhook processado com sucesso");
 
     } catch (error) {
       console.error("Erro no processamento do webhook:", error);
       res.status(500).send("Erro interno");
+    }
+  });
+});
+
+// ============================================================================
+// 🛑 FUNÇÃO 4: CANCELAR ASSINATURA A PEDIDO DA CLIENTE
+// ============================================================================
+
+exports.cancelarAssinatura = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method !== "POST") return res.status(405).send("Método não permitido");
+
+    try {
+      const { userId, subscriptionId } = req.body;
+
+      if (!userId || !subscriptionId) {
+         return res.status(400).send({ error: "Dados incompletos" });
+      }
+
+      // 1. Avisa o Mercado Pago para cancelar o contrato oficial
+      const preApproval = new PreApproval(client);
+      await preApproval.update({
+         id: subscriptionId,
+         body: { status: "cancelled" }
+      });
+
+      // 2. Atualiza imediatamente no nosso banco de dados (Firestore)
+      await db.collection("usuarios").doc(userId).update({
+         statusAssinatura: "cancelled",
+         plano: "gratuito", 
+         dataCancelamento: new Date().toISOString()
+      });
+
+      return res.status(200).send({ message: "Assinatura cancelada com sucesso" });
+
+    } catch (error) {
+      console.error("Erro ao cancelar:", error);
+      res.status(500).send({ error: "Erro interno ao tentar cancelar a assinatura" });
     }
   });
 });

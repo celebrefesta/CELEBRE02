@@ -43,36 +43,58 @@ const Dashboard = () => {
         const hojeISO = new Date().toISOString().split('T')[0];
         const mesAtual = hojeISO.substring(0, 7);
 
-        // 🔥 CÁLCULO DOS DIAS E BLOQUEIOS
+        // 🔥 CÁLCULO DOS DIAS E BLOQUEIOS (À PROVA DE FALHAS)
         const userDocRef = doc(db, "usuarios", usuarioLogado.uid);
         const userDocSnap = await getDoc(userDocRef);
         
+        let dataCadastroSegura = usuarioLogado.metadata.creationTime; 
+        let usuarioJaPagou = false;
+
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
-            if (userData.dataCadastro) {
-                const dataCadastro = new Date(userData.dataCadastro);
-                const hoje = new Date();
-                const diffTime = Math.abs(hoje - dataCadastro);
-                const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) || 1;
-                
-                setDiasTeste(diffDays);
+            
+            // 🛡️ NOVA LÓGICA DE LIBERAÇÃO: Aceita plano "pago" OU statusPagamentoVulso "pago"
+            if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa') {
+                usuarioJaPagou = true;
+            }
 
-                // 🔐 BLINDAGEM: Se não for a Super-Adm, verifica os bloqueios de tempo
-                if (!isSuperAdmin && userData.plano !== 'pago') {
-                    if (diffDays > 180) { // 6 Meses
-                        setStatusConta('excluido');
-                        setLoading(false);
-                        return; // Aborta carregamento
-                    } else if (diffDays > 7) { // 8º Dia
-                        setStatusConta('bloqueado');
-                        setLoading(false);
-                        return; // Aborta carregamento
-                    }
+            if (userData.dataCadastro) {
+                dataCadastroSegura = userData.dataCadastro;
+            }
+        }
+
+        if (dataCadastroSegura) {
+            let dataCadastroStr = dataCadastroSegura;
+            if (dataCadastroStr.toDate) {
+                dataCadastroStr = dataCadastroStr.toDate().toISOString();
+            }
+            
+            const hojeApenasData = new Date().toISOString().split('T')[0];
+            const cadastroApenasData = new Date(dataCadastroStr).toISOString().split('T')[0];
+            const hojeMilissegundos = new Date(hojeApenasData).getTime();
+            const cadastroMilissegundos = new Date(cadastroApenasData).getTime();
+
+            const diffTime = hojeMilissegundos - cadastroMilissegundos;
+            let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            if (diffDays < 1) diffDays = 1;
+
+            setDiasTeste(diffDays);
+
+            // 🔐 BLINDAGEM: Se não for a Super-Adm e NÃO tiver pago, verifica os bloqueios
+            if (!isSuperAdmin && !usuarioJaPagou) {
+                if (diffDays > 180) {
+                    setStatusConta('excluido');
+                    setLoading(false);
+                    return; 
+                } else if (diffDays > 7) {
+                    setStatusConta('bloqueado');
+                    setLoading(false);
+                    return; 
                 }
             }
         }
 
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS o seu estoque e pedidos
+        // 🔥 CARREGAMENTO DOS DADOS DO SISTEMA
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
 
@@ -226,7 +248,6 @@ const Dashboard = () => {
   const off4 = 100 - (p1 + p2 + p3);
   const off5 = 100 - (p1 + p2 + p3 + p4);
 
-  // 🚫 CENÁRIO 1: EXCLUÍDO (Mais de 6 meses inativo) - Ignorado para Super-Adm
   if (statusConta === 'excluido') {
       return (
           <div className="dash-wide-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center' }}>
@@ -243,7 +264,6 @@ const Dashboard = () => {
       );
   }
 
-  // 🔴 CENÁRIO 2: BLOQUEADO (Exige Pagamento) - Ignorado para Super-Adm
   if (statusConta === 'bloqueado') {
       return (
           <div className="dash-wide-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center' }}>
@@ -260,12 +280,11 @@ const Dashboard = () => {
       );
   }
 
-  // 🟢 CENÁRIO 3: ATIVO
   return (
     <div className="dash-wide-container fade-in">
       
-      {/* 🛡️ Faixa de Teste: Só aparece se NÃO for a Super-Adm e estiver nos 7 dias */}
-      {!isSuperAdmin && diasTeste <= 7 && (
+      {/* 🛡️ Faixa de Teste: Só aparece se NÃO for a Super-Adm e ainda estiver no teste */}
+      {!isSuperAdmin && statusConta === 'ativo' && diasTeste <= 7 && (
         <div style={{ background: '#fef3c7', color: '#b45309', padding: '12px', textAlign: 'center', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', border: '1px solid #fde68a' }}>
           ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito do Celebre. Aproveite!
         </div>
@@ -432,4 +451,4 @@ const Dashboard = () => {
   );
 };
 
-export default Dashboard;
+export default Dashboard;f

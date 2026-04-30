@@ -55,6 +55,10 @@ import Moodboard from './pages/Moodboard/Moodboard';
 import Catalogo from './pages/Catalago/Catalago'; 
 import Notificacoes from './pages/Notificacoes/Notificacoes';
 
+// 🔥 CAMINHO CORRIGIDO AQUI: Apontando direto para a pasta Usuarios dentro de src
+import Usuarios from './Usuarios/Usuarios'; 
+import Monitoramento from './Usuarios/Monitoramento'; // 🔥 NOVO IMPORT DA PÁGINA DE AUDITORIA
+
 // --- PLANOS & ASSINATURA ---
 import Planos from './pages/Planos/Planos';
 import AdminPlanos from './pages/Planos/AdminPlanos';
@@ -141,6 +145,12 @@ const AppContent = () => {
           <Route path="/configuracoes" element={<RotaPrivada><Configuracoes /></RotaPrivada>} />
           <Route path="/perfil" element={<RotaPrivada><Perfil /></RotaPrivada>} />
           <Route path="/notificacoes" element={<RotaPrivada><Notificacoes /></RotaPrivada>} /> 
+          
+          {/* 👥 GESTÃO DE EQUIPE (🔒 PROTEGIDO PELO PLANO) */}
+          <Route path="/usuarios" element={<RotaPrivada><RotaProtegida recursoExigido="Equipe"><Usuarios /></RotaProtegida></RotaPrivada>} />
+          
+          {/* 🔥 NOVA ROTA DE MONITORAMENTO PROTEGIDA */}
+          <Route path="/monitoramento" element={<RotaPrivada><RotaProtegida recursoExigido="Equipe"><Monitoramento /></RotaProtegida></RotaPrivada>} />
         </Routes>
       </main>
     </div>

@@ -2,9 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Estoque.css';
 import { db } from '../../firebaseConfig';
-// 🔥 Removido o orderBy daqui para não travar o Firebase
-import { collection, getDocs, doc, query, deleteDoc, updateDoc, writeBatch, where } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação para identificar o usuário
+import { collection, getDocs, doc, query, deleteDoc, updateDoc, writeBatch, where, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -13,9 +12,13 @@ import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 const Estoque = () => {
   const navigate = useNavigate();
   
-  // 🔥 PUXANDO O USUÁRIO LOGADO 🔥
+  // 🔥 PUXANDO O USUÁRIO LOGADO
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+
+  // 🔥 ESTADOS DE SEGURANÇA E LIMITES DO PLANO
+  const [temAcesso, setTemAcesso] = useState(false);
+  const [limiteEstoque, setLimiteEstoque] = useState(0);
 
   const [itens, setItens] = useState([]);
   const [locacoes, setLocacoes] = useState([]); 
@@ -43,7 +46,6 @@ const Estoque = () => {
   const [menuAberto, setMenuAberto] = useState(null);
 
   useEffect(() => { 
-    // 🛑 SE NÃO ESTIVER LOGADO, JOGA PRO LOGIN
     if (!usuarioLogado) {
         navigate('/login');
         return;
@@ -55,26 +57,67 @@ const Estoque = () => {
     if (!usuarioLogado) return;
     setLoading(true);
     try {
-      // 🔥 1. FILTRO BLINDADO NO ESTOQUE (Sem orderBy para não pedir índice no Firebase)
-      const qEstoque = query(
-          collection(db, "estoque"), 
-          where("userId", "==", usuarioLogado.uid)
-      );
+      // 🔥 1. VERIFICAÇÃO DE PLANO E LIMITES (LEITURA INTELIGENTE)
+      const userRef = doc(db, 'usuarios', usuarioLogado.uid);
+      const userSnap = await getDoc(userRef);
+      
+      let acessoLiberado = false;
+      let limiteMaximo = 50; // Padrão se der erro
+
+      if (userSnap.exists()) {
+          const userData = userSnap.data();
+          
+          if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa' || userData.assinaturaAtiva === true) {
+              acessoLiberado = true;
+              limiteMaximo = 1000; // Assume Básico como padrão
+
+              if (userData.planoId) {
+                  try {
+                      // Vai na coleção de planos buscar o nome exato do plano
+                      const planoSnap = await getDoc(doc(db, "planos", userData.planoId));
+                      if (planoSnap.exists()) {
+                          const nomePlano = planoSnap.data().nome?.toLowerCase() || '';
+                          
+                          if (nomePlano.includes('premium')) {
+                              limiteMaximo = 5000;
+                          } else if (nomePlano.includes('pro')) {
+                              limiteMaximo = 10000;
+                          } else {
+                              limiteMaximo = 1000; // Básico
+                          }
+                      } else if (userData.planoId === "gGRLzfUfHNUurTw3ppqQ") {
+                          limiteMaximo = 1000; // Fallback caso plano seja apagado
+                      }
+                  } catch (err) {
+                      console.error("Erro ao buscar nome do plano:", err);
+                  }
+              }
+          }
+      }
+
+      setTemAcesso(acessoLiberado);
+      setLimiteEstoque(limiteMaximo);
+
+      // SE NÃO TEM ACESSO, NÃO PRECISA CARREGAR O RESTO PARA ECONOMIZAR BANCO
+      if (!acessoLiberado) {
+          setLoading(false);
+          return;
+      }
+
+      // 🔥 2. FILTRO BLINDADO NO ESTOQUE
+      const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
       const snapEstoque = await getDocs(qEstoque);
       let listaEstoque = snapEstoque.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // 🔥 2. ORDENAÇÃO FEITA NO JAVASCRIPT (Os mais novos no topo)
+      // Ordenação
       listaEstoque.sort((a, b) => {
           const tempoA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
           const tempoB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
           return tempoB - tempoA; 
       });
 
-      // 🔥 3. FILTRO BLINDADO NAS LOCAÇÕES 🔥
-      const qLocacoes = query(
-          collection(db, "locacoes"),
-          where("userId", "==", usuarioLogado.uid)
-      );
+      // 🔥 3. FILTRO BLINDADO NAS LOCAÇÕES
+      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
       const snapLocacoes = await getDocs(qLocacoes);
       const listaLocacoes = snapLocacoes.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -91,7 +134,6 @@ const Estoque = () => {
       if (!usuarioLogado) return;
       setLimandoNomes(true);
       try {
-          // 🔥 FILTRO BLINDADO NO ROBÔ FAXINEIRO 🔥
           const q = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
           const snap = await getDocs(q);
           const batch = writeBatch(db);
@@ -163,7 +205,14 @@ const Estoque = () => {
       }
   };
 
+  // 🔥 TRAVA DE CADASTRO BASEADA NO PLANO
   const irParaCadastro = (item = null) => {
+    if (!item && itens.length >= limiteEstoque) {
+      alert(`⚠️ LIMITE ATINGIDO!\n\nSeu plano atual permite cadastrar até ${limiteEstoque.toLocaleString('pt-BR')} itens. Faça um upgrade no seu plano para cadastrar mais peças e continuar crescendo seu acervo!`);
+      navigate('/planos');
+      return;
+    }
+
     if (item) {
       navigate('/cadastro-estoque', { state: { itemEditando: item } });
     } else {
@@ -172,6 +221,12 @@ const Estoque = () => {
   };
 
   const duplicarItem = (item) => {
+      if (itens.length >= limiteEstoque) {
+        alert(`⚠️ LIMITE ATINGIDO!\n\nSeu plano atual permite cadastrar até ${limiteEstoque.toLocaleString('pt-BR')} itens. Faça um upgrade no seu plano para duplicar esta peça!`);
+        navigate('/planos');
+        return;
+      }
+
       const confirmar = window.confirm(
           "⚠️ ATENÇÃO:\n\n" +
           "Use a duplicação apenas se a nova peça tiver alguma DIFERENÇA (ex: Cor, Tamanho, Voltagem).\n\n" +
@@ -381,12 +436,29 @@ const Estoque = () => {
       doc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}.pdf`);
   };
 
+  // 🔥 TELAS DE CARREGAMENTO E BLOQUEIO
+  if (loading) return <div style={{padding: '50px', textAlign: 'center', color: '#64748b'}}>Verificando permissões de acesso...</div>;
+
+  if (!temAcesso) {
+    return (
+      <div style={{ padding: '60px', textAlign: 'center', backgroundColor: '#f8fafc', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ background: '#fff', padding: '40px', borderRadius: '16px', border: '1px solid #e2e8f0', maxWidth: '500px', boxShadow: '0 10px 25px rgba(0,0,0,0.05)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>🔒</div>
+          <h2 style={{ color: '#0f172a', marginBottom: '15px' }}>Recurso Exclusivo</h2>
+          <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '25px' }}>A gestão de Estoque e Acervo faz parte de um plano superior. Faça um upgrade agora mesmo para desbloquear todo o potencial do Celebre!</p>
+          <button onClick={() => navigate('/planos')} style={{ background: '#0f172a', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', border: 'none' }}>Ver Planos Disponíveis</button>
+        </div>
+      </div>
+    );
+  }
+
+  // 👇 SE PASSOU DA TRAVA, MOSTRA O ESTOQUE NORMALMENTE
   return (
     <div className="estoque-premium" onClick={() => setMenuAberto(null)}>
       <div className="header-top">
         <div className="titulo-bloco">
           <h1>Gestão de Acervo e Estoque</h1>
-          <p>Controle logístico, financeiro e catálogo online.</p>
+          <p>Controle logístico, financeiro e catálogo online. <strong style={{color: totalItens >= limiteEstoque ? '#ef4444' : '#10b981'}}>(Limite: {totalItens.toLocaleString('pt-BR')} / {limiteEstoque.toLocaleString('pt-BR')})</strong></p>
         </div>
         <div className="acoes-top" style={{ display: 'flex', gap: '10px' }}>
           
@@ -406,7 +478,14 @@ const Estoque = () => {
           >
             🖨️ Imprimir Lista
           </button>
-          <button className="btn-dark-blue" onClick={() => irParaCadastro()}>+ Novo Item</button>
+          
+          <button 
+            className="btn-dark-blue" 
+            onClick={() => irParaCadastro()}
+            style={{ opacity: totalItens >= limiteEstoque ? 0.7 : 1 }}
+          >
+            + Novo Item
+          </button>
         </div>
       </div>
 

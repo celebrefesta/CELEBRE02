@@ -16,7 +16,7 @@ const Checkout = () => {
   const [carregandoAlternativo, setCarregandoAlternativo] = useState(false);
   const [dadosPix, setDadosPix] = useState(null); 
   const [dadosBoleto, setDadosBoleto] = useState(null);
-  const [cpfCliente, setCpfCliente] = useState(''); // NOVO: Estado para guardar o CPF
+  const [cpfCliente, setCpfCliente] = useState(''); 
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -37,7 +37,7 @@ const Checkout = () => {
   };
 
   const customization = {
-    paymentMethods: { creditCard: 'all', debitCard: 'all' },
+    paymentMethods: { creditCard: 'all' },
     visual: { style: { theme: 'default' } }
   };
 
@@ -77,8 +77,7 @@ const Checkout = () => {
 
   // 🔥 Processamento Real do PIX e Boleto 🔥
   const gerarPagamentoAlternativo = async (metodo) => {
-    // Validação de Segurança do CPF
-    const cpfLimpo = cpfCliente.replace(/\D/g, ''); // Tira pontos e traços
+    const cpfLimpo = cpfCliente.replace(/\D/g, ''); 
     if (cpfLimpo.length !== 11) {
         setMensagem('⚠️ Por favor, digite um CPF válido com 11 números para emissão do documento.');
         return;
@@ -94,7 +93,7 @@ const Checkout = () => {
             transaction_amount: valorPlano,
             payer: { 
                 email: usuarioLogado.email,
-                identification: { type: "CPF", number: cpfLimpo } // NOVO: Enviando o CPF real para o robô
+                identification: { type: "CPF", number: cpfLimpo } 
             },
             userId: usuarioLogado.uid
         };
@@ -130,6 +129,31 @@ const Checkout = () => {
 
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '40px 20px', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
+      
+      {/* 🔙 BOTÃO DE VOLTAR ADICIONADO AQUI */}
+      <div style={{ maxWidth: '950px', margin: '0 auto', marginBottom: '20px' }}>
+        <button 
+          onClick={() => navigate('/planos')}
+          style={{ 
+            background: 'transparent', 
+            border: 'none', 
+            color: '#64748b', 
+            cursor: 'pointer', 
+            fontSize: '15px', 
+            fontWeight: '600', 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            padding: '0',
+            transition: 'color 0.2s'
+          }}
+          onMouseOver={(e) => e.currentTarget.style.color = '#0f172a'}
+          onMouseOut={(e) => e.currentTarget.style.color = '#64748b'}
+        >
+          <i className="fas fa-arrow-left"></i> Voltar para os planos
+        </button>
+      </div>
+
       <div style={{ maxWidth: '950px', margin: '0 auto', display: 'flex', gap: '30px', flexWrap: 'wrap' }}>
         
         {/* Lado Esquerdo: Resumo do Plano */}
