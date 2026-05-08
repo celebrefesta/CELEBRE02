@@ -17,7 +17,7 @@ const AutoCadastro = () => {
 
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    nome: '', documento: '', contato: '', email: '', // 🔥 Email já estava aqui no estado
+    nome: '', documento: '', contato: '', email: '', 
     cep: '', logradouro: '', numero: '', bairro: '', cidade: '', dataEvento: ''
   });
 
@@ -86,8 +86,6 @@ const AutoCadastro = () => {
 
   const finalizarCadastroE_Pedido = async (e) => {
     e.preventDefault();
-    
-    // Verificação de segurança rápida para o E-mail
     if (!form.email) {
       alert("Por favor, preencha o seu e-mail para receber a confirmação!");
       return;
@@ -98,7 +96,7 @@ const AutoCadastro = () => {
     try {
       const isJuridica = form.documento.length > 14;
       const idDaLoja = idEmpresa || empresa.userId || empresa.id || (auth.currentUser ? auth.currentUser.uid : null);
-
+      
       if (!idDaLoja) {
           alert("Erro de segurança: Não foi possível identificar a qual loja este catálogo pertence. O pedido não pode ser enviado cego.");
           setLoading(false);
@@ -142,7 +140,7 @@ const AutoCadastro = () => {
         });
       }
 
-      // 🔥 MÁGICA: DISPARO DO E-MAIL PARA A CLIENTE DO CATÁLOGO 🔥
+      // 3. E-mail
       await addDoc(collection(db, 'mail'), {
         to: form.email,
         message: {
@@ -170,6 +168,27 @@ const AutoCadastro = () => {
           `
         }
       });
+
+      // 🔥 INÍCIO DO ESPIÃO (MONITORAMENTO DO AUTO-CADASTRO) 🔥
+      try {
+        let detalhesAcao = `O cliente ${form.nome} realizou o próprio cadastro através do link público.`;
+        if (carrinho.length > 0) {
+          detalhesAcao += ` E enviou um pedido de orçamento com ${carrinho.length} itens.`;
+        }
+
+        await addDoc(collection(db, "logs_atividades"), {
+          empresaId: idDaLoja, 
+          funcionarioId: "auto_cadastro",
+          nomeFuncionario: "Sistema Automático 🤖",
+          acao: "AUTO-CADASTRO",
+          tipo: "CRIACAO",
+          detalhes: detalhesAcao,
+          dataHora: new Date().toISOString()
+        });
+      } catch (errorEspiao) {
+        console.error("Falha ao registrar auditoria de auto-cadastro:", errorEspiao);
+      }
+      // 🔥 FIM DO ESPIÃO 🔥
 
       if (carrinho.length > 0) {
         alert("🎉 Pedido recebido com sucesso!\n\nSua lista e seu cadastro foram enviados para a nossa equipe. Em breve entraremos em contato pelo seu WhatsApp para confirmar a aprovação!");
@@ -210,7 +229,6 @@ const AutoCadastro = () => {
             <input type="text" name="nome" placeholder="Ex: Maria Silva" required onChange={handleChange} />
           </div>
 
-          {/* 🔥 ADICIONADO: Campo de E-mail vital para a automação funcionar! */}
           <div className="form-group full">
             <label>E-mail *</label>
             <input type="email" name="email" placeholder="seu.email@exemplo.com" value={form.email} required onChange={handleChange} />

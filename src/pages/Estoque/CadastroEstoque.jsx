@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroEstoque.css';
 import { db } from '../../firebaseConfig';
-// 🔥 IMPORTAÇÃO DO 'where' e do 'auth' PARA BLINDAR OS DADOS 🔥
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, getDoc, query, setDoc, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 
@@ -15,7 +14,6 @@ const CadastroEstoque = () => {
   const itemDuplicando = location.state?.itemDuplicando || null; 
   const dadosCompra = location.state?.dadosCompra || null; 
 
-  // 🔥 IDENTIFICAÇÃO DO USUÁRIO LOGADO 🔥
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
@@ -45,19 +43,15 @@ const CadastroEstoque = () => {
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
   const [temaSelecionado, setTemaSelecionado] = useState('');
   const [temaDigitadoPersonalizado, setTemaDigitadoPersonalizado] = useState('');
-  
   const [tipoCadastro, setTipoCadastro] = useState('avulsa');
   const [tipoPacote, setTipoPacote] = useState('PEGUE E MONTE');
-
   const [pecasKitNovas, setPecasKitNovas] = useState([{ 
       id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' 
   }]);
-
   const [itensDoKit, setItensDoKit] = useState([]); 
   const [modalCatalogoAberto, setModalCatalogoAberto] = useState(false);
   const [buscaCatalogo, setBuscaCatalogo] = useState('');
   const [filtroCategoriaCatalogo, setFiltroCategoriaCatalogo] = useState('Todos');
-
   const [quantidade, setQuantidade] = useState(1);
   const [estoqueMinimo, setEstoqueMinimo] = useState(1);
   const [alertaEstoque, setAlertaEstoque] = useState('NaoAvisar'); 
@@ -92,14 +86,12 @@ const CadastroEstoque = () => {
   const categoriasFisicasUnicas = Object.keys(CATEGORIAS_FISICAS);
   const subcategoriasFisicasDisponiveis = categoria ? CATEGORIAS_FISICAS[categoria] || [] : [];
   const ocultarVitrineFisica = categoria === "Capas e Têxteis" && (subCategoria === "Capas de Painel" || subCategoria === "Capas de Cilindro" || subCategoria === "Kits de Capas (Painel + Cilindros)");
-  
   const EVENTOS_VITRINE = [
       "Aniversário", "Casamento", "Mêsversário", "Chá de Bebê", 
       "Chá Revelação", "Chá de Panela / Casa Nova", "Noivado", 
       "15 anos", "Formatura", "Religioso", "Corporativo", 
       "Escolar", "Datas Comemorativas"
   ];
-
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS).filter(cat => {
       if (tipoCadastro === 'decoracao') {
           return EVENTOS_VITRINE.includes(cat);
@@ -116,7 +108,6 @@ const CadastroEstoque = () => {
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
 
   useEffect(() => {
-    // 🛑 SE NÃO ESTIVER LOGADO, JOGA PRO LOGIN
     if (!usuarioLogado) {
       alert("Sessão expirada. Faça login novamente.");
       navigate('/login');
@@ -124,7 +115,6 @@ const CadastroEstoque = () => {
     }
 
     const fetchItens = async () => {
-      // 🔥 FILTRO: Só traz os itens cujo 'userId' seja o da pessoa logada
       const q = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
       const snap = await getDocs(q);
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -134,7 +124,6 @@ const CadastroEstoque = () => {
 
     const fetchConfiguracoes = async () => {
       try {
-        // 🔥 ISOLAMENTO: Puxa as prateleiras apenas da conta logada
         const docRef = doc(db, "parametros_usuarios", usuarioLogado.uid);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
@@ -155,8 +144,7 @@ const CadastroEstoque = () => {
       if (nomeLimpo.toUpperCase().startsWith('KIT ')) nomeLimpo = nomeLimpo.substring(4).trim();
       setNome(itemDuplicando ? `${nomeLimpo} (Cópia)` : nomeLimpo); 
       
-      setCodigo(itemEditando ? itemBase.codigo || '' : ''); 
-      
+      setCodigo(itemEditando ? itemBase.codigo || '' : '');
       setCategoria(itemBase.categoria || ''); 
       setSubCategoria(itemBase.subCategoria || '');
       
@@ -164,7 +152,6 @@ const CadastroEstoque = () => {
       setSubcategoriaTema(itemBase.subcategoriaTema || '');
       setGrupoTemaSelecionado(itemBase.grupoTema || ''); 
       setTemaSelecionado(itemBase.tema || '');
-      
       const ehDecoracao = itemBase.especificacoes?.isDecoracao || false;
       const ehKitPai = itemBase.especificacoes?.isKitPai || itemBase.especificacoes?.isKit || false;
 
@@ -182,7 +169,8 @@ const CadastroEstoque = () => {
 
       setQuantidade(itemBase.quantidade || 1); setEstoqueMinimo(itemBase.estoqueMinimo || 1);
       setAlertaEstoque(itemBase.configuracao?.alertaEstoque || 'NaoAvisar'); 
-      setFornecedor(itemBase.fornecedor || ''); setLinkFornecedor(itemBase.linkFornecedor || '');
+      setFornecedor(itemBase.fornecedor || '');
+      setLinkFornecedor(itemBase.linkFornecedor || '');
       setLocalizacao(itemBase.localizacao || ''); setStatus(itemBase.status || 'ok');
       setValorCompra(itemBase.financeiro?.valorCompra?.toFixed(2).replace('.', ',') || '');
       setValorAluguel(itemBase.financeiro?.valorAluguel?.toFixed(2).replace('.', ',') || '');
@@ -202,7 +190,6 @@ const CadastroEstoque = () => {
       
       if (itemBase.fotos && itemBase.fotos.length > 0) setFotos(itemBase.fotos);
       else if (itemBase.foto) setFotos([itemBase.foto]);
-    
     } else if (dadosCompra) {
       setNome(dadosCompra.nome || '');
       setQuantidade(dadosCompra.quantidade || 1);
@@ -222,13 +209,11 @@ const CadastroEstoque = () => {
         return;
     }
     const prefixo = catAlvo === 'Decoração Completa' ? 'DEC' : catAlvo.substring(0, 3).toUpperCase();
-    
     const matches = itensExistentes.filter(i => {
         const catStr = i.categoria || '';
         const pref = catStr === 'Decoração Completa' ? 'DEC' : catStr.substring(0, 3).toUpperCase();
         return pref === prefixo && i.id !== itemEditando?.id;
     });
-    
     const novoNumero = matches.length + 1;
     setCodigo(`${prefixo}-${String(novoNumero).padStart(3, '0')}`);
   };
@@ -250,7 +235,7 @@ const CadastroEstoque = () => {
       setSubcategoriaTema('');
       setGrupoTemaSelecionado('');
       setTemaSelecionado('');
-
+      
       if (novoTipo === 'decoracao') {
           setUnidadeMedida('Combo');
           setTipoDisponibilidade('Aluguel');
@@ -271,36 +256,46 @@ const CadastroEstoque = () => {
   };
 
   const autoPreencherVitrine = (catFis, subCatFis) => {
-    let cTema = ''; let sTema = ''; let gTema = '';
+    let cTema = '';
+    let sTema = ''; let gTema = '';
 
     if (catFis === "Painéis e Estruturas") {
-        cTema = "Móveis e Estruturas"; sTema = "Painéis e Fundos";
+        cTema = "Móveis e Estruturas";
+        sTema = "Painéis e Fundos";
     } else if (catFis === "Móveis") {
         cTema = "Móveis e Estruturas";
         if (subCatFis === "Mesas" || subCatFis === "Aparadores" || subCatFis === "Carrinhos") sTema = "Mesas e Aparadores";
         else if (subCatFis === "Cilindros" || subCatFis === "Cubos") sTema = "Cilindros e Cubos";
     } else if (catFis === "Bandejas e Suportes") {
-        cTema = "Acessórios e Decoração"; sTema = "Bandejas e Suportes";
+        cTema = "Acessórios e Decoração";
+        sTema = "Bandejas e Suportes";
     } else if (catFis === "Personagens e Displays") {
-        cTema = ""; 
+        cTema = "";
     } else if (catFis === "Vasos") {
-        cTema = "Acessórios e Decoração"; sTema = "Vasos";
+        cTema = "Acessórios e Decoração";
+        sTema = "Vasos";
     } else if (catFis === "Florais e Natureza") {
-        cTema = "Acessórios e Decoração"; sTema = "Florais e Natureza";
+        cTema = "Acessórios e Decoração";
+        sTema = "Florais e Natureza";
     } else if (catFis === "Tapetes e Pisos") {
-        cTema = "Acessórios e Decoração"; sTema = "Tapetes e Pisos";
+        cTema = "Acessórios e Decoração";
+        sTema = "Tapetes e Pisos";
     } else if (catFis === "Capas e Têxteis") {
         if (subCatFis.includes("Toalhas") || subCatFis.includes("Cortinas")) {
-            cTema = "Acessórios e Decoração"; sTema = "Mesas e Cortinas";
+            cTema = "Acessórios e Decoração";
+            sTema = "Mesas e Cortinas";
         } else {
             cTema = "";
         }
     } else if (catFis === "Iluminação") {
-        cTema = "Acessórios e Decoração"; sTema = "Complementos e Iluminação"; gTema = "Iluminação";
+        cTema = "Acessórios e Decoração";
+        sTema = "Complementos e Iluminação"; gTema = "Iluminação";
     } else if (catFis === "Complementos de Chão") {
-        cTema = "Acessórios e Decoração"; sTema = "Complementos e Iluminação"; gTema = "Objetos Decorativos";
+        cTema = "Acessórios e Decoração";
+        sTema = "Complementos e Iluminação"; gTema = "Objetos Decorativos";
     } else if (catFis === "Utensílios de Festa") {
-        cTema = "Acessórios e Decoração"; sTema = "Bandejas e Suportes"; 
+        cTema = "Acessórios e Decoração";
+        sTema = "Bandejas e Suportes"; 
     }
 
     if (cTema) {
@@ -470,10 +465,8 @@ const CadastroEstoque = () => {
       if (!usuarioLogado) return;
       setSalvandoLocalizacoes(true);
       try {
-          // 🔥 ISOLAMENTO: Salva as prateleiras só para esta pessoa!
           const docRef = doc(db, "parametros_usuarios", usuarioLogado.uid);
           await setDoc(docRef, { localizacoes: localizacoesEditaveis }, { merge: true });
-          
           setListasSistema(prev => ({ ...prev, localizacoes: localizacoesEditaveis }));
           setModalLocalizacaoAberto(false);
       } catch (error) {
@@ -485,7 +478,6 @@ const CadastroEstoque = () => {
   };
 
   const categoriasCatalogoUnicas = ['Todos', ...new Set(itensExistentes.map(item => item.categoria).filter(Boolean))];
-  
   const itensCatalogoFiltrados = itensExistentes.filter(item => {
       return !item.especificacoes?.isDecoracao && !item.especificacoes?.isKitPai && 
              (item.nome || '').toLowerCase().includes(buscaCatalogo.toLowerCase()) && 
@@ -501,7 +493,6 @@ const CadastroEstoque = () => {
 
     if (!isDecoracao && !categoria) return alert("❌ Selecione a Categoria física da peça (Ex: Móveis).");
     if (!isDecoracao && !subCategoria) return alert("❌ Selecione a Subcategoria física.");
-    
     if (!categoriaTema) return alert("❌ Selecione a Categoria da Vitrine do Site.");
     if (!subcategoriaTema) return alert("❌ Selecione a Subcategoria da Vitrine.");
     if (!grupoTemaSelecionado) return alert("❌ Selecione o Grupo na Vitrine.");
@@ -526,27 +517,23 @@ const CadastroEstoque = () => {
     setSalvando(true);
     try {
       const limparValor = (val) => Number(String(val).replace(',', '.'));
-      
       const catFinal = isDecoracao ? 'Decoração Completa' : categoria;
       const subCatFinal = isDecoracao ? 'Pacote' : subCategoria;
       const temaFinalParaSalvar = temaSelecionado === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaSelecionado;
 
-      const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ? `KIT ${nome.trim()}` : nome.trim();
+      const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ?
+      `KIT ${nome.trim()}` : nome.trim();
 
       const dados = {
-        // 🔥 O RG DO USUÁRIO LOGADO SALVO JUNTO COM O DADO! 🔥
         userId: usuarioLogado.uid,
-
         nome: nomePrincipalFormatado, 
         codigo, 
         categoria: catFinal, 
         subCategoria: subCatFinal, 
-        
         categoriaTema,
         subcategoriaTema,
         grupoTema: grupoTemaSelecionado, 
         tema: temaFinalParaSalvar, 
-          
         status: isDecoracao ? 'ok' : status, 
         fornecedor: isDecoracao ? '' : fornecedor, 
         linkFornecedor: isDecoracao ? '' : linkFornecedor, 
@@ -593,10 +580,8 @@ const CadastroEstoque = () => {
         if (isKitNovo && pecasKitNovas.length > 0) {
             for (let i = 0; i < pecasKitNovas.length; i++) {
                 const peca = pecasKitNovas[i];
-                
                 if (peca.nome.trim() || peca.tamanho.trim() || peca.cor.trim()) {
                     const valPeca = Number(peca.valorAluguel.replace(',', '.'));
-                    
                     let nomePaiPrefixo = nome.trim();
                     if (nomePaiPrefixo.toUpperCase().startsWith('KIT ')) {
                          nomePaiPrefixo = nomePaiPrefixo.substring(4).trim();
@@ -669,11 +654,62 @@ const CadastroEstoque = () => {
         else if (isKitNovo) alert("📦 Conjunto salvo e peças desmembradas com sucesso no estoque!");
         else alert(itemDuplicando ? "📋 Peça duplicada com sucesso!" : "🧩 Peça avulsa adicionada com sucesso!");
       }
+
+      // 🔥 INÍCIO DO ESPIÃO NÍVEL 2 (MONITORIZAÇÃO DE ESTOQUE) 🔥
+      try {
+        let detalhesAcao = "";
+        const nomeExibicao = dados.nome || 'Peça sem nome';
+
+        if (itemEditando) {
+          const mudancas = [];
+          
+          if (String(itemEditando.nome || '').trim() !== String(dados.nome || '').trim()) {
+            mudancas.push(`Nome (de '${itemEditando.nome || 'Vazio'}' para '${dados.nome}')`);
+          }
+          if (String(itemEditando.quantidade || '0') !== String(dados.quantidade || '0')) {
+            mudancas.push(`Quantidade (de '${itemEditando.quantidade || '0'}' para '${dados.quantidade || '0'}')`);
+          }
+          if (String(itemEditando.status || 'ok') !== String(dados.status || 'ok')) {
+            mudancas.push(`Status (de '${itemEditando.status || 'ok'}' para '${dados.status}')`);
+          }
+          if (String(itemEditando.financeiro?.valorAluguel || '0') !== String(dados.financeiro?.valorAluguel || '0')) {
+            mudancas.push(`Valor Aluguer (de '${itemEditando.financeiro?.valorAluguel || '0'}' para '${dados.financeiro?.valorAluguel}')`);
+          }
+          if (String(itemEditando.financeiro?.valorReposicao || '0') !== String(dados.financeiro?.valorReposicao || '0')) {
+            mudancas.push(`Valor Reposição (de '${itemEditando.financeiro?.valorReposicao || '0'}' para '${dados.financeiro?.valorReposicao}')`);
+          }
+
+          if (mudancas.length > 0) {
+            detalhesAcao = `Editou o item do acervo: ${nomeExibicao}. Alterações: ${mudancas.join(' | ')}`;
+          } else {
+            detalhesAcao = `Acedeu e guardou o item ${nomeExibicao} sem fazer alterações relevantes.`;
+          }
+        } else {
+          const tipoNome = tipoCadastro === 'decoracao' ? 'o pacote' : tipoCadastro === 'kit' ? 'o conjunto' : 'a peça';
+          detalhesAcao = `Registou ${tipoNome} no acervo: ${nomeExibicao}`;
+          if (dados.quantidade > 1) detalhesAcao += ` (Qtd: ${dados.quantidade})`;
+        }
+
+        await addDoc(collection(db, "logs_atividades"), {
+          empresaId: usuarioLogado.uid, 
+          funcionarioId: usuarioLogado.uid,
+          nomeFuncionario: usuarioLogado.displayName || usuarioLogado.email || "Equipa",
+          acao: itemEditando ? "EDIÇÃO DE ESTOQUE" : "NOVO ITEM NO ESTOQUE",
+          tipo: itemEditando ? "EDICAO" : "CRIACAO",
+          detalhes: detalhesAcao,
+          dataHora: new Date().toISOString()
+        });
+      } catch (errorEspiao) {
+        console.error("Falha ao registar auditoria de estoque:", errorEspiao);
+      }
+      // 🔥 FIM DO ESPIÃO 🔥
       
       navigate(dadosCompra ? '/compras' : '/estoque');
-
-    } catch (error) { alert("Erro ao salvar."); } 
-    finally { setSalvando(false); }
+    } catch (error) { 
+        alert("Erro ao salvar."); 
+    } finally { 
+        setSalvando(false); 
+    }
   };
 
   const handleTextChange = (setter) => (e) => {
@@ -835,7 +871,7 @@ const CadastroEstoque = () => {
 
                   {fotos.length > 0 && (
                       <div className="photo-thumbnails-row" style={{display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px', marginTop: '15px'}}>
-                      {fotos.map((f, idx) => {
+                          {fotos.map((f, idx) => {
                           const tFoco = getFocoThumb(idx);
                           return (
                           <div key={idx} style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '2px solid #0f172a' : '1px solid #cbd5e1', position: 'relative', cursor: 'pointer'}} onClick={() => setFotoPrincipalIndex(idx)}>
@@ -926,7 +962,7 @@ const CadastroEstoque = () => {
                                 {subcategoriasFisicasDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
-                    </div>
+                     </div>
                   )}
 
                   <div style={{ flex: 2, minWidth: '300px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '20px', position: 'relative' }}>
@@ -946,7 +982,10 @@ const CadastroEstoque = () => {
                                     setSubcategoriaTema(subsDaCat[0]);
                                     const gruposDaSub = Object.keys(CATALOGO_TEMAS[novaCat][subsDaCat[0]] || {});
                                     if (gruposDaSub.length === 1) { setGrupoTemaSelecionado(gruposDaSub[0]); } else { setGrupoTemaSelecionado(''); }
-                                } else { setSubcategoriaTema(''); setGrupoTemaSelecionado(''); }
+                                } else { 
+                                    setSubcategoriaTema('');
+                                    setGrupoTemaSelecionado(''); 
+                                }
                                 setTemaSelecionado('');
                             }} style={{borderColor: '#93c5fd', backgroundColor: '#fff'}} required>
                                 <option value="" disabled hidden>Selecione...</option>
@@ -1037,7 +1076,7 @@ const CadastroEstoque = () => {
                       </div>
                   ) : (
                       <div style={{textAlign: 'center', padding: '30px', color: '#b45309', background: '#fff', borderRadius: '8px', fontSize: '13px'}}>
-                          Sua decoração ainda está vazia.
+                           Sua decoração ainda está vazia.
                       </div>
                   )}
                 </div>
@@ -1052,7 +1091,6 @@ const CadastroEstoque = () => {
                   
                   {pecasKitNovas.map((p, idx) => (
                     <div key={p.id} style={{background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
-                      
                       <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap'}}>
                         <div style={{flex: 2, minWidth: '120px'}}>
                           <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>NOME (Ex: Tampo, Base)</label>
@@ -1091,7 +1129,6 @@ const CadastroEstoque = () => {
                         <label style={{color: '#10b981', fontWeight: 900, fontSize: '13px'}}>PREÇO DO ALUGUEL (R$) *</label>
                         <input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: '#10b981', backgroundColor: '#ecfdf5', fontSize: '18px', fontWeight: 'bold', padding: '15px'}} placeholder="0,00"/>
                     </div>
-                    
                     <div className="form-group span-1">
                         <label>VALOR COMPRA</label>
                         <input type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00" tabIndex={tipoCadastro === 'decoracao' ? -1 : 0}/>
@@ -1196,12 +1233,12 @@ const CadastroEstoque = () => {
                             </div>
                             <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
                                 <button style={{ width: '32px', height: '32px', background: '#0f172a', color: 'white', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: 'none', cursor: 'pointer' }}>
-                                    +
+                                  +
                                 </button>
                                 {foiAdicionado && (
                                     <span style={{background: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', position: 'absolute', top: '10px', right: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>Incluso: {qtdNoKit}</span>
                                 )}
-                            </div>
+                             </div>
                         </div>
                     </div>
                   </div>
@@ -1235,7 +1272,7 @@ const CadastroEstoque = () => {
                   onClick={handleAddLocalizacao}
                   style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                  Adicionar
+                 Adicionar
               </button>
             </div>
 
@@ -1252,7 +1289,7 @@ const CadastroEstoque = () => {
                                 style={{ background: '#fee2e2', color: '#ef4444', border: 'none', width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
                                 title="Remover"
                             >
-                                ×
+                              ×
                             </button>
                         </div>
                     ))

@@ -31,33 +31,64 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                         }
                     }
 
-                    // 🔥 2. A NOVA REGRA DE CONGELAMENTO 🔥
-                    // Verifica se o cliente realmente pagou o plano
-                    const assinaturaAtiva = dadosUsuario.assinaturaAtiva === true; 
+                    // 🔥 2. A NOVA REGRA BLINDADA DE IDENTIFICAÇÃO DE PAGAMENTO 🔥
+                    // O sistema agora reconhece qualquer formato de status de pagamento ativo
+                    const usuarioPagou = 
+                        dadosUsuario.assinaturaAtiva === true || 
+                        dadosUsuario.statusAssinatura === 'ativa' || 
+                        dadosUsuario.plano === 'pago' || 
+                        dadosUsuario.statusPagamentoVulso === 'pago';
 
-                    // Se o teste acabou E ele não pagou, CONGELA O SISTEMA.
-                    if (!testeAtivo && !assinaturaAtiva) {
+                    if (!testeAtivo && !usuarioPagou) {
                         setTemAcesso(false);
                         return; 
                     }
 
-                    // 3. Se está no teste grátis, é VIP e tem passe livre
+                    // Se está no teste grátis, é VIP e tem passe livre
                     if (testeAtivo) {
                         setTemAcesso(true);
                         return;
                     }
 
-                    // 4. Se o teste acabou MAS ELE PAGOU, verifica as regras do plano
-                    const planoId = dadosUsuario.planoId;
-                    if (planoId && assinaturaAtiva) {
-                        const planoRef = doc(db, "planos", planoId);
-                        const planoSnap = await getDoc(planoRef);
+                    // 4. Se o teste acabou MAS ELE PAGOU
+                    if (usuarioPagou) {
+                        const planoId = dadosUsuario.planoId;
                         
-                        if (planoSnap.exists()) {
-                            const beneficios = planoSnap.data().beneficios || [];
-                            const acessoLiberado = beneficios.includes(recursoExigido);
+                        if (planoId) {
+                            const planoRef = doc(db, "planos", planoId);
+                            const planoSnap = await getDoc(planoRef);
                             
-                            setTemAcesso(acessoLiberado);
+                            if (planoSnap.exists()) {
+                                const nomePlano = (planoSnap.data().nome || '').toLowerCase();
+                                const beneficios = planoSnap.data().beneficios || [];
+                                
+                                // 1ª Tentativa: Busca no array de benefícios oficial do banco
+                                if (beneficios.includes(recursoExigido)) {
+                                    setTemAcesso(true);
+                                    return;
+                                }
+                                
+                                // 🔥 2ª Tentativa (SALVA-VIDAS) 🔥
+                                // Caso a dona não tenha configurado o array 'beneficios' direito no Firebase
+                                if (recursoExigido === "Equipe") {
+                                    // Apenas Premium e Pro podem acessar a tela de Equipe
+                                    if (nomePlano.includes('pro') || nomePlano.includes('premium')) {
+                                        setTemAcesso(true); 
+                                        return;
+                                    }
+                                } else {
+                                    // Para Estoque, Logística, Contratos... Qualquer plano pago (Básico, Premium, Pro) entra!
+                                    setTemAcesso(true);
+                                    return;
+                                }
+                            } else {
+                                // Se o documento do plano sumiu, mas a pessoa tem ID de plano pago, libera!
+                                setTemAcesso(true);
+                                return;
+                            }
+                        } else {
+                            // Se a pessoa pagou mas deu algum erro no checkout e o ID não salvou, libera para não trancar o cliente!
+                            setTemAcesso(true);
                             return;
                         }
                     }

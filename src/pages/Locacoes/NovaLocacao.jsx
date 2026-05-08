@@ -1,15 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './NovaLocacao.css'; 
+import './NovaLocacao.css';
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, addDoc, getCountFromServer, serverTimestamp, query, where } from 'firebase/firestore'; 
-import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
-import { CATALOGO_TEMAS } from '../../catalogoDeTemas'; 
+import { collection, getDocs, addDoc, getCountFromServer, serverTimestamp, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
+import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 
 const NovaLocacao = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
@@ -33,11 +32,9 @@ const NovaLocacao = () => {
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
   const [temaFesta, setTemaFesta] = useState('');
   const [temaDigitadoPersonalizado, setTemaDigitadoPersonalizado] = useState('');
-  
   const [logistica, setLogistica] = useState({ 
     tipo: 'retirada', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', referencia: '', obsTransporte: '' 
   });
-  
   const [desconto, setDesconto] = useState(0);
   const [obsInternas, setObsInternas] = useState('');
 
@@ -45,7 +42,6 @@ const NovaLocacao = () => {
   const [formCompra, setFormCompra] = useState({ 
       nome: "", quantidade: 1, valorEstimado: "", valorAluguel: "", categoria: "material", prazo: "", fornecedor: "", obs: "" 
   });
-  
   const [sugestoesCompra, setSugestoesCompra] = useState([]);
   const [pecasSimilaresPlanoB, setPecasSimilaresPlanoB] = useState([]);
   const [previewPlanoB, setPreviewPlanoB] = useState(null); 
@@ -56,9 +52,33 @@ const NovaLocacao = () => {
   const [modalSinalAberto, setModalSinalAberto] = useState(false);
   const [valorSinal, setValorSinal] = useState('');
   const [formaPagtoSinal, setFormaPagtoSinal] = useState('Pix');
-  
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [statusParaSalvar, setStatusParaSalvar] = useState('');
+
+  const badgeEsgotado = { position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
+  const badgeBateVolta = { position: 'absolute', top: 5, left: 5, background: '#f59e0b', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
+  const badgeLivres = { position: 'absolute', top: 5, left: 5, background: '#10b981', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
+
+  // 🔥 AUDITORIA
+  const registrarLog = async (acao, detalhes, pedidoIdGerado, numeroPedidoGerado) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        pedidoId: pedidoIdGerado || "S/N",
+        numeroPedido: numeroPedidoGerado || "S/N",
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -68,7 +88,6 @@ const NovaLocacao = () => {
 
     const carregarDados = async () => {
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESAS: Puxa só os dados desta loja
         const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
@@ -92,12 +111,11 @@ const NovaLocacao = () => {
   }, [usuarioLogado, navigate]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
-
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
   const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
   const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
-  
+
   const isOverlapping = (start1, end1, start2, end2) => {
       if (!start1 || !end1 || !start2 || !end2) return false;
       const s1 = new Date(start1 + 'T00:00:00').getTime();
@@ -114,7 +132,6 @@ const NovaLocacao = () => {
       const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
       const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
       let disponiveisTotais = Math.max(0, qtdFisica - qtdManutencao);
-      
       let qtdReservadaForte = 0;
       let qtdRetornaNoDia = 0;
 
@@ -127,7 +144,7 @@ const NovaLocacao = () => {
                       if (itemNoPedido) {
                           const qtdAlugada = parseInt(itemNoPedido.qtd) || 0;
                           if (loc.dataDevolucao === datas.retirada) {
-                              qtdRetornaNoDia += qtdAlugada;
+                             qtdRetornaNoDia += qtdAlugada;
                           } else {
                               qtdReservadaForte += qtdAlugada;
                           }
@@ -136,16 +153,14 @@ const NovaLocacao = () => {
               }
           });
       }
-
       const livresReais = Math.max(0, disponiveisTotais - qtdReservadaForte - qtdRetornaNoDia);
       const livresMaximos = Math.max(0, disponiveisTotais - qtdReservadaForte);
-
       return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia };
   };
-  
+
   const abrirCatalogo = () => {
       if (!datas.retirada || !datas.devolucao) {
-          alert("📅 ATENÇÃO: Por favor, preencha as DATAS DE RETIRADA e DEVOLUÇÃO no topo da tela primeiro!\n\nO sistema precisa das datas para calcular o que está livre.");
+          alert("📅 ATENÇÃO: Por favor, preencha as DATAS DE RETIRADA e DEVOLUÇÃO no topo da tela primeiro!");
           return;
       }
       setModalAberto(true);
@@ -155,39 +170,31 @@ const NovaLocacao = () => {
     if (!itemFaltante || !itemFaltante.nome) return [];
     const normalize = (str) => str ? str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "") : '';
     const palavrasAlvo = normalize(itemFaltante.nome).split(' ').filter(p => p.length > 2 && !['com', 'para', 'das', 'dos', 'kit', 'par', 'festa', 'tema', 'locacao'].includes(p));
-    
     if (palavrasAlvo.length === 0) return [];
     const palavraPrincipal = palavrasAlvo[0]; 
     const temaAtual = normalize(temaFesta);
-    
     let similares = estoque.map(peca => {
         const disp = getDisponibilidade(peca.id);
         if (peca.id === itemFaltante.id || disp.livresMaximos <= 0) return { ...peca, score: -1 };
-
         let score = 0;
         const nomePecaNorm = normalize(peca.nome);
         const palavrasPeca = nomePecaNorm.split(' ');
-
         if (palavrasPeca.includes(palavraPrincipal)) score += 10;
         if (temaAtual && temaAtual.length > 2 && nomePecaNorm.includes(temaAtual)) score += 15; 
-        
         palavrasAlvo.forEach(palavra => {
             if (nomePecaNorm.includes(palavra) && palavra !== palavraPrincipal) score += 5;
         });
-
         return { ...peca, score, qtdLivre: disp.livresMaximos };
     });
-    
     similares = similares.filter(p => p.score >= 10);
     similares.sort((a, b) => b.score - a.score);
     return similares.slice(0, 4);
   };
-  
+
   const dispararCompraAutomatica = (item) => {
     let valorAlg = item.financeiro?.valorAluguel || "0,00";
     if (typeof valorAlg === 'number') valorAlg = valorAlg.toFixed(2).replace(".", ",");
     else if (!valorAlg && item.preco) valorAlg = Number(item.preco).toFixed(2).replace(".", ",");
-    
     setFormCompra({
         nome: item.nome, quantidade: 1, valorEstimado: "", valorAluguel: valorAlg, categoria: item.categoria || "acervo", prazo: datas.retirada || "", fornecedor: "", obs: "Falta de estoque para esta data."
     });
@@ -203,7 +210,7 @@ const NovaLocacao = () => {
       setPreviewPlanoB(null);
       alert(`✅ Excelente! A peça "${pecaSubstituta.nome}" foi adicionada ao pedido!`);
   };
-  
+
   const addCarrinho = (item, isSubstituicao = false) => {
     const disp = getDisponibilidade(item.id);
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
@@ -215,18 +222,15 @@ const NovaLocacao = () => {
           setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i));
           return;
       }
-
       if (existe.qtd >= disp.livresMaximos && !existe.isPendenteCompra) {
           alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê possui o limite absoluto de ${disp.livresMaximos} unidade(s) de "${item.nome}" para esta data.\n\nVamos buscar um Plano B!`);
           dispararCompraAutomatica(item);
           return;
       }
-
       if (existe.qtd >= disp.livresReais && disp.retornaNoDia > 0 && !existe.jaAvisouBateVolta) {
-          const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar a peça mesmo assim?`);
+          const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça será DEVOLVIDA por outro cliente exatamente na data deste novo evento.\n\nDeseja adicionar a peça mesmo assim?`);
           if (!querMesmo) return;
       }
-
       setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1, jaAvisouBateVolta: disp.retornaNoDia > 0 ? true : i.jaAvisouBateVolta } : i));
     } else {
       if (disp.livresMaximos < 1 && !isSubstituicao) {
@@ -234,12 +238,10 @@ const NovaLocacao = () => {
           dispararCompraAutomatica(item);
           return;
       }
-      
       if (disp.livresReais < 1 && disp.retornaNoDia > 0) {
-          const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar a peça mesmo assim?`);
+          const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça será DEVOLVIDA por outro cliente exatamente na data deste novo evento.\n\nDeseja adicionar a peça mesmo assim?`);
           if (!querMesmo) return;
       }
-
       setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, foto: item.foto, isBateVolta: disp.retornaNoDia > 0, jaAvisouBateVolta: disp.retornaNoDia > 0, qtdOriginal: qtdFisicaTotal, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
     }
   };
@@ -247,19 +249,16 @@ const NovaLocacao = () => {
   const handleChangeQtdCarrinho = (itemId, novaQtd) => {
       const itemCarrinho = carrinho.find(i => i.id === itemId);
       if (!itemCarrinho) return;
-
       let qtdDesejada = parseInt(novaQtd);
       if (isNaN(qtdDesejada)) qtdDesejada = '';
-      
       if (itemCarrinho.isPendenteCompra) {
            setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
            return;
       }
-
       if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
           const disp = getDisponibilidade(itemId);
           if (qtdDesejada > disp.livresMaximos) {
-              alert(`⚠️ LIMITE ABSOLUTO ATINGIDO!\nO limite para "${itemCarrinho.nome}" nesta data é: ${disp.livresMaximos} unidade(s).\n\nO sistema corrigiu o valor.`);
+              alert(`⚠️ LIMITE ABSOLUTO ATINGIDO!\nO limite para "${itemCarrinho.nome}" nesta data é: ${disp.livresMaximos} unidade(s).`);
               setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: disp.livresMaximos} : i));
           } else {
               setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
@@ -279,12 +278,11 @@ const NovaLocacao = () => {
     const total = subtotal + getFreteNumerico() - Number(desconto);
     return { subtotal, total: Math.max(0, total) };
   };
-  
+
   const handleCepChange = async (e) => {
     let value = e.target.value.replace(/\D/g, "");
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setLogistica(prev => ({ ...prev, cep: cepFormatado }));
-    
     if (value.length === 8) {
       try {
         const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
@@ -306,7 +304,7 @@ const NovaLocacao = () => {
     v = v.replace(".", ",").replace(/(\d)(\d{3})(\d{3}),/g, "$1.$2.$3,").replace(/(\d)(\d{3}),/g, "$1.$2,");
     setLogistica({ ...logistica, frete: v });
   };
-  
+
   const handleDataRetiradaChange = (e) => {
     const novaData = e.target.value;
     setDatas(prev => {
@@ -327,12 +325,11 @@ const NovaLocacao = () => {
     
     if (datas.devolucao && datas.retirada > datas.devolucao) return alert("A data de devolução não pode ser menor que a data de retirada!");
     if (carrinho.length === 0) return alert("Você precisa adicionar pelo menos 1 peça no pedido!");
-    
     for (let item of carrinho) {
         if (item.isPendenteCompra) continue;
         const disp = getDisponibilidade(item.id);
         const qtdNoCarrinho = Number(item.qtd) || 1;
-        if (qtdNoCarrinho > disp.livresMaximos) return alert(`⛔ ERRO GRAVE DE ESTOQUE:\nA peça "${item.nome}" possui apenas ${disp.livresMaximos} unidade(s) permitida(s) para esta data.\nDiminua a quantidade antes de salvar.`);
+        if (qtdNoCarrinho > disp.livresMaximos) return alert(`⛔ ERRO GRAVE DE ESTOQUE:\nA peça "${item.nome}" possui apenas ${disp.livresMaximos} unidade(s) permitida(s).`);
     }
 
     setStatusParaSalvar(status);
@@ -342,7 +339,7 @@ const NovaLocacao = () => {
         setModalSinalAberto(true); 
     }
   };
-  
+
   const executarSalvamentoFinal = async (statusFinal, valorRecebidoNoCaixa = 0, valorSinalNegociado = 0) => {
     setSalvandoPedido(true);
     try {
@@ -355,8 +352,7 @@ const NovaLocacao = () => {
       const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || clienteEncontrado.razaoSocial || "Cliente") : "Cliente";
       const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
       
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o pedido com o userId
-      await addDoc(coll, {
+      const docRef = await addDoc(coll, {
         numeroPedido: codigo, 
         clienteId: clienteSelecionado, 
         clienteNome: nomeClienteReal, 
@@ -375,25 +371,30 @@ const NovaLocacao = () => {
         criadoEm: serverTimestamp(),
         userId: usuarioLogado.uid 
       });
-      
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o financeiro com o userId
+
       if (valorRecebidoNoCaixa > 0) {
         await addDoc(collection(db, "financeiro_lancamentos"), {
             tipo: 'entrada', categoria: 'Locação', valor: valorRecebidoNoCaixa, formaPagto: formaPagtoSinal,
             data: new Date().toISOString().split('T')[0], status: 'pago', createdAt: serverTimestamp(), descricao: `SINAL - Pedido #${codigo} - ${nomeClienteReal}`,
             userId: usuarioLogado.uid 
         });
+        await registrarLog("PAGAMENTO Lançado", `Registrou entrada financeira de R$ ${valorRecebidoNoCaixa.toFixed(2)} na criação do pedido.`, docRef.id, codigo);
       }
+
+      const acaoLog = statusFinal === 'orcamento' ? 'NOVO ORÇAMENTO' : 'NOVA LOCAÇÃO';
+      await registrarLog(acaoLog, `Gerou um novo ${statusFinal.toLowerCase()} do zero no valor de R$ ${calcularTotal().total.toFixed(2)} para: ${nomeClienteReal} (${tipoServico})`, docRef.id, codigo);
+
       alert(`✅ Pedido ${codigo} salvo com sucesso!`);
       navigate('/locacoes');
     } catch (e) { 
         alert("Erro ao salvar o pedido.");
+        console.error(e);
     } finally {
         setSalvandoPedido(false);
         setModalSinalAberto(false);
     }
   };
-  
+
   const salvarSinalRecebido = () => {
       const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
       executarSalvamentoFinal('confirmado', valorDigitadoNum, valorDigitadoNum);
@@ -418,17 +419,17 @@ const NovaLocacao = () => {
       const vSinalFormatado = valorSinal || '0,00';
       
       const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
-      
       const msgEncoded = encodeURIComponent(texto);
+      
       const url = telefoneC ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` : `https://api.whatsapp.com/send?text=${msgEncoded}`;
       window.open(url, '_blank');
   };
-  
+
   const itensFiltrados = estoque.filter(item => {
     return (item.nome || '').toLowerCase().includes(busca.toLowerCase()) && 
            (filtroCategoria === 'Todos' || item.categoria === filtroCategoria);
   });
-  
+
   const maskCurrency = (value) => {
     let v = value.replace(/\D/g, ""); 
     if (!v) return "";
@@ -446,7 +447,6 @@ const NovaLocacao = () => {
       let valorCusto = formCompra.valorEstimado ? Number(formCompra.valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
       let valorAluguel = formCompra.valorAluguel ? Number(formCompra.valorAluguel.replace(/\./g, "").replace(",", ".")) : 0;
       
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva a compra pendente com o userId
       const novaCompraRef = await addDoc(collection(db, "lista_compras"), {
         nome: formCompra.nome, quantidade: Number(formCompra.quantidade), valorEstimado: valorCusto, categoria: formCompra.categoria, 
         prazo: formCompra.prazo || datas.retirada || "", fornecedor: formCompra.fornecedor, obs: formCompra.obs, vinculoTipo: "pedido", vinculoId: "pendente_salvamento", 
@@ -454,6 +454,8 @@ const NovaLocacao = () => {
         userId: usuarioLogado.uid 
       });
       
+      await registrarLog("NOVA COMPRA PENDENTE", `Adicionou "${formCompra.nome}" à lista de compras, urgente para nova locação.`, novaCompraRef.id, "S/N");
+
       const itemParaCarrinho = {
         id: novaCompraRef.id, nome: formCompra.nome, categoria: formCompra.categoria, foto: '', preco: valorAluguel, qtd: Number(formCompra.quantidade), qtdOriginal: Number(formCompra.quantidade), isPendenteCompra: true 
       };
@@ -469,13 +471,17 @@ const NovaLocacao = () => {
         alert("✅ Salvo no carrinho! Digite o próximo.");
         document.getElementById('compraNomeInput').focus();
       }
-    } catch (err) { alert("Erro ao salvar compra."); } finally { setSalvandoCompra(false); }
+    } catch (err) { 
+        alert("Erro ao salvar compra."); 
+    } finally { 
+        setSalvandoCompra(false); 
+    }
   };
-  
+
   const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
 
   if (loading) return <div className="loading-state">Carregando formulário...</div>;
-
+  
   return (
     <div className="locacao-form-container">
       <header className="page-header">
@@ -488,12 +494,13 @@ const NovaLocacao = () => {
         <div className="coluna-form">
           <div className="card-secao">
             <h3 className="section-divider">👤 DADOS DO EVENTO</h3>
-            
+       
             <div className="form-group mb-15">
               <label>MODALIDADE DE SERVIÇO *</label>
+              {/* 🔥 AQUI RETIRAMOS O SETLOGISTICA DOS BOTOES! */}
               <div className="toggle-servico">
-                <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`} onClick={() => { setTipoServico('PEGUE E MONTE'); setLogistica({...logistica, tipo: 'retirada', frete: ''}); }}>📦 PEGUE E MONTE</button>
-                <button type="button" className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`} onClick={() => { setTipoServico('DECORACAO COMPLETA'); setLogistica({...logistica, tipo: 'entrega'}); }}>✨ DECORAÇÃO COMPLETA</button>
+                <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`} onClick={() => setTipoServico('PEGUE E MONTE')}>📦 PEGUE E MONTE</button>
+                <button type="button" className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`} onClick={() => setTipoServico('DECORACAO COMPLETA')}>✨ DECORAÇÃO COMPLETA</button>
               </div>
             </div>
 
@@ -513,18 +520,13 @@ const NovaLocacao = () => {
                     <select value={categoriaTema} onChange={e => {
                         const novaCat = e.target.value;
                         setCategoriaTema(novaCat);
-                        
                         const subsDaCat = novaCat ? Object.keys(CATALOGO_TEMAS[novaCat] || {}) : [];
                         if (subsDaCat.length === 1) {
                             const unicaSub = subsDaCat[0];
                             setSubcategoriaTema(unicaSub);
-                            
                             const gruposDaSub = Object.keys(CATALOGO_TEMAS[novaCat][unicaSub] || {});
-                            if (gruposDaSub.length === 1) {
-                                setGrupoTemaSelecionado(gruposDaSub[0]);
-                            } else {
-                                setGrupoTemaSelecionado('');
-                            }
+                            if (gruposDaSub.length === 1) setGrupoTemaSelecionado(gruposDaSub[0]);
+                            else setGrupoTemaSelecionado('');
                         } else {
                             setSubcategoriaTema('');
                             setGrupoTemaSelecionado('');
@@ -535,19 +537,15 @@ const NovaLocacao = () => {
                         {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
-                 
+       
                 <div className="form-group flex-1">
                     <label>Subcategoria do Tema *</label>
                     <select value={subcategoriaTema} onChange={e => {
                         const novaSub = e.target.value;
                         setSubcategoriaTema(novaSub);
-                        
                         const gruposDaSub = (categoriaTema && novaSub) ? Object.keys(CATALOGO_TEMAS[categoriaTema][novaSub] || {}) : [];
-                        if (gruposDaSub.length === 1) {
-                            setGrupoTemaSelecionado(gruposDaSub[0]);
-                        } else {
-                            setGrupoTemaSelecionado('');
-                        }
+                        if (gruposDaSub.length === 1) setGrupoTemaSelecionado(gruposDaSub[0]);
+                        else setGrupoTemaSelecionado('');
                         setTemaFesta('');
                     }} disabled={!categoriaTema || subcategoriasDisponiveis.length === 1}>
                         <option value="" disabled hidden>{!categoriaTema ? 'Escolha a Categoria antes...' : 'Selecione a Subcategoria...'}</option>
@@ -557,7 +555,7 @@ const NovaLocacao = () => {
             </div>
 
             <div className="form-row mt-10">
-              <div className="form-group flex-1">
+               <div className="form-group flex-1">
                     <label>Grupo de Tema *</label>
                     <select value={grupoTemaSelecionado} onChange={e => {
                         setGrupoTemaSelecionado(e.target.value);
@@ -569,7 +567,7 @@ const NovaLocacao = () => {
                 </div>
 
                 <div className="form-group flex-1">
-                    <label>Tema Específico *</label>
+                 <label>Tema Específico *</label>
                     <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={(!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA')}>
                         <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Escolha o Grupo antes...' : 'Selecione o Tema...'}</option>
                         {temasDisponiveis.map(t => (
@@ -622,7 +620,7 @@ const NovaLocacao = () => {
                 </div>
                 <div className="form-group mt-10"><label>Observações de Transporte</label><textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})}></textarea></div>
               </div>
-            ) : (
+              ) : (
               <p className="texto-aviso-logistica mt-15">⚠️ O cliente fará a retirada e devolução dos itens diretamente no local.</p>
             )}
           </div>
@@ -642,14 +640,14 @@ const NovaLocacao = () => {
               ) : (
                 <div style={{overflowX: 'auto'}}>
                     <table style={{width: '100%', borderCollapse: 'collapse', minWidth: '500px'}}>
-                      <thead>
+                       <thead>
                         <tr style={{borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', textAlign: 'left'}}>
                           <th style={{padding: '12px 10px', width: '50%'}}>Produto</th>
                           <th style={{padding: '12px 10px', textAlign: 'center', width: '20%'}}>Quantidade</th>
                           <th style={{padding: '12px 10px', textAlign: 'right', width: '20%'}}>Total</th>
                           <th style={{padding: '12px 10px', width: '10%'}}></th>
                         </tr>
-                      </thead>
+                       </thead>
                       <tbody>
                         {carrinho.map(item => (
                           <tr key={item.id} style={{borderBottom: '1px solid #f1f5f9', transition: '0.2s'}}>
@@ -659,7 +657,7 @@ const NovaLocacao = () => {
                                       {item.foto ? <img src={item.foto} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <span style={{fontSize:'20px'}}>📷</span>}
                                   </div>
                                   <div style={{display: 'flex', flexDirection: 'column'}}>
-                                     <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>
+                                    <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>
                                         {item.nome}
                                         {item.isBateVolta && <span style={{color: '#f59e0b', fontSize: '10px', marginLeft: '6px', background: '#fef3c7', padding: '2px 4px', borderRadius: '4px'}}>⚠️ Bate e Volta (Retorna no Dia)</span>}
                                      </strong>
@@ -683,7 +681,7 @@ const NovaLocacao = () => {
                                     }
                                 }} style={{width: '28px', height: '28px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a'}}>+</button>
                               </div>
-                            </td>
+                             </td>
                             <td style={{padding: '12px 10px', textAlign: 'right'}}><strong style={{color: '#0f172a', fontSize: '15px'}}>R$ {(item.preco * (Number(item.qtd) || 1)).toFixed(2)}</strong></td>
                             <td style={{padding: '12px 10px', textAlign: 'center'}}><button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))} style={{background: '#fef2f2', border: 'none', color: '#ef4444', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s'}} onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'} onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}>🗑️</button></td>
                           </tr>
@@ -761,11 +759,11 @@ const NovaLocacao = () => {
                )}
                <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>Cancelar e Voltar</button>
             </form>
-        </div>
+          </div>
         </div>
       )}
 
-      {/* CATÁLOGO DE PEÇAS - EXIBINDO OS SELOS */}
+      {/* CATÁLOGO DE PEÇAS */}
       {modalAberto && (
         <div className="modal-overlay-premium">
           <div className="modal-box-premium catalogo-modal">
@@ -777,7 +775,7 @@ const NovaLocacao = () => {
             <div className="catalogo-filtros">
               <input type="text" className="search-input-clean" style={{border: '1px solid var(--borda)', padding: '10px', borderRadius: '8px'}} placeholder="🔎 Buscar peça..." value={busca} onChange={e => setBusca(e.target.value)} />
               <div className="chips-categorias">
-                {categoriasUnicasEstoque.map(cat => (
+                  {categoriasUnicasEstoque.map(cat => (
                   <button key={cat} type="button" className={`chip-cat ${filtroCategoria === cat ? 'active' : ''}`} onClick={() => setFiltroCategoria(cat)}>
                     {cat}
                   </button>
@@ -797,15 +795,15 @@ const NovaLocacao = () => {
                           {item.foto ? <img src={item.foto} alt=""/> : '📷'}
                           
                           {estaEsgotado ? (
-                              <span style={{position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>ALUGADO</span>
+                              <span style={badgeEsgotado}>ALUGADO</span>
                           ) : ehBateVolta ? (
-                              <span style={{position: 'absolute', top: 5, left: 5, background: '#f59e0b', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
+                              <span style={badgeBateVolta}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
                           ) : (
-                              <span style={{position: 'absolute', top: 5, left: 5, background: '#10b981', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>Livres: {disp.livresReais}</span>
+                             <span style={badgeLivres}>Livres: {disp.livresReais}</span>
                           )}
 
                           {!estaEsgotado && <button className="btn-add-peca">+</button>}
-                      </div>
+                        </div>
                       <div className="peca-info">
                         <strong>{item.nome}</strong>
                         <span>{item.categoria}</span>

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
-import { collection, query, where, orderBy, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs } from 'firebase/firestore'; 
 import { db } from '../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
 
@@ -31,15 +31,54 @@ const Monitoramento = () => {
       const listaEquipe = snapEquipe.docs.map(doc => ({ id: doc.id, nome: doc.data().nome }));
       setEquipe(listaEquipe);
 
-      // 2. Busca todas as atividades registradas no banco de dados para esta empresa
-      const qAtividades = query(
-        collection(db, "logs_atividades"), 
-        where("empresaId", "==", usuarioLogado.uid),
-        orderBy("dataHora", "desc") // Do mais recente para o mais antigo
-      );
+      // 2. 🔥 BUSCA INTELIGENTE: Puxa tanto por empresaId como por userId para nunca perder logs!
+      const qAtividadesEmpresa = query(collection(db, "logs_atividades"), where("empresaId", "==", usuarioLogado.uid));
+      const qAtividadesUser = query(collection(db, "logs_atividades"), where("userId", "==", usuarioLogado.uid));
       
-      const snapAtividades = await getDocs(qAtividades);
-      const listaAtividades = snapAtividades.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const [snapEmpresa, snapUser] = await Promise.all([getDocs(qAtividadesEmpresa), getDocs(qAtividadesUser)]);
+      
+      // Usamos um Map para juntar as duas buscas e evitar que o mesmo log apareça duplicado
+      const mapaAtividades = new Map();
+      
+      const processarDocs = (snap) => {
+          snap.docs.forEach(doc => {
+              const dataOriginal = doc.data();
+              
+              // 🔥 NORMALIZAÇÃO DE DATAS: Transforma qualquer data do espião no formato legível
+              let dataHoraAjustada = dataOriginal.dataHora;
+              
+              if (!dataHoraAjustada) {
+                  if (dataOriginal.data && typeof dataOriginal.data.toDate === 'function') {
+                      dataHoraAjustada = dataOriginal.data.toDate().toISOString();
+                  } else if (dataOriginal.criadoEm && typeof dataOriginal.criadoEm.toDate === 'function') {
+                      dataHoraAjustada = dataOriginal.criadoEm.toDate().toISOString();
+                  } else if (dataOriginal.data) {
+                      dataHoraAjustada = new Date(dataOriginal.data).toISOString();
+                  } else {
+                      dataHoraAjustada = new Date().toISOString();
+                  }
+              }
+
+              mapaAtividades.set(doc.id, {
+                  id: doc.id,
+                  ...dataOriginal,
+                  dataHora: dataHoraAjustada,
+                  // Tenta extrair o nome de todas as formas possíveis
+                  nomeFuncionario: dataOriginal.nomeFuncionario || dataOriginal.funcionario || dataOriginal.usuarioNome || "Equipa",
+                  acao: dataOriginal.acao || "AÇÃO DESCONHECIDA"
+              });
+          });
+      };
+
+      processarDocs(snapEmpresa);
+      processarDocs(snapUser);
+
+      // Converte o mapa de volta para uma lista
+      const listaAtividades = Array.from(mapaAtividades.values());
+
+      // 🔥 A MÁGICA: Ordenamos a lista do mais novo pro mais velho com a data correta
+      listaAtividades.sort((a, b) => new Date(b.dataHora) - new Date(a.dataHora));
+
       setAtividades(listaAtividades);
 
     } catch (error) {
@@ -49,16 +88,34 @@ const Monitoramento = () => {
     }
   };
 
-  // Função para formatar a data e hora bonitinha
+  // Função para formatar a data e hora bonitinha, com blindagem a erros
   const formatarDataHora = (isoString) => {
-    const data = new Date(isoString);
-    return data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    try {
+        const data = new Date(isoString);
+        if(isNaN(data.getTime())) return "Data Inválida";
+        return data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+    } catch(e) {
+        return "Data Desconhecida";
+    }
   };
 
-  // Aplica o filtro na lista caso a dona queira ver apenas as ações do "João", por exemplo
+  // Filtro
   const atividadesFiltradas = filtroFuncionario === 'Todos' 
     ? atividades 
     : atividades.filter(ativ => ativ.funcionarioId === filtroFuncionario);
+
+  // Função centralizada para dar cores aos "Emblemas" (Badges) com base no texto da ação
+  const obterEstiloBadge = (acao, tipo) => {
+      const acaoUpper = String(acao).toUpperCase();
+      
+      if (tipo === 'LOGIN' || acaoUpper.includes('LOGIN')) return { bg: '#dbeafe', color: '#1e40af' }; // Azul
+      if (tipo === 'EXCLUSAO' || acaoUpper.includes('EXCLU') || acaoUpper.includes('CANCEL')) return { bg: '#fee2e2', color: '#991b1b' }; // Vermelho
+      if (tipo === 'EDICAO' || acaoUpper.includes('EDIÇÃO') || acaoUpper.includes('ATUALIZ')) return { bg: '#fef3c7', color: '#92400e' }; // Amarelo
+      if (acaoUpper.includes('NOVA LOCAÇÃO') || acaoUpper.includes('PEDIDO') || acaoUpper.includes('ORÇAMENTO')) return { bg: '#dcfce7', color: '#166534' }; // Verde Sucesso
+      if (acaoUpper.includes('PAGAMENTO') || acaoUpper.includes('SINAL') || acaoUpper.includes('FINANCEIRO')) return { bg: '#cffafe', color: '#0891b2' }; // Ciano Dinheiro
+      
+      return { bg: '#f1f5f9', color: '#475569' }; // Cinza (Padrão)
+  };
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center', color: '#64748b' }}>Buscando registros de atividades...</div>;
 
@@ -70,7 +127,6 @@ const Monitoramento = () => {
           <p>Acompanhe em tempo real as ações da sua equipe no sistema.</p>
         </div>
         
-        {/* 🔥 BOTÃO DE VOLTAR ADICIONADO AQUI 🔥 */}
         <div className="acoes-top" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
           
           <button 
@@ -113,7 +169,11 @@ const Monitoramento = () => {
                 </td>
               </tr>
             ) : (
-              atividadesFiltradas.map(atividade => (
+              atividadesFiltradas.map(atividade => {
+                const estilos = obterEstiloBadge(atividade.acao, atividade.tipo);
+                const inicial = atividade.nomeFuncionario ? atividade.nomeFuncionario.charAt(0).toUpperCase() : 'U';
+
+                return (
                 <tr key={atividade.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                   <td style={{ padding: '15px 20px', fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
                     {formatarDataHora(atividade.dataHora)}
@@ -121,15 +181,15 @@ const Monitoramento = () => {
                   <td style={{ padding: '15px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
                       <div style={{ width: '28px', height: '28px', backgroundColor: '#e2e8f0', color: '#475569', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '11px' }}>
-                        {atividade.nomeFuncionario.charAt(0).toUpperCase()}
+                        {inicial}
                       </div>
                       <strong style={{ color: '#0f172a', fontSize: '13px' }}>{atividade.nomeFuncionario}</strong>
                     </div>
                   </td>
                   <td style={{ padding: '15px' }}>
                     <span style={{ 
-                      background: atividade.tipo === 'LOGIN' ? '#dbeafe' : atividade.tipo === 'EDICAO' ? '#fef3c7' : atividade.tipo === 'EXCLUSAO' ? '#fee2e2' : '#f1f5f9', 
-                      color: atividade.tipo === 'LOGIN' ? '#1e40af' : atividade.tipo === 'EDICAO' ? '#92400e' : atividade.tipo === 'EXCLUSAO' ? '#991b1b' : '#475569', 
+                      background: estilos.bg, 
+                      color: estilos.color, 
                       padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' 
                     }}>
                       {atividade.acao}
@@ -139,7 +199,7 @@ const Monitoramento = () => {
                     {atividade.detalhes}
                   </td>
                 </tr>
-              ))
+              )})
             )}
           </tbody>
         </table>

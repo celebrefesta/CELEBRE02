@@ -3,13 +3,12 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import './Locacoes.css';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore'; 
-import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
+import { getAuth } from 'firebase/auth'; 
 
 const Locacoes = () => {
   const navigate = useNavigate();
   const location = useLocation(); 
 
-  // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
@@ -46,7 +45,6 @@ const Locacoes = () => {
     if (!usuarioLogado) return;
     setLoading(true);
     try {
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os seus clientes
       const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
       const clientesSnapshot = await getDocs(qClientes);
       const dicionarioClientes = {};
@@ -55,7 +53,6 @@ const Locacoes = () => {
           dicionarioClientes[doc.id] = cData.nome || cData.nomeFantasia || cData.razaoSocial || cData.nomeCompleto || "Sem Nome";
       });
 
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os seus pedidos
       const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
       const querySnapshot = await getDocs(qLocacoes);
       const hojeStr = new Date().toISOString().split('T')[0];
@@ -106,7 +103,7 @@ const Locacoes = () => {
 
       setLista(dados);
     } catch (error) { 
-        console.error(error); 
+        console.error(error);
     } finally { 
         setLoading(false); 
     }
@@ -115,8 +112,29 @@ const Locacoes = () => {
   const handleExcluir = async (id) => {
     if (window.confirm("Apagar pedido definitivamente?")) {
       try {
+        const pedidoParaExcluir = lista.find(i => i.id === id); 
+
         await deleteDoc(doc(db, "locacoes", id));
         setLista(lista.filter(i => i.id !== id));
+
+        // 🔥 INÍCIO DO ESPIÃO (EXCLUSÃO DE PEDIDO) 🔥
+        if (pedidoParaExcluir) {
+          try {
+            await addDoc(collection(db, "logs_atividades"), {
+              empresaId: usuarioLogado.uid, 
+              funcionarioId: usuarioLogado.uid,
+              nomeFuncionario: usuarioLogado.displayName || usuarioLogado.email || "Equipe",
+              acao: "EXCLUSÃO DE PEDIDO",
+              tipo: "EXCLUSAO",
+              detalhes: `Excluiu permanentemente o pedido #${pedidoParaExcluir.numeroPedido || id.substring(0,6).toUpperCase()} do cliente ${pedidoParaExcluir.clienteNome}`,
+              dataHora: new Date().toISOString()
+            });
+          } catch (errorEspiao) {
+            console.error("Erro no espião de exclusão:", errorEspiao);
+          }
+        }
+        // 🔥 FIM DO ESPIÃO 🔥
+
       } catch (error) {
         alert("Erro ao excluir.");
       }
@@ -130,7 +148,6 @@ const Locacoes = () => {
       const novoValorPago = Number(pedidoSelecionado.valorPago || 0) + Number(pagamento.valor);
       await updateDoc(doc(db, "locacoes", pedidoSelecionado.id), { valorPago: novoValorPago });
       
-      // 🔥 BLINDAGEM NO FINANCEIRO: Salva a entrada com o seu userId
       await addDoc(collection(db, "financeiro_lancamentos"), {
         tipo: 'entrada', 
         categoria: 'Locação', 
@@ -140,21 +157,36 @@ const Locacoes = () => {
         status: 'pago', 
         createdAt: serverTimestamp(),
         descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6)} - ${pedidoSelecionado.clienteNome}`,
-        userId: usuarioLogado.uid // Cadeado
+        userId: usuarioLogado.uid 
       });
+
+      // 🔥 INÍCIO DO ESPIÃO (REGISTRO DE PAGAMENTO) 🔥
+      try {
+        await addDoc(collection(db, "logs_atividades"), {
+          empresaId: usuarioLogado.uid, 
+          funcionarioId: usuarioLogado.uid,
+          nomeFuncionario: usuarioLogado.displayName || usuarioLogado.email || "Equipe",
+          acao: "REGISTRO DE PAGAMENTO",
+          tipo: "EDICAO",
+          detalhes: `Registrou entrada de R$ ${Number(pagamento.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})} via ${pagamento.formaPagto} no pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6).toUpperCase()} (${pedidoSelecionado.clienteNome})`,
+          dataHora: new Date().toISOString()
+        });
+      } catch (errorEspiao) {
+        console.error("Erro no espião de pagamento:", errorEspiao);
+      }
+      // 🔥 FIM DO ESPIÃO 🔥
 
       alert("Recebido com sucesso!");
       carregarLocacoes();
       setModalPagamento(false);
     } catch (e) { 
-      alert("Erro ao salvar pagamento."); 
+      alert("Erro ao salvar pagamento.");
     } finally { 
       setSalvandoPagamento(false); 
     }
   };
 
   let filtrados = [...lista];
-  
   if (busca) {
     const termo = busca.toLowerCase();
     filtrados = filtrados.filter(i => {
@@ -165,7 +197,6 @@ const Locacoes = () => {
     });
   }
 
-  // 🔥 APLICAÇÃO DO FILTRO DE DATA 🔥
   if (filtroDataEvento) {
       filtrados = filtrados.filter(i => i.dataRetirada === filtroDataEvento);
   }
@@ -247,7 +278,7 @@ const Locacoes = () => {
             <h2>{lista.filter(i => {
                 const s = String(i.status || '').toLowerCase();
                 return !s.includes('orcam') && !s.includes('cancelado') && !s.includes('finalizado') && !i.isOrcamentoVencido;
-            }).length}</h2>
+              }).length}</h2>
           </div>
         </div>
         <div className="dash-card warning">
@@ -272,7 +303,6 @@ const Locacoes = () => {
             />
           </div>
          
-          {/* 🔥 NOVO CAMPO: BUSCA POR DATA 🔥 */}
           <div className="date-filter-group" style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 5px' }}>
              <span style={{ padding: '0 10px', color: '#64748b' }}>📅 Data:</span>
              <input 
@@ -335,7 +365,6 @@ const Locacoes = () => {
           </thead>
           <tbody>
             
-            {/* 🔥 HTML BLINDADO (SEM ENROLAÇÕES DE SINTAXE) 🔥 */}
             {loading && (
               <tr><td colSpan="7" className="loading-td">Carregando locações...</td></tr>
             )}
@@ -358,7 +387,6 @@ const Locacoes = () => {
 
                 let alertaOperacional = null;
                 let corAlerta = '';
-
                 if (item.dataRetirada && !statusStr.includes('finalizado') && !statusStr.includes('cancelado') && !item.isOrcamentoVencido) {
                     const hojeObj = new Date();
                     hojeObj.setHours(0,0,0,0);
@@ -366,7 +394,6 @@ const Locacoes = () => {
                     const devDateObj = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDateObj;
                     const diffMs = locDateObj.getTime() - hojeObj.getTime();
                     const diasParaFesta = Math.ceil(diffMs / (1000 * 3600 * 24));
-
                     if (statusStr.includes('confirmado') && diasParaFesta <= 4 && diasParaFesta >= 0) {
                         alertaOperacional = `📦 Separar Peças! (${diasParaFesta === 0 ? 'É Hoje!' : `Faltam ${diasParaFesta} dias`})`; 
                         corAlerta = "#f59e0b";

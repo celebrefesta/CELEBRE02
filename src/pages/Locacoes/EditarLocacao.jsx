@@ -1,26 +1,23 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import './NovaLocacao.css'; 
+import './NovaLocacao.css';
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore'; 
-import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
-import { CATALOGO_TEMAS } from '../../catalogoDeTemas'; 
+import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
+import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 
 const EditarLocacao = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); 
-  
-  // 🔥 Autenticação
+  const { id } = useParams();
+
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
   const [loading, setLoading] = useState(true);
-
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
   const [todasLocacoes, setTodasLocacoes] = useState([]); 
   const [carrinho, setCarrinho] = useState([]);
-  
   const [modalAberto, setModalAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
@@ -28,7 +25,6 @@ const EditarLocacao = () => {
   const [clienteSelecionado, setClienteSelecionado] = useState('');
   const [tipoServico, setTipoServico] = useState('PEGUE E MONTE'); 
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
-  
   const [categoriaTema, setCategoriaTema] = useState('');
   const [subcategoriaTema, setSubcategoriaTema] = useState('');
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
@@ -38,7 +34,6 @@ const EditarLocacao = () => {
   const [logistica, setLogistica] = useState({ 
     tipo: 'entrega', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', obsTransporte: '' 
   });
-  
   const [desconto, setDesconto] = useState(0);
   const [obsInternas, setObsInternas] = useState('');
   
@@ -52,7 +47,35 @@ const EditarLocacao = () => {
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
 
+  // 🔥 ESTADO DE MEMÓRIA (Apenas grava log se algo mudar de verdade)
+  const [dadosIniciais, setDadosIniciais] = useState(null);
+
   const isFinalizado = statusAtual === 'finalizado' || statusAtual === 'cancelado';
+
+  const badgeEsgotado = { position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
+  const badgeBateVolta = { position: 'absolute', top: 5, left: 5, background: '#f59e0b', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
+  const badgeLivres = { position: 'absolute', top: 5, left: 5, background: '#10b981', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
+
+  // 🔥 AUDITORIA
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,     
+        usuarioNome: nomeEquipa,     
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),    
+        detalhes: detalhes,
+        pedidoId: id,
+        numeroPedido: numeroPedido || "S/N",
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -62,7 +85,6 @@ const EditarLocacao = () => {
 
     const carregarDados = async () => {
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Filtra apenas os dados do seu utilizador logado
         const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
@@ -83,11 +105,13 @@ const EditarLocacao = () => {
           
           if (docSnap.exists()) {
             const data = docSnap.data();
-            
             setNumeroPedido(data.numeroPedido || '');
             setStatusAtual(data.status || 'orcamento'); 
             setClienteSelecionado(data.clienteId || '');
-            setTipoServico(data.tipoServico || 'PEGUE E MONTE');
+            
+            const servicoSalvo = data.tipoServico || 'PEGUE E MONTE';
+            setTipoServico(servicoSalvo);
+            
             setDatas({ retirada: data.dataRetirada || '', devolucao: data.dataDevolucao || '' });
             setValorJaPago(Number(data.valorPago || 0));
 
@@ -128,9 +152,11 @@ const EditarLocacao = () => {
             if (log.frete) {
               freteFormatado = Number(log.frete).toFixed(2).replace('.', ',');
             }
+            
+            const tipoLogSalvo = log.tipo || (servicoSalvo === 'PEGUE E MONTE' ? 'retirada' : 'entrega');
 
             setLogistica({
-              tipo: log.tipo || 'entrega',
+              tipo: tipoLogSalvo,
               cep: log.cep || '',
               rua: log.rua || log.endereco || '',
               numero: log.numero || '',
@@ -144,10 +170,22 @@ const EditarLocacao = () => {
               ...item,
               preco: Number(item.preco || item.financeiro?.valorAluguel || 0)
             }));
-            
             setCarrinho(itensFormatados);
             setDesconto(data.desconto || 0);
             setObsInternas(data.obsInternas || '');
+
+            // 🔥 MEMORIZA OS DADOS INTELIGENTEMENTE
+            setDadosIniciais({
+                clienteId: data.clienteId || '',
+                temaFesta: temaSalvo,
+                dataRetirada: data.dataRetirada || '',
+                dataDevolucao: data.dataDevolucao || '',
+                tipoServico: servicoSalvo,
+                tipoLogistica: tipoLogSalvo,
+                frete: freteFormatado,
+                desconto: data.desconto || 0,
+                carrinhoSnapshot: JSON.stringify(itensFormatados.map(i => ({ id: i.id, qtd: i.qtd, nome: i.nome })))
+            });
           }
         }
       } catch (error) {
@@ -160,12 +198,11 @@ const EditarLocacao = () => {
   }, [id, usuarioLogado, navigate]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
-
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
   const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
   const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
-  
+
   const isOverlapping = (start1, end1, start2, end2) => {
       if (!start1 || !end1 || !start2 || !end2) return false;
       const s1 = new Date(start1 + 'T00:00:00').getTime();
@@ -195,7 +232,6 @@ const EditarLocacao = () => {
                       const itemNoPedido = loc.itens?.find(i => i.id === pecaId);
                       if (itemNoPedido) {
                           const qtdAlugada = parseInt(itemNoPedido.qtd) || 0;
-                          
                           if (loc.dataDevolucao === datas.retirada) {
                               qtdRetornaNoDia += qtdAlugada;
                           } else {
@@ -209,7 +245,6 @@ const EditarLocacao = () => {
 
       const livresReais = Math.max(0, disponiveisTotais - qtdReservadaForte - qtdRetornaNoDia);
       const livresMaximos = Math.max(0, disponiveisTotais - qtdReservadaForte);
-
       return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia };
   };
 
@@ -218,24 +253,23 @@ const EditarLocacao = () => {
     const disp = getDisponibilidade(item.id);
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
     const existe = carrinho.find(i => i.id === item.id);
-    
     if (existe) {
       if (existe.qtd >= disp.livresMaximos) {
-          alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê possui o limite absoluto de ${disp.livresMaximos} unidade(s) de "${item.nome}" para esta data.`);
+          alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê possui o limite absoluto de ${disp.livresMaximos} unidade(s) de "${item.nome}".`);
           return;
       }
       if (existe.qtd >= disp.livresReais && disp.retornaNoDia > 0 && !existe.jaAvisouBateVolta) {
-           const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar mesmo assim?`);
+           const querMesmo = window.confirm("⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça será DEVOLVIDA por outro cliente exatamente na data deste novo evento.\n\nDeseja adicionar mesmo assim?");
            if(!querMesmo) return;
       }
       setCarrinho(carrinho.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1, jaAvisouBateVolta: disp.retornaNoDia > 0 ? true : i.jaAvisouBateVolta } : i));
     } else {
       if (disp.livresMaximos < 1) {
-          alert(`⚠️ PEÇA INDISPONÍVEL!\nEsta peça está em manutenção ou já alugada para esta data.`);
+          alert("⚠️ PEÇA INDISPONÍVEL!\nEsta peça está em manutenção ou já alugada para esta data.");
           return;
       }
       if (disp.livresReais < 1 && disp.retornaNoDia > 0) {
-           const querMesmo = window.confirm(`⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça "${item.nome}" será DEVOLVIDA por outro cliente exatamente na data deste novo evento (${datas.retirada.split('-').reverse().join('/')}).\n\nVocê precisará cobrar a devolução dela antes de entregar para este novo pedido.\n\nDeseja adicionar mesmo assim?`);
+           const querMesmo = window.confirm("⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça será DEVOLVIDA por outro cliente exatamente na data deste novo evento.\n\nDeseja adicionar mesmo assim?");
            if(!querMesmo) return;
       }
       setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, isBateVolta: disp.retornaNoDia > 0, jaAvisouBateVolta: disp.retornaNoDia > 0, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
@@ -249,11 +283,11 @@ const EditarLocacao = () => {
 
       let qtdDesejada = parseInt(novaQtd);
       if (isNaN(qtdDesejada)) qtdDesejada = '';
-      
+
       if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
           const disp = getDisponibilidade(itemId);
           if (qtdDesejada > disp.livresMaximos) {
-              alert(`⚠️ LIMITE ABSOLUTO ATINGIDO!\nVocê possui apenas ${disp.livresMaximos} unidade(s) permitidas de "${itemCarrinho.nome}" para esta data.`);
+              alert(`⚠️ LIMITE ABSOLUTO ATINGIDO!\nVocê possui apenas ${disp.livresMaximos} unidade(s) permitidas de "${itemCarrinho.nome}".`);
               setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: disp.livresMaximos} : i));
           } else {
               setCarrinho(carrinho.map(i => i.id === itemId ? {...i, qtd: qtdDesejada} : i));
@@ -263,38 +297,50 @@ const EditarLocacao = () => {
       }
   };
 
+  const removerDoCarrinho = (itemId, itemNome) => {
+      setCarrinho(carrinho.filter(i => i.id !== itemId));
+  };
+
   const salvarChecklistImediato = async (novosItens) => {
     try {
         await updateDoc(doc(db, "locacoes", id), { itens: novosItens });
     } catch (e) {
-        console.error("Erro ao salvar checklist no banco:", e);
+        console.error("Erro ao salvar checklist:", e);
     }
   };
 
   const marcarIda = (itemId) => {
     if (isFinalizado) return;
+    const itemEncontrado = carrinho.find(i => i.id === itemId);
+    const novoStatusSeparacao = !itemEncontrado.checkedSeparacao;
     const novosItens = carrinho.map(item => {
-      if (item.id === itemId) return { ...item, checkedSeparacao: !item.checkedSeparacao };
+      if (item.id === itemId) return { ...item, checkedSeparacao: novoStatusSeparacao };
       return item;
     });
     setCarrinho(novosItens);
     salvarChecklistImediato(novosItens); 
+    registrarLog("CHECKLIST: SEPARAÇÃO", `Marcou a peça "${itemEncontrado.nome}" como ${novoStatusSeparacao ? 'SEPARADA (Ida)' : 'PENDENTE (Desmarcou)'}.`);
   };
 
   const marcarVolta = (itemId, status) => {
     if (isFinalizado) return;
+    const itemEncontrado = carrinho.find(i => i.id === itemId);
+    let logTexto = "";
     const novosItens = carrinho.map(item => {
       if (item.id === itemId) {
         if (status === 'ok') {
           const jaTavaOk = item.checkedDevolucao && !item.avaria && !item.faltou;
+          logTexto = jaTavaOk ? `Desmarcou a devolução OK da peça "${item.nome}"` : `Marcou a peça "${item.nome}" como DEVOLVIDA OK`;
           return { ...item, checkedDevolucao: !jaTavaOk, avaria: false, faltou: false };
         }
         if (status === 'avaria') {
           const jaTavaAvaria = item.avaria;
+          logTexto = jaTavaAvaria ? `Removeu o alerta de AVARIA da peça "${item.nome}"` : `Marcou a peça "${item.nome}" com AVARIA!`;
           return { ...item, checkedDevolucao: !jaTavaAvaria ? true : false, avaria: !jaTavaAvaria, faltou: false };
         }
         if (status === 'faltou') {
           const jaTavaFaltou = item.faltou;
+          logTexto = jaTavaFaltou ? `Removeu o alerta de FALTA da peça "${item.nome}"` : `Marcou que FALTOU a peça "${item.nome}"!`;
           return { ...item, checkedDevolucao: !jaTavaFaltou ? true : false, avaria: false, faltou: !jaTavaFaltou };
         }
       }
@@ -302,6 +348,7 @@ const EditarLocacao = () => {
     });
     setCarrinho(novosItens);
     salvarChecklistImediato(novosItens); 
+    if(logTexto) registrarLog("CHECKLIST: DEVOLUÇÃO", logTexto);
   };
 
   const getFreteNumerico = () => {
@@ -317,7 +364,7 @@ const EditarLocacao = () => {
     const total = subtotal + getFreteNumerico() - Number(desconto || 0);
     return { subtotal, total: Math.max(0, total) };
   };
-  
+
   const handleCepChange = async (e) => {
     if (isFinalizado) return;
     let value = e.target.value.replace(/\D/g, "");
@@ -330,11 +377,7 @@ const EditarLocacao = () => {
         const dados = await res.json();
         if (!dados.erro) {
           setLogistica(prev => ({
-            ...prev, 
-            cep: cepFormatado,
-            rua: dados.logradouro || '',
-            bairro: dados.bairro || '',
-            cidade: `${dados.localidade || ''} - ${dados.uf || ''}`
+            ...prev, cep: cepFormatado, rua: dados.logradouro || '', bairro: dados.bairro || '', cidade: `${dados.localidade || ''} - ${dados.uf || ''}`
           }));
           setTimeout(() => document.getElementById('numeroInput').focus(), 100);
         }
@@ -355,39 +398,34 @@ const EditarLocacao = () => {
 
   const interceptarSalvamento = (novoStatus) => {
     if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data de retirada!");
-    
-    if (temaFesta === 'OUTRO_TEMA' && !temaDigitadoPersonalizado) {
-        return alert("Por favor, digite o nome do tema personalizado!");
-    } else if (!temaFesta) {
-        return alert("Selecione o Tema da Festa!");
-    }
+    if (temaFesta === 'OUTRO_TEMA' && !temaDigitadoPersonalizado) return alert("Por favor, digite o nome do tema personalizado!");
+    else if (!temaFesta) return alert("Selecione o Tema da Festa!");
 
     const hojeStr = new Date().toISOString().split('T')[0];
 
     if (novoStatus === 'finalizado') {
         const dataComparacao = datas.devolucao || datas.retirada;
         if (dataComparacao > hojeStr) {
-            alert(`🚫 BLOQUEADO:\n\nVocê não pode receber as peças de volta (DEVOLUÇÃO) de um evento marcado para ${dataComparacao.split('-').reverse().join('/')}. Aguarde a data do evento para finalizar.`);
+            alert("🚫 BLOQUEADO:\n\nVocê não pode receber as peças de volta de um evento marcado para o futuro. Aguarde a data do evento para finalizar.");
             return;
         }
         
         const temItemSemVolta = carrinho.some(i => !i.checkedDevolucao);
         if (temItemSemVolta) {
-             const confirmacaoExtra = window.confirm("⚠️ ALERTA DE CONFERÊNCIA:\n\nExistem itens no pedido que NÃO foram marcados como devolvidos (📥 VOLTA, ⚠️ AVARIA ou ❌ FALTA).\n\nTem certeza que deseja finalizar este pedido assim mesmo?");
+             const confirmacaoExtra = window.confirm("⚠️ ALERTA DE CONFERÊNCIA:\n\nExistem itens no pedido que NÃO foram marcados como devolvidos. Tem certeza que deseja finalizar?");
              if (!confirmacaoExtra) return;
         } else {
-             const confirmacao = window.confirm("Finalizar o Pedido? Certifique-se que todos os itens foram conferidos no check-in da tela.");
+             const confirmacao = window.confirm("Finalizar o Pedido? Certifique-se que todos os itens foram conferidos.");
              if (!confirmacao) return;
         }
     }
 
     if (novoStatus === 'entregue' && datas.retirada > hojeStr) {
-        const confirmacaoAntecipada = window.confirm(`⚠️ ATENÇÃO!\n\nA data do evento é ${datas.retirada.split('-').reverse().join('/')}, mas você está marcando como ENTREGUE hoje.\n\nTem certeza que o cliente já retirou as peças antecipadamente?`);
+        const confirmacaoAntecipada = window.confirm("⚠️ ATENÇÃO!\n\nA data do evento é no futuro, mas você está marcando como ENTREGUE hoje. Tem certeza?");
         if (!confirmacaoAntecipada) return;
     }
 
     const statusFinalDesejado = novoStatus || statusAtual;
-    
     if (statusAtual === 'orcamento' && statusFinalDesejado === 'confirmado') {
         setStatusParaSalvar('confirmado');
         setModalSinalAberto(true);
@@ -405,55 +443,86 @@ const EditarLocacao = () => {
       
       const logisticaParaSalvar = { ...logistica, frete: getFreteNumerico() };
       const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
-
       const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
-      
       const docRef = doc(db, "locacoes", id);
+      
       await updateDoc(docRef, {
-        clienteId: clienteSelecionado,
-        clienteNome: nomeCliente,
-        temaFesta: temaFinalParaSalvar,
-        tipoServico, 
-        dataRetirada: datas.retirada,
-        dataDevolucao: datas.devolucao,
-        itens: carrinho, 
-        logistica: logisticaParaSalvar,
-        obsInternas,
-        desconto: Number(desconto),
-        valorTotal: calcularTotal().total,
-        valorPago: novoValorPagoTotal,
-        sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
-        status: statusFinal,
-        atualizadoEm: new Date()
-        // userId: Não precisa alterar o userId num update, ele já é seu.
+        clienteId: clienteSelecionado, clienteNome: nomeCliente, temaFesta: temaFinalParaSalvar, tipoServico, 
+        dataRetirada: datas.retirada, dataDevolucao: datas.devolucao, itens: carrinho, 
+        logistica: logisticaParaSalvar, obsInternas, desconto: Number(desconto),
+        valorTotal: calcularTotal().total, valorPago: novoValorPagoTotal, sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
+        status: statusFinal, atualizadoEm: new Date()
       });
 
-      // 🔥 BLINDAGEM: Se entrar dinheiro, grava com o seu userId!
       if (valorSinalEntrandoNoCaixa > 0) {
         await addDoc(collection(db, "financeiro_lancamentos"), {
-            tipo: 'entrada', 
-            categoria: 'Locação', 
-            valor: valorSinalEntrandoNoCaixa, 
-            formaPagto: formaPagtoSinal,
-            data: new Date().toISOString().split('T')[0], 
-            status: 'pago', 
-            createdAt: serverTimestamp(),
-            descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`,
-            userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
+            tipo: 'entrada', categoria: 'Locação', valor: valorSinalEntrandoNoCaixa, formaPagto: formaPagtoSinal,
+            data: new Date().toISOString().split('T')[0], status: 'pago', createdAt: serverTimestamp(),
+            descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`, userId: usuarioLogado.uid
         });
+        await registrarLog("PAGAMENTO DE SINAL", `Registrou entrada financeira de R$ ${valorSinalEntrandoNoCaixa.toFixed(2)}.`);
         setValorJaPago(novoValorPagoTotal); 
       }
       
-      setStatusAtual(statusFinal);
-      
-      if (statusFinal && statusFinal !== statusAtual) {
-          alert(`✅ Pedido salvo! Avançou para a etapa: ${statusFinal.toUpperCase()}`);
-      } else {
-          alert(`✅ Alterações salvas com sucesso!`);
+      // 🔥 AQUI FICA A INFORMAÇÃO 100% PERFEITA E BLINDADA
+      let mudancas = [];
+      if (dadosIniciais) {
+          if (String(clienteSelecionado) !== String(dadosIniciais.clienteId)) {
+              const cliAntigo = clientes.find(c => String(c.id) === String(dadosIniciais.clienteId))?.nome || 'Desconhecido';
+              mudancas.push(`Cliente (de '${cliAntigo}' para '${nomeCliente}')`);
+          }
+          if (temaFinalParaSalvar !== dadosIniciais.temaFesta) mudancas.push(`Tema (de '${dadosIniciais.temaFesta}' para '${temaFinalParaSalvar}')`);
+          if (datas.retirada !== dadosIniciais.dataRetirada) mudancas.push(`Data Retirada (para '${datas.retirada}')`);
+          if (datas.devolucao !== dadosIniciais.dataDevolucao) mudancas.push(`Data Devolução (para '${datas.devolucao}')`);
+          if (tipoServico !== dadosIniciais.tipoServico) mudancas.push(`Serviço (de '${dadosIniciais.tipoServico}' para '${tipoServico}')`);
+          if (logistica.tipo !== dadosIniciais.tipoLogistica) mudancas.push(`Logística (de '${dadosIniciais.tipoLogistica}' para '${logistica.tipo}')`);
+          if (logistica.frete !== dadosIniciais.frete) mudancas.push(`Frete (de '${dadosIniciais.frete}' para '${logistica.frete}')`);
+          if (Number(desconto) !== Number(dadosIniciais.desconto)) mudancas.push(`Desconto (para R$${desconto})`);
+          
+          // Raio-X inteligente do carrinho
+          const carrinhoAntigo = JSON.parse(dadosIniciais.carrinhoSnapshot || '[]');
+          let mudancasItens = [];
+          
+          carrinho.forEach(itemAtual => {
+              const itemAntigo = carrinhoAntigo.find(i => i.id === itemAtual.id);
+              if (itemAntigo) {
+                  if (itemAntigo.qtd !== itemAtual.qtd) mudancasItens.push(`Qtd ${itemAtual.nome} (para ${itemAtual.qtd})`);
+              } else {
+                  mudancasItens.push(`Adicionou: ${itemAtual.nome}`);
+              }
+          });
+
+          carrinhoAntigo.forEach(itemAntigo => {
+              if (!carrinho.find(i => i.id === itemAntigo.id)) mudancasItens.push(`Removeu: ${itemAntigo.nome}`);
+          });
+
+          if (mudancasItens.length > 0) mudancas.push(`Itens [${mudancasItens.join(', ')}]`);
       }
+
+      // SÓ GERA LOG SE MUDAR O STATUS OU SE HOUVEREM ALTERAÇÕES! FIM DOS LOGS FANTASMAS!
+      if (statusFinal && statusFinal !== statusAtual) {
+        let det = `Avançou o pedido #${numeroPedido} de ${statusAtual.toUpperCase()} para ${statusFinal.toUpperCase()}.`;
+        if (mudancas.length > 0) det += ` (Também editou: ${mudancas.join(' | ')})`;
+        await registrarLog("ATUALIZAÇÃO DE STATUS", det);
+      } else if (mudancas.length > 0) {
+        await registrarLog("EDIÇÃO DE PEDIDO", `Editou o pedido #${numeroPedido}. Alterações: ${mudancas.join(' | ')}.`);
+      }
+
+      setStatusAtual(statusFinal);
+
+      // Atualiza a memória limpa para as próximas edições
+      setDadosIniciais({
+          clienteId: clienteSelecionado, temaFesta: temaFinalParaSalvar, dataRetirada: datas.retirada, dataDevolucao: datas.devolucao,
+          tipoServico: tipoServico, tipoLogistica: logistica.tipo, frete: logistica.frete, desconto: desconto,
+          carrinhoSnapshot: JSON.stringify(carrinho.map(i => ({ id: i.id, qtd: i.qtd, nome: i.nome })))
+      });
+
+      if (statusFinal && statusFinal !== statusAtual) alert(`✅ Pedido salvo! Avançou para a etapa: ${statusFinal.toUpperCase()}`);
+      else alert(`✅ Alterações salvas com sucesso!`);
       
     } catch (e) { 
       alert("Erro ao atualizar o pedido.");
+      console.error(e);
     } finally {
       setSalvandoPedido(false);
       setModalSinalAberto(false);
@@ -471,8 +540,7 @@ const EditarLocacao = () => {
   };
 
   const salvarSemSinal = () => {
-      const confirmouSemSinal = window.confirm("⚠️ ALERTA DE RISCO!\n\nVocê deixou o valor de entrada como R$ 0,00.\n\nTem certeza que deseja APROVAR este pedido assumindo o risco de não ter recebido nenhum sinal?");
-      if (confirmouSemSinal) {
+      if (window.confirm("⚠️ ALERTA DE RISCO!\n\nVocê deixou o valor de entrada como R$ 0,00.\n\nTem certeza que deseja APROVAR este pedido assumindo o risco de não ter recebido nenhum sinal?")) {
           executarSalvamentoFinal('confirmado', 0, 0);
       }
   };
@@ -481,17 +549,11 @@ const EditarLocacao = () => {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
       const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || '') : '';
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
-      
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
       const vSinalFormatado = valorSinal || '0,00';
-      
       const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
-
       const msgEncoded = encodeURIComponent(texto);
-      const url = telefoneC 
-            ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` 
-            : `https://api.whatsapp.com/send?text=${msgEncoded}`;
-            
+      const url = telefoneC ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` : `https://api.whatsapp.com/send?text=${msgEncoded}`;
       window.open(url, '_blank');
   };
 
@@ -528,7 +590,7 @@ const EditarLocacao = () => {
         <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
             <h1 className="page-title">{isFinalizado ? '🔎 Visualizar Pedido' : 'Editar Pedido'} {numeroPedido && <span style={{color: 'var(--dourado)'}}>#{numeroPedido}</span>}</h1>
             <span style={{background: badgeInfo.cor, color: 'white', padding: '6px 14px', borderRadius: '20px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase'}}>
-               {badgeInfo.txt}
+                {badgeInfo.txt}
             </span>
         </div>
         <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar à Lista</button>
@@ -550,11 +612,19 @@ const EditarLocacao = () => {
               <label>MODALIDADE DE SERVIÇO *</label>
               <div className="toggle-servico" style={{pointerEvents: isFinalizado ? 'none' : 'auto'}}>
                 <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`}
-                  onClick={() => { setTipoServico('PEGUE E MONTE'); setLogistica({...logistica, tipo: 'retirada', frete: ''}); }}>
+                  onClick={() => { 
+                      if(tipoServico !== 'PEGUE E MONTE') {
+                          setTipoServico('PEGUE E MONTE'); setLogistica({...logistica, tipo: 'retirada', frete: ''}); 
+                      }
+                  }}>
                   📦 PEGUE E MONTE
                 </button>
                 <button type="button" className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`}
-                  onClick={() => { setTipoServico('DECORACAO COMPLETA'); setLogistica({...logistica, tipo: 'entrega'}); }}>
+                  onClick={() => { 
+                      if(tipoServico !== 'DECORACAO COMPLETA') {
+                          setTipoServico('DECORACAO COMPLETA'); setLogistica({...logistica, tipo: 'entrega'}); 
+                      }
+                  }}>
                   ✨ DECORAÇÃO COMPLETA
                 </button>
               </div>
@@ -586,7 +656,6 @@ const EditarLocacao = () => {
                         {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
-                
                 <div className="form-group flex-1">
                     <label>Subcategoria do Tema *</label>
                     <select value={subcategoriaTema} onChange={e => {
@@ -611,7 +680,6 @@ const EditarLocacao = () => {
                         {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
                     </select>
                 </div>
-
                 <div className="form-group flex-1">
                     <label>Tema Específico *</label>
                     <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={(!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA') || isFinalizado}>
@@ -783,7 +851,7 @@ const EditarLocacao = () => {
                           </td>
                           {!isFinalizado && (
                               <td className="text-center">
-                                <button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))}>🗑️</button>
+                                <button type="button" className="btn-remover-item" onClick={() => removerDoCarrinho(item.id, item.nome)}>🗑️</button>
                               </td>
                           )}
                         </tr>
@@ -837,25 +905,25 @@ const EditarLocacao = () => {
             <div className="fin-acoes" style={{marginTop: '0'}}>
                 
                 {statusAtual === 'orcamento' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}} disabled={salvandoPedido}>
                     ✔ APROVAR PEDIDO
                 </button>
                 )}
 
                 {statusAtual === 'confirmado' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}} disabled={salvandoPedido}>
                     📦 INICIAR SEPARAÇÃO
                 </button>
                 )}
 
                 {statusAtual === 'preparacao' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}} disabled={salvandoPedido}>
                     🚚 MARCAR COMO ENTREGUE
                 </button>
                 )}
 
                 {statusAtual === 'entregue' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('finalizado')} style={{backgroundColor: '#10b981', marginBottom: '10px'}}>
+                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('finalizado')} style={{backgroundColor: '#10b981', marginBottom: '10px'}} disabled={salvandoPedido}>
                     ✅ RECEBER E FINALIZAR
                 </button>
                 )}
@@ -867,7 +935,7 @@ const EditarLocacao = () => {
                 )}
 
                 {!isFinalizado && (
-                <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center'}} onClick={() => interceptarSalvamento()}>
+                <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center'}} onClick={() => interceptarSalvamento()} disabled={salvandoPedido}>
                     💾 Apenas Salvar Alterações
                 </button>
                 )}
@@ -889,7 +957,6 @@ const EditarLocacao = () => {
             </div>
             
             <form onSubmit={(e) => e.preventDefault()} style={{padding: '25px'}}>
-               
                <div style={{display: 'flex', gap: '15px', marginBottom: '20px'}}>
                    <div className="form-group-pag" style={{flex: 1}}>
                      <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Valor da Entrada (R$)</label>
@@ -937,7 +1004,7 @@ const EditarLocacao = () => {
                      </button>
                      
                      <button type="button" onClick={salvarAguardandoPagamento} disabled={salvandoPedido} style={{padding: '16px', background: '#fffbeb', border: '2px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
-                        {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
+                         {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
                      </button>
                   </div>
                ) : (
@@ -949,7 +1016,7 @@ const EditarLocacao = () => {
                )}
 
                <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>
-                  Cancelar e Voltar
+                   Cancelar e Voltar
                </button>
             </form>
           </div>
@@ -987,11 +1054,11 @@ const EditarLocacao = () => {
                           {item.foto ? <img src={item.foto} alt=""/> : '📷'}
                           
                           {estaEsgotado ? (
-                              <span style={{position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>ALUGADO</span>
+                              <span style={badgeEsgotado}>ALUGADO</span>
                           ) : ehBateVolta ? (
-                              <span style={{position: 'absolute', top: 5, left: 5, background: '#f59e0b', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
+                              <span style={badgeBateVolta}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
                           ) : (
-                              <span style={{position: 'absolute', top: 5, left: 5, background: '#10b981', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold'}}>Livres: {disp.livresReais}</span>
+                              <span style={badgeLivres}>Livres: {disp.livresReais}</span>
                           )}
 
                           {!estaEsgotado && <button className="btn-add-peca">+</button>}
