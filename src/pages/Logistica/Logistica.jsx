@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import './Logistica.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, updateDoc, getDoc, query, where } from 'firebase/firestore'; 
+import { collection, getDocs, doc, updateDoc, getDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { useNavigate } from 'react-router-dom';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from 'firebase/auth';
 
 const Logistica = () => {
   const navigate = useNavigate();
@@ -24,24 +24,43 @@ const Logistica = () => {
   
   const [textoRelatorio, setTextoRelatorio] = useState('');
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO)
+  const registrarLog = async (acao, detalhes, pedidoId = "S/N", numeroPedido = "S/N") => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        pedidoId: pedidoId,
+        numeroPedido: numeroPedido,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria:", error);
+    }
+  };
+
   const carregarDados = async () => {
     setLoading(true);
     try {
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as suas locações
+      // 🔥 BLINDAGEM MULTI-EMPRESA
       const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
       const snap = await getDocs(qLocacoes);
       const dados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const ordenados = dados.sort((a, b) => (a.dataRetirada || '').localeCompare(b.dataRetirada || ''));
       setLocacoes(ordenados);
 
-      // 🔥 BLINDAGEM: Puxa o seu cofre de configurações
       const docRef = doc(db, "configuracoes_empresa", usuarioLogado.uid);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setParametros(docSnap.data());
       }
 
-      // 🔥 BLINDAGEM: Puxa o seu texto de relatório de avarias
       const contratoRef = doc(db, "relatorio_avarias", usuarioLogado.uid);
       const contratoSnap = await getDoc(contratoRef);
       if (contratoSnap.exists()) {
@@ -71,7 +90,6 @@ const Logistica = () => {
     const locacaoAlvo = locacoes.find(l => l.id === id);
     const hojeStr = new Date().toISOString().split('T')[0];
 
-    // NOVA LÓGICA DE TRAVA DA LOGÍSTICA
     if (novoStatus === 'finalizado') {
         if (locacaoAlvo.dataRetirada > hojeStr) {
             alert(`🚫 BLOQUEADO:\nA data do evento é ${locacaoAlvo.dataRetirada.split('-').reverse().join('/')}. Você não pode receber peças de volta de uma festa que ainda nem aconteceu!`);
@@ -87,8 +105,18 @@ const Logistica = () => {
     }
 
     try {
+      const statusAntigo = (locacaoAlvo.status || 'indefinido').toUpperCase();
       await updateDoc(doc(db, "locacoes", id), { status: novoStatus });
       setLocacoes(prev => prev.map(loc => loc.id === id ? { ...loc, status: novoStatus } : loc));
+      
+      // 🔥 Auditoria de movimento
+      await registrarLog(
+        "MOVIMENTAÇÃO DE ESTEIRA", 
+        `Avançou o pedido #${locacaoAlvo.numeroPedido} de ${statusAntigo} para ${novoStatus.toUpperCase()}.`,
+        id,
+        locacaoAlvo.numeroPedido
+      );
+
     } catch (e) {
       alert("Erro ao atualizar o status.");
     }
@@ -98,18 +126,30 @@ const Logistica = () => {
     const locacao = locacoes.find(l => l.id === locId);
     if (!locacao || !locacao.itens) return;
 
+    const itemAlvo = locacao.itens[itemIndex];
     const novosItens = locacao.itens.map((item, idx) => {
       if (idx === itemIndex) return { ...item, [tipo]: !item[tipo] };
       return item;
     });
+
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
-    try { await updateDoc(doc(db, "locacoes", locId), { itens: novosItens }); } catch (e) {}
+    
+    try { 
+      await updateDoc(doc(db, "locacoes", locId), { itens: novosItens });
+      
+      // 🔥 Auditoria de separação
+      if (tipo === 'checkedSeparacao') {
+        const acao = !itemAlvo.checkedSeparacao ? "ITEM SEPARADO" : "ITEM PENDENTE";
+        registrarLog(acao, `Checklist de Saída: Marcou "${itemAlvo.nome}" como ${!itemAlvo.checkedSeparacao ? 'CONFERIDO' : 'NÃO CONFERIDO'}.`, locId, locacao.numeroPedido);
+      }
+    } catch (e) {}
   };
 
   const registrarRetornoItem = async (locId, itemIndex, status) => {
     const locacao = locacoes.find(l => l.id === locId);
     if (!locacao || !locacao.itens) return;
 
+    const itemAlvo = locacao.itens[itemIndex];
     const novosItens = locacao.itens.map((item, idx) => {
       if (idx === itemIndex) {
         if (status === 'ok') return { ...item, checkedDevolucao: true, avaria: false, faltou: false };
@@ -119,24 +159,26 @@ const Logistica = () => {
       }
       return item;
     });
+
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
-    try { await updateDoc(doc(db, "locacoes", locId), { itens: novosItens }); } catch (e) {}
+    
+    try { 
+      await updateDoc(doc(db, "locacoes", locId), { itens: novosItens }); 
+      
+      // 🔥 Auditoria de retorno
+      let txtStatus = status === 'ok' ? 'DEVOLVIDO OK' : status === 'avaria' ? 'COM AVARIA' : status === 'faltou' ? 'FALTANDO/EXTRAVIO' : 'DESMARCADO';
+      registrarLog("CONFERÊNCIA DE RETORNO", `Marcou o item "${itemAlvo.nome}" como ${txtStatus}.`, locId, locacao.numeroPedido);
+    } catch (e) {}
   };
 
   const hojeStr = new Date().toISOString().split('T')[0];
   const mesAtual = hojeStr.substring(0, 7);
-
   const locacoesFiltradas = locacoes.filter(loc => {
     if (!loc.dataRetirada) return false;
-
     const st = String(loc.status || '').toLowerCase().trim();
-
     if (loc.dataRetirada < hojeStr) {
-        if (st.includes('orcam') || st.includes('confirmado') || st.includes('preparacao')) {
-            return false; 
-        }
+        if (st.includes('orcam') || st.includes('confirmado') || st.includes('preparacao')) return false; 
     }
-
     if (filtroTempo === 'hoje') return loc.dataRetirada === hojeStr;
     if (filtroTempo === 'mes_atual') return loc.dataRetirada.startsWith(mesAtual);
     return true; 
@@ -211,6 +253,7 @@ const Logistica = () => {
           textoBase={textoRelatorio} 
           onClose={() => setRelatorioModalLoc(null)} 
           usuarioLogadoId={usuarioLogado.uid}
+          registrarLog={registrarLog}
         />
       )}
     </div>
@@ -227,7 +270,6 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
     const locDate = new Date(loc.dataRetirada + 'T00:00:00'); 
     const diffTime = locDate.getTime() - hojeDate.getTime();
     const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
     if (diffDias < 0 && loc.status !== 'entregue') return <div className="alerta-urgente atrasado">🔥 ATRASADO!</div>;
     if (diffDias <= 0 && loc.status === 'entregue' && loc.dataDevolucao) {
        const devolucaoDate = new Date(loc.dataDevolucao + 'T00:00:00');
@@ -243,7 +285,6 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
   const isFaseSeparacao = loc.status === 'preparacao';
   const isFaseDevolucao = loc.status === 'finalizado'; 
   const hasItens = loc.itens && loc.itens.length > 0;
-  
   let totalItens = hasItens ? loc.itens.length : 0;
   let itensCheckados = 0;
   let checklistBloqueiaBotao = false;
@@ -320,14 +361,13 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
   );
 };
 
-const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLogadoId }) => {
+const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLogadoId, registrarLog }) => {
   const [itensProblema, setItensProblema] = useState([]);
   const [carregandoValores, setCarregandoValores] = useState(true);
 
   useEffect(() => {
     const buscarValoresNoEstoque = async () => {
       try {
-        // 🔥 BLINDAGEM: Busca apenas no seu próprio estoque
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogadoId));
         const estoqueSnap = await getDocs(qEstoque);
         const estoqueData = estoqueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -337,7 +377,6 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
         const itensComValorNovo = itensBase.map((item) => {
           let precoEncontrado = 0;
           const nomePecaLimpo = (item.nome || '').trim().toUpperCase();
-
           let pecaNoEstoque = estoqueData.find(e => e.id === item.id || e.id === item.produtoId || e.id === item.pecaId);
 
           if (!pecaNoEstoque) {
@@ -349,11 +388,8 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
 
           if (pecaNoEstoque) {
             const valorBruto = pecaNoEstoque.financeiro?.valorReposicao || pecaNoEstoque.valorReposicao || 0;
-            
             let valorString = String(valorBruto).replace(/[R$\s]/g, '');
-            if (valorString.includes('.') && valorString.includes(',')) {
-               valorString = valorString.replace(/\./g, '');
-            }
+            if (valorString.includes('.') && valorString.includes(',')) valorString = valorString.replace(/\./g, '');
             valorString = valorString.replace(',', '.'); 
             precoEncontrado = parseFloat(valorString);
           }
@@ -373,7 +409,6 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
         setCarregandoValores(false);
       }
     };
-
     buscarValoresNoEstoque();
   }, [loc, usuarioLogadoId]);
 
@@ -384,11 +419,8 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
   };
 
   const totalCobrar = itensProblema.reduce((acc, item) => acc + (parseFloat(item.valorCobrado || 0) * item.qtd), 0);
-  
-  const formatarMoeda = (valor) => {
-    return parseFloat(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  };
-  
+  const formatarMoeda = (valor) => parseFloat(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
   const gerarTermoPDF = () => {
     const nomeEmpresa = parametros?.nomeEmpresa || parametros?.nomeFantasia || parametros?.nome || 'NOME DA EMPRESA NÃO CONFIGURADO';
     const logoEmpresa = parametros?.logotipo || parametros?.logo || parametros?.logoUrl || parametros?.foto || null;
@@ -410,7 +442,6 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
             .doc-titulo h1 { margin: 0; font-size: 22px; color: #0f172a; text-transform: uppercase; letter-spacing: 1px;}
             .doc-titulo p { margin: 5px 0 0; color: #dc2626; font-size: 13px; font-weight: bold;}
             .info-box { background: #f8fafc; border: 1px solid #e2e8f0; padding: 20px; border-radius: 8px; margin-bottom: 30px; line-height: 1.8; }
-            .info-box strong { color: #0f172a; }
             .table { width: 100%; border-collapse: collapse; margin-bottom: 10px; }
             .table th, .table td { border: 1px solid #cbd5e1; padding: 10px; text-align: left; font-size: 14px; }
             .table th { background: #e2e8f0; color: #0f172a; font-weight: bold; }
@@ -436,13 +467,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
           </div>
           <table class="table">
             <thead>
-              <tr>
-                <th width="8%">Qtd</th>
-                <th width="35%">Produto</th>
-                <th width="27%">Ocorrência</th>
-                <th width="15%" class="valor-td">Valor Unit.</th>
-                <th width="15%" class="valor-td">Subtotal</th>
-              </tr>
+              <tr><th width="8%">Qtd</th><th width="35%">Produto</th><th width="27%">Ocorrência</th><th width="15%" class="valor-td">Valor Unit.</th><th width="15%" class="valor-td">Subtotal</th></tr>
             </thead>
             <tbody>
               ${itensProblema.map(i => `
@@ -457,42 +482,35 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
             </tbody>
           </table>
           <div class="total-box"> VALOR TOTAL A PAGAR: <span>${formatarMoeda(totalCobrar)}</span> </div>
-
-          <div class="aviso-legal">
-            ${textoBase || 'Declaramos para os devidos fins que os itens listados acima apresentaram avarias ou ausências descritas.\nNossa equipe entrará em contato.'}
-          </div>
-
-          <div class="assinaturas">
-            <div>Equipe de Conferência (Logística)</div>
-            <div>Ciente: ${loc.clienteNome}</div>
-          </div>
+          <div class="aviso-legal">${textoBase || 'Declaramos que os itens listados acima apresentaram avarias.\nNossa equipe entrará em contato.'}</div>
+          <div class="assinaturas"><div>Equipe de Logística</div><div>Ciente: ${loc.clienteNome}</div></div>
         </body>
       </html>
     `);
     printWindow.document.close();
     printWindow.focus();
     setTimeout(() => { printWindow.print(); }, 800);
+    
+    // 🔥 Auditoria de geração de relatório
+    registrarLog("RELATÓRIO GERADO", `Gerou PDF de Ocorrências (Total: ${formatarMoeda(totalCobrar)}) para o cliente ${loc.clienteNome}.`, loc.id, loc.numeroPedido);
+    
     onClose(); 
   };
-  
+
   return (
     <div className="modal-overlay-v3" onClick={onClose}>
       <div className="modal-content-v3" style={{maxWidth: '750px', width: '95vw', padding: '0'}} onClick={e => e.stopPropagation()}>
         <div style={{padding: '20px 25px', borderBottom: '1px solid #e2e8f0', background: '#fef2f2', borderRadius: '12px 12px 0 0', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-          <div> <h2 style={{margin: '0 0 5px 0', color: '#dc2626'}}>🚨 Atualizar Valor de Reposição</h2> </div>
+          <h2 style={{margin: 0, color: '#dc2626'}}>🚨 Laudo de Ocorrências</h2>
           <button onClick={onClose} style={{background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#dc2626'}}>✖</button>
         </div>
         <div style={{padding: '20px 25px', maxHeight: '50vh', overflowY: 'auto'}}>
-          {carregandoValores ? ( <div style={{textAlign: 'center', padding: '30px'}}> 🔄 Buscando valores no estoque... </div> ) : (
+          {carregandoValores ? ( <div style={{textAlign: 'center', padding: '30px'}}> 🔄 Buscando valores... </div> ) : (
             itensProblema.map((it, idx) => (
               <div key={idx} className="config-valor-row">
                 <div className="config-item-info">
-                   <div style={{display: 'flex', flexDirection: 'column'}}>
-                     <strong>{it.qtd}x {it.nome}</strong>
-                     <span style={{fontSize: '0.8rem', color: '#64748b'}}>
-                       Valor Estoque (Base): <strong style={{color: '#d97706'}}>{formatarMoeda(it.valorBaseEstoque)}</strong>
-                     </span>
-                   </div>
+                   <strong>{it.qtd}x {it.nome}</strong>
+                   <span style={{fontSize: '0.8rem', color: '#64748b'}}> Base estoque: <strong style={{color: '#d97706'}}>{formatarMoeda(it.valorBaseEstoque)}</strong></span>
                 </div>
                 <div className="config-item-input">
                    <label>Cobrar (R$):</label>
@@ -503,8 +521,8 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
           )}
         </div>
         <div style={{padding: '20px 25px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-           <div style={{fontWeight: 'bold'}}> Total do Laudo: <span style={{color: '#dc2626', fontSize: '1.4rem'}}>{formatarMoeda(totalCobrar)}</span> </div>
-           <button onClick={gerarTermoPDF} disabled={carregandoValores} style={{background: '#dc2626', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}> 🖨️ Gerar PDF </button>
+           <div style={{fontWeight: 'bold'}}> Total: <span style={{color: '#dc2626', fontSize: '1.4rem'}}>{formatarMoeda(totalCobrar)}</span> </div>
+           <button onClick={gerarTermoPDF} disabled={carregandoValores} style={{background: '#dc2626', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}> 🖨️ Imprimir Laudo </button>
         </div>
       </div>
     </div>
@@ -520,7 +538,7 @@ const ModalChecklist = ({ loc, onClose, onToggleChecklist, onRegistrarRetorno })
       <div className="modal-content-v3 modal-checklist-large" onClick={e => e.stopPropagation()}>
         <div className="modal-header-v3">
           <div>
-            <h3 style={{marginBottom: '5px'}}>📝 Checklist</h3>
+            <h3 style={{marginBottom: '5px'}}>📝 Checklist de Conferência</h3>
             <p style={{fontSize: '0.85rem', color: '#64748b', margin: 0}}>{loc.clienteNome} • {loc.status.toUpperCase()}</p>
           </div>
           <button onClick={onClose} style={{fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8'}}>✖</button>
@@ -557,10 +575,10 @@ const ModalChecklist = ({ loc, onClose, onToggleChecklist, onRegistrarRetorno })
                 </div>
               )
             })
-          ) : (<p style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhuma peça.</p>)}
+          ) : (<p style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhuma peça neste pedido.</p>)}
         </div>
         <div style={{padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end'}}>
-           <button onClick={onClose} style={{background: '#0f172a', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}>Salvar e Fechar</button>
+           <button onClick={onClose} style={{background: '#0f172a', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}>Concluído</button>
         </div>
       </div>
     </div>

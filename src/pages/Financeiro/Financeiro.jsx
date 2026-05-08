@@ -1,18 +1,37 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; 
 import { db } from "../../firebaseConfig"; 
-import { collection, query, onSnapshot, deleteDoc, doc, where } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { collection, query, onSnapshot, deleteDoc, doc, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; 
 import "./Financeiro.css";
 
 const Financeiro = () => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   
   // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
   const [transacoes, setTransacoes] = useState([]);
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipe = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipe,
+        usuarioNome: nomeEquipe,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria financeira:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -27,11 +46,9 @@ const Financeiro = () => {
       let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
       // 🔥 ORDENAÇÃO SEGURA: Ordena por data do mais recente para o mais antigo 
-      // (Feito aqui para evitar erro de índice composto no Firebase)
       lista.sort((a, b) => {
          const dataA = a.data ? new Date(a.data).getTime() : 0;
          const dataB = b.data ? new Date(b.data).getTime() : 0;
-         // Se a data for igual, ordena pela data de criação
          if (dataB === dataA) {
              const criacaoA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
              const criacaoB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
@@ -50,6 +67,28 @@ const Financeiro = () => {
   const totalEntradas = transacoes.filter(t => t.tipo === 'entrada').reduce((acc, t) => acc + Number(t.valor), 0);
   const totalSaidas = transacoes.filter(t => t.tipo === 'saida').reduce((acc, t) => acc + Number(t.valor), 0);
   const saldoLiquido = totalEntradas - totalSaidas;
+
+  const handleExcluirLancamento = async (transacao) => {
+    const confirmacao = window.confirm(`⚠️ CUIDADO: Tem certeza que deseja excluir "${transacao.descricao}"? Esta ação é irreversível.`);
+    
+    if (confirmacao) {
+      try {
+        const valorFormatado = Number(transacao.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        const detalhesLog = `Excluiu um lançamento de ${transacao.tipo.toUpperCase()} no valor de ${valorFormatado}. Descrição: ${transacao.descricao}`;
+        
+        // 🔥 Primeiro regista o log (para garantir o rastro)
+        await registrarLog("EXCLUSÃO FINANCEIRA", detalhesLog);
+        
+        // Depois apaga o documento
+        await deleteDoc(doc(db, "financeiro_lancamentos", transacao.id));
+        
+        alert("Lançamento removido com sucesso!");
+      } catch (error) {
+        console.error("Erro ao excluir:", error);
+        alert("Erro ao excluir lançamento.");
+      }
+    }
+  };
 
   return (
     <div className="pag-financeiro-main">
@@ -71,6 +110,7 @@ const Financeiro = () => {
 
         {/* CARDS DE RESUMO (KPIs) */}
         <div className="fin-kpi-grid">
+      
           <div className="kpi-card card-entradas">
             <div className="kpi-header">
               <span>ENTRADAS (RECEBIDO)</span>
@@ -95,6 +135,7 @@ const Financeiro = () => {
             <h2>{saldoLiquido.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h2>
             <p className="kpi-subtitle">Disponível em caixa</p>
           </div>
+      
         </div>
 
         {/* TABELA DE TRANSAÇÕES */}
@@ -134,7 +175,7 @@ const Financeiro = () => {
                     </td>
 
                     <td className={`direita col-valor ${t.tipo === 'entrada' ? 'txt-verde' : 'txt-vermelho'}`}>
-                      {t.tipo === 'entrada' ? '+ ' : '- '} 
+                      {t.tipo === 'entrada' ? '+ ' : '- '}
                       {Number(t.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                     </td>
 
@@ -150,11 +191,7 @@ const Financeiro = () => {
                     </td>
 
                     <td className="centro">
-                      <button className="btn-icon-excluir" title="Excluir" onClick={async () => {
-                        if(window.confirm(`Tem certeza que deseja excluir "${t.descricao}"?`)) {
-                          await deleteDoc(doc(db, "financeiro_lancamentos", t.id));
-                        }
-                      }}>
+                      <button className="btn-icon-excluir" title="Excluir" onClick={() => handleExcluirLancamento(t)}>
                         🗑️
                       </button>
                     </td>
