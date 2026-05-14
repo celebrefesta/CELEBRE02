@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 import './PedidosTab.css'; 
@@ -29,8 +29,27 @@ const PedidosTab = () => {
     logotipo: ''
   });
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE EXPORTAÇÃO)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria:", error);
+    }
+  };
+
   useEffect(() => {
-    if (!usuarioLogado) return; // Proteção adicional
+    if (!usuarioLogado) return; 
 
     const buscarDadosPedidosEConfigs = async () => {
       try {
@@ -71,6 +90,7 @@ const PedidosTab = () => {
           contagemStatus[statusLimpo] = (contagemStatus[statusLimpo] || 0) + 1;
 
           let dataFesta = null;
+  
           if (loc.dataRetirada) {
             dataFesta = new Date(loc.dataRetirada.includes('T') ? loc.dataRetirada : `${loc.dataRetirada}T12:00:00`);
           } else if (loc.criadoEm?.toDate) {
@@ -88,6 +108,7 @@ const PedidosTab = () => {
           }
 
           let tipoServico = "DECORAÇÃO";
+
           if (loc.tipoServico || loc.tipoDaFesta || loc.modalidade) {
              tipoServico = String(loc.tipoServico || loc.tipoDaFesta || loc.modalidade).toUpperCase();
           } 
@@ -108,22 +129,23 @@ const PedidosTab = () => {
         });
 
         pedidosFormatados.sort((a, b) => (b.dataObj || 0) - (a.dataObj || 0));
-        
+
         const futuros = pedidosFormatados
           .filter(p => p.dataObj && p.dataObj >= hoje && !p.status.includes('CANCELADO'))
           .sort((a, b) => a.dataObj - b.dataObj)
           .slice(0, 5);
-          
+
         const statusArray = Object.entries(contagemStatus).sort((a, b) => b[1] - a[1]);
         const totalOportunidades = qtdFechados + qtdOrcamentos;
+
         const taxa = totalOportunidades > 0 ? (qtdFechados / totalOportunidades) * 100 : 0;
-        
+
         setMetricas({ total: locacoes.length, faturamento: faturamentoTotal, futuros: eventosFuturosCount });
         setStatusContagem(statusArray);
         setProximosEventos(futuros);
         setPedidosLista(pedidosFormatados);
         setTaxaConversao(taxa);
-        
+
       } catch (error) {
         console.error("Erro ao carregar pedidos:", error);
       } finally {
@@ -152,7 +174,7 @@ const PedidosTab = () => {
     return true;
   });
 
-  const exportarPDFPedidos = () => {
+  const exportarPDFPedidos = async () => {
     try {
       const doc = new jsPDF();
       let startY = 25;
@@ -192,7 +214,12 @@ const PedidosTab = () => {
         theme: 'striped',
         headStyles: { fillColor: [15, 23, 42] }
       });
+
       doc.save(`Pedidos_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
+      
+      // 🔥 Aciona o espião de exportação
+      await registrarLog("EXPORTAÇÃO DE RELATÓRIO", `Fez o download do relatório em PDF da aba de Pedidos.`);
+      
     } catch (e) { alert("Erro ao gerar PDF"); }
   };
 

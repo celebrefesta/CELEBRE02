@@ -3,6 +3,10 @@ import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 
+// 🔥 IMPORTAÇÕES PARA O ESPIÃO E BANCO DE DADOS
+import { db } from '../../firebaseConfig';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+
 // 🔥 CONFIGURAÇÃO DE PRODUÇÃO 🔥
 initMercadoPago('APP_USR-4c525755-f2c1-4e28-8c9e-020787a172a1', { locale: 'pt-BR' });
 
@@ -21,6 +25,29 @@ const Checkout = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   const planoSelecionado = location.state?.plano;
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CHECKOUT)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      // Puxa o ID do Tenant para garantir que salva no lugar certo, seja dono ou funcionário
+      const tenantId = localStorage.getItem('tenantId') || usuarioLogado.uid;
+      const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Usuário";
+      
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipe,
+        usuarioNome: nomeEquipe,
+        usuarioEmail: usuarioLogado.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: tenantId
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log do checkout:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) navigate('/login');
@@ -44,6 +71,7 @@ const Checkout = () => {
   // Processamento do Cartão (Assinatura Recorrente)
   const onSubmit = async ({ selectedPaymentMethod, formData }) => {
     setMensagem('A processar pagamento seguro...');
+
     return new Promise(async (resolve, reject) => {
       try {
         const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
@@ -60,16 +88,26 @@ const Checkout = () => {
         });
 
         const resultado = await resposta.json();
+        
         if (resultado.status === 'authorized' || resultado.status === 'approved' || resultado.status === 'in_process') {
           setMensagem('✅ Sucesso! Assinatura ativada.');
+          
+          // 🔥 REGISTRA AUDITORIA DE SUCESSO
+          await registrarLog("ASSINATURA APROVADA", `Pagamento de assinatura processado com sucesso via Cartão. Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
+          
           resolve(); 
           setTimeout(() => navigate('/dashboard'), 3000);
         } else {
           setMensagem('❌ O pagamento foi recusado. Tente outro cartão.');
+          
+          // 🔥 REGISTRA AUDITORIA DE FALHA
+          await registrarLog("FALHA NO PAGAMENTO", `Tentativa de assinatura recusada via Cartão. Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
+          
           resolve(); 
         }
       } catch (erro) {
         setMensagem('Erro de ligação. Verifique a sua internet.');
+        await registrarLog("ERRO NO CHECKOUT", `Falha de conexão ao tentar assinar o plano ${planoSelecionado.nome}.`);
         reject(); 
       }
     });
@@ -77,7 +115,8 @@ const Checkout = () => {
 
   // 🔥 Processamento Real do PIX e Boleto 🔥
   const gerarPagamentoAlternativo = async (metodo) => {
-    const cpfLimpo = cpfCliente.replace(/\D/g, ''); 
+    const cpfLimpo = cpfCliente.replace(/\D/g, '');
+
     if (cpfLimpo.length !== 11) {
         setMensagem('⚠️ Por favor, digite um CPF válido com 11 números para emissão do documento.');
         return;
@@ -85,9 +124,10 @@ const Checkout = () => {
 
     setCarregandoAlternativo(true);
     setMensagem('A comunicar com o banco...');
-    
+
     try {
         const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
+        
         const payload = {
             payment_method_id: metodo,
             transaction_amount: valorPlano,
@@ -112,13 +152,22 @@ const Checkout = () => {
                 copiaECola: resultado.point_of_interaction.transaction_data.qr_code
             });
             setMensagem('');
+            
+            // 🔥 REGISTRA AUDITORIA DE PIX GERADO
+            await registrarLog("GERAÇÃO DE PIX", `Gerou um QR Code PIX para pagamento da assinatura do Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
+            
         } else if (metodo === 'bolbradesco' && resultado.transaction_details) {
             setDadosBoleto({
                 link: resultado.transaction_details.external_resource_url
             });
             setMensagem('');
+            
+            // 🔥 REGISTRA AUDITORIA DE BOLETO GERADO
+            await registrarLog("GERAÇÃO DE BOLETO", `Gerou um Boleto bancário para pagamento da assinatura do Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
+            
         } else {
             setMensagem('❌ Erro ao gerar código. Tente novamente.');
+            await registrarLog("ERRO NA GERAÇÃO", `Falha ao tentar gerar pagamento via ${metodo.toUpperCase()} para o plano ${planoSelecionado.nome}.`);
         }
     } catch (erro) {
         setMensagem('Erro de ligação ao servidor.');
@@ -255,7 +304,7 @@ const Checkout = () => {
                           </h4>
                           <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>Vencimento em 3 dias úteis. Clique no botão abaixo para ver e imprimir o seu boleto oficial.</p>
                           <a href={dadosBoleto.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: '#0f172a', color: 'white', padding: '14px 20px', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold', width: '100%', boxSizing: 'border-box' }}>
-                              <i className="fas fa-external-link-alt" style={{ marginRight: '8px' }}></i> Abrir Boleto para Pagamento
+                             <i className="fas fa-external-link-alt" style={{ marginRight: '8px' }}></i> Abrir Boleto para Pagamento
                           </a>
                       </div>
                   )}

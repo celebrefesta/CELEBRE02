@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, query, orderBy } from 'firebase/firestore'; 
+import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { getAuth } from 'firebase/auth'; 
 import Navbar from '../../components/Navbar'; 
 import './Planos.css';
@@ -14,6 +14,26 @@ const Planos = () => {
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ASSINATURAS E UPGRADES)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Usuário Logado";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log de assinatura:", error);
+    }
+  };
 
   const isRecursoNumerico = (nome) => {
       const n = nome.toLowerCase();
@@ -67,9 +87,12 @@ const Planos = () => {
     buscarPlanos();
   }, []);
 
-  // 🔥 AGORA SIM: ENVIA PARA O SEU CHECKOUT REAL PASSANDO O PLANO 🔥
-  const handleSelecionarPlano = (planoSelecionado) => {
+  // 🔥 AGORA SIM: ENVIA PARA O SEU CHECKOUT REAL PASSANDO O PLANO E GRAVA NO ESPIÃO 🔥
+  const handleSelecionarPlano = async (planoSelecionado) => {
       if (usuarioLogado) {
+          // 🔥 AUDITORIA: Regista a intenção de upgrade/assinatura antes de enviar para o checkout
+          await registrarLog("TENTATIVA DE ASSINATURA", `Iniciou o processo de checkout para assinar/migrar para o plano: "${planoSelecionado.nome}".`);
+          
           // Passa os dados do plano clicado para a rota /checkout
           navigate('/checkout', { state: { plano: planoSelecionado } });
       } else {
@@ -120,7 +143,6 @@ const Planos = () => {
                     >
                       {usuarioLogado ? 'Assinar Este Plano' : 'Começar agora'}
                     </button>
-
                   </th>
                 ))}
               </tr>

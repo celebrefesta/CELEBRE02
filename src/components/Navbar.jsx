@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
 import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../firebaseConfig'; 
+import { db } from '../firebaseConfig';
 import "./Navbar.css";
 
 const Navbar = () => {
@@ -17,18 +17,33 @@ const Navbar = () => {
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  
+  // Identificação da Super-Admin (Você)
   const emailAdmin = "celebrefesta25@gmail.com";
-
   const isSuperAdmin = usuarioLogado?.email === emailAdmin;
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
 
+  // 🔥 IDENTIFICAÇÃO DO SAAS (Lê o "crachá" gravado no Login)
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+  const userRole = localStorage.getItem('userRole') || 'admin';
+  let permissoesFuncionario = {};
+  
+  try {
+      permissoesFuncionario = JSON.parse(localStorage.getItem('userPermissions') || '{}');
+  } catch (e) {
+      permissoesFuncionario = {};
+  }
+
   useEffect(() => {
       const unsubscribe = onAuthStateChanged(auth, async (user) => {
           if (user) {
               try {
-                  const userSnap = await getDoc(doc(db, "usuarios", user.uid));
+                  // 🔥 Lê o plano do DONO DA CONTA (tenantId), não do funcionário
+                  const idParaBusca = localStorage.getItem('tenantId') || user.uid;
+                  const userSnap = await getDoc(doc(db, "usuarios", idParaBusca));
+
                   if (userSnap.exists()) {
                       const dados = userSnap.data();
                       
@@ -37,7 +52,8 @@ const Navbar = () => {
                           testeAtivo = new Date() <= new Date(dados.dataFimTeste);
                       }
                       
-                      const assinaturaAtiva = dados.assinaturaAtiva === true;
+                      // Aceita plano "pago" ou statusAssinatura "ativa"
+                      const assinaturaAtiva = dados.assinaturaAtiva === true || dados.plano === 'pago' || dados.statusPagamentoVulso === 'pago';
                       
                       let beneficios = [];
                       if (dados.planoId && assinaturaAtiva) {
@@ -52,17 +68,21 @@ const Navbar = () => {
                           beneficios,
                           congelado: !testeAtivo && !assinaturaAtiva 
                       });
+                  } else {
+                      setAcesso(prev => ({...prev, carregando: false}));
                   }
               } catch (error) {
                   console.error("Erro ao carregar permissões do menu:", error);
+                  setAcesso(prev => ({...prev, carregando: false}));
               }
           }
       });
       return () => unsubscribe();
   }, [auth]);
 
-  const verificarPermissao = (recursoExigido) => {
-      if (isSuperAdmin) return true; 
+  // 🛡️ REGRA 1: A EMPRESA TEM ESSE RECURSO NO PLANO DELA?
+  const verificarPermissaoPlano = (recursoExigido) => {
+      if (isSuperAdmin) return true;
       if (acesso.congelado) return false; 
       if (acesso.testeAtivo) return true; 
       if (!recursoExigido) return true; 
@@ -70,32 +90,56 @@ const Navbar = () => {
       return acesso.beneficios.some(b => b.toLowerCase().includes(recursoExigido.toLowerCase()));
   };
 
-  const ItemMenuProtegido = ({ to, icon, label, recurso }) => {
-      const liberado = verificarPermissao(recurso);
+  // 🛡️ REGRA 2: O FUNCIONÁRIO PODE CLICAR AQUI?
+  const verificarAcessoFuncionario = (label) => {
+      if (isSuperAdmin || userRole === 'admin') return true;
 
-      if (!liberado) {
+      const mapPermissoes = {
+          'Agenda': permissoesFuncionario.agenda,
+          'Clientes': permissoesFuncionario.clientes,
+          'Locações': permissoesFuncionario.locacoes,
+          'Estoque': permissoesFuncionario.estoque,
+          'Compras': permissoesFuncionario.compras,
+          'Logística': permissoesFuncionario.logistica,
+          'Contratos': permissoesFuncionario.contratos,
+          'Catálogo': permissoesFuncionario.catalogo,
+          'Moodboard': permissoesFuncionario.moodboard,
+          'Início': true 
+      };
+
+      // Áreas PROIBIDAS para funcionários (segurança máxima)
+      if (label === 'Financeiro' || label === 'Relatórios' || label === 'Assinatura') {
+          return false;
+      }
+
+      if (mapPermissoes[label] !== undefined) {
+          return mapPermissoes[label] === true;
+      }
+
+      return true; 
+  };
+
+  const ItemMenuProtegido = ({ to, icon, label, recurso }) => {
+      
+      // 1. O funcionário tem acesso a esta tela? (Se não, esconde totalmente)
+      const funcPodeVer = verificarAcessoFuncionario(label);
+      if (!funcPodeVer) return null; 
+
+      // 2. A empresa pagou pelo recurso no plano atual? (Se não, mostra o cadeado)
+      const empresaPagou = verificarPermissaoPlano(recurso);
+
+      if (!empresaPagou) {
           return (
-              <div 
-                  className="menu-item locked" 
-                  style={{ 
-                      opacity: 0.5, 
-                      cursor: 'not-allowed', 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      justifyContent: 'space-between',
-                      padding: '12px 20px',
-                      color: '#64748b'
-                  }}
-                  title="Você precisa escolher um plano para acessar esta área."
-              >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+              <div className="menu-item locked" title="A sua empresa precisa de um plano superior para acessar esta área.">
+                  <div style={{ display: 'flex', alignItems: 'center' }}>
                       <i className={icon}></i> <span>{label}</span>
                   </div>
-                  <i className="fas fa-lock" style={{ fontSize: '12px', color: '#94a3b8' }}></i>
+                  <i className="fas fa-lock lock-icon"></i>
               </div>
           );
       }
 
+      // Tudo certo! Mostra o botão normal
       return (
           <NavLink to={to} onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
               <i className={icon}></i> <span>{label}</span>
@@ -109,15 +153,12 @@ const Navbar = () => {
         <i className={isMobileMenuOpen ? "fas fa-times" : "fas fa-bars"}></i>
       </button>
 
-      <div 
-        className={`sidebar-overlay ${isMobileMenuOpen ? "active" : ""}`} 
-        onClick={closeMenu}
-      ></div>
+      <div className={`sidebar-overlay ${isMobileMenuOpen ? "active" : ""}`} onClick={closeMenu}></div>
 
       <div className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
         
         <div className="sidebar-logo">
-          <h1 style={{ color: '#c5a059', textAlign: 'center', margin: '20px 0' }}>CELEBRE</h1>
+          <h1>CELEBRE</h1>
         </div>
 
         <nav className="sidebar-nav">
@@ -144,7 +185,7 @@ const Navbar = () => {
           <ItemMenuProtegido to="/moodboard" icon="fas fa-palette" label="Moodboard" recurso="Moodboard- Projeto Digital" />
           
           <ItemMenuProtegido 
-              to={usuarioLogado ? `/catalogo/${usuarioLogado.uid}` : "/catalogo"} 
+              to={usuarioLogado ? `/catalogo/${tenantId}` : "/catalogo"} 
               icon="fas fa-store" 
               label="Catálogo" 
               recurso="Catalago Digital" 
@@ -152,30 +193,20 @@ const Navbar = () => {
 
           {!isSuperAdmin ? (
             <>
+              {/* O Funcionário não vê a aba de Assinatura (ocultada via inteligência), o admin vê */}
               <div className="sidebar-divider"></div>
-              <NavLink to="/planos" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-                <i className="fas fa-star" style={{ color: '#c5a059' }}></i> <span style={{ fontWeight: 'bold' }}>Assinatura</span>
-              </NavLink>
+              <ItemMenuProtegido to="/planos" icon="fas fa-star" label="Assinatura" />
             </>
           ) : (
             <>
               <div className="sidebar-divider" style={{ borderTop: '2px solid #c5a059' }}></div>
               <p style={{ color: '#c5a059', fontSize: '11px', marginLeft: '20px', fontWeight: 'bold' }}>PAINEL MASTER</p>
               
-              <NavLink 
-                to="/admin-planos" 
-                onClick={closeMenu} 
-                className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}
-                style={{ color: '#c5a059' }}
-              >
+              <NavLink to="/admin-planos" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
                 <i className="fas fa-tools"></i> <span>Gerenciar Planos</span>
               </NavLink>
 
-              <NavLink 
-                to="/gestao-usuarios"
-                onClick={closeMenu} 
-                className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}
-              >
+              <NavLink to="/gestao-usuarios" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
                 <i className="fas fa-user-shield"></i> <span>Controle Geral</span>
               </NavLink>
             </>

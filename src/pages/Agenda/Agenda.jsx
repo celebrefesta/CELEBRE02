@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, where } from 'firebase/firestore'; 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, where, serverTimestamp } from 'firebase/firestore'; 
 import { getAuth } from 'firebase/auth'; 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -17,7 +17,6 @@ const TIPOS = {
   bloqueio:  { label: 'Bloqueio de Data', cor: '#ef4444', dot: 'red'  },
 };
 
-// 🔥 Removido o linkMaps, agora tudo funciona direto pelo "local"
 const FORM_VAZIO = {
   id: null, titulo: '', clienteId: '', clienteNome: '', tipo: 'reuniao',
   dataISO: '', horario: '', local: '', observacoes: '', recorrencia: 'nenhuma', 
@@ -46,10 +45,12 @@ const Agenda = () => {
   const [dataAtual, setDataAtual] = useState(new Date());
   const [viewPrincipal, setViewPrincipal] = useState('calendario');
   const [viewLista, setViewLista] = useState('semana');
+
   const [clientes, setClientes]   = useState([]);
   const [locacoes, setLocacoes]   = useState([]);
   const [compras, setCompras]     = useState([]);
   const [eventosManual, setEventosManual] = useState([]);
+
   const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Ágape Decorações', logotipo: '' });
 
   const [loadingFB, setLoadingFB] = useState(true);
@@ -66,6 +67,25 @@ const Agenda = () => {
   const [diaSelecionado, setDiaSelecionado] = useState(null);
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
   const [formData, setFormData] = useState(FORM_VAZIO);
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DA AGENDA)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipe = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipe,
+        usuarioNome: nomeEquipe,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria da agenda:", error);
+    }
+  };
 
   const mostrarToast = (msg) => {
     setToastMsg(msg);
@@ -142,6 +162,7 @@ const Agenda = () => {
         const horarioExt = (typeof loc.dataRetirada === 'string' && loc.dataRetirada.includes('T')) ? loc.dataRetirada.split('T')[1].substring(0, 5) : '';
         if (dma) evs.push({ ...base, id: `loc-ent-${loc.id}`, tipo: 'entrega', titulo: `Entrega ${num}`, horario: horarioExt, ...dma });
       }
+    
       if (loc.dataDevolucao && !['cancelado'].includes((loc.status || '').toLowerCase())) {
         const dma = isoParaDMA(loc.dataDevolucao);
         const horarioExt = (typeof loc.dataDevolucao === 'string' && loc.dataDevolucao.includes('T')) ? loc.dataDevolucao.split('T')[1].substring(0, 5) : '';
@@ -211,7 +232,7 @@ const Agenda = () => {
     setSalvando(true);
     const [anoStr, mesStr, diaStr] = formData.dataISO.split('-');
     const cli = clientes.find(c => c.id === formData.clienteId || (c.nome || c.nomeFantasia) === buscaClienteModal);
-
+    
     const evParaSalvar = {
       titulo: formData.titulo, 
       clienteId: cli ? cli.id : '', 
@@ -233,11 +254,18 @@ const Agenda = () => {
         const docRef = doc(db, 'agenda_eventos', eventoSelecionado.id);
         await updateDoc(docRef, evParaSalvar);
         setEventosManual(prev => prev.map(x => x.id === eventoSelecionado.id ? { id: eventoSelecionado.id, ...evParaSalvar } : x));
+        
+        // 🔥 AUDITORIA DE EDIÇÃO
+        await registrarLog("EDIÇÃO NA AGENDA", `Editou o compromisso: "${evParaSalvar.titulo}".`);
+        
         mostrarToast('✅ Evento atualizado!');
       } else {
         let evsCriados = [];
         const docRef = await addDoc(collection(db, 'agenda_eventos'), evParaSalvar);
         evsCriados.push({ id: docRef.id, ...evParaSalvar });
+
+        // 🔥 AUDITORIA DE CRIAÇÃO
+        await registrarLog("NOVO NA AGENDA", `Adicionou o compromisso: "${evParaSalvar.titulo}" para a data ${diaStr}/${mesStr}/${anoStr}.`);
 
         if (formData.recorrencia !== 'nenhuma') {
           for (let i = 1; i <= 3; i++) {
@@ -269,6 +297,10 @@ const Agenda = () => {
       setSalvando(true);
       try {
         await deleteDoc(doc(db, 'agenda_eventos', formData.id));
+        
+        // 🔥 AUDITORIA DE EXCLUSÃO
+        await registrarLog("EXCLUSÃO NA AGENDA", `Apagou o compromisso: "${formData.titulo}".`);
+        
         setEventosManual(prev => prev.filter(x => x.id !== formData.id));
         mostrarToast('🗑️ Evento apagado.');
         setModalFormAberto(false);
@@ -282,17 +314,10 @@ const Agenda = () => {
     }
   };
 
-  // 🔥 MAGIA DO GOOGLE MAPS SUPER INTELIGENTE 🔥
   const abrirGoogleMaps = (endereco) => {
       if (!endereco) return;
-      // Se você colar um link do maps por engano, ele abre direto
       const isLink = endereco.startsWith('http://') || endereco.startsWith('https://');
-      
-      // Se for apenas o texto (ex: "Salão X, Rua Y"), ele gera a pesquisa no Maps
-      const url = isLink 
-        ? endereco 
-        : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
-        
+      const url = isLink ? endereco : `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(endereco)}`;
       window.open(url, '_blank');
   };
 
@@ -302,7 +327,7 @@ const Agenda = () => {
       let listaExportacao = [];
       let tituloRelatorio = '';
       let subtituloRelatorio = '';
-
+      
       const PDF_COLORS = {
         entrega:   { bg: '#eff6ff', text: '#1e3a8a' },
         devolucao: { bg: '#fff7ed', text: '#9a3412' },
@@ -404,14 +429,14 @@ const Agenda = () => {
 
       let colunasDef = [["Data", "Horário", "Tipo", "Título do Evento", "Cliente"]];
       if (filtroAtivo === 'compras') colunasDef = [["Item", "Qtd", "Valor Est.", "Prazo", "Referência / Vínculo"]];
-
+      
       autoTable(docPDF, {
         startY: startY, head: colunasDef, body: listaExportacao, theme: 'striped',
         headStyles: { fillColor: [15, 23, 42], textColor: [255, 255, 255], fontStyle: 'bold' }, 
         styles: { fontSize: 9, cellPadding: 5, valign: 'middle' }, 
         alternateRowStyles: { fillColor: [248, 250, 252] },
       });
-
+      
       const nomeArquivoSafe = dadosEmpresa.nomeEmpresa.replace(/[^a-z0-9]/gi, '_');
       docPDF.save(`${nomeArquivoSafe}_${tituloRelatorio.replace(/[^a-z0-9]/gi, '_')}.pdf`);
       mostrarToast('📄 PDF gerado com sucesso!');
@@ -471,9 +496,9 @@ const Agenda = () => {
     const hojeD = new Date();
     const MAX = 3;
     const dias = [];
-
+    
     for (let i = 0; i < diaInicio; i++) dias.push(<div key={`e${i}`} className="day-cell empty" />);
-
+    
     for (let dia = 1; dia <= totalDias; dia++) {
       const evsDia = eventosDoDia(dia).filter(eventoVisivel);
       const isHoje = hojeD.getDate() === dia && hojeD.getMonth() === dataAtual.getMonth() && hojeD.getFullYear() === dataAtual.getFullYear();
@@ -518,13 +543,13 @@ const Agenda = () => {
       if (a.dia !== b.dia) return a.dia - b.dia;
       return (a.horario || '99:99').localeCompare(b.horario || '99:99');
     });
-
+    
     if (listaAno.length === 0) return <div className="vista-vazia">Nenhum evento agendado para {anoAtual}.</div>;
     
     let ultimoMes = null;
     let ultimoDia = null;
     const mesesNomes = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-
+    
     return (
       <div className="list-view-container">
         {listaAno.map(ev => {
@@ -548,10 +573,10 @@ const Agenda = () => {
       if (a.dia !== b.dia) return a.dia - b.dia;
       return (a.horario || '99:99').localeCompare(b.horario || '99:99');
     });
-
+    
     if (lista.length === 0) return <div className="vista-vazia">Nenhum evento este mês.</div>;
     let ultimoDia = null;
-
+    
     return (
       <div className="list-view-container">
         {lista.map(ev => {
@@ -572,7 +597,7 @@ const Agenda = () => {
     const diaSemana = dataAtual.getDay();
     const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
     const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
-
+    
     const listaSemana = todosEventos.filter(e => {
       if (!eventoVisivel(e)) return false;
       const dataEv = new Date(e.ano, e.mes, e.dia);
@@ -586,6 +611,7 @@ const Agenda = () => {
     });
 
     if (listaSemana.length === 0) return <div className="vista-vazia">Nenhum evento agendado para esta semana.</div>;
+    
     let ultimoDia = null;
     
     return (
@@ -612,7 +638,7 @@ const Agenda = () => {
   const renderDia = () => {
     const evsDia = eventosDoDia(dataAtual.getDate()).filter(eventoVisivel).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99'));
     const tituloData = dataAtual.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long' });
-
+    
     return (
       <div className="vista-dia-container">
         <div className="vista-dia-titulo">{tituloData}</div>
@@ -626,7 +652,7 @@ const Agenda = () => {
 
   const renderCompras = () => {
     if (comprasPendentes.length === 0) return <div className="vista-vazia">✅ Nenhuma compra pendente!</div>;
-
+    
     return (
       <div className="list-view-container">
         <div className="compras-legenda">
@@ -662,7 +688,6 @@ const Agenda = () => {
 
   const renderHeader = () => {
     const btnNav = (label, onClick) => <button className="btn-nav" onClick={onClick}>{label}</button>;
-
     let titulo = ''; let navEsq, navDir;
 
     if (filtroAtivo === 'compras') {
@@ -830,7 +855,7 @@ const Agenda = () => {
                       </div>
                     )}
                   </div>
-                  
+                
                   <div className="form-group">
                     <label>👤 Vincular Cliente <span className="label-hint">(Opcional)</span></label>
                     <div className="custom-autocomplete-container">
@@ -859,7 +884,7 @@ const Agenda = () => {
                                 {c.nome || c.nomeFantasia}
                               </li>
                             ))}
-                            {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
+                             {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
                               <li style={{ color: 'var(--texto-secundario)', cursor: 'default' }}>Usar nome avulso: "{buscaClienteModal}"</li>
                             )}
                         </ul>
@@ -868,7 +893,6 @@ const Agenda = () => {
                     </div>
                   </div>
 
-                  {/* 🔥 A NOVA ÁREA DE LOCALIZAÇÃO SUPER PRÁTICA 🔥 */}
                   <div className="form-group">
                     <label>📍 Local / Endereço</label>
                     <div style={{ display: 'flex', gap: '6px' }}>
@@ -1014,7 +1038,7 @@ const Agenda = () => {
               {eventosDoDia(diaSelecionado).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99')).map(ev => (
                 <div key={ev.id} className={`item-detalhe-card ${ev.tipo}${ev.origem === 'locacao' ? ' card-locacao' : ''}`} onClick={() => abrirModalForm(diaSelecionado, ev)}>
                   <div className="detalhe-info">
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {ev.horario && <span className="detalhe-horario">{ev.horario}</span>}
                       <h4>
                           {ev.status === 'concluido' && '✅ '}

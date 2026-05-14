@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
@@ -39,6 +39,26 @@ const EstoqueTab = () => {
     logotipo: ''
   });
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ESTOQUE)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de estoque:", error);
+    }
+  };
+
   useEffect(() => {
     if (!usuarioLogado) return; // Proteção extra
 
@@ -64,7 +84,7 @@ const EstoqueTab = () => {
 
         const estoque = snapEstoque.docs.map(d => ({ id: d.id, ...d.data() }));
         const locacoes = snapLocacoes.docs.map(d => d.data());
-
+        
         const ultimaLocacaoItem = {};
   
         locacoes.forEach(loc => {
@@ -88,17 +108,16 @@ const EstoqueTab = () => {
         let totalPecas = 0;
         let emManutencao = 0;
         const contagemCategorias = {}; 
-        const statsOciosidade = {}; 
-
+        const statsOciosidade = {};
         let investTotal = 0;
         let investMesAtual = 0;
         const mapGastosCat = {};
         const mapGastosMes = {};
         const mapVariacaoPrecos = {};
-        
+
         const dataHoje = new Date();
         const mesAtualTag = `${String(dataHoje.getMonth() + 1).padStart(2, '0')}/${dataHoje.getFullYear()}`;
-        
+
         const estoqueFormatado = estoque.map(item => {
           const isDeco = item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa';
           const qtd = Number(item.quantidade) || 0;
@@ -116,9 +135,10 @@ const EstoqueTab = () => {
 
           const keyId = item.id;
           const keyNome = item.nome || item.descricao;
+       
           const ultimaLoc = ultimaLocacaoItem[keyId] || ultimaLocacaoItem[keyNome];
           const dataCriacao = item.criadoEm?.toDate ? item.criadoEm.toDate() : new Date(item.criadoEm || 0);
-          
+
           let isOcioso = false;
           if (!ultimaLoc) {
              if (dataCriacao < seisMesesAtras && dataCriacao.getFullYear() > 1970) isOcioso = true;
@@ -167,7 +187,7 @@ const EstoqueTab = () => {
           if (!a.precisaReparo && b.precisaReparo) return 1;
           return a.quantidade - b.quantidade;
         });
-        
+
         const contagemTemas = {};
         locacoes.forEach(loc => {
           if (loc.temaFesta) {
@@ -175,10 +195,10 @@ const EstoqueTab = () => {
             if(tema !== "") contagemTemas[tema] = (contagemTemas[tema] || 0) + 1;
           }
         });
-        
+
         const topTemas = Object.entries(contagemTemas).sort((a, b) => b[1] - a[1]).slice(0, 4); 
         const topCategorias = Object.entries(contagemCategorias).sort((a, b) => b[1] - a[1]).slice(0, 5);
-        
+
         const rankingOciosidade = Object.entries(statsOciosidade)
           .map(([cat, stats]) => {
              const taxa = stats.total > 0 ? (stats.ociosos / stats.total) * 100 : 0;
@@ -187,12 +207,12 @@ const EstoqueTab = () => {
           .filter(c => c.ociosos > 0) 
           .sort((a, b) => b.taxa - a.taxa)
           .slice(0, 4);
-          
+
         const gastosCategoria = Object.entries(mapGastosCat)
             .map(([nome, valor]) => ({ nome, valor }))
             .sort((a, b) => b.valor - a.valor)
             .slice(0, 5);
-            
+
         const gastosMes = Object.entries(mapGastosMes)
             .map(([nome, valor]) => ({ nome, valor }))
             .sort((a, b) => {
@@ -217,14 +237,14 @@ const EstoqueTab = () => {
             .sort((a, b) => b.percentual - a.percentual) 
             .slice(0, 5);
 
-        setMetricas({ totalPecas, tiposDiferentes: estoque.length, emManutencao });
+        setMetricas({ totalPecas, tiposDiferentes: estoqueLista.length, emManutencao });
         setRankingTemas(topTemas);
         setRankingCategorias(topCategorias); 
         setTaxaOciosidade(rankingOciosidade); 
         setEstoqueLista(estoqueFormatado);
         setFinanceiroAcervo({ totalInvestido: investTotal, totalEsteMes: investMesAtual, gastosCategoria, gastosMes });
         setRadarPrecos(radarCalculado);
-        
+
       } catch (error) {
         console.error("Erro ao carregar relatórios de estoque:", error);
       } finally {
@@ -236,20 +256,21 @@ const EstoqueTab = () => {
   }, [usuarioLogado]);
 
   const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-  
+
   const formatarData = (data) => {
       if (!data || data.getFullYear() <= 1970) return "S/ Data";
       return data.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' });
   };
-  
-  const exportarPDFEstoque = () => {
+
+  const exportarPDFEstoque = async () => {
     try {
       const doc = new jsPDF();
       let startY = 25; 
       const dataHoje = new Date().toLocaleDateString('pt-BR');
 
       if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
-        try { doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30); } catch(e) {}
+        try { doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+        } catch(e) {}
         doc.setFontSize(20);
         doc.setTextColor(15, 23, 42);
         doc.text(dadosEmpresa.nomeEmpresa, 48, 22);
@@ -279,8 +300,12 @@ const EstoqueTab = () => {
         theme: 'striped',
         headStyles: { fillColor: [15, 23, 42] }
       });
-      
+
       doc.save(`Inventario_Estoque_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
+      
+      // 🔥 Aciona o espião de exportação
+      await registrarLog("EXPORTAÇÃO DE INVENTÁRIO", `Fez o download do relatório completo do estoque em PDF.`);
+
     } catch (e) { alert("Erro ao gerar PDF"); }
   };
 
@@ -288,7 +313,7 @@ const EstoqueTab = () => {
   const maxMesFinanceiro = Math.max(...financeiroAcervo.gastosMes.map(m => m.valor), 1);
 
   if (loading) return <div className="loading-v3">Analisando inteligência de acervo...</div>;
-  
+
   return (
     <div className="fade-in">
       
@@ -500,7 +525,7 @@ const EstoqueTab = () => {
                             📈 Histórico de Custo: {categoriaSelecionadaRadar.categoria}
                         </h3>
                         <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#7f1d1d' }}>
-                           Acompanhe a variação de preço dos itens comprados nesta categoria.
+                            Acompanhe a variação de preço dos itens comprados nesta categoria.
                         </p>
                     </div>
                     <button onClick={() => setModalRadarAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#991b1b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '50%' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(153, 27, 27, 0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>

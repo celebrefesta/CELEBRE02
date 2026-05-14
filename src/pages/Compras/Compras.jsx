@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig"; 
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from "firebase/auth";
 import "./Compras.css";
 
 const Compras = () => {
@@ -17,6 +17,25 @@ const Compras = () => {
   const [ordemAlfabetica, setOrdemAlfabetica] = useState('Data'); 
   const [loading, setLoading] = useState(true);
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE COMPRAS)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de compras:", error);
+    }
+  };
+
   useEffect(() => {
     if (!usuarioLogado) {
         navigate('/login');
@@ -29,7 +48,7 @@ const Compras = () => {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Ordena em memória por data mais recente (evita erro de índice no banco de dados)
+      // Ordena em memória por data mais recente
       lista.sort((a, b) => {
          const dataA = a.createdAt?.toMillis ? a.createdAt.toMillis() : 0;
          const dataB = b.createdAt?.toMillis ? b.createdAt.toMillis() : 0;
@@ -51,10 +70,9 @@ const Compras = () => {
         const subtotal = qtd * valorUnit;
         
         if (item.status === "comprado" || item.status === "chegou") {
-          r += subtotal; 
+          r += subtotal;
         } else {
-          p += subtotal; 
-          
+          p += subtotal;
           if (item.prazo && item.vinculoTipo === 'pedido') {
             const dataPrazo = new Date(item.prazo + 'T00:00:00');
             const diffTime = dataPrazo.getTime() - hoje.getTime();
@@ -63,7 +81,6 @@ const Compras = () => {
           }
         }
       });
-
       setTotais({ pendente: p, urgente: u, realizado: r });
       setLoading(false);
     });
@@ -73,15 +90,13 @@ const Compras = () => {
 
   const handleStatusChange = async (item, novoStatus) => {
     try {
-      // 🔥 BLINDAGEM NO ESTOQUE: Procura a peça, mas APENAS no SEU estoque, para não misturar com o de outras pessoas!
       const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid), where("nome", "==", item.nome));
       const snapshotEstoque = await getDocs(qEstoque);
       const qtdComprada = Number(item.quantidade) || 1;
 
       let updatePayload = { status: novoStatus };
-
+      
       if (novoStatus === 'chegou') {
-        
         if (!snapshotEstoque.empty) {
           updatePayload.dataChegada = new Date().toISOString();
           const itemRef = doc(db, "lista_compras", item.id);
@@ -89,22 +104,25 @@ const Compras = () => {
 
           const docExistente = snapshotEstoque.docs[0];
           const qtdAtual = Number(docExistente.data().quantidade) || 0;
-          
           await updateDoc(doc(db, "estoque", docExistente.id), {
             quantidade: qtdAtual + (item.formato === 'kit' && item.quantidadePecasKit ? item.quantidadePecasKit : qtdComprada),
             atualizadoEm: new Date().toISOString()
           });
           
+          await registrarLog("COMPRA RECEBIDA", `Registrou a chegada de "${item.nome}" e adicionou ao estoque.`);
           alert(`📦 Caixa recebida!\n\nA peça "${item.nome}" já existe no seu acervo. A quantidade no estoque foi somada automaticamente!`);
         } else {
           if (item.categoria === "material") {
              updatePayload.dataChegada = new Date().toISOString();
              const itemRef = doc(db, "lista_compras", item.id);
              await updateDoc(itemRef, updatePayload);
+             
+             await registrarLog("COMPRA RECEBIDA", `Registrou a chegada do material "${item.nome}".`);
              alert(`📦 Material de consumo recebido e baixado da lista!`);
           } else {
              const querCadastrarAgora = window.confirm(`✨ A caixa de "${item.nome}" chegou!\n\nMas atenção: Como é uma peça INÉDITA, ela só vai constar como "No Acervo" após você preencher a foto e os detalhes dela.\n\nDeseja ir para a tela de Cadastro de Estoque AGORA?`);
              if (querCadastrarAgora) {
+                 await registrarLog("COMPRA RECEBIDA", `Registrou a chegada de "${item.nome}" e iniciou cadastro inédito no acervo.`);
                  navigate('/cadastro-estoque', { state: { dadosCompra: item } });
              }
              return;
@@ -128,11 +146,15 @@ const Compras = () => {
         }
         const itemRef = doc(db, "lista_compras", item.id);
         await updateDoc(itemRef, updatePayload);
+        
+        await registrarLog("COMPRA PENDENTE", `Voltou o status de "${item.nome}" para Pendente (Falta Comprar).`);
       }
       else if (novoStatus === 'comprado') {
         updatePayload.dataCompra = new Date().toISOString();
         const itemRef = doc(db, "lista_compras", item.id);
         await updateDoc(itemRef, updatePayload);
+        
+        await registrarLog("COMPRA EFETUADA", `Marcou o item "${item.nome}" como Comprado (A Caminho).`);
         alert(`🛒 Maravilha! A compra foi registrada. O sistema vai rastrear a entrega a partir de hoje.`);
       }
 
@@ -142,12 +164,13 @@ const Compras = () => {
     }
   };
 
-  const handleExcluir = async (id) => {
-    if (window.confirm("Tem certeza que deseja remover este item da lista?")) {
+  const handleExcluir = async (id, nome) => {
+    if (window.confirm(`Tem certeza que deseja remover "${nome}" da lista?`)) {
       try {
+        await registrarLog("EXCLUSÃO DE COMPRA", `Removeu a peça "${nome}" da lista de compras.`);
         await deleteDoc(doc(db, "lista_compras", id));
       } catch (error) { 
-        alert("Erro ao excluir item."); 
+        alert("Erro ao excluir item.");
       }
     }
   };
@@ -275,20 +298,24 @@ const Compras = () => {
                       if (isPedido && item.prazo) {
                           const dataPrazo = new Date(item.prazo + 'T00:00:00');
                           const diasParaPrazo = Math.ceil((dataPrazo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-                          
                           labelPrazo = '🎯 Limite:';
                           dataExibicao = item.prazo.split('-').reverse().join('/');
                           
                           if (diasParaPrazo < 0) { 
-                              alertaClasse = 'alerta-vencido'; alertaTexto = '☠️ ATRASADA'; 
+                              alertaClasse = 'alerta-vencido';
+                              alertaTexto = '☠️ ATRASADA'; 
                           } else if (diasParaPrazo === 0) { 
-                              alertaClasse = 'alerta-urgente'; alertaTexto = '🚨 HOJE!'; 
+                              alertaClasse = 'alerta-urgente';
+                              alertaTexto = '🚨 HOJE!'; 
                           } else if (diasParaPrazo <= 5) { 
-                              alertaClasse = 'alerta-urgente'; alertaTexto = `🚨 ${diasParaPrazo} dias`; 
+                              alertaClasse = 'alerta-urgente';
+                              alertaTexto = `🚨 ${diasParaPrazo} dias`; 
                           } else if (diasParaPrazo <= 10) { 
-                              alertaClasse = 'alerta-atencao'; alertaTexto = `⚠️ ${diasParaPrazo} dias`; 
+                              alertaClasse = 'alerta-atencao';
+                              alertaTexto = `⚠️ ${diasParaPrazo} dias`; 
                           } else { 
-                              alertaClasse = 'alerta-seguro'; alertaTexto = `✅ Seguro`; 
+                              alertaClasse = 'alerta-seguro';
+                              alertaTexto = `✅ Seguro`; 
                           }
                       } else {
                           labelPrazo = '⏳ Prazo:';
@@ -311,13 +338,15 @@ const Compras = () => {
                       if (previsaoDate) {
                           dataExibicao = previsaoDate.toLocaleDateString('pt-BR');
                           const diasParaChegar = Math.ceil((previsaoDate.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
-                          
                           if (diasParaChegar < 0) { 
-                              alertaClasse = 'alerta-urgente'; alertaTexto = '🚨 ATRASADO'; 
+                              alertaClasse = 'alerta-urgente';
+                              alertaTexto = '🚨 ATRASADO'; 
                           } else if (diasParaChegar === 0) { 
-                              alertaClasse = 'alerta-seguro'; alertaTexto = '📦 HOJE!'; 
+                              alertaClasse = 'alerta-seguro';
+                              alertaTexto = '📦 HOJE!'; 
                           } else { 
-                              alertaClasse = 'alerta-a-caminho'; alertaTexto = `📦 ${diasParaChegar} dias`; 
+                              alertaClasse = 'alerta-a-caminho';
+                              alertaTexto = `📦 ${diasParaChegar} dias`; 
                           }
                       } else {
                           dataExibicao = 'Aguardando';
@@ -391,7 +420,6 @@ const Compras = () => {
 
                       <td>
                         <div className="botoes-acao-container">
-                          
                           {item.status === 'pendente' && (
                              <button className="btn-acao-status comprar" onClick={() => handleStatusChange(item, 'comprado')}>
                                🛒 Comprado
@@ -420,7 +448,7 @@ const Compras = () => {
                           )}
 
                           <button className="btn-action edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar">✏️</button>
-                          <button className="btn-action delete" onClick={() => handleExcluir(item.id)} title="Excluir">🗑️</button>
+                          <button className="btn-action delete" onClick={() => handleExcluir(item.id, item.nome)} title="Excluir">🗑️</button>
                         
                         </div>
                       </td>

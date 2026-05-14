@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, serverTimestamp, getDoc, setDoc, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from "firebase/auth"; 
 import "./ModelosContrato.css";
 
 const ModelosContrato = () => {
@@ -17,9 +17,28 @@ const ModelosContrato = () => {
   const [editandoId, setEditandoId] = useState(null);
 
   // Controle de Abas e Estado do Relatório de Logística
-  const [abaAtiva, setAbaAtiva] = useState('contratos'); // 'contratos' ou 'logistica'
+  const [abaAtiva, setAbaAtiva] = useState('contratos');
   const [textoRelatorio, setTextoRelatorio] = useState('');
   const [salvandoRelatorio, setSalvandoRelatorio] = useState(false);
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipe = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipe,
+        usuarioNome: nomeEquipe,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria jurídica:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -36,7 +55,6 @@ const ModelosContrato = () => {
     // 🔥 BLINDAGEM 2: Carrega o texto do Relatório de Avarias exclusivo da sua empresa
     const carregarRelatorioLogistica = async () => {
       try {
-        // Agora o documento tem o nome exato do seu ID de utilizador
         const docSnap = await getDoc(doc(db, "relatorio_avarias", usuarioLogado.uid));
         if (docSnap.exists()) {
           setTextoRelatorio(docSnap.data().conteudo || "");
@@ -79,14 +97,15 @@ const ModelosContrato = () => {
     try {
       if (editandoId) {
         await updateDoc(doc(db, "modelosContrato", editandoId), novo);
+        await registrarLog("EDIÇÃO DE MODELO", `Editou as cláusulas do modelo de contrato: "${novo.titulo}".`);
         setEditandoId(null);
       } else {
-        // 🔥 BLINDAGEM: O novo modelo é guardado com a sua assinatura
         await addDoc(collection(db, "modelosContrato"), { 
             ...novo, 
             createdAt: serverTimestamp(),
-            userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
+            userId: usuarioLogado.uid
         });
+        await registrarLog("NOVO MODELO DE CONTRATO", `Criou um novo modelo de contrato chamado: "${novo.titulo}".`);
       }
       setNovo({ titulo: "", texto: "" });
       alert("Modelo salvo com sucesso!");
@@ -102,12 +121,11 @@ const ModelosContrato = () => {
     e.preventDefault();
     setSalvandoRelatorio(true);
     try {
-      // 🔥 BLINDAGEM: Salva o texto do PDF de avarias num documento só seu
       await setDoc(doc(db, "relatorio_avarias", usuarioLogado.uid), {
         conteudo: textoRelatorio,
         atualizadoEm: serverTimestamp()
       }, { merge: true });
-      
+      await registrarLog("EDIÇÃO DE TERMO LEGAL", `Atualizou o texto padrão do Relatório de Avarias e Extravios da Logística.`);
       alert("Texto do Relatório de Avarias salvo com sucesso! O PDF já sairá com este novo texto.");
     } catch (err) {
       alert("Erro ao salvar relatório: " + err.message);
@@ -187,8 +205,11 @@ const ModelosContrato = () => {
                   </div>
                   <div className="modelo-actions">
                     <button className="btn-icon-small" onClick={() => prepararEdicao(m)} title="Editar">✏️</button>
-                    <button className="btn-icon-small delete" onClick={() => {
-                        if(window.confirm("Deseja apagar este modelo?")) deleteDoc(doc(db, "modelosContrato", m.id))
+                    <button className="btn-icon-small delete" onClick={async () => {
+                        if(window.confirm("Deseja apagar este modelo?")) {
+                            await deleteDoc(doc(db, "modelosContrato", m.id));
+                            await registrarLog("EXCLUSÃO DE MODELO", `Excluiu o modelo de contrato: "${m.titulo}".`);
+                        }
                     }} title="Excluir">🗑️</button>
                   </div>
                 </div>

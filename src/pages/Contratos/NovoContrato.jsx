@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, addDoc, serverTimestamp, getDocs, query, where } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from "firebase/auth"; 
 import "./NovoContrato.css";
 
 const NovoContrato = () => {
@@ -15,7 +15,7 @@ const NovoContrato = () => {
   // Estados para dados e controle visual
   const [listaPedidos, setListaPedidos] = useState([]);
   const [modalPedidos, setModalPedidos] = useState(false);
-  const [meusModelos, setMeusModelos] = useState([]); 
+  const [meusModelos, setMeusModelos] = useState([]);
 
   // Estado do formulário
   const [form, setForm] = useState({
@@ -23,6 +23,25 @@ const NovoContrato = () => {
     endereco: "", descricao: "", valorTotal: "", status: "Em Aberto",
     dataRetirada: "", dataDevolucao: ""
   });
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de contratos:", error);
+    }
+  };
 
   // 1. Carrega Pedidos e Modelos ao abrir a página
   useEffect(() => {
@@ -36,6 +55,7 @@ const NovoContrato = () => {
         // 🔥 BLINDAGEM: Busca apenas as suas Locações (Pedidos)
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
         const snapPedidos = await getDocs(qLocacoes);
+ 
         const listaP = snapPedidos.docs.map(d => ({ id: d.id, ...d.data() }));
         
         // Ordena por data (mais recente primeiro)
@@ -44,6 +64,7 @@ const NovoContrato = () => {
 
         // 🔥 BLINDAGEM: Busca apenas os seus Modelos de Contrato
         const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", usuarioLogado.uid));
+   
         const snapModelos = await getDocs(qModelos);
         setMeusModelos(snapModelos.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (err) { console.error("Erro ao carregar dados:", err); }
@@ -53,7 +74,9 @@ const NovoContrato = () => {
 
   // 2. Importa os dados do Pedido selecionado no Modal
   const importarDados = (pedido) => {
-    const descItens = pedido.itens ? pedido.itens.map(i => `${i.qtd || 1}x ${i.nome || i.produto}`).join("\n") : "";
+    const descItens = pedido.itens ?
+      pedido.itens.map(i => `${i.qtd || 1}x ${i.nome || i.produto}`).join("\n") : "";
+
     setForm({
       ...form,
       cliente: pedido.clienteNome || pedido.cliente || "",
@@ -64,6 +87,7 @@ const NovoContrato = () => {
       valorTotal: pedido.valorTotal || pedido.valor || 0,
       descricao: descItens 
     });
+
     setModalPedidos(false); // Fecha o modal
   };
 
@@ -93,6 +117,10 @@ const NovoContrato = () => {
         createdAt: serverTimestamp(),
         userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
       });
+
+      // 🔥 AUDITORIA
+      await registrarLog("NOVO CONTRATO", `Gerou um novo contrato para o cliente: "${form.cliente}". Valor: R$ ${Number(form.valorTotal).toFixed(2)}.`);
+
       alert("Contrato salvo com sucesso!");
       navigate("/contratos");
     } catch (err) { alert("Erro ao salvar: " + err.message); }
@@ -104,7 +132,7 @@ const NovoContrato = () => {
         
         {/* CABEÇALHO */}
         <header className="form-header">
-          <button className="btn-voltar-link" onClick={() => navigate("/contratos")}>
+          <button className="btn-voltar-link" type="button" onClick={() => navigate("/contratos")}>
             ← Voltar para listagem
           </button>
           
@@ -124,6 +152,7 @@ const NovoContrato = () => {
             <div className="grid-inputs">
               <div className="input-field full">
                 <label>Nome do Cliente</label>
+               
                 <input 
                   value={form.cliente} 
                   onChange={e => setForm({...form, cliente: e.target.value})} 
@@ -150,6 +179,7 @@ const NovoContrato = () => {
                 <label>Retirada</label>
                 <input type="date" value={form.dataRetirada} onChange={e => setForm({...form, dataRetirada: e.target.value})} />
               </div>
+ 
               <div className="input-field">
                 <label>Devolução</label>
                 <input type="date" value={form.dataDevolucao} onChange={e => setForm({...form, dataDevolucao: e.target.value})} />
@@ -201,6 +231,7 @@ const NovoContrato = () => {
                 <option>Em Aberto</option>
                 <option>Assinado</option>
                 <option>Finalizado</option>
+                <option>Cancelado</option>
               </select>
             </div>
           </section>
@@ -209,7 +240,7 @@ const NovoContrato = () => {
         </form>
       </div>
 
-      {/* MODAL DE IMPORTAÇÃO (CORRIGIDO) */}
+      {/* MODAL DE IMPORTAÇÃO */}
       {modalPedidos && (
         <div className="modal-import-overlay">
           <div className="modal-import-box">

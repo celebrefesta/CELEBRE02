@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom'; 
+import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, getDocs, serverTimestamp, query, doc, getDoc, updateDoc, where } from 'firebase/firestore'; 
+import { collection, addDoc, getDocs, serverTimestamp, query, doc, getDoc, updateDoc, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
 import './NovaCompra.css';
 
 const NovaCompra = () => {
   const navigate = useNavigate();
-  const { id } = useParams(); 
+  const { id } = useParams();
   const isEditing = !!id; 
 
   // 🔥 Autenticação
@@ -24,12 +24,12 @@ const NovaCompra = () => {
   const [valorAluguel, setValorAluguel] = useState('');
   
   const [categoria, setCategoria] = useState('acervo'); 
-  const [formato, setFormato] = useState('unidade'); 
+  const [formato, setFormato] = useState('unidade');
   const [quantidadePecasKit, setQuantidadePecasKit] = useState(2); 
   
   const [condicao, setCondicao] = useState('pronto'); 
-  const [destino, setDestino] = useState('geral'); 
-  
+  const [destino, setDestino] = useState('geral');
+
   // LOGÍSTICA
   const [tipoEntrega, setTipoEntrega] = useState('10'); 
   const [diasPersonalizados, setDiasPersonalizados] = useState('');
@@ -47,6 +47,25 @@ const NovaCompra = () => {
   const [buscaPedido, setBuscaPedido] = useState('');
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE COMPRAS)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de compras:", error);
+    }
+  };
+
   useEffect(() => {
     if (!usuarioLogado) {
         navigate('/login');
@@ -57,7 +76,7 @@ const NovaCompra = () => {
     if (isEditing) {
         carregarDadosEdicao();
     }
-  }, [id, usuarioLogado]);
+  }, [id, usuarioLogado, navigate]);
 
   const carregarDadosEdicao = async () => {
     try {
@@ -66,7 +85,7 @@ const NovaCompra = () => {
         
         if (snap.exists()) {
             const data = snap.data();
-            
+
             // Verifica se a compra pertence ao usuário (Segurança Extra)
             if (data.userId && data.userId !== usuarioLogado.uid) {
                 alert("Acesso negado: Esta compra pertence a outra conta.");
@@ -91,6 +110,7 @@ const NovaCompra = () => {
             setObservacoes(data.obs || '');
 
             if (data.tipoEntrega) setTipoEntrega(data.tipoEntrega);
+
             if (data.diasFrete !== undefined && data.tipoEntrega === 'outro') {
                 setDiasPersonalizados(String(data.diasFrete));
             }
@@ -117,13 +137,14 @@ const NovaCompra = () => {
 
   const carregarPedidosFuturos = async () => {
     if (!usuarioLogado) return;
+
     try {
       // 🔥 BLINDAGEM: Busca apenas os SEUS pedidos
       const q = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
       const snapshot = await getDocs(q);
       
       let locacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       // Ordena na memória para evitar problemas de índice no Firebase
       locacoes.sort((a, b) => {
           const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0;
@@ -133,6 +154,7 @@ const NovaCompra = () => {
 
       const pedidosAtivos = locacoes.filter(loc => !['cancelado', 'finalizado'].includes((loc.status || '').toLowerCase()));
       setPedidosDisponiveis(pedidosAtivos);
+
     } catch (error) { 
       console.error("Erro ao buscar pedidos:", error);
     }
@@ -154,6 +176,7 @@ const NovaCompra = () => {
     dataPronta.setDate(dataPronta.getDate() + diasDePreparo);
 
     if (destino === 'pedido' && pedidoSelecionado && pedidoSelecionado.dataRetirada) {
+        
         const dataFesta = new Date(pedidoSelecionado.dataRetirada + 'T00:00:00');
         
         const dataLimiteRecebimento = new Date(dataFesta);
@@ -192,7 +215,7 @@ const NovaCompra = () => {
     if (!nome.trim()) return alert("Digite o nome do item!");
     if (destino === 'pedido' && !pedidoSelecionado) return alert("Selecione o pedido para vincular a compra!");
     if (erroPrazo && destino === 'pedido') return alert("O sistema bloqueou a operação: O item não chegará a tempo da festa!");
-    
+
     setSalvando(true);
     try {
       const custoNum = valorEstimado ? Number(valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
@@ -235,6 +258,7 @@ const NovaCompra = () => {
               ...dadosDaCompra,
               atualizadoEm: serverTimestamp()
           });
+          await registrarLog("EDIÇÃO DE COMPRA", `Atualizou os dados da solicitação de compra: "${dadosDaCompra.nome}".`);
           alert("Solicitação atualizada com sucesso!");
       } else {
           // 🔥 BLINDAGEM MULTI-EMPRESA: Salva a nova compra com o seu userId
@@ -244,10 +268,12 @@ const NovaCompra = () => {
             createdAt: serverTimestamp(),
             userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
           });
+          await registrarLog("NOVA COMPRA", `Criou uma solicitação de compra para: "${dadosDaCompra.nome}" (Qtd: ${dadosDaCompra.quantidade}).`);
           alert("Nova solicitação de compra criada!");
       }
 
       navigate('/compras');
+
     } catch (error) {
       alert("Erro ao salvar a operação.");
     } finally {
@@ -486,7 +512,7 @@ const NovaCompra = () => {
 
             {destino === 'pedido' && mensagemPrazo && permitirSimulador && (
                 <div className={`mensagem-prazo-risco ${erroPrazo ? 'bloqueado' : 'ok'} mt-10`}>
-                    {mensagemPrazo}
+                     {mensagemPrazo}
                 </div>
             )}
           </div>

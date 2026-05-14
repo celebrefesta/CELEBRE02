@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../../firebaseConfig";
-import { doc, getDoc, updateDoc, collection, getDocs, query, where } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
-import "./NovoContrato.css"; // Usa o mesmo CSS bonito da página de Novo Contrato
+import { doc, getDoc, updateDoc, collection, getDocs, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; 
+import "./NovoContrato.css"; 
 
 const EditarContrato = () => {
   const { id } = useParams();
@@ -15,6 +15,7 @@ const EditarContrato = () => {
 
   const [carregando, setCarregando] = useState(true);
   const [meusModelos, setMeusModelos] = useState([]);
+  const [dadosIniciais, setDadosIniciais] = useState(null);
 
   // Estado do formulário com TODOS os campos
   const [form, setForm] = useState({
@@ -29,6 +30,25 @@ const EditarContrato = () => {
     dataRetirada: "",
     dataDevolucao: ""
   });
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de contratos:", error);
+    }
+  };
 
   // 1. Carrega os dados do contrato existente e os modelos
   useEffect(() => {
@@ -54,6 +74,7 @@ const EditarContrato = () => {
           }
           
           setForm(data);
+          setDadosIniciais(data); // Guarda a memória para a auditoria
         } else {
           alert("Contrato não encontrado!");
           navigate("/contratos");
@@ -64,7 +85,6 @@ const EditarContrato = () => {
         const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", usuarioLogado.uid));
         const snapModelos = await getDocs(qModelos);
         setMeusModelos(snapModelos.docs.map(d => ({ id: d.id, ...d.data() })));
-
       } catch (error) {
         console.error("Erro ao buscar dados:", error);
       } finally {
@@ -96,8 +116,21 @@ const EditarContrato = () => {
       const docRef = doc(db, "contratos", id);
       await updateDoc(docRef, {
         ...form,
-        valorTotal: Number(form.valorTotal) // Garante que é número
+        valorTotal: Number(form.valorTotal) 
       });
+
+      // 🔥 ANÁLISE DE AUDITORIA (Raio-X da edição)
+      let mudancas = [];
+      if (dadosIniciais) {
+        if (dadosIniciais.valorTotal !== form.valorTotal) mudancas.push(`Valor (de R$${dadosIniciais.valorTotal} para R$${form.valorTotal})`);
+        if (dadosIniciais.status !== form.status) mudancas.push(`Status (para '${form.status}')`);
+        if (dadosIniciais.descricao !== form.descricao) mudancas.push(`Texto/Cláusulas alteradas`);
+      }
+
+      if (mudancas.length > 0) {
+        await registrarLog("EDIÇÃO DE CONTRATO", `Editou o contrato de "${form.cliente}". Alterações: ${mudancas.join(' | ')}.`);
+      }
+
       alert("Contrato atualizado com sucesso! ✅");
       navigate("/contratos");
     } catch (error) {
@@ -113,7 +146,7 @@ const EditarContrato = () => {
         
         {/* CABEÇALHO */}
         <header className="form-header">
-          <button className="btn-voltar-link" onClick={() => navigate("/contratos")}>
+          <button type="button" className="btn-voltar-link" onClick={() => navigate("/contratos")}>
             ← Voltar sem salvar
           </button>
           
@@ -186,7 +219,6 @@ const EditarContrato = () => {
             <div className="header-section-modelos">
               <h3 className="section-title">Itens & Contrato</h3>
               
-              {/* Opção de adicionar mais modelos se precisar editar o texto jurídico */}
               <select onChange={aplicarModelo} className="select-modelo-clean">
                 <option value="">➕ Adicionar outro modelo...</option>
                 {meusModelos.map(m => (

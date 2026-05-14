@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth'; 
-import { doc, getDoc } from 'firebase/firestore'; // 🔥 Precisamos do Firestore para verificar o cargo
-import { auth, db } from '../firebaseConfig'; // 🔥 Importando o db junto com o auth
+import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+// 🔥 Precisamos do Firestore para verificar o cargo e gravar o log
+import { auth, db } from '../firebaseConfig';
 import SininhoNotificacoes from './SininhoNotificacoes';
 import './Topbar.css';
 
@@ -10,15 +11,17 @@ const Topbar = () => {
   const navigate = useNavigate();
   const [menuAberto, setMenuAberto] = useState(false);
   const [usuario, setUsuario] = useState(null); 
-  const [isAdminConta, setIsAdminConta] = useState(false); // 🔥 Estado para saber se é a Dona da conta
+  const [userAuthObj, setUserAuthObj] = useState(null);
+  const [isAdminConta, setIsAdminConta] = useState(false);
   const menuRef = useRef(null);
 
   // Fica vigiando para ver quem está logado no sistema e verifica o cargo
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
+        setUserAuthObj(user);
         setUsuario({
-          nome: user.displayName || "Admin Celebre",
+          nome: localStorage.getItem('funcName') || user.displayName || "Admin Celebre",
           foto: user.photoURL || null,
           email: user.email
         });
@@ -39,6 +42,7 @@ const Topbar = () => {
 
       } else {
         setUsuario(null);
+        setUserAuthObj(null);
         setIsAdminConta(false);
       }
     });
@@ -62,10 +66,42 @@ const Topbar = () => {
     setMenuAberto(false);
   };
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE LOGOUT)
+  const registrarLogLogout = async () => {
+    if (!userAuthObj) return;
+    try {
+      const tenantId = localStorage.getItem('tenantId') || userAuthObj.uid;
+      const nomeEquipa = localStorage.getItem('funcName') || userAuthObj.displayName || userAuthObj.email || "Usuário";
+      
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: userAuthObj.email,
+        acao: "LOGOUT",
+        detalhes: "Encerrou a sessão e saiu do sistema.",
+        userId: tenantId
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log de logout:", error);
+    }
+  };
+
   // 🔥 Função Oficial de Sair do Sistema 🔥
   const handleSair = async () => {
     try {
-      await signOut(auth); 
+      // 1. Grava o log de saída antes de perder a conexão
+      await registrarLogLogout();
+
+      // 2. Limpa a memória do navegador por segurança
+      localStorage.removeItem('tenantId');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userPermissions');
+      localStorage.removeItem('funcName');
+
+      // 3. Desconecta do Firebase e redireciona
+      await signOut(auth);
       navigate('/login'); 
     } catch (error) {
       console.error("Erro ao sair:", error);

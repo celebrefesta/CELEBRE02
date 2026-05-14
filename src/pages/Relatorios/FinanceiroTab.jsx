@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, getDoc, query, where } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
 
 // --- IMPORTAÇÕES DO PDF ---
 import { jsPDF } from 'jspdf';
@@ -28,8 +28,28 @@ const FinanceiroTab = () => {
     endereco: ''
   });
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO FINANCEIRO)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria financeira:", error);
+    }
+  };
+
   useEffect(() => {
-    if (!usuarioLogado) return; // Proteção adicional
+    if (!usuarioLogado) return; 
 
     const buscarDadosFinanceirosEConfigs = async () => {
       try {
@@ -62,7 +82,7 @@ const FinanceiroTab = () => {
         let totalReceitas = 0;
         let totalDespesas = 0;
         const listaTransacoes = [];
-
+        
         const formatarData = (dataBase) => {
           if (!dataBase) return new Date().toLocaleDateString('pt-BR');
           if (typeof dataBase === 'string') {
@@ -112,13 +132,14 @@ const FinanceiroTab = () => {
             }
           }
         });
-
+        
         // 2. SAÍDAS (COMPRAS)
         compras.forEach(comp => {
           const statusLimpo = comp.status ? String(comp.status).toLowerCase().trim() : '';
           if (statusLimpo === 'comprado' || statusLimpo === 'chegou') {
             let valorLimpoStr = String(comp.valorEstimado || '0').replace(/[^\d.,-]/g, '').replace(',', '.');
             const valorComp = (Number(valorLimpoStr) || 0) * (Number(comp.quantidade) || 1);
+            
             totalDespesas += valorComp;
   
             let dataReal = comp.dataCompra || comp.createdAt || comp.prazo || new Date();
@@ -132,7 +153,7 @@ const FinanceiroTab = () => {
             });
           }
         });
-
+        
         // 3. LANÇAMENTOS MANUAIS
         lancamentos.forEach(lan => {
           let valorLimpo = String(lan.valor || '0').replace(/[^\d,-]/g, '').replace(',', '.');
@@ -151,7 +172,7 @@ const FinanceiroTab = () => {
             valor: valorLan
           });
         });
-
+        
         listaTransacoes.sort((a, b) => b.dataTimestamp - a.dataTimestamp);
         setTransacoes(listaTransacoes);
         setMetricas({ receitas: totalReceitas, despesas: totalDespesas, lucro: totalReceitas - totalDespesas });
@@ -165,15 +186,15 @@ const FinanceiroTab = () => {
 
     buscarDadosFinanceirosEConfigs();
   }, [usuarioLogado]);
-
+  
   // 🔥 LÓGICA DE FILTRO: Só mostra o que o utilizador escolheu no botão
   const transacoesFiltradas = transacoes.filter(t => {
     if (filtroTipo === 'todos') return true;
     return t.tipo === filtroTipo;
   });
-
+  
   // --- FUNÇÃO GERAR PDF ---
-  const exportarPDF = () => {
+  const exportarPDF = async () => {
     try {
       const doc = new jsPDF();
       const dataHoje = new Date().toLocaleDateString('pt-BR');
@@ -249,6 +270,9 @@ const FinanceiroTab = () => {
       });
       
       doc.save(`Relatorio_${filtroTipo}_${dataHoje.replace(/\//g, '-')}.pdf`);
+
+      // 🔥 Aciona o espião de exportação financeira
+      await registrarLog("EXPORTAÇÃO DE RELATÓRIO FINANCEIRO", `Fez o download do DRE/Livro Caixa em PDF (Filtro utilizado: ${filtroTipo}).`);
 
     } catch (error) {
       console.error("Erro ao gerar PDF: ", error);

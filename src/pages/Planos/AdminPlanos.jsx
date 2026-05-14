@@ -1,12 +1,37 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, orderBy } from 'firebase/firestore';
+import { collection, getDocs, doc, updateDoc, addDoc, deleteDoc, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
 import './AdminPlanos.css';
 
 const AdminPlanos = () => {
     const [planos, setPlanos] = useState([]);
     const [loading, setLoading] = useState(true);
     const [recursos, setRecursos] = useState([]);
+
+    // 🔥 Autenticação
+    const auth = getAuth();
+    const usuarioLogado = auth.currentUser;
+
+    // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DA ADMINISTRAÇÃO DE PLANOS)
+    const registrarLog = async (acao, detalhes) => {
+        if (!usuarioLogado) return;
+        try {
+            const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Administrador";
+            await addDoc(collection(db, "logs_atividades"), {
+                data: new Date(),
+                criadoEm: serverTimestamp(),
+                funcionario: nomeEquipa,
+                usuarioNome: nomeEquipa,
+                usuarioEmail: usuarioLogado?.email || "Desconhecido",
+                acao: acao.toUpperCase(),
+                detalhes: detalhes,
+                userId: usuarioLogado?.uid
+            });
+        } catch (error) {
+            console.error("Erro ao gravar log da matriz de planos:", error);
+        }
+    };
 
     // ✨ REGRA ATUALIZADA: "contrato" agora também é campo de texto!
     const isRecursoNumerico = (nome) => {
@@ -49,7 +74,7 @@ const AdminPlanos = () => {
                     Object.keys(p.limites).forEach(l => recursosEncontrados.add(l));
                 }
             });
-            
+
             setRecursos(Array.from(recursosEncontrados));
             setPlanos(planosCarregados);
         } catch (error) {
@@ -82,7 +107,6 @@ const AdminPlanos = () => {
             if (p.id === planoId) {
                 const beneficiosArray = Array.isArray(p.beneficios) ? p.beneficios : [];
                 const existe = beneficiosArray.includes(recursoNome);
-              
                 const novosBen = existe 
                     ? beneficiosArray.filter(b => b !== recursoNome)
                     : [...beneficiosArray, recursoNome];
@@ -113,7 +137,6 @@ const AdminPlanos = () => {
         }
 
         setRecursos(recursos.map(r => r === oldName ? nomeLimpo : r));
-        
         setPlanos(planos.map(p => {
             const novoPlano = { ...p };
             if (Array.isArray(novoPlano.beneficios)) {
@@ -138,12 +161,23 @@ const AdminPlanos = () => {
             limites: {} 
         };
         const docRef = await addDoc(collection(db, "planos"), novo);
+        
+        // 🔥 REGISTA AUDITORIA
+        await registrarLog("NOVO PLANO CRIADO", `Adicionou um novo plano à matriz de assinaturas.`);
+        
         setPlanos([...planos, { id: docRef.id, ...novo }]);
     };
 
     const deletarPlano = async (id) => {
-        if (window.confirm("Atenção: Excluir este plano permanentemente?")) {
+        const planoParaDeletar = planos.find(p => p.id === id);
+        const nomePlano = planoParaDeletar ? planoParaDeletar.nome : "Desconhecido";
+
+        if (window.confirm(`Atenção: Excluir permanentemente o plano "${nomePlano}"?`)) {
             await deleteDoc(doc(db, "planos", id));
+            
+            // 🔥 REGISTA AUDITORIA
+            await registrarLog("EXCLUSÃO DE PLANO", `Excluiu o plano "${nomePlano}" da matriz de assinaturas.`);
+            
             setPlanos(planos.filter(p => p.id !== id));
         }
     };
@@ -182,6 +216,10 @@ const AdminPlanos = () => {
                     limites: dados.limites || {} 
                 });
             }
+            
+            // 🔥 REGISTA AUDITORIA
+            await registrarLog("ATUALIZAÇÃO DE MATRIZ DE PLANOS", `Salvou alterações nos preços, limites ou recursos dos planos.`);
+            
             alert("Matriz salva com sucesso! 💎");
         } catch (e) { alert("Erro ao salvar: " + e.message); }
     };
@@ -220,7 +258,9 @@ const AdminPlanos = () => {
                                                 ))}
                                             </select>
                                         </div>
-                                        <button className="btn-trash-col" onClick={() => deletarPlano(p.id)}><i className="fas fa-trash"></i></button>
+                                        <button className="btn-trash-col" onClick={() => deletarPlano(p.id)}>
+                                            <i className="fas fa-trash"></i>
+                                        </button>
                                     </div>
                                     <input 
                                         className="plano-nome-input"

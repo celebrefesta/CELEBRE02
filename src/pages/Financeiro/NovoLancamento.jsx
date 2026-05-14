@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { db } from "../../firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from "firebase/auth";
+// 🔥 Importação do Cadeado de Segurança
 import "./NovoLancamento.css";
 
 const NovoLancamento = () => {
@@ -12,7 +13,6 @@ const NovoLancamento = () => {
   // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-
   const tipoInicial = location.state?.tipo || "entrada";
 
   const [novo, setNovo] = useState({
@@ -26,8 +26,26 @@ const NovoLancamento = () => {
     parcelas: 1,       // Quantidade de parcelas
     acrescimo: ""      // Valor dos juros
   });
-
   const [salvando, setSalvando] = useState(false);
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE LANÇAMENTOS)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de lançamentos:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -64,17 +82,22 @@ const NovoLancamento = () => {
       // Se tiver acréscimo de juros, converte para número, senão é 0
       const valorAcrescimo = Number(novo.acrescimo) || 0;
       const valorBase = Number(novo.valor);
+      const valorTotalFinal = valorBase + valorAcrescimo;
       
       // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o lançamento com o userId
       await addDoc(collection(db, "financeiro_lancamentos"), {
         ...novo,
         valor: valorBase,
         acrescimo: valorAcrescimo,
-        valorTotal: valorBase + valorAcrescimo, // Salva o valor base + juros
+        valorTotal: valorTotalFinal, // Salva o valor base + juros
         parcelas: Number(novo.parcelas),
         createdAt: serverTimestamp(),
         userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
       });
+
+      // 🔥 REGISTA AUDITORIA
+      const tipoTxt = novo.tipo === 'entrada' ? 'Receita (Entrada)' : 'Despesa (Saída)';
+      await registrarLog("NOVO LANÇAMENTO FINANCEIRO", `Registrou uma ${tipoTxt} manual de R$ ${valorTotalFinal.toFixed(2)}. Descrição: "${novo.descricao}".`);
 
       alert("Lançamento salvo com sucesso!");
       navigate("/financeiro");
@@ -97,6 +120,7 @@ const NovoLancamento = () => {
         <div className="nl-card">
           
           <div className="nl-tipo-selector">
+           
             <button 
               type="button" 
               className={`nl-tipo-btn ${novo.tipo === 'entrada' ? 'ativo-entrada' : ''}`}
@@ -104,6 +128,7 @@ const NovoLancamento = () => {
             >
               🟢 ENTRADA
             </button>
+   
             <button 
               type="button" 
               className={`nl-tipo-btn ${novo.tipo === 'saida' ? 'ativo-saida' : ''}`}

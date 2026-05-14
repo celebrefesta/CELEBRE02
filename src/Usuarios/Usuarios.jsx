@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import '../pages/Estoque/Estoque.css'; 
+import '../pages/Estoque/Estoque.css';
 import { db } from '../firebaseConfig'; 
-import { collection, getDocs, doc, query, where, getDoc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const Usuarios = () => {
@@ -16,9 +16,11 @@ const Usuarios = () => {
   const [equipe, setEquipe] = useState([]);
   
   const [isPro, setIsPro] = useState(false);
-
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  
+  // NOVO ESTADO: Controla se estamos editando alguém existente
+  const [editandoId, setEditandoId] = useState(null);
 
   const [novoUsuario, setNovoUsuario] = useState({
     nome: '',
@@ -41,6 +43,25 @@ const Usuarios = () => {
     }
   });
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE RH)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipe = usuarioLogado?.displayName || usuarioLogado?.email || "Admin";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipe,
+        usuarioNome: nomeEquipe,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log de usuários:", error);
+    }
+  };
+
   useEffect(() => {
     if (!usuarioLogado) {
       navigate('/login');
@@ -54,14 +75,13 @@ const Usuarios = () => {
     try {
       const userRef = doc(db, 'usuarios', usuarioLogado.uid);
       const userSnap = await getDoc(userRef);
-
+      
       let acessoLiberado = false;
       let limite = 1;
       let planoEhPro = false;
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
-
         if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa') {
           if (userData.planoId) {
             const planoSnap = await getDoc(doc(db, "planos", userData.planoId));
@@ -99,6 +119,24 @@ const Usuarios = () => {
     }
   };
 
+  // 🔥 MÁSCARA AUTOMÁTICA DE NOME (Primeira letra maiúscula)
+  const handleNomeChange = (e) => {
+    const valor = e.target.value;
+    const formatado = valor.split(' ').map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1)).join(' ');
+    setNovoUsuario({ ...novoUsuario, nome: formatado });
+  };
+
+  // 🔥 MÁSCARA AUTOMÁTICA DE CPF
+  const handleCpfChange = (e) => {
+    let valor = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
+    if (valor.length <= 11) {
+      valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+      valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
+      valor = valor.replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+    }
+    setNovoUsuario({ ...novoUsuario, cpf: valor });
+  };
+
   const handleCheckbox = (campo) => {
     setNovoUsuario(prev => ({
       ...prev,
@@ -109,60 +147,103 @@ const Usuarios = () => {
     }));
   };
 
+  // 🔥 FUNÇÃO PARA ABRIR O MODAL NO MODO CRIAÇÃO
+  const abrirModalCriacao = () => {
+    setEditandoId(null);
+    setNovoUsuario({
+      nome: '', cpf: '', telefone: '', cargo: '', email: '', senhaTemp: '', 
+      monitorarAtividade: true, 
+      permissoes: { agenda: false, clientes: false, locacoes: false, estoque: false, compras: false, logistica: false, contratos: false, moodboard: false, catalogo: false }
+    });
+    setModalAberto(true);
+  };
+
+  // 🔥 FUNÇÃO PARA ABRIR O MODAL NO MODO EDIÇÃO
+  const abrirModalEdicao = (membro) => {
+    setEditandoId(membro.id);
+    setNovoUsuario({
+      nome: membro.nome || '',
+      cpf: membro.cpf || '',
+      telefone: membro.telefone || '',
+      cargo: membro.cargo || '',
+      email: membro.email || '',
+      senhaTemp: membro.senhaTemporaria || '', // Mostra a senha temporária se ele ainda não tiver ativado a conta
+      monitorarAtividade: membro.monitorarAtividade ?? true,
+      permissoes: membro.permissoes || { agenda: false, clientes: false, locacoes: false, estoque: false, compras: false, logistica: false, contratos: false, moodboard: false, catalogo: false }
+    });
+    setModalAberto(true);
+  };
+
   const salvarNovoUsuario = async (e) => {
     e.preventDefault();
-    if (!novoUsuario.nome || !novoUsuario.email || !novoUsuario.senhaTemp) {
+    if (!novoUsuario.nome || !novoUsuario.email || (!novoUsuario.senhaTemp && !editandoId)) {
       alert("Nome, E-mail e Senha são obrigatórios!");
       return;
     }
 
-    if (equipe.length + 1 >= limiteUsuarios) {
-        alert(`Limite atingido! Seu plano permite ${limiteUsuarios} usuários no total.`);
-        return;
-    }
-
     setSalvando(true);
     try {
-      const novoId = doc(collection(db, "equipe")).id;
+      if (editandoId) {
+        // --- MODO EDIÇÃO ---
+        await updateDoc(doc(db, "equipe", editandoId), {
+          nome: novoUsuario.nome,
+          cpf: novoUsuario.cpf,
+          telefone: novoUsuario.telefone,
+          cargo: novoUsuario.cargo || "Funcionário",
+          email: novoUsuario.email,
+          senhaTemporaria: novoUsuario.senhaTemp,
+          monitorarAtividade: novoUsuario.monitorarAtividade, 
+          permissoes: novoUsuario.permissoes
+        });
+        await registrarLog("EDIÇÃO DE FUNCIONÁRIO", `Editou os dados ou permissões de ${novoUsuario.nome}.`);
+        alert("Funcionário atualizado com sucesso!");
+      } else {
+        // --- MODO CRIAÇÃO ---
+        if (equipe.length + 1 >= limiteUsuarios) {
+            alert(`Limite atingido! Seu plano permite ${limiteUsuarios} usuários no total.`);
+            setSalvando(false);
+            return;
+        }
+        
+        const novoId = doc(collection(db, "equipe")).id;
+        await setDoc(doc(db, "equipe", novoId), {
+          nome: novoUsuario.nome,
+          cpf: novoUsuario.cpf,
+          telefone: novoUsuario.telefone,
+          cargo: novoUsuario.cargo || "Funcionário",
+          email: novoUsuario.email,
+          senhaTemporaria: novoUsuario.senhaTemp, 
+          monitorarAtividade: novoUsuario.monitorarAtividade, 
+          permissoes: novoUsuario.permissoes,
+          empresaId: usuarioLogado.uid,
+          criadoEm: new Date().toISOString()
+        });
 
-      await setDoc(doc(db, "equipe", novoId), {
-        nome: novoUsuario.nome,
-        cpf: novoUsuario.cpf,
-        telefone: novoUsuario.telefone,
-        cargo: novoUsuario.cargo || "Funcionário",
-        email: novoUsuario.email,
-        senhaTemporaria: novoUsuario.senhaTemp, 
-        monitorarAtividade: novoUsuario.monitorarAtividade, 
-        permissoes: novoUsuario.permissoes,
-        empresaId: usuarioLogado.uid,
-        criadoEm: new Date().toISOString()
-      });
+        await registrarLog("NOVO FUNCIONÁRIO", `Cadastrou ${novoUsuario.nome} (${novoUsuario.email}) com o cargo de ${novoUsuario.cargo || "Não definido"}.`);
+        alert("Funcionário adicionado com sucesso!");
+      }
 
-      alert("Funcionário adicionado com sucesso!");
       setModalAberto(false);
-      setNovoUsuario({ 
-        nome: '', cpf: '', telefone: '', cargo: '', email: '', senhaTemp: '', 
-        monitorarAtividade: true, 
-        permissoes: { agenda: false, clientes: false, locacoes: false, estoque: false, compras: false, logistica: false, contratos: false, moodboard: false, catalogo: false } 
-      });
+      setEditandoId(null);
       carregarDadosDaConta();
     } catch (error) {
       console.error("Erro ao salvar usuário:", error);
-      alert("Erro ao criar usuário.");
+      alert("Erro ao salvar os dados do usuário.");
     } finally {
       setSalvando(false);
     }
   };
 
-  const removerUsuario = async (id) => {
-    if (window.confirm("Tem certeza que deseja remover o acesso deste usuário?")) {
+  const removerUsuario = async (id, nome) => {
+    if (window.confirm(`Tem certeza que deseja remover permanentemente o acesso de ${nome}?`)) {
       await deleteDoc(doc(db, "equipe", id));
+      await registrarLog("REMOÇÃO DE FUNCIONÁRIO", `Removeu o acesso do funcionário(a) ${nome}.`);
       carregarDadosDaConta();
     }
   };
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center', color: '#64748b' }}>Verificando permissões...</div>;
-
+  
   if (!temAcesso) {
     return (
       <div style={{ padding: '60px', textAlign: 'center', backgroundColor: '#f8fafc', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -190,7 +271,6 @@ const Usuarios = () => {
           </p>
         </div>
         
-        {/* 🔥 AQUI ESTÃO OS DOIS BOTÕES JUNTOS 🔥 */}
         <div className="acoes-top" style={{ display: 'flex', gap: '15px' }}>
           <button 
             onClick={() => navigate('/monitoramento')}
@@ -201,7 +281,7 @@ const Usuarios = () => {
 
           <button 
             className="btn-dark-blue" 
-            onClick={() => setModalAberto(true)}
+            onClick={abrirModalCriacao}
             style={{ opacity: (equipe.length + 1) >= limiteUsuarios ? 0.6 : 1 }}
           >
             + Novo Funcionário
@@ -268,17 +348,24 @@ const Usuarios = () => {
                         {membro.permissoes?.contratos && <span style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', fontSize: '10px', padding: '3px 6px', borderRadius: '4px'}}>Contratos</span>}
                         {membro.permissoes?.catalogo && <span style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', fontSize: '10px', padding: '3px 6px', borderRadius: '4px'}}>Catálogo</span>}
                         {membro.permissoes?.moodboard && isPro && <span style={{ background: '#f1f5f9', border: '1px solid #cbd5e1', fontSize: '10px', padding: '3px 6px', borderRadius: '4px'}}>Moodboard</span>}
-                        
                         {semAcesso && <span style={{ color: '#ef4444', fontSize: '11px' }}>Nenhum acesso</span>}
                     </div>
                 </td>
                 <td style={{ padding: '15px', textAlign: 'right' }}>
-                  <button 
-                    onClick={() => removerUsuario(membro.id)}
-                    style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}
-                  >
-                    Remover
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                    <button 
+                      onClick={() => abrirModalEdicao(membro)}
+                      style={{ background: '#f1f5f9', color: '#334155', border: '1px solid #cbd5e1', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}
+                    >
+                      Editar
+                    </button>
+                    <button 
+                      onClick={() => removerUsuario(membro.id, membro.nome)}
+                      style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', padding: '6px 12px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}
+                    >
+                      Remover
+                    </button>
+                  </div>
                 </td>
               </tr>
             )})}
@@ -292,7 +379,9 @@ const Usuarios = () => {
             
             <div className="modal-maintenance-header" style={{ padding: '20px 25px', borderBottom: '1px solid #e2e8f0', background: '#f8fafc', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
-                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>Ficha do Funcionário</h3>
+                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>
+                  {editandoId ? 'Editar Funcionário' : 'Ficha do Funcionário'}
+                </h3>
                 <p style={{ margin: 0, fontSize: '12px', color: '#64748b', marginTop: '4px' }}>Cadastre os dados, jornada de trabalho e defina o que ele pode acessar.</p>
               </div>
               <button onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>×</button>
@@ -310,13 +399,13 @@ const Usuarios = () => {
                   
                   <div style={{ marginBottom: '15px' }}>
                     <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>NOME COMPLETO *</label>
-                    <input required type="text" placeholder="Ex: João da Silva" value={novoUsuario.nome} onChange={e => setNovoUsuario({...novoUsuario, nome: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                    <input required type="text" placeholder="Ex: João da Silva" value={novoUsuario.nome} onChange={handleNomeChange} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
                   </div>
 
                   <div style={{ display: 'flex', gap: '15px', marginBottom: '15px' }}>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>CPF</label>
-                      <input type="text" placeholder="000.000.000-00" value={novoUsuario.cpf} onChange={e => setNovoUsuario({...novoUsuario, cpf: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                      <input type="text" placeholder="000.000.000-00" value={novoUsuario.cpf} onChange={handleCpfChange} maxLength="14" style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
                     </div>
                     <div style={{ flex: 1 }}>
                       <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>TELEFONE / WHATSAPP</label>
@@ -334,8 +423,8 @@ const Usuarios = () => {
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>SENHA INICIAL *</label>
-                    <input required type="text" placeholder="Crie uma senha provisória" value={novoUsuario.senhaTemp} onChange={e => setNovoUsuario({...novoUsuario, senhaTemp: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
+                    <label style={{ display: 'block', fontSize: '12px', fontWeight: 'bold', color: '#475569', marginBottom: '5px' }}>{editandoId ? "SENHA INICIAL (Pode deixar em branco se não quiser alterar)" : "SENHA INICIAL *"}</label>
+                    <input required={!editandoId} type="text" placeholder="Crie uma senha provisória" value={novoUsuario.senhaTemp} onChange={e => setNovoUsuario({...novoUsuario, senhaTemp: e.target.value})} style={{ width: '100%', padding: '10px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box' }} />
                   </div>
                 </div>
 
@@ -421,7 +510,7 @@ const Usuarios = () => {
                 <div style={{ display: 'flex', gap: '10px', width: '35%' }}>
                   <button type="button" onClick={() => setModalAberto(false)} style={{ flex: 1, padding: '12px', background: '#f1f5f9', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold', color: '#475569' }}>Cancelar</button>
                   <button type="submit" disabled={salvando} style={{ flex: 1, padding: '12px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                    {salvando ? 'Salvando...' : 'Cadastrar'}
+                    {salvando ? 'Salvando...' : (editandoId ? 'Salvar Edição' : 'Cadastrar')}
                   </button>
                 </div>
 

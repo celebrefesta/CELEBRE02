@@ -1,11 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth"; 
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 import './ClientesTab.css'; 
 
 const ClientesTab = () => {
+  // 🔥 Autenticação
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ 
     total: 0, 
@@ -24,12 +29,38 @@ const ClientesTab = () => {
     logotipo: ''
   });
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CLIENTES)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de clientes:", error);
+    }
+  };
+
   useEffect(() => {
+    if (!usuarioLogado) return;
+
     const buscarDadosClientesEConfigs = async () => {
       try {
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Filtra clientes e locações pela sua conta
+        const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+
         const [snapClientes, snapLocacoes, snapConfig] = await Promise.all([
-          getDocs(collection(db, "clientes")),
-          getDocs(collection(db, "locacoes")),
+          getDocs(qClientes),
+          getDocs(qLocacoes),
           getDoc(doc(db, "sistema", "parametros"))
         ]);
 
@@ -70,14 +101,15 @@ const ClientesTab = () => {
             clientesStats[cid].qtdLocacoes += 1;
             clientesStats[cid].gastoTotal += valor;
             let dataLoc = loc.dataRetirada ? new Date(loc.dataRetirada) : (loc.criadoEm?.toDate ? loc.criadoEm.toDate() : new Date(0));
+    
             if (dataLoc > clientesStats[cid].ultimaLocacao) clientesStats[cid].ultimaLocacao = dataLoc;
           }
         });
-
+        
         const ticketMedio = locacoes.length > 0 ? (somaTotal / locacoes.length) : 0;
         const seisMesesAtras = new Date();
         seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
-
+        
         const listaStats = Object.values(clientesStats);
         const clientesFieis = listaStats.filter(c => c.qtdLocacoes > 1).length;
         const taxaRetorno = totalClientes > 0 ? (clientesFieis / totalClientes) * 100 : 0;
@@ -102,7 +134,7 @@ const ClientesTab = () => {
             status: isInativo ? "Inativo" : "Ativo"
           };
         });
-
+        
         setMetricas({ 
           total: totalClientes, 
           novosMes, 
@@ -111,37 +143,42 @@ const ClientesTab = () => {
           clientesFieis,
           taxaRetorno
         });
+        
         setRankingCidades(Object.entries(cidadesCount).sort((a, b) => b[1] - a[1]).slice(0, 5));
         setTopClientes(listaStats.sort((a, b) => b.gastoTotal - a.gastoTotal).slice(0, 8));
         setTodosClientesData(clientesFormatadosRelatorio);
 
-      } catch (error) { console.error(error); } finally { setLoading(false); }
+      } catch (error) { 
+        console.error(error);
+      } finally { 
+        setLoading(false); 
+      }
     };
     
     buscarDadosClientesEConfigs();
-  }, []);
-
-  const exportarRelatorioGeral = () => {
+  }, [usuarioLogado]);
+  
+  const exportarRelatorioGeral = async () => {
     try {
-      const doc = new jsPDF();
+      const docPDF = new jsPDF();
       let startY = 25; 
 
       if (dadosEmpresa.logotipo) {
-        doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
-        doc.setFontSize(20);
-        doc.setTextColor(15, 23, 42);
-        doc.text(dadosEmpresa.nomeEmpresa, 48, 22);
-        doc.setFontSize(12);
-        doc.setTextColor(100, 116, 139);
-        doc.text("Relatório Geral de Clientes", 48, 30);
-        startY = 45; 
+        docPDF.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
+        docPDF.setFontSize(20);
+        docPDF.setTextColor(15, 23, 42);
+        docPDF.text(dadosEmpresa.nomeEmpresa, 48, 22);
+        docPDF.setFontSize(12);
+        docPDF.setTextColor(100, 116, 139);
+        docPDF.text("Relatório Geral de Clientes", 48, 30);
+        startY = 45;
       } else {
-        doc.setFontSize(18);
-        doc.setTextColor(15, 23, 42); 
-        doc.text(`Relatório de Clientes - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
+        docPDF.setFontSize(18);
+        docPDF.setTextColor(15, 23, 42);
+        docPDF.text(`Relatório de Clientes - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
       }
 
-      autoTable(doc, {
+      autoTable(docPDF, {
         head: [["Nome do Cliente", "Cidade", "Festas", "Gasto Total (R$)", "Status"]],
         body: todosClientesData.sort((a,b) => b.totalGasto - a.totalGasto).map(c => [
           c.nome, 
@@ -154,9 +191,16 @@ const ClientesTab = () => {
         theme: 'grid',
         headStyles: { fillColor: [15, 23, 42] }
       });
+      
+      docPDF.save(`Relatorio_Clientes_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
 
-      doc.save(`Relatorio_Clientes_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
-    } catch (e) { alert("Erro ao gerar PDF"); }
+      // 🔥 Aciona o espião de exportação
+      await registrarLog("EXPORTAÇÃO DE RELATÓRIO DE CLIENTES", `Fez o download do relatório VIP e geral de clientes em PDF.`);
+
+    } catch (e) { 
+      alert("Erro ao gerar PDF"); 
+      console.error(e);
+    }
   };
 
   if (loading) return <div className="loading-v3">Analisando carteira de clientes...</div>;
@@ -250,7 +294,17 @@ const ClientesTab = () => {
               {topClientes.map((c, i) => {
                 const ticketMedioVip = c.gastoTotal / (c.qtdLocacoes || 1);
                 return (
-                  <tr key={i}><td><div className="vip-cell"><span className={`vip-rank rank-${i+1}`}>{i+1}</span><span className="vip-name">{c.nome}</span></div></td><td className="centro bold" style={{ color: 'var(--texto-secundario)' }}>{c.qtdLocacoes}x</td><td className="centro" style={{ color: '#64748b', fontSize: '13px', fontWeight: '600' }}>R$ {ticketMedioVip.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td><td className="direita bold text-verde">R$ {c.gastoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td></tr>
+                  <tr key={i}>
+                    <td>
+                      <div className="vip-cell">
+                        <span className={`vip-rank rank-${i+1}`}>{i+1}</span>
+                        <span className="vip-name">{c.nome}</span>
+                      </div>
+                    </td>
+                    <td className="centro bold" style={{ color: 'var(--texto-secundario)' }}>{c.qtdLocacoes}x</td>
+                    <td className="centro" style={{ color: '#64748b', fontSize: '13px', fontWeight: '600' }}>R$ {ticketMedioVip.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    <td className="direita bold text-verde">R$ {c.gastoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                  </tr>
                 );
               })}
             </tbody>

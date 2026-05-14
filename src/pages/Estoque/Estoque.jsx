@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Estoque.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, doc, query, deleteDoc, updateDoc, writeBatch, where, getDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, query, deleteDoc, updateDoc, writeBatch, where, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 
 import { jsPDF } from 'jspdf';
@@ -11,15 +11,14 @@ import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 
 const Estoque = () => {
   const navigate = useNavigate();
-  
   // 🔥 PUXANDO O USUÁRIO LOGADO
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-
+  
   // 🔥 ESTADOS DE SEGURANÇA E LIMITES DO PLANO
   const [temAcesso, setTemAcesso] = useState(false);
   const [limiteEstoque, setLimiteEstoque] = useState(0);
-
+  
   const [itens, setItens] = useState([]);
   const [locacoes, setLocacoes] = useState([]); 
   const [loading, setLoading] = useState(true);
@@ -45,6 +44,26 @@ const Estoque = () => {
 
   const [menuAberto, setMenuAberto] = useState(null);
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ESTOQUE - LISTAGEM)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria do estoque:", error);
+    }
+  };
+
   useEffect(() => { 
     if (!usuarioLogado) {
         navigate('/login');
@@ -56,6 +75,7 @@ const Estoque = () => {
   const carregarDados = async () => {
     if (!usuarioLogado) return;
     setLoading(true);
+
     try {
       // 🔥 1. VERIFICAÇÃO DE PLANO E LIMITES (LEITURA INTELIGENTE)
       const userRef = doc(db, 'usuarios', usuarioLogado.uid);
@@ -66,18 +86,16 @@ const Estoque = () => {
 
       if (userSnap.exists()) {
           const userData = userSnap.data();
-          
+
           if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa' || userData.assinaturaAtiva === true) {
               acessoLiberado = true;
               limiteMaximo = 1000; // Assume Básico como padrão
 
               if (userData.planoId) {
                   try {
-                      // Vai na coleção de planos buscar o nome exato do plano
                       const planoSnap = await getDoc(doc(db, "planos", userData.planoId));
                       if (planoSnap.exists()) {
                           const nomePlano = planoSnap.data().nome?.toLowerCase() || '';
-                          
                           if (nomePlano.includes('premium')) {
                               limiteMaximo = 5000;
                           } else if (nomePlano.includes('pro')) {
@@ -108,7 +126,7 @@ const Estoque = () => {
       const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
       const snapEstoque = await getDocs(qEstoque);
       let listaEstoque = snapEstoque.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
+
       // Ordenação
       listaEstoque.sort((a, b) => {
           const tempoA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
@@ -138,7 +156,7 @@ const Estoque = () => {
           const snap = await getDocs(q);
           const batch = writeBatch(db);
           let alterados = 0;
-          
+
           snap.forEach(docSnap => {
               const item = docSnap.data();
               let nomeAtual = item.nome || '';
@@ -162,7 +180,7 @@ const Estoque = () => {
                   let sufixos = [];
                   if (tam) sufixos.push(tam.trim());
                   if (cor) sufixos.push(cor.trim());
-                  
+
                   if (sufixos.length > 0) {
                       nomeNovo = `${pai} - ${sufixos.join(' ')}`;
                   } else {
@@ -189,9 +207,13 @@ const Estoque = () => {
                   alterados++;
               }
           });
-          
+
           if (alterados > 0) {
               await batch.commit();
+              
+              // 🔥 REGISTA AUDITORIA
+              await registrarLog("AJUSTE EM LOTE NO ESTOQUE", `Executou a limpeza e padronização automática de nomes de ${alterados} kits e peças.`);
+              
               alert(`✅ Mágica Feita! O robô arrumou os nomes de ${alterados} peças e kits! Verifique as que ficaram com o aviso "Sem Medida".`);
               carregarDados();
           } else {
@@ -246,6 +268,7 @@ const Estoque = () => {
   const salvarManutencao = async () => {
     if (!itemParaManutencao) return;
     const valor = parseInt(qtdMaint);
+
     if (isNaN(valor) || valor < 0 || valor > itemParaManutencao.quantidade) {
       alert("Quantidade inválida!");
       return;
@@ -255,6 +278,10 @@ const Estoque = () => {
         qtdManutencao: valor,
         status: valor === itemParaManutencao.quantidade ? 'manutencao' : 'ok'
       });
+      
+      // 🔥 REGISTA AUDITORIA
+      await registrarLog("MANUTENÇÃO DE ACERVO", `Moveu ${valor} unidades da peça "${itemParaManutencao.nome}" para o status de manutenção/reparo.`);
+
       setModalManutencao(false);
       carregarDados();
     } catch (error) { alert("Erro ao atualizar."); }
@@ -280,10 +307,10 @@ const Estoque = () => {
               avaria: false,
               faltou: false
           };
-          
+
           let itensAtualizados = [...(locacaoAlvo.itens || [])];
           const indexExistente = itensAtualizados.findIndex(i => i.id === itemParaPedido.id);
-          
+
           if (indexExistente >= 0) {
               itensAtualizados[indexExistente].qtd += 1;
           } else {
@@ -300,6 +327,9 @@ const Estoque = () => {
               valorTotal: novoTotal
           });
           
+          // 🔥 REGISTA AUDITORIA
+          await registrarLog("INSERÇÃO RÁPIDA EM PEDIDO", `Adicionou a peça "${itemParaPedido.nome}" diretamente pelo painel de estoque ao pedido de "${locacaoAlvo.clienteNome}".`);
+
           alert(`✅ A peça "${itemParaPedido.nome}" foi adicionada com sucesso ao pedido de ${locacaoAlvo.clienteNome}!`);
           setModalAddPedidoAberto(false);
           carregarDados();
@@ -321,7 +351,7 @@ const Estoque = () => {
       
       const emMaint = item.qtdManutencao !== undefined ? Number(item.qtdManutencao) : (item.status === 'manutencao' ? qtdBase : 0);
       let alugadosNaData = 0;
-      
+
       if (dataFiltro) {
           const pedidosNessaData = locacoes.filter(loc => 
               loc.dataRetirada === dataFiltro && 
@@ -360,7 +390,7 @@ const Estoque = () => {
       const s = String(loc.status || '').toLowerCase();
       return s.includes('confirmado') || s.includes('preparacao');
   });
-  
+
   pedidosAtivos.sort((a,b) => {
       const dA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
       const dB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
@@ -387,7 +417,7 @@ const Estoque = () => {
         if (statusFiltro === 'manutencao') return emManutencao > 0;
         return true;
     });
-    
+
   itensFiltrados.sort((a, b) => {
       const nomeA = (a.nome || '').toLowerCase();
       const nomeB = (b.nome || '').toLowerCase();
@@ -396,7 +426,7 @@ const Estoque = () => {
       return 0;
   });
 
-  const imprimirListaFiltrada = () => {
+  const imprimirListaFiltrada = async () => {
       const doc = new jsPDF();
       const dataHoje = new Date().toLocaleDateString('pt-BR');
       
@@ -423,7 +453,7 @@ const Estoque = () => {
               isDeco ? "1 Kit" : `${qtdBase} pçs`
           ];
       });
-      
+
       autoTable(doc, {
           head: colunas,
           body: linhas,
@@ -432,8 +462,11 @@ const Estoque = () => {
           headStyles: { fillColor: [15, 23, 42] },
           styles: { fontSize: 9 }
       });
-      
+
       doc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}.pdf`);
+      
+      // 🔥 REGISTA AUDITORIA
+      await registrarLog("EXPORTAÇÃO DE INVENTÁRIO", "Fez o download da lista de verificação de estoque em PDF.");
   };
 
   // 🔥 TELAS DE CARREGAMENTO E BLOQUEIO
@@ -583,6 +616,7 @@ const Estoque = () => {
                 {itensFiltrados.map(item => {
                   
                   const { qtdBase, disponivelTotal, alugados, emManutencao, tudoQuebrado, estaTotalmenteAlugado, isDeco } = calcularDisponibilidadeNaData(item);
+                  
                   let labelPill = 'DISPONÍVEL';
                   let bgPill = '#f0fdf4'; let colorPill = '#166534'; let borderPill = '#bbf7d0';
                   
@@ -598,6 +632,7 @@ const Estoque = () => {
                   }
 
                   const estoqueBaixo = !dataFiltro && item.configuracao?.alertaEstoque === 'Avisar' && qtdBase > 0 && disponivelTotal <= item.estoqueMinimo;
+                  
                   const valorAluguelFormatado = item.financeiro?.valorAluguel ? Number(item.financeiro.valorAluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
                   const posImg = item.posicoesFoco?.[0];
                   const isMenuOpen = menuAberto === item.id;
@@ -687,7 +722,22 @@ const Estoque = () => {
                                         <button onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>📋 Duplicar</button>
                                         <button onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); setMenuAberto(null); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>🛠️ Manutenção</button>
                                         <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }}></div>
-                                        <button onClick={(e) => { e.stopPropagation(); if(window.confirm("Excluir permanentemente do acervo?")) deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#ef4444', textAlign: 'left', fontWeight: 'bold', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#fef2f2'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>🗑️ Excluir</button>
+                                        
+                                        {/* 🔥 AÇÃO COM ESPIÃO NÍVEL MÁXIMO 🔥 */}
+                                        <button 
+                                          onClick={async (e) => { 
+                                            e.stopPropagation();
+                                            if(window.confirm("Excluir permanentemente do acervo?")) {
+                                              await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`);
+                                              deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); 
+                                            }
+                                          }} 
+                                          style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#ef4444', textAlign: 'left', fontWeight: 'bold', display: 'flex', gap: '8px' }} 
+                                          onMouseEnter={e=>e.currentTarget.style.background='#fef2f2'} 
+                                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}
+                                        >
+                                          🗑️ Excluir
+                                        </button>
                                     </div>
                                 )}
                             </div>

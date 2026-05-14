@@ -5,7 +5,7 @@ import { db } from '../../firebaseConfig';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, getDoc, query, setDoc, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 
-import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
+import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 
 const CadastroEstoque = () => {
   const navigate = useNavigate();
@@ -19,7 +19,6 @@ const CadastroEstoque = () => {
 
   const [salvando, setSalvando] = useState(false);
   const [itensExistentes, setItensExistentes] = useState([]);
-
   const [listasSistema, setListasSistema] = useState({
     localizacoes: [], tamanhos: []
   });
@@ -106,7 +105,7 @@ const CadastroEstoque = () => {
   const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
   const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
-
+  
   useEffect(() => {
     if (!usuarioLogado) {
       alert("Sessão expirada. Faça login novamente.");
@@ -138,7 +137,6 @@ const CadastroEstoque = () => {
     fetchConfiguracoes();
 
     const itemBase = itemEditando || itemDuplicando;
-
     if (itemBase) {
       let nomeLimpo = itemBase.nome || '';
       if (nomeLimpo.toUpperCase().startsWith('KIT ')) nomeLimpo = nomeLimpo.substring(4).trim();
@@ -147,7 +145,6 @@ const CadastroEstoque = () => {
       setCodigo(itemEditando ? itemBase.codigo || '' : '');
       setCategoria(itemBase.categoria || ''); 
       setSubCategoria(itemBase.subCategoria || '');
-      
       setCategoriaTema(itemBase.categoriaTema || '');
       setSubcategoriaTema(itemBase.subcategoriaTema || '');
       setGrupoTemaSelecionado(itemBase.grupoTema || ''); 
@@ -361,6 +358,7 @@ const CadastroEstoque = () => {
                     ctx.drawImage(img, 0, 0, w, h);
                     resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
+               
                 img.onerror = () => resolve(null);
                 img.src = event.target.result;
             };
@@ -403,6 +401,7 @@ const CadastroEstoque = () => {
     const deltaX = clientX - startMouse.x;
     const deltaY = clientY - startMouse.y;
     setStartMouse({ x: clientX, y: clientY });
+    
     setPosicoesFoco(prev => {
       const current = prev[fotoPrincipalIndex] || { x: 50, y: 50, z: 1 };
       const velocidade = 0.6 / (current.z || 1); 
@@ -478,6 +477,7 @@ const CadastroEstoque = () => {
   };
 
   const categoriasCatalogoUnicas = ['Todos', ...new Set(itensExistentes.map(item => item.categoria).filter(Boolean))];
+  
   const itensCatalogoFiltrados = itensExistentes.filter(item => {
       return !item.especificacoes?.isDecoracao && !item.especificacoes?.isKitPai && 
              (item.nome || '').toLowerCase().includes(buscaCatalogo.toLowerCase()) && 
@@ -521,8 +521,7 @@ const CadastroEstoque = () => {
       const subCatFinal = isDecoracao ? 'Pacote' : subCategoria;
       const temaFinalParaSalvar = temaSelecionado === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaSelecionado;
 
-      const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ?
-      `KIT ${nome.trim()}` : nome.trim();
+      const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ? `KIT ${nome.trim()}` : nome.trim();
 
       const dados = {
         userId: usuarioLogado.uid,
@@ -662,7 +661,6 @@ const CadastroEstoque = () => {
 
         if (itemEditando) {
           const mudancas = [];
-          
           if (String(itemEditando.nome || '').trim() !== String(dados.nome || '').trim()) {
             mudancas.push(`Nome (de '${itemEditando.nome || 'Vazio'}' para '${dados.nome}')`);
           }
@@ -706,7 +704,7 @@ const CadastroEstoque = () => {
       
       navigate(dadosCompra ? '/compras' : '/estoque');
     } catch (error) { 
-        alert("Erro ao salvar."); 
+        alert("Erro ao salvar.");
     } finally { 
         setSalvando(false); 
     }
@@ -866,7 +864,7 @@ const CadastroEstoque = () => {
                               onChange={handleZoomChange} 
                               style={{flex: 1, cursor: 'pointer', accentColor: '#0f172a'}}
                           />
-                      </div>
+                       </div>
                   )}
 
                   {fotos.length > 0 && (
@@ -962,7 +960,7 @@ const CadastroEstoque = () => {
                                 {subcategoriasFisicasDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
-                     </div>
+                      </div>
                   )}
 
                   <div style={{ flex: 2, minWidth: '300px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '20px', position: 'relative' }}>
@@ -1076,7 +1074,7 @@ const CadastroEstoque = () => {
                       </div>
                   ) : (
                       <div style={{textAlign: 'center', padding: '30px', color: '#b45309', background: '#fff', borderRadius: '8px', fontSize: '13px'}}>
-                           Sua decoração ainda está vazia.
+                          Sua decoração ainda está vazia.
                       </div>
                   )}
                 </div>
@@ -1238,7 +1236,7 @@ const CadastroEstoque = () => {
                                 {foiAdicionado && (
                                     <span style={{background: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', position: 'absolute', top: '10px', right: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>Incluso: {qtdNoKit}</span>
                                 )}
-                             </div>
+                            </div>
                         </div>
                     </div>
                   </div>
@@ -1272,7 +1270,7 @@ const CadastroEstoque = () => {
                   onClick={handleAddLocalizacao}
                   style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                 Adicionar
+                  Adicionar
               </button>
             </div>
 

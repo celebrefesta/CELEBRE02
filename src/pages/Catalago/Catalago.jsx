@@ -15,8 +15,6 @@ const ESTRUTURA_TEMAS = {
 
 const Catalogo = () => {
   const navigate = useNavigate();
-
-  // 🔥 BLINDAGEM MULTI-EMPRESA E LINK MÁGICO [cite: 4, 35, 138]
   const { idEmpresa } = useParams();
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -41,6 +39,28 @@ const Catalogo = () => {
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   const [produtoDetalhe, setProdutoDetalhe] = useState(null);
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DO CATÁLOGO)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Cliente Web (Catálogo)";
+      const uid = usuarioLogado?.uid || tenantId;
+      if (!uid) return;
+      
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "N/A",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log do catálogo:", error);
+    }
+  };
 
   useEffect(() => {
     const inicializar = async () => {
@@ -142,7 +162,7 @@ const Catalogo = () => {
 
   const isNoCarrinho = (id) => carrinho.some(i => i.id === id);
   const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * i.qtd), 0);
-  
+
   const abrirCarrinho = () => {
       setModalFinalizar(true);
       dispararPixel('InitiateCheckout', { value: calcularTotal(), currency: 'BRL' });
@@ -151,10 +171,8 @@ const Catalogo = () => {
   const enviarOrcamento = async (e) => {
     e.preventDefault();
     if (carrinho.length === 0) return alert("Seu carrinho está vazio!");
-    
     const total = calcularTotal();
     const resumoItens = carrinho.map(i => `- ${i.qtd}x ${i.nome} (R$ ${Number(i.financeiro?.valorAluguel || 0).toFixed(2)})`).join('\n');
-    
     try {
       await addDoc(collection(db, "locacoes"), {
         clienteNome: dadosCliente.nome,
@@ -169,8 +187,10 @@ const Catalogo = () => {
         userId: tenantId 
       });
       
+      // 🔥 REGISTRA NO ESPIÃO
+      await registrarLog("NOVO ORÇAMENTO WEB", `O cliente "${dadosCliente.nome}" gerou um orçamento público via Catálogo no valor de R$ ${total.toFixed(2)}.`);
+
       dispararPixel('Lead', { value: total, currency: 'BRL' });
-      
       const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : "5519999999999";
       
       const texto = `🌟 *NOVO ORÇAMENTO* 🌟\n\n*Cliente:* ${dadosCliente.nome}\n*Data do Evento:* ${dadosCliente.dataEvento}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}\n\nOlá! Vim pelo catálogo e gostaria de verificar a disponibilidade destas peças!`;
@@ -193,7 +213,7 @@ const Catalogo = () => {
            (filtroMenu === 'Todos' || catI.includes(String(filtroMenu).toLowerCase()) || temaI.includes(String(filtroMenu).toLowerCase())) &&
            (filtroModalidade === 'Todas' || String(i.modalidade || '').toLowerCase().includes(String(filtroModalidade).toLowerCase()));
   });
-  
+
   const selecionarFiltro = (tipo, valor) => {
     if (tipo === 'modalidade') setFiltroModalidade(valor);
     if (tipo === 'menu') setFiltroMenu(valor);
@@ -213,7 +233,6 @@ const Catalogo = () => {
   };
 
   if (loading) return <div className="loader-catalogo">Carregando Acervo...</div>;
-  
   if (lojaInvalida) return (
       <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', fontFamily: 'sans-serif', textAlign: 'center', padding: '20px'}}>
           <h1 style={{fontSize: '40px', marginBottom: '10px'}}>🏪</h1>
@@ -221,9 +240,9 @@ const Catalogo = () => {
           <p style={{color: '#64748b'}}>Por favor, solicite o link correto à decoradora para aceder ao catálogo de produtos.</p>
       </div>
   );
-  
+
   return (
-    <div className="catalogo-publico">
+    <div className="catalogo-publico" style={{ backgroundColor: '#fff' }}>
       <header className="cat-header">
         <div className="cat-header-content">
           <h1 className="cat-logo">{empresa.nome}</h1>
@@ -243,7 +262,6 @@ const Catalogo = () => {
         {menuMobileAberto && <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>}
 
         <aside className={`cat-sidebar ${menuMobileAberto ? 'open' : ''}`}>
- 
           <div className="sidebar-mobile-header">
              <h3>Filtros</h3>
              <button className="btn-fechar-menu" onClick={() => setMenuMobileAberto(false)}>✕</button>
@@ -277,70 +295,24 @@ const Catalogo = () => {
         </aside>
 
         <main className="cat-content">
-          
-          {/* 🔥 BOTÕES DE MODALIDADE CENTRALIZADOS E MODERNOS [cite: 53] */}
-          <div style={{ 
-            display: 'flex', 
-            gap: '10px', 
-            marginBottom: '20px', 
-            flexWrap: 'wrap', 
-            justifyContent: 'center', 
-            width: '100%',
-            padding: '0 10px'
-          }}>
+          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', padding: '0 10px' }}>
              <button 
                 onClick={() => selecionarFiltro('modalidade', 'Todas')}
-                style={{ 
-                  padding: '10px 20px', 
-                  borderRadius: '25px', 
-                  border: '1px solid #cbd5e1', 
-                  background: filtroModalidade === 'Todas' ? '#0f172a' : '#fff', 
-                  color: filtroModalidade === 'Todas' ? '#fff' : '#475569', 
-                  fontWeight: 'bold', 
-                  cursor: 'pointer', 
-                  transition: '0.3s ease',
-                  fontSize: '14px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '5px'
-                }}
+                style={{ padding: '10px 20px', borderRadius: '25px', border: '1px solid #cbd5e1', background: filtroModalidade === 'Todas' ? '#0f172a' : '#fff', color: filtroModalidade === 'Todas' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '5px' }}
              >
-                {filtroModalidade === 'Todas' && <span>✓</span>} Todas
+               {filtroModalidade === 'Todas' && <span>✓</span>} Todas
              </button>
 
              <button 
                 onClick={() => selecionarFiltro('modalidade', 'Pegue e Monte')}
-                style={{ 
-                  padding: '10px 20px', 
-                  borderRadius: '25px', 
-                  border: '1px solid #cbd5e1', 
-                  background: filtroModalidade === 'Pegue e Monte' ? '#0f172a' : '#fff', 
-                  color: filtroModalidade === 'Pegue e Monte' ? '#fff' : '#475569', 
-                  fontWeight: 'bold', 
-                  cursor: 'pointer', 
-                  transition: '0.3s ease',
-                  fontSize: '14px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                }}
+                style={{ padding: '10px 20px', borderRadius: '25px', border: '1px solid #cbd5e1', background: filtroModalidade === 'Pegue e Monte' ? '#0f172a' : '#fff', color: filtroModalidade === 'Pegue e Monte' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
              >
                 📦 Pegue e Monte
              </button>
 
              <button 
                 onClick={() => selecionarFiltro('modalidade', 'Decoração Completa')}
-                style={{ 
-                  padding: '10px 20px', 
-                  borderRadius: '25px', 
-                  border: '1px solid #cbd5e1', 
-                  background: filtroModalidade === 'Decoração Completa' ? '#0f172a' : '#fff', 
-                  color: filtroModalidade === 'Decoração Completa' ? '#fff' : '#475569', 
-                  fontWeight: 'bold', 
-                  cursor: 'pointer', 
-                  transition: '0.3s ease',
-                  fontSize: '14px',
-                  boxShadow: '0 2px 4px rgba(0,0,0,0.05)'
-                }}
+                style={{ padding: '10px 20px', borderRadius: '25px', border: '1px solid #cbd5e1', background: filtroModalidade === 'Decoração Completa' ? '#0f172a' : '#fff', color: filtroModalidade === 'Decoração Completa' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
              >
                 ✨ Decoração
              </button>
@@ -355,7 +327,7 @@ const Catalogo = () => {
           {window.innerWidth <= 900 && (filtroMenu !== 'Todos' || filtroModalidade !== 'Todas') && (
               <div className="active-filters-mobile">
                   Mostrando: <strong>{filtroModalidade}</strong> • <strong>{filtroMenu}</strong>
-                 <button onClick={() => { setFiltroModalidade('Todas'); setFiltroMenu('Todos'); }}>Limpar</button>
+                  <button onClick={() => { setFiltroModalidade('Todas'); setFiltroMenu('Todos'); }}>Limpar</button>
               </div>
           )}
 
@@ -396,7 +368,6 @@ const Catalogo = () => {
         </div>
       </footer>
 
-      {/* 🔥 BOTÃO FLUTUANTE DO MENU (CORRIGIDO PARA ABRIR/FECHAR) [cite: 71] */}
       {window.innerWidth <= 900 && (
           <button 
             className="btn-mobile-filtros-fab" 
@@ -414,14 +385,12 @@ const Catalogo = () => {
         </div>
       )}
 
-      {/* MODAL E-COMMERCE PREMIUM (DETALHES DO PRODUTO) [cite: 73, 105] */}
       {produtoDetalhe && (
         <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '20px', boxSizing: 'border-box', opacity: 1, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setProdutoDetalhe(null)}>
           <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '950px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={e => e.stopPropagation()}>
             
             <button onClick={() => setProdutoDetalhe(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '50%', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', zIndex: 10, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
 
-            {/* LADO ESQUERDO: IMAGENS */}
             <div style={{ width: window.innerWidth < 768 ? '100%' : '50%', backgroundColor: '#f8fafc', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', borderRight: window.innerWidth < 768 ? 'none' : '1px solid #e2e8f0', borderBottom: window.innerWidth < 768 ? '1px solid #e2e8f0' : 'none' }}>
                <div style={{ width: '100%', height: '350px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
                    {produtoDetalhe.foto ? <img src={produtoDetalhe.foto} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={produtoDetalhe.nome}/> : <span style={{fontSize:'50px'}}>📷</span>}
@@ -450,7 +419,6 @@ const Catalogo = () => {
                )}
             </div>
 
-            {/* LADO DIREITO: DADOS E PREÇO */}
             <div style={{ width: window.innerWidth < 768 ? '100%' : '50%', padding: '30px', display: 'flex', flexDirection: 'column' }}>
                <div style={{ marginBottom: '5px' }}>
                    <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
@@ -550,7 +518,6 @@ const Catalogo = () => {
                        {isNoCarrinho(produtoDetalhe.id) ? 'Remover da Lista' : 'Adicionar à Minha Festa'}
                    </button>
                </div>
-
             </div>
           </div>
         </div>
@@ -558,14 +525,13 @@ const Catalogo = () => {
 
       {modalFinalizar && (
         <div className="modal-overlay-catalogo" onClick={() => setModalFinalizar(false)}>
-           <div className="modal-content-catalogo" onClick={e => e.stopPropagation()}>
-            
+          <div className="modal-content-catalogo" onClick={e => e.stopPropagation()}>
             <div className="modal-header-catalogo">
               <h2>Sua Lista de Peças</h2>
               <button className="btn-close-modal" onClick={() => setModalFinalizar(false)}>✕</button>
             </div>
             
-             <div className="modal-body-catalogo">
+            <div className="modal-body-catalogo">
               <div className="resumo-carrinho">
                 <h3>Itens Selecionados ({carrinho.length})</h3>
                 <ul>
@@ -578,7 +544,7 @@ const Catalogo = () => {
                 </ul>
                 <div className="resumo-total">
                   <span>Total Estimado:</span>
-                   <strong>R$ {calcularTotal().toFixed(2)}</strong>
+                  <strong>R$ {calcularTotal().toFixed(2)}</strong>
                 </div>
               </div>
 
@@ -590,7 +556,7 @@ const Catalogo = () => {
                  >
                    Apenas Orçamento
                  </button>
-                   <button 
+                 <button 
                    className={tipoFluxo === 'cadastro' ? 'active' : ''} 
                    onClick={() => setTipoFluxo('cadastro')}
                    type="button"
@@ -604,7 +570,7 @@ const Catalogo = () => {
                     <h3>Orçamento Rápido</h3>
                     <label>Seu Nome</label>
                     <input type="text" placeholder="Como podemos te chamar?" required 
-                        value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})}
+                      value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})}
                     />
                     <label>Seu WhatsApp</label>
                     <input type="text" placeholder="(11) 99999-9999" required 
@@ -625,12 +591,12 @@ const Catalogo = () => {
                         type="button" 
                          className="btn-ir-cadastro" 
                         onClick={() => navigate(`/autocadastro/${tenantId}`, { state: { carrinhoCatalogo: carrinho, empresaConfig: empresa, empresaId: tenantId } })} 
-                    >
+                     >
                         Ir para Tela de Cadastro ➔
                      </button>
                   </div>
               )}
-            </div>
+             </div>
           </div>
         </div>
       )}

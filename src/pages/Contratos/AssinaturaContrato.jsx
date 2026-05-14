@@ -1,15 +1,15 @@
 import React, { useRef, useState, useEffect } from "react";
-import { useParams, useNavigate, useSearchParams } from "react-router-dom"; 
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { db } from "../../firebaseConfig";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import SignatureCanvas from "react-signature-canvas";
 import "./AssinaturaContrato.css";
 
 const AssinaturaContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -22,9 +22,34 @@ const AssinaturaContrato = () => {
   
   const [contrato, setContrato] = useState(null);
   const [assinaturaGlobal, setAssinaturaGlobal] = useState(null); 
-  const [nomeEmpresa, setNomeEmpresa] = useState("Nossa Empresa"); // 🔥 Nome Dinâmico
+  const [nomeEmpresa, setNomeEmpresa] = useState("Nossa Empresa");
+
   const [carregando, setCarregando] = useState(true);
-  const [status, setStatus] = useState("pronto"); 
+  const [status, setStatus] = useState("pronto");
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ASSINATURAS EXTERNAS E INTERNAS)
+  const registrarLog = async (acao, detalhes, dadosContrato) => {
+    try {
+      // Se for externo, quem está assinando é o cliente. Se for interno, é a equipe.
+      const nomeResponsavel = isExternal ? (dadosContrato?.cliente || "Cliente Externo") : (usuarioLogado?.displayName || usuarioLogado?.email || "Equipe");
+      const donoDoContratoId = dadosContrato?.userId || usuarioLogado?.uid;
+
+      if (!donoDoContratoId) return;
+
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeResponsavel,
+        usuarioNome: nomeResponsavel,
+        usuarioEmail: usuarioLogado?.email || "N/A",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: donoDoContratoId
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da assinatura:", error);
+    }
+  };
 
   useEffect(() => {
     const buscarDados = async () => {
@@ -34,7 +59,6 @@ const AssinaturaContrato = () => {
           const data = docSnap.data();
 
           // 🔥 BLINDAGEM MULTI-EMPRESA INTELIGENTE
-          // Se não for o cliente abrindo de fora, exige que seja o dono logado
           if (!isExternal) {
               if (!usuarioLogado) {
                   navigate('/login');
@@ -49,7 +73,7 @@ const AssinaturaContrato = () => {
 
           setContrato(data);
 
-          // 🔥 BUSCA O COFRE CERTO: Puxa a assinatura e o nome da empresa que criou o contrato
+          // 🔥 BUSCA O COFRE CERTO
           const donoId = data.userId || (usuarioLogado ? usuarioLogado.uid : null);
           if (donoId) {
               const configRef = doc(db, "configuracoes_empresa", donoId);
@@ -66,7 +90,7 @@ const AssinaturaContrato = () => {
           if (!isExternal) navigate("/contratos");
         }
       } catch (err) { 
-        console.error("Erro ao buscar dados:", err); 
+        console.error("Erro ao buscar dados:", err);
       } finally { 
         setCarregando(false); 
       }
@@ -77,8 +101,6 @@ const AssinaturaContrato = () => {
 
   const enviarWhatsapp = () => {
     const linkAssinatura = `${window.location.origin}/assinatura/${id}?external=true`;
-    
-    // 🔥 MENSAGEM DINÂMICA: Usa o nome real da sua empresa!
     const textoBruto = `Olá ${contrato.cliente}!\n\nAqui está o link para a assinatura digital do seu contrato da *${nomeEmpresa}*:\n\n👉 ${linkAssinatura}\n\nÉ só clicar, desenhar sua assinatura na tela e salvar!`;
     const mensagem = encodeURIComponent(textoBruto);
     const fone = contrato.telefone ? String(contrato.telefone).replace(/\D/g, "") : "";
@@ -96,6 +118,7 @@ const AssinaturaContrato = () => {
   const limparCliente = () => { 
       if(sigCliente.current && typeof sigCliente.current.clear === 'function') sigCliente.current.clear();
   };
+
   const limparAgape = () => { 
       if(sigAgape.current && typeof sigAgape.current.clear === 'function') sigAgape.current.clear();
   };
@@ -125,7 +148,7 @@ const AssinaturaContrato = () => {
 
       if (novaAssinaturaCliente) atualizacao.assinaturaCliente = novaAssinaturaCliente;
       if (novaAssinaturaAgape) atualizacao.assinaturaAgape = novaAssinaturaAgape;
-      
+
       if (!contrato.assinaturaAgape && assinaturaGlobal) {
           atualizacao.assinaturaAgape = assinaturaGlobal;
       }
@@ -140,11 +163,23 @@ const AssinaturaContrato = () => {
 
       await updateDoc(docRef, atualizacao);
 
+      // 🔥 CHAMA O ESPIÃO APÓS SALVAR A ASSINATURA
+      let quemAssinou = [];
+      if (novaAssinaturaCliente) quemAssinou.push("Cliente");
+      if (novaAssinaturaAgape) quemAssinou.push("Empresa");
+
+      await registrarLog(
+        "COLETA DE ASSINATURA DIGITAL",
+        `Assinatura(s) recolhida(s) no documento: ${quemAssinou.join(" e ")}. O contrato de ${contrato?.cliente} agora está no status: ${atualizacao.status || contrato?.status}.`,
+        contrato
+      );
+
       setStatus("sucesso");
       setTimeout(() => {
         alert("✅ Assinatura salva com sucesso!");
         window.location.reload(); 
       }, 500);
+
     } catch (error) {
       console.error(error);
       setStatus("erro");

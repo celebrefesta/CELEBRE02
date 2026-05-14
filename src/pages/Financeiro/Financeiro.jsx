@@ -1,19 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom"; 
-import { db } from "../../firebaseConfig"; 
+import { db } from "../../firebaseConfig";
 import { collection, query, onSnapshot, deleteDoc, doc, where, addDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; 
+import { getAuth } from "firebase/auth";
 import "./Financeiro.css";
 
 const Financeiro = () => {
   const navigate = useNavigate();
-  
   // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
   const [transacoes, setTransacoes] = useState([]);
-
+  
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO)
   const registrarLog = async (acao, detalhes) => {
     try {
@@ -70,7 +69,6 @@ const Financeiro = () => {
 
   const handleExcluirLancamento = async (transacao) => {
     const confirmacao = window.confirm(`⚠️ CUIDADO: Tem certeza que deseja excluir "${transacao.descricao}"? Esta ação é irreversível.`);
-    
     if (confirmacao) {
       try {
         const valorFormatado = Number(transacao.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -100,7 +98,7 @@ const Financeiro = () => {
             <h1>Financeiro</h1>
             <p>Controle completo de fluxo de caixa da empresa</p>
           </div>
-        
+  
           <div className="fin-action-buttons">
             <button className="btn-novo-lancamento-unico" onClick={() => navigate('/financeiro/novo')}>
               + Novo Lançamento

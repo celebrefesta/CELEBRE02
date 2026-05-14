@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import './NovaLocacao.css';
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, doc, getDoc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, updateDoc, addDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 
@@ -47,7 +47,6 @@ const EditarLocacao = () => {
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
 
-  // 🔥 ESTADO DE MEMÓRIA (Apenas grava log se algo mudar de verdade)
   const [dadosIniciais, setDadosIniciais] = useState(null);
 
   const isFinalizado = statusAtual === 'finalizado' || statusAtual === 'cancelado';
@@ -174,7 +173,6 @@ const EditarLocacao = () => {
             setDesconto(data.desconto || 0);
             setObsInternas(data.obsInternas || '');
 
-            // 🔥 MEMORIZA OS DADOS INTELIGENTEMENTE
             setDadosIniciais({
                 clienteId: data.clienteId || '',
                 temaFesta: temaSalvo,
@@ -377,7 +375,11 @@ const EditarLocacao = () => {
         const dados = await res.json();
         if (!dados.erro) {
           setLogistica(prev => ({
-            ...prev, cep: cepFormatado, rua: dados.logradouro || '', bairro: dados.bairro || '', cidade: `${dados.localidade || ''} - ${dados.uf || ''}`
+            ...prev, 
+            cep: cepFormatado,
+            rua: dados.logradouro || '',
+            bairro: dados.bairro || '',
+            cidade: `${dados.localidade || ''} - ${dados.uf || ''}`
           }));
           setTimeout(() => document.getElementById('numeroInput').focus(), 100);
         }
@@ -398,8 +400,11 @@ const EditarLocacao = () => {
 
   const interceptarSalvamento = (novoStatus) => {
     if (!clienteSelecionado || !datas.retirada) return alert("Preencha cliente e data de retirada!");
-    if (temaFesta === 'OUTRO_TEMA' && !temaDigitadoPersonalizado) return alert("Por favor, digite o nome do tema personalizado!");
-    else if (!temaFesta) return alert("Selecione o Tema da Festa!");
+    if (temaFesta === 'OUTRO_TEMA' && !temaDigitadoPersonalizado) {
+        return alert("Por favor, digite o nome do tema personalizado!");
+    } else if (!temaFesta) {
+        return alert("Selecione o Tema da Festa!");
+    }
 
     const hojeStr = new Date().toISOString().split('T')[0];
 
@@ -444,27 +449,83 @@ const EditarLocacao = () => {
       const logisticaParaSalvar = { ...logistica, frete: getFreteNumerico() };
       const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
       const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
+      const totalFinalCalculado = calcularTotal().total;
+      
       const docRef = doc(db, "locacoes", id);
       
       await updateDoc(docRef, {
-        clienteId: clienteSelecionado, clienteNome: nomeCliente, temaFesta: temaFinalParaSalvar, tipoServico, 
-        dataRetirada: datas.retirada, dataDevolucao: datas.devolucao, itens: carrinho, 
-        logistica: logisticaParaSalvar, obsInternas, desconto: Number(desconto),
-        valorTotal: calcularTotal().total, valorPago: novoValorPagoTotal, sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
-        status: statusFinal, atualizadoEm: new Date()
+        clienteId: clienteSelecionado,
+        clienteNome: nomeCliente,
+        temaFesta: temaFinalParaSalvar,
+        tipoServico, 
+        dataRetirada: datas.retirada,
+        dataDevolucao: datas.devolucao,
+        itens: carrinho, 
+        logistica: logisticaParaSalvar,
+        obsInternas,
+        desconto: Number(desconto),
+        valorTotal: totalFinalCalculado,
+        valorPago: novoValorPagoTotal,
+        sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
+        status: statusFinal,
+        atualizadoEm: new Date()
       });
 
       if (valorSinalEntrandoNoCaixa > 0) {
         await addDoc(collection(db, "financeiro_lancamentos"), {
-            tipo: 'entrada', categoria: 'Locação', valor: valorSinalEntrandoNoCaixa, formaPagto: formaPagtoSinal,
-            data: new Date().toISOString().split('T')[0], status: 'pago', createdAt: serverTimestamp(),
-            descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`, userId: usuarioLogado.uid
+            tipo: 'entrada', 
+            categoria: 'Locação', 
+            valor: valorSinalEntrandoNoCaixa, 
+            formaPagto: formaPagtoSinal,
+            data: new Date().toISOString().split('T')[0], 
+            status: 'pago', 
+            createdAt: serverTimestamp(),
+            descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`,
+            userId: usuarioLogado.uid
         });
         await registrarLog("PAGAMENTO DE SINAL", `Registrou entrada financeira de R$ ${valorSinalEntrandoNoCaixa.toFixed(2)}.`);
         setValorJaPago(novoValorPagoTotal); 
       }
       
-      // 🔥 AQUI FICA A INFORMAÇÃO 100% PERFEITA E BLINDADA
+      // 🔥 ATUALIZAR FINANCEIRO PENDENTE (O Elo Perdido da Edição)
+      const valorRestante = totalFinalCalculado - novoValorPagoTotal;
+      try {
+          const qPendentes = query(collection(db, "financeiro_lancamentos"), where("pedidoId", "==", id), where("status", "==", "pendente"));
+          const snapPendentes = await getDocs(qPendentes);
+          
+          if (valorRestante > 0 && statusFinal !== 'orcamento') {
+              if (!snapPendentes.empty) {
+                  // Já existe um lançamento pendente, vamos atualizar o valor
+                  const docRefPend = doc(db, "financeiro_lancamentos", snapPendentes.docs[0].id);
+                  await updateDoc(docRefPend, {
+                      valor: valorRestante,
+                      descricao: `Locação #${numeroPedido} - ${nomeCliente}`
+                  });
+              } else {
+                  // Não tem pendente mas ainda falta pagar, logo, cria um novo
+                  await addDoc(collection(db, "financeiro_lancamentos"), {
+                      userId: usuarioLogado.uid,
+                      pedidoId: id,
+                      numeroPedido: numeroPedido,
+                      descricao: `Locação #${numeroPedido} - ${nomeCliente}`,
+                      valor: valorRestante,
+                      tipo: 'entrada',
+                      status: 'pendente',
+                      categoria: 'Locação',
+                      data: datas.retirada,
+                      createdAt: serverTimestamp()
+                  });
+              }
+          } else if (valorRestante <= 0) {
+              // Se já não há valor a receber, apaga os pendentes dessa locação
+              snapPendentes.docs.forEach(async (d) => {
+                  await deleteDoc(doc(db, "financeiro_lancamentos", d.id));
+              });
+          }
+      } catch (errFin) {
+          console.error("Erro ao sincronizar pendente no financeiro:", errFin);
+      }
+
       let mudancas = [];
       if (dadosIniciais) {
           if (String(clienteSelecionado) !== String(dadosIniciais.clienteId)) {
@@ -479,7 +540,6 @@ const EditarLocacao = () => {
           if (logistica.frete !== dadosIniciais.frete) mudancas.push(`Frete (de '${dadosIniciais.frete}' para '${logistica.frete}')`);
           if (Number(desconto) !== Number(dadosIniciais.desconto)) mudancas.push(`Desconto (para R$${desconto})`);
           
-          // Raio-X inteligente do carrinho
           const carrinhoAntigo = JSON.parse(dadosIniciais.carrinhoSnapshot || '[]');
           let mudancasItens = [];
           
@@ -499,7 +559,6 @@ const EditarLocacao = () => {
           if (mudancasItens.length > 0) mudancas.push(`Itens [${mudancasItens.join(', ')}]`);
       }
 
-      // SÓ GERA LOG SE MUDAR O STATUS OU SE HOUVEREM ALTERAÇÕES! FIM DOS LOGS FANTASMAS!
       if (statusFinal && statusFinal !== statusAtual) {
         let det = `Avançou o pedido #${numeroPedido} de ${statusAtual.toUpperCase()} para ${statusFinal.toUpperCase()}.`;
         if (mudancas.length > 0) det += ` (Também editou: ${mudancas.join(' | ')})`;
@@ -510,7 +569,6 @@ const EditarLocacao = () => {
 
       setStatusAtual(statusFinal);
 
-      // Atualiza a memória limpa para as próximas edições
       setDadosIniciais({
           clienteId: clienteSelecionado, temaFesta: temaFinalParaSalvar, dataRetirada: datas.retirada, dataDevolucao: datas.devolucao,
           tipoServico: tipoServico, tipoLogistica: logistica.tipo, frete: logistica.frete, desconto: desconto,
@@ -540,7 +598,8 @@ const EditarLocacao = () => {
   };
 
   const salvarSemSinal = () => {
-      if (window.confirm("⚠️ ALERTA DE RISCO!\n\nVocê deixou o valor de entrada como R$ 0,00.\n\nTem certeza que deseja APROVAR este pedido assumindo o risco de não ter recebido nenhum sinal?")) {
+      const confirmouSemSinal = window.confirm("⚠️ ALERTA DE RISCO!\n\nVocê deixou o valor de entrada como R$ 0,00.\n\nTem certeza que deseja APROVAR este pedido assumindo o risco de não ter recebido nenhum sinal?");
+      if (confirmouSemSinal) {
           executarSalvamentoFinal('confirmado', 0, 0);
       }
   };
@@ -551,8 +610,10 @@ const EditarLocacao = () => {
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
       const vSinalFormatado = valorSinal || '0,00';
+      
       const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
       const msgEncoded = encodeURIComponent(texto);
+      
       const url = telefoneC ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` : `https://api.whatsapp.com/send?text=${msgEncoded}`;
       window.open(url, '_blank');
   };

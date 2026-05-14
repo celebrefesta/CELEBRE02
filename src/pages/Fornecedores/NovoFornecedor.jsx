@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from 'firebase/auth'; 
 import './NovoFornecedor.css';
 
 const NovoFornecedor = () => {
@@ -28,6 +28,25 @@ const NovoFornecedor = () => {
   const [pix, setPix] = useState('');
   const [endereco, setEndereco] = useState('');
   const [observacoes, setObservacoes] = useState('');
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE FORNECEDORES)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de fornecedores:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -89,7 +108,6 @@ const NovoFornecedor = () => {
   const handleSalvar = async (e) => {
     e.preventDefault();
     if (!nome.trim()) return alert("O nome do fornecedor é obrigatório.");
-
     setSalvando(true);
     try {
         const dadosParaSalvar = {
@@ -108,6 +126,10 @@ const NovoFornecedor = () => {
 
         if (isEditing) {
             await updateDoc(doc(db, 'fornecedores', id), dadosParaSalvar);
+            
+            // 🔥 AUDITORIA DE EDIÇÃO
+            await registrarLog("EDIÇÃO DE FORNECEDOR", `Atualizou os dados do fornecedor/parceiro: "${nome}".`);
+            
             alert("Fornecedor atualizado com sucesso!");
         } else {
             // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o fornecedor com o seu userId
@@ -116,6 +138,10 @@ const NovoFornecedor = () => {
                 userId: usuarioLogado.uid, // 🔥 CADEADO DE SEGURANÇA
                 criadoEm: serverTimestamp()
             });
+            
+            // 🔥 AUDITORIA DE CRIAÇÃO
+            await registrarLog("NOVO FORNECEDOR", `Cadastrou um novo fornecedor/parceiro: "${nome}".`);
+            
             alert("Fornecedor cadastrado com sucesso!");
         }
         navigate('/fornecedores');
@@ -147,7 +173,6 @@ const NovoFornecedor = () => {
             <div className="card-header-visual">
                 <div className="logo-wrapper">
                     <input type="file" id="logo-input" hidden accept="image/*" onChange={handleImageChange} />
-                  
                     <div className="logo-circle" onClick={() => document.getElementById('logo-input').click()} title="Adicionar Logo">
                         {logoPreview ? (
                             <img src={logoPreview} className="logo-preview" alt="Preview" />
@@ -165,7 +190,6 @@ const NovoFornecedor = () => {
             </div>
 
             <div className="card-body">
-                
                 <div className="section-heading">
                     <h1>{isEditing ? 'Editar Fornecedor' : 'Cadastrar Fornecedor'}</h1>
                     <p>Preencha os dados do seu parceiro comercial</p>

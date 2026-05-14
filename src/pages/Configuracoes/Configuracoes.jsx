@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, getDocs, where, writeBatch } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, getDocs, where, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
 import SignatureCanvas from 'react-signature-canvas'; 
 import './Configuracoes.css';
 
@@ -33,7 +33,6 @@ const Configuracoes = () => {
     endereco: '', instagram: '', logotipo: '', slogan: '', site: '',
     assinatura: '', pixelFacebook: '' 
   });
-  
   const [loading, setLoading] = useState(true);
 
   const [inputCatFisica, setInputCatFisica] = useState(''); 
@@ -54,6 +53,26 @@ const Configuracoes = () => {
   const [subCatVitrineSelecionada, setSubCatVitrineSelecionada] = useState('');
   const [grupoVitrineSelecionado, setGrupoVitrineSelecionado] = useState('');
   const [temaVitrineSelecionado, setTemaVitrineSelecionado] = useState('');
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CONFIGURAÇÕES)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de configurações:", error);
+    }
+  };
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -113,7 +132,7 @@ const Configuracoes = () => {
 
         const newState = {
             ...dados,
-            userId: usuarioLogado.uid, // 🔥 Grava a posse do documento
+            userId: usuarioLogado.uid,
             categoriasFisicas: dbCatFis,
             subcategoriasFisicas: dbSubCatFis,
             tamanhosPorCategoria: dbTamCat,
@@ -135,7 +154,6 @@ const Configuracoes = () => {
 
   const verificarUsoNoEstoque = async (nomeDoCampoDeBusca, valorProcurado) => {
       if (!usuarioLogado) return 0;
-      // 🔥 BLINDAGEM: Procura apenas no seu estoque
       const q = query(
           collection(db, "estoque"), 
           where("userId", "==", usuarioLogado.uid),
@@ -148,7 +166,6 @@ const Configuracoes = () => {
   const atualizarNomeNoEstoqueEmLote = async (campoBanco, valorAntigo, valorNovo) => {
       if (!campoBanco || !usuarioLogado) return;
       try {
-          // 🔥 BLINDAGEM: Atualiza apenas o seu estoque
           const q = query(
               collection(db, "estoque"), 
               where("userId", "==", usuarioLogado.uid),
@@ -205,7 +222,6 @@ const Configuracoes = () => {
       if (nivel === 2) campoBanco = 'subcategoriaTema';
       if (nivel === 3) campoBanco = 'grupoTema';
       if (nivel === 4) campoBanco = 'tema';
-
       if (campoBanco) {
           const emUso = await verificarUsoNoEstoque(campoBanco, valor);
           if (emUso > 0) { 
@@ -434,14 +450,25 @@ const Configuracoes = () => {
       } catch (e) { alert("Erro ao editar localização."); }
   };
 
-  // Funções Gerais da Empresa
+  // Funções Gerais da Empresa e 🔥 Auditoria 🔥
   const handleConfigChange = (campo, valor) => setConfig(prev => ({ ...prev, [campo]: valor }));
+
   const salvarConfigTextual = async (campo, valor) => {
     if (!usuarioLogado) return;
-    try { await updateDoc(getDocConfigRef(), { [campo]: valor });
+    try { 
+        await updateDoc(getDocConfigRef(), { [campo]: valor }); 
+        
+        // 🔥 REGISTA AUDITORIA DE ALTERAÇÃO DE DADOS VITAIS
+        const nomesAmigaveis = {
+            nomeEmpresa: 'Nome da Empresa', cnpj: 'CNPJ / CPF', telefone: 'WhatsApp / Telefone', 
+            emailEmpresa: 'E-mail', endereco: 'Endereço Completo', instagram: 'Instagram', 
+            slogan: 'Slogan', site: 'Site / Link', pixelFacebook: 'Pixel do Facebook'
+        };
+        await registrarLog("ALTERAÇÃO DE CONFIGURAÇÃO", `Atualizou o campo "${nomesAmigaveis[campo] || campo}" da empresa para: "${valor}".`);
+        
     } catch (e) { console.error(e); }
   };
-  
+
   const handleLogoUpload = (e) => {
     const file = e.target.files[0];
     if (!file || !usuarioLogado) return;
@@ -458,8 +485,12 @@ const Configuracoes = () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
         const base64Logo = canvas.toDataURL('image/png', 0.9);
+        
         setConfig(prev => ({ ...prev, logotipo: base64Logo }));
-        try { await updateDoc(getDocConfigRef(), { logotipo: base64Logo }); } catch (e) { console.error(e); }
+        try { 
+            await updateDoc(getDocConfigRef(), { logotipo: base64Logo }); 
+            await registrarLog("IDENTIDADE VISUAL", "Atualizou o Logotipo da empresa.");
+        } catch (e) { console.error(e); }
       };
       img.src = event.target.result;
     };
@@ -469,32 +500,42 @@ const Configuracoes = () => {
   const removerLogo = async () => {
     if(!window.confirm("Remover logotipo?")) return;
     setConfig(prev => ({ ...prev, logotipo: '' }));
-    try { await updateDoc(getDocConfigRef(), { logotipo: '' }); } catch (e) { console.error(e); }
+    try { 
+        await updateDoc(getDocConfigRef(), { logotipo: '' }); 
+        await registrarLog("IDENTIDADE VISUAL", "Removeu o Logotipo da empresa.");
+    } catch (e) { console.error(e); }
   };
 
   const limparAssinatura = () => { if(sigGlobal.current) sigGlobal.current.clear(); };
+  
   const salvarAssinaturaGlobal = async () => {
     if (sigGlobal.current.isEmpty()) { alert("⚠️ Por favor, desenhe sua assinatura antes de salvar."); return; }
     const base64Sig = sigGlobal.current.getCanvas().toDataURL("image/png");
     setConfig(prev => ({ ...prev, assinatura: base64Sig }));
-    try { await updateDoc(getDocConfigRef(), { assinatura: base64Sig }); alert("✅ Assinatura padrão salva com sucesso!");
+    try { 
+        await updateDoc(getDocConfigRef(), { assinatura: base64Sig }); 
+        await registrarLog("ASSINATURA DIGITAL", "Criou uma nova assinatura padrão para os contratos.");
+        alert("✅ Assinatura padrão salva com sucesso!");
     } catch (e) { console.error(e); }
   };
 
   const removerAssinaturaGlobal = async () => {
     if(!window.confirm("Tem certeza que deseja apagar a assinatura padrão?")) return;
     setConfig(prev => ({ ...prev, assinatura: '' }));
-    try { await updateDoc(getDocConfigRef(), { assinatura: '' });
+    try { 
+        await updateDoc(getDocConfigRef(), { assinatura: '' });
+        await registrarLog("ASSINATURA DIGITAL", "Apagou a assinatura padrão dos contratos.");
     } catch (e) { console.error(e); }
   };
 
   if (loading) return <div className="loading-config">Carregando painel de controle...</div>;
+  
   const categoriasVitrineArr = Object.keys(config.catalogoVitrine || {});
   const subcategoriasVitrineArr = catVitrineSelecionada ? Object.keys(config.catalogoVitrine[catVitrineSelecionada] || {}) : [];
   const gruposVitrineArr = (catVitrineSelecionada && subCatVitrineSelecionada) ? Object.keys(config.catalogoVitrine[catVitrineSelecionada][subCatVitrineSelecionada] || {}) : [];
   const temasVitrineArr = (catVitrineSelecionada && subCatVitrineSelecionada && grupoVitrineSelecionado) ? (config.catalogoVitrine[catVitrineSelecionada][subCatVitrineSelecionada][grupoVitrineSelecionado] || []) : [];
-
   const alvoTamanhoFisico = subCatFisicaSelecionada || catFisicaSelecionada;
+
   return (
     <div className="config-container fade-in">
       <header className="config-header-top">
@@ -514,16 +555,18 @@ const Configuracoes = () => {
         
         {abaAtiva === 'listas' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
-            
+        
             {/* ========================================== */}
             {/* SESSÃO 1: GALPÃO */}
             {/* ========================================== */}
             <div>
               <h2 style={{borderBottom: '2px solid #3b82f6', paddingBottom: '8px', color: '#0f172a', margin: '0 0 15px 0', fontSize: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '800'}}>📦 Estrutura do Galpão (Físico)</h2>
+ 
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '15px' }}>
                   
                   <div className="config-card" style={{margin: 0}}>
                     <div className="card-top-bar blue-bar"></div>
+                
                     <h3>🏷️ Categorias Físicas (Prateleira)</h3>
                     <div className="add-item-box">
                       <input type="text" placeholder="Ex: Móveis, Painéis..." value={inputCatFisica} onChange={(e) => setInputCatFisica(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && adicionarFisicoOuTamanho('categoriasFisicas', null, null, inputCatFisica)} />
@@ -533,7 +576,6 @@ const Configuracoes = () => {
                       {config.categoriasFisicas?.map(cat => (
                         <li key={cat} onClick={() => { setCatFisicaSelecionada(cat); setSubCatFisicaSelecionada(''); }} className={catFisicaSelecionada === cat ? 'active' : ''}>
                           <span>{cat}</span>
-                          {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={(e) => {e.stopPropagation(); editarFisicoOuTamanho('categoriasFisicas', null, null, cat)}} title="Editar Nome">✏️</span>
                               <span className="del-icon" onClick={(e) => {e.stopPropagation(); removerFisicoOuTamanho('categoriasFisicas', null, null, cat)}} title="Excluir">✕</span>
@@ -556,7 +598,6 @@ const Configuracoes = () => {
                           {config.subcategoriasFisicas[catFisicaSelecionada]?.map(sub => (
                             <li key={sub} onClick={() => setSubCatFisicaSelecionada(sub)} className={subCatFisicaSelecionada === sub ? 'active' : ''}>
                                 <span>{sub}</span>
-                                {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                     <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={(e) => {e.stopPropagation(); editarFisicoOuTamanho(null, 'subcategoriasFisicas', catFisicaSelecionada, sub)}} title="Editar Nome">✏️</span>
                                     <span className="del-icon" onClick={(e) => { e.stopPropagation(); removerFisicoOuTamanho(null, 'subcategoriasFisicas', catFisicaSelecionada, sub); }} title="Excluir">✕</span>
@@ -575,6 +616,7 @@ const Configuracoes = () => {
             {/* ========================================== */}
             <div>
               <h2 style={{borderBottom: '2px solid var(--dourado)', paddingBottom: '8px', color: '#0f172a', margin: '0 0 15px 0', fontSize: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '800'}}>🌐 Catálogo Virtual (Filtros do Site)</h2>
+   
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                   
                   <div className="config-card" style={{margin: 0}}>
@@ -588,7 +630,6 @@ const Configuracoes = () => {
                       {categoriasVitrineArr.map(cat => (
                         <li key={cat} onClick={() => { setCatVitrineSelecionada(cat); setSubCatVitrineSelecionada(''); setGrupoVitrineSelecionado(''); setTemaVitrineSelecionado(''); }} className={catVitrineSelecionada === cat ? 'active-gold' : ''}>
                           <span>{cat}</span> 
-                          {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={(e) => {e.stopPropagation(); editarVitrine(1, cat)}} title="Editar Nome">✏️</span>
                               <span className="del-icon" onClick={(e) => {e.stopPropagation(); removerVitrine(1, cat)}} title="Excluir">✕</span>
@@ -611,7 +652,6 @@ const Configuracoes = () => {
                           {subcategoriasVitrineArr.map(sub => (
                             <li key={sub} onClick={() => { setSubCatVitrineSelecionada(sub); setGrupoVitrineSelecionado(''); setTemaVitrineSelecionado(''); }} className={subCatVitrineSelecionada === sub ? 'active-gold' : ''}>
                               <span>{sub}</span> 
-                              {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={(e) => {e.stopPropagation(); editarVitrine(2, sub)}} title="Editar Nome">✏️</span>
                                   <span className="del-icon" onClick={(e) => { e.stopPropagation(); removerVitrine(2, sub); }} title="Excluir">✕</span>
@@ -636,7 +676,6 @@ const Configuracoes = () => {
                           {gruposVitrineArr.map(grupo => (
                             <li key={grupo} onClick={() => { setGrupoVitrineSelecionado(grupo); setTemaVitrineSelecionado(''); }} className={grupoVitrineSelecionado === grupo ? 'active-gold' : ''}>
                               <span>{grupo}</span> 
-                              {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={(e) => {e.stopPropagation(); editarVitrine(3, grupo)}} title="Editar Nome">✏️</span>
                                   <span className="del-icon" onClick={(e) => { e.stopPropagation(); removerVitrine(3, grupo); }} title="Excluir">✕</span>
@@ -661,7 +700,6 @@ const Configuracoes = () => {
                           {temasVitrineArr.map(tema => (
                             <li key={tema} onClick={() => setTemaVitrineSelecionado(tema)} className={temaVitrineSelecionado === tema ? 'active-gold' : ''}>
                               <span>{tema}</span> 
-                              {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                               <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                   <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={(e) => {e.stopPropagation(); editarVitrine(4, tema)}} title="Editar Nome">✏️</span>
                                   <span className="del-icon" onClick={(e) => { e.stopPropagation(); removerVitrine(4, tema); }} title="Excluir">✕</span>
@@ -694,7 +732,6 @@ const Configuracoes = () => {
                         {config.localizacoes?.map(loc => (
                           <li key={loc}>
                             <span>{loc}</span> 
-                            {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                 <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={() => editarLocalizacao(loc)} title="Editar Nome">✏️</span>
                                 <span className="del-icon" onClick={() => removerLocalizacao(loc)} title="Excluir">✕</span>
@@ -721,7 +758,6 @@ const Configuracoes = () => {
                               {config.tamanhosPorCategoria?.[alvoTamanhoFisico]?.map(tam => (
                                 <li key={tam}>
                                   <span>{tam}</span> 
-                                  {/* 🔥 CORREÇÃO DO ALINHAMENTO DOS BOTÕES 🔥 */}
                                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                                       <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={() => editarFisicoOuTamanho(null, 'tamanhosPorCategoria', alvoTamanhoFisico, tam)} title="Editar Nome">✏️</span>
                                       <span className="del-icon" onClick={() => removerFisicoOuTamanho(null, 'tamanhosPorCategoria', alvoTamanhoFisico, tam)} title="Excluir">✕</span>

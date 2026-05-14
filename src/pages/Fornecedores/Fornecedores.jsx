@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig'; 
-import { collection, query, where, getDocs, deleteDoc, doc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { collection, query, where, getDocs, deleteDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth'; 
 import './Fornecedores.css';
 
 const Fornecedores = () => {
@@ -15,6 +15,25 @@ const Fornecedores = () => {
   const [fornecedores, setFornecedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE FORNECEDORES)
+  const registrarLog = async (acao, detalhes) => {
+    try {
+      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria de fornecedores:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -42,9 +61,12 @@ const Fornecedores = () => {
     carregarFornecedores();
   }, [usuarioLogado, navigate]);
 
-  const handleDelete = async (id) => {
-      if(window.confirm("Deseja realmente excluir este fornecedor?")) {
+  const handleDelete = async (id, nome) => {
+      if(window.confirm(`Deseja realmente excluir o fornecedor "${nome}"?`)) {
           try {
+              // 🔥 Regista no monitoramento ANTES de apagar
+              await registrarLog("EXCLUSÃO DE FORNECEDOR", `Excluiu o fornecedor/parceiro: "${nome}".`);
+              
               await deleteDoc(doc(db, "fornecedores", id));
               setFornecedores(prev => prev.filter(f => f.id !== id));
           } catch (e) {
@@ -179,7 +201,7 @@ const Fornecedores = () => {
                   <button className="action-btn" title="Editar" onClick={() => navigate(`/fornecedores/editar/${item.id}`)}>
                     <i className="fas fa-pen"></i>
                   </button>
-                  <button className="action-btn" title="Excluir" style={{color: '#ef4444', backgroundColor: '#fef2f2'}} onClick={() => handleDelete(item.id)}>
+                  <button className="action-btn" title="Excluir" style={{color: '#ef4444', backgroundColor: '#fef2f2'}} onClick={() => handleDelete(item.id, item.nome)}>
                     <i className="fas fa-trash"></i>
                   </button>
                 </td>

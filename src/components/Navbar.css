@@ -1,192 +1,136 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800;900&display=swap');
-
-/* =========================================
-   BARRA LATERAL (SIDEBAR)
-   ========================================= */
+/* Navbar.css */
 .sidebar {
+  background-color: #0f172a; /* Azul escuro corporativo */
   width: 250px;
   height: 100vh;
-  background-color: #0f172a;
-  color: white;
   position: fixed;
-  left: 0; /* Padrão Desktop */
   top: 0;
+  left: 0;
   display: flex;
   flex-direction: column;
-  box-shadow: 4px 0 10px rgba(0, 0, 0, 0.3);
-  z-index: 2000; /* Aumentado para cobrir tudo no mobile */
-  overflow: hidden; 
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* 📱 AJUSTE MOBILE: Esconde a barra lateral */
-@media (max-width: 768px) {
-  .sidebar {
-    transform: translateX(-100%); /* Joga para fora da tela */
-  }
-
-  /* Classe que o React vai aplicar para abrir */
-  .sidebar.mobile-open {
-    transform: translateX(0);
-  }
+  box-shadow: 4px 0 15px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  transition: all 0.3s ease;
 }
 
 .sidebar-logo {
-  padding: 15px 0;
+  padding: 20px;
   text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .sidebar-logo h1 {
-  font-family: 'Montserrat', sans-serif;
-  font-size: 1.6rem;
-  letter-spacing: 3px;
-  margin: 0 !important;
+  color: #c5a059; /* Dourado Celebre */
+  font-size: 24px;
+  letter-spacing: 2px;
+  margin: 0;
 }
 
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  padding: 10px;
-  flex: 1;
-  justify-content: flex-start; 
+  padding: 20px 0;
+  overflow-y: auto;
 }
 
+/* Links Normais (Claros e Legíveis) */
 .menu-item {
-  text-decoration: none;
-  color: #94a3b8;
   display: flex;
   align-items: center;
-  padding: 12px 15px; /* Aumentado um pouco para facilitar o toque no dedo */
-  margin: 2px 0;
+  padding: 12px 20px;
+  margin: 4px 15px;
+  color: #cbd5e1; /* Cinza clarinho (Quase branco) - Ótima leitura */
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
   border-radius: 8px;
   transition: all 0.2s ease;
-  font-size: 0.88rem; 
-  font-weight: 500;
 }
 
 .menu-item i {
-  margin-right: 12px;
-  width: 20px;
-  text-align: center;
-  font-size: 1rem;
+  width: 24px;
+  font-size: 16px;
+  color: #94a3b8; /* Ícones levemente mais suaves */
+  transition: color 0.2s ease;
 }
 
+/* Efeito Hover (Ao passar o rato por cima) */
 .menu-item:hover {
-  background-color: rgba(197, 160, 89, 0.1);
-  color: white;
+  background-color: rgba(255, 255, 255, 0.08);
+  color: #ffffff; /* Fica totalmente branco */
 }
 
+.menu-item:hover i {
+  color: #c5a059; /* Ícone fica dourado! */
+}
+
+/* Menu Ativo (Página onde o utilizador está) */
 .menu-item.active {
   background-color: #c5a059;
-  color: #0f172a;
+  color: #0f172a !important;
   font-weight: 700;
-  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3);
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3);
 }
 
+.menu-item.active i {
+  color: #0f172a !important;
+}
+
+/* Itens Bloqueados (Com Cadeado) */
+.menu-item.locked {
+  opacity: 0.6;
+  cursor: not-allowed;
+  display: flex;
+  justify-content: space-between;
+  color: #94a3b8;
+  background-color: transparent;
+}
+
+.menu-item.locked:hover {
+  background-color: transparent;
+  color: #94a3b8;
+}
+
+.menu-item.locked .lock-icon {
+  color: #ef4444; /* Vermelho suave para indicar bloqueio do plano */
+}
+
+/* Linhas Divisórias */
 .sidebar-divider {
   height: 1px;
-  background: rgba(148, 163, 184, 0.1);
-  margin: 8px 15px;
+  background-color: rgba(255, 255, 255, 0.1);
+  margin: 10px 20px;
 }
 
-/* =========================================
-   CONTEÚDO PRINCIPAL (MAIN CONTENT)
-   ========================================= */
-.main-content {
-  margin-left: 250px;
-  padding: 0; /* 🔥 ZERADO: Agora as páginas decidem seu próprio limite 🔥 */
-  width: calc(100% - 250px);
-  min-height: 100vh;
-  transition: margin 0.3s ease;
-  box-sizing: border-box; /* 🔥 IMPEDE O VAZAMENTO LATERAL 🔥 */
-  overflow-x: hidden; /* 🔥 CORTA A BARRA DE ROLAGEM HORIZONTAL 🔥 */
-  background-color: #f1f5f9; /* Fundo suave para dar contraste aos cards brancos */
-}
-
-/* =========================================
-   BARRA SUPERIOR (NAVBAR DO SININHO E PERFIL)
-   ========================================= */
-.navbar-top {
-  width: 100%;
-  display: flex;
-  justify-content: flex-end; /* Joga os itens para a direita */
-  align-items: center;
-  padding: 15px 30px;
-  background-color: #ffffff;
-  border-bottom: 1px solid #e2e8f0;
-  box-sizing: border-box;
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  gap: 20px;
-}
-
-/* =========================================
-   BOTÃO HAMBÚRGUER (SÓ APARECE NO CELULAR)
-   ========================================= */
+/* Responsividade Mobile */
 .mobile-menu-btn {
-  display: none; /* Escondido no PC */
+  display: none;
 }
 
 @media (max-width: 768px) {
+  .sidebar {
+    transform: translateX(-100%);
+  }
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
   .mobile-menu-btn {
     display: block;
     position: fixed;
     top: 15px;
     left: 15px;
-    z-index: 2100;
+    z-index: 1001;
     background: #0f172a;
     color: white;
     border: none;
     padding: 10px;
     border-radius: 6px;
-    font-size: 20px;
-    cursor: pointer;
-    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
   }
-}
-
-/* FUNDO ESCURO AO ABRIR O MENU (OVERLAY) */
-.sidebar-overlay {
-  display: none;
-}
-
-@media (max-width: 768px) {
   .sidebar-overlay.active {
     display: block;
     position: fixed;
-    inset: 0;
+    top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(0,0,0,0.5);
-    z-index: 1900;
-  }
-}
-
-/* =========================================
-   ESTRUTURA GLOBAL PARA APP (MOBILE)
-   ========================================= */
-
-/* Garante que o container principal não tenha margens no celular */
-@media (max-width: 768px) {
-  .main-content {
-    margin-left: 0 !important; /* Mata a margem da sidebar do PC */
-    width: 100% !important;   /* Ocupa a largura total */
-    padding: 0 !important;
-    padding-top: 80px !important; /* Dá espaço para o botão de menu fixo */
-    box-sizing: border-box;
-    overflow-x: hidden; /* Evita que a tela "dance" para os lados */
-  }
-
-  /* Faz os cards de resumo (Início) ficarem em uma coluna só */
-  .dashboard-grid, .config-grid-columns, .config-empresa-grid {
-    display: flex !important;
-    flex-direction: column !important;
-    gap: 15px !important;
-    width: 100% !important;
-  }
-
-  /* Ajusta os títulos para não ficarem gigantes no celular */
-  h1 {
-    font-size: 1.8rem !important;
-    text-align: left;
+    z-index: 999;
   }
 }
