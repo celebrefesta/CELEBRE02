@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { db } from "../../firebaseConfig"; 
+import { db } from "../../firebaseConfig";
 import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
@@ -7,8 +7,11 @@ import "./Compras.css";
 
 const Compras = () => {
   const navigate = useNavigate();
+  
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [itens, setItens] = useState([]);
   const [totais, setTotais] = useState({ pendente: 0, urgente: 0, realizado: 0 });
@@ -17,10 +20,10 @@ const Compras = () => {
   const [ordemAlfabetica, setOrdemAlfabetica] = useState('Data'); 
   const [loading, setLoading] = useState(true);
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE COMPRAS)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE COMPRAS VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -29,7 +32,9 @@ const Compras = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de compras:", error);
@@ -42,8 +47,8 @@ const Compras = () => {
         return;
     }
 
-    // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as compras da sua conta
-    const q = query(collection(db, "lista_compras"), where("userId", "==", usuarioLogado.uid));
+    // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as compras da conta principal
+    const q = query(collection(db, "lista_compras"), where("userId", "==", tenantId));
     
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let lista = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -60,7 +65,7 @@ const Compras = () => {
       let p = 0; 
       let u = 0; 
       let r = 0; 
-      
+ 
       const hoje = new Date();
       hoje.setHours(0,0,0,0);
 
@@ -68,7 +73,7 @@ const Compras = () => {
         const qtd = Number(item.quantidade) || 1;
         const valorUnit = Number(item.valorEstimado) || 0;
         const subtotal = qtd * valorUnit;
-        
+
         if (item.status === "comprado" || item.status === "chegou") {
           r += subtotal;
         } else {
@@ -81,21 +86,23 @@ const Compras = () => {
           }
         }
       });
+
       setTotais({ pendente: p, urgente: u, realizado: r });
       setLoading(false);
     });
 
     return () => unsubscribe();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const handleStatusChange = async (item, novoStatus) => {
     try {
-      const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid), where("nome", "==", item.nome));
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Procura a peça no estoque da conta principal
+      const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId), where("nome", "==", item.nome));
       const snapshotEstoque = await getDocs(qEstoque);
       const qtdComprada = Number(item.quantidade) || 1;
 
       let updatePayload = { status: novoStatus };
-      
+
       if (novoStatus === 'chegou') {
         if (!snapshotEstoque.empty) {
           updatePayload.dataChegada = new Date().toISOString();
@@ -108,7 +115,7 @@ const Compras = () => {
             quantidade: qtdAtual + (item.formato === 'kit' && item.quantidadePecasKit ? item.quantidadePecasKit : qtdComprada),
             atualizadoEm: new Date().toISOString()
           });
-          
+
           await registrarLog("COMPRA RECEBIDA", `Registrou a chegada de "${item.nome}" e adicionou ao estoque.`);
           alert(`📦 Caixa recebida!\n\nA peça "${item.nome}" já existe no seu acervo. A quantidade no estoque foi somada automaticamente!`);
         } else {
@@ -146,7 +153,7 @@ const Compras = () => {
         }
         const itemRef = doc(db, "lista_compras", item.id);
         await updateDoc(itemRef, updatePayload);
-        
+
         await registrarLog("COMPRA PENDENTE", `Voltou o status de "${item.nome}" para Pendente (Falta Comprar).`);
       }
       else if (novoStatus === 'comprado') {
@@ -298,6 +305,7 @@ const Compras = () => {
                       if (isPedido && item.prazo) {
                           const dataPrazo = new Date(item.prazo + 'T00:00:00');
                           const diasParaPrazo = Math.ceil((dataPrazo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+                          
                           labelPrazo = '🎯 Limite:';
                           dataExibicao = item.prazo.split('-').reverse().join('/');
                           
@@ -338,6 +346,7 @@ const Compras = () => {
                       if (previsaoDate) {
                           dataExibicao = previsaoDate.toLocaleDateString('pt-BR');
                           const diasParaChegar = Math.ceil((previsaoDate.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+                          
                           if (diasParaChegar < 0) { 
                               alertaClasse = 'alerta-urgente';
                               alertaTexto = '🚨 ATRASADO'; 
@@ -449,7 +458,6 @@ const Compras = () => {
 
                           <button className="btn-action edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar">✏️</button>
                           <button className="btn-action delete" onClick={() => handleExcluir(item.id, item.nome)} title="Excluir">🗑️</button>
-                        
                         </div>
                       </td>
                     </tr>

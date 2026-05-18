@@ -106,7 +106,6 @@ const Dashboard = () => {
         const locs = locSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const confirmadas = locs.filter(l => l.status === 'confirmado' || l.status === 'preparacao' || l.status === 'entregue' || l.status === 'finalizado');
         const orcamentos = locs.filter(l => (l.status || '').toLowerCase() === 'orcamento');
-        
         let cOrcamento = 0, cConfirmado = 0, cPreparacao = 0, cEntregue = 0, cFinalizado = 0;
         let vOrcamento = 0, vConfirmado = 0;
         
@@ -124,6 +123,7 @@ const Dashboard = () => {
         setStatusChart({
           orcamento: cOrcamento, confirmado: cConfirmado, preparacao: cPreparacao, entregue: cEntregue, finalizado: cFinalizado, total: cOrcamento + cConfirmado + cPreparacao + cEntregue + cFinalizado
         });
+        
         setValoresPorStatus({ orcamento: vOrcamento, confirmado: vConfirmado });
 
         const fatSemanal = [0, 0, 0, 0];
@@ -153,8 +153,8 @@ const Dashboard = () => {
             if (devendo > 0.01) {
               totalAReceber += devendo;
               if (dataFesta && dataFesta < hojeISO && l.status !== 'cancelado') {
-                 const nomeCerto = l.clienteNome || l.cliente?.nome || l.razaoSocial || l.nomeFantasia || l.nome || 'Cliente Não Identificado';
-                 atrasados.push({
+                  const nomeCerto = l.clienteNome || l.cliente?.nome || l.razaoSocial || l.nomeFantasia || l.nome || 'Cliente Não Identificado';
+                  atrasados.push({
                       id: l.id,
                       cliente: nomeCerto,
                       data: dataFesta.split('-').reverse().join('/'),
@@ -250,7 +250,7 @@ const Dashboard = () => {
   const off3 = 100 - (p1 + p2);
   const off4 = 100 - (p1 + p2 + p3);
   const off5 = 100 - (p1 + p2 + p3 + p4);
-
+  
   if (statusConta === 'excluido') {
       return (
           <div className="dash-wide-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center' }}>
@@ -275,7 +275,7 @@ const Dashboard = () => {
                   <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '25px' }}>
                       Esperamos que o <strong>Celebre</strong> tenha ajudado a organizar suas festas nestes últimos dias. Para destravar seu painel e não perder nenhum dado importante, escolha o seu plano.
                   </p>
-                   <button onClick={() => navigate('/planos')} style={{ background: '#0f172a', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', width: '100%', cursor: 'pointer', border: 'none' }}>
+                  <button onClick={() => navigate('/planos')} style={{ background: '#0f172a', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', width: '100%', cursor: 'pointer', border: 'none' }}>
                       Ver Planos e Assinar
                   </button>
               </div>
@@ -301,7 +301,7 @@ const Dashboard = () => {
           <p>Visão geral e inteligência de negócios.</p>
         </div>
         
-         <div className="dash-actions-row">
+        <div className="dash-actions-row">
           <button onClick={() => navigate('/cadastro-cliente')}>👤 NOVO CLIENTE</button>
           <button onClick={() => navigate('/locacoes/nova')}>🛒 NOVA LOCAÇÃO</button>
           <button onClick={() => navigate('/cadastro-estoque')}>📦 NOVO ITEM</button>
@@ -336,7 +336,7 @@ const Dashboard = () => {
                 {p4 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#ec4899" strokeWidth="4" strokeDasharray={`${p4} ${100 - p4}`} strokeDashoffset={off4} strokeLinecap="round" />}
                 {p5 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3b82f6" strokeWidth="4" strokeDasharray={`${p5} ${100 - p5}`} strokeDashoffset={off5} strokeLinecap="round" />}
               </svg>
-    
+  
                <div className="chart-center-text">
                 <strong>{statusChart.total}</strong>
                 <span>Pedidos</span>
@@ -364,7 +364,7 @@ const Dashboard = () => {
             </div>
           </section>
 
-           <section className="dash-card-wide chart-card">
+         <section className="dash-card-wide chart-card">
             <h3>💸 Faturamento do Mês</h3>
             <div className="compact-chart">
               {faturamentoData.map((val, idx) => (
@@ -375,7 +375,7 @@ const Dashboard = () => {
                   </div>
                   <span className="compact-bar-value">R$ {val.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
-               ))}
+            ))}
             </div>
           </section>
         </div>
@@ -384,7 +384,7 @@ const Dashboard = () => {
           <section className="dash-card-wide border-top-yellow flex-grow">
             <h3>📝 Orçamentos Pendentes</h3>
             <p className="card-subtitle">Negócios abertos aguardando fechamento.</p>
-            
+       
             <div className="activity-feed">
               {orcamentosPendentes.length > 0 ?
                 orcamentosPendentes.map((orc, i) => (
@@ -417,7 +417,7 @@ const Dashboard = () => {
         </div>
 
         <div className="dash-column">
-          <section className="dash-card-wide border-top-red flex-grow">
+         <section className="dash-card-wide border-top-red flex-grow">
             <h3>🚨 Radar de Cobrança</h3>
             <p className="card-subtitle" style={{marginBottom: '10px'}}>A festa passou e o pagamento não concluiu.</p>
             <div className="activity-feed">
@@ -432,7 +432,7 @@ const Dashboard = () => {
                   <div className="feed-valor" style={{color: '#dc2626'}}>R$ {cob.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
               )) : <p className="empty-feed" style={{color: '#10b981', background: '#ecfdf5', padding: '10px', borderRadius: '8px'}}>✅ Nenhum atraso detectado.</p>}
-             </div>
+              </div>
           </section>
 
           <section className="dash-card-wide flex-grow">
@@ -444,7 +444,7 @@ const Dashboard = () => {
                   <div className="feed-icon" style={{background: '#f8fafc', color: '#64748b', fontSize: '14px', fontWeight: 'bold'}}>{i+1}º</div>
                   <div className="feed-info">
                     <p>{peca.nome}</p>
-                     <span className="feed-sub">Alugada {peca.qtd} vezes</span>
+                    <span className="feed-sub">Alugada {peca.qtd} vezes</span>
                   </div>
                 </div>
               )) : <p className="empty-feed">Dados insuficientes.</p>}

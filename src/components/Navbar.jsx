@@ -25,7 +25,7 @@ const Navbar = () => {
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // 🔥 IDENTIFICAÇÃO DO SAAS (Lê o "crachá" gravado no Login)
+  // 🔥 IDENTIFICAÇÃO DO SAAS
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
   const userRole = localStorage.getItem('userRole') || 'admin';
   let permissoesFuncionario = {};
@@ -83,7 +83,7 @@ const Navbar = () => {
   // 🛡️ REGRA 1: A EMPRESA TEM ESSE RECURSO NO PLANO DELA?
   const verificarPermissaoPlano = (recursoExigido) => {
       if (isSuperAdmin) return true;
-      if (acesso.congelado) return false; 
+      if (acesso.congelado) return false;
       if (acesso.testeAtivo) return true; 
       if (!recursoExigido) return true; 
       
@@ -93,7 +93,7 @@ const Navbar = () => {
   // 🛡️ REGRA 2: O FUNCIONÁRIO PODE CLICAR AQUI?
   const verificarAcessoFuncionario = (label) => {
       if (isSuperAdmin || userRole === 'admin') return true;
-
+      
       const mapPermissoes = {
           'Agenda': permissoesFuncionario.agenda,
           'Clientes': permissoesFuncionario.clientes,
@@ -121,13 +121,11 @@ const Navbar = () => {
 
   const ItemMenuProtegido = ({ to, icon, label, recurso }) => {
       
-      // 1. O funcionário tem acesso a esta tela? (Se não, esconde totalmente)
-      const funcPodeVer = verificarAcessoFuncionario(label);
-      if (!funcPodeVer) return null; 
-
-      // 2. A empresa pagou pelo recurso no plano atual? (Se não, mostra o cadeado)
       const empresaPagou = verificarPermissaoPlano(recurso);
+      const funcPodeVer = verificarAcessoFuncionario(label);
 
+      // 🔥 MUDANÇA DE ESTRATÉGIA SaaS:
+      // Se a empresa NÃO pagou, mostra o cadeado para TODOS verem que o recurso existe!
       if (!empresaPagou) {
           return (
               <div className="menu-item locked" title="A sua empresa precisa de um plano superior para acessar esta área.">
@@ -138,6 +136,9 @@ const Navbar = () => {
               </div>
           );
       }
+
+      // Se a empresa pagou, mas este funcionário específico NÃO tem permissão, esconde o botão para ele não fazer asneira.
+      if (!funcPodeVer) return null;
 
       // Tudo certo! Mostra o botão normal
       return (

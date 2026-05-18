@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, getDocs, serverTimestamp, query, doc, getDoc, updateDoc, where } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação de Segurança
+import { getAuth } from 'firebase/auth'; 
 import './NovaCompra.css';
 
 const NovaCompra = () => {
@@ -10,9 +10,10 @@ const NovaCompra = () => {
   const { id } = useParams();
   const isEditing = !!id; 
 
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [salvando, setSalvando] = useState(false);
   const [carregandoEdicao, setCarregandoEdicao] = useState(isEditing);
@@ -47,10 +48,10 @@ const NovaCompra = () => {
   const [buscaPedido, setBuscaPedido] = useState('');
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE COMPRAS)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE COMPRAS VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -59,7 +60,9 @@ const NovaCompra = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de compras:", error);
@@ -76,7 +79,7 @@ const NovaCompra = () => {
     if (isEditing) {
         carregarDadosEdicao();
     }
-  }, [id, usuarioLogado, navigate]);
+  }, [id, usuarioLogado, navigate, tenantId]);
 
   const carregarDadosEdicao = async () => {
     try {
@@ -85,17 +88,16 @@ const NovaCompra = () => {
         
         if (snap.exists()) {
             const data = snap.data();
-
-            // Verifica se a compra pertence ao usuário (Segurança Extra)
-            if (data.userId && data.userId !== usuarioLogado.uid) {
-                alert("Acesso negado: Esta compra pertence a outra conta.");
+            
+            // 🔥 CADEADO MULTI-EMPRESA: Verifica se a compra pertence à empresa
+            if (data.userId && data.userId !== tenantId) {
+                alert("Acesso negado: Esta compra não pertence à sua empresa.");
                 navigate('/compras');
                 return;
             }
 
             setNome(data.nome || '');
             setQuantidade(data.quantidade || 1);
-
             if (data.valorEstimado) setValorEstimado(Number(data.valorEstimado).toFixed(2).replace('.', ','));
             if (data.valorAluguel) setValorAluguel(Number(data.valorAluguel).toFixed(2).replace('.', ','));
 
@@ -110,7 +112,6 @@ const NovaCompra = () => {
             setObservacoes(data.obs || '');
 
             if (data.tipoEntrega) setTipoEntrega(data.tipoEntrega);
-
             if (data.diasFrete !== undefined && data.tipoEntrega === 'outro') {
                 setDiasPersonalizados(String(data.diasFrete));
             }
@@ -137,14 +138,13 @@ const NovaCompra = () => {
 
   const carregarPedidosFuturos = async () => {
     if (!usuarioLogado) return;
-
     try {
-      // 🔥 BLINDAGEM: Busca apenas os SEUS pedidos
-      const q = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Busca apenas os pedidos da empresa
+      const q = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const snapshot = await getDocs(q);
       
       let locacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+      
       // Ordena na memória para evitar problemas de índice no Firebase
       locacoes.sort((a, b) => {
           const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0;
@@ -154,7 +154,6 @@ const NovaCompra = () => {
 
       const pedidosAtivos = locacoes.filter(loc => !['cancelado', 'finalizado'].includes((loc.status || '').toLowerCase()));
       setPedidosDisponiveis(pedidosAtivos);
-
     } catch (error) { 
       console.error("Erro ao buscar pedidos:", error);
     }
@@ -176,7 +175,6 @@ const NovaCompra = () => {
     dataPronta.setDate(dataPronta.getDate() + diasDePreparo);
 
     if (destino === 'pedido' && pedidoSelecionado && pedidoSelecionado.dataRetirada) {
-        
         const dataFesta = new Date(pedidoSelecionado.dataRetirada + 'T00:00:00');
         
         const dataLimiteRecebimento = new Date(dataFesta);
@@ -215,7 +213,7 @@ const NovaCompra = () => {
     if (!nome.trim()) return alert("Digite o nome do item!");
     if (destino === 'pedido' && !pedidoSelecionado) return alert("Selecione o pedido para vincular a compra!");
     if (erroPrazo && destino === 'pedido') return alert("O sistema bloqueou a operação: O item não chegará a tempo da festa!");
-
+    
     setSalvando(true);
     try {
       const custoNum = valorEstimado ? Number(valorEstimado.replace(/\./g, "").replace(",", ".")) : 0;
@@ -261,12 +259,12 @@ const NovaCompra = () => {
           await registrarLog("EDIÇÃO DE COMPRA", `Atualizou os dados da solicitação de compra: "${dadosDaCompra.nome}".`);
           alert("Solicitação atualizada com sucesso!");
       } else {
-          // 🔥 BLINDAGEM MULTI-EMPRESA: Salva a nova compra com o seu userId
+          // 🔥 BLINDAGEM MULTI-EMPRESA: Salva a nova compra na conta principal
           await addDoc(collection(db, "lista_compras"), {
             ...dadosDaCompra,
             status: "pendente",
             createdAt: serverTimestamp(),
-            userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
+            userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
           });
           await registrarLog("NOVA COMPRA", `Criou uma solicitação de compra para: "${dadosDaCompra.nome}" (Qtd: ${dadosDaCompra.quantidade}).`);
           alert("Nova solicitação de compra criada!");
@@ -512,7 +510,7 @@ const NovaCompra = () => {
 
             {destino === 'pedido' && mensagemPrazo && permitirSimulador && (
                 <div className={`mensagem-prazo-risco ${erroPrazo ? 'bloqueado' : 'ok'} mt-10`}>
-                     {mensagemPrazo}
+                    {mensagemPrazo}
                 </div>
             )}
           </div>

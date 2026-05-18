@@ -2,15 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from 'firebase/auth';
 import './Notificacoes.css';
 
 const Notificacoes = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+
+  // 🔥 CHAVE MESTRA: Pega o ID da empresa no navegador ou o do próprio usuário
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [listaUnificada, setListaUnificada] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -20,8 +22,12 @@ const Notificacoes = () => {
 
     setLoading(true);
     try {
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os SEUS novos clientes pendentes
-      const qClientes = query(collection(db, "clientes"), where("situacaoFinanceira", "==", "pendente"), where("userId", "==", usuarioLogado.uid));
+      // 🎯 BUSCA VINCULADA À EMPRESA (TENANT): Puxa apenas os novos clientes pendentes da empresa
+      const qClientes = query(
+          collection(db, "clientes"), 
+          where("situacaoFinanceira", "==", "pendente"), 
+          where("userId", "==", tenantId)
+      );
       const snapClientes = await getDocs(qClientes);
       const listaC = snapClientes.docs.map(d => ({ 
           id: d.id, 
@@ -30,8 +36,13 @@ const Notificacoes = () => {
           timestampOrdenacao: d.data().criadoEm?.toMillis ? d.data().criadoEm.toMillis() : Date.now() 
       }));
 
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas os SEUS novos orçamentos do catálogo
-      const qPedidos = query(collection(db, "locacoes"), where("origem", "==", "catalogo_publico"), where("status", "==", "orcamento"), where("userId", "==", usuarioLogado.uid));
+      // 🎯 BUSCA VINCULADA À EMPRESA (TENANT): Puxa apenas os novos orçamentos da empresa
+      const qPedidos = query(
+          collection(db, "locacoes"), 
+          where("origem", "==", "catalogo_publico"), 
+          where("status", "==", "orcamento"), 
+          where("userId", "==", tenantId)
+      );
       const snapPedidos = await getDocs(qPedidos);
       const listaP = snapPedidos.docs.map(d => ({ 
           id: d.id, 
@@ -55,7 +66,7 @@ const Notificacoes = () => {
         return;
     }
     carregarDados();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const aprovarCliente = async (id) => {
     try {

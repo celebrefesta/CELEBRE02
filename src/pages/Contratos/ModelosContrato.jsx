@@ -8,9 +8,10 @@ import "./ModelosContrato.css";
 const ModelosContrato = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [modelos, setModelos] = useState([]);
   const [novo, setNovo] = useState({ titulo: "", texto: "" });
@@ -21,10 +22,10 @@ const ModelosContrato = () => {
   const [textoRelatorio, setTextoRelatorio] = useState('');
   const [salvandoRelatorio, setSalvandoRelatorio] = useState(false);
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipe = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -33,7 +34,9 @@ const ModelosContrato = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria jurídica:", error);
@@ -46,16 +49,16 @@ const ModelosContrato = () => {
         return;
     }
 
-    // 🔥 BLINDAGEM 1: Carrega APENAS os modelos de contrato da sua empresa
-    const q = query(collection(db, "modelosContrato"), where("userId", "==", usuarioLogado.uid));
+    // 🔥 BLINDAGEM MULTI-EMPRESA: Carrega APENAS os modelos de contrato da sua empresa
+    const q = query(collection(db, "modelosContrato"), where("userId", "==", tenantId));
     const unsub = onSnapshot(q, (snap) => {
       setModelos(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // 🔥 BLINDAGEM 2: Carrega o texto do Relatório de Avarias exclusivo da sua empresa
+    // 🔥 BLINDAGEM MULTI-EMPRESA: Carrega o texto do Relatório de Avarias exclusivo da sua empresa
     const carregarRelatorioLogistica = async () => {
       try {
-        const docSnap = await getDoc(doc(db, "relatorio_avarias", usuarioLogado.uid));
+        const docSnap = await getDoc(doc(db, "relatorio_avarias", tenantId));
         if (docSnap.exists()) {
           setTextoRelatorio(docSnap.data().conteudo || "");
         }
@@ -67,7 +70,7 @@ const ModelosContrato = () => {
     carregarRelatorioLogistica();
 
     return () => unsub();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   // --- TEXTOS PADRÃO (CONTRATOS DO SISTEMA) ---
   const templates = {
@@ -77,7 +80,7 @@ const ModelosContrato = () => {
     },
     decoracao: {
       titulo: "CONTRATO DE DECORAÇÃO COMPLETA",
-      texto: `CLÁUSULAS - DECORAÇÃO COMPLETA:\n\n1. DA PRESTAÇÃO DE SERVIÇO: A CONTRATADA se compromete a realizar a montagem e desmontagem completa do cenário contratado.\n2. DO ACESSO: O local deve estar liberado para a equipe de montagem pelo menos 2 horas antes do início do evento.\n3. DA ESTRUTURA: A contratada não se responsabiliza por falhas na estrutura do local (tomadas, goteiras, piso irregular) que impeçam a montagem.\n4. ALTERAÇÕES: Mudanças no layout só poderão ser feitas se solicitadas com 7 dias de antecedência.\n5. SEGURANÇA: O LOCATÁRIO é responsável pela integridade das peças durante o evento.`
+      texto: `CLÁUSULAS - DECORAÇÃO COMPLETA:\n\n1. DA PRESTAÇÃO DE SERVIÇO: A CONTRATADA se compromete a realizar a montagem e desmontagem completa do cenário contratado.\n2. DO ACESSO: O local deve estar liberado para a equipe de montagem pelo menos 2 horas antes do início do evento.\n3. DA ESTRUTURA: A contratada não se responsabiliza por falhas na estrutura do local (tomadas, goteiras, piso irregular) que impedçam a montagem.\n4. ALTERAÇÕES: Mudanças no layout só poderão ser feitas se solicitadas com 7 dias de antecedência.\n5. SEGURANÇA: O LOCATÁRIO é responsável pela integridade das peças durante o evento.`
     },
     pecas: {
       titulo: "CONTRATO DE PEÇAS AVULSAS",
@@ -86,7 +89,7 @@ const ModelosContrato = () => {
   };
 
   // --- TEXTO PADRÃO (LOGÍSTICA DO SISTEMA) ---
-  const textoPadraoRelatorio = `Declaramos para os devidos fins que os itens listados acima foram locados em perfeito estado de conservação e, após a devolução e conferência física no galpão, apresentaram as avarias ou ausências descritas.\n\nConforme os termos do contrato de locação firmado, os produtos danificados estão sujeitos à cobrança de taxa de manutenção ou conserto. No caso de peças extraviadas ou com perda total, será cobrado o valor integral de reposição do produto de acordo com o preço de mercado atualizado listado acima.\n\nNossa equipe entrará em contato para apresentar as opções de pagamento para regularização das pendências.`;
+  const textoPadraoRelatorio = `Declaramos para os devidos fins que os itens listados acima foram locados em perfeito estado de conservação e, após a devolução e conferência física no galpão, apresentaram as avarias ou ausências descritas.\n\ Conforme os termos do contrato de locação firmado, os produtos danificados estão sujeitos à cobrança de taxa de manutenção ou conserto. No caso de peças extraviadas ou com perda total, será cobrado o valor integral de reposição do produto de acordo com o preço de mercado atualizado listado acima.\n\nNossa equipe entrará em contato para apresentar as opções de pagamento para regularização das pendências.`;
 
   const carregarTemplate = (tipo) => {
     setNovo(templates[tipo]);
@@ -103,12 +106,12 @@ const ModelosContrato = () => {
         await addDoc(collection(db, "modelosContrato"), { 
             ...novo, 
             createdAt: serverTimestamp(),
-            userId: usuarioLogado.uid
+            userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
         });
         await registrarLog("NOVO MODELO DE CONTRATO", `Criou um novo modelo de contrato chamado: "${novo.titulo}".`);
       }
       setNovo({ titulo: "", texto: "" });
-      alert("Modelo salvo com sucesso!");
+      alert("Modelo saved com sucesso!");
     } catch (err) { alert("Erro: " + err.message); }
   };
 
@@ -121,7 +124,7 @@ const ModelosContrato = () => {
     e.preventDefault();
     setSalvandoRelatorio(true);
     try {
-      await setDoc(doc(db, "relatorio_avarias", usuarioLogado.uid), {
+      await setDoc(doc(db, "relatorio_avarias", tenantId), {
         conteudo: textoRelatorio,
         atualizadoEm: serverTimestamp()
       }, { merge: true });
@@ -231,7 +234,8 @@ const ModelosContrato = () => {
             <div className="form-group">
               <label style={{display: 'flex', justifyContent: 'space-between'}}>
                 <span>CONTEÚDO DO AVISO LEGAL</span>
-                <button type="button" onClick={() => setTextoRelatorio(textoPadraoRelatorio)} style={{background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold'}}>
+                <button type="button" onClick={() => setTextoRelatorio(textoPadraoRelatorio)} 
+                        style={{background: 'none', border: 'none', color: '#3b82f6', cursor: 'pointer', fontSize: '0.8rem', fontWeight: 'bold'}}>
                   🔄 Carregar Texto do Sistema
                 </button>
               </label>

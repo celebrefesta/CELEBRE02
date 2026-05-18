@@ -16,6 +16,7 @@ const ESTRUTURA_TEMAS = {
 const Catalogo = () => {
   const navigate = useNavigate();
   const { idEmpresa } = useParams();
+
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   
@@ -25,17 +26,21 @@ const Catalogo = () => {
   const [empresa, setEmpresa] = useState({ 
     nome: 'CELEBRE', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '' 
   });
+
   const [loading, setLoading] = useState(true);
   const [lojaInvalida, setLojaInvalida] = useState(false);
   
   const [filtroModalidade, setFiltroModalidade] = useState('Todas');
   const [filtroMenu, setFiltroMenu] = useState('Todos');
+
   const [busca, setBusca] = useState('');
   const [carrinho, setCarrinho] = useState([]);
   
   const [modalFinalizar, setModalFinalizar] = useState(false);
+
   const [dadosCliente, setDadosCliente] = useState({ nome: '', whats: '', dataEvento: '' });
   const [tipoFluxo, setTipoFluxo] = useState('orcamento');
+
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
 
   const [produtoDetalhe, setProdutoDetalhe] = useState(null);
@@ -46,7 +51,7 @@ const Catalogo = () => {
       const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Cliente Web (Catálogo)";
       const uid = usuarioLogado?.uid || tenantId;
       if (!uid) return;
-      
+
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -57,6 +62,7 @@ const Catalogo = () => {
         detalhes: detalhes,
         userId: uid
       });
+
     } catch (error) {
       console.error("Erro ao gravar log do catálogo:", error);
     }
@@ -89,6 +95,7 @@ const Catalogo = () => {
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
         const snap = await getDocs(qEstoque);
         const itens = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => i.status !== 'manutencao'); 
+   
         setEstoque(itens);
       } catch (e) { 
         console.error(e);
@@ -122,10 +129,11 @@ const Catalogo = () => {
   };
 
   const categoriasDinamicas = [...new Set(estoque.map(i => i.categoria ? String(i.categoria) : "").filter(c => c !== ""))].sort();
-  
+
   const formatarDimensoes = (dim) => {
     if (!dim) return null;
     if (typeof dim === 'string') return dim;
+
     if (typeof dim === 'object') {
       let partes = [];
       if (dim.altura) partes.push(`A:${dim.altura}`);
@@ -139,6 +147,7 @@ const Catalogo = () => {
   const formatarDimensoesDetalhe = (esp) => {
       if (!esp) return null;
       let partes = [];
+
       if (Number(esp.largura) > 0) partes.push(`Largura: ${esp.largura}cm`);
       if (Number(esp.altura) > 0) partes.push(`Altura: ${esp.altura}cm`);
       if (Number(esp.diametro) > 0) partes.push(`Diâmetro: ${esp.diametro}cm`);
@@ -148,10 +157,12 @@ const Catalogo = () => {
 
   const toggleNoCarrinho = (item) => {
     const existe = carrinho.find(i => i.id === item.id);
+
     if (existe) {
       setCarrinho(carrinho.filter(i => i.id !== item.id));
     } else {
       setCarrinho([...carrinho, { ...item, qtd: 1 }]);
+
       dispararPixel('AddToCart', { 
           content_name: item.nome, 
           value: Number(item.financeiro?.valorAluguel || 0), 
@@ -161,6 +172,7 @@ const Catalogo = () => {
   };
 
   const isNoCarrinho = (id) => carrinho.some(i => i.id === id);
+
   const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * i.qtd), 0);
 
   const abrirCarrinho = () => {
@@ -171,8 +183,10 @@ const Catalogo = () => {
   const enviarOrcamento = async (e) => {
     e.preventDefault();
     if (carrinho.length === 0) return alert("Seu carrinho está vazio!");
+
     const total = calcularTotal();
     const resumoItens = carrinho.map(i => `- ${i.qtd}x ${i.nome} (R$ ${Number(i.financeiro?.valorAluguel || 0).toFixed(2)})`).join('\n');
+
     try {
       await addDoc(collection(db, "locacoes"), {
         clienteNome: dadosCliente.nome,
@@ -186,18 +200,19 @@ const Catalogo = () => {
         criadoEm: serverTimestamp(),
         userId: tenantId 
       });
-      
+
       // 🔥 REGISTRA NO ESPIÃO
       await registrarLog("NOVO ORÇAMENTO WEB", `O cliente "${dadosCliente.nome}" gerou um orçamento público via Catálogo no valor de R$ ${total.toFixed(2)}.`);
 
       dispararPixel('Lead', { value: total, currency: 'BRL' });
       const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : "5519999999999";
-      
-      const texto = `🌟 *NOVO ORÇAMENTO* 🌟\n\n*Cliente:* ${dadosCliente.nome}\n*Data do Evento:* ${dadosCliente.dataEvento}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}\n\nOlá! Vim pelo catálogo e gostaria de verificar a disponibilidade destas peças!`;
+
+      const texto = `🌟 *NOVO ORÇAMENTO* 🌟\n\n*Cliente:* ${dadosCliente.nome}\n*Data do Evento:* ${dadosCliente.dataEvento}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}\n\nOlá!\nVim pelo catálogo e gostaria de verificar a disponibilidade destas peças!`;
       
       window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(texto)}`, '_blank');
       setCarrinho([]);
       setModalFinalizar(false);
+
     } catch (err) { 
         console.error(err);
         alert("Erro ao processar o orçamento. Tente novamente.");
@@ -217,11 +232,13 @@ const Catalogo = () => {
   const selecionarFiltro = (tipo, valor) => {
     if (tipo === 'modalidade') setFiltroModalidade(valor);
     if (tipo === 'menu') setFiltroMenu(valor);
+
     setMenuMobileAberto(false); 
   };
 
   const calcularAncoragemKit = (item) => {
       const precoAtual = Number(item.financeiro?.valorAluguel || 0);
+
       let precoSomaAvulso = 0;
       
       if (item.especificacoes?.isDecoracao && item.especificacoes?.itensDecoracao) {
@@ -229,10 +246,12 @@ const Catalogo = () => {
       }
       
       const desconto = precoSomaAvulso - precoAtual;
+
       return { precoAtual, precoSomaAvulso, desconto, isVantajoso: desconto > 0 };
   };
 
   if (loading) return <div className="loader-catalogo">Carregando Acervo...</div>;
+
   if (lojaInvalida) return (
       <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', fontFamily: 'sans-serif', textAlign: 'center', padding: '20px'}}>
           <h1 style={{fontSize: '40px', marginBottom: '10px'}}>🏪</h1>
@@ -319,7 +338,7 @@ const Catalogo = () => {
           </div>
 
           <div className="cat-top-controls">
-              <div className="cat-search-bar">
+            <div className="cat-search-bar">
                 <input type="text" placeholder="O que você procura para sua festa?" value={busca} onChange={e => setBusca(e.target.value)} />
               </div>
           </div>
@@ -477,6 +496,7 @@ const Catalogo = () => {
                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '10px' }}>
                    {(() => {
                        const { precoAtual, precoSomaAvulso, desconto, isVantajoso } = calcularAncoragemKit(produtoDetalhe);
+
                        if (isVantajoso) {
                            return (
                                <div style={{ marginBottom: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '15px', borderRadius: '10px' }}>
@@ -489,7 +509,8 @@ const Catalogo = () => {
                                        </span>
                                    </div>
                                    <div style={{ background: '#10b981', color: 'white', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', display: 'inline-block', width: '100%', textAlign: 'center' }}>
-                                       Viu como compensa? Você economiza R$ {desconto.toFixed(2)}! 😉
+                                       Viu como compensa?
+                                       Você economiza R$ {desconto.toFixed(2)}! 😉
                                    </div>
                                </div>
                            );
@@ -537,7 +558,7 @@ const Catalogo = () => {
                 <ul>
                   {carrinho.map(item => (
                     <li key={item.id}>
-                       <span>{item.qtd}x {item.nome}</span>
+                      <span>{item.qtd}x {item.nome}</span>
                       <span>R$ {(Number(item.financeiro?.valorAluguel || 0) * item.qtd).toFixed(2)}</span>
                     </li>
                   ))}
@@ -570,11 +591,11 @@ const Catalogo = () => {
                     <h3>Orçamento Rápido</h3>
                     <label>Seu Nome</label>
                     <input type="text" placeholder="Como podemos te chamar?" required 
-                      value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})}
+                       value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})}
                     />
                     <label>Seu WhatsApp</label>
                     <input type="text" placeholder="(11) 99999-9999" required 
-                      value={dadosCliente.whats} onChange={e => setDadosCliente({...dadosCliente, whats: e.target.value})}
+                       value={dadosCliente.whats} onChange={e => setDadosCliente({...dadosCliente, whats: e.target.value})}
                     />
                     <label>Data da Festa / Evento</label>
                     <input type="date" required 
@@ -596,7 +617,7 @@ const Catalogo = () => {
                      </button>
                   </div>
               )}
-             </div>
+            </div>
           </div>
         </div>
       )}

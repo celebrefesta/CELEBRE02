@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; 
+import { getAuth } from "firebase/auth";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
-import './ClientesTab.css'; 
+import './ClientesTab.css';
 
 const ClientesTab = () => {
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ 
@@ -20,20 +21,23 @@ const ClientesTab = () => {
     clientesFieis: 0,
     taxaRetorno: 0 
   });
+
   const [rankingCidades, setRankingCidades] = useState([]);
   const [topClientes, setTopClientes] = useState([]);
   const [todosClientesData, setTodosClientesData] = useState([]);
-  
+
   const [dadosEmpresa, setDadosEmpresa] = useState({
     nomeEmpresa: 'Ágape Decorações',
     logotipo: ''
   });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CLIENTES)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CLIENTES VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
+
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -42,8 +46,11 @@ const ClientesTab = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
+
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de clientes:", error);
     }
@@ -54,9 +61,9 @@ const ClientesTab = () => {
 
     const buscarDadosClientesEConfigs = async () => {
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Filtra clientes e locações pela sua conta
-        const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Filtra clientes e locações pela conta da empresa
+        const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
 
         const [snapClientes, snapLocacoes, snapConfig] = await Promise.all([
           getDocs(qClientes),
@@ -85,7 +92,7 @@ const ClientesTab = () => {
 
         let somaTotal = 0;
         const cidadesCount = {};
-        const clientesStats = {}; 
+        const clientesStats = {};
 
         locacoes.forEach(loc => {
           const valor = Number(loc.valorTotal) || 0;
@@ -105,16 +112,17 @@ const ClientesTab = () => {
             if (dataLoc > clientesStats[cid].ultimaLocacao) clientesStats[cid].ultimaLocacao = dataLoc;
           }
         });
-        
+
         const ticketMedio = locacoes.length > 0 ? (somaTotal / locacoes.length) : 0;
         const seisMesesAtras = new Date();
         seisMesesAtras.setMonth(seisMesesAtras.getMonth() - 6);
-        
+
         const listaStats = Object.values(clientesStats);
         const clientesFieis = listaStats.filter(c => c.qtdLocacoes > 1).length;
         const taxaRetorno = totalClientes > 0 ? (clientesFieis / totalClientes) * 100 : 0;
 
         let inativosCount = 0;
+
         const clientesFormatadosRelatorio = clientes.map(c => {
           const stat = clientesStats[c.id] || { qtdLocacoes: 0, gastoTotal: 0, ultimaLocacao: null };
           let isInativo = false;
@@ -134,7 +142,7 @@ const ClientesTab = () => {
             status: isInativo ? "Inativo" : "Ativo"
           };
         });
-        
+
         setMetricas({ 
           total: totalClientes, 
           novosMes, 
@@ -143,7 +151,7 @@ const ClientesTab = () => {
           clientesFieis,
           taxaRetorno
         });
-        
+
         setRankingCidades(Object.entries(cidadesCount).sort((a, b) => b[1] - a[1]).slice(0, 5));
         setTopClientes(listaStats.sort((a, b) => b.gastoTotal - a.gastoTotal).slice(0, 8));
         setTodosClientesData(clientesFormatadosRelatorio);
@@ -156,8 +164,8 @@ const ClientesTab = () => {
     };
     
     buscarDadosClientesEConfigs();
-  }, [usuarioLogado]);
-  
+  }, [usuarioLogado, tenantId]);
+
   const exportarRelatorioGeral = async () => {
     try {
       const docPDF = new jsPDF();
@@ -191,7 +199,7 @@ const ClientesTab = () => {
         theme: 'grid',
         headStyles: { fillColor: [15, 23, 42] }
       });
-      
+
       docPDF.save(`Relatorio_Clientes_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
 
       // 🔥 Aciona o espião de exportação

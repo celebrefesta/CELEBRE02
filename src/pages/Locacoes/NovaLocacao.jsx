@@ -12,17 +12,19 @@ const NovaLocacao = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
+  // 🔥 IDENTIFICAÇÃO CORPORATIVA (A chave para puxar e salvar dados no cofre da empresa)
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [loading, setLoading] = useState(true);
 
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
-  const [todasLocacoes, setTodasLocacoes] = useState([]); 
+  const [todasLocacoes, setTodasLocacoes] = useState([]);
   const [carrinho, setCarrinho] = useState([]);
   
   const [modalAberto, setModalAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
-  
   const [clienteSelecionado, setClienteSelecionado] = useState('');
   const [tipoServico, setTipoServico] = useState('PEGUE E MONTE');
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
@@ -62,7 +64,7 @@ const NovaLocacao = () => {
   // 🔥 AUDITORIA
   const registrarLog = async (acao, detalhes, pedidoIdGerado, numeroPedidoGerado) => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -73,7 +75,7 @@ const NovaLocacao = () => {
         detalhes: detalhes,
         pedidoId: pedidoIdGerado || "S/N",
         numeroPedido: numeroPedidoGerado || "S/N",
-        userId: usuarioLogado?.uid
+        userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria:", error);
@@ -88,9 +90,10 @@ const NovaLocacao = () => {
 
     const carregarDados = async () => {
       try {
-        const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🎯 BUSCA VINCULADA À EMPRESA (TENANT)
+        const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
 
         const [snapCli, snapEst, snapLoc] = await Promise.all([
           getDocs(qClientes),
@@ -107,8 +110,9 @@ const NovaLocacao = () => {
         setLoading(false);
       }
     };
+
     carregarDados();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
@@ -144,7 +148,7 @@ const NovaLocacao = () => {
                       if (itemNoPedido) {
                           const qtdAlugada = parseInt(itemNoPedido.qtd) || 0;
                           if (loc.dataDevolucao === datas.retirada) {
-                             qtdRetornaNoDia += qtdAlugada;
+                              qtdRetornaNoDia += qtdAlugada;
                           } else {
                               qtdReservadaForte += qtdAlugada;
                           }
@@ -325,6 +329,7 @@ const NovaLocacao = () => {
     
     if (datas.devolucao && datas.retirada > datas.devolucao) return alert("A data de devolução não pode ser menor que a data de retirada!");
     if (carrinho.length === 0) return alert("Você precisa adicionar pelo menos 1 peça no pedido!");
+    
     for (let item of carrinho) {
         if (item.isPendenteCompra) continue;
         const disp = getDisponibilidade(item.id);
@@ -369,21 +374,21 @@ const NovaLocacao = () => {
         sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
         status: statusFinal, 
         criadoEm: serverTimestamp(),
-        userId: usuarioLogado.uid 
+        userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
       });
 
       if (valorRecebidoNoCaixa > 0) {
         await addDoc(collection(db, "financeiro_lancamentos"), {
             tipo: 'entrada', categoria: 'Locação', valor: valorRecebidoNoCaixa, formaPagto: formaPagtoSinal,
             data: new Date().toISOString().split('T')[0], status: 'pago', createdAt: serverTimestamp(), descricao: `SINAL - Pedido #${codigo} - ${nomeClienteReal}`,
-            userId: usuarioLogado.uid 
+            userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
         });
         await registrarLog("PAGAMENTO Lançado", `Registrou entrada financeira de R$ ${valorRecebidoNoCaixa.toFixed(2)} na criação do pedido.`, docRef.id, codigo);
       }
 
       const acaoLog = statusFinal === 'orcamento' ? 'NOVO ORÇAMENTO' : 'NOVA LOCAÇÃO';
       await registrarLog(acaoLog, `Gerou um novo ${statusFinal.toLowerCase()} do zero no valor de R$ ${calcularTotal().total.toFixed(2)} para: ${nomeClienteReal} (${tipoServico})`, docRef.id, codigo);
-
+      
       alert(`✅ Pedido ${codigo} salvo com sucesso!`);
       navigate('/locacoes');
     } catch (e) { 
@@ -417,7 +422,6 @@ const NovaLocacao = () => {
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
       const vSinalFormatado = valorSinal || '0,00';
-      
       const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
       const msgEncoded = encodeURIComponent(texto);
       
@@ -451,15 +455,14 @@ const NovaLocacao = () => {
         nome: formCompra.nome, quantidade: Number(formCompra.quantidade), valorEstimado: valorCusto, categoria: formCompra.categoria, 
         prazo: formCompra.prazo || datas.retirada || "", fornecedor: formCompra.fornecedor, obs: formCompra.obs, vinculoTipo: "pedido", vinculoId: "pendente_salvamento", 
         vinculo: nomeVinculo, status: "pendente", createdAt: serverTimestamp(),
-        userId: usuarioLogado.uid 
+        userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
       });
-      
-      await registrarLog("NOVA COMPRA PENDENTE", `Adicionou "${formCompra.nome}" à lista de compras, urgente para nova locação.`, novaCompraRef.id, "S/N");
 
+      await registrarLog("NOVA COMPRA PENDENTE", `Adicionou "${formCompra.nome}" à lista de compras, urgente para nova locação.`, novaCompraRef.id, "S/N");
+      
       const itemParaCarrinho = {
         id: novaCompraRef.id, nome: formCompra.nome, categoria: formCompra.categoria, foto: '', preco: valorAluguel, qtd: Number(formCompra.quantidade), qtdOriginal: Number(formCompra.quantidade), isPendenteCompra: true 
       };
-      
       setCarrinho(prev => [...prev, itemParaCarrinho]);
       setFormCompra({ nome: "", quantidade: 1, valorEstimado: "", valorAluguel: "", categoria: "material", prazo: "", fornecedor: "", obs: "" });
       setSugestoesCompra([]);
@@ -472,7 +475,7 @@ const NovaLocacao = () => {
         document.getElementById('compraNomeInput').focus();
       }
     } catch (err) { 
-        alert("Erro ao salvar compra."); 
+        alert("Erro ao salvar compra.");
     } finally { 
         setSalvandoCompra(false); 
     }
@@ -481,7 +484,7 @@ const NovaLocacao = () => {
   const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || 0;
 
   if (loading) return <div className="loading-state">Carregando formulário...</div>;
-  
+
   return (
     <div className="locacao-form-container">
       <header className="page-header">
@@ -555,7 +558,7 @@ const NovaLocacao = () => {
             </div>
 
             <div className="form-row mt-10">
-               <div className="form-group flex-1">
+                <div className="form-group flex-1">
                     <label>Grupo de Tema *</label>
                     <select value={grupoTemaSelecionado} onChange={e => {
                         setGrupoTemaSelecionado(e.target.value);
@@ -567,7 +570,7 @@ const NovaLocacao = () => {
                 </div>
 
                 <div className="form-group flex-1">
-                 <label>Tema Específico *</label>
+                    <label>Tema Específico *</label>
                     <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={(!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA')}>
                         <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Escolha o Grupo antes...' : 'Selecione o Tema...'}</option>
                         {temasDisponiveis.map(t => (
@@ -620,7 +623,7 @@ const NovaLocacao = () => {
                 </div>
                 <div className="form-group mt-10"><label>Observações de Transporte</label><textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})}></textarea></div>
               </div>
-              ) : (
+            ) : (
               <p className="texto-aviso-logistica mt-15">⚠️ O cliente fará a retirada e devolução dos itens diretamente no local.</p>
             )}
           </div>
@@ -640,7 +643,7 @@ const NovaLocacao = () => {
               ) : (
                 <div style={{overflowX: 'auto'}}>
                     <table style={{width: '100%', borderCollapse: 'collapse', minWidth: '500px'}}>
-                       <thead>
+                        <thead>
                         <tr style={{borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', textAlign: 'left'}}>
                           <th style={{padding: '12px 10px', width: '50%'}}>Produto</th>
                           <th style={{padding: '12px 10px', textAlign: 'center', width: '20%'}}>Quantidade</th>
@@ -657,7 +660,7 @@ const NovaLocacao = () => {
                                       {item.foto ? <img src={item.foto} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : <span style={{fontSize:'20px'}}>📷</span>}
                                   </div>
                                   <div style={{display: 'flex', flexDirection: 'column'}}>
-                                    <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>
+                                     <strong style={{color: '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '200px'}}>
                                         {item.nome}
                                         {item.isBateVolta && <span style={{color: '#f59e0b', fontSize: '10px', marginLeft: '6px', background: '#fef3c7', padding: '2px 4px', borderRadius: '4px'}}>⚠️ Bate e Volta (Retorna no Dia)</span>}
                                      </strong>
@@ -665,11 +668,12 @@ const NovaLocacao = () => {
                                      {item.isPendenteCompra ? <span style={{color: '#d97706', fontSize: '10px', fontWeight: 'bold', background: '#fef3c7', padding: '2px 6px', borderRadius: '4px', width: 'max-content', marginTop: '4px'}}>⏳ COMPRA PENDENTE</span> : <span style={{color: '#10b981', fontSize: '10px', fontWeight: 'bold', marginTop: '4px'}}>📦 Confirmado!</span>}
                                   </div>
                                </div>
-                            </td>
+                             </td>
                             <td style={{padding: '12px 10px', textAlign: 'center'}}>
                               <div style={{display: 'inline-flex', alignItems: 'center', gap: '5px', background: '#f8fafc', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
                                 <button type="button" onClick={() => handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) - 1)} style={{width: '28px', height: '28px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a'}}>-</button>
-                                <input type="number" min="1" value={item.qtd} onChange={(e) => handleChangeQtdCarrinho(item.id, e.target.value)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleChangeQtdCarrinho(item.id, 1); }} style={{width: '40px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: 'bold', fontSize: '14px', color: '#0f172a', appearance: 'textfield'}} />
+                                <input type="number" min="1" value={item.qtd} onChange={(e) => handleChangeQtdCarrinho(item.id, e.target.value)} onBlur={(e) => { if (!e.target.value || parseInt(e.target.value) < 1) handleChangeQtdCarrinho(item.id, 1);
+                                }} style={{width: '40px', textAlign: 'center', border: 'none', background: 'transparent', fontWeight: 'bold', fontSize: '14px', color: '#0f172a', appearance: 'textfield'}} />
                                 <button type="button" onClick={() => {
                                     if (item.isPendenteCompra) handleChangeQtdCarrinho(item.id, (Number(item.qtd) || 1) + 1);
                                     else {
@@ -681,7 +685,7 @@ const NovaLocacao = () => {
                                     }
                                 }} style={{width: '28px', height: '28px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', color: '#0f172a'}}>+</button>
                               </div>
-                             </td>
+                            </td>
                             <td style={{padding: '12px 10px', textAlign: 'right'}}><strong style={{color: '#0f172a', fontSize: '15px'}}>R$ {(item.preco * (Number(item.qtd) || 1)).toFixed(2)}</strong></td>
                             <td style={{padding: '12px 10px', textAlign: 'center'}}><button type="button" className="btn-remover-item" onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))} style={{background: '#fef2f2', border: 'none', color: '#ef4444', cursor: 'pointer', width: '32px', height: '32px', borderRadius: '6px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s'}} onMouseEnter={e => e.currentTarget.style.background = '#fca5a5'} onMouseLeave={e => e.currentTarget.style.background = '#fef2f2'}>🗑️</button></td>
                           </tr>
@@ -694,7 +698,7 @@ const NovaLocacao = () => {
           </div>
 
           <div className="card-secao">
-            <h3 className="section-divider">🔒 OBSERVAÇÕES INTERNAS</h3>
+             <h3 className="section-divider">🔒 OBSERVAÇÕES INTERNAS</h3>
             <div className="form-group"><textarea rows="2" placeholder="Anotações para a equipe (Ex: Verificar estado da mesa na volta...)" value={obsInternas} onChange={e => setObsInternas(e.target.value)}></textarea></div>
           </div>
 
@@ -709,7 +713,7 @@ const NovaLocacao = () => {
             <div className="fin-total"><span>TOTAL</span><strong>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
             <div className="fin-acoes">
               <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')}>✔ CONFIRMAR PEDIDO</button>
-              <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center', marginTop: '10px'}} onClick={() => interceptarSalvamento('orcamento')}>💾 Salvar como Orçamento</button>
+               <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center', marginTop: '10px'}} onClick={() => interceptarSalvamento('orcamento')}>💾 Salvar como Orçamento</button>
             </div>
           </div>
         </aside>
@@ -718,7 +722,7 @@ const NovaLocacao = () => {
       {modalSinalAberto && (
         <div className="modal-overlay-premium" style={{zIndex: 99999}}>
           <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
-            <div style={{background: '#f8fafc', padding: '25px', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
+             <div style={{background: '#f8fafc', padding: '25px', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
                <h3 style={{margin: 0, color: '#0f172a', fontSize: '22px'}}>💰 Confirmação e Sinal</h3>
                <div style={{marginTop: '20px', padding: '20px', background: '#eff6ff', border: '2px dashed #3b82f6', borderRadius: '12px'}}>
                   <span style={{fontSize: '13px', color: '#1e3a8a', display: 'block', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Valor Total do Pedido</span>
@@ -727,10 +731,10 @@ const NovaLocacao = () => {
             </div>
             <form onSubmit={(e) => e.preventDefault()} style={{padding: '25px'}}>
                <div style={{display: 'flex', gap: '15px', marginBottom: '20px'}}>
-                   <div className="form-group-pag" style={{flex: 1}}>
+                    <div className="form-group-pag" style={{flex: 1}}>
                      <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Valor da Entrada (R$)</label>
                      <input type="text" placeholder="0,00" autoFocus style={{fontSize: '22px', padding: '15px', textAlign: 'center', borderColor: '#3b82f6', color: '#1e3a8a', backgroundColor: '#fff', fontWeight: 'bold'}} value={valorSinal} onChange={e => setValorSinal(maskCurrency(e.target.value))} />
-                   </div>
+                  </div>
                    <div className="form-group-pag" style={{flex: 1}}>
                      <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Forma de Pagto.</label>
                      <select value={formaPagtoSinal} onChange={e => setFormaPagtoSinal(e.target.value)} style={{padding: '15px', fontSize: '16px', height: '100%', borderColor: '#cbd5e1', backgroundColor: '#fff'}}>
@@ -759,7 +763,7 @@ const NovaLocacao = () => {
                )}
                <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>Cancelar e Voltar</button>
             </form>
-          </div>
+           </div>
         </div>
       )}
 
@@ -805,13 +809,13 @@ const NovaLocacao = () => {
                           {!estaEsgotado && <button className="btn-add-peca">+</button>}
                         </div>
                       <div className="peca-info">
-                        <strong>{item.nome}</strong>
+                         <strong>{item.nome}</strong>
                         <span>{item.categoria}</span>
                         <b className="txt-sucesso">R$ {item.financeiro?.valorAluguel || item.preco || 0}</b>
                       </div>
                     </div>
                   );
-              })}
+               })}
               {itensFiltrados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada.</p>}
             </div>
           </div>

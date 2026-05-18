@@ -17,6 +17,9 @@ const CadastroEstoque = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
+  // 🔥 IDENTIFICAÇÃO CORPORATIVA (A chave para puxar e salvar dados no cofre da empresa)
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [salvando, setSalvando] = useState(false);
   const [itensExistentes, setItensExistentes] = useState([]);
   const [listasSistema, setListasSistema] = useState({
@@ -85,12 +88,14 @@ const CadastroEstoque = () => {
   const categoriasFisicasUnicas = Object.keys(CATEGORIAS_FISICAS);
   const subcategoriasFisicasDisponiveis = categoria ? CATEGORIAS_FISICAS[categoria] || [] : [];
   const ocultarVitrineFisica = categoria === "Capas e Têxteis" && (subCategoria === "Capas de Painel" || subCategoria === "Capas de Cilindro" || subCategoria === "Kits de Capas (Painel + Cilindros)");
+  
   const EVENTOS_VITRINE = [
       "Aniversário", "Casamento", "Mêsversário", "Chá de Bebê", 
       "Chá Revelação", "Chá de Panela / Casa Nova", "Noivado", 
       "15 anos", "Formatura", "Religioso", "Corporativo", 
       "Escolar", "Datas Comemorativas"
   ];
+
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS).filter(cat => {
       if (tipoCadastro === 'decoracao') {
           return EVENTOS_VITRINE.includes(cat);
@@ -105,7 +110,7 @@ const CadastroEstoque = () => {
   const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
   const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
   const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
-  
+
   useEffect(() => {
     if (!usuarioLogado) {
       alert("Sessão expirada. Faça login novamente.");
@@ -114,7 +119,8 @@ const CadastroEstoque = () => {
     }
 
     const fetchItens = async () => {
-      const q = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
+      // 🎯 BUSCA VINCULADA À EMPRESA (TENANT)
+      const q = query(collection(db, "estoque"), where("userId", "==", tenantId));
       const snap = await getDocs(q);
       const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setItensExistentes(docs);
@@ -123,7 +129,8 @@ const CadastroEstoque = () => {
 
     const fetchConfiguracoes = async () => {
       try {
-        const docRef = doc(db, "parametros_usuarios", usuarioLogado.uid);
+        // 🎯 BUSCA CONFIGURAÇÕES (PRATELEIRAS) DA EMPRESA
+        const docRef = doc(db, "parametros_usuarios", tenantId);
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const dados = docSnap.data();
@@ -197,7 +204,7 @@ const CadastroEstoque = () => {
       setStatus('ok'); 
       if (dadosCompra.formato === 'kit') setTipoCadastro('kit');
     }
-  }, [itemEditando, itemDuplicando, dadosCompra, usuarioLogado, navigate]);
+  }, [itemEditando, itemDuplicando, dadosCompra, usuarioLogado, navigate, tenantId]);
 
   const atualizarSKU = (tipo, cat) => {
     let catAlvo = tipo === 'decoracao' ? 'Decoração Completa' : cat;
@@ -232,7 +239,7 @@ const CadastroEstoque = () => {
       setSubcategoriaTema('');
       setGrupoTemaSelecionado('');
       setTemaSelecionado('');
-      
+
       if (novoTipo === 'decoracao') {
           setUnidadeMedida('Combo');
           setTipoDisponibilidade('Aluguel');
@@ -358,7 +365,6 @@ const CadastroEstoque = () => {
                     ctx.drawImage(img, 0, 0, w, h);
                     resolve(canvas.toDataURL('image/jpeg', 0.8));
                 };
-               
                 img.onerror = () => resolve(null);
                 img.src = event.target.result;
             };
@@ -464,7 +470,8 @@ const CadastroEstoque = () => {
       if (!usuarioLogado) return;
       setSalvandoLocalizacoes(true);
       try {
-          const docRef = doc(db, "parametros_usuarios", usuarioLogado.uid);
+          // 🎯 SALVA CONFIGURAÇÕES (PRATELEIRAS) VINCULADAS À EMPRESA
+          const docRef = doc(db, "parametros_usuarios", tenantId);
           await setDoc(docRef, { localizacoes: localizacoesEditaveis }, { merge: true });
           setListasSistema(prev => ({ ...prev, localizacoes: localizacoesEditaveis }));
           setModalLocalizacaoAberto(false);
@@ -477,7 +484,6 @@ const CadastroEstoque = () => {
   };
 
   const categoriasCatalogoUnicas = ['Todos', ...new Set(itensExistentes.map(item => item.categoria).filter(Boolean))];
-  
   const itensCatalogoFiltrados = itensExistentes.filter(item => {
       return !item.especificacoes?.isDecoracao && !item.especificacoes?.isKitPai && 
              (item.nome || '').toLowerCase().includes(buscaCatalogo.toLowerCase()) && 
@@ -524,7 +530,7 @@ const CadastroEstoque = () => {
       const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ? `KIT ${nome.trim()}` : nome.trim();
 
       const dados = {
-        userId: usuarioLogado.uid,
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA, NÃO AO FUNCIONÁRIO
         nome: nomePrincipalFormatado, 
         codigo, 
         categoria: catFinal, 
@@ -688,10 +694,11 @@ const CadastroEstoque = () => {
           if (dados.quantidade > 1) detalhesAcao += ` (Qtd: ${dados.quantidade})`;
         }
 
+        // 🎯 ESPIÃO VINCULADO À EMPRESA
         await addDoc(collection(db, "logs_atividades"), {
-          empresaId: usuarioLogado.uid, 
+          empresaId: tenantId, 
           funcionarioId: usuarioLogado.uid,
-          nomeFuncionario: usuarioLogado.displayName || usuarioLogado.email || "Equipa",
+          nomeFuncionario: localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Equipa",
           acao: itemEditando ? "EDIÇÃO DE ESTOQUE" : "NOVO ITEM NO ESTOQUE",
           tipo: itemEditando ? "EDICAO" : "CRIACAO",
           detalhes: detalhesAcao,
@@ -864,7 +871,7 @@ const CadastroEstoque = () => {
                               onChange={handleZoomChange} 
                               style={{flex: 1, cursor: 'pointer', accentColor: '#0f172a'}}
                           />
-                       </div>
+                      </div>
                   )}
 
                   {fotos.length > 0 && (
@@ -916,7 +923,7 @@ const CadastroEstoque = () => {
                   </div>
                 </div>
               )}
-            </div>
+          </div>
 
             <div style={{ flex: 1, minWidth: '0', background: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
               
@@ -960,7 +967,7 @@ const CadastroEstoque = () => {
                                 {subcategoriasFisicasDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
                         </div>
-                      </div>
+                    </div>
                   )}
 
                   <div style={{ flex: 2, minWidth: '300px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '20px', position: 'relative' }}>
@@ -1074,7 +1081,7 @@ const CadastroEstoque = () => {
                       </div>
                   ) : (
                       <div style={{textAlign: 'center', padding: '30px', color: '#b45309', background: '#fff', borderRadius: '8px', fontSize: '13px'}}>
-                          Sua decoração ainda está vazia.
+                           Sua decoração ainda está vazia.
                       </div>
                   )}
                 </div>
@@ -1089,7 +1096,7 @@ const CadastroEstoque = () => {
                   
                   {pecasKitNovas.map((p, idx) => (
                     <div key={p.id} style={{background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
-                      <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap'}}>
+                        <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap'}}>
                         <div style={{flex: 2, minWidth: '120px'}}>
                           <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>NOME (Ex: Tampo, Base)</label>
                           <input type="text" placeholder="Pode ficar vazio..." value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box'}} />
@@ -1234,7 +1241,7 @@ const CadastroEstoque = () => {
                                   +
                                 </button>
                                 {foiAdicionado && (
-                                    <span style={{background: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', position: 'absolute', top: '10px', right: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>Incluso: {qtdNoKit}</span>
+                                  <span style={{background: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', position: 'absolute', top: '10px', right: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>Incluso: {qtdNoKit}</span>
                                 )}
                             </div>
                         </div>
@@ -1270,7 +1277,7 @@ const CadastroEstoque = () => {
                   onClick={handleAddLocalizacao}
                   style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                  Adicionar
+                 Adicionar
               </button>
             </div>
 

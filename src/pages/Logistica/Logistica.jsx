@@ -7,10 +7,11 @@ import { getAuth } from 'firebase/auth';
 
 const Logistica = () => {
   const navigate = useNavigate();
-
-  // 🔥 Autenticação
+  
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [locacoes, setLocacoes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,7 +19,6 @@ const Logistica = () => {
   
   const [checklistModalId, setChecklistModalId] = useState(null);
   const [relatorioModalLoc, setRelatorioModalLoc] = useState(null);
-
   const [vistaAtual, setVistaAtual] = useState('kanban');
   const [parametros, setParametros] = useState(null);
   
@@ -27,7 +27,7 @@ const Logistica = () => {
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO)
   const registrarLog = async (acao, detalhes, pedidoId = "S/N", numeroPedido = "S/N") => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -38,7 +38,9 @@ const Logistica = () => {
         detalhes: detalhes,
         pedidoId: pedidoId,
         numeroPedido: numeroPedido,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria:", error);
@@ -49,19 +51,21 @@ const Logistica = () => {
     setLoading(true);
     try {
       // 🔥 BLINDAGEM MULTI-EMPRESA
-      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const snap = await getDocs(qLocacoes);
       const dados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const ordenados = dados.sort((a, b) => (a.dataRetirada || '').localeCompare(b.dataRetirada || ''));
       setLocacoes(ordenados);
 
-      const docRef = doc(db, "configuracoes_empresa", usuarioLogado.uid);
+      // Busca parâmetros da empresa
+      const docRef = doc(db, "configuracoes_empresa", tenantId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setParametros(docSnap.data());
       }
 
-      const contratoRef = doc(db, "relatorio_avarias", usuarioLogado.uid);
+      // Busca texto base do relatório da empresa
+      const contratoRef = doc(db, "relatorio_avarias", tenantId);
       const contratoSnap = await getDoc(contratoRef);
       if (contratoSnap.exists()) {
         setTextoRelatorio(contratoSnap.data().conteudo || contratoSnap.data().texto || '');
@@ -84,7 +88,7 @@ const Logistica = () => {
     if (window.innerWidth <= 800) {
       setVistaAtual('lista');
     }
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const moverCard = async (id, novoStatus) => {
     const locacaoAlvo = locacoes.find(l => l.id === id);
@@ -112,11 +116,10 @@ const Logistica = () => {
       // 🔥 Auditoria de movimento
       await registrarLog(
         "MOVIMENTAÇÃO DE ESTEIRA", 
-        `Avançou o pedido #${locacaoAlvo.numeroPedido} de ${statusAntigo} para ${novoStatus.toUpperCase()}.`,
+        `Avançou o pedido #${locacaoAlvo.numeroPedido || id.substring(0,6).toUpperCase()} de ${statusAntigo} para ${novoStatus.toUpperCase()}.`,
         id,
         locacaoAlvo.numeroPedido
       );
-
     } catch (e) {
       alert("Erro ao atualizar o status.");
     }
@@ -133,7 +136,7 @@ const Logistica = () => {
     });
 
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
-    
+
     try { 
       await updateDoc(doc(db, "locacoes", locId), { itens: novosItens });
       
@@ -142,7 +145,9 @@ const Logistica = () => {
         const acao = !itemAlvo.checkedSeparacao ? "ITEM SEPARADO" : "ITEM PENDENTE";
         registrarLog(acao, `Checklist de Saída: Marcou "${itemAlvo.nome}" como ${!itemAlvo.checkedSeparacao ? 'CONFERIDO' : 'NÃO CONFERIDO'}.`, locId, locacao.numeroPedido);
       }
-    } catch (e) {}
+    } catch (e) {
+        console.error("Erro no checklist", e);
+    }
   };
 
   const registrarRetornoItem = async (locId, itemIndex, status) => {
@@ -161,18 +166,21 @@ const Logistica = () => {
     });
 
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
-    
+
     try { 
-      await updateDoc(doc(db, "locacoes", locId), { itens: novosItens }); 
+      await updateDoc(doc(db, "locacoes", locId), { itens: novosItens });
       
       // 🔥 Auditoria de retorno
       let txtStatus = status === 'ok' ? 'DEVOLVIDO OK' : status === 'avaria' ? 'COM AVARIA' : status === 'faltou' ? 'FALTANDO/EXTRAVIO' : 'DESMARCADO';
       registrarLog("CONFERÊNCIA DE RETORNO", `Marcou o item "${itemAlvo.nome}" como ${txtStatus}.`, locId, locacao.numeroPedido);
-    } catch (e) {}
+    } catch (e) {
+        console.error("Erro no registro de retorno", e);
+    }
   };
 
   const hojeStr = new Date().toISOString().split('T')[0];
   const mesAtual = hojeStr.substring(0, 7);
+
   const locacoesFiltradas = locacoes.filter(loc => {
     if (!loc.dataRetirada) return false;
     const st = String(loc.status || '').toLowerCase().trim();
@@ -252,7 +260,7 @@ const Logistica = () => {
           parametros={parametros} 
           textoBase={textoRelatorio} 
           onClose={() => setRelatorioModalLoc(null)} 
-          usuarioLogadoId={usuarioLogado.uid}
+          tenantId={tenantId}
           registrarLog={registrarLog}
         />
       )}
@@ -270,6 +278,7 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
     const locDate = new Date(loc.dataRetirada + 'T00:00:00'); 
     const diffTime = locDate.getTime() - hojeDate.getTime();
     const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
     if (diffDias < 0 && loc.status !== 'entregue') return <div className="alerta-urgente atrasado">🔥 ATRASADO!</div>;
     if (diffDias <= 0 && loc.status === 'entregue' && loc.dataDevolucao) {
        const devolucaoDate = new Date(loc.dataDevolucao + 'T00:00:00');
@@ -285,6 +294,7 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
   const isFaseSeparacao = loc.status === 'preparacao';
   const isFaseDevolucao = loc.status === 'finalizado'; 
   const hasItens = loc.itens && loc.itens.length > 0;
+  
   let totalItens = hasItens ? loc.itens.length : 0;
   let itensCheckados = 0;
   let checklistBloqueiaBotao = false;
@@ -361,14 +371,14 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
   );
 };
 
-const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLogadoId, registrarLog }) => {
+const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, tenantId, registrarLog }) => {
   const [itensProblema, setItensProblema] = useState([]);
   const [carregandoValores, setCarregandoValores] = useState(true);
 
   useEffect(() => {
     const buscarValoresNoEstoque = async () => {
       try {
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogadoId));
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
         const estoqueSnap = await getDocs(qEstoque);
         const estoqueData = estoqueSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -390,7 +400,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
             const valorBruto = pecaNoEstoque.financeiro?.valorReposicao || pecaNoEstoque.valorReposicao || 0;
             let valorString = String(valorBruto).replace(/[R$\s]/g, '');
             if (valorString.includes('.') && valorString.includes(',')) valorString = valorString.replace(/\./g, '');
-            valorString = valorString.replace(',', '.'); 
+            valorString = valorString.replace(',', '.');
             precoEncontrado = parseFloat(valorString);
           }
 
@@ -410,7 +420,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
       }
     };
     buscarValoresNoEstoque();
-  }, [loc, usuarioLogadoId]);
+  }, [loc, tenantId]);
 
   const handleValorChange = (index, value) => {
     const novosItens = [...itensProblema];
@@ -420,7 +430,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
 
   const totalCobrar = itensProblema.reduce((acc, item) => acc + (parseFloat(item.valorCobrado || 0) * item.qtd), 0);
   const formatarMoeda = (valor) => parseFloat(valor || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
+  
   const gerarTermoPDF = () => {
     const nomeEmpresa = parametros?.nomeEmpresa || parametros?.nomeFantasia || parametros?.nome || 'NOME DA EMPRESA NÃO CONFIGURADO';
     const logoEmpresa = parametros?.logotipo || parametros?.logo || parametros?.logoUrl || parametros?.foto || null;
@@ -493,7 +503,6 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, usuarioLog
     
     // 🔥 Auditoria de geração de relatório
     registrarLog("RELATÓRIO GERADO", `Gerou PDF de Ocorrências (Total: ${formatarMoeda(totalCobrar)}) para o cliente ${loc.clienteNome}.`, loc.id, loc.numeroPedido);
-    
     onClose(); 
   };
 

@@ -11,19 +11,18 @@ import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 
 const Estoque = () => {
   const navigate = useNavigate();
-  // 🔥 PUXANDO O USUÁRIO LOGADO
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-  
-  // 🔥 ESTADOS DE SEGURANÇA E LIMITES DO PLANO
+
+  // 🔥 CHAVE MESTRA: Pega o ID da empresa no navegador ou o do próprio usuário
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [temAcesso, setTemAcesso] = useState(false);
   const [limiteEstoque, setLimiteEstoque] = useState(0);
-  
   const [itens, setItens] = useState([]);
   const [locacoes, setLocacoes] = useState([]); 
   const [loading, setLoading] = useState(true);
   const [limpandoNomes, setLimandoNomes] = useState(false);
-  
   const [busca, setBusca] = useState('');
   const [dataFiltro, setDataFiltro] = useState(''); 
   const [categoriaFiltro, setCategoriaFiltro] = useState('');
@@ -48,7 +47,7 @@ const Estoque = () => {
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -57,7 +56,7 @@ const Estoque = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria do estoque:", error);
@@ -70,15 +69,14 @@ const Estoque = () => {
         return;
     }
     carregarDados(); 
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const carregarDados = async () => {
     if (!usuarioLogado) return;
     setLoading(true);
-
     try {
-      // 🔥 1. VERIFICAÇÃO DE PLANO E LIMITES (LEITURA INTELIGENTE)
-      const userRef = doc(db, 'usuarios', usuarioLogado.uid);
+      // 🔥 1. VERIFICAÇÃO DE PLANO E LIMITES NA CONTA DA EMPRESA
+      const userRef = doc(db, 'usuarios', tenantId);
       const userSnap = await getDoc(userRef);
       
       let acessoLiberado = false;
@@ -86,7 +84,6 @@ const Estoque = () => {
 
       if (userSnap.exists()) {
           const userData = userSnap.data();
-
           if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa' || userData.assinaturaAtiva === true) {
               acessoLiberado = true;
               limiteMaximo = 1000; // Assume Básico como padrão
@@ -116,26 +113,24 @@ const Estoque = () => {
       setTemAcesso(acessoLiberado);
       setLimiteEstoque(limiteMaximo);
 
-      // SE NÃO TEM ACESSO, NÃO PRECISA CARREGAR O RESTO PARA ECONOMIZAR BANCO
       if (!acessoLiberado) {
           setLoading(false);
           return;
       }
 
-      // 🔥 2. FILTRO BLINDADO NO ESTOQUE
-      const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
+      // 🔥 2. FILTRO BLINDADO NO ESTOQUE (DA EMPRESA)
+      const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
       const snapEstoque = await getDocs(qEstoque);
       let listaEstoque = snapEstoque.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Ordenação
+      
       listaEstoque.sort((a, b) => {
           const tempoA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
           const tempoB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
           return tempoB - tempoA; 
       });
 
-      // 🔥 3. FILTRO BLINDADO NAS LOCAÇÕES
-      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+      // 🔥 3. FILTRO BLINDADO NAS LOCAÇÕES (DA EMPRESA)
+      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const snapLocacoes = await getDocs(qLocacoes);
       const listaLocacoes = snapLocacoes.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
@@ -152,11 +147,12 @@ const Estoque = () => {
       if (!usuarioLogado) return;
       setLimandoNomes(true);
       try {
-          const q = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
+          // 🎯 BUSCA NA EMPRESA
+          const q = query(collection(db, "estoque"), where("userId", "==", tenantId));
           const snap = await getDocs(q);
           const batch = writeBatch(db);
           let alterados = 0;
-
+          
           snap.forEach(docSnap => {
               const item = docSnap.data();
               let nomeAtual = item.nome || '';
@@ -180,7 +176,7 @@ const Estoque = () => {
                   let sufixos = [];
                   if (tam) sufixos.push(tam.trim());
                   if (cor) sufixos.push(cor.trim());
-
+                  
                   if (sufixos.length > 0) {
                       nomeNovo = `${pai} - ${sufixos.join(' ')}`;
                   } else {
@@ -210,10 +206,7 @@ const Estoque = () => {
 
           if (alterados > 0) {
               await batch.commit();
-              
-              // 🔥 REGISTA AUDITORIA
               await registrarLog("AJUSTE EM LOTE NO ESTOQUE", `Executou a limpeza e padronização automática de nomes de ${alterados} kits e peças.`);
-              
               alert(`✅ Mágica Feita! O robô arrumou os nomes de ${alterados} peças e kits! Verifique as que ficaram com o aviso "Sem Medida".`);
               carregarDados();
           } else {
@@ -227,7 +220,6 @@ const Estoque = () => {
       }
   };
 
-  // 🔥 TRAVA DE CADASTRO BASEADA NO PLANO
   const irParaCadastro = (item = null) => {
     if (!item && itens.length >= limiteEstoque) {
       alert(`⚠️ LIMITE ATINGIDO!\n\nSeu plano atual permite cadastrar até ${limiteEstoque.toLocaleString('pt-BR')} itens. Faça um upgrade no seu plano para cadastrar mais peças e continuar crescendo seu acervo!`);
@@ -268,7 +260,6 @@ const Estoque = () => {
   const salvarManutencao = async () => {
     if (!itemParaManutencao) return;
     const valor = parseInt(qtdMaint);
-
     if (isNaN(valor) || valor < 0 || valor > itemParaManutencao.quantidade) {
       alert("Quantidade inválida!");
       return;
@@ -278,10 +269,7 @@ const Estoque = () => {
         qtdManutencao: valor,
         status: valor === itemParaManutencao.quantidade ? 'manutencao' : 'ok'
       });
-      
-      // 🔥 REGISTA AUDITORIA
       await registrarLog("MANUTENÇÃO DE ACERVO", `Moveu ${valor} unidades da peça "${itemParaManutencao.nome}" para o status de manutenção/reparo.`);
-
       setModalManutencao(false);
       carregarDados();
     } catch (error) { alert("Erro ao atualizar."); }
@@ -307,10 +295,10 @@ const Estoque = () => {
               avaria: false,
               faltou: false
           };
-
+          
           let itensAtualizados = [...(locacaoAlvo.itens || [])];
           const indexExistente = itensAtualizados.findIndex(i => i.id === itemParaPedido.id);
-
+          
           if (indexExistente >= 0) {
               itensAtualizados[indexExistente].qtd += 1;
           } else {
@@ -327,9 +315,7 @@ const Estoque = () => {
               valorTotal: novoTotal
           });
           
-          // 🔥 REGISTA AUDITORIA
           await registrarLog("INSERÇÃO RÁPIDA EM PEDIDO", `Adicionou a peça "${itemParaPedido.nome}" diretamente pelo painel de estoque ao pedido de "${locacaoAlvo.clienteNome}".`);
-
           alert(`✅ A peça "${itemParaPedido.nome}" foi adicionada com sucesso ao pedido de ${locacaoAlvo.clienteNome}!`);
           setModalAddPedidoAberto(false);
           carregarDados();
@@ -351,13 +337,14 @@ const Estoque = () => {
       
       const emMaint = item.qtdManutencao !== undefined ? Number(item.qtdManutencao) : (item.status === 'manutencao' ? qtdBase : 0);
       let alugadosNaData = 0;
-
+      
       if (dataFiltro) {
           const pedidosNessaData = locacoes.filter(loc => 
               loc.dataRetirada === dataFiltro && 
               loc.status !== 'cancelado' && 
               loc.status !== 'finalizado'
           );
+          
           pedidosNessaData.forEach(pedido => {
               if (pedido.itens && Array.isArray(pedido.itens)) {
                   const itemEncontrado = pedido.itens.find(i => i.id === item.id);
@@ -390,13 +377,13 @@ const Estoque = () => {
       const s = String(loc.status || '').toLowerCase();
       return s.includes('confirmado') || s.includes('preparacao');
   });
-
+  
   pedidosAtivos.sort((a,b) => {
       const dA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
       const dB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
       return dA - dB;
   });
-
+  
   let itensFiltrados = itens
     .filter(i => {
         const termo = busca.toLowerCase();
@@ -417,7 +404,7 @@ const Estoque = () => {
         if (statusFiltro === 'manutencao') return emManutencao > 0;
         return true;
     });
-
+    
   itensFiltrados.sort((a, b) => {
       const nomeA = (a.nome || '').toLowerCase();
       const nomeB = (b.nome || '').toLowerCase();
@@ -425,7 +412,7 @@ const Estoque = () => {
       if (ordemAlfabetica === 'Z-A') return nomeB.localeCompare(nomeA);
       return 0;
   });
-
+  
   const imprimirListaFiltrada = async () => {
       const doc = new jsPDF();
       const dataHoje = new Date().toLocaleDateString('pt-BR');
@@ -453,7 +440,7 @@ const Estoque = () => {
               isDeco ? "1 Kit" : `${qtdBase} pçs`
           ];
       });
-
+      
       autoTable(doc, {
           head: colunas,
           body: linhas,
@@ -462,16 +449,14 @@ const Estoque = () => {
           headStyles: { fillColor: [15, 23, 42] },
           styles: { fontSize: 9 }
       });
-
+      
       doc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}.pdf`);
       
-      // 🔥 REGISTA AUDITORIA
       await registrarLog("EXPORTAÇÃO DE INVENTÁRIO", "Fez o download da lista de verificação de estoque em PDF.");
   };
 
-  // 🔥 TELAS DE CARREGAMENTO E BLOQUEIO
   if (loading) return <div style={{padding: '50px', textAlign: 'center', color: '#64748b'}}>Verificando permissões de acesso...</div>;
-
+  
   if (!temAcesso) {
     return (
       <div style={{ padding: '60px', textAlign: 'center', backgroundColor: '#f8fafc', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -485,7 +470,6 @@ const Estoque = () => {
     );
   }
 
-  // 👇 SE PASSOU DA TRAVA, MOSTRA O ESTOQUE NORMALMENTE
   return (
     <div className="estoque-premium" onClick={() => setMenuAberto(null)}>
       <div className="header-top">
@@ -632,7 +616,6 @@ const Estoque = () => {
                   }
 
                   const estoqueBaixo = !dataFiltro && item.configuracao?.alertaEstoque === 'Avisar' && qtdBase > 0 && disponivelTotal <= item.estoqueMinimo;
-                  
                   const valorAluguelFormatado = item.financeiro?.valorAluguel ? Number(item.financeiro.valorAluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
                   const posImg = item.posicoesFoco?.[0];
                   const isMenuOpen = menuAberto === item.id;

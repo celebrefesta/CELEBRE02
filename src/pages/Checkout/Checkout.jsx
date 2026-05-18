@@ -2,8 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
-
-// 🔥 IMPORTAÇÕES PARA O ESPIÃO E BANCO DE DADOS
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -16,7 +14,6 @@ const Checkout = () => {
   const [mensagem, setMensagem] = useState('');
   const [metodoAtivo, setMetodoAtivo] = useState('cartao');
   
-  // 🔥 ESTADOS PARA ARMAZENAR DADOS REAIS 🔥
   const [carregandoAlternativo, setCarregandoAlternativo] = useState(false);
   const [dadosPix, setDadosPix] = useState(null); 
   const [dadosBoleto, setDadosBoleto] = useState(null);
@@ -30,7 +27,6 @@ const Checkout = () => {
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      // Puxa o ID do Tenant para garantir que salva no lugar certo, seja dono ou funcionário
       const tenantId = localStorage.getItem('tenantId') || usuarioLogado.uid;
       const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Usuário";
       
@@ -57,12 +53,12 @@ const Checkout = () => {
   if (!planoSelecionado || !usuarioLogado) return null; 
 
   const valorPlano = parseFloat(planoSelecionado.preco.toString().replace('.', '').replace(',', '.'));
-
+  
   const initialization = {
     amount: valorPlano,
     payer: { email: usuarioLogado.email, entityType: 'individual' }
   };
-
+  
   const customization = {
     paymentMethods: { creditCard: 'all' },
     visual: { style: { theme: 'default' } }
@@ -71,7 +67,6 @@ const Checkout = () => {
   // Processamento do Cartão (Assinatura Recorrente)
   const onSubmit = async ({ selectedPaymentMethod, formData }) => {
     setMensagem('A processar pagamento seguro...');
-
     return new Promise(async (resolve, reject) => {
       try {
         const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
@@ -91,18 +86,12 @@ const Checkout = () => {
         
         if (resultado.status === 'authorized' || resultado.status === 'approved' || resultado.status === 'in_process') {
           setMensagem('✅ Sucesso! Assinatura ativada.');
-          
-          // 🔥 REGISTRA AUDITORIA DE SUCESSO
           await registrarLog("ASSINATURA APROVADA", `Pagamento de assinatura processado com sucesso via Cartão. Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
-          
-          resolve(); 
+          resolve();
           setTimeout(() => navigate('/dashboard'), 3000);
         } else {
           setMensagem('❌ O pagamento foi recusado. Tente outro cartão.');
-          
-          // 🔥 REGISTRA AUDITORIA DE FALHA
           await registrarLog("FALHA NO PAGAMENTO", `Tentativa de assinatura recusada via Cartão. Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
-          
           resolve(); 
         }
       } catch (erro) {
@@ -116,7 +105,6 @@ const Checkout = () => {
   // 🔥 Processamento Real do PIX e Boleto 🔥
   const gerarPagamentoAlternativo = async (metodo) => {
     const cpfLimpo = cpfCliente.replace(/\D/g, '');
-
     if (cpfLimpo.length !== 11) {
         setMensagem('⚠️ Por favor, digite um CPF válido com 11 números para emissão do documento.');
         return;
@@ -124,10 +112,9 @@ const Checkout = () => {
 
     setCarregandoAlternativo(true);
     setMensagem('A comunicar com o banco...');
-
+    
     try {
         const URL_DO_SEU_ROBO = 'https://processarpagamento-yfhz7t44jq-uc.a.run.app';
-        
         const payload = {
             payment_method_id: metodo,
             transaction_amount: valorPlano,
@@ -137,13 +124,13 @@ const Checkout = () => {
             },
             userId: usuarioLogado.uid
         };
-
+        
         const resposta = await fetch(URL_DO_SEU_ROBO, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-
+        
         const resultado = await resposta.json();
 
         if (metodo === 'pix' && resultado.point_of_interaction) {
@@ -152,19 +139,13 @@ const Checkout = () => {
                 copiaECola: resultado.point_of_interaction.transaction_data.qr_code
             });
             setMensagem('');
-            
-            // 🔥 REGISTRA AUDITORIA DE PIX GERADO
             await registrarLog("GERAÇÃO DE PIX", `Gerou um QR Code PIX para pagamento da assinatura do Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
-            
         } else if (metodo === 'bolbradesco' && resultado.transaction_details) {
             setDadosBoleto({
                 link: resultado.transaction_details.external_resource_url
             });
             setMensagem('');
-            
-            // 🔥 REGISTRA AUDITORIA DE BOLETO GERADO
             await registrarLog("GERAÇÃO DE BOLETO", `Gerou um Boleto bancário para pagamento da assinatura do Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
-            
         } else {
             setMensagem('❌ Erro ao gerar código. Tente novamente.');
             await registrarLog("ERRO NA GERAÇÃO", `Falha ao tentar gerar pagamento via ${metodo.toUpperCase()} para o plano ${planoSelecionado.nome}.`);
@@ -179,7 +160,6 @@ const Checkout = () => {
   return (
     <div style={{ minHeight: '100vh', backgroundColor: '#f8fafc', padding: '40px 20px', fontFamily: 'Plus Jakarta Sans, sans-serif' }}>
       
-      {/* 🔙 BOTÃO DE VOLTAR ADICIONADO AQUI */}
       <div style={{ maxWidth: '950px', margin: '0 auto', marginBottom: '20px' }}>
         <button 
           onClick={() => navigate('/planos')}
@@ -244,19 +224,16 @@ const Checkout = () => {
             </div>
           )}
 
-          {/* ABA CARTÃO */}
           {metodoAtivo === 'cartao' && (
               <div className="fade-in">
                   <Payment initialization={initialization} customization={customization} onSubmit={onSubmit} />
               </div>
           )}
 
-          {/* ABA PIX */}
           {metodoAtivo === 'pix' && (
               <div style={{ textAlign: 'center', padding: '20px' }} className="fade-in">
                   {!dadosPix ? (
                       <>
-                          {/* CAMPO DE CPF ADICIONADO AQUI */}
                           <div style={{ textAlign: 'left', marginBottom: '25px' }}>
                             <label style={{ display: 'block', color: '#64748b', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>CPF para emissão do comprovante *</label>
                             <input type="text" placeholder="Apenas números" value={cpfCliente} onChange={(e) => setCpfCliente(e.target.value)} maxLength="14" style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px', boxSizing: 'border-box' }} />
@@ -280,12 +257,10 @@ const Checkout = () => {
               </div>
           )}
 
-          {/* ABA BOLETO */}
           {metodoAtivo === 'boleto' && (
               <div style={{ textAlign: 'center', padding: '20px' }} className="fade-in">
                   {!dadosBoleto ? (
                       <>
-                          {/* CAMPO DE CPF ADICIONADO AQUI */}
                           <div style={{ textAlign: 'left', marginBottom: '25px' }}>
                             <label style={{ display: 'block', color: '#64748b', fontSize: '13px', fontWeight: 'bold', marginBottom: '8px' }}>CPF para registro do boleto *</label>
                             <input type="text" placeholder="Apenas números" value={cpfCliente} onChange={(e) => setCpfCliente(e.target.value)} maxLength="14" style={{ width: '100%', padding: '14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '15px', boxSizing: 'border-box' }} />
@@ -304,7 +279,7 @@ const Checkout = () => {
                           </h4>
                           <p style={{ fontSize: '13px', color: '#64748b', marginBottom: '20px' }}>Vencimento em 3 dias úteis. Clique no botão abaixo para ver e imprimir o seu boleto oficial.</p>
                           <a href={dadosBoleto.link} target="_blank" rel="noopener noreferrer" style={{ display: 'inline-block', background: '#0f172a', color: 'white', padding: '14px 20px', textDecoration: 'none', borderRadius: '8px', fontWeight: 'bold', width: '100%', boxSizing: 'border-box' }}>
-                             <i className="fas fa-external-link-alt" style={{ marginRight: '8px' }}></i> Abrir Boleto para Pagamento
+                            <i className="fas fa-external-link-alt" style={{ marginRight: '8px' }}></i> Abrir Boleto para Pagamento
                           </a>
                       </div>
                   )}

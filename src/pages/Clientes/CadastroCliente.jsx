@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroCliente.css';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, updateDoc, doc, query, getDocs, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, query, getDocs, where, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const formatarNomeCapitalizado = (nomeBruto) => {
@@ -49,11 +49,13 @@ const CadastroCliente = () => {
   const location = useLocation();
   const clienteEditando = location.state?.clienteEditando || null;
 
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [tipoPessoa, setTipoPessoa] = useState('fisica');
   const [salvando, setSalvando] = useState(false);
-
   const [podeSerPendente, setPodeSerPendente] = useState(false);
   const [calculandoFinancas, setCalculandoFinancas] = useState(!!clienteEditando);
   const [historicoLocacoes, setHistoricoLocacoes] = useState([]);
@@ -62,6 +64,7 @@ const CadastroCliente = () => {
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
   const [dragging, setDragging] = useState(false);
   const [startMouse, setStartMouse] = useState({ x: 0, y: 0 });
+
   const [formData, setFormData] = useState({
     nome: '', cpf: '', rg: '', nascimento: '', sexo: '',
     razaoSocial: '', nomeFantasia: '', cnpj: '', inscricaoEstadual: '',
@@ -87,7 +90,7 @@ const CadastroCliente = () => {
       
       const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
       const statusReal = clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado');
-      
+   
       setFormData({
         nome: formatarNomeCapitalizado(clienteEditando.nome || ''), 
         cpf: clienteEditando.cpf || '', rg: clienteEditando.rg || '', nascimento: clienteEditando.nascimento || '', sexo: clienteEditando.sexo || '',
@@ -129,7 +132,8 @@ const CadastroCliente = () => {
       if (!clienteEditando?.id || !usuarioLogado) return; 
       
       try {
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa o histórico apenas da sua empresa
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
         const snap = await getDocs(qLocacoes);
         
         let temDividaVencida = false;
@@ -159,6 +163,7 @@ const CadastroCliente = () => {
                 const pagStatus = (loc.statusPagamento || '').toLowerCase();
                 const vPago = Number(loc.valorPago || 0);
                 const saldoDevedor = valorTotalLoc - vPago;
+
                 if (dataEvento < hoje && saldoDevedor > 0.01 && !pagStatus.includes('pago') && !pagStatus.includes('quitado')) {
                   temDividaVencida = true;
                 }
@@ -180,6 +185,7 @@ const CadastroCliente = () => {
           ...prev,
           situacaoFinanceira: temDividaVencida ? 'inadimplente' : 'adimplente'
         }));
+
       } catch(e) {
         console.error("Erro ao montar histórico:", e);
       } finally {
@@ -188,7 +194,7 @@ const CadastroCliente = () => {
     };
 
     verificarInadimplenciaEHistorico();
-  }, [clienteEditando, usuarioLogado]);
+  }, [clienteEditando, usuarioLogado, tenantId]);
 
   const maskCPF = (v) => { v = v.replace(/\D/g, ""); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d)/, "$1.$2"); v = v.replace(/(\d{3})(\d{1,2})$/, "$1-$2"); return v.substring(0, 14); };
   const maskCNPJ = (v) => { v = v.replace(/\D/g, ""); v = v.replace(/^(\d{2})(\d)/, "$1.$2"); v = v.replace(/^(\d{2})\.(\d{3})(\d)/, "$1.$2.$3"); v = v.replace(/\.(\d{3})(\d)/, ".$1/$2"); v = v.replace(/(\d{4})(\d)/, "$1-$2"); return v.substring(0, 18); };
@@ -276,7 +282,9 @@ const CadastroCliente = () => {
 
   const verificarDuplicidade = async () => {
       if (!usuarioLogado) return false;
-      const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
+      
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Verifica duplicidade apenas dentro da empresa
+      const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
       const snap = await getDocs(qClientes);
       const todosClientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
@@ -287,6 +295,7 @@ const CadastroCliente = () => {
 
       for (let c of todosClientes) {
           if (clienteEditando && c.id === clienteEditando.id) continue;
+          
           const bancoCelular = c.celular ? c.celular.replace(/\D/g, '') : '';
           const bancoCpf = c.cpf ? c.cpf.replace(/\D/g, '') : '';
           const bancoCnpj = c.cnpj ? c.cnpj.replace(/\D/g, '') : '';
@@ -331,7 +340,7 @@ const CadastroCliente = () => {
           foto: fotoBase64, 
           posicaoFoto, 
           atualizadoEm: new Date().toISOString(),
-          userId: usuarioLogado.uid
+          userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
       };
 
       if (clienteEditando) {
@@ -377,7 +386,6 @@ const CadastroCliente = () => {
         if (clienteEditando) {
           const mudancas = [];
           
-          // Mapeando os campos que o espião vai vigiar
           const camposVigiados = [
             { id: 'nome', nomeAmigavel: 'Nome' }, 
             { id: 'nomeFantasia', nomeAmigavel: 'Nome Fantasia' },
@@ -398,7 +406,7 @@ const CadastroCliente = () => {
           });
 
           const nomeExibicao = dadosLimpos.nome || dadosLimpos.nomeFantasia || 'Cliente';
-
+          
           if (mudancas.length > 0) {
             detalhesAcao = `Editou o cliente ${nomeExibicao}. Alterações: ${mudancas.join(' | ')}`;
           } else {
@@ -409,13 +417,15 @@ const CadastroCliente = () => {
         }
 
         await addDoc(collection(db, "logs_atividades"), {
-          empresaId: usuarioLogado.uid, 
+          empresaId: tenantId, 
+          userId: tenantId,
           funcionarioId: usuarioLogado.uid,
           nomeFuncionario: usuarioLogado.displayName || usuarioLogado.email || "Equipe",
           acao: clienteEditando ? "EDIÇÃO DE CLIENTE" : "NOVO CLIENTE",
           tipo: clienteEditando ? "EDICAO" : "CRIACAO",
           detalhes: detalhesAcao,
-          dataHora: new Date().toISOString()
+          dataHora: new Date().toISOString(),
+          criadoEm: serverTimestamp()
         });
       } catch (errorEspiao) {
         console.error("Falha ao registrar auditoria:", errorEspiao);
@@ -423,10 +433,10 @@ const CadastroCliente = () => {
       // 🔥 FIM DO ESPIÃO 🔥
 
       navigate('/clientes');
-  } catch (error) { 
+    } catch (error) { 
       console.error(error);
       alert("Erro ao guardar cliente.");
-  } finally { 
+    } finally { 
       setSalvando(false); 
     }
   };
@@ -470,6 +480,7 @@ const CadastroCliente = () => {
                 <input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} />
               </div>
             )}
+      
             <div className="painel-resumo-lateral">
               <div className="resumo-badges">
                 <span className={`badge-status ${formData.statusCadastro}`}>
@@ -546,11 +557,11 @@ const CadastroCliente = () => {
 
             <h3 className="section-divider mt-compact">MORADA</h3>
             <div className="form-grid-4">
-               <div className="form-group span-2"><label htmlFor="cep">CÓDIGO POSTAL (BUSCA AUTO)</label><input id="cep" type="text" name="cep" autoComplete="postal-code" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
+              <div className="form-group span-2"><label htmlFor="cep">CÓDIGO POSTAL (BUSCA AUTO)</label><input id="cep" type="text" name="cep" autoComplete="postal-code" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
               <div className="form-group span-2"><label htmlFor="logradouro">LOGRADOURO</label><input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} /></div>
               <div className="form-group-row span-4">
                 <div className="form-group flex-1"><label htmlFor="numeroInput">NÚMERO</label><input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} /></div>
-                 <div className="form-group flex-small"><label htmlFor="uf">UF</label><input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="EX: SP" value={formData.uf} onChange={handleChange} /></div>
+                <div className="form-group flex-small"><label htmlFor="uf">UF</label><input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="EX: SP" value={formData.uf} onChange={handleChange} /></div>
               </div>
               <div className="form-group span-2"><label htmlFor="bairro">BAIRRO</label><input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} /></div>
               <div className="form-group span-2"><label htmlFor="cidade">CIDADE</label><input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} /></div>
@@ -574,7 +585,7 @@ const CadastroCliente = () => {
               </div>
 
               <div className="form-group span-4">
-                 <label>PERFIL DO CLIENTE (TAG ÚNICA)</label>
+                <label>PERFIL DO CLIENTE (TAG ÚNICA)</label>
                 <div className="tags-selector-chips">
                   {tagsParaExibir.map(tag => {
                     const estaSelecionada = formData.tags === tag;
@@ -586,7 +597,7 @@ const CadastroCliente = () => {
                         {tag} {estaSelecionada && '✓'}
                       </button>
                     )
-               })}
+                  })}
                 </div>
                 {ehTagAntiga && <span style={{fontSize: '0.75rem', color: '#ef4444', display: 'block', marginTop: '8px', fontWeight: '600'}}>👻 Tag Antiga detetada: "{formData.tags}". Clique numa das opções acima para atualizar.</span>}
               </div>

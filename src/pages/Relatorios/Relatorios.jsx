@@ -13,17 +13,18 @@ import PedidosTab from './PedidosTab';
 const Relatorios = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [activeTab, setActiveTab] = useState('financeiro');
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE RELATÓRIOS)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE RELATÓRIOS VINCULADO À EMPRESA)
   const registrarLogVisualizacao = async (abaCorrente) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
       const nomeAba = abaCorrente.charAt(0).toUpperCase() + abaCorrente.slice(1);
       
       await addDoc(collection(db, "logs_atividades"), {
@@ -34,7 +35,9 @@ const Relatorios = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: "VISUALIZAÇÃO DE RELATÓRIO",
         detalhes: `Acedeu ao painel de relatórios estratégicos (Aba: ${nomeAba}).`,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de relatórios:", error);
@@ -48,7 +51,7 @@ const Relatorios = () => {
         return;
     }
     registrarLogVisualizacao(activeTab);
-  }, [activeTab, usuarioLogado, navigate]);
+  }, [activeTab, usuarioLogado, navigate, tenantId]);
 
   return (
     <div className="dashboard-container">
@@ -61,6 +64,7 @@ const Relatorios = () => {
         </div>
 
         <div className="tabs-relatorios-compacto">
+         
           <button 
             className={activeTab === 'financeiro' ? 'active' : ''} 
             onClick={() => setActiveTab('financeiro')}

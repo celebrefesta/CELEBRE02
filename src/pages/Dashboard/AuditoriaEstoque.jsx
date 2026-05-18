@@ -2,15 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from 'firebase/auth';
 import './AuditoriaEstoque.css';
 
 const AuditoriaEstoque = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [pedidosComProblema, setPedidosComProblema] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -24,8 +25,9 @@ const AuditoriaEstoque = () => {
         const tzoffset = (new Date()).getTimezoneOffset() * 60000;
         const hoje = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
 
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Audita APENAS os seus pedidos
-        const q = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Audita APENAS os pedidos da empresa
+        const q = query(collection(db, "locacoes"), where("userId", "==", tenantId));
+        
         const snap = await getDocs(q);
         
         const anomalias = [];
@@ -68,12 +70,18 @@ const AuditoriaEstoque = () => {
           const temAvaria = item.itens?.some(i => i.avaria);
           const temFalta = item.itens?.some(i => i.faltou);
           
-          if (temAvaria) { alertas.push({ tipo: 'avaria', texto: 'Peça Avariada' }); permiteAcaoRapida = false; }
-          if (temFalta) { alertas.push({ tipo: 'falta', texto: 'Peça Faltando' }); permiteAcaoRapida = false; }
+          if (temAvaria) { 
+              alertas.push({ tipo: 'avaria', texto: 'Peça Avariada' }); 
+              permiteAcaoRapida = false;
+          }
+          if (temFalta) { 
+              alertas.push({ tipo: 'falta', texto: 'Peça Faltando' });
+              permiteAcaoRapida = false; 
+          }
 
           // Se tiver alerta e o status for finalizado, só mostra se tiver BO de dinheiro/avaria
           if (statusStr === 'finalizado' && !temAvaria && !temFalta && saldoDevedor <= 0) return;
-          
+
           if (alertas.length > 0) {
             anomalias.push({ ...item, alertas, permiteAcaoRapida });
           }
@@ -91,7 +99,7 @@ const AuditoriaEstoque = () => {
     };
 
     realizarAuditoriaUnificada();
-  }, [usuarioLogado]);
+  }, [usuarioLogado, tenantId]);
 
   const handleResolverRapido = async (id, novoStatus) => {
     try {

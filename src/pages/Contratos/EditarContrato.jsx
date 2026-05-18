@@ -9,9 +9,10 @@ const EditarContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [carregando, setCarregando] = useState(true);
   const [meusModelos, setMeusModelos] = useState([]);
@@ -31,10 +32,11 @@ const EditarContrato = () => {
     dataDevolucao: ""
   });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -43,7 +45,9 @@ const EditarContrato = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de contratos:", error);
@@ -67,7 +71,7 @@ const EditarContrato = () => {
           const data = docSnap.data();
           
           // 🔥 BLINDAGEM: Verifica se o contrato pertence à sua empresa
-          if (data.userId && data.userId !== usuarioLogado.uid) {
+          if (data.userId && data.userId !== tenantId) {
               alert("Acesso negado: Este contrato pertence a outra empresa.");
               navigate('/contratos');
               return;
@@ -81,8 +85,8 @@ const EditarContrato = () => {
           return;
         }
 
-        // 🔥 BLINDAGEM: Busca APENAS os seus modelos de contrato
-        const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM: Busca APENAS os modelos da empresa
+        const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", tenantId));
         const snapModelos = await getDocs(qModelos);
         setMeusModelos(snapModelos.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (error) {
@@ -93,7 +97,7 @@ const EditarContrato = () => {
     };
     
     carregarDados();
-  }, [id, usuarioLogado, navigate]);
+  }, [id, usuarioLogado, navigate, tenantId]);
 
   // 2. Aplica modelo (Adiciona texto ao final sem apagar o que já tem)
   const aplicarModelo = (e) => {

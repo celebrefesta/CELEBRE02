@@ -10,9 +10,10 @@ import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [abaAtiva, setAbaAtiva] = useState('listas'); 
   
@@ -21,7 +22,6 @@ const Configuracoes = () => {
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'pt');
   
   const sigGlobal = useRef({});
-
   const [config, setConfig] = useState({
     localizacoes: [], 
     categoriasFisicas: [], 
@@ -54,11 +54,11 @@ const Configuracoes = () => {
   const [grupoVitrineSelecionado, setGrupoVitrineSelecionado] = useState('');
   const [temaVitrineSelecionado, setTemaVitrineSelecionado] = useState('');
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CONFIGURAÇÕES)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CONFIGURAÇÕES VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -67,7 +67,9 @@ const Configuracoes = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de configurações:", error);
@@ -101,10 +103,10 @@ const Configuracoes = () => {
         return;
     }
     buscarConfiguracoes(); 
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
-  // 🔥 Helper para obter a referência do cofre da empresa logada
-  const getDocConfigRef = () => doc(db, "configuracoes_empresa", usuarioLogado.uid);
+  // 🔥 Helper para obter a referência do cofre da empresa logada (TENANT)
+  const getDocConfigRef = () => doc(db, "configuracoes_empresa", tenantId);
 
   const sincronizarComArquivoJS = async () => {
     if (!usuarioLogado) return;
@@ -132,7 +134,7 @@ const Configuracoes = () => {
 
         const newState = {
             ...dados,
-            userId: usuarioLogado.uid,
+            userId: tenantId, // 🎯 Garante que pertence à empresa
             categoriasFisicas: dbCatFis,
             subcategoriasFisicas: dbSubCatFis,
             tamanhosPorCategoria: dbTamCat,
@@ -154,9 +156,10 @@ const Configuracoes = () => {
 
   const verificarUsoNoEstoque = async (nomeDoCampoDeBusca, valorProcurado) => {
       if (!usuarioLogado) return 0;
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Busca no estoque da empresa
       const q = query(
           collection(db, "estoque"), 
-          where("userId", "==", usuarioLogado.uid),
+          where("userId", "==", tenantId),
           where(nomeDoCampoDeBusca, "==", valorProcurado)
       );
       const snap = await getDocs(q);
@@ -166,9 +169,10 @@ const Configuracoes = () => {
   const atualizarNomeNoEstoqueEmLote = async (campoBanco, valorAntigo, valorNovo) => {
       if (!campoBanco || !usuarioLogado) return;
       try {
+          // 🔥 BLINDAGEM MULTI-EMPRESA: Atualiza no estoque da empresa
           const q = query(
               collection(db, "estoque"), 
-              where("userId", "==", usuarioLogado.uid),
+              where("userId", "==", tenantId),
               where(campoBanco, "==", valorAntigo)
           );
           const snap = await getDocs(q);
@@ -189,6 +193,7 @@ const Configuracoes = () => {
       if (!valor.trim() || !usuarioLogado) return;
       const docRef = getDocConfigRef();
       let novaVitrine = JSON.parse(JSON.stringify(config.catalogoVitrine || {}));
+
       try {
           if (nivel === 1) { 
               if (novaVitrine[valor.trim()]) { alert("Esta Categoria já existe!"); return; }
@@ -222,6 +227,7 @@ const Configuracoes = () => {
       if (nivel === 2) campoBanco = 'subcategoriaTema';
       if (nivel === 3) campoBanco = 'grupoTema';
       if (nivel === 4) campoBanco = 'tema';
+
       if (campoBanco) {
           const emUso = await verificarUsoNoEstoque(campoBanco, valor);
           if (emUso > 0) { 
@@ -233,6 +239,7 @@ const Configuracoes = () => {
       if (!window.confirm(`Tem certeza que deseja apagar "${valor}"?`)) return;
       const docRef = getDocConfigRef();
       let novaVitrine = JSON.parse(JSON.stringify(config.catalogoVitrine || {}));
+
       try {
           if (nivel === 1) {
               delete novaVitrine[valor];
@@ -456,7 +463,7 @@ const Configuracoes = () => {
   const salvarConfigTextual = async (campo, valor) => {
     if (!usuarioLogado) return;
     try { 
-        await updateDoc(getDocConfigRef(), { [campo]: valor }); 
+        await updateDoc(getDocConfigRef(), { [campo]: valor });
         
         // 🔥 REGISTA AUDITORIA DE ALTERAÇÃO DE DADOS VITAIS
         const nomesAmigaveis = {
@@ -485,10 +492,9 @@ const Configuracoes = () => {
         const ctx = canvas.getContext('2d');
         ctx.drawImage(img, 0, 0, w, h);
         const base64Logo = canvas.toDataURL('image/png', 0.9);
-        
         setConfig(prev => ({ ...prev, logotipo: base64Logo }));
         try { 
-            await updateDoc(getDocConfigRef(), { logotipo: base64Logo }); 
+            await updateDoc(getDocConfigRef(), { logotipo: base64Logo });
             await registrarLog("IDENTIDADE VISUAL", "Atualizou o Logotipo da empresa.");
         } catch (e) { console.error(e); }
       };
@@ -501,7 +507,7 @@ const Configuracoes = () => {
     if(!window.confirm("Remover logotipo?")) return;
     setConfig(prev => ({ ...prev, logotipo: '' }));
     try { 
-        await updateDoc(getDocConfigRef(), { logotipo: '' }); 
+        await updateDoc(getDocConfigRef(), { logotipo: '' });
         await registrarLog("IDENTIDADE VISUAL", "Removeu o Logotipo da empresa.");
     } catch (e) { console.error(e); }
   };
@@ -513,7 +519,7 @@ const Configuracoes = () => {
     const base64Sig = sigGlobal.current.getCanvas().toDataURL("image/png");
     setConfig(prev => ({ ...prev, assinatura: base64Sig }));
     try { 
-        await updateDoc(getDocConfigRef(), { assinatura: base64Sig }); 
+        await updateDoc(getDocConfigRef(), { assinatura: base64Sig });
         await registrarLog("ASSINATURA DIGITAL", "Criou uma nova assinatura padrão para os contratos.");
         alert("✅ Assinatura padrão salva com sucesso!");
     } catch (e) { console.error(e); }
@@ -566,7 +572,6 @@ const Configuracoes = () => {
                   
                   <div className="config-card" style={{margin: 0}}>
                     <div className="card-top-bar blue-bar"></div>
-                
                     <h3>🏷️ Categorias Físicas (Prateleira)</h3>
                     <div className="add-item-box">
                       <input type="text" placeholder="Ex: Móveis, Painéis..." value={inputCatFisica} onChange={(e) => setInputCatFisica(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && adicionarFisicoOuTamanho('categoriasFisicas', null, null, inputCatFisica)} />
@@ -616,7 +621,6 @@ const Configuracoes = () => {
             {/* ========================================== */}
             <div>
               <h2 style={{borderBottom: '2px solid var(--dourado)', paddingBottom: '8px', color: '#0f172a', margin: '0 0 15px 0', fontSize: '15px', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: '800'}}>🌐 Catálogo Virtual (Filtros do Site)</h2>
-   
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px' }}>
                   
                   <div className="config-card" style={{margin: 0}}>
@@ -629,7 +633,7 @@ const Configuracoes = () => {
                     <ul className="config-list">
                       {categoriasVitrineArr.map(cat => (
                         <li key={cat} onClick={() => { setCatVitrineSelecionada(cat); setSubCatVitrineSelecionada(''); setGrupoVitrineSelecionado(''); setTemaVitrineSelecionado(''); }} className={catVitrineSelecionada === cat ? 'active-gold' : ''}>
-                          <span>{cat}</span> 
+                           <span>{cat}</span> 
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                               <span style={{cursor: 'pointer', fontSize: '14px'}} onClick={(e) => {e.stopPropagation(); editarVitrine(1, cat)}} title="Editar Nome">✏️</span>
                               <span className="del-icon" onClick={(e) => {e.stopPropagation(); removerVitrine(1, cat)}} title="Excluir">✕</span>

@@ -13,6 +13,9 @@ const EditarLocacao = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
+  // 🔥 IDENTIFICAÇÃO CORPORATIVA (A chave para puxar e salvar dados no cofre da empresa)
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [loading, setLoading] = useState(true);
   const [clientes, setClientes] = useState([]);
   const [estoque, setEstoque] = useState([]);
@@ -48,7 +51,6 @@ const EditarLocacao = () => {
   const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
 
   const [dadosIniciais, setDadosIniciais] = useState(null);
-
   const isFinalizado = statusAtual === 'finalizado' || statusAtual === 'cancelado';
 
   const badgeEsgotado = { position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
@@ -58,7 +60,7 @@ const EditarLocacao = () => {
   // 🔥 AUDITORIA
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -69,7 +71,9 @@ const EditarLocacao = () => {
         detalhes: detalhes,
         pedidoId: id,
         numeroPedido: numeroPedido || "S/N",
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria:", error);
@@ -84,9 +88,10 @@ const EditarLocacao = () => {
 
     const carregarDados = async () => {
       try {
-        const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🎯 BUSCA VINCULADA À EMPRESA (TENANT)
+        const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
 
         const [snapCli, snapEst, snapLoc] = await Promise.all([
           getDocs(qClientes),
@@ -110,7 +115,6 @@ const EditarLocacao = () => {
             
             const servicoSalvo = data.tipoServico || 'PEGUE E MONTE';
             setTipoServico(servicoSalvo);
-            
             setDatas({ retirada: data.dataRetirada || '', devolucao: data.dataDevolucao || '' });
             setValorJaPago(Number(data.valorPago || 0));
 
@@ -169,6 +173,7 @@ const EditarLocacao = () => {
               ...item,
               preco: Number(item.preco || item.financeiro?.valorAluguel || 0)
             }));
+
             setCarrinho(itensFormatados);
             setDesconto(data.desconto || 0);
             setObsInternas(data.obsInternas || '');
@@ -193,7 +198,7 @@ const EditarLocacao = () => {
       }
     };
     carregarDados();
-  }, [id, usuarioLogado, navigate]);
+  }, [id, usuarioLogado, navigate, tenantId]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
@@ -251,6 +256,7 @@ const EditarLocacao = () => {
     const disp = getDisponibilidade(item.id);
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
     const existe = carrinho.find(i => i.id === item.id);
+
     if (existe) {
       if (existe.qtd >= disp.livresMaximos) {
           alert(`⚠️ ESTOQUE MÁXIMO ATINGIDO!\nVocê possui o limite absoluto de ${disp.livresMaximos} unidade(s) de "${item.nome}".`);
@@ -315,6 +321,7 @@ const EditarLocacao = () => {
       if (item.id === itemId) return { ...item, checkedSeparacao: novoStatusSeparacao };
       return item;
     });
+
     setCarrinho(novosItens);
     salvarChecklistImediato(novosItens); 
     registrarLog("CHECKLIST: SEPARAÇÃO", `Marcou a peça "${itemEncontrado.nome}" como ${novoStatusSeparacao ? 'SEPARADA (Ida)' : 'PENDENTE (Desmarcou)'}.`);
@@ -324,6 +331,7 @@ const EditarLocacao = () => {
     if (isFinalizado) return;
     const itemEncontrado = carrinho.find(i => i.id === itemId);
     let logTexto = "";
+
     const novosItens = carrinho.map(item => {
       if (item.id === itemId) {
         if (status === 'ok') {
@@ -344,6 +352,7 @@ const EditarLocacao = () => {
       }
       return item;
     });
+
     setCarrinho(novosItens);
     salvarChecklistImediato(novosItens); 
     if(logTexto) registrarLog("CHECKLIST: DEVOLUÇÃO", logTexto);
@@ -368,7 +377,7 @@ const EditarLocacao = () => {
     let value = e.target.value.replace(/\D/g, "");
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setLogistica(prev => ({ ...prev, cep: cepFormatado }));
-    
+
     if (value.length === 8) {
       try {
         const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
@@ -431,6 +440,7 @@ const EditarLocacao = () => {
     }
 
     const statusFinalDesejado = novoStatus || statusAtual;
+
     if (statusAtual === 'orcamento' && statusFinalDesejado === 'confirmado') {
         setStatusParaSalvar('confirmado');
         setModalSinalAberto(true);
@@ -442,6 +452,7 @@ const EditarLocacao = () => {
 
   const executarSalvamentoFinal = async (statusFinal, valorSinalEntrandoNoCaixa = 0, valorSinalNegociado = 0) => {
     setSalvandoPedido(true);
+
     try {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
       const nomeCliente = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || clienteEncontrado.razaoSocial || 'Cliente') : 'Cliente';
@@ -450,7 +461,6 @@ const EditarLocacao = () => {
       const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
       const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
       const totalFinalCalculado = calcularTotal().total;
-      
       const docRef = doc(db, "locacoes", id);
       
       await updateDoc(docRef, {
@@ -481,14 +491,16 @@ const EditarLocacao = () => {
             status: 'pago', 
             createdAt: serverTimestamp(),
             descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`,
-            userId: usuarioLogado.uid
+            userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
         });
+
         await registrarLog("PAGAMENTO DE SINAL", `Registrou entrada financeira de R$ ${valorSinalEntrandoNoCaixa.toFixed(2)}.`);
-        setValorJaPago(novoValorPagoTotal); 
+        setValorJaPago(novoValorPagoTotal);
       }
       
-      // 🔥 ATUALIZAR FINANCEIRO PENDENTE (O Elo Perdido da Edição)
+      // 🔥 ATUALIZAR FINANCEIRO PENDENTE
       const valorRestante = totalFinalCalculado - novoValorPagoTotal;
+
       try {
           const qPendentes = query(collection(db, "financeiro_lancamentos"), where("pedidoId", "==", id), where("status", "==", "pendente"));
           const snapPendentes = await getDocs(qPendentes);
@@ -504,7 +516,7 @@ const EditarLocacao = () => {
               } else {
                   // Não tem pendente mas ainda falta pagar, logo, cria um novo
                   await addDoc(collection(db, "financeiro_lancamentos"), {
-                      userId: usuarioLogado.uid,
+                      userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
                       pedidoId: id,
                       numeroPedido: numeroPedido,
                       descricao: `Locação #${numeroPedido} - ${nomeCliente}`,
@@ -527,6 +539,7 @@ const EditarLocacao = () => {
       }
 
       let mudancas = [];
+
       if (dadosIniciais) {
           if (String(clienteSelecionado) !== String(dadosIniciais.clienteId)) {
               const cliAntigo = clientes.find(c => String(c.id) === String(dadosIniciais.clienteId))?.nome || 'Desconhecido';
@@ -539,10 +552,10 @@ const EditarLocacao = () => {
           if (logistica.tipo !== dadosIniciais.tipoLogistica) mudancas.push(`Logística (de '${dadosIniciais.tipoLogistica}' para '${logistica.tipo}')`);
           if (logistica.frete !== dadosIniciais.frete) mudancas.push(`Frete (de '${dadosIniciais.frete}' para '${logistica.frete}')`);
           if (Number(desconto) !== Number(dadosIniciais.desconto)) mudancas.push(`Desconto (para R$${desconto})`);
-          
+
           const carrinhoAntigo = JSON.parse(dadosIniciais.carrinhoSnapshot || '[]');
           let mudancasItens = [];
-          
+
           carrinho.forEach(itemAtual => {
               const itemAntigo = carrinhoAntigo.find(i => i.id === itemAtual.id);
               if (itemAntigo) {
@@ -577,7 +590,7 @@ const EditarLocacao = () => {
 
       if (statusFinal && statusFinal !== statusAtual) alert(`✅ Pedido salvo! Avançou para a etapa: ${statusFinal.toUpperCase()}`);
       else alert(`✅ Alterações salvas com sucesso!`);
-      
+
     } catch (e) { 
       alert("Erro ao atualizar o pedido.");
       console.error(e);
@@ -610,7 +623,6 @@ const EditarLocacao = () => {
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
       const vSinalFormatado = valorSinal || '0,00';
-      
       const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
       const msgEncoded = encodeURIComponent(texto);
       
@@ -651,7 +663,7 @@ const EditarLocacao = () => {
         <div style={{display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap'}}>
             <h1 className="page-title">{isFinalizado ? '🔎 Visualizar Pedido' : 'Editar Pedido'} {numeroPedido && <span style={{color: 'var(--dourado)'}}>#{numeroPedido}</span>}</h1>
             <span style={{background: badgeInfo.cor, color: 'white', padding: '6px 14px', borderRadius: '20px', fontWeight: '800', fontSize: '10px', textTransform: 'uppercase'}}>
-                {badgeInfo.txt}
+             {badgeInfo.txt}
             </span>
         </div>
         <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar à Lista</button>
@@ -675,7 +687,8 @@ const EditarLocacao = () => {
                 <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`}
                   onClick={() => { 
                       if(tipoServico !== 'PEGUE E MONTE') {
-                          setTipoServico('PEGUE E MONTE'); setLogistica({...logistica, tipo: 'retirada', frete: ''}); 
+                          setTipoServico('PEGUE E MONTE');
+                          setLogistica({...logistica, tipo: 'retirada', frete: ''}); 
                       }
                   }}>
                   📦 PEGUE E MONTE
@@ -683,7 +696,8 @@ const EditarLocacao = () => {
                 <button type="button" className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`}
                   onClick={() => { 
                       if(tipoServico !== 'DECORACAO COMPLETA') {
-                          setTipoServico('DECORACAO COMPLETA'); setLogistica({...logistica, tipo: 'entrega'}); 
+                          setTipoServico('DECORACAO COMPLETA');
+                          setLogistica({...logistica, tipo: 'entrega'}); 
                       }
                   }}>
                   ✨ DECORAÇÃO COMPLETA
@@ -697,7 +711,7 @@ const EditarLocacao = () => {
                 <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)} disabled={isFinalizado}>
                   <option value="">Selecione um cliente cadastrado...</option>
                   <option value={clienteSelecionado} disabled hidden>
-                    {clientes.find(c => String(c.id) === String(clienteSelecionado))?.nome || 'Carregando...'}
+                     {clientes.find(c => String(c.id) === String(clienteSelecionado))?.nome || 'Carregando...'}
                   </option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia || c.razaoSocial}</option>)}
                 </select>
@@ -717,6 +731,7 @@ const EditarLocacao = () => {
                         {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                     </select>
                 </div>
+   
                 <div className="form-group flex-1">
                     <label>Subcategoria do Tema *</label>
                     <select value={subcategoriaTema} onChange={e => {
@@ -741,6 +756,7 @@ const EditarLocacao = () => {
                         {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
                     </select>
                 </div>
+         
                 <div className="form-group flex-1">
                     <label>Tema Específico *</label>
                     <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={(!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA') || isFinalizado}>
@@ -769,7 +785,7 @@ const EditarLocacao = () => {
                     </div>
                 </div>
             )}
-            
+        
             <div className="form-row mt-10">
               <div className="form-group flex-1"><label>Data de Retirada / Evento *</label><input type="date" value={datas.retirada} onChange={e => setDatas({...datas, retirada: e.target.value})} disabled={isFinalizado}/></div>
               <div className="form-group flex-1"><label>Data de Devolução</label><input type="date" value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} disabled={isFinalizado}/></div>
@@ -966,31 +982,31 @@ const EditarLocacao = () => {
             <div className="fin-acoes" style={{marginTop: '0'}}>
                 
                 {statusAtual === 'orcamento' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}} disabled={salvandoPedido}>
+                  <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}} disabled={salvandoPedido}>
                     ✔ APROVAR PEDIDO
                 </button>
                 )}
 
                 {statusAtual === 'confirmado' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}} disabled={salvandoPedido}>
+                  <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}} disabled={salvandoPedido}>
                     📦 INICIAR SEPARAÇÃO
                 </button>
                 )}
 
                 {statusAtual === 'preparacao' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}} disabled={salvandoPedido}>
+                  <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}} disabled={salvandoPedido}>
                     🚚 MARCAR COMO ENTREGUE
                 </button>
                 )}
 
                 {statusAtual === 'entregue' && (
-                <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('finalizado')} style={{backgroundColor: '#10b981', marginBottom: '10px'}} disabled={salvandoPedido}>
+                  <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('finalizado')} style={{backgroundColor: '#10b981', marginBottom: '10px'}} disabled={salvandoPedido}>
                     ✅ RECEBER E FINALIZAR
                 </button>
                 )}
 
                 {isFinalizado && (
-                <div style={{background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', padding: '15px', borderRadius: '8px', textAlign: 'center', fontWeight: '700', marginBottom: '10px', fontSize: '13px'}}>
+                  <div style={{background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#059669', padding: '15px', borderRadius: '8px', textAlign: 'center', fontWeight: '700', marginBottom: '10px', fontSize: '13px'}}>
                     🎉 Ciclo Concluído! Tudo Certo.
                 </div>
                 )}
@@ -998,7 +1014,7 @@ const EditarLocacao = () => {
                 {!isFinalizado && (
                 <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center'}} onClick={() => interceptarSalvamento()} disabled={salvandoPedido}>
                     💾 Apenas Salvar Alterações
-                </button>
+                 </button>
                 )}
             </div>
           </div>
@@ -1131,7 +1147,7 @@ const EditarLocacao = () => {
                       </div>
                     </div>
                   );
-              })}
+               })}
               {itensFiltrados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada.</p>}
             </div>
           </div>

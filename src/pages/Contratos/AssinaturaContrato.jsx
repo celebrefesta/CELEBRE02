@@ -10,12 +10,15 @@ const AssinaturaContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-
+  
   const [searchParams] = useSearchParams();
   const isExternal = searchParams.get("external") === "true"; 
+  
+  // 🔥 IDENTIFICAÇÃO CORPORATIVA
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
   
   const sigCliente = useRef(null);
   const sigAgape = useRef(null);
@@ -27,15 +30,14 @@ const AssinaturaContrato = () => {
   const [carregando, setCarregando] = useState(true);
   const [status, setStatus] = useState("pronto");
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ASSINATURAS EXTERNAS E INTERNAS)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ASSINATURAS VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes, dadosContrato) => {
     try {
-      // Se for externo, quem está assinando é o cliente. Se for interno, é a equipe.
-      const nomeResponsavel = isExternal ? (dadosContrato?.cliente || "Cliente Externo") : (usuarioLogado?.displayName || usuarioLogado?.email || "Equipe");
-      const donoDoContratoId = dadosContrato?.userId || usuarioLogado?.uid;
+      const nomeResponsavel = isExternal ? (dadosContrato?.cliente || "Cliente Externo") : (localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa");
+      const donoDoContratoId = dadosContrato?.userId || tenantId;
 
       if (!donoDoContratoId) return;
-
+      
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -44,7 +46,8 @@ const AssinaturaContrato = () => {
         usuarioEmail: usuarioLogado?.email || "N/A",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: donoDoContratoId
+        userId: donoDoContratoId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: donoDoContratoId
       });
     } catch (error) {
       console.error("Erro ao gravar log da assinatura:", error);
@@ -64,7 +67,8 @@ const AssinaturaContrato = () => {
                   navigate('/login');
                   return;
               }
-              if (data.userId && data.userId !== usuarioLogado.uid) {
+              // Bloqueia se o usuário logado tentar ver um contrato que não é da sua empresa
+              if (data.userId && data.userId !== tenantId) {
                   alert("Acesso negado: Este contrato pertence a outra empresa.");
                   navigate("/contratos");
                   return;
@@ -73,8 +77,9 @@ const AssinaturaContrato = () => {
 
           setContrato(data);
 
-          // 🔥 BUSCA O COFRE CERTO
-          const donoId = data.userId || (usuarioLogado ? usuarioLogado.uid : null);
+          // 🔥 BUSCA O COFRE CERTO PARA A LOGO E ASSINATURA DA EMPRESA
+          const donoId = data.userId || tenantId;
+          
           if (donoId) {
               const configRef = doc(db, "configuracoes_empresa", donoId);
               const configSnap = await getDoc(configRef);
@@ -97,7 +102,7 @@ const AssinaturaContrato = () => {
     };
 
     buscarDados();
-  }, [id, navigate, isExternal, usuarioLogado]);
+  }, [id, navigate, isExternal, usuarioLogado, tenantId]);
 
   const enviarWhatsapp = () => {
     const linkAssinatura = `${window.location.origin}/assinatura/${id}?external=true`;
@@ -148,14 +153,14 @@ const AssinaturaContrato = () => {
 
       if (novaAssinaturaCliente) atualizacao.assinaturaCliente = novaAssinaturaCliente;
       if (novaAssinaturaAgape) atualizacao.assinaturaAgape = novaAssinaturaAgape;
-
+      
       if (!contrato.assinaturaAgape && assinaturaGlobal) {
           atualizacao.assinaturaAgape = assinaturaGlobal;
       }
 
       const temCliente = contrato.assinaturaCliente || novaAssinaturaCliente;
       const temAgape = contrato.assinaturaAgape || novaAssinaturaAgape || assinaturaGlobal;
-
+      
       if (temCliente && temAgape) {
           atualizacao.status = "Assinado";
           atualizacao.dataAssinatura = new Date().toISOString();
@@ -179,7 +184,7 @@ const AssinaturaContrato = () => {
         alert("✅ Assinatura salva com sucesso!");
         window.location.reload(); 
       }, 500);
-
+      
     } catch (error) {
       console.error(error);
       setStatus("erro");

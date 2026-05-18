@@ -29,9 +29,10 @@ const Icons = {
 const Moodboard = () => {
   const navigate = useNavigate(); 
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [estoqueReal, setEstoqueReal] = useState([]);
   const [itensCanvas, setItensCanvas] = useState([]);
@@ -62,17 +63,17 @@ const Moodboard = () => {
     estoqueReal.forEach(i => { const c = i.categoria || 'Sem Categoria'; if (!mapa[c]) mapa[c] = []; mapa[c].push(i); });
     return mapa;
   }, [estoqueReal]);
-  
+
   const interactionMode = useRef('none');
   const activeItemId = useRef(null);
   const resizeDir = useRef(null);
   const lastPos = useRef({ x: 0, y: 0 });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE MOODBOARD)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE MOODBOARD VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -81,7 +82,9 @@ const Moodboard = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria do Moodboard:", error);
@@ -96,12 +99,11 @@ const Moodboard = () => {
 
     const carregarTudo = async () => {
       try {
-        // 🔥 BLINDAGEM: Carrega APENAS o estoque da sua empresa
-        const q = query(collection(db, 'estoque'), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM: Carrega APENAS o estoque da empresa
+        const q = query(collection(db, 'estoque'), where("userId", "==", tenantId));
         const snap = await getDocs(q);
   
         let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        // Ordena na memória
         lista.sort((a, b) => {
             const dataA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
             const dataB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
@@ -111,8 +113,8 @@ const Moodboard = () => {
         const norm = lista.map(i => ({ ...i, imagem: i.foto || i.imagem || (i.fotos?.[0]) || '' }));
         setEstoqueReal(norm);
 
-        // 🔥 BLINDAGEM: Lê as texturas salvas apenas no cofre da sua empresa
-        const paramSnap = await getDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid));
+        // 🔥 BLINDAGEM: Lê as texturas salvas apenas no cofre da empresa
+        const paramSnap = await getDoc(doc(db, "configuracoes_empresa", tenantId));
         if(paramSnap.exists()) {
             const data = paramSnap.data();
             if(data.texturasParede && data.texturasParede.length > 0) setTexturasParede(data.texturasParede);
@@ -123,7 +125,7 @@ const Moodboard = () => {
       }
     };
     carregarTudo();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const adicionarTextura = async (tipo) => {
     const input = document.createElement('input');
@@ -159,15 +161,15 @@ const Moodboard = () => {
                 
                 const nova = { nome, url: base64 };
                 try {
-                    // 🔥 BLINDAGEM: Salva a textura APENAS nas configurações da sua empresa
+                    // 🔥 BLINDAGEM: Salva a textura APENAS nas configurações da empresa
                     if(tipo === 'wall') {
                         const atualizadas = [...texturasParede, nova];
                         setTexturasParede(atualizadas);
-                        await setDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid), { texturasParede: atualizadas }, { merge: true });
+                        await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
                     } else {
                         const atualizadas = [...texturasChao, nova];
                         setTexturasChao(atualizadas);
-                        await setDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid), { texturasChao: atualizadas }, { merge: true });
+                        await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasChao: atualizadas }, { merge: true });
                     }
                     alert("✅ Fundo salvo na galeria com sucesso!");
                 } catch(err) { 
@@ -184,15 +186,15 @@ const Moodboard = () => {
   const removerTextura = async (tipo, urlParaRemover) => {
     if(!window.confirm("Deseja mesmo excluir este fundo da galeria?")) return;
     try {
-        // 🔥 BLINDAGEM: Remove a textura APENAS nas configurações da sua empresa
+        // 🔥 BLINDAGEM: Remove a textura APENAS nas configurações da empresa
         if(tipo === 'wall') {
             const atualizadas = texturasParede.filter(t => t.url !== urlParaRemover);
             setTexturasParede(atualizadas);
-            await setDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid), { texturasParede: atualizadas }, { merge: true });
+            await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
         } else {
             const atualizadas = texturasChao.filter(t => t.url !== urlParaRemover);
             setTexturasChao(atualizadas);
-            await setDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid), { texturasChao: atualizadas }, { merge: true });
+            await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasChao: atualizadas }, { merge: true });
         }
     } catch(e) { 
         alert("Erro ao remover fundo.");
@@ -208,19 +210,20 @@ const Moodboard = () => {
   const salvarProjeto = async () => {
     if (!nomeProjeto.trim()) return alert("Digite um nome para o projeto!");
     try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o projeto com a sua identificação
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o projeto no cofre principal
         await addDoc(collection(db, "projetos_moodboard"), {
             nome: nomeProjeto, 
             itens: itensCanvas, 
             wallBackground, 
             floorBackground, 
             createdAt: new Date().toISOString(),
-            userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
+            userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+            empresaId: tenantId,
+            funcionarioId: usuarioLogado.uid 
         });
-        
+
         // 🔥 REGISTA AUDITORIA
         await registrarLog("NOVO PROJETO MOODBOARD", `Salvou um novo projeto de design no Moodboard chamado "${nomeProjeto}".`);
-
         alert("Projeto salvo com sucesso! ✅");
         setModalSalvarAberto(false);
     } catch (error) { 
@@ -230,8 +233,8 @@ const Moodboard = () => {
 
   const handleAbrirListaProjetos = async () => {
     try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS os seus projetos
-        const q = query(collection(db, "projetos_moodboard"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS os projetos da empresa
+        const q = query(collection(db, "projetos_moodboard"), where("userId", "==", tenantId));
         const snapshot = await getDocs(q);
         
         let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -272,9 +275,9 @@ const Moodboard = () => {
       setSelecionadoId(id);
       setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id }); 
   };
-  
+
   const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
-  
+
   const bringToFront = (targetId = null) => { 
       const id = targetId || contextMenu.itemId;
       if (!id) return; 
@@ -309,7 +312,7 @@ const Moodboard = () => {
   };
   
   const toggleCategory = (cat) => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
-  
+
   const adicionarAoCanvas = (item) => {
     const novoItem = { ...item, type: 'image', uniqueId: `img_${Date.now()}`, x: 50, y: 50, width: 150, height: 150, rotation: 0, flipH: false, locked: false, opacity: 100, brightness: 100, contrast: 100, shadow: 0 };
     setItensCanvas(prev => [...prev, novoItem]); setSelecionadoId(novoItem.uniqueId); setAbaAtiva('efeitos');
@@ -341,7 +344,7 @@ const Moodboard = () => {
     const estiloFinal = valor.startsWith('data:image') || valor.startsWith('http') ? `url(${valor})` : valor;
     if (activeSurface === 'wall') setWallBackground(estiloFinal); else setFloorBackground(estiloFinal);
   };
-  
+
   const handleClearProject = () => { 
       if (window.confirm("⚠️ Tem certeza que deseja limpar a tela?")) { 
           setItensCanvas([]);
@@ -380,13 +383,13 @@ const Moodboard = () => {
         lastPos.current = { x: e.clientX, y: e.clientY };
     }
   };
-  
+
   const handlePointerMove = (e) => {
     if (interactionMode.current === 'none' || !activeItemId.current) return;
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
     lastPos.current = { x: e.clientX, y: e.clientY };
-    
+
     let scale = 1;
     if (boardRef.current) scale = boardRef.current.getBoundingClientRect().width / boardRef.current.offsetWidth;
     
@@ -405,7 +408,6 @@ const Moodboard = () => {
                 return { ...item, fontSize: Math.max(12, Math.round(newFontSize)) };
             } else {
                 let newW = item.width; let newH = item.height;
- 
                 if (resizeDir.current.includes('e')) newW += adjDx;
                 if (resizeDir.current.includes('s')) newH += adjDy;
                 return { ...item, width: Math.max(30, newW), height: Math.max(30, newH) };
@@ -423,7 +425,7 @@ const Moodboard = () => {
     activeItemId.current = null;
     resizeDir.current = null;
   };
-  
+
   const handleCanvasClick = () => {
       if (selecionadoId) {
           setAbaAtiva('acervo');
@@ -432,13 +434,13 @@ const Moodboard = () => {
       setEditingTextId(null); 
       closeContextMenu();
   };
-  
+
   const atualizarItem = (id, alt) => setItensCanvas(prev => prev.map(i => i.uniqueId === id ? { ...i, ...alt } : i));
   const deleteItem = (id) => { setItensCanvas(prev => prev.filter(i => i.uniqueId !== id)); setSelecionadoId(null); };
-  
+
   const itemSelecionado = itensCanvas.find(i => i.uniqueId === selecionadoId);
   const getStyle = (valor) => (!valor ? { background: '#fff' } : valor.startsWith('url') ? { backgroundImage: valor, backgroundSize: 'cover', backgroundPosition: 'center' } : { backgroundColor: valor });
-  
+
   return (
     <div className="studio-page" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onClick={handleCanvasClick}>
       
@@ -456,6 +458,7 @@ const Moodboard = () => {
         {abaAtiva === 'acervo' && (
            <div className="panel-content">
              <h3 className="panel-title">SEU ACERVO</h3>
+           
              <div className="acervo-list-scroll">
                {Object.keys(grouped).sort().map(cat => (
                  <div key={cat} className="acervo-category">
@@ -545,7 +548,7 @@ const Moodboard = () => {
             </div>
         )}
 
-         {abaAtiva === 'texto' && (
+        {abaAtiva === 'texto' && (
              <div className="panel-content">
                 <h3 className="panel-title">ESTILO DO TEXTO</h3>
                 <div className="text-tools">
@@ -567,7 +570,7 @@ const Moodboard = () => {
                                 <button className={`btn-style ${itemSelecionado.fontStyle === 'italic' ? 'active' : ''}`} onClick={() => atualizarItem(selecionadoId, {fontStyle: itemSelecionado.fontStyle === 'italic' ? 'normal' : 'italic'})}><Icons.Italic /></button>
                                 <div className="divider-v"></div>
                                 <label className="color-picker-wrapper">
-                                Cor: <input type="color" className="color-input-mini" value={itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {color: e.target.value})} />
+                                    Cor: <input type="color" className="color-input-mini" value={itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {color: e.target.value})} />
                                 </label>
                             </div>
 
@@ -576,7 +579,7 @@ const Moodboard = () => {
                                  <input type="range" min="12" max="150" value={itemSelecionado.fontSize} 
                                     onChange={e => atualizarItem(selecionadoId, {fontSize: Number(e.target.value)})} 
                                     onDoubleClick={() => atualizarItem(selecionadoId, {fontSize: 48})}
-                                />
+                                 />
                             </div>
 
                             <div className="slider-group" style={{marginTop: '15px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
@@ -584,7 +587,7 @@ const Moodboard = () => {
                                     <label style={{color: '#c5a059', margin: 0}} title="Dê 2 cliques na bolinha abaixo para desligar">🌟 Efeito LED ({(itemSelecionado.neonGlow || 0)}px)</label>
                                     
                                     <label className="color-picker-wrapper" style={{fontSize: '10px', cursor: 'pointer'}}>
-                                        Cor LED: <input type="color" className="color-input-mini" style={{width: '20px', height: '20px'}} value={itemSelecionado.neonColor || itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {neonColor: e.target.value})} />
+                                       Cor LED: <input type="color" className="color-input-mini" style={{width: '20px', height: '20px'}} value={itemSelecionado.neonColor || itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {neonColor: e.target.value})} />
                                     </label>
                                 </div>
                           
@@ -596,7 +599,7 @@ const Moodboard = () => {
 
                         </div>
                     ) : <p className="hint-text">Crie ou selecione um texto.</p>}
-                 </div>
+                </div>
             </div>
         )}
 
@@ -611,7 +614,7 @@ const Moodboard = () => {
                             <input type="color" className="invisible-color-input" onChange={(e) => aplicarAoFundo(e.target.value)} />
                          </div>
                      </div>
-             
+       
                     <div className="adm-header-flex">
                         <h4>Texturas Salvas</h4>
                         <button className="btn-add-textura" onClick={() => adicionarTextura(activeSurface)}>+ Enviar Imagem</button>
@@ -638,6 +641,7 @@ const Moodboard = () => {
                  <button className="btn-header-action" onClick={handleAbrirListaProjetos}><Icons.Folder /> <span className="btn-text">ABRIR PROJETOS</span></button>
                  <button className="btn-header-action" onClick={handleAbrirModalSalvar}><Icons.Save /> <span className="btn-text">SALVAR NOVO PROJETO</span></button>
                  <div className="header-divider"></div>
+ 
                  <button className="btn-header-action" onClick={handleClearProject}><Icons.Trash /> <span className="btn-text">LIMPAR TELA</span></button>
                  <button className="btn-header-action primary" onClick={handleExportImage}><Icons.Download /> <span className="btn-text">BAIXAR PROJETO (PNG)</span></button>
                  <div className="header-divider"></div>
@@ -726,7 +730,7 @@ const Moodboard = () => {
                     <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} crossOrigin="anonymous" alt="" />
                 )}
                 
-                {/* 🔥 BOTÃO FLUTUANTE "EDITAR" (IMPEDE O EVENTO PAI DE ROUBAR O CLIQUE) 🔥 */}
+                {/* 🔥 BOTÃO FLUTUANTE "EDITAR" */}
                 {selecionadoId === item.uniqueId && !item.locked && !editingTextId && (
                     <>
                         <div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} />
@@ -739,11 +743,11 @@ const Moodboard = () => {
                                 onTouchEnd={(e) => { e.stopPropagation(); e.preventDefault(); setEditingTextId(item.uniqueId); }}
                                 style={{ position: 'absolute', top: '-40px', left: '50%', transform: 'translateX(-50%)', background: '#0f172a', color: 'white', padding: '6px 16px', borderRadius: '8px', fontSize: '13px', fontWeight: 'bold', cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: '0 4px 6px rgba(0,0,0,0.2)', zIndex: 1000 }}
                             >
-                               ✏️ Editar
+                                ✏️ Editar
                             </div>
                         )}
                     </>
-                )}
+                 )}
               </div>
             ))}
         </div>
@@ -791,8 +795,7 @@ const Moodboard = () => {
             </div>
          )}
       </div>
-    
-</div>
+    </div>
   );
 };
 

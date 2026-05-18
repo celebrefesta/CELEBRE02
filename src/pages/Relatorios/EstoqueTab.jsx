@@ -1,15 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from "firebase/auth";
+// 🔥 Importação do Cadeado de Segurança
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
-import './EstoqueTab.css'; 
+import './EstoqueTab.css';
 
 const EstoqueTab = () => {
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ 
@@ -17,6 +19,7 @@ const EstoqueTab = () => {
     tiposDiferentes: 0, 
     emManutencao: 0 
   });
+
   const [rankingTemas, setRankingTemas] = useState([]);
   const [rankingCategorias, setRankingCategorias] = useState([]); 
   const [taxaOciosidade, setTaxaOciosidade] = useState([]); 
@@ -39,11 +42,13 @@ const EstoqueTab = () => {
     logotipo: ''
   });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ESTOQUE)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ESTOQUE VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
+
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -52,8 +57,11 @@ const EstoqueTab = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
+
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de estoque:", error);
     }
@@ -64,9 +72,9 @@ const EstoqueTab = () => {
 
     const buscarDadosEstoqueEConfigs = async () => {
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS o seu estoque e as suas locações
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", usuarioLogado.uid));
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS o estoque e as locações da sua empresa
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
 
         const [snapEstoque, snapLocacoes, snapConfig] = await Promise.all([
           getDocs(qEstoque),
@@ -84,7 +92,7 @@ const EstoqueTab = () => {
 
         const estoque = snapEstoque.docs.map(d => ({ id: d.id, ...d.data() }));
         const locacoes = snapLocacoes.docs.map(d => d.data());
-        
+
         const ultimaLocacaoItem = {};
   
         locacoes.forEach(loc => {
@@ -109,6 +117,7 @@ const EstoqueTab = () => {
         let emManutencao = 0;
         const contagemCategorias = {}; 
         const statsOciosidade = {};
+
         let investTotal = 0;
         let investMesAtual = 0;
         const mapGastosCat = {};
@@ -140,6 +149,7 @@ const EstoqueTab = () => {
           const dataCriacao = item.criadoEm?.toDate ? item.criadoEm.toDate() : new Date(item.criadoEm || 0);
 
           let isOcioso = false;
+
           if (!ultimaLoc) {
              if (dataCriacao < seisMesesAtras && dataCriacao.getFullYear() > 1970) isOcioso = true;
           } else if (ultimaLoc < seisMesesAtras) {
@@ -253,7 +263,7 @@ const EstoqueTab = () => {
     };
 
     buscarDadosEstoqueEConfigs();
-  }, [usuarioLogado]);
+  }, [usuarioLogado, tenantId]);
 
   const formatarMoeda = (valor) => valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -525,7 +535,7 @@ const EstoqueTab = () => {
                             📈 Histórico de Custo: {categoriaSelecionadaRadar.categoria}
                         </h3>
                         <p style={{ margin: '5px 0 0 0', fontSize: '12px', color: '#7f1d1d' }}>
-                            Acompanhe a variação de preço dos itens comprados nesta categoria.
+                             Acompanhe a variação de preço dos itens comprados nesta categoria.
                         </p>
                     </div>
                     <button onClick={() => setModalRadarAberto(false)} style={{ background: 'transparent', border: 'none', fontSize: '24px', color: '#991b1b', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', borderRadius: '50%' }} onMouseEnter={e => e.currentTarget.style.background = 'rgba(153, 27, 27, 0.1)'} onMouseLeave={e => e.currentTarget.style.background = 'transparent'}>
@@ -561,7 +571,7 @@ const EstoqueTab = () => {
 
                 <div style={{ padding: '15px 25px', background: '#fff', borderTop: '1px solid #e2e8f0', textAlign: 'center', flexShrink: 0 }}>
                     <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>
-                        Diferença total nesta categoria: <strong style={{color: '#0f172a'}}>{formatarMoeda(categoriaSelecionadaRadar.variacao)} (+{categoriaSelecionadaRadar.percentual.toFixed(0)}%)</strong>
+                         Diferença total nesta categoria: <strong style={{color: '#0f172a'}}>{formatarMoeda(categoriaSelecionadaRadar.variacao)} (+{categoriaSelecionadaRadar.percentual.toFixed(0)}%)</strong>
                     </p>
                 </div>
             </div>

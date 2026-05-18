@@ -14,46 +14,68 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                 return;
             }
 
+            // 🔥 A CHAVE MESTRA: Ensina o porteiro a olhar para a Dona da Conta
+            const tenantId = localStorage.getItem('tenantId') || user.uid;
+            
+            // Bypass para a Super-Admin (Você)
+            const isSuperAdmin = user.email === "celebrefesta25@gmail.com";
+            if (isSuperAdmin) {
+                setTemAcesso(true);
+                return;
+            }
+
             try {
-                const userRef = doc(db, "usuarios", user.uid);
+                // 🎯 BUSCA O PLANO DA EMPRESA E NÃO DO FUNCIONÁRIO
+                const userRef = doc(db, "usuarios", tenantId);
                 const userSnap = await getDoc(userRef);
 
                 if (userSnap.exists()) {
                     const dadosUsuario = userSnap.data();
 
-                    // 1. VERIFICA O TESTE DE 7 DIAS
+                    // 🔥 CORREÇÃO CRUCIAL: CÁLCULO DO TESTE GRÁTIS IGUAL AO DO DASHBOARD 🔥
                     let testeAtivo = false;
+                    
                     if (dadosUsuario.dataFimTeste) {
                         const dataFim = new Date(dadosUsuario.dataFimTeste);
-                        const agora = new Date();
-                        if (agora <= dataFim) {
+                        if (new Date() <= dataFim) testeAtivo = true;
+                    } else if (dadosUsuario.dataCadastro) {
+                        // Se não tem dataFimTeste, calcula 7 dias a partir do dia que a conta foi criada
+                        let dataCad = dadosUsuario.dataCadastro;
+                        if (dataCad.toDate) dataCad = dataCad.toDate();
+                        
+                        const diffTime = new Date().getTime() - new Date(dataCad).getTime();
+                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+                        
+                        if (diffDays <= 7) {
                             testeAtivo = true;
                         }
+                    } else {
+                        // Fallback de segurança: Se não achar a data, libera para não travar o cliente à toa
+                        testeAtivo = true;
                     }
 
-                    // 🔥 2. A NOVA REGRA BLINDADA DE IDENTIFICAÇÃO DE PAGAMENTO 🔥
-                    // O sistema agora reconhece qualquer formato de status de pagamento ativo
+                    // Identificação de pagamento ativo
                     const usuarioPagou = 
                         dadosUsuario.assinaturaAtiva === true || 
-                        dadosUsuario.statusAssinatura === 'ativa' || 
+                        dadosUsuario.statusAssinatura === 'ativa' ||
                         dadosUsuario.plano === 'pago' || 
                         dadosUsuario.statusPagamentoVulso === 'pago';
 
+                    // 1. Se NÃO está no teste e NÃO pagou = Bloqueio (vai para /upgrade)
                     if (!testeAtivo && !usuarioPagou) {
                         setTemAcesso(false);
                         return; 
                     }
 
-                    // Se está no teste grátis, é VIP e tem passe livre
+                    // 2. Se está no teste grátis, é VIP e tem passe livre para testar tudo
                     if (testeAtivo) {
                         setTemAcesso(true);
                         return;
                     }
 
-                    // 4. Se o teste acabou MAS ELE PAGOU
+                    // 3. Se o teste acabou MAS A EMPRESA PAGOU
                     if (usuarioPagou) {
                         const planoId = dadosUsuario.planoId;
-                        
                         if (planoId) {
                             const planoRef = doc(db, "planos", planoId);
                             const planoSnap = await getDoc(planoRef);
@@ -68,32 +90,30 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                                     return;
                                 }
                                 
-                                // 🔥 2ª Tentativa (SALVA-VIDAS) 🔥
-                                // Caso a dona não tenha configurado o array 'beneficios' direito no Firebase
+                                // 2ª Tentativa (SALVA-VIDAS)
                                 if (recursoExigido === "Equipe") {
                                     // Apenas Premium e Pro podem acessar a tela de Equipe
                                     if (nomePlano.includes('pro') || nomePlano.includes('premium')) {
-                                        setTemAcesso(true); 
+                                        setTemAcesso(true);
                                         return;
                                     }
                                 } else {
-                                    // Para Estoque, Logística, Contratos... Qualquer plano pago (Básico, Premium, Pro) entra!
+                                    // Para Estoque, Logística, Contratos... Qualquer plano pago entra!
                                     setTemAcesso(true);
                                     return;
                                 }
                             } else {
-                                // Se o documento do plano sumiu, mas a pessoa tem ID de plano pago, libera!
                                 setTemAcesso(true);
                                 return;
                             }
                         } else {
-                            // Se a pessoa pagou mas deu algum erro no checkout e o ID não salvou, libera para não trancar o cliente!
                             setTemAcesso(true);
                             return;
                         }
                     }
                 }
                 
+                // Se o documento da empresa não existir, bloqueia por segurança
                 setTemAcesso(false);
             } catch (error) {
                 console.error("Erro ao verificar proteção de rota:", error);
@@ -104,6 +124,7 @@ const RotaProtegida = ({ recursoExigido, children }) => {
         return () => unsubscribe();
     }, [recursoExigido]);
 
+    // Tela de Carregamento Rápido
     if (temAcesso === null) {
         return (
             <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', color: '#64748b', fontFamily: 'sans-serif' }}>
@@ -117,6 +138,7 @@ const RotaProtegida = ({ recursoExigido, children }) => {
         return <Navigate to="/upgrade" replace />;
     }
 
+    // ✅ TUDO OK: Renderiza a página
     return children;
 };
 

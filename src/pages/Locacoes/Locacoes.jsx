@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Locacoes.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore'; 
+import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 
 const Locacoes = () => {
@@ -12,12 +12,15 @@ const Locacoes = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
+  // 🔥 CHAVE MESTRA: Pega o ID da empresa no navegador ou o do próprio usuário
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [lista, setLista] = useState([]);
   const [busca, setBusca] = useState('');
   
   const [filtroStatus, setFiltroStatus] = useState('todos'); 
   const [filtroServico, setFiltroServico] = useState('todos'); 
-  const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes'); 
+  const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes');
   const [filtroDataEvento, setFiltroDataEvento] = useState(''); 
   
   const [loading, setLoading] = useState(true);
@@ -39,13 +42,14 @@ const Locacoes = () => {
       setBusca(idCurto);
     }
     carregarLocacoes();
-  }, [location, usuarioLogado]);
+  }, [location, usuarioLogado, tenantId]);
 
   const carregarLocacoes = async () => {
     if (!usuarioLogado) return;
     setLoading(true);
     try {
-      const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
+      // 🎯 BUSCA CLIENTES DA EMPRESA
+      const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
       const clientesSnapshot = await getDocs(qClientes);
       const dicionarioClientes = {};
       clientesSnapshot.forEach(doc => {
@@ -53,7 +57,8 @@ const Locacoes = () => {
           dicionarioClientes[doc.id] = cData.nome || cData.nomeFantasia || cData.razaoSocial || cData.nomeCompleto || "Sem Nome";
       });
 
-      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+      // 🎯 BUSCA LOCAÇÕES DA EMPRESA
+      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const querySnapshot = await getDocs(qLocacoes);
       const hojeStr = new Date().toISOString().split('T')[0];
 
@@ -78,7 +83,8 @@ const Locacoes = () => {
         
         let timestampCriacao = 0;
         if (data.criadoEm) {
-            timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
+            timestampCriacao = data.criadoEm.toMillis ?
+            data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
         }
 
         let statusReal = String(data.status || '').toLowerCase().trim();
@@ -112,8 +118,7 @@ const Locacoes = () => {
   const handleExcluir = async (id) => {
     if (window.confirm("Apagar pedido definitivamente?")) {
       try {
-        const pedidoParaExcluir = lista.find(i => i.id === id); 
-
+        const pedidoParaExcluir = lista.find(i => i.id === id);
         await deleteDoc(doc(db, "locacoes", id));
         setLista(lista.filter(i => i.id !== id));
 
@@ -121,9 +126,9 @@ const Locacoes = () => {
         if (pedidoParaExcluir) {
           try {
             await addDoc(collection(db, "logs_atividades"), {
-              empresaId: usuarioLogado.uid, 
+              empresaId: tenantId, 
               funcionarioId: usuarioLogado.uid,
-              nomeFuncionario: usuarioLogado.displayName || usuarioLogado.email || "Equipe",
+              nomeFuncionario: localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Equipe",
               acao: "EXCLUSÃO DE PEDIDO",
               tipo: "EXCLUSAO",
               detalhes: `Excluiu permanentemente o pedido #${pedidoParaExcluir.numeroPedido || id.substring(0,6).toUpperCase()} do cliente ${pedidoParaExcluir.clienteNome}`,
@@ -148,6 +153,7 @@ const Locacoes = () => {
       const novoValorPago = Number(pedidoSelecionado.valorPago || 0) + Number(pagamento.valor);
       await updateDoc(doc(db, "locacoes", pedidoSelecionado.id), { valorPago: novoValorPago });
       
+      // 🎯 CAIXA DA EMPRESA
       await addDoc(collection(db, "financeiro_lancamentos"), {
         tipo: 'entrada', 
         categoria: 'Locação', 
@@ -157,15 +163,15 @@ const Locacoes = () => {
         status: 'pago', 
         createdAt: serverTimestamp(),
         descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6)} - ${pedidoSelecionado.clienteNome}`,
-        userId: usuarioLogado.uid 
+        userId: tenantId 
       });
 
       // 🔥 INÍCIO DO ESPIÃO (REGISTRO DE PAGAMENTO) 🔥
       try {
         await addDoc(collection(db, "logs_atividades"), {
-          empresaId: usuarioLogado.uid, 
+          empresaId: tenantId, 
           funcionarioId: usuarioLogado.uid,
-          nomeFuncionario: usuarioLogado.displayName || usuarioLogado.email || "Equipe",
+          nomeFuncionario: localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Equipe",
           acao: "REGISTRO DE PAGAMENTO",
           tipo: "EDICAO",
           detalhes: `Registrou entrada de R$ ${Number(pagamento.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})} via ${pagamento.formaPagto} no pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6).toUpperCase()} (${pedidoSelecionado.clienteNome})`,
@@ -278,7 +284,7 @@ const Locacoes = () => {
             <h2>{lista.filter(i => {
                 const s = String(i.status || '').toLowerCase();
                 return !s.includes('orcam') && !s.includes('cancelado') && !s.includes('finalizado') && !i.isOrcamentoVencido;
-              }).length}</h2>
+            }).length}</h2>
           </div>
         </div>
         <div className="dash-card warning">
@@ -418,11 +424,11 @@ const Locacoes = () => {
                       {item.numeroPedido ? (
                         `#${item.numeroPedido}`
                       ) : item.id ? (
-                        `#${item.id.substring(0,6).toUpperCase()}`
+                       `#${item.id.substring(0,6).toUpperCase()}`
                       ) : item.isOrcamentoVencido ? (
                         <span style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px'}}>PERDIDO</span>
                       ) : isOrcamento ? (
-                        <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span>
+                         <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span>
                       ) : (
                         <span style={{color: '#94a3b8', fontWeight: 'bold'}}>#S/N</span>
                       )}
@@ -463,7 +469,7 @@ const Locacoes = () => {
                       </span>
                       {alertaOperacional && (
                          <div style={{ marginTop: '6px', fontSize: '0.75rem', fontWeight: '800', color: corAlerta, textTransform: 'uppercase' }}>
-                            {alertaOperacional}
+                          {alertaOperacional}
                          </div>
                       )}
                     </td>
@@ -483,7 +489,7 @@ const Locacoes = () => {
                         {menuAberto === item.id && (
                           <div className="menu-suspenso">
                             {saldoDevedor > 0 && !isCancelado && !isOrcamento && (
-                              <button 
+                               <button 
                                 onClick={(e) => { 
                                   e.stopPropagation();
                                   setPedidoSelecionado(item); 
@@ -499,7 +505,7 @@ const Locacoes = () => {
 
                             {!isOrcamento && !isCancelado && (
                               <button 
-                                onClick={(e) => { 
+                                 onClick={(e) => { 
                                   e.stopPropagation();
                                   navigate(`/logistica`); 
                                 }} 
@@ -510,20 +516,20 @@ const Locacoes = () => {
                               </button>
                             )}
 
-                            {temAlertas && (
+                             {temAlertas && (
                               <button 
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
                                   navigate(`/termo-ocorrencia/${item.id}`); 
                                 }} 
-                                className="item-menu"
+                                 className="item-menu"
                                 style={{ backgroundColor: '#fef2f2', color: '#b91c1c', fontWeight: '700' }}
                               >
                                 ⚠️ Imprimir Termo (Avaria/Falta)
                               </button>
                             )}
 
-                            <button onClick={(e) => { e.stopPropagation(); navigate(`/locacoes/editar/${item.id}`); }} className="item-menu" style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}>✏️ Editar Pedido</button>
+                             <button onClick={(e) => { e.stopPropagation(); navigate(`/locacoes/editar/${item.id}`); }} className="item-menu" style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}>✏️ Editar Pedido</button>
                             <button onClick={(e) => { e.stopPropagation(); handleExcluir(item.id); }} className="item-menu item-excluir">🗑️ Excluir</button>
                           </div>
                         )}

@@ -1,15 +1,16 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; 
+import { getAuth } from "firebase/auth";
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
-import './PedidosTab.css'; 
+import './PedidosTab.css';
 
 const PedidosTab = () => {
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ 
@@ -29,10 +30,11 @@ const PedidosTab = () => {
     logotipo: ''
   });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE EXPORTAÇÃO)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE EXPORTAÇÃO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -41,7 +43,9 @@ const PedidosTab = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria:", error);
@@ -53,8 +57,8 @@ const PedidosTab = () => {
 
     const buscarDadosPedidosEConfigs = async () => {
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as locações do seu utilizador
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as locações da conta da empresa
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
 
         const [snapLocacoes, snapConfig] = await Promise.all([
           getDocs(qLocacoes),
@@ -108,7 +112,6 @@ const PedidosTab = () => {
           }
 
           let tipoServico = "DECORAÇÃO";
-
           if (loc.tipoServico || loc.tipoDaFesta || loc.modalidade) {
              tipoServico = String(loc.tipoServico || loc.tipoDaFesta || loc.modalidade).toUpperCase();
           } 
@@ -129,23 +132,22 @@ const PedidosTab = () => {
         });
 
         pedidosFormatados.sort((a, b) => (b.dataObj || 0) - (a.dataObj || 0));
-
+        
         const futuros = pedidosFormatados
           .filter(p => p.dataObj && p.dataObj >= hoje && !p.status.includes('CANCELADO'))
           .sort((a, b) => a.dataObj - b.dataObj)
           .slice(0, 5);
-
+          
         const statusArray = Object.entries(contagemStatus).sort((a, b) => b[1] - a[1]);
         const totalOportunidades = qtdFechados + qtdOrcamentos;
-
         const taxa = totalOportunidades > 0 ? (qtdFechados / totalOportunidades) * 100 : 0;
-
+        
         setMetricas({ total: locacoes.length, faturamento: faturamentoTotal, futuros: eventosFuturosCount });
         setStatusContagem(statusArray);
         setProximosEventos(futuros);
         setPedidosLista(pedidosFormatados);
         setTaxaConversao(taxa);
-
+        
       } catch (error) {
         console.error("Erro ao carregar pedidos:", error);
       } finally {
@@ -154,7 +156,7 @@ const PedidosTab = () => {
     };
 
     buscarDadosPedidosEConfigs();
-  }, [usuarioLogado]);
+  }, [usuarioLogado, tenantId]);
 
   const getStatusClass = (status) => {
     if (status.includes('ORÇAMENTO') || status.includes('ORCAMENTO') || status.includes('PENDENTE')) return 'status-orcamento';
@@ -214,12 +216,11 @@ const PedidosTab = () => {
         theme: 'striped',
         headStyles: { fillColor: [15, 23, 42] }
       });
-
+      
       doc.save(`Pedidos_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
       
       // 🔥 Aciona o espião de exportação
       await registrarLog("EXPORTAÇÃO DE RELATÓRIO", `Fez o download do relatório em PDF da aba de Pedidos.`);
-      
     } catch (e) { alert("Erro ao gerar PDF"); }
   };
 
@@ -236,6 +237,7 @@ const PedidosTab = () => {
         <div className="kpi-card card-verde">
           <span>RECEITA PROJETADA</span>
           <h2>R$ {metricas.faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h2>
+  
           <small>Soma de todos os contratos</small>
         </div>
         <div className="kpi-card card-alerta">
@@ -247,6 +249,7 @@ const PedidosTab = () => {
 
       <div className="clientes-layout-split mt-20">
         <div className="col-esquerda">
+      
           <div className="main-card-premium" style={{ marginBottom: '20px' }}>
             <div className="card-header-flex">
               <h3>🗓️ Agenda da Semana</h3>
@@ -259,20 +262,24 @@ const PedidosTab = () => {
                 <div key={i} className="agenda-item">
                   <div className="agenda-data">
                     <strong>{ev.dataObj ? ev.dataObj.getDate() : '-'}</strong>
+         
                     <span>{ev.dataObj ? ev.dataObj.toLocaleString('pt-BR', { month: 'short' }).toUpperCase() : '-'}</span>
                   </div>
                   <div className="agenda-info">
                     <div className="agenda-cliente">{ev.cliente}</div>
                     <div className="agenda-detalhe">
+  
                       <span style={{color: ev.tipoServico.includes('PEGUE') ? 'var(--dourado)' : 'var(--texto-principal)', fontWeight: '800'}}>
                         {ev.tipoServico.includes('PEGUE') ? '📦 Pegue e Monte' : '✨ Decoração'}
                       </span> • Pedido #{ev.numero}
+               
                     </div>
                   </div>
                   <div className={`agenda-status ${getStatusClass(ev.status)}`}>
                     {ev.status}
                   </div>
                 </div>
+   
               ))}
               {proximosEventos.length === 0 && (
                 <div className="agenda-vazia">Nenhum evento futuro agendado.</div>
@@ -281,6 +288,7 @@ const PedidosTab = () => {
           </div>
 
           <div className="main-card-premium">
+    
             <div className="card-header-flex">
               <h3>📊 Funil de Pedidos</h3>
             </div>
@@ -292,15 +300,18 @@ const PedidosTab = () => {
                 const porcentagem = metricas.total > 0 ? (total / metricas.total) * 100 : 0;
                 return (
                   <div key={i} className="rank-item-v4">
+   
                     <div className="rank-info-v4">
                       <strong>{status}</strong>
                       <span style={{ color: 'var(--texto-principal)' }}>{total} ({porcentagem.toFixed(0)}%)</span>
                     </div>
+             
                     <div className="rank-bar-bg-v4" style={{ height: '6px' }}>
                       <div className="rank-bar-fill-v4" style={{ width: `${porcentagem}%`, background: 'linear-gradient(90deg, var(--texto-secundario), var(--texto-principal))' }}></div>
                     </div>
                   </div>
                 );
+   
               })}
             </div>
             
@@ -317,6 +328,7 @@ const PedidosTab = () => {
         <div className="main-card-premium col-tabela">
           <div className="card-header-flex">
             <h3>📝 Histórico de Contratos</h3>
+  
             <button className="btn-export-pdf-clientes" onClick={exportarPDFPedidos}>📄 Baixar Relatório</button>
           </div>
           
@@ -332,11 +344,13 @@ const PedidosTab = () => {
             <table className="table-pedidos-v4">
               <thead>
                 <tr><th width="20%">Nº PEDIDO</th><th width="40%">CLIENTE / DATA</th><th width="20%" className="direita">VALOR TOTAL</th><th width="20%" className="centro">STATUS</th></tr>
+        
               </thead>
               <tbody>
                 {pedidosFiltrados.map((pedido, i) => (
                   <tr key={i} className="fade-in">
                     <td style={{fontWeight: '800', color: 'var(--texto-secundario)'}}>#{pedido.numero}</td>
+                 
                     <td>
                       <div className="td-name" style={{color: 'var(--texto-principal)', fontWeight: '700'}}>{pedido.cliente}</div>
                       <div style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '4px'}}>{pedido.dataStr}</div>
@@ -346,10 +360,12 @@ const PedidosTab = () => {
                     </td>
                     <td className="direita bold text-verde">
                       R$ {pedido.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+    
                     </td>
                     <td className="centro">
                       <span className={`badge-status-pedido ${getStatusClass(pedido.status)}`}>
                         {pedido.status}
+               
                       </span>
                     </td>
                   </tr>
@@ -357,6 +373,7 @@ const PedidosTab = () => {
               </tbody>
             </table>
           </div>
+   
         </div>
       </div>
     </div>

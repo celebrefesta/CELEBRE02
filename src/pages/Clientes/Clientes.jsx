@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Clientes.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, query, where, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const getTagStyle = (tag) => {
@@ -30,10 +30,13 @@ const Clientes = () => {
   const usuarioLogado = auth.currentUser;
   const navigate = useNavigate();
 
+  // 🔥 IDENTIFICAÇÃO CORPORATIVA (A chave para puxar os dados da empresa)
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [clientes, setClientes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('todos'); 
+  const [filtroStatus, setFiltroStatus] = useState('todos');
   const [ordemAlfabetica, setOrdemAlfabetica] = useState('A-Z');
 
   const [menuAberto, setMenuAberto] = useState(null); 
@@ -42,7 +45,7 @@ const Clientes = () => {
   const [detalhesDivida, setDetalhesDivida] = useState({ cliente: '', pendencias: [] });
 
   const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
-  const [abaAtiva, setAbaAtiva] = useState('dados'); 
+  const [abaAtiva, setAbaAtiva] = useState('dados');
 
   useEffect(() => { 
     if (!usuarioLogado) {
@@ -50,17 +53,19 @@ const Clientes = () => {
         return;
     }
     carregarClientes(); 
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const carregarClientes = async () => {
     if (!usuarioLogado) return;
     setLoading(true);
     try {
-      const qClientes = query(collection(db, "clientes"), where("userId", "==", usuarioLogado.uid));
+      // 🎯 BUSCA PELO ID DA EMPRESA (TENANT), NÃO PELO ID DO FUNCIONÁRIO
+      const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
       const querySnapshot = await getDocs(qClientes);
       let listaClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
-      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+      // 🎯 BUSCA PELO ID DA EMPRESA (TENANT)
+      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const snapLocacoes = await getDocs(qLocacoes);
       const locacoes = snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() }));
       setAllLocacoes(locacoes);
@@ -83,7 +88,7 @@ const Clientes = () => {
             const vTotal = Number(loc.valorTotal || loc.total || 0);
             const vPago = Number(loc.valorPago || 0);
             if (dataEvento < hoje && (vTotal - vPago) > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado') {
-              temDivida = true;
+                temDivida = true;
             }
           }
         });
@@ -101,7 +106,6 @@ const Clientes = () => {
         await batch.commit();
       }
       setClientes(listaClientes);
-
     } catch (error) { 
         console.error("Erro ao carregar clientes:", error);
     } finally { 
@@ -134,7 +138,7 @@ const Clientes = () => {
 
   const irParaLocacaoEspecifica = (pedidoId) => {
     setModalAberto(false);
-    setClienteVisualizacao(null); 
+    setClienteVisualizacao(null);
     navigate(`/locacoes/editar/${pedidoId}`); 
   };
 
@@ -148,10 +152,31 @@ const Clientes = () => {
             pedidosSnap.forEach((docPedido) => batch.delete(docPedido.ref));
             await batch.commit();
         }
+        
+        // 🔥 INÍCIO DO ESPIÃO DE EXCLUSÃO 🔥
+        try {
+          const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+          await addDoc(collection(db, "logs_atividades"), {
+            data: new Date(),
+            criadoEm: serverTimestamp(),
+            funcionario: nomeEquipe,
+            usuarioNome: nomeEquipe,
+            usuarioEmail: usuarioLogado?.email || "Desconhecido",
+            acao: "EXCLUSÃO DE CLIENTE",
+            detalhes: `Excluiu permanentemente o cliente "${nome}" e todos os seus pedidos vinculados.`,
+            userId: tenantId, 
+            empresaId: tenantId,
+            funcionarioId: usuarioLogado?.uid
+          });
+        } catch (errorEspiao) {
+          console.error("Erro no espião de exclusão:", errorEspiao);
+        }
+        // 🔥 FIM DO ESPIÃO 🔥
+
         carregarClientes(); 
         setClienteVisualizacao(null);
       } catch (error) { 
-        alert("Erro ao excluir."); 
+        alert("Erro ao excluir.");
       }
     }
   };
@@ -165,11 +190,13 @@ const Clientes = () => {
         }
         return soma;
     }, 0);
+
     historico.sort((a, b) => {
         const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0;
         const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 0;
         return dataB - dataA;
     });
+
     return { historico, totalGasto };
   };
 
@@ -241,6 +268,7 @@ const Clientes = () => {
             <h2 style={{color: '#0f172a'}}>{clientes.length}</h2>
           </div>
         </div>
+ 
         <div className="dash-card success">
           <div className="dash-icon">✅</div>
           <div className="dash-info">
@@ -309,7 +337,7 @@ const Clientes = () => {
                           )}
                           <div className="user-details">
                             <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'}}>
-                                <strong style={{color: '#0f172a', fontSize: '15px'}}>{nomeBonito}</strong>
+                               <strong style={{color: '#0f172a', fontSize: '15px'}}>{nomeBonito}</strong>
                                 {tagColorida && (
                                     <span style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}`, padding: '3px 10px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
                                         {c.tags}
@@ -344,7 +372,7 @@ const Clientes = () => {
 
                       <td className="actions-cell">
                         <div className="dropdown-container">
-                          <button className="btn-pontinhos" onClick={(e) => { e.stopPropagation(); setMenuAberto(menuAberto === c.id ? null : c.id); }}>⋮</button>
+                         <button className="btn-pontinhos" onClick={(e) => { e.stopPropagation(); setMenuAberto(menuAberto === c.id ? null : c.id); }}>⋮</button>
                           {menuAberto === c.id && (
                             <div className="menu-suspenso">
                               <button onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }} className="item-menu">👁️ Ver Perfil</button>
@@ -384,7 +412,7 @@ const Clientes = () => {
               <h2 style={{ fontSize: '20px', color: '#0f172a', textAlign: 'center', margin: 0 }}>{perfilNomeBonito}</h2>
               {perfilTagColorida && (
                   <span style={{ backgroundColor: perfilTagColorida.bg, color: perfilTagColorida.color, border: `1px solid ${perfilTagColorida.border}`, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
-                      {clienteVisualizacao.tags}
+                    {clienteVisualizacao.tags}
                   </span>
               )}
 
@@ -457,7 +485,6 @@ const Clientes = () => {
                                      let tipoServico = "DECORAÇÃO";
                                      if (loc.tipoServico || loc.modalidade) tipoServico = String(loc.tipoServico || loc.modalidade).toUpperCase();
                                      else if (loc.logistica && String(loc.logistica.tipoFrete || loc.logistica.frete).toUpperCase().includes('RETIRADA')) tipoServico = "PEGUE E MONTE";
-                                     
                                      return (
                                      <tr key={loc.id} onClick={() => irParaLocacaoEspecifica(loc.id)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
                                         <td style={{ padding: '12px 8px', maxWidth: '150px' }}>

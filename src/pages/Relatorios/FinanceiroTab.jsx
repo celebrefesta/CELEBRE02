@@ -1,26 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; 
-
+import { getAuth } from 'firebase/auth';
 // --- IMPORTAÇÕES DO PDF ---
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable'; 
 
-import './FinanceiroTab.css'; 
+import './FinanceiroTab.css';
 
 const FinanceiroTab = () => {
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [loading, setLoading] = useState(true);
   const [metricas, setMetricas] = useState({ receitas: 0, despesas: 0, lucro: 0 });
   const [transacoes, setTransacoes] = useState([]);
   
   // 🔥 NOVO ESTADO: Controla qual aba do Livro Caixa está ativa
-  const [filtroTipo, setFiltroTipo] = useState('todos'); 
-
+  const [filtroTipo, setFiltroTipo] = useState('todos');
+  
   const [dadosEmpresa, setDadosEmpresa] = useState({
     nomeEmpresa: 'Ágape Decorações',
     logotipo: '',
@@ -28,11 +28,11 @@ const FinanceiroTab = () => {
     endereco: ''
   });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO FINANCEIRO)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO FINANCEIRO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -41,7 +41,9 @@ const FinanceiroTab = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria financeira:", error);
@@ -54,9 +56,9 @@ const FinanceiroTab = () => {
     const buscarDadosFinanceirosEConfigs = async () => {
       try {
         // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as informações da sua empresa
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
-        const qCompras = query(collection(db, "lista_compras"), where("userId", "==", usuarioLogado.uid));
-        const qLancamentos = query(collection(db, "financeiro_lancamentos"), where("userId", "==", usuarioLogado.uid));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
+        const qCompras = query(collection(db, "lista_compras"), where("userId", "==", tenantId));
+        const qLancamentos = query(collection(db, "financeiro_lancamentos"), where("userId", "==", tenantId));
 
         const [snapLocacoes, snapCompras, snapLancamentos, snapConfig] = await Promise.all([
           getDocs(qLocacoes),
@@ -176,7 +178,6 @@ const FinanceiroTab = () => {
         listaTransacoes.sort((a, b) => b.dataTimestamp - a.dataTimestamp);
         setTransacoes(listaTransacoes);
         setMetricas({ receitas: totalReceitas, despesas: totalDespesas, lucro: totalReceitas - totalDespesas });
-        
       } catch (error) {
         console.error("Erro ao carregar o financeiro:", error);
       } finally {
@@ -185,7 +186,7 @@ const FinanceiroTab = () => {
     };
 
     buscarDadosFinanceirosEConfigs();
-  }, [usuarioLogado]);
+  }, [usuarioLogado, tenantId]);
   
   // 🔥 LÓGICA DE FILTRO: Só mostra o que o utilizador escolheu no botão
   const transacoesFiltradas = transacoes.filter(t => {
@@ -273,7 +274,6 @@ const FinanceiroTab = () => {
 
       // 🔥 Aciona o espião de exportação financeira
       await registrarLog("EXPORTAÇÃO DE RELATÓRIO FINANCEIRO", `Fez o download do DRE/Livro Caixa em PDF (Filtro utilizado: ${filtroTipo}).`);
-
     } catch (error) {
       console.error("Erro ao gerar PDF: ", error);
       alert("Erro ao gerar o PDF financeiro.");

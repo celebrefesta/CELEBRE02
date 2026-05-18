@@ -1,20 +1,43 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, query, onSnapshot, deleteDoc, doc, where, getDoc } from "firebase/firestore";
+import { collection, query, onSnapshot, deleteDoc, doc, where, getDoc, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { getAuth } from "firebase/auth"; 
 import jsPDF from "jspdf"; 
 import "./Contratos.css";
 
 const Contratos = () => {
   const [contratos, setContratos] = useState([]);
-  const [menuAberto, setMenuAberto] = useState(null); 
+  const [menuAberto, setMenuAberto] = useState(null);
   const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Sua Empresa' });
   const navigate = useNavigate();
 
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE CONTRATOS VINCULADO À EMPRESA)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log de contratos:", error);
+    }
+  };
 
   // Fecha o menu se clicar fora dele
   useEffect(() => {
@@ -30,10 +53,10 @@ const Contratos = () => {
         return;
     }
 
-    // 1. Busca as configurações da empresa para o PDF
+    // 1. Busca as configurações da empresa para o PDF usando o tenantId
     const fetchConfig = async () => {
         try {
-            const snap = await getDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid));
+            const snap = await getDoc(doc(db, "configuracoes_empresa", tenantId));
             if (snap.exists()) {
                 setDadosEmpresa({ nomeEmpresa: snap.data().nomeEmpresa || snap.data().nome || 'Sua Empresa' });
             }
@@ -41,8 +64,8 @@ const Contratos = () => {
     };
     fetchConfig();
 
-    // 2. 🔥 BLINDAGEM MULTI-EMPRESA: Busca APENAS os seus contratos
-    const q = query(collection(db, "contratos"), where("userId", "==", usuarioLogado.uid));
+    // 2. 🔥 BLINDAGEM MULTI-EMPRESA: Busca APENAS os contratos da empresa
+    const q = query(collection(db, "contratos"), where("userId", "==", tenantId));
     const unsubscribe = onSnapshot(q, (snapshot) => {
       let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       
@@ -55,18 +78,30 @@ const Contratos = () => {
       
       setContratos(lista);
     });
-    
+
     return () => unsubscribe();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   // Alterna a visibilidade do menu de um item específico
   const toggleMenu = (e, id) => {
-    e.stopPropagation(); 
+    e.stopPropagation();
     setMenuAberto(menuAberto === id ? null : id);
   };
 
+  const handleExcluir = async (id, clienteNome) => {
+    if(window.confirm("ATENÇÃO: Deseja realmente excluir este contrato?")) {
+      try {
+        await deleteDoc(doc(db, "contratos", id));
+        await registrarLog("EXCLUSÃO DE CONTRATO", `Excluiu permanentemente o contrato do cliente: ${clienteNome}.`);
+      } catch (error) {
+        console.error("Erro ao excluir contrato", error);
+        alert("Erro ao excluir o contrato.");
+      }
+    }
+  };
+
   // FUNÇÃO: Gerar PDF Completo (Com Assinaturas)
-  const gerarPDF = (item) => {
+  const gerarPDF = async (item) => {
     const docPdf = new jsPDF();
     const margin = 20;
     let y = 20; 
@@ -80,6 +115,7 @@ const Contratos = () => {
     docPdf.setTextColor(15, 23, 42); 
     docPdf.setFontSize(22);
     docPdf.setFont("helvetica", "bold");
+    
     // 🔥 PDF DINÂMICO: Usa o nome da sua empresa configurada
     docPdf.text(dadosEmpresa.nomeEmpresa.toUpperCase(), 105, 20, null, null, "center");
     
@@ -121,7 +157,6 @@ const Contratos = () => {
     docPdf.text("ENDEREÇO:", margin + 5, y);
     docPdf.setFont("helvetica", "normal");
     docPdf.text(item.endereco || "Local a definir / Retirada", margin + 30, y);
-
     y += 25; 
 
     // --- CORPO DO TEXTO ---
@@ -129,7 +164,6 @@ const Contratos = () => {
     docPdf.setFont("helvetica", "bold");
     docPdf.text("DESCRIÇÃO DOS ITENS E TERMOS DE LOCAÇÃO", 105, y, null, null, "center");
     docPdf.line(margin, y + 2, 190, y + 2);
-
     y += 10;
     
     docPdf.setFont("helvetica", "normal");
@@ -146,7 +180,6 @@ const Contratos = () => {
             docPdf.text(`Contrato - ${item.cliente} (Continuação)`, 105, 10, null, null, "center");
             docPdf.setFontSize(10);
         }
-   
         docPdf.text(linha, margin, y);
         y += 5; 
     });
@@ -181,24 +214,26 @@ const Contratos = () => {
     y += 5;
     docPdf.setFontSize(9);
     docPdf.setFont("helvetica", "bold");
+    
     // 🔥 PDF DINÂMICO
     docPdf.text(dadosEmpresa.nomeEmpresa.toUpperCase(), margin + 20, y);
     docPdf.text("LOCATÁRIO(A)", margin + 115, y);
-    
     y += 10;
     docPdf.setFont("helvetica", "normal");
 
     // Verifica data
     const dataEmissao = new Date().toLocaleDateString('pt-BR');
-
     const infoData = item.dataAssinatura 
         ? `Assinado digitalmente em: ${new Date(item.dataAssinatura).toLocaleDateString('pt-BR')}`
         : `Emitido para conferência em: ${dataEmissao}`;
-
     docPdf.text(infoData, 105, y, null, null, "center");
 
     const nomeArquivoSeguro = dadosEmpresa.nomeEmpresa.replace(/[^a-z0-9]/gi, '_');
     docPdf.save(`Contrato_${nomeArquivoSeguro}_${item.cliente}.pdf`);
+    
+    // 🔥 REGISTRA NO ESPIÃO
+    await registrarLog("EXPORTAÇÃO DE CONTRATO", `Gerou o PDF do contrato do cliente: ${item.cliente}.`);
+    
     setMenuAberto(null); // Fecha o menu após a ação
   };
 
@@ -222,7 +257,7 @@ const Contratos = () => {
       <div className="lista-container">
         {contratos.length === 0 ? (
           <div className="empty-state-list">
-            <p>Nenhum contrato gerado ainda.</p>
+             <p>Nenhum contrato gerado ainda.</p>
           </div>
         ) : (
           <table className="tabela-contratos">
@@ -263,7 +298,6 @@ const Contratos = () => {
                           ✏️ Editar
                         </button>
                         
-                        {/* 🔥 NOVO BOTÃO DE VISUALIZAR AQUI 🔥 */}
                         <button onClick={() => navigate(`/visualizar/${item.id}`)}>
                           👁️ Visualizar
                         </button>
@@ -279,11 +313,7 @@ const Contratos = () => {
                         <hr />
                         <button 
                           className="danger" 
-                          onClick={() => {
-                            if(window.confirm("Excluir contrato?")) {
-                              deleteDoc(doc(db, "contratos", item.id));
-                            }
-                          }}
+                          onClick={() => handleExcluir(item.id, item.cliente)}
                         >
                           🗑️ Excluir
                         </button>

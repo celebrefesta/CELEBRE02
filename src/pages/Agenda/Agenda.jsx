@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, where, serverTimestamp } from 'firebase/firestore'; 
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, where, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -42,15 +42,16 @@ const Agenda = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
+  // 🔥 IDENTIFICAÇÃO CORPORATIVA (A chave para puxar e salvar dados no cofre da empresa)
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [dataAtual, setDataAtual] = useState(new Date());
   const [viewPrincipal, setViewPrincipal] = useState('calendario');
   const [viewLista, setViewLista] = useState('semana');
-
   const [clientes, setClientes]   = useState([]);
   const [locacoes, setLocacoes]   = useState([]);
   const [compras, setCompras]     = useState([]);
   const [eventosManual, setEventosManual] = useState([]);
-
   const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Ágape Decorações', logotipo: '' });
 
   const [loadingFB, setLoadingFB] = useState(true);
@@ -68,10 +69,10 @@ const Agenda = () => {
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
   const [formData, setFormData] = useState(FORM_VAZIO);
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DA AGENDA)
+  // 🔥 SISTEMA DE AUDITORIA ATUALIZADO (Registra no banco de dados do Dono)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipe = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -80,7 +81,7 @@ const Agenda = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria da agenda:", error);
@@ -101,25 +102,26 @@ const Agenda = () => {
     const carregarDados = async () => {
       setLoadingFB(true);
       try {
-        const qCli = query(collection(db, 'clientes'), where("userId", "==", usuarioLogado.uid));
+        // 🎯 BUSCAS PELO ID DA EMPRESA (TENANT), NÃO PELO ID DO FUNCIONÁRIO
+        const qCli = query(collection(db, 'clientes'), where("userId", "==", tenantId));
         const sc = await getDocs(qCli);
         setClientes(sc.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Clientes:', e); }
 
       try {
-        const qLoc = query(collection(db, 'locacoes'), where("userId", "==", usuarioLogado.uid));
+        const qLoc = query(collection(db, 'locacoes'), where("userId", "==", tenantId));
         const sl = await getDocs(qLoc);
         setLocacoes(sl.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Locações:', e); }
 
       try {
-        const qComp = query(collection(db, 'lista_compras'), where("userId", "==", usuarioLogado.uid));
+        const qComp = query(collection(db, 'lista_compras'), where("userId", "==", tenantId));
         const sco = await getDocs(qComp);
         setCompras(sco.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Compras:', e); }
 
       try {
-        const qAg = query(collection(db, 'agenda_eventos'), where("userId", "==", usuarioLogado.uid));
+        const qAg = query(collection(db, 'agenda_eventos'), where("userId", "==", tenantId));
         const sa = await getDocs(qAg);
         setEventosManual(sa.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) {
@@ -142,7 +144,7 @@ const Agenda = () => {
     };
 
     carregarDados();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const eventosLocacao = useMemo(() => {
     const evs = [];
@@ -194,6 +196,7 @@ const Agenda = () => {
 
   const hojeISO = new Date().toISOString().split('T')[0];
   const comprasPendentes = useMemo(() => compras.filter(c => c.status !== 'comprado').sort((a, b) => (a.prazo || '9999').localeCompare(b.prazo || '9999')), [compras]);
+
   const comprasUrgentes = comprasPendentes.filter(c => c.prazo && c.prazo <= hojeISO).length;
 
   const eventosDoDia = (dia, mesOv, anoOv) => {
@@ -232,7 +235,7 @@ const Agenda = () => {
     setSalvando(true);
     const [anoStr, mesStr, diaStr] = formData.dataISO.split('-');
     const cli = clientes.find(c => c.id === formData.clienteId || (c.nome || c.nomeFantasia) === buscaClienteModal);
-    
+
     const evParaSalvar = {
       titulo: formData.titulo, 
       clienteId: cli ? cli.id : '', 
@@ -246,7 +249,7 @@ const Agenda = () => {
       dia: parseInt(diaStr), 
       mes: parseInt(mesStr) - 1, 
       ano: parseInt(anoStr),
-      userId: usuarioLogado.uid
+      userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
     };
 
     try {
@@ -254,17 +257,12 @@ const Agenda = () => {
         const docRef = doc(db, 'agenda_eventos', eventoSelecionado.id);
         await updateDoc(docRef, evParaSalvar);
         setEventosManual(prev => prev.map(x => x.id === eventoSelecionado.id ? { id: eventoSelecionado.id, ...evParaSalvar } : x));
-        
-        // 🔥 AUDITORIA DE EDIÇÃO
         await registrarLog("EDIÇÃO NA AGENDA", `Editou o compromisso: "${evParaSalvar.titulo}".`);
-        
-        mostrarToast('✅ Evento atualizado!');
+        mostrarToast('✅ Evento updated!');
       } else {
         let evsCriados = [];
         const docRef = await addDoc(collection(db, 'agenda_eventos'), evParaSalvar);
         evsCriados.push({ id: docRef.id, ...evParaSalvar });
-
-        // 🔥 AUDITORIA DE CRIAÇÃO
         await registrarLog("NOVO NA AGENDA", `Adicionou o compromisso: "${evParaSalvar.titulo}" para a data ${diaStr}/${mesStr}/${anoStr}.`);
 
         if (formData.recorrencia !== 'nenhuma') {
@@ -297,10 +295,7 @@ const Agenda = () => {
       setSalvando(true);
       try {
         await deleteDoc(doc(db, 'agenda_eventos', formData.id));
-        
-        // 🔥 AUDITORIA DE EXCLUSÃO
         await registrarLog("EXCLUSÃO NA AGENDA", `Apagou o compromisso: "${formData.titulo}".`);
-        
         setEventosManual(prev => prev.filter(x => x.id !== formData.id));
         mostrarToast('🗑️ Evento apagado.');
         setModalFormAberto(false);
@@ -363,6 +358,7 @@ const Agenda = () => {
           const diaSemana = dataAtual.getDay();
           const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
           const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
+          
           eventosFiltrados = todosEventos.filter(e => {
             if (!eventoVisivel(e)) return false;
             const dataEv = new Date(e.ano, e.mes, e.dia);
@@ -465,19 +461,15 @@ const Agenda = () => {
           </div>
           {ev.clienteNome && <span className="list-cliente">👤 {ev.clienteNome}</span>}
           
-          {/* 🔥 Botão Maps na Listagem 🔥 */}
           {ev.local && (
-              <span 
-                className="link-maps-card" 
-                onClick={(e) => { e.stopPropagation(); abrirGoogleMaps(ev.local); }}
-              >
+              <span className="link-maps-card" onClick={(e) => { e.stopPropagation(); abrirGoogleMaps(ev.local); }}>
                   📍 {ev.local}
               </span>
           )}
 
           {ev.tipoServico  && <span className="list-obs">📦 {ev.tipoServico}</span>}
           {ev.observacoes  && <span className="list-obs">📝 {ev.observacoes}</span>}
-          
+       
           {saldo !== null && Number(ev.valorTotal) > 0 && (
             <span className="list-financeiro">
               💰 R$ {Number(ev.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·{' '}
@@ -485,6 +477,7 @@ const Agenda = () => {
             </span>
           )}
         </div>
+        
         <span className={`list-tipo-badge badge-${ev.tipo}`}>{TIPOS[ev.tipo]?.label}</span>
       </div>
     );
@@ -620,7 +613,6 @@ const Agenda = () => {
           const dataObj = new Date(ev.ano, ev.mes, ev.dia);
           const formatoDia = dataObj.toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' });
           const formatoDiaCap = formatoDia.charAt(0).toUpperCase() + formatoDia.slice(1);
-          
           const novoGrupo = formatoDiaCap !== ultimoDia;
           ultimoDia = formatoDiaCap;
 
@@ -688,6 +680,7 @@ const Agenda = () => {
 
   const renderHeader = () => {
     const btnNav = (label, onClick) => <button className="btn-nav" onClick={onClick}>{label}</button>;
+    
     let titulo = ''; let navEsq, navDir;
 
     if (filtroAtivo === 'compras') {
@@ -771,7 +764,7 @@ const Agenda = () => {
         <div className="modal-content modal-form-content" onClick={e => e.stopPropagation()}>
           
           <div className="modal-header">
-            <h3>{ehLocacao ? '🔗 Detalhe da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : '📝 Novo Compromisso')}</h3>
+            <h3>{ehLocacao ? '🔗 Detalhes da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : '📝 Novo Compromisso')}</h3>
             <button className="btn-close" onClick={() => !salvando && setModalFormAberto(false)}>×</button>
           </div>
 
@@ -884,7 +877,7 @@ const Agenda = () => {
                                 {c.nome || c.nomeFantasia}
                               </li>
                             ))}
-                             {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
+                           {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
                               <li style={{ color: 'var(--texto-secundario)', cursor: 'default' }}>Usar nome avulso: "{buscaClienteModal}"</li>
                             )}
                         </ul>
@@ -914,7 +907,7 @@ const Agenda = () => {
                                 📍 Abrir Maps
                             </button>
                         )}
-                    </div>
+                      </div>
                   </div>
               </div>
 
@@ -929,7 +922,7 @@ const Agenda = () => {
                       disabled={salvando}
                     />
                   </div>
-              </div>
+               </div>
               
               <div className="modal-actions">
                 {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar Compromisso</button>}
@@ -988,13 +981,13 @@ const Agenda = () => {
             <div className="menu-section">
                 <h4 className="menu-section-title">Administrativo</h4>
                 {[
-                  ['reuniao',  'purple', 'Reuniões',    contadores.reuniao],
-                  ['visita',   'green',  'Visitas Técnicas', contadores.visita],
-                  ['pagamento','yellow', 'Cobranças',      contadores.pagamento],
-                  ['tarefa',   'gray',   'Tarefas Internas', contadores.tarefa],
-                  ['bloqueio', 'red',  'Bloqueios de Data',contadores.bloqueio],
+                  ['reuniao',  'purple', 'Reuniões',          contadores.reuniao],
+                  ['visita',   'green',  'Visitas Técnicas',  contadores.visita],
+                  ['pagamento','yellow', 'Cobranças',         contadores.pagamento],
+                  ['tarefa',   'gray',   'Tarefas Internas',  contadores.tarefa],
+                  ['bloqueio', 'red',    'Bloqueios de Data', contadores.bloqueio],
                 ].map(([tipo, cor, label, count]) => (
-                  <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
+                  <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista');}}>
                     <span className={`dot bg-${cor}`} />
                     <span className="menu-label">{label}</span>
                     {count > 0 && <span className="menu-badge">{count}</span>}
@@ -1038,7 +1031,7 @@ const Agenda = () => {
               {eventosDoDia(diaSelecionado).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99')).map(ev => (
                 <div key={ev.id} className={`item-detalhe-card ${ev.tipo}${ev.origem === 'locacao' ? ' card-locacao' : ''}`} onClick={() => abrirModalForm(diaSelecionado, ev)}>
                   <div className="detalhe-info">
-                    <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
                       {ev.horario && <span className="detalhe-horario">{ev.horario}</span>}
                       <h4>
                           {ev.status === 'concluido' && '✅ '}
