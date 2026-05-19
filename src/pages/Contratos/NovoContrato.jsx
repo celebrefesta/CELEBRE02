@@ -7,11 +7,12 @@ import "./NovoContrato.css";
 
 const NovoContrato = () => {
   const navigate = useNavigate();
-  
-  // 🔥 Autenticação
+
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-  
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   // Estados para dados e controle visual
   const [listaPedidos, setListaPedidos] = useState([]);
   const [modalPedidos, setModalPedidos] = useState(false);
@@ -24,10 +25,10 @@ const NovoContrato = () => {
     dataRetirada: "", dataDevolucao: ""
   });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -36,7 +37,9 @@ const NovoContrato = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de contratos:", error);
@@ -52,8 +55,8 @@ const NovoContrato = () => {
 
     const carregarDados = async () => {
       try {
-        // 🔥 BLINDAGEM: Busca apenas as suas Locações (Pedidos)
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Busca apenas as Locações (Pedidos) da empresa
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
         const snapPedidos = await getDocs(qLocacoes);
  
         const listaP = snapPedidos.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -62,32 +65,32 @@ const NovoContrato = () => {
         listaP.sort((a, b) => new Date(b.dataEvento || 0) - new Date(a.dataEvento || 0));
         setListaPedidos(listaP);
 
-        // 🔥 BLINDAGEM: Busca apenas os seus Modelos de Contrato
-        const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", usuarioLogado.uid));
-   
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Busca apenas os Modelos de Contrato da empresa
+        const qModelos = query(collection(db, "modelosContrato"), where("userId", "==", tenantId));
         const snapModelos = await getDocs(qModelos);
         setMeusModelos(snapModelos.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (err) { console.error("Erro ao carregar dados:", err); }
+      } catch (err) { 
+        console.error("Erro ao carregar dados:", err); 
+      }
     };
     carregarDados();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   // 2. Importa os dados do Pedido selecionado no Modal
   const importarDados = (pedido) => {
     const descItens = pedido.itens ?
       pedido.itens.map(i => `${i.qtd || 1}x ${i.nome || i.produto}`).join("\n") : "";
-
+    
     setForm({
       ...form,
       cliente: pedido.clienteNome || pedido.cliente || "",
-      tema: pedido.tema || "",
-      dataEvento: pedido.dataEvento || "",
+      tema: pedido.tema || pedido.temaFesta || "",
+      dataEvento: pedido.dataEvento || pedido.dataRetirada || "",
       dataRetirada: pedido.dataRetirada || pedido.dataEvento || "",
       dataDevolucao: pedido.dataDevolucao || pedido.dataEvento || "",
       valorTotal: pedido.valorTotal || pedido.valor || 0,
       descricao: descItens 
     });
-
     setModalPedidos(false); // Fecha o modal
   };
 
@@ -97,11 +100,12 @@ const NovoContrato = () => {
     const modelo = meusModelos.find(m => m.id === idModelo);
     
     if (modelo) {
+      const PatternDeSeparacao = "\n\n--------------------------------\nTERMOS E CONDIÇÕES:\n";
       const atual = form.descricao || "";
       // Adiciona o texto do modelo sem apagar o que já estava escrito
       setForm({ 
         ...form, 
-        descricao: atual + (atual ? "\n\n--------------------------------\nTERMOS E CONDIÇÕES:\n" : "") + modelo.texto 
+        descricao: atual + (atual ? PatternDeSeparacao : "") + modelo.texto 
       });
     }
   };
@@ -110,20 +114,22 @@ const NovoContrato = () => {
   const handleSalvar = async (e) => {
     e.preventDefault();
     try {
-      // 🔥 BLINDAGEM: Salva o contrato com o seu userId
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o contrato com a chave da empresa
       await addDoc(collection(db, "contratos"), { 
         ...form, 
         valorTotal: Number(form.valorTotal), 
         createdAt: serverTimestamp(),
-        userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
+        userId: tenantId // 🔥 CADEADO DE SEGURANÇA CORPORATIVO
       });
 
       // 🔥 AUDITORIA
       await registrarLog("NOVO CONTRATO", `Gerou um novo contrato para o cliente: "${form.cliente}". Valor: R$ ${Number(form.valorTotal).toFixed(2)}.`);
-
-      alert("Contrato salvo com sucesso!");
+      
+      alert("Contrato salvo com sucesso! 🎉");
       navigate("/contratos");
-    } catch (err) { alert("Erro ao salvar: " + err.message); }
+    } catch (err) { 
+      alert("Erro ao salvar: " + err.message); 
+    }
   };
 
   return (
@@ -152,7 +158,6 @@ const NovoContrato = () => {
             <div className="grid-inputs">
               <div className="input-field full">
                 <label>Nome do Cliente</label>
-               
                 <input 
                   value={form.cliente} 
                   onChange={e => setForm({...form, cliente: e.target.value})} 
@@ -179,7 +184,6 @@ const NovoContrato = () => {
                 <label>Retirada</label>
                 <input type="date" value={form.dataRetirada} onChange={e => setForm({...form, dataRetirada: e.target.value})} />
               </div>
- 
               <div className="input-field">
                 <label>Devolução</label>
                 <input type="date" value={form.dataDevolucao} onChange={e => setForm({...form, dataDevolucao: e.target.value})} />
@@ -207,7 +211,7 @@ const NovoContrato = () => {
             <div className="header-section-modelos">
               <h3 className="section-title">Itens & Contrato</h3>
               
-              {/* SELETOR DE MODELOS (DOURADO E LIMPO) */}
+              {/* SELETOR DE MODELOS */}
               <select onChange={aplicarModelo} className="select-modelo-clean">
                 <option value="">📄 Inserir Modelo de Contrato...</option>
                 {meusModelos.map(m => (
@@ -228,10 +232,10 @@ const NovoContrato = () => {
             <div className="input-field" style={{marginTop: '20px', maxWidth: '200px'}}>
               <label>Status do Contrato</label>
               <select value={form.status} onChange={e => setForm({...form, status: e.target.value})}>
-                <option>Em Aberto</option>
-                <option>Assinado</option>
-                <option>Finalizado</option>
-                <option>Cancelado</option>
+                <option value="Em Aberto">Em Aberto</option>
+                <option value="Assinado">Assinado</option>
+                <option value="Finalizado">Finalizado</option>
+                <option value="Cancelado">Cancelado</option>
               </select>
             </div>
           </section>
@@ -249,10 +253,10 @@ const NovoContrato = () => {
               {listaPedidos.map(p => (
                 <div key={p.id} className="import-card-item" onClick={() => importarDados(p)}>
                   <div>
-                    <strong>{p.clienteNome || p.cliente}</strong>
-                    <div style={{fontSize: '12px', color: '#64748b'}}>📅 {p.dataEvento || '---'}</div>
+                    <strong>{p.clienteNome || p.cliente || "Cliente"}</strong>
+                    <div style={{fontSize: '12px', color: '#64748b'}}>📅 {p.dataEvento || p.dataRetirada || '---'}</div>
                   </div>
-                  <span className="valor-verde">R$ {p.valorTotal || p.valor || 0}</span>
+                  <span className="valor-verde">R$ {Number(p.valorTotal || p.valor || 0).toFixed(2)}</span>
                 </div>
               ))}
             </div>

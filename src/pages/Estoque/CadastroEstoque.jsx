@@ -88,14 +88,12 @@ const CadastroEstoque = () => {
   const categoriasFisicasUnicas = Object.keys(CATEGORIAS_FISICAS);
   const subcategoriasFisicasDisponiveis = categoria ? CATEGORIAS_FISICAS[categoria] || [] : [];
   const ocultarVitrineFisica = categoria === "Capas e Têxteis" && (subCategoria === "Capas de Painel" || subCategoria === "Capas de Cilindro" || subCategoria === "Kits de Capas (Painel + Cilindros)");
-  
   const EVENTOS_VITRINE = [
       "Aniversário", "Casamento", "Mêsversário", "Chá de Bebê", 
       "Chá Revelação", "Chá de Panela / Casa Nova", "Noivado", 
       "15 anos", "Formatura", "Religioso", "Corporativo", 
       "Escolar", "Datas Comemorativas"
   ];
-
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS).filter(cat => {
       if (tipoCadastro === 'decoracao') {
           return EVENTOS_VITRINE.includes(cat);
@@ -156,9 +154,10 @@ const CadastroEstoque = () => {
       setSubcategoriaTema(itemBase.subcategoriaTema || '');
       setGrupoTemaSelecionado(itemBase.grupoTema || ''); 
       setTemaSelecionado(itemBase.tema || '');
+      
       const ehDecoracao = itemBase.especificacoes?.isDecoracao || false;
       const ehKitPai = itemBase.especificacoes?.isKitPai || itemBase.especificacoes?.isKit || false;
-
+      
       if (ehDecoracao) {
           setTipoCadastro('decoracao');
           setTipoDisponibilidade('Aluguel');
@@ -239,7 +238,7 @@ const CadastroEstoque = () => {
       setSubcategoriaTema('');
       setGrupoTemaSelecionado('');
       setTemaSelecionado('');
-
+      
       if (novoTipo === 'decoracao') {
           setUnidadeMedida('Combo');
           setTipoDisponibilidade('Aluguel');
@@ -407,7 +406,6 @@ const CadastroEstoque = () => {
     const deltaX = clientX - startMouse.x;
     const deltaY = clientY - startMouse.y;
     setStartMouse({ x: clientX, y: clientY });
-    
     setPosicoesFoco(prev => {
       const current = prev[fotoPrincipalIndex] || { x: 50, y: 50, z: 1 };
       const velocidade = 0.6 / (current.z || 1); 
@@ -697,6 +695,7 @@ const CadastroEstoque = () => {
         // 🎯 ESPIÃO VINCULADO À EMPRESA
         await addDoc(collection(db, "logs_atividades"), {
           empresaId: tenantId, 
+          userId: tenantId,
           funcionarioId: usuarioLogado.uid,
           nomeFuncionario: localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Equipa",
           acao: itemEditando ? "EDIÇÃO DE ESTOQUE" : "NOVO ITEM NO ESTOQUE",
@@ -928,6 +927,7 @@ const CadastroEstoque = () => {
             <div style={{ flex: 1, minWidth: '0', background: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
               
               <h3 className="section-divider" style={{marginTop: 0}}>INFORMAÇÕES DO ITEM</h3>
+              
               <div className="form-grid-4">
                 <div className="form-group span-3"><label>NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label><input value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} style={{fontSize: '16px', fontWeight: 'bold'}} /></div>
                 
@@ -1081,7 +1081,7 @@ const CadastroEstoque = () => {
                       </div>
                   ) : (
                       <div style={{textAlign: 'center', padding: '30px', color: '#b45309', background: '#fff', borderRadius: '8px', fontSize: '13px'}}>
-                           Sua decoração ainda está vazia.
+                          Sua decoração ainda está vazia.
                       </div>
                   )}
                 </div>
@@ -1277,7 +1277,7 @@ const CadastroEstoque = () => {
                   onClick={handleAddLocalizacao}
                   style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
               >
-                 Adicionar
+                  Adicionar
               </button>
             </div>
 

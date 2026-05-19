@@ -81,7 +81,7 @@
    ÁREA DE FOTOS E UPLOADS
 ========================================= */
 .main-photo-display {
-  width: 240px; 
+  width: 240px;
   height: 240px; 
   border-radius: 8px;
   background: var(--fundo-cinza);
@@ -112,7 +112,8 @@
 }
 
 .photo-thumbnails-row {
-  display: flex; gap: 10px; flex-wrap: wrap;
+  display: flex;
+  gap: 10px; flex-wrap: wrap;
   justify-content: flex-start;
 }
 
@@ -124,13 +125,15 @@
   position: relative;
 }
 .thumb-item.active { border-color: var(--dourado); }
-.thumb-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px; }
+.thumb-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px;
+}
 
 .btn-remove-thumb {
   position: absolute; top: -5px; right: -5px;
   background: #ef4444; color: white;
   border: none; border-radius: 50%;
-  width: 18px; height: 18px; font-size: 10px; cursor: pointer;
+  width: 18px;
+  height: 18px; font-size: 10px; cursor: pointer;
 }
 
 .thumb-upload-btn {
@@ -139,18 +142,21 @@
   display: flex; align-items: center; justify-content: center;
   cursor: pointer; color: var(--texto-secundario); font-size: 20px; transition: 0.2s;
 }
-.thumb-upload-btn:hover { border-color: var(--texto-principal); color: var(--texto-principal); }
+.thumb-upload-btn:hover { border-color: var(--texto-principal); color: var(--texto-principal);
+}
 
 /* =========================================
    GRIDS, INPUTS E DIVISORES
 ========================================= */
 .section-divider {
   font-size: 12px; color: var(--texto-secundario); font-weight: 800;
-  text-transform: uppercase; letter-spacing: 1px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
   margin-bottom: 15px; border-bottom: 1px solid var(--borda); padding-bottom: 6px;
 }
 
-.mt-compact { margin-top: 25px; }
+.mt-compact { margin-top: 25px;
+}
 
 /* GRID PRINCIPAL (COMPUTADOR) */
 .form-grid-4 { 
@@ -164,7 +170,8 @@
 .span-1 { grid-column: span 1; }
 .span-2 { grid-column: span 2; }
 .span-3 { grid-column: span 3; }
-.span-4 { grid-column: span 4; }
+.span-4 { grid-column: span 4;
+}
 
 /* AGRUPAMENTO BLINDADO (SEMPRE LADO A LADO) */
 .flex-row-always {
@@ -177,23 +184,28 @@
   min-width: 0;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 6px; }
+.form-group { display: flex; flex-direction: column; gap: 6px;
+}
 .form-group label { font-size: 11px; font-weight: 700; color: var(--texto-secundario); text-transform: uppercase;}
 
 .form-group input, .form-group select, .form-group textarea {
-  padding: 12px 14px; border: 1px solid var(--borda); border-radius: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--borda); border-radius: 8px;
   font-size: 14px; color: var(--texto-principal); background-color: #fcfcfc;
-  transition: all 0.2s; font-family: inherit; outline: none; width: 100%; box-sizing: border-box;
+  transition: all 0.2s; font-family: inherit; outline: none;
+  width: 100%; box-sizing: border-box;
 }
 .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-  border-color: var(--dourado); background-color: var(--branco); box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
+  border-color: var(--dourado); background-color: var(--branco);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
 }
 
 /* =========================================
    BOTÕES DE AÇÃO DO FORMULÁRIO
 ========================================= */
 .form-actions {
-  display: flex; justify-content: flex-end; gap: 15px;
+  display: flex;
+  justify-content: flex-end; gap: 15px;
   padding-top: 20px; border-top: 1px solid var(--borda);
 }
 
@@ -202,22 +214,25 @@
   border: 1px solid var(--borda); border-radius: 8px; text-decoration: none;
   font-weight: 700; font-size: 14px; transition: 0.2s;
 }
-.btn-voltar:hover { background-color: var(--fundo-cinza); color: var(--texto-principal); }
+.btn-voltar:hover { background-color: var(--fundo-cinza); color: var(--texto-principal);
+}
 
 .btn-salvar {
   padding: 12px 30px; background-color: #0f172a; color: white;
-  border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer; transition: 0.2s;
+  border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer;
+  transition: 0.2s;
 }
 .btn-salvar:hover { background-color: #1e293b; }
 
 [data-theme='dark'] .btn-salvar { background-color: var(--dourado); color: white; }
-[data-theme='dark'] .btn-salvar:hover { background: #b48a3c; }
+[data-theme='dark'] .btn-salvar:hover { background: #b48a3c;
+}
 
 /* =========================================
    🔥 TOGGLE SWITCH À PROVA DE BALAS 🔥
 ========================================= */
 .ios-toggle-wrapper {
-  display: inline-flex !important; 
+  display: inline-flex !important;
   align-items: center !important; 
   gap: 12px !important; 
   cursor: pointer;
@@ -236,17 +251,18 @@
 }
 
 .ios-toggle-switch {
-  width: 46px !important; 
+  width: 46px !important;
   height: 26px !important; 
   background-color: var(--borda); 
   border-radius: 30px;
   position: relative; 
   transition: 0.3s ease; 
-  flex-shrink: 0 !important; /* BLINDA O BOTÃO PARA NÃO ENCOLHER */
+  flex-shrink: 0 !important;
+  /* BLINDA O BOTÃO PARA NÃO ENCOLHER */
 }
 
 .ios-toggle-wrapper.active .ios-toggle-switch { 
-  background-color: #10b981 !important; 
+  background-color: #10b981 !important;
 }
 [data-theme='dark'] .ios-toggle-wrapper.active .ios-toggle-switch { 
   background-color: #059669 !important; 
@@ -254,12 +270,12 @@
 
 .ios-toggle-knob {
   width: 20px !important; 
-  height: 20px !important; 
+  height: 20px !important;
   background-color: white !important; 
   border-radius: 50% !important;
   position: absolute !important; 
   top: 3px !important; 
-  left: 3px !important; 
+  left: 3px !important;
   transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
   box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
 }
@@ -273,14 +289,14 @@
   font-weight: 800 !important; 
   color: var(--texto-secundario);
   white-space: nowrap !important; /* TEXTO NUNCA QUEBRA DE LINHA */
-  letter-spacing: 0.5px !important; 
+  letter-spacing: 0.5px !important;
 }
 
 .ios-toggle-wrapper.active .ios-toggle-text { 
   color: #10b981 !important; 
 }
 [data-theme='dark'] .ios-toggle-wrapper.active .ios-toggle-text { 
-  color: #34d399 !important; 
+  color: #34d399 !important;
 }
 
 /* =========================================
@@ -288,8 +304,10 @@
 ========================================= */
 @media (max-width: 1000px) {
   
-  .page-container { padding: 10px 0 0 0 !important; }
-  .page-header { padding: 0 15px 15px 15px !important; margin-bottom: 10px !important; }
+  .page-container { padding: 10px 0 0 0 !important;
+}
+  .page-header { padding: 0 15px 15px 15px !important; margin-bottom: 10px !important;
+}
 
   .form-widescreen { 
       padding: 25px 15px !important; 
@@ -299,15 +317,19 @@
   }
 
   /* 1. Desempilha Foto e Formulário */
-  .estoque-form-layout { flex-direction: column !important; position: static !important; gap: 30px !important;}
+  .estoque-form-layout { flex-direction: column !important;
+  position: static !important; gap: 30px !important;}
   
   /* 2. Centraliza a área da Foto no Celular e Aumenta o tamanho dela */
-  .left-photo-col { width: 100% !important; max-width: 100% !important; position: static !important; display: flex; flex-direction: column; align-items: center;}
+  .left-photo-col { width: 100% !important;
+  max-width: 100% !important; position: static !important; display: flex; flex-direction: column; align-items: center;}
   
-  .main-photo-display { width: 100% !important; max-width: 280px !important; height: 280px !important; }
+  .main-photo-display { width: 100% !important;
+  max-width: 280px !important; height: 280px !important; }
   
   /* 3. A Mágica do Formulário (Vira Coluna) */
-  .right-data-col { width: 100% !important; }
+  .right-data-col { width: 100% !important;
+}
   
   .form-grid-4 { 
       display: flex !important;
@@ -317,7 +339,7 @@
   }
   
   .span-1, .span-2, .span-3, .span-4 { 
-      width: 100% !important; 
+      width: 100% !important;
       min-width: 100% !important; 
   }
   
@@ -335,7 +357,8 @@
   }
 
   .flex-row-always label {
-      font-size: 9px !important; /* Diminui a letra pra caber 3 itens */
+      font-size: 9px !important;
+      /* Diminui a letra pra caber 3 itens */
       white-space: nowrap !important;
       overflow: hidden !important;
       text-overflow: ellipsis !important;
@@ -347,16 +370,19 @@
   }
 
   /* 4. Ajuste Botões de Salvar */
-  .form-actions { flex-direction: column; }
+  .form-actions { flex-direction: column;
+}
   .btn-voltar { width: 100%; text-align: center; }
-  .btn-salvar { width: 100%; padding: 16px !important; }
+  .btn-salvar { width: 100%; padding: 16px !important;
+}
 }
 
 /* 🔥 AJUSTE DEFINITIVO PARA O ZOOM DO CROPPER 🔥 */
 
 /* 1. Garante que o contêiner do cropper tenha um fundo limpo */
 .cropper-container {
-    background-color: #f8fafc !important; /* Fundo cinza bem clarinho igual ao da página */
+    background-color: #f8fafc !important;
+    /* Fundo cinza bem clarinho igual ao da página */
     border-radius: 8px;
     overflow: hidden;
 }
@@ -364,7 +390,8 @@
 /* 2. 🔥 A MÁGICA: Muda o comportamento da imagem de 'cover' para 'contain' 🔥 */
 .cropper-view-box img,
 .cropper-canvas img {
-    object-fit: contain !important; /* Faz a imagem caber inteira no quadrado, sem cortar nada */
+    object-fit: contain !important;
+    /* Faz a imagem caber inteira no quadrado, sem cortar nada */
     width: 100% !important;
     height: 100% !important;
     max-width: 100% !important;
@@ -387,6 +414,8 @@
 .zoom-slider {
     flex: 1;
     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     height: 4px;
     background: #e2e8f0;
     border-radius: 2px;
@@ -395,9 +424,12 @@
 
 .zoom-slider::-webkit-slider-thumb {
     -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
     width: 16px;
     height: 16px;
-    background: #c5a059; /* Cor dourada do seu sistema */
+    background: #c5a059;
+    /* Cor dourada do seu sistema */
     border-radius: 50%;
     cursor: pointer;
     border: 2px solid #fff;

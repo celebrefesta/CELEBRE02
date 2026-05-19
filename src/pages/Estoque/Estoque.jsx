@@ -28,7 +28,6 @@ const Estoque = () => {
   const [categoriaFiltro, setCategoriaFiltro] = useState('');
   const [statusFiltro, setStatusFiltro] = useState('');
   const [localizacaoFiltro, setLocalizacaoFiltro] = useState('');
-  
   const [ordemAlfabetica, setOrdemAlfabetica] = useState('A-Z'); 
 
   const [imagemAmpliada, setImagemAmpliada] = useState(null);
@@ -40,7 +39,6 @@ const Estoque = () => {
   const [itemParaPedido, setItemParaPedido] = useState(null);
   const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState('');
   const [adicionandoAoPedido, setAdicionandoAoPedido] = useState(false);
-
   const [menuAberto, setMenuAberto] = useState(null);
 
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ESTOQUE - LISTAGEM)
@@ -56,7 +54,9 @@ const Estoque = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria do estoque:", error);
@@ -122,7 +122,6 @@ const Estoque = () => {
       const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
       const snapEstoque = await getDocs(qEstoque);
       let listaEstoque = snapEstoque.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
       listaEstoque.sort((a, b) => {
           const tempoA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
           const tempoB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
@@ -152,7 +151,7 @@ const Estoque = () => {
           const snap = await getDocs(q);
           const batch = writeBatch(db);
           let alterados = 0;
-          
+
           snap.forEach(docSnap => {
               const item = docSnap.data();
               let nomeAtual = item.nome || '';
@@ -176,7 +175,7 @@ const Estoque = () => {
                   let sufixos = [];
                   if (tam) sufixos.push(tam.trim());
                   if (cor) sufixos.push(cor.trim());
-                  
+
                   if (sufixos.length > 0) {
                       nomeNovo = `${pai} - ${sufixos.join(' ')}`;
                   } else {
@@ -295,10 +294,10 @@ const Estoque = () => {
               avaria: false,
               faltou: false
           };
-          
+
           let itensAtualizados = [...(locacaoAlvo.itens || [])];
           const indexExistente = itensAtualizados.findIndex(i => i.id === itemParaPedido.id);
-          
+
           if (indexExistente >= 0) {
               itensAtualizados[indexExistente].qtd += 1;
           } else {
@@ -314,7 +313,7 @@ const Estoque = () => {
               itens: itensAtualizados,
               valorTotal: novoTotal
           });
-          
+
           await registrarLog("INSERÇÃO RÁPIDA EM PEDIDO", `Adicionou a peça "${itemParaPedido.nome}" diretamente pelo painel de estoque ao pedido de "${locacaoAlvo.clienteNome}".`);
           alert(`✅ A peça "${itemParaPedido.nome}" foi adicionada com sucesso ao pedido de ${locacaoAlvo.clienteNome}!`);
           setModalAddPedidoAberto(false);
@@ -337,14 +336,13 @@ const Estoque = () => {
       
       const emMaint = item.qtdManutencao !== undefined ? Number(item.qtdManutencao) : (item.status === 'manutencao' ? qtdBase : 0);
       let alugadosNaData = 0;
-      
+
       if (dataFiltro) {
           const pedidosNessaData = locacoes.filter(loc => 
               loc.dataRetirada === dataFiltro && 
               loc.status !== 'cancelado' && 
               loc.status !== 'finalizado'
           );
-          
           pedidosNessaData.forEach(pedido => {
               if (pedido.itens && Array.isArray(pedido.itens)) {
                   const itemEncontrado = pedido.itens.find(i => i.id === item.id);
@@ -377,13 +375,13 @@ const Estoque = () => {
       const s = String(loc.status || '').toLowerCase();
       return s.includes('confirmado') || s.includes('preparacao');
   });
-  
+
   pedidosAtivos.sort((a,b) => {
       const dA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 9999999999999;
       const dB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 9999999999999;
       return dA - dB;
   });
-  
+
   let itensFiltrados = itens
     .filter(i => {
         const termo = busca.toLowerCase();
@@ -404,7 +402,7 @@ const Estoque = () => {
         if (statusFiltro === 'manutencao') return emManutencao > 0;
         return true;
     });
-    
+
   itensFiltrados.sort((a, b) => {
       const nomeA = (a.nome || '').toLowerCase();
       const nomeB = (b.nome || '').toLowerCase();
@@ -412,7 +410,7 @@ const Estoque = () => {
       if (ordemAlfabetica === 'Z-A') return nomeB.localeCompare(nomeA);
       return 0;
   });
-  
+
   const imprimirListaFiltrada = async () => {
       const doc = new jsPDF();
       const dataHoje = new Date().toLocaleDateString('pt-BR');
@@ -440,7 +438,7 @@ const Estoque = () => {
               isDeco ? "1 Kit" : `${qtdBase} pçs`
           ];
       });
-      
+
       autoTable(doc, {
           head: colunas,
           body: linhas,
@@ -449,14 +447,14 @@ const Estoque = () => {
           headStyles: { fillColor: [15, 23, 42] },
           styles: { fontSize: 9 }
       });
-      
+
       doc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}.pdf`);
       
       await registrarLog("EXPORTAÇÃO DE INVENTÁRIO", "Fez o download da lista de verificação de estoque em PDF.");
   };
 
   if (loading) return <div style={{padding: '50px', textAlign: 'center', color: '#64748b'}}>Verificando permissões de acesso...</div>;
-  
+
   if (!temAcesso) {
     return (
       <div style={{ padding: '60px', textAlign: 'center', backgroundColor: '#f8fafc', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -478,7 +476,7 @@ const Estoque = () => {
           <p>Controle logístico, financeiro e catálogo online. <strong style={{color: totalItens >= limiteEstoque ? '#ef4444' : '#10b981'}}>(Limite: {totalItens.toLocaleString('pt-BR')} / {limiteEstoque.toLocaleString('pt-BR')})</strong></p>
         </div>
         <div className="acoes-top" style={{ display: 'flex', gap: '10px' }}>
-          
+         
           <button 
             onClick={corrigirNomesDuplicados} 
             style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
@@ -599,11 +597,10 @@ const Estoque = () => {
               <tbody>
                 {itensFiltrados.map(item => {
                   
-                  const { qtdBase, disponivelTotal, alugados, emManutencao, tudoQuebrado, estaTotalmenteAlugado, isDeco } = calcularDisponibilidadeNaData(item);
-                  
+                  const { qtdBase, disponivelTotal, estaTotalmenteAlugado, tudoQuebrado, isDeco } = calcularDisponibilidadeNaData(item);
                   let labelPill = 'DISPONÍVEL';
                   let bgPill = '#f0fdf4'; let colorPill = '#166534'; let borderPill = '#bbf7d0';
-                  
+
                   if (estaTotalmenteAlugado) { 
                       labelPill = 'ALUGADO';
                       bgPill = '#fef2f2'; colorPill = '#b91c1c'; borderPill = '#fecaca';
@@ -622,7 +619,7 @@ const Estoque = () => {
                   
                   const ehKitPai = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit && item.especificacoes?.pecasKit.length > 0);
                   const ehSubPeca = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKitPai);
-                  
+
                   return (
                     <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: estaTotalmenteAlugado ? 0.6 : 1 }}>
                       
@@ -672,7 +669,7 @@ const Estoque = () => {
                             {labelPill}
                         </span>
                       </td>
-                      
+              
                       <td style={{ textAlign: 'right', padding: '15px', position: 'relative' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
                             
@@ -689,8 +686,8 @@ const Estoque = () => {
                             <div style={{ position: 'relative' }}>
                                 <button 
                                     onClick={(e) => { 
-                                        e.stopPropagation();
-                                        setMenuAberto(isMenuOpen ? null : item.id); 
+                                       e.stopPropagation();
+                                       setMenuAberto(isMenuOpen ? null : item.id); 
                                     }}
                                     style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '6px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
                                     onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}

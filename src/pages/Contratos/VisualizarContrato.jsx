@@ -1,21 +1,44 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../../firebaseConfig";
-import { doc, getDoc } from "firebase/firestore";
-import { getAuth } from "firebase/auth"; // 🔥 Importação do Cadeado de Segurança
+import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
 import "./VisualizarContrato.css";
 
 const VisualizarContrato = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [contrato, setContrato] = useState(null);
   const [empresa, setEmpresa] = useState(null);
   const [carregando, setCarregando] = useState(true);
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO VINCULADO À EMPRESA)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria:", error);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -31,23 +54,27 @@ const VisualizarContrato = () => {
           const data = docSnap.data();
 
           // 🔥 BLINDAGEM: Verifica se o contrato pertence à sua empresa
-          if (data.userId && data.userId !== usuarioLogado.uid) {
+          if (data.userId && data.userId !== tenantId) {
               alert("Acesso negado: Este contrato pertence a outra empresa.");
               navigate('/contratos');
               return;
           }
 
           setContrato(data);
+          
+          // Regista que o documento oficial foi aberto para visualização/impressão
+          await registrarLog("VISUALIZAÇÃO DE CONTRATO", `Acessou o documento oficial do contrato de "${data.cliente}".`);
+
         } else {
           alert("Contrato não encontrado!");
           navigate("/contratos");
           return;
         }
 
-        // 🔥 BLINDAGEM: Busca os dados da Empresa (Logo, CNPJ, etc) no seu cofre pessoal
-        const configSnap = await getDoc(doc(db, "configuracoes_empresa", usuarioLogado.uid));
+        // 🔥 BLINDAGEM: Busca os dados da Empresa (Logo, CNPJ, etc) no cofre principal
+        const configSnap = await getDoc(doc(db, "configuracoes_empresa", tenantId));
         if (configSnap.exists()) {
-          setEmpresa(configSnap.data());
+            setEmpresa(configSnap.data());
         }
       } catch (err) {
         console.error("Erro ao carregar documento:", err);
@@ -55,8 +82,14 @@ const VisualizarContrato = () => {
         setCarregando(false);
       }
     };
+    
     buscarDados();
-  }, [id, navigate, usuarioLogado]);
+  }, [id, navigate, usuarioLogado, tenantId]);
+
+  const handleImprimir = async () => {
+    await registrarLog("IMPRESSÃO DE CONTRATO", `Gerou a impressão ou salvou o PDF via navegador do contrato de "${contrato?.cliente}".`);
+    window.print();
+  };
 
   if (carregando) return <div className="loading-screen">Gerando documento...</div>;
 
@@ -67,7 +100,7 @@ const VisualizarContrato = () => {
     <div className="visualizar-container">
       <div className="acoes-flutuantes">
         <button className="btn-voltar" onClick={() => navigate("/contratos")}>← Voltar</button>
-        <button className="btn-imprimir" onClick={() => window.print()}>🖨️ Imprimir / Salvar PDF</button>
+        <button className="btn-imprimir" onClick={handleImprimir}>🖨️ Imprimir / Salvar PDF</button>
       </div>
 
       {/* A FOLHA A4 VIRTUAL */}
@@ -101,7 +134,7 @@ const VisualizarContrato = () => {
           <p><strong>VALOR TOTAL:</strong> R$ {Number(contrato.valorTotal || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
         </div>
 
-        {/* CLÁUSULAS (Mantém as quebras de linha que você digitou) */}
+        {/* CLÁUSULAS */}
         <div className="doc-clausulas">
           {contrato.descricao ? contrato.descricao : "Nenhum termo ou cláusula adicionada a este contrato."}
         </div>
