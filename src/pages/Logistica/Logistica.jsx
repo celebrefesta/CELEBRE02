@@ -7,7 +7,7 @@ import { getAuth } from 'firebase/auth';
 
 const Logistica = () => {
   const navigate = useNavigate();
-  
+
   // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -16,15 +16,13 @@ const Logistica = () => {
   const [locacoes, setLocacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroTempo, setFiltroTempo] = useState('mes_atual');
-  
   const [checklistModalId, setChecklistModalId] = useState(null);
   const [relatorioModalLoc, setRelatorioModalLoc] = useState(null);
   const [vistaAtual, setVistaAtual] = useState('kanban');
   const [parametros, setParametros] = useState(null);
-  
   const [textoRelatorio, setTextoRelatorio] = useState('');
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO CORPORATIVO)
   const registrarLog = async (acao, detalhes, pedidoId = "S/N", numeroPedido = "S/N") => {
     try {
       const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
@@ -50,21 +48,21 @@ const Logistica = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      // 🔥 BLINDAGEM MULTI-EMPRESA
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa apenas locações desta empresa
       const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const snap = await getDocs(qLocacoes);
       const dados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       const ordenados = dados.sort((a, b) => (a.dataRetirada || '').localeCompare(b.dataRetirada || ''));
       setLocacoes(ordenados);
 
-      // Busca parâmetros da empresa
+      // Busca parâmetros da empresa para o PDF (Logo, Nome, etc)
       const docRef = doc(db, "configuracoes_empresa", tenantId);
       const docSnap = await getDoc(docRef);
       if (docSnap.exists()) {
         setParametros(docSnap.data());
       }
 
-      // Busca texto base do relatório da empresa
+      // Busca texto base do relatório de avarias da empresa
       const contratoRef = doc(db, "relatorio_avarias", tenantId);
       const contratoSnap = await getDoc(contratoRef);
       if (contratoSnap.exists()) {
@@ -136,14 +134,19 @@ const Logistica = () => {
     });
 
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
-
+    
     try { 
       await updateDoc(doc(db, "locacoes", locId), { itens: novosItens });
       
       // 🔥 Auditoria de separação
       if (tipo === 'checkedSeparacao') {
         const acao = !itemAlvo.checkedSeparacao ? "ITEM SEPARADO" : "ITEM PENDENTE";
-        registrarLog(acao, `Checklist de Saída: Marcou "${itemAlvo.nome}" como ${!itemAlvo.checkedSeparacao ? 'CONFERIDO' : 'NÃO CONFERIDO'}.`, locId, locacao.numeroPedido);
+        registrarLog(
+          acao, 
+          `Checklist de Saída: Marcou "${itemAlvo.nome}" como ${!itemAlvo.checkedSeparacao ? 'CONFERIDO' : 'NÃO CONFERIDO'}.`, 
+          locId, 
+          locacao.numeroPedido
+        );
       }
     } catch (e) {
         console.error("Erro no checklist", e);
@@ -166,7 +169,7 @@ const Logistica = () => {
     });
 
     setLocacoes(prev => prev.map(loc => loc.id === locId ? { ...loc, itens: novosItens } : loc));
-
+    
     try { 
       await updateDoc(doc(db, "locacoes", locId), { itens: novosItens });
       
@@ -174,13 +177,13 @@ const Logistica = () => {
       let txtStatus = status === 'ok' ? 'DEVOLVIDO OK' : status === 'avaria' ? 'COM AVARIA' : status === 'faltou' ? 'FALTANDO/EXTRAVIO' : 'DESMARCADO';
       registrarLog("CONFERÊNCIA DE RETORNO", `Marcou o item "${itemAlvo.nome}" como ${txtStatus}.`, locId, locacao.numeroPedido);
     } catch (e) {
-        console.error("Erro no registro de retorno", e);
+      console.error("Erro no registro de retorno", e);
     }
   };
 
   const hojeStr = new Date().toISOString().split('T')[0];
   const mesAtual = hojeStr.substring(0, 7);
-
+  
   const locacoesFiltradas = locacoes.filter(loc => {
     if (!loc.dataRetirada) return false;
     const st = String(loc.status || '').toLowerCase().trim();
@@ -225,33 +228,116 @@ const Logistica = () => {
       </header>
 
       <div className={`kanban-board ${vistaAtual === 'lista' ? 'board-lista' : 'board-colunas'}`}>
+        
         <div className="kanban-col">
-          <div className="col-header"><span className="dot" style={{background: '#64748b'}}></span><h3>1. Orçamentos</h3><span className="badge-count">{colunas.orcamento.length}</span></div>
-          <div className="col-body">{colunas.orcamento.map(loc => <CartaoKanban key={loc.id} loc={loc} navigate={navigate} onAvancar={() => moverCard(loc.id, 'confirmado')} btnTxt="Aprovar ➔" btnCor="#3b82f6" onAbrirChecklist={() => setChecklistModalId(loc.id)} onAbrirRelatorio={() => setRelatorioModalLoc(loc)} isModoLista={vistaAtual === 'lista'} />)}</div>
-        </div>
-        <div className="kanban-col">
-          <div className="col-header"><span className="dot" style={{background: '#3b82f6'}}></span><h3>2. Confirmados</h3><span className="badge-count">{colunas.confirmado.length}</span></div>
-          <div className="col-body">{colunas.confirmado.map(loc => <CartaoKanban key={loc.id} loc={loc} navigate={navigate} onAvancar={() => moverCard(loc.id, 'preparacao')} btnTxt="Separar ➔" btnCor="#f59e0b" onAbrirChecklist={() => setChecklistModalId(loc.id)} onAbrirRelatorio={() => setRelatorioModalLoc(loc)} isModoLista={vistaAtual === 'lista'} />)}</div>
-        </div>
-        <div className="kanban-col">
-          <div className="col-header"><span className="dot" style={{background: '#f59e0b'}}></span><h3>3. Em Separação</h3><span className="badge-count">{colunas.preparacao.length}</span></div>
-          <div className="col-body">{colunas.preparacao.map(loc => <CartaoKanban key={loc.id} loc={loc} navigate={navigate} onAvancar={() => moverCard(loc.id, 'entregue')} btnTxt="Enviar ➔" btnCor="#8b5cf6" onAbrirChecklist={() => setChecklistModalId(loc.id)} onAbrirRelatorio={() => setRelatorioModalLoc(loc)} isModoLista={vistaAtual === 'lista'} />)}</div>
-        </div>
-        <div className="kanban-col">
-          <div className="col-header"><span className="dot" style={{background: '#8b5cf6'}}></span><h3>4. Na Rua / Evento</h3><span className="badge-count">{colunas.entregue.length}</span></div>
-          <div className="col-body">{colunas.entregue.map(loc => <CartaoKanban key={loc.id} loc={loc} navigate={navigate} onAvancar={() => moverCard(loc.id, 'finalizado')} btnTxt="Receber ➔" btnCor="#10b981" onAbrirChecklist={() => setChecklistModalId(loc.id)} onAbrirRelatorio={() => setRelatorioModalLoc(loc)} isModoLista={vistaAtual === 'lista'} />)}</div>
-        </div>
-        <div className="kanban-col">
-          <div className="col-header"><span className="dot" style={{background: '#10b981'}}></span><h3>5. Devolvidos</h3><span className="badge-count">{colunas.finalizado.length}</span></div>
+          <div className="col-header">
+            <span className="dot" style={{background: '#64748b'}}></span>
+            <h3>1. Orçamentos</h3>
+            <span className="badge-count">{colunas.orcamento.length}</span>
+          </div>
           <div className="col-body">
-            {colunas.finalizado.slice(0, 15).map(loc => <CartaoKanban key={loc.id} loc={loc} navigate={navigate} isFinal={true} onVoltar={() => moverCard(loc.id, 'entregue')} onAbrirChecklist={() => setChecklistModalId(loc.id)} onAbrirRelatorio={() => setRelatorioModalLoc(loc)} isModoLista={vistaAtual === 'lista'} />)}
+            {colunas.orcamento.map(loc => (
+              <CartaoKanban 
+                key={loc.id} loc={loc} navigate={navigate} 
+                onAvancar={() => moverCard(loc.id, 'confirmado')} 
+                btnTxt="Aprovar ➔" btnCor="#3b82f6" 
+                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                isModoLista={vistaAtual === 'lista'} 
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="kanban-col">
+          <div className="col-header">
+            <span className="dot" style={{background: '#3b82f6'}}></span>
+            <h3>2. Confirmados</h3>
+            <span className="badge-count">{colunas.confirmado.length}</span>
+          </div>
+          <div className="col-body">
+            {colunas.confirmado.map(loc => (
+              <CartaoKanban 
+                key={loc.id} loc={loc} navigate={navigate} 
+                onAvancar={() => moverCard(loc.id, 'preparacao')} 
+                btnTxt="Separar ➔" btnCor="#f59e0b" 
+                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                isModoLista={vistaAtual === 'lista'} 
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="kanban-col">
+          <div className="col-header">
+            <span className="dot" style={{background: '#f59e0b'}}></span>
+            <h3>3. Em Separação</h3>
+            <span className="badge-count">{colunas.preparacao.length}</span>
+          </div>
+          <div className="col-body">
+            {colunas.preparacao.map(loc => (
+              <CartaoKanban 
+                key={loc.id} loc={loc} navigate={navigate} 
+                onAvancar={() => moverCard(loc.id, 'entregue')} 
+                btnTxt="Enviar ➔" btnCor="#8b5cf6" 
+                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                isModoLista={vistaAtual === 'lista'} 
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="kanban-col">
+          <div className="col-header">
+            <span className="dot" style={{background: '#8b5cf6'}}></span>
+            <h3>4. Na Rua / Evento</h3>
+            <span className="badge-count">{colunas.entregue.length}</span>
+          </div>
+          <div className="col-body">
+            {colunas.entregue.map(loc => (
+              <CartaoKanban 
+                key={loc.id} loc={loc} navigate={navigate} 
+                onAvancar={() => moverCard(loc.id, 'finalizado')} 
+                btnTxt="Receber ➔" btnCor="#10b981" 
+                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                isModoLista={vistaAtual === 'lista'} 
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="kanban-col">
+          <div className="col-header">
+            <span className="dot" style={{background: '#10b981'}}></span>
+            <h3>5. Devolvidos</h3>
+            <span className="badge-count">{colunas.finalizado.length}</span>
+          </div>
+          <div className="col-body">
+            {colunas.finalizado.slice(0, 15).map(loc => (
+              <CartaoKanban 
+                key={loc.id} loc={loc} navigate={navigate} isFinal={true} 
+                onVoltar={() => moverCard(loc.id, 'entregue')} 
+                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                isModoLista={vistaAtual === 'lista'} 
+              />
+            ))}
             {colunas.finalizado.length > 15 && <p className="limite-aviso">+ {colunas.finalizado.length - 15} arquivados...</p>}
           </div>
         </div>
+
       </div>
 
       {locacaoModalAtiva && (
-        <ModalChecklist loc={locacaoModalAtiva} onClose={() => setChecklistModalId(null)} onToggleChecklist={toggleItemChecklist} onRegistrarRetorno={registrarRetornoItem} />
+        <ModalChecklist 
+          loc={locacaoModalAtiva} 
+          onClose={() => setChecklistModalId(null)} 
+          onToggleChecklist={toggleItemChecklist} 
+          onRegistrarRetorno={registrarRetornoItem} 
+        />
       )}
 
       {relatorioModalLoc && (
@@ -268,26 +354,35 @@ const Logistica = () => {
   );
 };
 
+// ==========================================
+// SUB-COMPONENTE: CARTÃO KANBAN
+// ==========================================
 const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFinal, onAbrirChecklist, onAbrirRelatorio, isModoLista }) => {
   const isEntrega = loc.logistica?.tipo === 'entrega';
   const dataBr = loc.dataRetirada ? loc.dataRetirada.split('-').reverse().join('/') : '--/--/----';
 
   const getAlertaUrgencia = () => {
     if (!loc.dataRetirada || isFinal || loc.status === 'orcamento') return null;
-    const hojeDate = new Date(); hojeDate.setHours(0,0,0,0);
+    
+    const hojeDate = new Date(); 
+    hojeDate.setHours(0,0,0,0);
+    
     const locDate = new Date(loc.dataRetirada + 'T00:00:00'); 
     const diffTime = locDate.getTime() - hojeDate.getTime();
     const diffDias = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
     if (diffDias < 0 && loc.status !== 'entregue') return <div className="alerta-urgente atrasado">🔥 ATRASADO!</div>;
+    
     if (diffDias <= 0 && loc.status === 'entregue' && loc.dataDevolucao) {
        const devolucaoDate = new Date(loc.dataDevolucao + 'T00:00:00');
        const diffDev = Math.ceil((devolucaoDate.getTime() - hojeDate.getTime()) / (1000 * 60 * 60 * 24));
        if (diffDev < 0) return <div className="alerta-urgente devolver">🚨 DEVOLUÇÃO ATRASADA</div>;
        if (diffDev === 0) return <div className="alerta-urgente devolver">⚠️ BUSCAR HOJE!</div>;
     }
+    
     if (diffDias === 0 && loc.status !== 'entregue') return <div className="alerta-urgente hoje">🚨 ENTREGAR HOJE!</div>;
     if (diffDias === 1 && loc.status !== 'entregue') return <div className="alerta-urgente amanha">⚠️ FESTA É AMANHÃ!</div>;
+    
     return null;
   };
 
@@ -304,6 +399,7 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
   if (hasItens) {
     temAvaria = loc.itens.some(i => i.avaria === true);
     temFalta = loc.itens.some(i => i.faltou === true);
+    
     if (isFaseSeparacao) {
       itensCheckados = loc.itens.filter(i => i.checkedSeparacao).length;
       checklistBloqueiaBotao = itensCheckados < totalItens;
@@ -336,7 +432,9 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
           <strong>{loc.clienteNome || 'Cliente'}</strong>
           <span className="k-card-pedido">{loc.numeroPedido ? `#${loc.numeroPedido}` : ''}</span>
         </div>
-        <span className={`k-tag ${isEntrega ? 'tag-entrega' : 'tag-loja'}`}>{isEntrega ? '🚚 Entrega' : '🏬 Loja'}</span>
+        <span className={`k-tag ${isEntrega ? 'tag-entrega' : 'tag-loja'}`}>
+          {isEntrega ? '🚚 Entrega' : '🏬 Loja'}
+        </span>
       </div>
 
       <div className={`k-card-info ${isModoLista ? 'info-modo-lista' : ''}`}>
@@ -345,7 +443,10 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
       </div>
 
       <div className={`k-card-actions-wrapper ${isModoLista ? 'actions-modo-lista' : ''}`}>
-        <button className={`k-btn-itens-toggle ${(isFaseSeparacao || (isFaseDevolucao && itensCheckados < totalItens)) ? 'pulse-btn' : ''}`} onClick={onAbrirChecklist}>
+        <button 
+          className={`k-btn-itens-toggle ${(isFaseSeparacao || (isFaseDevolucao && itensCheckados < totalItens)) ? 'pulse-btn' : ''}`} 
+          onClick={onAbrirChecklist}
+        >
           📝 {btnChecklistTxt}
         </button>
 
@@ -353,16 +454,26 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
           <button className="k-btn-view" onClick={() => navigate(`/locacoes/editar/${loc.id}`)}>Editar</button>
           
           {!isFinal ? (
-            <button className={`k-btn-move ${checklistBloqueiaBotao ? 'btn-bloqueado' : ''}`} style={{ backgroundColor: checklistBloqueiaBotao ? '#cbd5e1' : btnCor, color: checklistBloqueiaBotao ? '#64748b' : 'white' }} onClick={handleAvancarClick}>
+            <button 
+              className={`k-btn-move ${checklistBloqueiaBotao ? 'btn-bloqueado' : ''}`} 
+              style={{ backgroundColor: checklistBloqueiaBotao ? '#cbd5e1' : btnCor, color: checklistBloqueiaBotao ? '#64748b' : 'white' }} 
+              onClick={handleAvancarClick}
+            >
               {checklistBloqueiaBotao ? `🔒 Faça o Checklist` : btnTxt}
             </button>
           ) : (
-            <button className="k-btn-view" onClick={onVoltar} style={{ color: '#ef4444', borderColor: '#fca5a5' }}>⏪ Voltar</button>
+            <button className="k-btn-view" onClick={onVoltar} style={{ color: '#ef4444', borderColor: '#fca5a5' }}>
+              ⏪ Voltar
+            </button>
           )}
         </div>
 
         {(temAvaria || temFalta) && (
-          <button className="k-btn-view" onClick={onAbrirRelatorio} style={{ width: '100%', marginTop: '6px', backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', fontWeight: 'bold' }}>
+          <button 
+            className="k-btn-view" 
+            onClick={onAbrirRelatorio} 
+            style={{ width: '100%', marginTop: '6px', backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', fontWeight: 'bold' }}
+          >
             📄 Gerar Relatório (PDF)
           </button>
         )}
@@ -371,6 +482,9 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
   );
 };
 
+// ==========================================
+// SUB-COMPONENTE: MODAL RELATÓRIO AVARIAS
+// ==========================================
 const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, tenantId, registrarLog }) => {
   const [itensProblema, setItensProblema] = useState([]);
   const [carregandoValores, setCarregandoValores] = useState(true);
@@ -513,6 +627,7 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, tenantId, 
           <h2 style={{margin: 0, color: '#dc2626'}}>🚨 Laudo de Ocorrências</h2>
           <button onClick={onClose} style={{background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#dc2626'}}>✖</button>
         </div>
+ 
         <div style={{padding: '20px 25px', maxHeight: '50vh', overflowY: 'auto'}}>
           {carregandoValores ? ( <div style={{textAlign: 'center', padding: '30px'}}> 🔄 Buscando valores... </div> ) : (
             itensProblema.map((it, idx) => (
@@ -538,6 +653,9 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, tenantId, 
   );
 };
 
+// ==========================================
+// SUB-COMPONENTE: MODAL CHECKLIST
+// ==========================================
 const ModalChecklist = ({ loc, onClose, onToggleChecklist, onRegistrarRetorno }) => {
   const isFaseSeparacao = loc.status === 'preparacao';
   const isFaseDevolucao = loc.status === 'finalizado'; 
@@ -552,6 +670,7 @@ const ModalChecklist = ({ loc, onClose, onToggleChecklist, onRegistrarRetorno })
           </div>
           <button onClick={onClose} style={{fontSize: '1.5rem', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8'}}>✖</button>
         </div>
+        
         <div className="modal-checklist-body">
           {loc.itens && loc.itens.length > 0 ? (
             loc.itens.map((it, idx) => {
@@ -569,10 +688,26 @@ const ModalChecklist = ({ loc, onClose, onToggleChecklist, onRegistrarRetorno })
                   <div key={idx} className={`checklist-row dev-row ${it.avaria ? 'avaria' : ''} ${it.faltou ? 'faltou' : ''} ${it.checkedDevolucao && !it.avaria && !it.faltou ? 'checked' : ''}`}>
                     {it.foto ? <img src={it.foto} alt="" className="chk-foto" /> : <div className="chk-foto vazio">📷</div>}
                     <span className="chk-nome"><strong>{it.qtd}x</strong> {it.nome}</span>
+                    
                     <div className="chk-botoes-volta">
-                       <button className={`btn-volta ok ${it.checkedDevolucao && !it.avaria && !it.faltou ? 'ativo' : ''}`} onClick={(e) => { e.stopPropagation(); onRegistrarRetorno(loc.id, idx, (it.checkedDevolucao && !it.avaria && !it.faltou) ? 'desmarcar' : 'ok'); }}>✔️ OK</button>
-                       <button className={`btn-volta bad ${it.avaria ? 'ativo' : ''}`} onClick={(e) => { e.stopPropagation(); onRegistrarRetorno(loc.id, idx, it.avaria ? 'desmarcar' : 'avaria'); }}>⚠️ AVARIA</button>
-                       <button className={`btn-volta lost ${it.faltou ? 'ativo' : ''}`} onClick={(e) => { e.stopPropagation(); onRegistrarRetorno(loc.id, idx, it.faltou ? 'desmarcar' : 'faltou'); }}>❌ SUMIU</button>
+                       <button 
+                         className={`btn-volta ok ${it.checkedDevolucao && !it.avaria && !it.faltou ? 'ativo' : ''}`} 
+                         onClick={(e) => { e.stopPropagation(); onRegistrarRetorno(loc.id, idx, (it.checkedDevolucao && !it.avaria && !it.faltou) ? 'desmarcar' : 'ok'); }}
+                       >
+                         ✔️ OK
+                       </button>
+                       <button 
+                         className={`btn-volta bad ${it.avaria ? 'ativo' : ''}`} 
+                         onClick={(e) => { e.stopPropagation(); onRegistrarRetorno(loc.id, idx, it.avaria ? 'desmarcar' : 'avaria'); }}
+                       >
+                         ⚠️ AVARIA
+                       </button>
+                       <button 
+                         className={`btn-volta lost ${it.faltou ? 'ativo' : ''}`} 
+                         onClick={(e) => { e.stopPropagation(); onRegistrarRetorno(loc.id, idx, it.faltou ? 'desmarcar' : 'faltou'); }}
+                       >
+                         ❌ SUMIU
+                       </button>
                     </div>
                   </div>
                 )
@@ -586,6 +721,7 @@ const ModalChecklist = ({ loc, onClose, onToggleChecklist, onRegistrarRetorno })
             })
           ) : (<p style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhuma peça neste pedido.</p>)}
         </div>
+        
         <div style={{padding: '20px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end'}}>
            <button onClick={onClose} style={{background: '#0f172a', color: 'white', border: 'none', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer'}}>Concluído</button>
         </div>

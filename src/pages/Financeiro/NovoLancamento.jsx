@@ -3,16 +3,17 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { db } from "../../firebaseConfig";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-// 🔥 Importação do Cadeado de Segurança
 import "./NovoLancamento.css";
 
 const NovoLancamento = () => {
   const navigate = useNavigate();
   const location = useLocation();
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const tipoInicial = location.state?.tipo || "entrada";
 
   const [novo, setNovo] = useState({
@@ -23,15 +24,16 @@ const NovoLancamento = () => {
     categoria: tipoInicial === "entrada" ? "Locação" : "Compra para Estoque",
     formaPagto: "Pix",
     status: "pago",
-    parcelas: 1,       // Quantidade de parcelas
-    acrescimo: ""      // Valor dos juros
+    parcelas: 1,
+    acrescimo: ""
   });
+  
   const [salvando, setSalvando] = useState(false);
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE LANÇAMENTOS)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE LANÇAMENTOS VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -40,7 +42,9 @@ const NovoLancamento = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de lançamentos:", error);
@@ -54,22 +58,14 @@ const NovoLancamento = () => {
   }, [usuarioLogado, navigate]);
 
   const categoriasEntrada = [
-    "Locação",
-    "Sinal / Reserva",
-    "Frete / Deslocamento",
-    "Acréscimo / Multa",
-    "Venda de Produto",
-    "Outros"
+    "Locação", "Sinal / Reserva", "Frete / Deslocamento", 
+    "Acréscimo / Multa", "Venda de Produto", "Outros"
   ];
 
   const categoriasSaida = [
-    "Compra para Estoque",
-    "Manutenção / Conserto",
-    "Despesas Fixas (Luz, Internet...)",
-    "Logística / Combustível",
-    "Fornecedores / Equipe",
-    "Impostos / Taxas",
-    "Outros"
+    "Compra para Estoque", "Manutenção / Conserto", 
+    "Despesas Fixas (Luz, Internet...)", "Logística / Combustível", 
+    "Fornecedores / Equipe", "Impostos / Taxas", "Outros"
   ];
 
   const handleSalvar = async (e) => {
@@ -79,20 +75,19 @@ const NovoLancamento = () => {
 
     setSalvando(true);
     try {
-      // Se tiver acréscimo de juros, converte para número, senão é 0
       const valorAcrescimo = Number(novo.acrescimo) || 0;
       const valorBase = Number(novo.valor);
       const valorTotalFinal = valorBase + valorAcrescimo;
-      
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o lançamento com o userId
+
+      // 🔥 BLINDAGEM MULTI-EMPRESA: Salva no financeiro da empresa (tenantId)
       await addDoc(collection(db, "financeiro_lancamentos"), {
         ...novo,
         valor: valorBase,
         acrescimo: valorAcrescimo,
-        valorTotal: valorTotalFinal, // Salva o valor base + juros
+        valorTotal: valorTotalFinal,
         parcelas: Number(novo.parcelas),
         createdAt: serverTimestamp(),
-        userId: usuarioLogado.uid // 🔥 CADEADO DE SEGURANÇA
+        userId: tenantId // 🔥 CADEADO DE SEGURANÇA CORPORATIVO
       });
 
       // 🔥 REGISTA AUDITORIA
@@ -120,7 +115,6 @@ const NovoLancamento = () => {
         <div className="nl-card">
           
           <div className="nl-tipo-selector">
-           
             <button 
               type="button" 
               className={`nl-tipo-btn ${novo.tipo === 'entrada' ? 'ativo-entrada' : ''}`}
@@ -128,7 +122,6 @@ const NovoLancamento = () => {
             >
               🟢 ENTRADA
             </button>
-   
             <button 
               type="button" 
               className={`nl-tipo-btn ${novo.tipo === 'saida' ? 'ativo-saida' : ''}`}
@@ -189,24 +182,12 @@ const NovoLancamento = () => {
               </div>
             </div>
 
-            {/* --- BLOCO CONDICIONAL: SÓ APARECE EM SAÍDAS COM CARTÃO DE CRÉDITO --- */}
             {novo.tipo === 'saida' && novo.formaPagto === 'Cartão de Crédito' && (
               <div className="nl-row" style={{ backgroundColor: '#f8fafc', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
                 <div className="nl-group">
                   <label>Parcelamento</label>
                   <select value={novo.parcelas} onChange={e => setNovo({...novo, parcelas: e.target.value})}>
-                    <option value="1">À vista (1x)</option>
-                    <option value="2">2x</option>
-                    <option value="3">3x</option>
-                    <option value="4">4x</option>
-                    <option value="5">5x</option>
-                    <option value="6">6x</option>
-                    <option value="7">7x</option>
-                    <option value="8">8x</option>
-                    <option value="9">9x</option>
-                    <option value="10">10x</option>
-                    <option value="11">11x</option>
-                    <option value="12">12x</option>
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n}x</option>)}
                   </select>
                 </div>
                 <div className="nl-group">

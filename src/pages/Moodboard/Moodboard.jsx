@@ -27,7 +27,7 @@ const Icons = {
 };
 
 const Moodboard = () => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
   
   // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
@@ -46,24 +46,39 @@ const Moodboard = () => {
   const [texturasParede, setTexturasParede] = useState([
     { nome: 'Tijolinho Branco', url: 'https://images.unsplash.com/photo-1558611997-0950a7cf6161?q=80&w=2070&auto=format&fit=crop' }
   ]);
+  
   const [texturasChao, setTexturasChao] = useState([
     { nome: 'Madeira Clara', url: 'https://images.unsplash.com/photo-1595428774223-ef52624120d2?q=80&w=1974&auto=format&fit=crop' }
   ]);
+  
   const [modalSalvarAberto, setModalSalvarAberto] = useState(false);
   const [modalAbrirAberto, setModalAbrirAberto] = useState(false);
   const [nomeProjeto, setNomeProjeto] = useState("");
   const [projetosSalvos, setProjetosSalvos] = useState([]);
+  
   const boardRef = useRef(null);
   const [expandedCats, setExpandedCats] = useState({});
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
-  const fontesDisponiveis = [ { nome: 'Moderna (Poppins)', valor: "'Poppins', sans-serif" }, { nome: 'Clássica (Playfair)', valor: "'Playfair Display', serif" }, { nome: 'Elegante (Great Vibes)', valor: "'Great Vibes', cursive" }, { nome: 'Manuscrita (Dancing)', valor: "'Dancing Script', cursive" }, { nome: 'Divertida (Pacifico)', valor: "'Pacifico', cursive" }, { nome: 'Simples (Montserrat)', valor: "'Montserrat', sans-serif" } ];
+  
+  const fontesDisponiveis = [ 
+    { nome: 'Moderna (Poppins)', valor: "'Poppins', sans-serif" }, 
+    { nome: 'Clássica (Playfair)', valor: "'Playfair Display', serif" }, 
+    { nome: 'Elegante (Great Vibes)', valor: "'Great Vibes', cursive" }, 
+    { nome: 'Manuscrita (Dancing)', valor: "'Dancing Script', cursive" }, 
+    { nome: 'Divertida (Pacifico)', valor: "'Pacifico', cursive" }, 
+    { nome: 'Simples (Montserrat)', valor: "'Montserrat', sans-serif" } 
+  ];
   
   const grouped = useMemo(() => {
     const mapa = {};
-    estoqueReal.forEach(i => { const c = i.categoria || 'Sem Categoria'; if (!mapa[c]) mapa[c] = []; mapa[c].push(i); });
+    estoqueReal.forEach(i => { 
+        const c = i.categoria || 'Sem Categoria'; 
+        if (!mapa[c]) mapa[c] = []; 
+        mapa[c].push(i); 
+    });
     return mapa;
   }, [estoqueReal]);
-
+  
   const interactionMode = useRef('none');
   const activeItemId = useRef(null);
   const resizeDir = useRef(null);
@@ -115,7 +130,7 @@ const Moodboard = () => {
 
         // 🔥 BLINDAGEM: Lê as texturas salvas apenas no cofre da empresa
         const paramSnap = await getDoc(doc(db, "configuracoes_empresa", tenantId));
-        if(paramSnap.exists()) {
+        if (paramSnap.exists()) {
             const data = paramSnap.data();
             if(data.texturasParede && data.texturasParede.length > 0) setTexturasParede(data.texturasParede);
             if(data.texturasChao && data.texturasChao.length > 0) setTexturasChao(data.texturasChao);
@@ -162,7 +177,7 @@ const Moodboard = () => {
                 const nova = { nome, url: base64 };
                 try {
                     // 🔥 BLINDAGEM: Salva a textura APENAS nas configurações da empresa
-                    if(tipo === 'wall') {
+                    if (tipo === 'wall') {
                         const atualizadas = [...texturasParede, nova];
                         setTexturasParede(atualizadas);
                         await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
@@ -187,7 +202,7 @@ const Moodboard = () => {
     if(!window.confirm("Deseja mesmo excluir este fundo da galeria?")) return;
     try {
         // 🔥 BLINDAGEM: Remove a textura APENAS nas configurações da empresa
-        if(tipo === 'wall') {
+        if (tipo === 'wall') {
             const atualizadas = texturasParede.filter(t => t.url !== urlParaRemover);
             setTexturasParede(atualizadas);
             await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
@@ -209,6 +224,7 @@ const Moodboard = () => {
 
   const salvarProjeto = async () => {
     if (!nomeProjeto.trim()) return alert("Digite um nome para o projeto!");
+    
     try {
         // 🔥 BLINDAGEM MULTI-EMPRESA: Salva o projeto no cofre principal
         await addDoc(collection(db, "projetos_moodboard"), {
@@ -221,9 +237,10 @@ const Moodboard = () => {
             empresaId: tenantId,
             funcionarioId: usuarioLogado.uid 
         });
-
+        
         // 🔥 REGISTA AUDITORIA
         await registrarLog("NOVO PROJETO MOODBOARD", `Salvou um novo projeto de design no Moodboard chamado "${nomeProjeto}".`);
+        
         alert("Projeto salvo com sucesso! ✅");
         setModalSalvarAberto(false);
     } catch (error) { 
@@ -238,6 +255,7 @@ const Moodboard = () => {
         const snapshot = await getDocs(q);
         
         let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        
         // Ordena na memória por data
         lista.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setProjetosSalvos(lista);
@@ -255,7 +273,7 @@ const Moodboard = () => {
         setModalAbrirAberto(false);
     }
   };
-
+  
   const deletarProjetoSalvo = async (id, nomeProjetoApagado) => {
     if (window.confirm("Excluir este projeto salvo?")) {
         try {
@@ -275,12 +293,13 @@ const Moodboard = () => {
       setSelecionadoId(id);
       setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id }); 
   };
-
+  
   const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
-
+  
   const bringToFront = (targetId = null) => { 
       const id = targetId || contextMenu.itemId;
       if (!id) return; 
+      
       setItensCanvas(prev => { 
           const idx = prev.findIndex(i => i.uniqueId === id); 
           if(idx < 0) return prev; 
@@ -294,6 +313,7 @@ const Moodboard = () => {
   const sendToBack = (targetId = null) => { 
       const id = targetId || contextMenu.itemId;
       if (!id) return; 
+      
       setItensCanvas(prev => { 
           const idx = prev.findIndex(i => i.uniqueId === id); 
           if(idx < 0) return prev; 
@@ -312,10 +332,27 @@ const Moodboard = () => {
   };
   
   const toggleCategory = (cat) => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
-
+  
   const adicionarAoCanvas = (item) => {
-    const novoItem = { ...item, type: 'image', uniqueId: `img_${Date.now()}`, x: 50, y: 50, width: 150, height: 150, rotation: 0, flipH: false, locked: false, opacity: 100, brightness: 100, contrast: 100, shadow: 0 };
-    setItensCanvas(prev => [...prev, novoItem]); setSelecionadoId(novoItem.uniqueId); setAbaAtiva('efeitos');
+    const novoItem = { 
+        ...item, 
+        type: 'image', 
+        uniqueId: `img_${Date.now()}`, 
+        x: 50, 
+        y: 50, 
+        width: 150, 
+        height: 150, 
+        rotation: 0, 
+        flipH: false, 
+        locked: false, 
+        opacity: 100, 
+        brightness: 100, 
+        contrast: 100, 
+        shadow: 0 
+    };
+    setItensCanvas(prev => [...prev, novoItem]); 
+    setSelecionadoId(novoItem.uniqueId); 
+    setAbaAtiva('efeitos');
   };
 
   const adicionarTexto = () => {
@@ -330,10 +367,15 @@ const Moodboard = () => {
         uniqueId: idUnico, 
         x: window.innerWidth < 600 ? 20 : 100, 
         y: window.innerWidth < 600 ? 50 : 100, 
-        width: 150, height: 60, 
-        rotation: 0, locked: false, opacity: 100, shadow: 0,
+        width: 150, 
+        height: 60, 
+        rotation: 0, 
+        locked: false, 
+        opacity: 100, 
+        shadow: 0,
         neonGlow: 0 
     };
+    
     setItensCanvas(prev => [...prev, itemTexto]); 
     setSelecionadoId(idUnico); 
     setEditingTextId(idUnico); 
@@ -342,19 +384,25 @@ const Moodboard = () => {
 
   const aplicarAoFundo = (valor) => {
     const estiloFinal = valor.startsWith('data:image') || valor.startsWith('http') ? `url(${valor})` : valor;
-    if (activeSurface === 'wall') setWallBackground(estiloFinal); else setFloorBackground(estiloFinal);
+    if (activeSurface === 'wall') {
+        setWallBackground(estiloFinal); 
+    } else {
+        setFloorBackground(estiloFinal);
+    }
   };
-
+  
   const handleClearProject = () => { 
       if (window.confirm("⚠️ Tem certeza que deseja limpar a tela?")) { 
           setItensCanvas([]);
-          setWallBackground('#f1f5f9'); setFloorBackground('#e2e8f0'); 
+          setWallBackground('#f1f5f9'); 
+          setFloorBackground('#e2e8f0'); 
       }
   };
   
   const handleExportImage = async () => { 
       if (!boardRef.current) return;
       setSelecionadoId(null); 
+      
       setTimeout(async () => { 
           const canvas = await html2canvas(boardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null }); 
           const link = document.createElement('a'); 
@@ -371,8 +419,10 @@ const Moodboard = () => {
     e.stopPropagation();
     e.target.setPointerCapture(e.pointerId);
     setSelecionadoId(id);
+    
     if (!dir) {
-        if (type === 'text') setAbaAtiva('texto'); else setAbaAtiva('efeitos');
+        if (type === 'text') setAbaAtiva('texto'); 
+        else setAbaAtiva('efeitos');
     }
 
     const item = itensCanvas.find(i => i.uniqueId === id);
@@ -383,13 +433,14 @@ const Moodboard = () => {
         lastPos.current = { x: e.clientX, y: e.clientY };
     }
   };
-
+  
   const handlePointerMove = (e) => {
     if (interactionMode.current === 'none' || !activeItemId.current) return;
+    
     const dx = e.clientX - lastPos.current.x;
     const dy = e.clientY - lastPos.current.y;
     lastPos.current = { x: e.clientX, y: e.clientY };
-
+    
     let scale = 1;
     if (boardRef.current) scale = boardRef.current.getBoundingClientRect().width / boardRef.current.offsetWidth;
     
@@ -407,7 +458,8 @@ const Moodboard = () => {
                 let newFontSize = (item.fontSize || 48) + sizeChange;
                 return { ...item, fontSize: Math.max(12, Math.round(newFontSize)) };
             } else {
-                let newW = item.width; let newH = item.height;
+                let newW = item.width; 
+                let newH = item.height;
                 if (resizeDir.current.includes('e')) newW += adjDx;
                 if (resizeDir.current.includes('s')) newH += adjDy;
                 return { ...item, width: Math.max(30, newW), height: Math.max(30, newH) };
@@ -419,13 +471,15 @@ const Moodboard = () => {
   };
 
   const handlePointerUp = (e) => {
-    try { e.target.releasePointerCapture(e.pointerId);
+    try { 
+        e.target.releasePointerCapture(e.pointerId);
     } catch(err){}
+    
     interactionMode.current = 'none';
     activeItemId.current = null;
     resizeDir.current = null;
   };
-
+  
   const handleCanvasClick = () => {
       if (selecionadoId) {
           setAbaAtiva('acervo');
@@ -434,23 +488,36 @@ const Moodboard = () => {
       setEditingTextId(null); 
       closeContextMenu();
   };
-
+  
   const atualizarItem = (id, alt) => setItensCanvas(prev => prev.map(i => i.uniqueId === id ? { ...i, ...alt } : i));
-  const deleteItem = (id) => { setItensCanvas(prev => prev.filter(i => i.uniqueId !== id)); setSelecionadoId(null); };
-
+  
+  const deleteItem = (id) => { 
+      setItensCanvas(prev => prev.filter(i => i.uniqueId !== id)); 
+      setSelecionadoId(null); 
+  };
+  
   const itemSelecionado = itensCanvas.find(i => i.uniqueId === selecionadoId);
+  
   const getStyle = (valor) => (!valor ? { background: '#fff' } : valor.startsWith('url') ? { backgroundImage: valor, backgroundSize: 'cover', backgroundPosition: 'center' } : { backgroundColor: valor });
-
+  
   return (
     <div className="studio-page" onPointerMove={handlePointerMove} onPointerUp={handlePointerUp} onClick={handleCanvasClick}>
       
       {/* BARRA DE FERRAMENTAS */}
       <div className="studio-toolbar" onClick={e => e.stopPropagation()}>
         <div className="tool-logo"><Icons.Crown /></div>
-        <div className={`tool-item ${abaAtiva === 'acervo' ? 'active' : ''}`} onClick={() => setAbaAtiva('acervo')}><Icons.Couch /><span>Acervo</span></div>
-        <div className={`tool-item ${abaAtiva === 'texto' ? 'active' : ''}`} onClick={() => setAbaAtiva('texto')}><Icons.Type /><span>Texto</span></div>
-        <div className={`tool-item ${abaAtiva === 'fundo' ? 'active' : ''}`} onClick={() => setAbaAtiva('fundo')}><Icons.Layers /><span>Cenário</span></div>
-        <div className={`tool-item ${abaAtiva === 'efeitos' ? 'active' : ''}`} onClick={() => setAbaAtiva('efeitos')}><Icons.Magic /><span>Efeitos</span></div>
+        <div className={`tool-item ${abaAtiva === 'acervo' ? 'active' : ''}`} onClick={() => setAbaAtiva('acervo')}>
+            <Icons.Couch /><span>Acervo</span>
+        </div>
+        <div className={`tool-item ${abaAtiva === 'texto' ? 'active' : ''}`} onClick={() => setAbaAtiva('texto')}>
+            <Icons.Type /><span>Texto</span>
+        </div>
+        <div className={`tool-item ${abaAtiva === 'fundo' ? 'active' : ''}`} onClick={() => setAbaAtiva('fundo')}>
+            <Icons.Layers /><span>Cenário</span>
+        </div>
+        <div className={`tool-item ${abaAtiva === 'efeitos' ? 'active' : ''}`} onClick={() => setAbaAtiva('efeitos')}>
+            <Icons.Magic /><span>Efeitos</span>
+        </div>
       </div>
 
       {/* PAINEL LATERAL/INFERIOR */}
@@ -458,7 +525,6 @@ const Moodboard = () => {
         {abaAtiva === 'acervo' && (
            <div className="panel-content">
              <h3 className="panel-title">SEU ACERVO</h3>
-           
              <div className="acervo-list-scroll">
                {Object.keys(grouped).sort().map(cat => (
                  <div key={cat} className="acervo-category">
@@ -469,7 +535,9 @@ const Moodboard = () => {
                      <div className="acervo-grid">
                        {grouped[cat].map(item => (
                          <div key={item.id} className="acervo-card" onClick={() => adicionarAoCanvas(item)}>
-                           <div className="card-thumb"><img src={item.imagem || 'https://via.placeholder.com/120'} crossOrigin="anonymous" alt={item.nome} /></div>
+                           <div className="card-thumb">
+                               <img src={item.imagem || 'https://via.placeholder.com/120'} crossOrigin="anonymous" alt={item.nome} />
+                           </div>
                            <div className="card-name">{item.nome}</div>
                          </div>
                        ))}
@@ -494,21 +562,27 @@ const Moodboard = () => {
 
                 {itemSelecionado ? (
                     <div className="effects-tools">
-                        <div className="selected-preview"><span>Editando: {itemSelecionado.nome || (itemSelecionado.type === 'text' ? 'Texto' : 'Item')}</span></div>
+                        <div className="selected-preview">
+                            <span>Editando: {itemSelecionado.nome || (itemSelecionado.type === 'text' ? 'Texto' : 'Item')}</span>
+                        </div>
                         
                         {itemSelecionado.type === 'image' && (
                           <>
                             <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
                                 <label>Brilho ({itemSelecionado.brightness}%)</label>
-                                <input type="range" min="0" max="200" value={itemSelecionado.brightness || 100} 
+                                <input 
+                                    type="range" min="0" max="200" 
+                                    value={itemSelecionado.brightness || 100} 
                                     onChange={e => atualizarItem(selecionadoId, {brightness: Number(e.target.value)})} 
                                     onDoubleClick={() => atualizarItem(selecionadoId, {brightness: 100})} 
                                 />
                             </div>
                
-                             <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
+                            <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
                                 <label>Contraste ({itemSelecionado.contrast}%)</label>
-                                <input type="range" min="0" max="200" value={itemSelecionado.contrast || 100} 
+                                <input 
+                                    type="range" min="0" max="200" 
+                                    value={itemSelecionado.contrast || 100} 
                                     onChange={e => atualizarItem(selecionadoId, {contrast: Number(e.target.value)})} 
                                     onDoubleClick={() => atualizarItem(selecionadoId, {contrast: 100})}
                                 />
@@ -516,9 +590,11 @@ const Moodboard = () => {
                           </>
                         )}
         
-                         <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
+                        <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
                             <label>Opacidade ({itemSelecionado.opacity}%)</label>
-                            <input type="range" min="10" max="100" value={itemSelecionado.opacity || 100} 
+                            <input 
+                                type="range" min="10" max="100" 
+                                value={itemSelecionado.opacity || 100} 
                                 onChange={e => atualizarItem(selecionadoId, {opacity: Number(e.target.value)})} 
                                 onDoubleClick={() => atualizarItem(selecionadoId, {opacity: 100})}
                             />
@@ -526,7 +602,9 @@ const Moodboard = () => {
                         
                         <div className="slider-group" title="Dê 2 cliques na bolinha para voltar ao normal">
                             <label>Sombra ({itemSelecionado.shadow}px) {itemSelecionado.shadow === 0 && <small>(Off)</small>}</label>
-                            <input type="range" min="0" max="50" value={itemSelecionado.shadow || 0} 
+                            <input 
+                                type="range" min="0" max="50" 
+                                value={itemSelecionado.shadow || 0} 
                                 onChange={e => atualizarItem(selecionadoId, {shadow: Number(e.target.value)})} 
                                 onDoubleClick={() => atualizarItem(selecionadoId, {shadow: 0})}
                             />
@@ -538,13 +616,23 @@ const Moodboard = () => {
                         </div>
 
                         <div className="action-buttons-grid">
-                            <button className={`btn-secondary ${itemSelecionado.locked ? 'active' : ''}`} onClick={() => toggleLock(selecionadoId)}>{itemSelecionado.locked ? <><Icons.Lock width={14} /> Bloqueado</> : <><Icons.Unlock width={14} /> Bloquear</>}</button>
-                            <button className="btn-secondary" onClick={() => atualizarItem(selecionadoId, {flipH: !itemSelecionado.flipH})}><Icons.Flip width={14} /> Virar</button>
+                            <button className={`btn-secondary ${itemSelecionado.locked ? 'active' : ''}`} onClick={() => toggleLock(selecionadoId)}>
+                                {itemSelecionado.locked ? <><Icons.Lock width={14} /> Bloqueado</> : <><Icons.Unlock width={14} /> Bloquear</>}
+                            </button>
+                            <button className="btn-secondary" onClick={() => atualizarItem(selecionadoId, {flipH: !itemSelecionado.flipH})}>
+                                <Icons.Flip width={14} /> Virar
+                            </button>
                         </div>
                         
-                        <button className="btn-danger-action" onClick={() => deleteItem(selecionadoId)}><Icons.Trash width={14} /> Remover Item</button>
+                        <button className="btn-danger-action" onClick={() => deleteItem(selecionadoId)}>
+                            <Icons.Trash width={14} /> Remover Item
+                        </button>
                     </div>
-                ) : (<div className="empty-state-panel"><p style={{fontSize: '13px', color: '#64748b'}}>Selecione um item no quadro.</p></div>)}
+                ) : (
+                    <div className="empty-state-panel">
+                        <p style={{fontSize: '13px', color: '#64748b'}}>Selecione um item no quadro.</p>
+                    </div>
+                )}
             </div>
         )}
 
@@ -587,7 +675,7 @@ const Moodboard = () => {
                                     <label style={{color: '#c5a059', margin: 0}} title="Dê 2 cliques na bolinha abaixo para desligar">🌟 Efeito LED ({(itemSelecionado.neonGlow || 0)}px)</label>
                                     
                                     <label className="color-picker-wrapper" style={{fontSize: '10px', cursor: 'pointer'}}>
-                                       Cor LED: <input type="color" className="color-input-mini" style={{width: '20px', height: '20px'}} value={itemSelecionado.neonColor || itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {neonColor: e.target.value})} />
+                                        Cor LED: <input type="color" className="color-input-mini" style={{width: '20px', height: '20px'}} value={itemSelecionado.neonColor || itemSelecionado.color} onChange={e => atualizarItem(selecionadoId, {neonColor: e.target.value})} />
                                     </label>
                                 </div>
                           
@@ -599,14 +687,17 @@ const Moodboard = () => {
 
                         </div>
                     ) : <p className="hint-text">Crie ou selecione um texto.</p>}
-                </div>
+                 </div>
             </div>
         )}
 
         {abaAtiva === 'fundo' && (
              <div className="panel-content">
                  <h3 className="panel-title">CENÁRIO</h3>
-                 <div className="surface-switcher"><button className={`switch-btn ${activeSurface === 'wall' ? 'active' : ''}`} onClick={() => setActiveSurface('wall')}>🧱 PAREDE</button><button className={`switch-btn ${activeSurface === 'floor' ? 'active' : ''}`} onClick={() => setActiveSurface('floor')}>🟧 CHÃO</button></div>
+                 <div className="surface-switcher">
+                    <button className={`switch-btn ${activeSurface === 'wall' ? 'active' : ''}`} onClick={() => setActiveSurface('wall')}>🧱 PAREDE</button>
+                    <button className={`switch-btn ${activeSurface === 'floor' ? 'active' : ''}`} onClick={() => setActiveSurface('floor')}>🟧 CHÃO</button>
+                 </div>
                 
                 <div className="bg-tools">
                     <div className="bg-options-grid" style={{ justifyContent: 'center' }}>
@@ -660,22 +751,23 @@ const Moodboard = () => {
             </div>
     
             {itensCanvas.map((item, index) => (
-                <div key={item.uniqueId} className={`canvas-object ${selecionadoId === item.uniqueId ? 'selected' : ''} ${item.locked ? 'locked-item' : ''}`}
-                style={{ 
-                    left: item.x, 
-                    top: item.y, 
-                    width: item.type === 'text' ? 'max-content' : `${item.width}px`, 
-                    height: item.type === 'text' ? 'max-content' : `${item.height}px`, 
-                    zIndex: index + 10,
-                    transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1})`,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    filter: `brightness(${item.brightness}%) contrast(${item.contrast}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`,
-                    opacity: item.opacity / 100, cursor: item.locked ? 'not-allowed' : 'grab',
-                    touchAction: 'none'
-                }}
-                onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type)} 
-                onClick={e => e.stopPropagation()} 
-                onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}
+                <div key={item.uniqueId} 
+                    className={`canvas-object ${selecionadoId === item.uniqueId ? 'selected' : ''} ${item.locked ? 'locked-item' : ''}`}
+                    style={{ 
+                        left: item.x, 
+                        top: item.y, 
+                        width: item.type === 'text' ? 'max-content' : `${item.width}px`, 
+                        height: item.type === 'text' ? 'max-content' : `${item.height}px`, 
+                        zIndex: index + 10,
+                        transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1})`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        filter: `brightness(${item.brightness}%) contrast(${item.contrast}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`,
+                        opacity: item.opacity / 100, cursor: item.locked ? 'not-allowed' : 'grab',
+                        touchAction: 'none'
+                    }}
+                    onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type)} 
+                    onClick={e => e.stopPropagation()} 
+                    onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}
                 >
                 
                 {/* LÓGICA DE TEXTO APRIMORADA */}
@@ -758,9 +850,13 @@ const Moodboard = () => {
                 <div className="ctx-item" onClick={() => bringToFront()}><Icons.Layers style={{transform: 'rotate(180deg)'}} width={16} /> Trazer p/ Frente</div>
                 <div className="ctx-item" onClick={() => sendToBack()}><Icons.Layers width={16} /> Enviar p/ Trás</div>
                 <div className="ctx-divider"></div>
-                <div className="ctx-item" onClick={() => toggleLock()}><Icons.Lock /> {itensCanvas.find(i => i.uniqueId === contextMenu.itemId)?.locked ? 'Desbloquear' : 'Bloquear'}</div>
+                <div className="ctx-item" onClick={() => toggleLock()}>
+                    <Icons.Lock /> {itensCanvas.find(i => i.uniqueId === contextMenu.itemId)?.locked ? 'Desbloquear' : 'Bloquear'}
+                </div>
                 <div className="ctx-divider"></div>
-                <div className="ctx-item delete" onClick={() => { deleteItem(contextMenu.itemId); closeContextMenu(); }}><Icons.Trash /> Excluir</div>
+                <div className="ctx-item delete" onClick={() => { deleteItem(contextMenu.itemId); closeContextMenu(); }}>
+                    <Icons.Trash /> Excluir
+                </div>
             </div>
         )}
 
@@ -783,12 +879,16 @@ const Moodboard = () => {
                 <div className="modal-content large">
                     <h3>Projetos Salvos</h3>
                     <div className="projects-list">
-                        {projetosSalvos.length === 0 ? <p>Nenhum projeto salvo.</p> : projetosSalvos.map(proj => (
-                            <div key={proj.id} className="project-item-row">
-                                <span onClick={() => carregarProjeto(proj)}>{proj.nome}</span>
-                                <button onClick={() => deletarProjetoSalvo(proj.id, proj.nome)} className="btn-icon-del"><Icons.Trash /></button>
-                            </div>
-                        ))}
+                        {projetosSalvos.length === 0 ? (
+                            <p>Nenhum projeto salvo.</p> 
+                        ) : (
+                            projetosSalvos.map(proj => (
+                                <div key={proj.id} className="project-item-row">
+                                    <span onClick={() => carregarProjeto(proj)}>{proj.nome}</span>
+                                    <button onClick={() => deletarProjetoSalvo(proj.id, proj.nome)} className="btn-icon-del"><Icons.Trash /></button>
+                                </div>
+                            ))
+                        )}
                     </div>
                     <button className="btn-cancel full" onClick={() => setModalAbrirAberto(false)}>Fechar</button>
                 </div>

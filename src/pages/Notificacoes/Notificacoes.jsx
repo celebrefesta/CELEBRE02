@@ -1,33 +1,50 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import './Notificacoes.css';
 
 const Notificacoes = () => {
   const navigate = useNavigate();
   
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-
-  // 🔥 CHAVE MESTRA: Pega o ID da empresa no navegador ou o do próprio usuário
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [listaUnificada, setListaUnificada] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO CORPORATIVO)
+  const registrarLog = async (acao, detalhes) => {
+    if (!usuarioLogado) return;
+    try {
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      await addDoc(collection(db, "logs_atividades"), {
+        data: new Date(),
+        criadoEm: serverTimestamp(),
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
+      });
+    } catch (error) {
+      console.error("Erro ao gravar log da auditoria:", error);
+    }
+  };
+
   const carregarDados = async () => {
     if (!usuarioLogado) return;
-
     setLoading(true);
+    
     try {
       // 🎯 BUSCA VINCULADA À EMPRESA (TENANT): Puxa apenas os novos clientes pendentes da empresa
-      const qClientes = query(
-          collection(db, "clientes"), 
-          where("situacaoFinanceira", "==", "pendente"), 
-          where("userId", "==", tenantId)
-      );
+      const qClientes = query(collection(db, "clientes"), where("situacaoFinanceira", "==", "pendente"), where("userId", "==", tenantId));
       const snapClientes = await getDocs(qClientes);
       const listaC = snapClientes.docs.map(d => ({ 
           id: d.id, 
@@ -37,12 +54,7 @@ const Notificacoes = () => {
       }));
 
       // 🎯 BUSCA VINCULADA À EMPRESA (TENANT): Puxa apenas os novos orçamentos da empresa
-      const qPedidos = query(
-          collection(db, "locacoes"), 
-          where("origem", "==", "catalogo_publico"), 
-          where("status", "==", "orcamento"), 
-          where("userId", "==", tenantId)
-      );
+      const qPedidos = query(collection(db, "locacoes"), where("origem", "==", "catalogo_publico"), where("status", "==", "orcamento"), where("userId", "==", tenantId));
       const snapPedidos = await getDocs(qPedidos);
       const listaP = snapPedidos.docs.map(d => ({ 
           id: d.id, 
@@ -51,6 +63,7 @@ const Notificacoes = () => {
           timestampOrdenacao: d.data().criadoEm?.toMillis ? d.data().criadoEm.toMillis() : Date.now() 
       }));
 
+      // Junta as duas listas e ordena pelas mais recentes
       const todasNotificacoes = [...listaC, ...listaP].sort((a, b) => b.timestampOrdenacao - a.timestampOrdenacao);
       setListaUnificada(todasNotificacoes);
     } catch (error) {
@@ -68,20 +81,22 @@ const Notificacoes = () => {
     carregarDados();
   }, [usuarioLogado, navigate, tenantId]);
 
-  const aprovarCliente = async (id) => {
+  const aprovarCliente = async (id, nomeCliente) => {
     try {
       await updateDoc(doc(db, "clientes", id), { situacaoFinanceira: 'adimplente' });
+      await registrarLog("APROVAÇÃO DE CLIENTE", `Aprovou o cadastro do novo cliente: "${nomeCliente || 'Desconhecido'}".`);
       carregarDados(); 
     } catch (error) {
       alert("Erro ao aprovar cliente.");
     }
   };
 
-  const recusarCliente = async (id) => {
+  const recusarCliente = async (id, nomeCliente) => {
     const confirmar = window.confirm("Tem certeza que deseja recusar e excluir este cadastro definitivamente?");
     if (confirmar) {
       try {
         await deleteDoc(doc(db, "clientes", id));
+        await registrarLog("RECUSA DE CLIENTE", `Recusou e excluiu o cadastro do cliente: "${nomeCliente || 'Desconhecido'}".`);
         carregarDados(); 
       } catch (error) {
         alert("Erro ao excluir cliente.");
@@ -101,7 +116,6 @@ const Notificacoes = () => {
           <div className="loading-notificacoes">Buscando novidades...</div>
         ) : (
           <div className="notificacoes-lista">
-              
             {listaUnificada.length === 0 ? (
               <div className="notificacao-vazia">
                  <span style={{fontSize: '40px', display: 'block', marginBottom: '10px'}}>🎉</span>
@@ -127,10 +141,10 @@ const Notificacoes = () => {
                                    <button className="noti-btn btn-cinza" onClick={() => navigate('/cadastro-cliente', { state: { clienteEditando: item } })}>
                                        Revisar
                                    </button>
-                                   <button className="noti-btn btn-vermelho" onClick={() => recusarCliente(item.id)}>
+                                   <button className="noti-btn btn-vermelho" onClick={() => recusarCliente(item.id, item.nome || item.nomeCompleto)}>
                                        Recusar
                                    </button>
-                                   <button className="noti-btn btn-verde" onClick={() => aprovarCliente(item.id)}>
+                                   <button className="noti-btn btn-verde" onClick={() => aprovarCliente(item.id, item.nome || item.nomeCompleto)}>
                                        ✓ Aprovar
                                    </button>
                                </div>

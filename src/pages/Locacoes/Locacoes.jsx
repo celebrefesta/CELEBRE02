@@ -11,14 +11,14 @@ const Locacoes = () => {
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-
+  
   // 🔥 CHAVE MESTRA: Pega o ID da empresa no navegador ou o do próprio usuário
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [lista, setLista] = useState([]);
   const [busca, setBusca] = useState('');
   
-  const [filtroStatus, setFiltroStatus] = useState('todos'); 
+  const [filtroStatus, setFiltroStatus] = useState('todos');
   const [filtroServico, setFiltroServico] = useState('todos'); 
   const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes');
   const [filtroDataEvento, setFiltroDataEvento] = useState(''); 
@@ -47,6 +47,7 @@ const Locacoes = () => {
   const carregarLocacoes = async () => {
     if (!usuarioLogado) return;
     setLoading(true);
+    
     try {
       // 🎯 BUSCA CLIENTES DA EMPRESA
       const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
@@ -83,8 +84,7 @@ const Locacoes = () => {
         
         let timestampCriacao = 0;
         if (data.criadoEm) {
-            timestampCriacao = data.criadoEm.toMillis ?
-            data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
+            timestampCriacao = data.criadoEm.toMillis ? data.criadoEm.toMillis() : new Date(data.criadoEm).getTime();
         }
 
         let statusReal = String(data.status || '').toLowerCase().trim();
@@ -149,6 +149,7 @@ const Locacoes = () => {
   const registrarPagamento = async (e) => {
     e.preventDefault();
     setSalvandoPagamento(true);
+    
     try {
       const novoValorPago = Number(pedidoSelecionado.valorPago || 0) + Number(pagamento.valor);
       await updateDoc(doc(db, "locacoes", pedidoSelecionado.id), { valorPago: novoValorPago });
@@ -193,6 +194,7 @@ const Locacoes = () => {
   };
 
   let filtrados = [...lista];
+
   if (busca) {
     const termo = busca.toLowerCase();
     filtrados = filtrados.filter(i => {
@@ -284,7 +286,7 @@ const Locacoes = () => {
             <h2>{lista.filter(i => {
                 const s = String(i.status || '').toLowerCase();
                 return !s.includes('orcam') && !s.includes('cancelado') && !s.includes('finalizado') && !i.isOrcamentoVencido;
-            }).length}</h2>
+              }).length}</h2>
           </div>
         </div>
         <div className="dash-card warning">
@@ -393,6 +395,7 @@ const Locacoes = () => {
 
                 let alertaOperacional = null;
                 let corAlerta = '';
+                
                 if (item.dataRetirada && !statusStr.includes('finalizado') && !statusStr.includes('cancelado') && !item.isOrcamentoVencido) {
                     const hojeObj = new Date();
                     hojeObj.setHours(0,0,0,0);
@@ -400,6 +403,7 @@ const Locacoes = () => {
                     const devDateObj = item.dataDevolucao ? new Date(item.dataDevolucao + 'T00:00:00') : locDateObj;
                     const diffMs = locDateObj.getTime() - hojeObj.getTime();
                     const diasParaFesta = Math.ceil(diffMs / (1000 * 3600 * 24));
+                    
                     if (statusStr.includes('confirmado') && diasParaFesta <= 4 && diasParaFesta >= 0) {
                         alertaOperacional = `📦 Separar Peças! (${diasParaFesta === 0 ? 'É Hoje!' : `Faltam ${diasParaFesta} dias`})`; 
                         corAlerta = "#f59e0b";
@@ -424,11 +428,11 @@ const Locacoes = () => {
                       {item.numeroPedido ? (
                         `#${item.numeroPedido}`
                       ) : item.id ? (
-                       `#${item.id.substring(0,6).toUpperCase()}`
+                        `#${item.id.substring(0,6).toUpperCase()}`
                       ) : item.isOrcamentoVencido ? (
                         <span style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px'}}>PERDIDO</span>
                       ) : isOrcamento ? (
-                         <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span>
+                        <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span>
                       ) : (
                         <span style={{color: '#94a3b8', fontWeight: 'bold'}}>#S/N</span>
                       )}
@@ -469,11 +473,11 @@ const Locacoes = () => {
                       </span>
                       {alertaOperacional && (
                          <div style={{ marginTop: '6px', fontSize: '0.75rem', fontWeight: '800', color: corAlerta, textTransform: 'uppercase' }}>
-                          {alertaOperacional}
+                           {alertaOperacional}
                          </div>
                       )}
                     </td>
-                    
+                  
                     <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                       <div className="dropdown-container">
                         <button 
@@ -505,7 +509,7 @@ const Locacoes = () => {
 
                             {!isOrcamento && !isCancelado && (
                               <button 
-                                 onClick={(e) => { 
+                                onClick={(e) => { 
                                   e.stopPropagation();
                                   navigate(`/logistica`); 
                                 }} 
@@ -516,20 +520,20 @@ const Locacoes = () => {
                               </button>
                             )}
 
-                             {temAlertas && (
+                            {temAlertas && (
                               <button 
                                 onClick={(e) => { 
                                   e.stopPropagation(); 
                                   navigate(`/termo-ocorrencia/${item.id}`); 
                                 }} 
-                                 className="item-menu"
+                                className="item-menu"
                                 style={{ backgroundColor: '#fef2f2', color: '#b91c1c', fontWeight: '700' }}
                               >
                                 ⚠️ Imprimir Termo (Avaria/Falta)
                               </button>
                             )}
 
-                             <button onClick={(e) => { e.stopPropagation(); navigate(`/locacoes/editar/${item.id}`); }} className="item-menu" style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}>✏️ Editar Pedido</button>
+                            <button onClick={(e) => { e.stopPropagation(); navigate(`/locacoes/editar/${item.id}`); }} className="item-menu" style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}>✏️ Editar Pedido</button>
                             <button onClick={(e) => { e.stopPropagation(); handleExcluir(item.id); }} className="item-menu item-excluir">🗑️ Excluir</button>
                           </div>
                         )}

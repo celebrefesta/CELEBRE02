@@ -9,7 +9,7 @@ import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 const EditarLocacao = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-
+  
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
@@ -26,20 +26,21 @@ const EditarLocacao = () => {
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
   
   const [clienteSelecionado, setClienteSelecionado] = useState('');
-  const [tipoServico, setTipoServico] = useState('PEGUE E MONTE'); 
+  const [tipoServico, setTipoServico] = useState('PEGUE E MONTE');
   const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
+  
   const [categoriaTema, setCategoriaTema] = useState('');
   const [subcategoriaTema, setSubcategoriaTema] = useState('');
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
   const [temaFesta, setTemaFesta] = useState('');
   const [temaDigitadoPersonalizado, setTemaDigitadoPersonalizado] = useState('');
-
+  
   const [logistica, setLogistica] = useState({ 
     tipo: 'entrega', cep: '', rua: '', numero: '', bairro: '', cidade: '', frete: '', obsTransporte: '' 
   });
+  
   const [desconto, setDesconto] = useState(0);
   const [obsInternas, setObsInternas] = useState('');
-  
   const [numeroPedido, setNumeroPedido] = useState('');
   const [statusAtual, setStatusAtual] = useState('');
   const [valorJaPago, setValorJaPago] = useState(0); 
@@ -51,6 +52,7 @@ const EditarLocacao = () => {
   const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
 
   const [dadosIniciais, setDadosIniciais] = useState(null);
+
   const isFinalizado = statusAtual === 'finalizado' || statusAtual === 'cancelado';
 
   const badgeEsgotado = { position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
@@ -109,6 +111,7 @@ const EditarLocacao = () => {
           
           if (docSnap.exists()) {
             const data = docSnap.data();
+            
             setNumeroPedido(data.numeroPedido || '');
             setStatusAtual(data.status || 'orcamento'); 
             setClienteSelecionado(data.clienteId || '');
@@ -221,6 +224,7 @@ const EditarLocacao = () => {
       
       const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
       const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
+      
       let disponiveisTotais = Math.max(0, qtdFisica - qtdManutencao);
       let qtdReservadaForte = 0;
       let qtdRetornaNoDia = 0;
@@ -287,7 +291,7 @@ const EditarLocacao = () => {
 
       let qtdDesejada = parseInt(novaQtd);
       if (isNaN(qtdDesejada)) qtdDesejada = '';
-
+      
       if (typeof qtdDesejada === 'number' && qtdDesejada > 0) {
           const disp = getDisponibilidade(itemId);
           if (qtdDesejada > disp.livresMaximos) {
@@ -317,11 +321,12 @@ const EditarLocacao = () => {
     if (isFinalizado) return;
     const itemEncontrado = carrinho.find(i => i.id === itemId);
     const novoStatusSeparacao = !itemEncontrado.checkedSeparacao;
+    
     const novosItens = carrinho.map(item => {
       if (item.id === itemId) return { ...item, checkedSeparacao: novoStatusSeparacao };
       return item;
     });
-
+    
     setCarrinho(novosItens);
     salvarChecklistImediato(novosItens); 
     registrarLog("CHECKLIST: SEPARAÇÃO", `Marcou a peça "${itemEncontrado.nome}" como ${novoStatusSeparacao ? 'SEPARADA (Ida)' : 'PENDENTE (Desmarcou)'}.`);
@@ -331,7 +336,7 @@ const EditarLocacao = () => {
     if (isFinalizado) return;
     const itemEncontrado = carrinho.find(i => i.id === itemId);
     let logTexto = "";
-
+    
     const novosItens = carrinho.map(item => {
       if (item.id === itemId) {
         if (status === 'ok') {
@@ -377,7 +382,7 @@ const EditarLocacao = () => {
     let value = e.target.value.replace(/\D/g, "");
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
     setLogistica(prev => ({ ...prev, cep: cepFormatado }));
-
+    
     if (value.length === 8) {
       try {
         const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
@@ -440,7 +445,7 @@ const EditarLocacao = () => {
     }
 
     const statusFinalDesejado = novoStatus || statusAtual;
-
+    
     if (statusAtual === 'orcamento' && statusFinalDesejado === 'confirmado') {
         setStatusParaSalvar('confirmado');
         setModalSinalAberto(true);
@@ -452,7 +457,7 @@ const EditarLocacao = () => {
 
   const executarSalvamentoFinal = async (statusFinal, valorSinalEntrandoNoCaixa = 0, valorSinalNegociado = 0) => {
     setSalvandoPedido(true);
-
+    
     try {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
       const nomeCliente = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || clienteEncontrado.razaoSocial || 'Cliente') : 'Cliente';
@@ -461,6 +466,7 @@ const EditarLocacao = () => {
       const novoValorPagoTotal = valorJaPago + valorSinalEntrandoNoCaixa;
       const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
       const totalFinalCalculado = calcularTotal().total;
+      
       const docRef = doc(db, "locacoes", id);
       
       await updateDoc(docRef, {
@@ -493,28 +499,25 @@ const EditarLocacao = () => {
             descricao: `SINAL (Aprovação) - Pedido ${numeroPedido ? `#${numeroPedido}` : ''} - ${nomeCliente}`,
             userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
         });
-
+        
         await registrarLog("PAGAMENTO DE SINAL", `Registrou entrada financeira de R$ ${valorSinalEntrandoNoCaixa.toFixed(2)}.`);
         setValorJaPago(novoValorPagoTotal);
       }
       
       // 🔥 ATUALIZAR FINANCEIRO PENDENTE
       const valorRestante = totalFinalCalculado - novoValorPagoTotal;
-
       try {
           const qPendentes = query(collection(db, "financeiro_lancamentos"), where("pedidoId", "==", id), where("status", "==", "pendente"));
           const snapPendentes = await getDocs(qPendentes);
           
           if (valorRestante > 0 && statusFinal !== 'orcamento') {
               if (!snapPendentes.empty) {
-                  // Já existe um lançamento pendente, vamos atualizar o valor
                   const docRefPend = doc(db, "financeiro_lancamentos", snapPendentes.docs[0].id);
                   await updateDoc(docRefPend, {
                       valor: valorRestante,
                       descricao: `Locação #${numeroPedido} - ${nomeCliente}`
                   });
               } else {
-                  // Não tem pendente mas ainda falta pagar, logo, cria um novo
                   await addDoc(collection(db, "financeiro_lancamentos"), {
                       userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
                       pedidoId: id,
@@ -529,7 +532,6 @@ const EditarLocacao = () => {
                   });
               }
           } else if (valorRestante <= 0) {
-              // Se já não há valor a receber, apaga os pendentes dessa locação
               snapPendentes.docs.forEach(async (d) => {
                   await deleteDoc(doc(db, "financeiro_lancamentos", d.id));
               });
@@ -539,7 +541,7 @@ const EditarLocacao = () => {
       }
 
       let mudancas = [];
-
+      
       if (dadosIniciais) {
           if (String(clienteSelecionado) !== String(dadosIniciais.clienteId)) {
               const cliAntigo = clientes.find(c => String(c.id) === String(dadosIniciais.clienteId))?.nome || 'Desconhecido';
@@ -552,10 +554,10 @@ const EditarLocacao = () => {
           if (logistica.tipo !== dadosIniciais.tipoLogistica) mudancas.push(`Logística (de '${dadosIniciais.tipoLogistica}' para '${logistica.tipo}')`);
           if (logistica.frete !== dadosIniciais.frete) mudancas.push(`Frete (de '${dadosIniciais.frete}' para '${logistica.frete}')`);
           if (Number(desconto) !== Number(dadosIniciais.desconto)) mudancas.push(`Desconto (para R$${desconto})`);
-
+          
           const carrinhoAntigo = JSON.parse(dadosIniciais.carrinhoSnapshot || '[]');
           let mudancasItens = [];
-
+          
           carrinho.forEach(itemAtual => {
               const itemAntigo = carrinhoAntigo.find(i => i.id === itemAtual.id);
               if (itemAntigo) {
@@ -564,11 +566,11 @@ const EditarLocacao = () => {
                   mudancasItens.push(`Adicionou: ${itemAtual.nome}`);
               }
           });
-
+          
           carrinhoAntigo.forEach(itemAntigo => {
               if (!carrinho.find(i => i.id === itemAntigo.id)) mudancasItens.push(`Removeu: ${itemAntigo.nome}`);
           });
-
+          
           if (mudancasItens.length > 0) mudancas.push(`Itens [${mudancasItens.join(', ')}]`);
       }
 
@@ -587,10 +589,10 @@ const EditarLocacao = () => {
           tipoServico: tipoServico, tipoLogistica: logistica.tipo, frete: logistica.frete, desconto: desconto,
           carrinhoSnapshot: JSON.stringify(carrinho.map(i => ({ id: i.id, qtd: i.qtd, nome: i.nome })))
       });
-
+      
       if (statusFinal && statusFinal !== statusAtual) alert(`✅ Pedido salvo! Avançou para a etapa: ${statusFinal.toUpperCase()}`);
       else alert(`✅ Alterações salvas com sucesso!`);
-
+      
     } catch (e) { 
       alert("Erro ao atualizar o pedido.");
       console.error(e);
@@ -623,9 +625,10 @@ const EditarLocacao = () => {
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
       const vSinalFormatado = valorSinal || '0,00';
-      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
-      const msgEncoded = encodeURIComponent(texto);
       
+      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
+      
+      const msgEncoded = encodeURIComponent(texto);
       const url = telefoneC ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` : `https://api.whatsapp.com/send?text=${msgEncoded}`;
       window.open(url, '_blank');
   };
@@ -711,7 +714,7 @@ const EditarLocacao = () => {
                 <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)} disabled={isFinalizado}>
                   <option value="">Selecione um cliente cadastrado...</option>
                   <option value={clienteSelecionado} disabled hidden>
-                     {clientes.find(c => String(c.id) === String(clienteSelecionado))?.nome || 'Carregando...'}
+                      {clientes.find(c => String(c.id) === String(clienteSelecionado))?.nome || 'Carregando...'}
                   </option>
                   {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia || c.razaoSocial}</option>)}
                 </select>
@@ -982,19 +985,19 @@ const EditarLocacao = () => {
             <div className="fin-acoes" style={{marginTop: '0'}}>
                 
                 {statusAtual === 'orcamento' && (
-                  <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}} disabled={salvandoPedido}>
+                   <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')} style={{backgroundColor: '#3b82f6', marginBottom: '10px'}} disabled={salvandoPedido}>
                     ✔ APROVAR PEDIDO
                 </button>
                 )}
 
                 {statusAtual === 'confirmado' && (
-                  <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}} disabled={salvandoPedido}>
+                   <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('preparacao')} style={{backgroundColor: '#f59e0b', marginBottom: '10px'}} disabled={salvandoPedido}>
                     📦 INICIAR SEPARAÇÃO
                 </button>
                 )}
 
                 {statusAtual === 'preparacao' && (
-                  <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}} disabled={salvandoPedido}>
+                   <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('entregue')} style={{backgroundColor: '#8b5cf6', marginBottom: '10px'}} disabled={salvandoPedido}>
                     🚚 MARCAR COMO ENTREGUE
                 </button>
                 )}
@@ -1014,7 +1017,7 @@ const EditarLocacao = () => {
                 {!isFinalizado && (
                 <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center'}} onClick={() => interceptarSalvamento()} disabled={salvandoPedido}>
                     💾 Apenas Salvar Alterações
-                 </button>
+                  </button>
                 )}
             </div>
           </div>
@@ -1068,7 +1071,7 @@ const EditarLocacao = () => {
                       onClick={abrirWhatsAppCobranca}
                       style={{ width: '100%', padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '15px', transition: '0.2s', boxShadow: '0 4px 6px rgba(34, 197, 94, 0.2)' }}
                   >
-                      <span style={{fontSize: '20px'}}>📱</span> Enviar Cobrança no WhatsApp
+                       <span style={{fontSize: '20px'}}>📱</span> Enviar Cobrança no WhatsApp
                   </button>
               </div>
 
@@ -1081,7 +1084,7 @@ const EditarLocacao = () => {
                      </button>
                      
                      <button type="button" onClick={salvarAguardandoPagamento} disabled={salvandoPedido} style={{padding: '16px', background: '#fffbeb', border: '2px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
-                         {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
+                          {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
                      </button>
                   </div>
                ) : (
@@ -1093,7 +1096,7 @@ const EditarLocacao = () => {
                )}
 
                <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>
-                   Cancelar e Voltar
+                    Cancelar e Voltar
                </button>
             </form>
           </div>
@@ -1109,7 +1112,7 @@ const EditarLocacao = () => {
             </div>
             
             <div className="catalogo-filtros">
-              <input type="text" className="search-input-clean" style={{border: '1px solid var(--borda)', padding: '10px', borderRadius: '8px'}} placeholder="🔎 Buscar peça..." value={busca} onChange={e => setBusca(e.target.value)} />
+               <input type="text" className="search-input-clean" style={{border: '1px solid var(--borda)', padding: '10px', borderRadius: '8px'}} placeholder="🔎 Buscar peça..." value={busca} onChange={e => setBusca(e.target.value)} />
               <div className="chips-categorias">
                 {categoriasUnicasEstoque.map(cat => (
                   <button key={cat} type="button" className={`chip-cat ${filtroCategoria === cat ? 'active' : ''}`} onClick={() => setFiltroCategoria(cat)}>
@@ -1141,13 +1144,13 @@ const EditarLocacao = () => {
                           {!estaEsgotado && <button className="btn-add-peca">+</button>}
                       </div>
                       <div className="peca-info">
-                        <strong>{item.nome}</strong>
+                         <strong>{item.nome}</strong>
                         <span>{item.categoria}</span>
                         <b className="txt-sucesso">R$ {item.financeiro?.valorAluguel || item.preco || 0}</b>
                       </div>
                     </div>
                   );
-               })}
+                })}
               {itensFiltrados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada.</p>}
             </div>
           </div>

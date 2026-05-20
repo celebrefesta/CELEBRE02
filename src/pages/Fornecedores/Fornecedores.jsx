@@ -1,25 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { db } from '../../firebaseConfig'; 
+import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs, deleteDoc, doc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; 
+import { getAuth } from 'firebase/auth';
 import './Fornecedores.css';
 
 const Fornecedores = () => {
   const navigate = useNavigate();
-
-  // 🔥 Autenticação
+  
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [fornecedores, setFornecedores] = useState([]);
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState('');
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE FORNECEDORES)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE FORNECEDORES VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -28,7 +29,9 @@ const Fornecedores = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de fornecedores:", error);
@@ -43,8 +46,8 @@ const Fornecedores = () => {
 
     const carregarFornecedores = async () => {
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS os seus fornecedores
-        const q = query(collection(db, "fornecedores"), where("userId", "==", usuarioLogado.uid));
+        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS os fornecedores da empresa (tenantId)
+        const q = query(collection(db, "fornecedores"), where("userId", "==", tenantId));
         const querySnapshot = await getDocs(q);
         const lista = querySnapshot.docs.map(doc => ({
           id: doc.id,
@@ -59,14 +62,13 @@ const Fornecedores = () => {
     };
 
     carregarFornecedores();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const handleDelete = async (id, nome) => {
       if(window.confirm(`Deseja realmente excluir o fornecedor "${nome}"?`)) {
           try {
-              // 🔥 Regista no monitoramento ANTES de apagar
+              // 🔥 Regista no monitoramento antes de apagar
               await registrarLog("EXCLUSÃO DE FORNECEDOR", `Excluiu o fornecedor/parceiro: "${nome}".`);
-              
               await deleteDoc(doc(db, "fornecedores", id));
               setFornecedores(prev => prev.filter(f => f.id !== id));
           } catch (e) {
@@ -75,7 +77,6 @@ const Fornecedores = () => {
       }
   };
 
-  // Função para desenhar as estrelinhas
   const renderStars = (score) => {
     const numScore = Number(score) || 0;
     const stars = [];
@@ -98,7 +99,6 @@ const Fornecedores = () => {
 
   return (
     <div className="fornecedores-page">
-      {/* Cabeçalho */}
       <header className="page-header">
         <div className="page-title">
           <h1>Meus Fornecedores</h1>
@@ -109,7 +109,6 @@ const Fornecedores = () => {
         </button>
       </header>
 
-      {/* Filtros */}
       <div className="filter-card">
         <div className="filter-grid">
           <div className="form-group">
@@ -119,7 +118,7 @@ const Fornecedores = () => {
                 className="form-control" 
                 placeholder="Nome, CNPJ ou Produto..." 
                 value={busca}
-                onChange={(e) => setBusca(e.target.value)}
+                onChange={(e) => setFornecedores(e.target.value)}
             />
           </div>
           <div className="form-group">
@@ -140,7 +139,6 @@ const Fornecedores = () => {
         </div>
       </div>
 
-      {/* Tabela */}
       <div className="table-card">
         {loading ? (
             <div style={{padding: '40px', textAlign: 'center', color: '#64748b'}}>Carregando os seus fornecedores...</div>

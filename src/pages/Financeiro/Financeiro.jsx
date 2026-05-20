@@ -7,25 +7,29 @@ import "./Financeiro.css";
 
 const Financeiro = () => {
   const navigate = useNavigate();
-  // 🔥 Autenticação
+  
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [transacoes, setTransacoes] = useState([]);
-  
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO)
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipe = usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
-        funcionario: nomeEquipe,
-        usuarioNome: nomeEquipe,
+        funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa,
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria financeira:", error);
@@ -38,13 +42,13 @@ const Financeiro = () => {
         return;
     }
 
-    // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as transações da sua empresa
-    const q = query(collection(db, "financeiro_lancamentos"), where("userId", "==", usuarioLogado.uid));
+    // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as transações da sua empresa 
+    const q = query(collection(db, "financeiro_lancamentos"), where("userId", "==", tenantId));
     
     const unsubscribe = onSnapshot(q, (snap) => {
       let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       
-      // 🔥 ORDENAÇÃO SEGURA: Ordena por data do mais recente para o mais antigo 
+      // Ordenação segura [cite: 9, 10]
       lista.sort((a, b) => {
          const dataA = a.data ? new Date(a.data).getTime() : 0;
          const dataB = b.data ? new Date(b.data).getTime() : 0;
@@ -60,7 +64,7 @@ const Financeiro = () => {
     });
 
     return () => unsubscribe();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   // Cálculos dos Cards
   const totalEntradas = transacoes.filter(t => t.tipo === 'entrada').reduce((acc, t) => acc + Number(t.valor), 0);
@@ -74,10 +78,10 @@ const Financeiro = () => {
         const valorFormatado = Number(transacao.valor).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         const detalhesLog = `Excluiu um lançamento de ${transacao.tipo.toUpperCase()} no valor de ${valorFormatado}. Descrição: ${transacao.descricao}`;
         
-        // 🔥 Primeiro regista o log (para garantir o rastro)
+        // 🔥 Primeiro regista o log [cite: 16]
         await registrarLog("EXCLUSÃO FINANCEIRA", detalhesLog);
         
-        // Depois apaga o documento
+        // Depois apaga o documento [cite: 17]
         await deleteDoc(doc(db, "financeiro_lancamentos", transacao.id));
         
         alert("Lançamento removido com sucesso!");
@@ -108,7 +112,7 @@ const Financeiro = () => {
 
         {/* CARDS DE RESUMO (KPIs) */}
         <div className="fin-kpi-grid">
-      
+     
           <div className="kpi-card card-entradas">
             <div className="kpi-header">
               <span>ENTRADAS (RECEBIDO)</span>
