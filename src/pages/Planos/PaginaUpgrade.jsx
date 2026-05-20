@@ -8,15 +8,17 @@ import './PaginaUpgrade.css';
 const PaginaUpgrade = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
+  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE INTENÇÃO DE UPGRADE)
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE INTENÇÃO DE UPGRADE VINCULADO À EMPRESA)
   const registrarLog = async () => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Usuário";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Usuário";
+      
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -25,7 +27,9 @@ const PaginaUpgrade = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: "INTERESSE EM UPGRADE",
         detalhes: "Esbarrou num bloqueio de funcionalidade e clicou para ver os Planos Disponíveis.",
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log de intenção de upgrade:", error);

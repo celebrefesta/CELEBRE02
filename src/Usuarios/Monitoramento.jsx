@@ -9,6 +9,9 @@ const Monitoramento = () => {
   const usuarioLogado = auth.currentUser;
   const navigate = useNavigate();
 
+  // 🔥 CHAVE MESTRA: Pega o ID da empresa no navegador ou o do próprio usuário
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
   const [atividades, setAtividades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filtroFuncionario, setFiltroFuncionario] = useState('Todos');
@@ -20,26 +23,25 @@ const Monitoramento = () => {
       return;
     }
     carregarDados();
-  }, [usuarioLogado, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
   const carregarDados = async () => {
     setLoading(true);
     try {
-      // 1. Busca a lista de funcionários para montar o filtro (Select)
-      const qEquipe = query(collection(db, "equipe"), where("empresaId", "==", usuarioLogado.uid));
+      // 1. Busca a lista de funcionários para montar o filtro (Select) vinculado à empresa
+      const qEquipe = query(collection(db, "usuarios_equipe"), where("empresaId", "==", tenantId));
       const snapEquipe = await getDocs(qEquipe);
       const listaEquipe = snapEquipe.docs.map(doc => ({ id: doc.id, nome: doc.data().nome }));
       setEquipe(listaEquipe);
 
-      // 2. 🔥 BUSCA INTELIGENTE: Puxa tanto por empresaId como por userId para nunca perder logs!
-      const qAtividadesEmpresa = query(collection(db, "logs_atividades"), where("empresaId", "==", usuarioLogado.uid));
-      const qAtividadesUser = query(collection(db, "logs_atividades"), where("userId", "==", usuarioLogado.uid));
-      
+      // 2. 🔥 BUSCA INTELIGENTE: Puxa tanto por empresaId como por userId no cofre da empresa
+      const qAtividadesEmpresa = query(collection(db, "logs_atividades"), where("empresaId", "==", tenantId));
+      const qAtividadesUser = query(collection(db, "logs_atividades"), where("userId", "==", tenantId));
       const [snapEmpresa, snapUser] = await Promise.all([getDocs(qAtividadesEmpresa), getDocs(qAtividadesUser)]);
       
       // Usamos um Map para juntar as duas buscas e evitar que o mesmo log apareça duplicado
       const mapaAtividades = new Map();
-      
+
       const processarDocs = (snap) => {
           snap.docs.forEach(doc => {
               const dataOriginal = doc.data();
@@ -64,7 +66,7 @@ const Monitoramento = () => {
                   ...dataOriginal,
                   dataHora: dataHoraAjustada,
                   // Tenta extrair o nome de todas as formas possíveis
-                  nomeFuncionario: dataOriginal.nomeFuncionario || dataOriginal.funcionario || dataOriginal.usuarioNome || "Equipa",
+                  nomeFuncionario: dataOriginal.nomeFuncionario || dataOriginal.funcionario || dataOriginal.usuarioNome || "Equipe",
                   acao: dataOriginal.acao || "AÇÃO DESCONHECIDA"
               });
           });
@@ -78,7 +80,6 @@ const Monitoramento = () => {
 
       // 🔥 A MÁGICA: Ordenamos a lista do mais novo pro mais velho com a data correta
       listaAtividades.sort((a, b) => new Date(b.dataHora) - new Date(a.dataHora));
-
       setAtividades(listaAtividades);
 
     } catch (error) {
@@ -107,11 +108,10 @@ const Monitoramento = () => {
   // Função centralizada para dar cores aos "Emblemas" (Badges) com base no texto da ação
   const obterEstiloBadge = (acao, tipo) => {
       const acaoUpper = String(acao).toUpperCase();
-      
       if (tipo === 'LOGIN' || acaoUpper.includes('LOGIN')) return { bg: '#dbeafe', color: '#1e40af' }; // Azul
       if (tipo === 'EXCLUSAO' || acaoUpper.includes('EXCLU') || acaoUpper.includes('CANCEL')) return { bg: '#fee2e2', color: '#991b1b' }; // Vermelho
       if (tipo === 'EDICAO' || acaoUpper.includes('EDIÇÃO') || acaoUpper.includes('ATUALIZ')) return { bg: '#fef3c7', color: '#92400e' }; // Amarelo
-      if (acaoUpper.includes('NOVA LOCAÇÃO') || acaoUpper.includes('PEDIDO') || acaoUpper.includes('ORÇAMENTO')) return { bg: '#dcfce7', color: '#166534' }; // Verde Sucesso
+      if (acaoUpper.includes('NOVA LOCAÇÃO') || acaoUpper.includes('PEDIDO') || acaoUpper.includes('ORÇAMENTO') || acaoUpper.includes('ESTOQUE')) return { bg: '#dcfce7', color: '#166534' }; // Verde Sucesso
       if (acaoUpper.includes('PAGAMENTO') || acaoUpper.includes('SINAL') || acaoUpper.includes('FINANCEIRO')) return { bg: '#cffafe', color: '#0891b2' }; // Ciano Dinheiro
       
       return { bg: '#f1f5f9', color: '#475569' }; // Cinza (Padrão)
@@ -128,9 +128,8 @@ const Monitoramento = () => {
         </div>
         
         <div className="acoes-top" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
-          
           <button 
-            onClick={() => navigate('/usuarios')}
+            onClick={() => navigate('/perfil')}
             style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '10px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
           >
             <i className="fas fa-arrow-left"></i> Voltar para Equipe
@@ -146,7 +145,6 @@ const Monitoramento = () => {
               <option key={func.id} value={func.id}>{func.nome}</option>
             ))}
           </select>
-
         </div>
       </div>
 
@@ -171,7 +169,7 @@ const Monitoramento = () => {
             ) : (
               atividadesFiltradas.map(atividade => {
                 const estilos = obterEstiloBadge(atividade.acao, atividade.tipo);
-                const inicial = atividade.nomeFuncionario ? atividade.nomeFuncionario.charAt(0).toUpperCase() : 'U';
+                const inicial = atividade.nomeFuncionario ? atividade.nomeFuncionario.charAt(0).toUpperCase() : 'E';
 
                 return (
                 <tr key={atividade.id} style={{ borderBottom: '1px solid #f1f5f9' }}>

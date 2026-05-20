@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore'; 
-import { getAuth } from 'firebase/auth'; 
+import { getAuth } from 'firebase/auth';
 import Navbar from '../../components/Navbar'; 
 import './Planos.css';
 
@@ -15,11 +15,14 @@ const Planos = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ASSINATURAS E UPGRADES)
+  // 🔥 CHAVE MESTRA: Pega o ID da empresa no navegador ou o do próprio usuário
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+
+  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO CORPORATIVO DE ASSINATURAS E UPGRADES)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Usuário Logado";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
         data: new Date(),
         criadoEm: serverTimestamp(),
@@ -28,7 +31,9 @@ const Planos = () => {
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: usuarioLogado?.uid
+        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
       console.error("Erro ao gravar log de assinatura:", error);
@@ -62,6 +67,7 @@ const Planos = () => {
   useEffect(() => {
     const buscarPlanos = async () => {
       try {
+        // 🔥 Não usamos o tenantId aqui porque a matriz de planos é global para todos os clientes
         const q = query(collection(db, "planos"), orderBy("ordem", "asc"));
         const snap = await getDocs(q);
         const planosData = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -87,7 +93,7 @@ const Planos = () => {
     buscarPlanos();
   }, []);
 
-  // 🔥 AGORA SIM: ENVIA PARA O SEU CHECKOUT REAL PASSANDO O PLANO E GRAVA NO ESPIÃO 🔥
+  // 🔥 ENVIA PARA O CHECKOUT E GRAVA NO ESPIÃO 🔥
   const handleSelecionarPlano = async (planoSelecionado) => {
       if (usuarioLogado) {
           // 🔥 AUDITORIA: Regista a intenção de upgrade/assinatura antes de enviar para o checkout
@@ -160,7 +166,7 @@ const Planos = () => {
                           const valor = (valorBanco === undefined || valorBanco === "") ? "Ilimitado" : valorBanco;
                           return (
                               <td key={p.id} className="td-check-public" style={{ fontWeight: '800', color: '#0f172a', fontSize: '15px' }}>
-                                  {valor}
+                                {valor}
                               </td>
                           );
                       } else {

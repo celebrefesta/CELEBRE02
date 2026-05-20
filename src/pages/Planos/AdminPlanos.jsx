@@ -9,15 +9,16 @@ const AdminPlanos = () => {
     const [loading, setLoading] = useState(true);
     const [recursos, setRecursos] = useState([]);
 
-    // 🔥 Autenticação
+    // 🔥 Autenticação e Chave Mestra (Para o Espião)
     const auth = getAuth();
     const usuarioLogado = auth.currentUser;
+    const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
-    // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DA ADMINISTRAÇÃO DE PLANOS)
+    // 🔥 SISTEMA DE AUDITORIA PADRONIZADO
     const registrarLog = async (acao, detalhes) => {
         if (!usuarioLogado) return;
         try {
-            const nomeEquipa = usuarioLogado?.displayName || usuarioLogado?.email || "Administrador";
+            const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Administrador Master";
             await addDoc(collection(db, "logs_atividades"), {
                 data: new Date(),
                 criadoEm: serverTimestamp(),
@@ -26,7 +27,9 @@ const AdminPlanos = () => {
                 usuarioEmail: usuarioLogado?.email || "Desconhecido",
                 acao: acao.toUpperCase(),
                 detalhes: detalhes,
-                userId: usuarioLogado?.uid
+                userId: tenantId, 
+                empresaId: tenantId,
+                funcionarioId: usuarioLogado?.uid
             });
         } catch (error) {
             console.error("Erro ao gravar log da matriz de planos:", error);
@@ -61,11 +64,13 @@ const AdminPlanos = () => {
     const carregarDados = async () => {
         setLoading(true);
         try {
+            // Planos são globais, não usamos where("userId", "==", tenantId) aqui!
             const q = query(collection(db, "planos"), orderBy("ordem", "asc"));
             const snap = await getDocs(q);
             const planosCarregados = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             
             const recursosEncontrados = new Set(recursosPadrao);
+            
             planosCarregados.forEach(p => {
                 if (Array.isArray(p.beneficios)) {
                     p.beneficios.forEach(b => recursosEncontrados.add(b));
@@ -74,16 +79,19 @@ const AdminPlanos = () => {
                     Object.keys(p.limites).forEach(l => recursosEncontrados.add(l));
                 }
             });
-
+            
             setRecursos(Array.from(recursosEncontrados));
             setPlanos(planosCarregados);
         } catch (error) {
             console.error("Erro ao carregar:", error);
+        } finally {
+            setLoading(false);
         }
-        setLoading(false);
     };
 
-    useEffect(() => { carregarDados(); }, []);
+    useEffect(() => { 
+        carregarDados(); 
+    }, []);
 
     const mudarOrdem = (planoId, novaOrdem) => {
         setPlanos(planosAtuais => {
@@ -129,6 +137,7 @@ const AdminPlanos = () => {
 
     const atualizarNomeRecurso = (oldName, newName) => {
         const nomeLimpo = newName.trim();
+        
         if (oldName === nomeLimpo || nomeLimpo === '') return;
         
         if (recursos.includes(nomeLimpo)) {
@@ -137,6 +146,7 @@ const AdminPlanos = () => {
         }
 
         setRecursos(recursos.map(r => r === oldName ? nomeLimpo : r));
+        
         setPlanos(planos.map(p => {
             const novoPlano = { ...p };
             if (Array.isArray(novoPlano.beneficios)) {
@@ -160,9 +170,8 @@ const AdminPlanos = () => {
             beneficios: [],
             limites: {} 
         };
-        const docRef = await addDoc(collection(db, "planos"), novo);
         
-        // 🔥 REGISTA AUDITORIA
+        const docRef = await addDoc(collection(db, "planos"), novo);
         await registrarLog("NOVO PLANO CRIADO", `Adicionou um novo plano à matriz de assinaturas.`);
         
         setPlanos([...planos, { id: docRef.id, ...novo }]);
@@ -174,10 +183,7 @@ const AdminPlanos = () => {
 
         if (window.confirm(`Atenção: Excluir permanentemente o plano "${nomePlano}"?`)) {
             await deleteDoc(doc(db, "planos", id));
-            
-            // 🔥 REGISTA AUDITORIA
             await registrarLog("EXCLUSÃO DE PLANO", `Excluiu o plano "${nomePlano}" da matriz de assinaturas.`);
-            
             setPlanos(planos.filter(p => p.id !== id));
         }
     };
@@ -217,11 +223,11 @@ const AdminPlanos = () => {
                 });
             }
             
-            // 🔥 REGISTA AUDITORIA
             await registrarLog("ATUALIZAÇÃO DE MATRIZ DE PLANOS", `Salvou alterações nos preços, limites ou recursos dos planos.`);
-            
             alert("Matriz salva com sucesso! 💎");
-        } catch (e) { alert("Erro ao salvar: " + e.message); }
+        } catch (e) { 
+            alert("Erro ao salvar: " + e.message); 
+        }
     };
 
     if (loading) return <div className="loading-admin">Construindo matriz...</div>;
