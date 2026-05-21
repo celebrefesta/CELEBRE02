@@ -1,4 +1,21 @@
+/* A REGRA DE OURO: O @import DEVE SER SEMPRE A PRIMEIRA LINHA */
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+/* =========================================
+   PALETA DE CORES PREMIUM (CELEBRE)
+   ========================================= */
+:root {
+  --azul-naval: #0f172a;       /* Cor principal */
+  --azul-naval-hover: #1e293b;
+  --dourado: #c5a059;          /* Dourado para detalhes e destaques */
+  --dourado-hover: #b48c48;
+  --dourado-claro: #fef3c7;
+  --dourado-borda: #fde68a;
+  --fundo-branco: #ffffff;
+  --texto-escuro: #0f172a;
+  --texto-claro: #64748b;
+  --borda-suave: #e2e8f0;
+}
 
 html {
   scroll-behavior: smooth;
@@ -6,8 +23,8 @@ html {
 
 .landing-container {
   font-family: 'Plus Jakarta Sans', sans-serif;
-  background-color: #ffffff;
-  color: #0f172a;
+  background-color: var(--fundo-branco);
+  color: var(--texto-escuro);
   overflow-x: hidden;
 }
 
@@ -20,7 +37,7 @@ html {
   align-items: center;
   padding: 15px 5%;
   background: rgba(255, 255, 255, 0.98);
-  border-bottom: 1px solid #f1f5f9;
+  border-bottom: 1px solid var(--borda-suave);
   position: sticky;
   top: 0;
   z-index: 100;
@@ -32,7 +49,7 @@ html {
   gap: 12px;
   font-size: 1.6rem; 
   font-weight: 800; 
-  color: #0f172a;
+  color: var(--azul-naval);
 }
 
 .header-logo-img {
@@ -50,15 +67,15 @@ html {
 
 .nav-link {
   text-decoration: none;
-  color: #475569;
+  color: var(--texto-claro);
   font-weight: 600;
   transition: color 0.2s;
 }
 
-.nav-link:hover { color: #0f172a; }
+.nav-link:hover { color: var(--azul-naval); }
 
 .nav-btn-destaque {
-  background: #0f172a;
+  background: var(--azul-naval);
   color: white;
   padding: 10px 20px;
   border-radius: 8px;
@@ -67,7 +84,7 @@ html {
   transition: background 0.2s;
 }
 
-.nav-btn-destaque:hover { background: #1e293b; }
+.nav-btn-destaque:hover { background: var(--azul-naval-hover); }
 
 /* =========================================
    HERO LADO A LADO
@@ -90,13 +107,14 @@ html {
 
 .hero-badge {
   display: inline-block;
-  background: #eff6ff;
-  color: #2563eb;
+  background: var(--dourado-claro);
+  color: #92400e;
   padding: 6px 14px;
   border-radius: 50px;
   font-size: 0.85rem;
   font-weight: 700;
   margin-bottom: 20px;
+  border: 1px solid var(--dourado-borda);
 }
 
 .hero-content-left h1 {
@@ -105,13 +123,24 @@ html {
   line-height: 1.15;
   letter-spacing: -1px;
   margin-bottom: 20px;
+  color: var(--azul-naval);
 }
 
-.text-highlight { color: #3b82f6; }
+.text-highlight { color: var(--azul-naval); }
+
+.text-highlight::after {
+  content: '';
+  display: block;
+  width: 100%;
+  height: 8px;
+  background-color: var(--dourado);
+  opacity: 0.3;
+  margin-top: -15px;
+}
 
 .hero-subtitle {
   font-size: 1.1rem;
-  color: #475569;
+  color: var(--texto-claro);
   line-height: 1.6;
   margin-bottom: 25px;
 }
@@ -124,13 +153,13 @@ html {
   gap: 10px;
   margin-bottom: 10px;
   font-weight: 600;
-  color: #1e293b;
+  color: var(--texto-escuro);
   font-size: 1.05rem;
 }
 
 .check-icon {
-  color: #10b981;
-  background: #d1fae5;
+  background: var(--dourado);
+  color: white;
   border-radius: 50%;
   width: 24px;
   height: 24px;
@@ -149,33 +178,34 @@ html {
 }
 
 .btn-primary-large {
-  background: #3b82f6;
+  background: var(--azul-naval);
   color: white;
   padding: 16px 36px;
   border-radius: 10px;
   font-size: 1.1rem;
   font-weight: 700;
   text-decoration: none;
-  box-shadow: 0 10px 20px rgba(59, 130, 246, 0.25);
+  box-shadow: 0 10px 20px rgba(15, 23, 42, 0.25);
   transition: all 0.2s;
 }
 
-.btn-primary-large:hover { background: #2563eb; transform: translateY(-2px); }
+.btn-primary-large:hover { background: var(--azul-naval-hover); transform: translateY(-2px); }
 
-.hero-disclaimer { font-size: 0.8rem; color: #94a3b8; font-weight: 500; }
+.hero-disclaimer { font-size: 0.8rem; color: var(--texto-claro); font-weight: 500; }
 
 .hero-users {
   display: flex;
   align-items: center;
   gap: 15px;
   font-size: 0.9rem;
-  color: #64748b;
+  color: var(--texto-claro);
 }
 
 .avatars { display: flex; }
 .avatar { 
   width: 32px; height: 32px; background: #e2e8f0; border-radius: 50%; 
-  display: flex; align-items: center; justify-content: center;
+  display: flex;
+  align-items: center; justify-content: center;
   margin-left: -10px; border: 2px solid white;
 }
 .avatar:first-child { margin-left: 0; }
@@ -186,7 +216,7 @@ html {
   width: 100%;
   border-radius: 16px;
   box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.2);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--borda-suave);
 }
 
 .float-card {
@@ -212,8 +242,9 @@ html {
   display: flex; align-items: center; justify-content: center;
 }
 
-.float-card strong { display: block; font-size: 0.8rem; color: #64748b; text-transform: uppercase; }
-.float-value { display: block; font-weight: 800; font-size: 1.1rem; color: #0f172a; margin-top: 4px;}
+.float-card strong { display: block; font-size: 0.8rem; color: var(--texto-claro); text-transform: uppercase; }
+.float-value { display: block; font-weight: 800; font-size: 1.1rem;
+color: var(--azul-naval); margin-top: 4px;}
 
 /* =========================================
    PROVA SOCIAL (CASE ÁGAPE)
@@ -232,8 +263,9 @@ html {
    ========================================= */
 .features-section { padding: 70px 5%; background: #f8fafc; }
 .features-header { text-align: center; margin-bottom: 40px; }
-.features-header h2 { font-size: 2.2rem; color: #0f172a; margin-bottom: 10px; }
-.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; max-width: 1100px; margin: 0 auto; }
+.features-header h2 { font-size: 2.2rem; color: var(--azul-naval); margin-bottom: 10px; }
+.features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+gap: 25px; max-width: 1100px; margin: 0 auto; }
 .feature-card { background: white; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; }
 .feature-icon { font-size: 2.2rem; margin-bottom: 15px; }
 
@@ -242,8 +274,8 @@ html {
    ========================================= */
 .pricing-section { padding: 80px 5%; background-color: #ffffff; }
 .pricing-header { text-align: center; margin-bottom: 50px; }
-.pricing-header h2 { font-size: 2.5rem; font-weight: 800; color: #0f172a; margin-bottom: 12px; }
-.pricing-header p { font-size: 1.1rem; color: #64748b; max-width: 600px; margin: 0 auto; }
+.pricing-header h2 { font-size: 2.5rem; font-weight: 800; color: var(--azul-naval); margin-bottom: 12px; }
+.pricing-header p { font-size: 1.1rem; color: var(--texto-claro); max-width: 600px; margin: 0 auto; }
 
 .pricing-cards {
   display: grid;
@@ -271,18 +303,19 @@ html {
   box-shadow: 0 10px 20px rgba(0,0,0,0.03);
 }
 
-.card-header h3 { font-size: 1.6rem; font-weight: 700; color: #0f172a; margin-bottom: 6px; }
-.card-header .pricing-desc { font-size: 0.9rem; color: #64748b; margin-bottom: 25px; }
+.card-header h3 { font-size: 1.6rem; font-weight: 700; color: var(--azul-naval); margin-bottom: 6px; }
+.card-header .pricing-desc { font-size: 0.9rem; color: var(--texto-claro); margin-bottom: 25px; }
 
-.price { font-size: 3.2rem; font-weight: 800; color: #0f172a; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; }
-.price span { font-size: 1.1rem; font-weight: 500; color: #64748b; }
+.price { font-size: 3.2rem; font-weight: 800; color: var(--azul-naval); margin-bottom: 30px;
+padding-bottom: 20px; border-bottom: 1px solid #e2e8f0; }
+.price span { font-size: 1.1rem; font-weight: 500; color: var(--texto-claro); }
 
 .pricing-features { list-style: none; padding: 0; margin: 0 0 35px 0; flex: 1; }
 .pricing-features li { margin-bottom: 14px; font-size: 0.95rem; color: #475569; }
 .pricing-features li.disabled { color: #94a3b8; opacity: 0.7; text-decoration: line-through; }
 
 .pricing-card.popular {
-  background: #0f172a;
+  background: var(--azul-naval);
   color: #f1f5f9;
   transform: scale(1.03);
   box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.25);
@@ -297,41 +330,41 @@ html {
 
 .popular-badge {
   position: absolute; top: -15px; left: 50%; transform: translateX(-50%);
-  background: #3b82f6; color: white; padding: 6px 16px; border-radius: 20px;
+  background: var(--dourado); color: var(--azul-naval); padding: 6px 16px; border-radius: 20px;
   font-size: 0.85rem; font-weight: 700; text-transform: uppercase;
 }
 
 .btn-pricing-outline {
   display: block; text-align: center; padding: 15px; border-radius: 10px;
-  border: 2px solid #0f172a; color: #0f172a; font-weight: 700; text-decoration: none;
+  border: 2px solid var(--azul-naval); color: var(--azul-naval); font-weight: 700; text-decoration: none;
   transition: all 0.2s;
 }
-.btn-pricing-outline:hover { background: #0f172a; color: white; }
+.btn-pricing-outline:hover { background: var(--azul-naval); color: white; }
 
 .btn-pricing-solid {
   display: block; text-align: center; padding: 15px; border-radius: 10px;
-  background: #3b82f6; color: white; font-weight: 700; text-decoration: none;
+  background: var(--dourado); color: var(--azul-naval); font-weight: 700; text-decoration: none;
   transition: all 0.2s;
 }
-.btn-pricing-solid:hover { background: #2563eb; transform: translateY(-2px); }
+.btn-pricing-solid:hover { background: var(--dourado-hover); transform: translateY(-2px); }
 
 /* =========================================
    FAQ / DÚVIDAS FREQUENTES
    ========================================= */
 .faq-section { padding: 80px 5%; background: #ffffff; border-top: 1px solid #f1f5f9; }
 .faq-header { text-align: center; margin-bottom: 50px; }
-.faq-header h2 { font-size: 2.2rem; color: #0f172a; margin-bottom: 10px; }
-.faq-header p { color: #64748b; font-size: 1.1rem; }
+.faq-header h2 { font-size: 2.2rem; color: var(--azul-naval); margin-bottom: 10px; }
+.faq-header p { color: var(--texto-claro); font-size: 1.1rem; }
 .faq-grid { max-width: 900px; margin: 0 auto; display: grid; grid-template-columns: 1fr 1fr; gap: 30px; }
 .faq-item { background: #f8fafc; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; }
-.faq-item h4 { color: #0f172a; font-size: 1.1rem; margin-bottom: 10px; }
+.faq-item h4 { color: var(--azul-naval); font-size: 1.1rem; margin-bottom: 10px; }
 .faq-item p { color: #475569; font-size: 0.95rem; line-height: 1.6; }
 
 /* =========================================
    FOOTER
    ========================================= */
 .landing-footer {
-  background: #0f172a;
+  background: var(--azul-naval);
   color: white;
   padding: 60px 5% 20px;
 }
@@ -359,7 +392,6 @@ html {
 }
 .footer-link:hover { color: #ffffff; }
 
-/* 🔥 ESTILO PARA O BOTÃO QUE PARECE LINK NO FOOTER 🔥 */
 .footer-link-btn {
   background: none;
   border: none;
@@ -426,10 +458,10 @@ html {
   transition: color 0.2s;
 }
 
-.close-modal:hover { color: #0f172a; }
+.close-modal:hover { color: var(--azul-naval); }
 
-.modal-content h3 { color: #0f172a; margin-bottom: 10px; font-size: 1.4rem; }
-.modal-content p { color: #64748b; margin-bottom: 25px; font-size: 0.95rem; line-height: 1.5; }
+.modal-content h3 { color: var(--azul-naval); margin-bottom: 10px; font-size: 1.4rem; }
+.modal-content p { color: var(--texto-claro); margin-bottom: 25px; font-size: 0.95rem; line-height: 1.5; }
 
 .modal-buttons {
   display: flex;
@@ -455,8 +487,8 @@ html {
 
 .btn-email {
   background: #f8fafc;
-  color: #0f172a;
-  border: 1px solid #e2e8f0;
+  color: var(--azul-naval);
+  border: 1px solid var(--borda-suave);
   padding: 15px;
   border-radius: 10px;
   font-weight: 700;

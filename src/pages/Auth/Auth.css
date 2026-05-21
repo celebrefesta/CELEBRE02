@@ -1,241 +1,283 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
 /* =========================================
-   🛡️ BLINDAGEM MÁXIMA DO CONTAINER
-   ========================================= */
+   ESTRUTURA DIVIDIDA (SPLIT SCREEN)
+========================================= */
 .auth-container {
-  display: flex !important;
-  flex-direction: row !important;
-  position: absolute !important; /* Ignora margens do App.css */
-  top: 0 !important;
-  left: 0 !important;
-  width: 100vw !important;
-  min-height: 100vh !important;
-  font-family: 'Plus Jakarta Sans', sans-serif !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  box-sizing: border-box !important;
-  overflow-x: hidden !important;
+  display: flex;
+  min-height: 100vh;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background-color: #ffffff;
 }
 
-/* =========================================
-   ⬅️ LADO ESQUERDO (FORMULÁRIO)
-   ========================================= */
+/* LADO ESQUERDO (CENTRALIZANDO O FORMULÁRIO) */
 .auth-main {
-  flex: 1 !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  align-items: center !important;
-  background-color: #f4f7f9 !important; /* Cinza bem clarinho e limpo */
-  padding: 40px 20px !important;
+  flex: 1;
+  display: flex;
+  align-items: center;    
+  justify-content: center; 
+  padding: 20px; /* Reduzido para caber melhor em telas pequenas */
 }
 
 .auth-box {
-  width: 100% !important;
-  max-width: 420px !important;
-  background: #ffffff !important;
-  padding: 40px !important;
-  border-radius: 16px !important;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08) !important;
-  text-align: left !important;
+  width: 100%;
+  max-width: 440px; /* Ligeiramente mais estreito para ficar mais elegante */
+  background: #ffffff;
+  padding: 25px 30px; /* Espaçamento interno reduzido */
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); /* Sombra suave para destacar */
 }
 
-.logo-placeholder {
-  font-weight: 800 !important;
-  font-size: 1.5rem !important;
-  color: #00284A !important;
-  margin-bottom: 30px !important;
-  display: flex !important;
-  align-items: center !important;
-  gap: 10px !important;
+/* 🔥 LOGO PREMIUM 🔥 */
+.auth-logo-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center; 
+  gap: 10px;
+  margin-bottom: 15px; /* Reduzido */
 }
 
-.logo-circle {
-  width: 32px !important;
-  height: 32px !important;
-  background: #00284A !important;
-  border-radius: 8px !important;
+.auth-logo-img {
+  height: 32px; /* Reduzido */
+  object-fit: contain;
+  mix-blend-mode: multiply;
+}
+
+.auth-logo-text {
+  font-size: 1.5rem; /* Reduzido */
+  font-weight: 900;
+  color: #0f172a; 
+  letter-spacing: -0.5px;
 }
 
 .auth-box h2 {
-  font-size: 1.8rem !important;
-  font-weight: 800 !important;
-  color: #0f172a !important;
-  margin-top: 0 !important;
-  margin-bottom: 8px !important;
+  font-size: 1.4rem; /* Reduzido */
+  color: #0f172a;
+  margin: 0 0 5px 0;
+  text-align: center;
 }
 
 .auth-box p {
-  color: #64748b !important;
-  font-size: 0.95rem !important;
-  margin-bottom: 25px !important;
+  color: #64748b;
+  font-size: 0.85rem; /* Reduzido */
+  margin: 0 0 20px 0; /* Reduzido */
+  text-align: center;
 }
 
-/* Campos de Texto Modernos */
+/* MENSAGEM DE ERRO */
+.auth-erro {
+  background-color: #fef2f2;
+  color: #ef4444;
+  padding: 10px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  margin-bottom: 15px;
+  border: 1px solid #fecaca;
+}
+
+/* =========================================
+   FORMULÁRIO (ALINHAMENTO E COMPACTAÇÃO)
+========================================= */
+.auth-form-elements {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Reduzido o espaço entre os campos */
+}
+
+/* SELETOR DE PESSOA / EMPRESA */
+.tipo-pessoa-wrapper {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 5px;
+}
+
+.tipo-pessoa-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px; /* Reduzido */
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.8rem; /* Reduzido */
+  font-weight: 700;
+  color: #64748b;
+  background: #f8fafc;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tipo-pessoa-btn input {
+  display: none;
+}
+
+.tipo-pessoa-btn.ativo {
+  background: #eff6ff;
+  border-color: #3b82f6;
+  color: #1d4ed8;
+}
+
+/* GRUPOS DE INPUT */
 .input-group {
-  display: flex !important;
-  flex-direction: column !important;
-  margin-bottom: 15px !important;
-}
-
-.input-row {
-  display: flex !important;
-  gap: 15px !important;
-}
-
-.input-row .input-group {
-  flex: 1 !important;
+  display: flex;
+  flex-direction: column;
+  gap: 4px; /* Reduzido */
 }
 
 .input-group label {
-  font-size: 0.8rem !important;
-  font-weight: 700 !important;
-  color: #475569 !important;
-  margin-bottom: 6px !important;
-  text-transform: uppercase !important;
+  font-size: 0.7rem; /* Reduzido */
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .input-group input {
-  padding: 12px 16px !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 8px !important;
-  font-size: 1rem !important;
-  background-color: #f8fafc !important;
-  color: #0f172a !important;
-  transition: all 0.2s !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
+  padding: 10px 14px; /* Reduzido a altura do campo */
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem; /* Reduzido */
+  color: #0f172a;
+  background-color: #f8fafc;
+  transition: all 0.2s;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .input-group input:focus {
-  outline: none !important;
-  border-color: #00284A !important;
-  background-color: #ffffff !important;
-  box-shadow: 0 0 0 3px rgba(0, 40, 74, 0.1) !important;
+  outline: none;
+  border-color: #0f172a;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+  background-color: #ffffff;
 }
 
-/* Botões */
+/* 🔥 LINHA DE SENHAS (ALINHADAS) 🔥 */
+.input-row {
+  display: flex;
+  gap: 12px;
+  width: 100%;
+}
+
+.input-row .input-group {
+  flex: 1; 
+  width: 50%; /* Força as duas metades a terem exatamente o mesmo tamanho */
+}
+
+/* 🔥 INPUT COM ÍCONE DO OLHINHO (CORRIGIDO) 🔥 */
+.input-with-icon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-with-icon input {
+  width: 100%;
+  padding-right: 35px; /* Dá espaço para o olho não sobrepor o texto */
+  box-sizing: border-box;
+}
+
+.btn-olhinho {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%); /* Centraliza perfeitamente na vertical */
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: color 0.2s;
+}
+
+.btn-olhinho:hover {
+  color: #0f172a;
+}
+
+/* BOTÃO DE CADASTRO */
 .btn-auth {
-  width: 100% !important;
-  padding: 14px !important;
-  background-color: #00284A !important;
-  color: white !important;
-  border: none !important;
-  border-radius: 8px !important;
-  font-size: 1.05rem !important;
-  font-weight: 700 !important;
-  cursor: pointer !important;
-  margin-top: 10px !important;
-  transition: background-color 0.2s !important;
+  background-color: #0f172a; 
+  color: #ffffff;
+  border: none;
+  padding: 14px; /* Reduzido */
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 5px; /* Reduzido */
+  transition: all 0.2s;
+  width: 100%;
 }
 
-.btn-auth:hover {
-  background-color: #001f3a !important;
+.btn-auth:hover:not(:disabled) {
+  background-color: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 
 .btn-auth:disabled {
-  background-color: #94a3b8 !important;
-  cursor: not-allowed !important;
-}
-
-.auth-divisor {
-  text-align: center !important;
-  margin: 20px 0 !important;
-  color: #94a3b8 !important;
-  font-size: 0.85rem !important;
-  display: flex !important;
-  align-items: center !important;
-}
-
-.auth-divisor::before,
-.auth-divisor::after {
-  content: '' !important;
-  flex: 1 !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-}
-
-.auth-divisor span {
-  padding: 0 10px !important;
-}
-
-.btn-google {
-  width: 100% !important;
-  padding: 12px !important;
-  background: white !important;
-  border: 1px solid #cbd5e1 !important;
-  border-radius: 8px !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  gap: 10px !important;
-  font-weight: 600 !important;
-  color: #475569 !important;
-  cursor: pointer !important;
-  font-size: 0.95rem !important;
-}
-
-.btn-google:hover {
-  background: #f8fafc !important;
+  background-color: #94a3b8;
+  cursor: not-allowed;
 }
 
 .auth-link {
-  text-align: center !important;
-  margin-top: 20px !important;
-  font-size: 0.9rem !important;
-  color: #64748b !important;
+  text-align: center;
+  font-size: 0.85rem;
+  color: #64748b;
+  margin-top: 15px; /* Reduzido */
 }
 
 .auth-link a {
-  color: #00284A !important;
-  font-weight: 700 !important;
-  text-decoration: none !important;
+  color: #0f172a;
+  font-weight: 800;
+  text-decoration: none;
 }
 
-.auth-erro {
-  background-color: #fee2e2 !important;
-  color: #b91c1c !important;
-  padding: 10px !important;
-  border-radius: 8px !important;
-  font-size: 0.85rem !important;
-  font-weight: bold !important;
-  margin-bottom: 15px !important;
-  text-align: center !important;
+.auth-link a:hover {
+  text-decoration: underline;
 }
-
 
 /* =========================================
-   ➡️ LADO DIREITO (PAINEL AZUL PREMIUM)
-   ========================================= */
+   LADO DIREITO (BANNER AZUL NAVAL)
+========================================= */
 .auth-side-panel {
-  flex: 1.1 !important;
-  background-color: #00284A !important; /* Azul escuro inspirado nas suas fotos */
-  background-image: linear-gradient(135deg, #00284A 0%, #004b87 100%) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  padding: 80px 10% !important;
-  color: #ffffff !important;
+  flex: 1.2;
+  background-color: #0f172a;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 40px;
+  color: #ffffff;
+}
+
+.side-content {
+  max-width: 500px;
 }
 
 .side-content h1 {
-  font-size: 3.2rem !important;
-  font-weight: 800 !important;
-  line-height: 1.2 !important;
-  margin-bottom: 20px !important;
-  color: #ffffff !important;
+  font-size: 3.2rem;
+  font-weight: 900;
+  line-height: 1.1;
+  margin-bottom: 20px;
+  letter-spacing: -1px;
 }
 
 .side-content p {
-  font-size: 1.15rem !important;
-  color: #93c5fd !important; /* Azul clarinho para contraste */
-  line-height: 1.6 !important;
-  max-width: 450px !important;
+  font-size: 1.1rem;
+  color: #cbd5e1;
+  line-height: 1.6;
 }
 
-/* Esconde o painel direito no celular */
+/* RESPONSIVIDADE MOBILE */
 @media (max-width: 900px) {
-  .auth-side-panel {
-    display: none !important;
-  }
+  .auth-container { flex-direction: column; }
+  .auth-side-panel { display: none; } 
+  .auth-main { padding: 20px; }
+  .input-row { flex-direction: column; gap: 12px; } 
+  .input-row .input-group { width: 100%; }
 }
