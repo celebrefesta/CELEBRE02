@@ -5,7 +5,8 @@
   display: flex;
   min-height: 100vh;
   font-family: 'Plus Jakarta Sans', sans-serif;
-  background-color: #ffffff;
+  background-color: #f8fafc;
+  overflow: hidden; 
 }
 
 /* LADO ESQUERDO (CENTRALIZANDO O FORMULÁRIO) */
@@ -14,16 +15,20 @@
   display: flex;
   align-items: center;    
   justify-content: center; 
-  padding: 20px; /* Reduzido para caber melhor em telas pequenas */
+  padding: 20px; 
+  height: 100vh;
+  overflow-y: auto; 
+  box-sizing: border-box;
 }
 
 .auth-box {
   width: 100%;
-  max-width: 440px; /* Ligeiramente mais estreito para ficar mais elegante */
+  max-width: 440px; 
   background: #ffffff;
-  padding: 25px 30px; /* Espaçamento interno reduzido */
+  padding: 25px 30px; 
   border-radius: 12px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); /* Sombra suave para destacar */
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05); 
+  margin: auto; 
 }
 
 /* 🔥 LOGO PREMIUM 🔥 */
@@ -31,34 +36,34 @@
   display: flex;
   align-items: center;
   justify-content: center; 
-  gap: 10px;
-  margin-bottom: 15px; /* Reduzido */
+  gap: 8px;
+  margin-bottom: 10px; 
 }
 
 .auth-logo-img {
-  height: 32px; /* Reduzido */
+  height: 28px; 
   object-fit: contain;
   mix-blend-mode: multiply;
 }
 
 .auth-logo-text {
-  font-size: 1.5rem; /* Reduzido */
+  font-size: 1.4rem; 
   font-weight: 900;
   color: #0f172a; 
   letter-spacing: -0.5px;
 }
 
 .auth-box h2 {
-  font-size: 1.4rem; /* Reduzido */
+  font-size: 1.3rem; 
   color: #0f172a;
-  margin: 0 0 5px 0;
+  margin: 0 0 2px 0;
   text-align: center;
 }
 
 .auth-box p {
   color: #64748b;
-  font-size: 0.85rem; /* Reduzido */
-  margin: 0 0 20px 0; /* Reduzido */
+  font-size: 0.8rem; 
+  margin: 0 0 15px 0; 
   text-align: center;
 }
 
@@ -68,27 +73,28 @@
   color: #ef4444;
   padding: 10px;
   border-radius: 8px;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 600;
   text-align: center;
-  margin-bottom: 15px;
+  margin-bottom: 10px;
   border: 1px solid #fecaca;
 }
 
 /* =========================================
-   FORMULÁRIO (ALINHAMENTO E COMPACTAÇÃO)
+   FORMULÁRIO (ULTRACARTÃO COMPACTO)
 ========================================= */
 .auth-form-elements {
   display: flex;
   flex-direction: column;
-  gap: 12px; /* Reduzido o espaço entre os campos */
+  gap: 10px; 
+  width: 100%;
 }
 
 /* SELETOR DE PESSOA / EMPRESA */
 .tipo-pessoa-wrapper {
   display: flex;
   gap: 10px;
-  margin-bottom: 5px;
+  margin-bottom: 2px;
 }
 
 .tipo-pessoa-btn {
@@ -97,10 +103,10 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 10px; /* Reduzido */
+  padding: 8px; 
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.8rem; /* Reduzido */
+  font-size: 0.8rem; 
   font-weight: 700;
   color: #64748b;
   background: #f8fafc;
@@ -122,27 +128,37 @@
 .input-group {
   display: flex;
   flex-direction: column;
-  gap: 4px; /* Reduzido */
+  gap: 2px; 
 }
 
 .input-group label {
-  font-size: 0.7rem; /* Reduzido */
+  font-size: 0.65rem; 
   font-weight: 800;
   color: #475569;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
+.label-sub {
+  font-size: 0.55rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.input-row .input-group label {
+  white-space: nowrap;
+}
+
 .input-group input {
-  padding: 10px 14px; /* Reduzido a altura do campo */
+  padding: 10px 12px; 
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.9rem; /* Reduzido */
+  font-size: 0.9rem; 
   color: #0f172a;
   background-color: #f8fafc;
   transition: all 0.2s;
   width: 100%;
-  box-sizing: border-box;
+  box-sizing: border-box; 
 }
 
 .input-group input:focus {
@@ -152,19 +168,18 @@
   background-color: #ffffff;
 }
 
-/* 🔥 LINHA DE SENHAS (ALINHADAS) 🔥 */
+/* 🔥 LINHA DE SENHAS E OLHINHO 🔥 */
 .input-row {
-  display: flex;
-  gap: 12px;
+  display: grid; 
+  grid-template-columns: 1fr 1fr;
+  gap: 10px; 
   width: 100%;
 }
 
 .input-row .input-group {
-  flex: 1; 
-  width: 50%; /* Força as duas metades a terem exatamente o mesmo tamanho */
+  width: 100%;
 }
 
-/* 🔥 INPUT COM ÍCONE DO OLHINHO (CORRIGIDO) 🔥 */
 .input-with-icon {
   position: relative;
   display: flex;
@@ -174,7 +189,7 @@
 
 .input-with-icon input {
   width: 100%;
-  padding-right: 35px; /* Dá espaço para o olho não sobrepor o texto */
+  padding-right: 35px; 
   box-sizing: border-box;
 }
 
@@ -182,12 +197,12 @@
   position: absolute;
   right: 10px;
   top: 50%;
-  transform: translateY(-50%); /* Centraliza perfeitamente na vertical */
+  transform: translateY(-50%); 
   background: none;
   border: none;
   color: #94a3b8;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem; 
   display: flex;
   align-items: center;
   justify-content: center;
@@ -199,19 +214,58 @@
   color: #0f172a;
 }
 
-/* BOTÃO DE CADASTRO */
+/* 🔥 CRITÉRIOS DE SEGURANÇA DA SENHA 🔥 */
+.senha-criterios {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.senha-criterios ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.senha-criterios li {
+  font-size: 0.6rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px; 
+  border-radius: 6px;
+  transition: all 0.3s ease;
+}
+
+.crit-ok {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.crit-falha {
+  background-color: #f8fafc;
+  color: #94a3b8;
+  border: 1px solid #e2e8f0;
+}
+
+/* BOTÃO DE CADASTRO / LOGIN */
 .btn-auth {
   background-color: #0f172a; 
   color: #ffffff;
   border: none;
-  padding: 14px; /* Reduzido */
+  padding: 12px; 
   border-radius: 8px;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 800;
   cursor: pointer;
-  margin-top: 5px; /* Reduzido */
+  margin-top: 5px; 
   transition: all 0.2s;
   width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-auth:hover:not(:disabled) {
@@ -221,15 +275,17 @@
 }
 
 .btn-auth:disabled {
-  background-color: #94a3b8;
+  background-color: #cbd5e1;
+  color: #94a3b8;
   cursor: not-allowed;
+  box-shadow: none;
 }
 
 .auth-link {
   text-align: center;
-  font-size: 0.85rem;
+  font-size: 0.8rem; 
   color: #64748b;
-  margin-top: 15px; /* Reduzido */
+  margin-top: 10px; 
 }
 
 .auth-link a {
@@ -240,6 +296,64 @@
 
 .auth-link a:hover {
   text-decoration: underline;
+}
+
+/* =========================================
+   🔥 ESTILOS EXCLUSIVOS DO LOGIN (GOOGLE & DIVISOR) 🔥
+========================================= */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.75rem;
+  margin: 15px 0;
+}
+
+.auth-divider::before, 
+.auth-divider::after {
+  content: '';
+  flex: 1;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.auth-divider span {
+  padding: 0 10px;
+}
+
+.btn-google {
+  background-color: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-sizing: border-box;
+  transition: all 0.2s;
+}
+
+.btn-google:hover:not(:disabled) {
+  background-color: #f8fafc;
+  border-color: #cbd5e1;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+}
+
+.btn-google:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  cursor: not-allowed;
+}
+
+.btn-google img {
+  width: 20px;
+  height: 20px;
 }
 
 /* =========================================
@@ -273,11 +387,41 @@
   line-height: 1.6;
 }
 
-/* RESPONSIVIDADE MOBILE */
+/* 🔥 RESPONSIVIDADE MOBILE OTIMIZADA 🔥 */
 @media (max-width: 900px) {
-  .auth-container { flex-direction: column; }
+  .auth-container { 
+    flex-direction: column; 
+    overflow: auto; 
+    background-color: #ffffff; 
+  }
+  .auth-main { 
+    height: auto; 
+    min-height: 100vh;
+    overflow-y: visible; 
+    align-items: flex-start; 
+    padding: 10px; 
+  }
+  .auth-box {
+    margin: 0 auto; 
+    padding: 10px 15px; 
+    box-shadow: none; 
+    max-width: 100%;
+  }
+  .auth-logo-wrapper {
+    margin-top: 10px; 
+  }
   .auth-side-panel { display: none; } 
-  .auth-main { padding: 20px; }
-  .input-row { flex-direction: column; gap: 12px; } 
-  .input-row .input-group { width: 100%; }
+  .input-row { 
+    grid-template-columns: 1fr; 
+    gap: 10px; 
+  } 
+}
+
+/* 🔥 CORREÇÃO DO BURACO VERDE (CSS GLOBAL) 🔥 */
+@media (max-width: 768px) {
+  .App.no-navbar main,
+  .App.no-navbar .main-content,
+  .App.no-navbar .page-layout {
+    padding: 0 !important;
+  }
 }

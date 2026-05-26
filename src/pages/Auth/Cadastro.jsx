@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate, Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom'; // 🔥 IMPORTAÇÃO CORRIGIDA AQUI
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
 import './Auth.css'; 
 
-// 🔥 Importação da sua Logo Oficial
 import logoImage from '../../assets/LOGO_CELEBRE.png';
 
 const Cadastro = () => {
@@ -21,12 +20,34 @@ const Cadastro = () => {
   const [senha, setSenha] = useState('');
   const [confirmarSenha, setConfirmarSenha] = useState('');
   
-  // 🔥 Estados para o "Olhinho" da senha
   const [mostrarSenha, setMostrarSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 🔥 VALIDADOR DE SENHA FORTE EM TEMPO REAL
+  const validarSenha = (s) => {
+    return {
+      tamanho: s.length >= 8,
+      maiuscula: /[A-Z]/.test(s),
+      minuscula: /[a-z]/.test(s),
+      numero: /[0-9]/.test(s),
+      especial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(s)
+    };
+  };
+
+  const criterios = validarSenha(senha);
+  const isSenhaForte = Object.values(criterios).every(Boolean);
+
+  const handleNomeChange = (e) => {
+    const valor = e.target.value;
+    const formatado = valor
+      .split(' ')
+      .map(palavra => palavra.charAt(0).toUpperCase() + palavra.slice(1).toLowerCase())
+      .join(' ');
+    setNome(formatado);
+  };
 
   const handleDocumentoChange = (e) => {
     let valor = e.target.value.replace(/\D/g, ""); 
@@ -51,11 +72,11 @@ const Cadastro = () => {
     e.preventDefault();
     setErro('');
 
+    if (!isSenhaForte) {
+      return setErro('A sua palavra-passe não cumpre todos os requisitos de segurança.');
+    }
     if (senha !== confirmarSenha) {
       return setErro('As palavras-passe não coincidem.');
-    }
-    if (senha.length < 6) {
-      return setErro('A palavra-passe deve ter pelo menos 6 caracteres.');
     }
 
     try {
@@ -115,11 +136,9 @@ const Cadastro = () => {
 
   return (
     <div className="auth-container">
-      {/* LADO ESQUERDO CENTRALIZADO */}
       <main className="auth-main">
         <div className="auth-box">
           
-          {/* 🔥 LOGO OFICIAL APLICADA AQUI */}
           <div className="auth-logo-wrapper">
             <img src={logoImage} alt="Logotipo Celebre" className="auth-logo-img" />
             <span className="auth-logo-text">Celebre</span>
@@ -152,11 +171,13 @@ const Cadastro = () => {
 
             <div className="input-group">
               <label>NOME COMPLETO</label>
-              <input type="text" value={nome} onChange={(e) => setNome(e.target.value)} required />
+              <input type="text" value={nome} onChange={handleNomeChange} required />
             </div>
 
             <div className="input-group">
-              <label>COMO GOSTARIA DE SER CHAMADO? (Nome da Empresa ou Apelido)</label>
+              <label>
+                COMO GOSTARIA DE SER CHAMADO? <span className="label-sub">(NOME DA EMPRESA OU APELIDO)</span>
+              </label>
               <input type="text" value={nomeExibicao} onChange={(e) => setNomeExibicao(e.target.value)} required />
             </div>
 
@@ -170,7 +191,6 @@ const Cadastro = () => {
               <input type="email" placeholder="nome@exemplo.com" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             
-            {/* 🔥 SENHAS ALINHADAS COM O "OLHINHO" */}
             <div className="input-row">
               <div className="input-group">
                 <label>PALAVRA-PASSE</label>
@@ -203,8 +223,29 @@ const Cadastro = () => {
                 </div>
               </div>
             </div>
+
+            {/* 🔥 INDICADORES DE SEGURANÇA DA SENHA 🔥 */}
+            <div className="senha-criterios">
+              <ul>
+                <li className={criterios.tamanho ? "crit-ok" : "crit-falha"}>
+                  <i className={`fas ${criterios.tamanho ? "fa-check" : "fa-times"}`}></i> 8+ Caracteres
+                </li>
+                <li className={criterios.maiuscula ? "crit-ok" : "crit-falha"}>
+                  <i className={`fas ${criterios.maiuscula ? "fa-check" : "fa-times"}`}></i> Maiúscula
+                </li>
+                <li className={criterios.minuscula ? "crit-ok" : "crit-falha"}>
+                  <i className={`fas ${criterios.minuscula ? "fa-check" : "fa-times"}`}></i> Minúscula
+                </li>
+                <li className={criterios.numero ? "crit-ok" : "crit-falha"}>
+                  <i className={`fas ${criterios.numero ? "fa-check" : "fa-times"}`}></i> Número
+                </li>
+                <li className={criterios.especial ? "crit-ok" : "crit-falha"}>
+                  <i className={`fas ${criterios.especial ? "fa-check" : "fa-times"}`}></i> Especial (!@#)
+                </li>
+              </ul>
+            </div>
             
-            <button type="submit" disabled={loading} className="btn-auth">
+            <button type="submit" disabled={loading || !isSenhaForte} className="btn-auth">
               {loading ? 'A criar conta...' : 'Começar meu Teste Grátis'}
             </button>
           </form>
@@ -215,7 +256,6 @@ const Cadastro = () => {
         </div>
       </main>
       
-      {/* LADO DIREITO (BANNER AZUL NAVAL) */}
       <aside className="auth-side-panel">
         <div className="side-content">
           <h1>Tudo liberado <br/> por 7 dias.</h1>

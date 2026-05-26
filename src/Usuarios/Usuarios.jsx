@@ -7,7 +7,6 @@ import { getAuth } from 'firebase/auth';
 
 const Usuarios = () => {
   const navigate = useNavigate();
-  
   // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -21,10 +20,8 @@ const Usuarios = () => {
   const [isPro, setIsPro] = useState(false);
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
-  
   // NOVO ESTADO: Controla se estamos editando alguém existente
   const [editandoId, setEditandoId] = useState(null);
-  
   const [novoUsuario, setNovoUsuario] = useState({
     nome: '',
     cpf: '',
@@ -86,14 +83,12 @@ const Usuarios = () => {
       let acessoLiberado = false;
       let limite = 1;
       let planoEhPro = false;
-      
+
       if (userSnap.exists()) {
         const userData = userSnap.data();
-        
         if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa') {
           if (userData.planoId) {
             const planoSnap = await getDoc(doc(db, "planos", userData.planoId));
-            
             if (planoSnap.exists()) {
               const nomePlano = planoSnap.data().nome?.toLowerCase() || '';
               
@@ -139,7 +134,8 @@ const Usuarios = () => {
 
   // 🔥 MÁSCARA AUTOMÁTICA DE CPF
   const handleCpfChange = (e) => {
-    let valor = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
+    let valor = e.target.value.replace(/\D/g, "");
+    // Remove tudo que não for número
     if (valor.length <= 11) {
       valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
       valor = valor.replace(/(\d{3})(\d)/, "$1.$2");
@@ -193,7 +189,7 @@ const Usuarios = () => {
       telefone: membro.telefone || '',
       cargo: membro.cargo || '',
       email: membro.email || '',
-      senhaTemp: membro.senhaTemporaria || '', // Mostra a senha temporária se ele ainda não tiver ativado a conta
+      senhaTemp: membro.senhaTemporaria || '', 
       monitorarAtividade: membro.monitorarAtividade ?? true,
       permissoes: membro.permissoes || { 
           agenda: false, 
@@ -212,7 +208,6 @@ const Usuarios = () => {
 
   const salvarNovoUsuario = async (e) => {
     e.preventDefault();
-    
     if (!novoUsuario.nome || !novoUsuario.email || (!novoUsuario.senhaTemp && !editandoId)) {
       alert("Nome, E-mail e Senha são obrigatórios!");
       return;
@@ -232,10 +227,8 @@ const Usuarios = () => {
           monitorarAtividade: novoUsuario.monitorarAtividade, 
           permissoes: novoUsuario.permissoes
         });
-        
         await registrarLog("EDIÇÃO DE FUNCIONÁRIO", `Editou os dados ou permissões de ${novoUsuario.nome}.`);
         alert("Funcionário atualizado com sucesso!");
-        
       } else {
         // --- MODO CRIAÇÃO ---
         if (equipe.length + 1 >= limiteUsuarios) {
@@ -245,7 +238,6 @@ const Usuarios = () => {
         }
         
         const novoId = doc(collection(db, "equipe")).id;
-        
         await setDoc(doc(db, "equipe", novoId), {
           nome: novoUsuario.nome,
           cpf: novoUsuario.cpf,
@@ -258,9 +250,22 @@ const Usuarios = () => {
           empresaId: tenantId, // 🔥 CADEADO CORPORATIVO DA EMPRESA
           criadoEm: new Date().toISOString()
         });
-        
         await registrarLog("NOVO FUNCIONÁRIO", `Cadastrou ${novoUsuario.nome} (${novoUsuario.email}) com o cargo de ${novoUsuario.cargo || "Não definido"}.`);
         alert("Funcionário adicionado com sucesso!");
+      }
+
+      // 🔥 A MÁGICA DA INJEÇÃO DO VÍNCULO (CRACHÁ DA EMPRESA) 🔥
+      // Procura na coleção principal de usuários se o funcionário já tentou logar e tem perfil
+      const qUser = query(collection(db, "usuarios"), where("email", "==", novoUsuario.email));
+      const snapUser = await getDocs(qUser);
+
+      if (!snapUser.empty) {
+        // Se o funcionário já tem um perfil criado, carimba o seu ID de patroa (tenantId) nele!
+        const funcDocId = snapUser.docs[0].id;
+        await updateDoc(doc(db, "usuarios", funcDocId), {
+          tenantId: tenantId, 
+          role: novoUsuario.cargo || "Funcionário"
+        });
       }
 
       setModalAberto(false);
@@ -385,7 +390,6 @@ const Usuarios = () => {
             {/* LISTAGEM DA EQUIPE */}
             {equipe.map(membro => {
               const semAcesso = !membro.permissoes?.agenda && !membro.permissoes?.clientes && !membro.permissoes?.estoque && !membro.permissoes?.locacoes && !membro.permissoes?.compras && !membro.permissoes?.logistica && !membro.permissoes?.contratos && !membro.permissoes?.catalogo && !(membro.permissoes?.moodboard && isPro);
-              
               return (
               <tr key={membro.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
                 <td style={{ padding: '15px 20px' }}>

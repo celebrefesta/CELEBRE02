@@ -14,8 +14,8 @@ const Dashboard = () => {
   const usuarioLogado = auth.currentUser;
 
   // 🔥 IDENTIFICAÇÃO CORPORATIVA (SaaS)
-  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
-  const nomeUsuario = localStorage.getItem('funcName') || usuarioLogado?.displayName || "Equipa";
+  const tenantIdLocal = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+  const nomeUsuario = localStorage.getItem('funcName') || usuarioLogado?.displayName || "Equipe";
 
   // 🛡️ Identificação da Super-Adm
   const emailAdmin = "celebrefesta25@gmail.com";
@@ -47,8 +47,25 @@ const Dashboard = () => {
         const hojeISO = new Date().toISOString().split('T')[0];
         const mesAtual = hojeISO.substring(0, 7);
 
-        // 🔥 CÁLCULO DOS DIAS E BLOQUEIOS (VERIFICA A CONTA DO DONO, NÃO DO FUNCIONÁRIO)
-        const userDocRef = doc(db, "usuarios", tenantId);
+        // =================================================================
+        // 🔥 A GRANDE CORREÇÃO: CAÇADOR DE VÍNCULOS EMPREGATÍCIOS 🔥
+        // =================================================================
+        let idDaEmpresaCorreta = tenantIdLocal;
+        
+        // Pergunta ao banco: "Este e-mail pertence à equipe de alguma empresa?"
+        const qEquipe = query(collection(db, "equipe"), where("email", "==", usuarioLogado.email));
+        const snapEquipe = await getDocs(qEquipe);
+        
+        if (!snapEquipe.empty) {
+            // Opa! Ele é funcionário! Pegamos o ID da PATROA.
+            idDaEmpresaCorreta = snapEquipe.docs[0].data().empresaId;
+            
+            // Força a atualização da Chave Mestra no navegador para destrancar as outras telas!
+            localStorage.setItem('tenantId', idDaEmpresaCorreta);
+        }
+
+        // 🔥 CÁLCULO DOS DIAS E BLOQUEIOS (VERIFICA A CONTA DA PATROA, NÃO DO FUNCIONÁRIO)
+        const userDocRef = doc(db, "usuarios", idDaEmpresaCorreta);
         const userDocSnap = await getDoc(userDocRef);
         
         let dataCadastroSegura = usuarioLogado.metadata.creationTime; 
@@ -57,11 +74,12 @@ const Dashboard = () => {
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
             
-            // 🛡️ NOVA LÓGICA DE LIBERAÇÃO: Aceita plano "pago" OU statusPagamentoVulso "pago"
+            // 🛡️ Verifica se a EMPRESA pagou
             if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa') {
                 usuarioJaPagou = true;
             }
 
+            // Pega a data de início de teste da EMPRESA
             if (userData.dataCadastro) {
                 dataCadastroSegura = userData.dataCadastro;
             }
@@ -83,7 +101,7 @@ const Dashboard = () => {
 
             setDiasTeste(diffDays);
 
-            // 🔐 BLINDAGEM: Se não for a Super-Adm e NÃO tiver pago, verifica os bloqueios
+            // 🔐 BLINDAGEM: Se não for a Super-Adm e a EMPRESA não tiver pago, bloqueia.
             if (!isSuperAdmin && !usuarioJaPagou) {
                 if (diffDays > 180) {
                     setStatusConta('excluido');
@@ -97,15 +115,16 @@ const Dashboard = () => {
             }
         }
 
-        // 🔥 CARREGAMENTO DOS DADOS DO SISTEMA (PUXANDO DA EMPRESA)
-        const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
+        // 🔥 CARREGAMENTO DOS DADOS DO SISTEMA (PUXANDO DA EMPRESA CORRETA)
+        const qEstoque = query(collection(db, "estoque"), where("userId", "==", idDaEmpresaCorreta));
+        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", idDaEmpresaCorreta));
 
         const estSnap = await getDocs(qEstoque);
         const locSnap = await getDocs(qLocacoes);
         const locs = locSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         const confirmadas = locs.filter(l => l.status === 'confirmado' || l.status === 'preparacao' || l.status === 'entregue' || l.status === 'finalizado');
         const orcamentos = locs.filter(l => (l.status || '').toLowerCase() === 'orcamento');
+        
         let cOrcamento = 0, cConfirmado = 0, cPreparacao = 0, cEntregue = 0, cFinalizado = 0;
         let vOrcamento = 0, vConfirmado = 0;
         
@@ -123,7 +142,6 @@ const Dashboard = () => {
         setStatusChart({
           orcamento: cOrcamento, confirmado: cConfirmado, preparacao: cPreparacao, entregue: cEntregue, finalizado: cFinalizado, total: cOrcamento + cConfirmado + cPreparacao + cEntregue + cFinalizado
         });
-        
         setValoresPorStatus({ orcamento: vOrcamento, confirmado: vConfirmado });
 
         const fatSemanal = [0, 0, 0, 0];
@@ -233,7 +251,7 @@ const Dashboard = () => {
     };
     
     carregarDados();
-  }, [usuarioLogado, isSuperAdmin, navigate, tenantId]);
+  }, [usuarioLogado, isSuperAdmin, navigate, tenantIdLocal]);
 
   if (loading) return <div className="loading-v3">Atualizando central de comando...</div>;
 
@@ -337,7 +355,7 @@ const Dashboard = () => {
                 {p5 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3b82f6" strokeWidth="4" strokeDasharray={`${p5} ${100 - p5}`} strokeDashoffset={off5} strokeLinecap="round" />}
               </svg>
   
-               <div className="chart-center-text">
+              <div className="chart-center-text">
                 <strong>{statusChart.total}</strong>
                 <span>Pedidos</span>
               </div>
@@ -357,14 +375,14 @@ const Dashboard = () => {
                     <span>Orçamentos Abertos</span>
                     <strong>R$ {valoresPorStatus.orcamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
                 </div>
-             <div className="summary-item green-text">
+              <div className="summary-item green-text">
                     <span>Confirmados (Garantido)</span>
                     <strong>R$ {valoresPorStatus.confirmado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
                 </div>
             </div>
           </section>
 
-         <section className="dash-card-wide chart-card">
+          <section className="dash-card-wide chart-card">
             <h3>💸 Faturamento do Mês</h3>
             <div className="compact-chart">
               {faturamentoData.map((val, idx) => (
@@ -375,7 +393,7 @@ const Dashboard = () => {
                   </div>
                   <span className="compact-bar-value">R$ {val.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                 </div>
-            ))}
+              ))}
             </div>
           </section>
         </div>
@@ -384,7 +402,6 @@ const Dashboard = () => {
           <section className="dash-card-wide border-top-yellow flex-grow">
             <h3>📝 Orçamentos Pendentes</h3>
             <p className="card-subtitle">Negócios abertos aguardando fechamento.</p>
-       
             <div className="activity-feed">
               {orcamentosPendentes.length > 0 ?
                 orcamentosPendentes.map((orc, i) => (
@@ -417,7 +434,7 @@ const Dashboard = () => {
         </div>
 
         <div className="dash-column">
-         <section className="dash-card-wide border-top-red flex-grow">
+          <section className="dash-card-wide border-top-red flex-grow">
             <h3>🚨 Radar de Cobrança</h3>
             <p className="card-subtitle" style={{marginBottom: '10px'}}>A festa passou e o pagamento não concluiu.</p>
             <div className="activity-feed">
@@ -432,7 +449,7 @@ const Dashboard = () => {
                   <div className="feed-valor" style={{color: '#dc2626'}}>R$ {cob.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
               )) : <p className="empty-feed" style={{color: '#10b981', background: '#ecfdf5', padding: '10px', borderRadius: '8px'}}>✅ Nenhum atraso detectado.</p>}
-              </div>
+            </div>
           </section>
 
           <section className="dash-card-wide flex-grow">
