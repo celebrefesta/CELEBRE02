@@ -57,7 +57,8 @@ import Notificacoes from './pages/Notificacoes/Notificacoes';
 
 // 🔥 CAMINHO CORRIGIDO AQUI: Apontando direto para a pasta Usuarios dentro de src
 import Usuarios from './Usuarios/Usuarios'; 
-import Monitoramento from './Usuarios/Monitoramento'; // 🔥 NOVO IMPORT DA PÁGINA DE AUDITORIA
+import Monitoramento from './Usuarios/Monitoramento'; 
+import GestaoASO from './Usuarios/GestaoASO'; // 🔥 NOVO IMPORT DA PÁGINA DE ASO
 
 // --- PLANOS & ASSINATURA ---
 import Planos from './pages/Planos/Planos';
@@ -146,11 +147,12 @@ const AppContent = () => {
           <Route path="/perfil" element={<RotaPrivada><Perfil /></RotaPrivada>} />
           <Route path="/notificacoes" element={<RotaPrivada><Notificacoes /></RotaPrivada>} /> 
           
-          {/* 👥 GESTÃO DE EQUIPE (🔒 PROTEGIDO PELO PLANO) */}
+          {/* 👥 GESTÃO DE EQUIPE E RH (🔒 PROTEGIDO PELO PLANO) */}
           <Route path="/usuarios" element={<RotaPrivada><RotaProtegida recursoExigido="Equipe"><Usuarios /></RotaProtegida></RotaPrivada>} />
-          
-          {/* 🔥 NOVA ROTA DE MONITORAMENTO PROTEGIDA */}
           <Route path="/monitoramento" element={<RotaPrivada><RotaProtegida recursoExigido="Equipe"><Monitoramento /></RotaProtegida></RotaPrivada>} />
+          
+          {/* 🔥 NOVA ROTA DE GESTÃO DE ASOS PROTEGIDA */}
+          <Route path="/asos" element={<RotaPrivada><RotaProtegida recursoExigido="Equipe"><GestaoASO /></RotaProtegida></RotaPrivada>} />
         </Routes>
       </main>
     </div>
