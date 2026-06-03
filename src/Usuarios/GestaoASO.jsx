@@ -21,49 +21,31 @@ const GestaoASO = () => {
   const [membroEditando, setMembroEditando] = useState(null);
   const [arquivoParaUpload, setArquivoParaUpload] = useState(null);
 
+  const [membroImprimir, setMembroImprimir] = useState(null);
+  const [numeroAsoAtual, setNumeroAsoAtual] = useState('');
+
   const [modalClinicaAberto, setModalClinicaAberto] = useState(false);
   const [clinicaEditandoId, setClinicaEditandoId] = useState(null);
   
   const [novaClinica, setNovaClinica] = useState({
-      nome: '',
-      endereco: '',
-      telefone: '',
-      diasFuncionamento: 'Segunda a Sexta',
-      horaAbertura: '08:00',
-      horaFechamento: '18:00',
-      temAlmoco: false,
-      horaAlmocoInicio: '12:00',
-      horaAlmocoFim: '13:00',
-      medicos: [] // Array de objetos: [{ nome: "Dr. A", crm: "123-SP" }]
+      nome: '', endereco: '', telefone: '', 
+      diasFuncionamento: 'Segunda a Sexta', horaAbertura: '08:00', horaFechamento: '18:00', 
+      temAlmoco: false, horaAlmocoInicio: '12:00', horaAlmocoFim: '13:00', medicos: [] 
   });
 
   const [medicoInput, setMedicoInput] = useState({ nome: '', crm: '' });
   
   const listaRiscosDisponiveis = [
-      'Ausência de Risco',
-      'Físico (Ruído, Calor, Frio)',
-      'Químico (Poeira, Produtos)',
-      'Biológico (Vírus, Bactérias)',
-      'Ergonómico (Postura, Peso)',
-      'Acidentes (Máquinas, Quedas)'
+      'Ausência de Risco', 'Físico (Ruído, Calor, Frio)', 'Químico (Poeira, Produtos)',
+      'Biológico (Vírus, Bactérias)', 'Ergonómico (Postura, Peso)', 'Acidentes (Máquinas, Quedas)'
   ];
 
   const [asoForm, setAsoForm] = useState({
-    asoStatus: 'Pendente',
-    asoTipo: 'Admissional',
-    asoDataExame: '',
-    asoValidade: '',
-    dataAdmissao: '', 
-    asoMedico: '',
-    asoCRM: '',
-    asoClinica: '', 
-    asoRiscos: [], 
-    asoObservacoes: '',
-    asoArquivoNome: '',
-    asoArquivoUrl: '' 
+    asoStatus: 'Pendente', asoTipo: 'Admissional', asoDataExame: '', asoValidade: '', dataAdmissao: '', 
+    asoMedico: '', asoCRM: '', asoClinica: '', asoRiscos: [], asoObservacoes: '', asoArquivoNome: '', asoArquivoUrl: '',
+    asoHistorico: []
   });
 
-  // 🔥 LISTA HISTÓRICA CORRIGIDA E PROTEGIDA
   const medicosSugestoesHist = [...new Set(equipe.map(m => m.asoMedico).filter(Boolean))];
 
   const registrarLog = async (acao, detalhes) => {
@@ -90,16 +72,13 @@ const GestaoASO = () => {
 
       const qClinicas = query(collection(db, "clinicas_aso"), where("empresaId", "==", tenantId));
       const snapClinicas = await getDocs(qClinicas);
-      
       const clinicasLidas = snapClinicas.docs.map(d => {
           const data = d.data();
           const medicosNormalizados = Array.isArray(data.medicos) 
-              ? data.medicos.map(m => typeof m === 'string' ? { nome: m, crm: '' } : m)
-              : [];
+              ? data.medicos.map(m => typeof m === 'string' ? { nome: m, crm: '' } : m) : [];
           return { id: d.id, ...data, medicos: medicosNormalizados };
       });
       setClinicas(clinicasLidas);
-
     } catch (error) {
       console.error("Erro ao carregar Fichas de ASO:", error);
     } finally {
@@ -137,9 +116,20 @@ const GestaoASO = () => {
   const totalAptos = equipe.filter(m => getStatusReal(m) === 'Apto').length;
   const totalAlertas = equipe.filter(m => ['Pendente', 'Inapto', 'Vencido'].includes(getStatusReal(m))).length;
 
+  // 🔥 PROTEÇÃO ANTI-FALHAS AO ABRIR EDIÇÃO DO ASO 🔥
   const abrirModalAso = (membro) => {
     setMembroEditando(membro);
     setArquivoParaUpload(null); 
+    
+    let riscosSeguros = [];
+    if (membro.asoRiscos) {
+        if (typeof membro.asoRiscos === 'string') {
+            riscosSeguros = membro.asoRiscos.split(', ').filter(r => r.trim() !== '');
+        } else if (Array.isArray(membro.asoRiscos)) {
+            riscosSeguros = membro.asoRiscos;
+        }
+    }
+
     setAsoForm({
       asoStatus: membro.asoStatus || 'Pendente',
       asoTipo: membro.asoTipo || 'Admissional',
@@ -149,13 +139,66 @@ const GestaoASO = () => {
       asoMedico: membro.asoMedico || '',
       asoCRM: membro.asoCRM || '',
       asoClinica: membro.asoClinica || '',
-      asoRiscos: membro.asoRiscos ? membro.asoRiscos.split(', ') : [], 
+      asoRiscos: riscosSeguros, 
       asoObservacoes: membro.asoObservacoes || '',
       asoArquivoNome: membro.asoArquivoNome || '',
-      asoArquivoUrl: membro.asoArquivoUrl || ''
+      asoArquivoUrl: membro.asoArquivoUrl || '',
+      asoHistorico: membro.asoHistorico || [] 
     });
     setModalAberto(true);
   };
+
+  const arquivarAsoAtual = () => {
+      if (!asoForm.asoArquivoUrl && !asoForm.asoDataExame) {
+          alert("Não existem dados ou arquivo suficiente para arquivar."); return;
+      }
+      if (window.confirm("Deseja arquivar os dados e o PDF atual no histórico e limpar o topo para um novo ASO?")) {
+          const itemHistorico = {
+              id: Date.now().toString(),
+              tipo: asoForm.asoTipo || 'Não informado',
+              dataExame: asoForm.asoDataExame || '',
+              validade: asoForm.asoValidade || '',
+              clinica: asoForm.asoClinica || '',
+              medico: asoForm.asoMedico || '',
+              url: asoForm.asoArquivoUrl || '',
+              nomeArquivo: asoForm.asoArquivoNome || ''
+          };
+          
+          setAsoForm(prev => ({
+              ...prev,
+              asoHistorico: [itemHistorico, ...(prev.asoHistorico || [])],
+              asoTipo: 'Periódico',
+              asoDataExame: '',
+              asoValidade: '',
+              asoArquivoUrl: '',
+              asoArquivoNome: '',
+              asoStatus: 'Pendente'
+          }));
+          setArquivoParaUpload(null);
+      }
+  };
+
+  const removerDoHistorico = (idHistorico) => {
+      if (window.confirm("Apagar este ASO do histórico? Esta ação é irreversível.")) {
+          setAsoForm(prev => ({
+              ...prev,
+              asoHistorico: prev.asoHistorico.filter(h => h.id !== idHistorico)
+          }));
+      }
+  };
+
+  const abrirImpressaoASO = (membro) => {
+      const dataHoje = new Date();
+      const ano = dataHoje.getFullYear();
+      const mes = String(dataHoje.getMonth() + 1).padStart(2, '0');
+      const dia = String(dataHoje.getDate()).padStart(2, '0');
+      const idCurto = membro.id.substring(0, 5).toUpperCase();
+
+      setNumeroAsoAtual(`ASO-${ano}${mes}${dia}-${idCurto}`);
+      setMembroImprimir(membro);
+  };
+
+  const imprimirFicha = () => window.print();
 
   const formatarCRM = (valor) => {
       let rawText = valor.toUpperCase().replace(/[^0-9A-Z]/g, '');
@@ -204,36 +247,21 @@ const GestaoASO = () => {
       }
   };
 
-  // 🔥 FUNÇÕES DE TAGS DE MÉDICOS RESTAURADAS E CORRIGIDAS 🔥
   const adicionarMedicoLista = () => {
       const nomeLimpo = medicoInput.nome.trim();
       const crmLimpo = medicoInput.crm.trim();
       if (!nomeLimpo) return;
-      
-      if (novaClinica.medicos.some(m => m.nome === nomeLimpo)) {
-          setMedicoInput({ nome: '', crm: '' }); 
-          return; 
-      }
-      
-      setNovaClinica(prev => ({
-          ...prev,
-          medicos: [...prev.medicos, { nome: nomeLimpo, crm: crmLimpo }]
-      }));
+      if (novaClinica.medicos.some(m => m.nome === nomeLimpo)) { setMedicoInput({ nome: '', crm: '' }); return; }
+      setNovaClinica(prev => ({ ...prev, medicos: [...prev.medicos, { nome: nomeLimpo, crm: crmLimpo }] }));
       setMedicoInput({ nome: '', crm: '' }); 
   };
 
   const removerMedicoLista = (indexParaRemover) => {
-      setNovaClinica(prev => ({
-          ...prev,
-          medicos: prev.medicos.filter((_, index) => index !== indexParaRemover)
-      }));
+      setNovaClinica(prev => ({ ...prev, medicos: prev.medicos.filter((_, index) => index !== indexParaRemover) }));
   };
 
   const handleKeyDownMedico = (e) => {
-      if (e.key === 'Enter') {
-          e.preventDefault(); 
-          adicionarMedicoLista();
-      }
+      if (e.key === 'Enter') { e.preventDefault(); adicionarMedicoLista(); }
   };
 
   const abrirModalNovaClinica = () => {
@@ -241,27 +269,26 @@ const GestaoASO = () => {
       setNovaClinica({ 
           nome: '', endereco: '', telefone: '', 
           diasFuncionamento: 'Segunda a Sexta', horaAbertura: '08:00', horaFechamento: '18:00', 
-          temAlmoco: false, horaAlmocoInicio: '12:00', horaAlmocoFim: '13:00',
-          medicos: [] 
+          temAlmoco: false, horaAlmocoInicio: '12:00', horaAlmocoFim: '13:00', medicos: [] 
       });
       setMedicoInput({ nome: '', crm: '' });
       setModalClinicaAberto(true);
   };
 
+  // 🔥 PROTEÇÃO ANTI-FALHAS AO ABRIR EDIÇÃO DA CLÍNICA 🔥
   const abrirModalEditarClinica = () => {
+      if (!asoForm.asoClinica) {
+          alert("Por favor, selecione uma clínica na lista antes de clicar em Editar.");
+          return;
+      }
       const clinicaData = clinicas.find(c => c.nome === asoForm.asoClinica);
       if (clinicaData) {
           setClinicaEditandoId(clinicaData.id);
           setNovaClinica({
-              nome: clinicaData.nome || '',
-              endereco: clinicaData.endereco || '',
-              telefone: clinicaData.telefone || '',
-              diasFuncionamento: clinicaData.diasFuncionamento || 'Segunda a Sexta',
-              horaAbertura: clinicaData.horaAbertura || '08:00',
-              horaFechamento: clinicaData.horaFechamento || '18:00',
-              temAlmoco: clinicaData.temAlmoco || false,
-              horaAlmocoInicio: clinicaData.horaAlmocoInicio || '12:00',
-              horaAlmocoFim: clinicaData.horaAlmocoFim || '13:00',
+              nome: clinicaData.nome || '', endereco: clinicaData.endereco || '', telefone: clinicaData.telefone || '',
+              diasFuncionamento: clinicaData.diasFuncionamento || 'Segunda a Sexta', horaAbertura: clinicaData.horaAbertura || '08:00',
+              horaFechamento: clinicaData.horaFechamento || '18:00', temAlmoco: clinicaData.temAlmoco || false,
+              horaAlmocoInicio: clinicaData.horaAlmocoInicio || '12:00', horaAlmocoFim: clinicaData.horaAlmocoFim || '13:00',
               medicos: clinicaData.medicos || []
           });
           setMedicoInput({ nome: '', crm: '' });
@@ -278,18 +305,10 @@ const GestaoASO = () => {
           }
 
           const dadosClinica = {
-              nome: novaClinica.nome,
-              endereco: novaClinica.endereco,
-              telefone: novaClinica.telefone,
-              horario: horarioFormatado,
-              diasFuncionamento: novaClinica.diasFuncionamento,
-              horaAbertura: novaClinica.horaAbertura,
-              horaFechamento: novaClinica.horaFechamento,
-              temAlmoco: novaClinica.temAlmoco,
-              horaAlmocoInicio: novaClinica.horaAlmocoInicio,
-              horaAlmocoFim: novaClinica.horaAlmocoFim,
-              medicos: novaClinica.medicos, 
-              empresaId: tenantId
+              nome: novaClinica.nome, endereco: novaClinica.endereco, telefone: novaClinica.telefone, horario: horarioFormatado,
+              diasFuncionamento: novaClinica.diasFuncionamento, horaAbertura: novaClinica.horaAbertura, horaFechamento: novaClinica.horaFechamento,
+              temAlmoco: novaClinica.temAlmoco, horaAlmocoInicio: novaClinica.horaAlmocoInicio, horaAlmocoFim: novaClinica.horaAlmocoFim,
+              medicos: novaClinica.medicos, empresaId: tenantId
           };
 
           if (clinicaEditandoId) {
@@ -314,13 +333,10 @@ const GestaoASO = () => {
           try {
               await deleteDoc(doc(db, "clinicas_aso", clinicaEditandoId));
               await registrarLog("EXCLUSÃO DE CLÍNICA", `Removeu a clínica ${novaClinica.nome}.`);
-              
               setAsoForm({ ...asoForm, asoClinica: '' }); 
               carregarDados();
               setModalClinicaAberto(false);
-          } catch (error) {
-              console.error(error); alert("Erro ao excluir clínica.");
-          }
+          } catch (error) { console.error(error); alert("Erro ao excluir clínica."); }
       }
   };
 
@@ -329,12 +345,9 @@ const GestaoASO = () => {
   const handleMedicoSelectFicha = (e) => {
       const nomeSelecionado = e.target.value;
       let crmEncontrado = asoForm.asoCRM; 
-
       if (clinicaSelecionadaData && clinicaSelecionadaData.medicos) {
           const medicoObj = clinicaSelecionadaData.medicos.find(m => m.nome === nomeSelecionado);
-          if (medicoObj && medicoObj.crm) {
-              crmEncontrado = medicoObj.crm; 
-          }
+          if (medicoObj && medicoObj.crm) { crmEncontrado = medicoObj.crm; }
       }
       setAsoForm({ ...asoForm, asoMedico: nomeSelecionado, asoCRM: crmEncontrado });
   };
@@ -343,40 +356,54 @@ const GestaoASO = () => {
     e.preventDefault();
     setSalvando(true);
     try {
-        let urlArquivo = asoForm.asoArquivoUrl;
-        let nomeArquivo = asoForm.asoArquivoNome;
+        let urlArquivo = asoForm.asoArquivoUrl || '';
+        let nomeArquivo = asoForm.asoArquivoNome || '';
 
         if (arquivoParaUpload) {
             const storage = getStorage();
-            const arquivoPath = `aso_pdfs/${tenantId}/${membroEditando.id}_${Date.now()}_${arquivoParaUpload.name}`;
+            const nomeSeguro = arquivoParaUpload.name.replace(/[^a-zA-Z0-9.]/g, '_');
+            const arquivoPath = `aso_pdfs/${tenantId}/${membroEditando.id}_${Date.now()}_${nomeSeguro}`;
             const storageRef = ref(storage, arquivoPath);
 
-            await uploadBytes(storageRef, arquivoParaUpload);
+            const uploadPromise = uploadBytes(storageRef, arquivoParaUpload);
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => reject(new Error("TIMEOUT_STORAGE")), 15000);
+            });
+
+            await Promise.race([uploadPromise, timeoutPromise]);
+
             urlArquivo = await getDownloadURL(storageRef); 
             nomeArquivo = arquivoParaUpload.name;
         }
 
-        await updateDoc(doc(db, "equipe", membroEditando.id), {
-            asoStatus: asoForm.asoStatus,
-            asoTipo: asoForm.asoTipo,
-            asoDataExame: asoForm.asoDataExame,
-            asoValidade: asoForm.asoTipo === 'Demissional' ? '' : asoForm.asoValidade, 
-            dataAdmissao: asoForm.dataAdmissao,
-            asoMedico: asoForm.asoMedico,
-            asoCRM: asoForm.asoCRM,
-            asoClinica: asoForm.asoClinica,
-            asoRiscos: asoForm.asoRiscos.join(', '), 
-            asoObservacoes: asoForm.asoObservacoes,
-            asoArquivoNome: nomeArquivo,
-            asoArquivoUrl: urlArquivo 
-        });
+        const dadosSalvar = {
+            asoStatus: asoForm.asoStatus || 'Pendente',
+            asoTipo: asoForm.asoTipo || 'Admissional',
+            asoDataExame: asoForm.asoDataExame || '',
+            asoValidade: asoForm.asoTipo === 'Demissional' ? '' : (asoForm.asoValidade || ''), 
+            dataAdmissao: asoForm.dataAdmissao || '',
+            asoMedico: asoForm.asoMedico || '',
+            asoCRM: asoForm.asoCRM || '',
+            asoClinica: asoForm.asoClinica || '',
+            asoRiscos: asoForm.asoRiscos ? (Array.isArray(asoForm.asoRiscos) ? asoForm.asoRiscos.join(', ') : asoForm.asoRiscos) : '', 
+            asoObservacoes: asoForm.asoObservacoes || '',
+            asoArquivoNome: nomeArquivo || '',
+            asoArquivoUrl: urlArquivo || '',
+            asoHistorico: asoForm.asoHistorico || [] 
+        };
+
+        await updateDoc(doc(db, "equipe", membroEditando.id), dadosSalvar);
 
         await registrarLog("ATUALIZAÇÃO DE ASO", `Atualizou a ficha médica completa de ${membroEditando.nome}.`);
         setModalAberto(false);
         carregarDados(); 
     } catch (error) {
-        console.error("Erro no upload ou ao salvar:", error);
-        alert("Erro ao atualizar ASO no banco de dados.");
+        console.error("Erro fatal ao salvar ASO na Nuvem:", error);
+        if (error.message === "TIMEOUT_STORAGE") {
+            alert("O envio do PDF demorou muito e o sistema travou.\n\nVERIFIQUE:\n1. Se o serviço 'Storage' está ativado no seu Firebase Console.\n2. Se o 'storageBucket' está correto no seu firebaseConfig.js.");
+        } else {
+            alert(`Erro de conexão com o banco de dados. \nDetalhe: ${error.message}`);
+        }
     } finally {
         setSalvando(false);
     }
@@ -392,9 +419,11 @@ const GestaoASO = () => {
           <h1>Gestão de ASOs</h1>
           <p>Acompanhe a Saúde Ocupacional e o vencimento dos atestados médicos da sua equipe.</p>
         </div>
-        <button onClick={() => navigate('/usuarios')} className="btn-voltar">
-          <i className="fas fa-arrow-left"></i> Voltar para Equipe
-        </button>
+        <div className="header-botoes">
+            <button onClick={() => navigate('/usuarios')} className="btn-voltar">
+                <i className="fas fa-arrow-left"></i> Voltar para Equipe
+            </button>
+        </div>
       </div>
 
       <div className="dashboard-asos">
@@ -434,10 +463,7 @@ const GestaoASO = () => {
           <tbody>
             {equipe.map(membro => {
               const statusReal = getStatusReal(membro);
-              
-              let badgeClass = 'pendente';
-              let icone = 'fa-clock';
-              
+              let badgeClass = 'pendente'; let icone = 'fa-clock';
               if (statusReal === 'Apto') { badgeClass = 'apto'; icone = 'fa-check-circle'; }
               else if (statusReal === 'Inapto') { badgeClass = 'inapto'; icone = 'fa-times-circle'; }
               else if (statusReal === 'Vencido') { badgeClass = 'vencido'; icone = 'fa-exclamation-circle'; }
@@ -460,19 +486,14 @@ const GestaoASO = () => {
                 </td>
                 
                 <td>
-                    <span className={`badge-aso ${badgeClass}`}>
-                        <i className={`fas ${icone}`}></i> {statusReal}
-                    </span>
+                    <span className={`badge-aso ${badgeClass}`}><i className={`fas ${icone}`}></i> {statusReal}</span>
                     {membro.asoRiscos && (
-                        <span className="info-sub" style={{ color: '#b91c1c' }}>
-                            <i className="fas fa-biohazard"></i> Riscos: {membro.asoRiscos}
-                        </span>
+                        <span className="info-sub" style={{ color: '#b91c1c' }}><i className="fas fa-biohazard"></i> Riscos: {membro.asoRiscos}</span>
                     )}
                 </td>
                 
                 <td>
                     <strong style={{ color: '#334155', fontSize: '13px', display: 'block' }}>{membro.asoTipo || 'Não informado'}</strong>
-                    
                     {membro.asoTipo === 'Demissional' && membro.dataAdmissao && membro.asoDataExame ? (
                         <>
                             <span className="info-sub"><i className="far fa-calendar-check"></i> Admissão: <strong>{membro.dataAdmissao.split('-').reverse().join('/')}</strong></span>
@@ -491,14 +512,15 @@ const GestaoASO = () => {
                 
                 <td>
                   <div className="acoes-tabela">
+                    <button onClick={() => abrirImpressaoASO(membro)} className="btn-action" style={{ background: '#fefce8', color: '#a16207', borderColor: '#fde047' }}>
+                        <i className="fas fa-print"></i> Gerar Ficha
+                    </button>
                     {membro.asoArquivoUrl && (
                         <button onClick={() => window.open(membro.asoArquivoUrl, '_blank')} className="btn-anexo-min" title="Baixar ou Visualizar Atestado (PDF)">
                             <i className="fas fa-file-pdf" style={{ color: '#ef4444' }}></i>
                         </button>
                     )}
-                    <button onClick={() => abrirModalAso(membro)} className="btn-action">
-                        <i className="fas fa-edit"></i> Editar Ficha
-                    </button>
+                    <button onClick={() => abrirModalAso(membro)} className="btn-action"><i className="fas fa-edit"></i> Editar Ficha</button>
                   </div>
                 </td>
               </tr>
@@ -510,9 +532,7 @@ const GestaoASO = () => {
         </table>
       </div>
 
-      {/* =========================================
-          MODAL DE FICHA MÉDICA COMPLETA
-      ========================================= */}
+      {/* MODAL DE FICHA MÉDICA COMPLETA */}
       {modalAberto && (
           <div className="modal-overlay-blur">
               <div className="modal-card-aso">
@@ -569,7 +589,6 @@ const GestaoASO = () => {
 
                       <div className="modal-section-box">
                           <h4 className="section-title-aso"><i className="fas fa-hospital-user" style={{ color: '#10b981' }}></i> Profissional e Clínica</h4>
-                          
                           <div style={{ marginBottom: '15px' }}>
                               <label className="input-label">CLÍNICA VINCULADA (LOCAL DO EXAME)</label>
                               <div style={{ display: 'flex', gap: '10px' }}>
@@ -579,13 +598,9 @@ const GestaoASO = () => {
                                           <option key={c.id} value={c.nome}>{c.nome}</option>
                                       ))}
                                   </select>
-                                  <button type="button" onClick={abrirModalNovaClinica} className="btn-add-mini" title="Cadastrar Nova Clínica">
-                                      <i className="fas fa-plus"></i> Nova
-                                  </button>
+                                  <button type="button" onClick={abrirModalNovaClinica} className="btn-add-mini" title="Cadastrar Nova Clínica"><i className="fas fa-plus"></i> Nova</button>
                                   {asoForm.asoClinica && (
-                                      <button type="button" onClick={abrirModalEditarClinica} className="btn-edit-mini" title="Editar dados desta Clínica">
-                                          <i className="fas fa-pen"></i> Editar
-                                      </button>
+                                      <button type="button" onClick={abrirModalEditarClinica} className="btn-edit-mini" title="Editar dados desta Clínica"><i className="fas fa-pen"></i> Editar</button>
                                   )}
                               </div>
                           </div>
@@ -602,9 +617,8 @@ const GestaoASO = () => {
                                       </select>
                                   ) : (
                                       <>
-                                          {/* 🔥 CORRIGIDO O DATALIST AQUI 🔥 */}
-                                          <input list="lista-medicos" type="text" placeholder="Ex: Dr. Carlos Silva" value={asoForm.asoMedico} onChange={e => setAsoForm({...asoForm, asoMedico: e.target.value})} className="input-field" />
-                                          <datalist id="lista-medicos">
+                                          <input list="lista-medicos-hist" type="text" placeholder="Ex: Dr. Carlos Silva" value={asoForm.asoMedico} onChange={e => setAsoForm({...asoForm, asoMedico: e.target.value})} className="input-field" />
+                                          <datalist id="lista-medicos-hist">
                                               {medicosSugestoesHist.map((m, i) => <option key={i} value={m}>{m}</option>)}
                                           </datalist>
                                       </>
@@ -622,7 +636,7 @@ const GestaoASO = () => {
                           <label className="input-label">RISCOS OCUPACIONAIS IDENTIFICADOS</label>
                           <div className="riscos-grid">
                               {listaRiscosDisponiveis.map(risco => {
-                                  const estaAtivo = asoForm.asoRiscos.includes(risco);
+                                  const estaAtivo = Array.isArray(asoForm.asoRiscos) ? asoForm.asoRiscos.includes(risco) : false;
                                   const classeAtivo = estaAtivo ? (risco === 'Ausência de Risco' ? 'ativo-ausente' : 'ativo') : '';
                                   return (
                                       <label key={risco} className={`risco-label ${classeAtivo}`}>
@@ -638,18 +652,55 @@ const GestaoASO = () => {
                           </div>
                       </div>
 
+                      {/* UPLOAD ATUAL */}
                       <div className="modal-section-box">
-                          <h4 className="section-title-aso"><i className="fas fa-paperclip" style={{ color: '#64748b' }}></i> Documento Anexo</h4>
+                          <h4 className="section-title-aso"><i className="fas fa-paperclip" style={{ color: '#64748b' }}></i> Documento Anexo (Prontuário Preenchido)</h4>
                           <div className="upload-box">
                               <input type="file" className="upload-input-hidden" accept=".pdf, .jpg, .jpeg, .png" onChange={handleFileUpload} />
                               <i className="fas fa-cloud-upload-alt"></i>
                               {asoForm.asoArquivoNome ? (
-                                  <><p style={{ color: '#10b981' }}>{asoForm.asoArquivoNome}</p><span>Clique para substituir o arquivo</span></>
+                                  <><p style={{ color: '#10b981' }}>{asoForm.asoArquivoNome}</p><span>Clique para substituir o arquivo preenchido</span></>
                               ) : (
-                                  <><p>Clique ou arraste o ASO digitalizado</p><span>Tamanho máximo: 5MB</span></>
+                                  <><p>Clique ou arraste o ASO digitalizado após assinado</p><span>Tamanho máximo: 5MB</span></>
                               )}
                           </div>
+
+                          {/* 🔥 BOTÃO DE RENOVAÇÃO / ARQUIVAMENTO 🔥 */}
+                          {(asoForm.asoArquivoUrl || asoForm.asoDataExame) && (
+                              <button type="button" onClick={arquivarAsoAtual} className="btn-arquivar">
+                                  <i className="fas fa-history"></i> Renovar ASO (Arquivar documento atual e iniciar novo)
+                              </button>
+                          )}
                       </div>
+
+                      {/* 🔥 LISTA DO HISTÓRICO 🔥 */}
+                      {asoForm.asoHistorico && asoForm.asoHistorico.length > 0 && (
+                          <div className="historico-section">
+                              <h4 className="section-title-aso" style={{ fontSize: '12px', color: '#64748b', borderBottom: 'none', marginBottom: '10px' }}>
+                                  <i className="fas fa-archive"></i> Histórico de Arquivos Anteriores
+                              </h4>
+                              <div className="historico-lista">
+                                  {asoForm.asoHistorico.map(hist => (
+                                      <div key={hist.id} className="historico-item">
+                                          <div className="historico-info">
+                                              <strong>{hist.tipo} - {hist.dataExame ? hist.dataExame.split('-').reverse().join('/') : 'Sem data'}</strong>
+                                              <span>{hist.clinica || 'Clínica não informada'} | Validade: {hist.validade ? hist.validade.split('-').reverse().join('/') : 'N/A'}</span>
+                                          </div>
+                                          <div style={{ display: 'flex', gap: '8px' }}>
+                                              {hist.url && (
+                                                  <button type="button" onClick={() => window.open(hist.url, '_blank')} className="btn-anexo-min" title="Baixar ASO Arquivado">
+                                                      <i className="fas fa-download" style={{ color: '#3b82f6' }}></i>
+                                                  </button>
+                                              )}
+                                              <button type="button" onClick={() => removerDoHistorico(hist.id)} className="btn-anexo-min" title="Excluir do Histórico">
+                                                  <i className="fas fa-trash-alt" style={{ color: '#ef4444' }}></i>
+                                              </button>
+                                          </div>
+                                      </div>
+                                  ))}
+                              </div>
+                          </div>
+                      )}
 
                       <div className="modal-acoes-footer">
                           <button type="button" onClick={() => setModalAberto(false)} className="btn-cancel">Cancelar</button>
@@ -660,9 +711,7 @@ const GestaoASO = () => {
           </div>
       )}
 
-      {/* =========================================
-          🔥 MODAL ROBUSTO DE EDIÇÃO / NOVA CLÍNICA 🔥
-      ========================================= */}
+      {/* MODAL ROBUSTO DE EDIÇÃO / NOVA CLÍNICA */}
       {modalClinicaAberto && (
           <div className="modal-overlay-blur" style={{ zIndex: 10000 }}>
               <div className="modal-card-aso modal-mini">
@@ -734,30 +783,13 @@ const GestaoASO = () => {
                           <label className="input-label" style={{ color: '#3b82f6' }}><i className="fas fa-user-md"></i> MÉDICOS DISPONÍVEIS NA CLÍNICA</label>
                           
                           <div className="medicos-input-group">
-                              <input 
-                                  type="text" 
-                                  placeholder="Nome do Médico" 
-                                  value={medicoInput.nome}
-                                  onChange={(e) => setMedicoInput({ ...medicoInput, nome: e.target.value })}
-                                  onKeyDown={handleKeyDownMedico}
-                                  className="input-field" 
-                              />
-                              <input 
-                                  type="text" 
-                                  placeholder="CRM (Opcional)" 
-                                  value={medicoInput.crm}
-                                  onChange={handleCRMChangeTag}
-                                  maxLength="11"
-                                  className="input-field" 
-                                  style={{ maxWidth: '180px' }}
-                              />
+                              <input type="text" placeholder="Nome do Médico" value={medicoInput.nome} onChange={(e) => setMedicoInput({ ...medicoInput, nome: e.target.value })} onKeyDown={handleKeyDownMedico} className="input-field" />
+                              <input type="text" placeholder="CRM (Opcional)" value={medicoInput.crm} onChange={handleCRMChangeTag} maxLength="11" className="input-field" style={{ maxWidth: '180px' }} />
                               <button type="button" onClick={adicionarMedicoLista} className="btn-add-medico">Adicionar</button>
                           </div>
 
                           <div className="medicos-tags-container">
-                              {novaClinica.medicos.length === 0 && (
-                                  <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '4px' }}>Nenhum médico associado ainda.</span>
-                              )}
+                              {novaClinica.medicos.length === 0 && ( <span style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginTop: '4px' }}>Nenhum médico associado ainda.</span> )}
                               {novaClinica.medicos.map((medicoObj, index) => (
                                   <div key={index} className="medico-tag">
                                       {medicoObj.nome} {medicoObj.crm ? `(${medicoObj.crm})` : ''}
@@ -771,7 +803,6 @@ const GestaoASO = () => {
                           <button type="button" onClick={salvarClinica} className="btn-submit" style={{ width: '100%', maxWidth: 'none', padding: '14px' }}>
                               {clinicaEditandoId ? 'Atualizar Clínica' : 'Salvar Clínica no Banco'}
                           </button>
-                          
                           {clinicaEditandoId && (
                               <button type="button" onClick={excluirClinica} className="btn-delete-clinica">
                                   <i className="fas fa-trash-alt"></i> Excluir Clínica Definitivamente
@@ -779,6 +810,98 @@ const GestaoASO = () => {
                           )}
                       </div>
                   </div>
+              </div>
+          </div>
+      )}
+
+      {/* MÓDULO DE IMPRESSÃO A4 AUTOMÁTICO */}
+      {membroImprimir && (
+          <div className="print-overlay">
+              <div className="print-toolbar">
+                  <div>
+                      <h3>Pré-visualização do Documento</h3>
+                      <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>Imprima em formato A4, retrato.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                      <button onClick={() => setMembroImprimir(null)} className="btn-cancel" style={{ padding: '10px 20px', height: '42px' }}>Fechar</button>
+                      <button onClick={imprimirFicha} className="btn-imprimir-real"><i className="fas fa-print"></i> Imprimir ASO</button>
+                  </div>
+              </div>
+
+              <div className="a4-page">
+                  <div className="a4-header">
+                      <h1>Atestado de Saúde Ocupacional - ASO</h1>
+                      <p>Em conformidade com a Norma Regulamentadora Nº 07 (NR-7)</p>
+                  </div>
+
+                  <div className="a4-row-dupla">
+                      <span><strong>Nº de Controle:</strong> {numeroAsoAtual}</span>
+                      <span><strong>Data de Emissão:</strong> {new Date().toLocaleDateString('pt-BR')}</span>
+                  </div>
+
+                  <div className="a4-section">
+                      <h2>1. Identificação do Colaborador</h2>
+                      <div className="a4-linha"><strong>Nome Completo:</strong> <div className="a4-tracejado" style={{ borderBottomStyle: 'solid' }}>{membroImprimir.nome}</div></div>
+                      <div className="a4-linha"><strong>Função / Cargo:</strong> <div className="a4-tracejado" style={{ borderBottomStyle: 'solid' }}>{membroImprimir.cargo || 'Não informado'}</div></div>
+                      <div className="a4-linha">
+                          <strong>Tipo de Exame:</strong>
+                          <div className="a4-checkboxes" style={{ display: 'flex', gap: '15px', marginLeft: '10px', alignItems: 'center' }}>
+                              <span><div className="a4-quadradinho"></div> Admissional</span>
+                              <span><div className="a4-quadradinho"></div> Periódico</span>
+                              <span><div className="a4-quadradinho"></div> Demissional</span>
+                              <span><div className="a4-quadradinho"></div> Retorno</span>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="a4-section">
+                      <h2>2. Triagem e Sinais Vitais (Uso Médico)</h2>
+                      <div className="a4-grid-sinais">
+                          <div className="a4-box"><span>Pressão Arterial (PA)</span><div className="a4-box-linha"></div></div>
+                          <div className="a4-box"><span>Peso (Kg)</span><div className="a4-box-linha"></div></div>
+                          <div className="a4-box"><span>Altura (m)</span><div className="a4-box-linha"></div></div>
+                          <div className="a4-box"><span>Frequência Cardíaca (BPM)</span><div className="a4-box-linha"></div></div>
+                          <div className="a4-box"><span>Temperatura (°C)</span><div className="a4-box-linha"></div></div>
+                          <div className="a4-box"><span>Saturação O2 (%)</span><div className="a4-box-linha"></div></div>
+                      </div>
+                  </div>
+
+                  <div className="a4-section">
+                      <h2>3. Comorbidades e Anamnese</h2>
+                      <div className="a4-checkbox-grid">
+                          <div className="a4-check-item"><div className="a4-quadradinho"></div> Diabetes</div>
+                          <div className="a4-check-item"><div className="a4-quadradinho"></div> Hipertensão</div>
+                          <div className="a4-check-item"><div className="a4-quadradinho"></div> Cardiopatia</div>
+                          <div className="a4-check-item"><div className="a4-quadradinho"></div> Asma/Bronquite</div>
+                          <div className="a4-check-item"><div className="a4-quadradinho"></div> Doença Ocular</div>
+                          <div className="a4-check-item"><div className="a4-quadradinho"></div> Lesão Ortopédica</div>
+                      </div>
+                      <div className="a4-linha" style={{ marginTop: '15px' }}><strong>Outras observações / Alergias:</strong> <div className="a4-tracejado"></div></div>
+                      <div className="a4-linha"><div className="a4-tracejado"></div></div>
+                  </div>
+
+                  <div className="a4-section">
+                      <h2>4. Conclusão e Parecer Médico</h2>
+                      <p style={{ fontSize: '12px', marginBottom: '15px' }}>Após avaliação clínica, declaro que o colaborador acima identificado encontra-se:</p>
+                      
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', fontSize: '14px', fontWeight: 'bold' }}>
+                          <div className="a4-check-item"><div className="a4-quadradinho" style={{ width: '18px', height: '18px' }}></div> APTO PARA A FUNÇÃO</div>
+                          <div className="a4-check-item"><div className="a4-quadradinho" style={{ width: '18px', height: '18px' }}></div> APTO COM RESTRIÇÕES</div>
+                          <div className="a4-check-item"><div className="a4-quadradinho" style={{ width: '18px', height: '18px' }}></div> INAPTO PARA A FUNÇÃO</div>
+                      </div>
+                  </div>
+
+                  <div className="a4-assinaturas">
+                      <div className="a4-ass-bloco">
+                          <strong>Assinatura do Colaborador</strong>
+                          <br /><br />Data: ____/____/20___
+                      </div>
+                      <div className="a4-ass-bloco">
+                          <strong>Carimbo e Assinatura do Médico</strong>
+                          <br /><br />CRM: 
+                      </div>
+                  </div>
+
               </div>
           </div>
       )}

@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore'; 
 import { db } from '../firebaseConfig';
 import "./Navbar.css";
 
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [permissoesAtivas, setPermissoesAtivas] = useState(null); 
+  const [isDonoDaConta, setIsDonoDaConta] = useState(localStorage.getItem('userRole') !== 'funcionario'); 
+
   const [acesso, setAcesso] = useState({
       carregando: true,
       testeAtivo: false,
@@ -18,41 +21,61 @@ const Navbar = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   
-  // Identificação da Super-Admin (Você)
   const emailAdmin = "celebrefesta25@gmail.com";
   const isSuperAdmin = usuarioLogado?.email === emailAdmin;
 
   const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
   const closeMenu = () => setIsMobileMenuOpen(false);
 
-  // 🔥 IDENTIFICAÇÃO DO SAAS
-  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
-  const userRole = localStorage.getItem('userRole') || 'admin';
-  let permissoesFuncionario = {};
-  
+  let permissoesCache = {};
   try {
-      permissoesFuncionario = JSON.parse(localStorage.getItem('userPermissions') || '{}');
+      permissoesCache = JSON.parse(localStorage.getItem('userPermissions')) || {};
   } catch (e) {
-      permissoesFuncionario = {};
+      permissoesCache = {};
   }
 
   useEffect(() => {
-      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      let unsubSnapshot = null;
+
+      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
           if (user) {
               try {
-                  // 🔥 Lê o plano do DONO DA CONTA (tenantId), não do funcionário
-                  const idParaBusca = localStorage.getItem('tenantId') || user.uid;
+                  const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+                  const snapFunc = await getDocs(qFunc);
+                  
+                  const isFuncionarioReal = !snapFunc.empty;
+                  
+                  setIsDonoDaConta(!isFuncionarioReal);
+
+                  let idParaBusca = user.uid;
+
+                  if (isFuncionarioReal) {
+                      const funcDoc = snapFunc.docs[0]; 
+                      const dadosFunc = funcDoc.data();
+                      
+                      unsubSnapshot = onSnapshot(doc(db, "equipe", funcDoc.id), (docSnap) => {
+                          if (docSnap.exists()) setPermissoesAtivas(docSnap.data());
+                      });
+
+                      if (dadosFunc.empresaId) {
+                          idParaBusca = dadosFunc.empresaId;
+                          localStorage.setItem('tenantId', idParaBusca); 
+                      }
+                  } else {
+                      localStorage.setItem('userRole', 'admin');
+                      localStorage.setItem('tenantId', user.uid);
+                      idParaBusca = user.uid;
+                  }
+
                   const userSnap = await getDoc(doc(db, "usuarios", idParaBusca));
 
                   if (userSnap.exists()) {
                       const dados = userSnap.data();
-                      
                       let testeAtivo = false;
                       if (dados.dataFimTeste) {
                           testeAtivo = new Date() <= new Date(dados.dataFimTeste);
                       }
                       
-                      // Aceita plano "pago" ou statusAssinatura "ativa"
                       const assinaturaAtiva = dados.assinaturaAtiva === true || dados.plano === 'pago' || dados.statusPagamentoVulso === 'pago';
                       
                       let beneficios = [];
@@ -77,7 +100,11 @@ const Navbar = () => {
               }
           }
       });
-      return () => unsubscribe();
+
+      return () => {
+          unsubscribeAuth();
+          if (unsubSnapshot) unsubSnapshot(); 
+      };
   }, [auth]);
 
   // 🛡️ REGRA 1: A EMPRESA TEM ESSE RECURSO NO PLANO DELA?
@@ -92,55 +119,66 @@ const Navbar = () => {
 
   // 🛡️ REGRA 2: O FUNCIONÁRIO PODE CLICAR AQUI?
   const verificarAcessoFuncionario = (label) => {
-      if (isSuperAdmin || userRole === 'admin') return true;
+      if (isSuperAdmin || isDonoDaConta) return true;
       
-      const mapPermissoes = {
-          'Agenda': permissoesFuncionario.agenda,
-          'Clientes': permissoesFuncionario.clientes,
-          'Locações': permissoesFuncionario.locacoes,
-          'Estoque': permissoesFuncionario.estoque,
-          'Compras': permissoesFuncionario.compras,
-          'Logística': permissoesFuncionario.logistica,
-          'Contratos': permissoesFuncionario.contratos,
-          'Catálogo': permissoesFuncionario.catalogo,
-          'Moodboard': permissoesFuncionario.moodboard,
-          'Início': true 
-      };
+      if (label === 'Financeiro' || label === 'Relatórios' || label === 'Assinatura') return false;
+      if (label === 'Início') return true;
 
-      // Áreas PROIBIDAS para funcionários (segurança máxima)
-      if (label === 'Financeiro' || label === 'Relatórios' || label === 'Assinatura') {
-          return false;
+      const objPermissoes = permissoesAtivas || permissoesCache;
+      
+      if (!objPermissoes) return false;
+
+      const removerAcentos = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+      const labelLimpa = removerAcentos(label);
+      
+      let valorEncontrado = null; 
+
+      const base = objPermissoes.permissoes ? objPermissoes.permissoes : objPermissoes;
+
+      if (Array.isArray(base)) {
+          const arrNorm = base.map(removerAcentos);
+          valorEncontrado = arrNorm.includes(labelLimpa);
+      } else if (typeof base === 'object' && base !== null) {
+          const chaves = Object.keys(base);
+          for (let k of chaves) {
+              if (removerAcentos(k) === labelLimpa) {
+                  valorEncontrado = base[k];
+                  break;
+              }
+          }
       }
 
-      if (mapPermissoes[label] !== undefined) {
-          return mapPermissoes[label] === true;
-      }
+      if (valorEncontrado !== null) return valorEncontrado === true;
 
-      return true; 
+      return false; 
   };
 
   const ItemMenuProtegido = ({ to, icon, label, recurso }) => {
       
-      const empresaPagou = verificarPermissaoPlano(recurso);
       const funcPodeVer = verificarAcessoFuncionario(label);
+      const empresaPagou = verificarPermissaoPlano(recurso);
 
-      // 🔥 MUDANÇA DE ESTRATÉGIA SaaS:
-      // Se a empresa NÃO pagou, mostra o cadeado para TODOS verem que o recurso existe!
-      if (!empresaPagou) {
+      // 🔥 LÓGICA DE CORES: Se NÃO tem permissão ou a empresa NÃO pagou, mostra o cadeado!
+      if (!funcPodeVer || !empresaPagou) {
+          
+          // Se a empresa não pagou, o bloqueio é do plano (Vermelho). Caso contrário, é da gestão (Branco).
+          const corCadeado = !empresaPagou ? '#ef4444' : '#ffffff';
+
+          const mensagemBloqueio = !empresaPagou 
+              ? "A sua empresa precisa de um plano superior para acessar esta área."
+              : "Você não tem permissão para acessar esta área. Solicite liberação ao administrador.";
+
           return (
-              <div className="menu-item locked" title="A sua empresa precisa de um plano superior para acessar esta área.">
+              <div className="menu-item locked" title={mensagemBloqueio}>
                   <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <i className={icon}></i> <span>{label}</span>
+                      <i className={icon}></i> <span style={{ opacity: 0.6 }}>{label}</span>
                   </div>
-                  <i className="fas fa-lock lock-icon"></i>
+                  <i className="fas fa-lock lock-icon" style={{ color: corCadeado }}></i>
               </div>
           );
       }
 
-      // Se a empresa pagou, mas este funcionário específico NÃO tem permissão, esconde o botão para ele não fazer asneira.
-      if (!funcPodeVer) return null;
-
-      // Tudo certo! Mostra o botão normal
+      // Tudo liberado e pago!
       return (
           <NavLink to={to} onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
               <i className={icon}></i> <span>{label}</span>
@@ -186,7 +224,7 @@ const Navbar = () => {
           <ItemMenuProtegido to="/moodboard" icon="fas fa-palette" label="Moodboard" recurso="Moodboard- Projeto Digital" />
           
           <ItemMenuProtegido 
-              to={usuarioLogado ? `/catalogo/${tenantId}` : "/catalogo"} 
+              to={usuarioLogado ? `/catalogo/${localStorage.getItem('tenantId') || usuarioLogado?.uid}` : "/catalogo"} 
               icon="fas fa-store" 
               label="Catálogo" 
               recurso="Catalago Digital" 
@@ -194,7 +232,7 @@ const Navbar = () => {
 
           {!isSuperAdmin ? (
             <>
-              {/* O Funcionário não vê a aba de Assinatura (ocultada via inteligência), o admin vê */}
+              {/* O Funcionário não vê a aba de Assinatura, o admin vê */}
               <div className="sidebar-divider"></div>
               <ItemMenuProtegido to="/planos" icon="fas fa-star" label="Assinatura" />
             </>

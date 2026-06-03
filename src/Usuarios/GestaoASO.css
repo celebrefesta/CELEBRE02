@@ -23,6 +23,8 @@
 .titulo-bloco h1 { margin: 0; color: #0f172a; font-size: 24px; font-weight: 900; letter-spacing: -0.5px; }
 .titulo-bloco p { margin: 5px 0 0; color: #64748b; font-size: 14px; }
 
+.header-botoes { display: flex; gap: 15px; align-items: center; }
+
 .btn-voltar {
     background: #fff; color: #0f172a; border: 1px solid #cbd5e1;
     padding: 10px 20px; border-radius: 8px; font-weight: bold; cursor: pointer;
@@ -30,9 +32,7 @@
 }
 .btn-voltar:hover { background: #f1f5f9; border-color: #94a3b8; }
 
-/* =========================================
-   DASHBOARD DE SAÚDE (CARDS INDICADORES)
-========================================= */
+/* DASHBOARD DE SAÚDE (CARDS INDICADORES) */
 .dashboard-asos { display: flex; gap: 20px; margin-bottom: 25px; flex-wrap: wrap; width: 100%; }
 .dash-card {
     flex: 1; min-width: 250px; background: #fff; border: 1px solid #e2e8f0;
@@ -40,19 +40,14 @@
     box-shadow: 0 4px 15px rgba(0,0,0,0.03); transition: transform 0.2s, box-shadow 0.2s;
 }
 .dash-card:hover { transform: translateY(-3px); box-shadow: 0 8px 25px rgba(0,0,0,0.06); }
-.dash-icon {
-    width: 55px; height: 55px; border-radius: 12px; display: flex; align-items: center;
-    justify-content: center; font-size: 24px; flex-shrink: 0;
-}
+.dash-icon { width: 55px; height: 55px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
 .dash-card.total .dash-icon { background: #f8fafc; color: #3b82f6; }
 .dash-card.aptos .dash-icon { background: #dcfce7; color: #10b981; }
 .dash-card.alertas .dash-icon { background: #fee2e2; color: #ef4444; }
 .dash-info h3 { margin: 0; font-size: 13px; color: #64748b; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
 .dash-info h2 { margin: 5px 0 0 0; font-size: 28px; color: #0f172a; font-weight: 900; }
 
-/* =========================================
-   TABELA DE ASOs
-========================================= */
+/* TABELA DE ASOs */
 .table-container { width: 100%; overflow-x: auto; overflow-y: visible !important; }
 .table-pro { width: 100%; border-collapse: separate; border-spacing: 0 10px; min-width: 900px; }
 .table-pro th { padding: 15px 20px; text-align: left; font-size: 11px; text-transform: uppercase; color: #64748b; letter-spacing: 1px; border: none; }
@@ -92,83 +87,43 @@
 }
 .btn-anexo-min:hover { background: #e2e8f0; color: #0f172a; }
 
-/* =========================================
-   MODAL FICHA MÉDICA E CLÍNICA
-========================================= */
+/* MODAIS */
 .modal-overlay-blur { z-index: 9999; display: flex; align-items: center; justify-content: center; background-color: rgba(15, 23, 42, 0.6); position: fixed; top: 0; left: 0; right: 0; bottom: 0; padding: 20px; }
-
-.modal-card-aso {
-    width: 100%; max-width: 850px; 
-    max-height: 90vh; background: #fff; border-radius: 16px;
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column;
-}
-
+.modal-card-aso { width: 100%; max-width: 850px; max-height: 90vh; background: #fff; border-radius: 16px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); display: flex; flex-direction: column; }
 .modal-mini { max-width: 650px !important; height: auto !important; max-height: 90vh; }
-
 .modal-header { padding: 20px 30px; border-bottom: 1px solid #e2e8f0; background: #f8fafc; display: flex; justify-content: space-between; align-items: center; }
 .modal-body { padding: 30px; overflow-y: auto; background: #f8fafc; display: flex; flex-direction: column; gap: 20px; }
 .modal-mini .modal-body { background: #fff; padding: 25px; gap: 15px; }
-
 .modal-section-box { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
 .section-title-aso { display: flex; align-items: center; gap: 10px; font-size: 14px; font-weight: 900; color: #0f172a; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 2px solid #f1f5f9; padding-bottom: 12px; margin-bottom: 20px; margin-top: 0;}
-
 .input-label { display: block; font-size: 11px; font-weight: 800; color: #64748b; margin-bottom: 6px; text-transform: uppercase; }
 .input-field { width: 100%; padding: 12px 14px; border-radius: 8px; border: 1px solid #cbd5e1; box-sizing: border-box; background: #fff; font-size: 14px; color: #0f172a; transition: all 0.2s; outline: none; }
 .input-field:focus { border-color: #0f172a; }
 select.input-field { cursor: pointer; }
 
 /* BOTÕES DE CONTROLE DA CLÍNICA */
-.btn-add-mini {
-    background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1;
-    border-radius: 8px; padding: 0 16px; font-weight: 800; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
-    white-space: nowrap; height: 46px; 
-}
+.btn-add-mini { background: #f8fafc; color: #0f172a; border: 1px solid #cbd5e1; border-radius: 8px; padding: 0 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; white-space: nowrap; height: 46px; }
 .btn-add-mini:hover { background: #e2e8f0; border-color: #94a3b8; }
-
-.btn-edit-mini {
-    background: #fefce8; color: #a16207; border: 1px solid #fde047;
-    border-radius: 8px; padding: 0 16px; font-weight: 800; cursor: pointer;
-    display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s;
-    white-space: nowrap; height: 46px; 
-}
+.btn-edit-mini { background: #fefce8; color: #a16207; border: 1px solid #fde047; border-radius: 8px; padding: 0 16px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; transition: 0.2s; white-space: nowrap; height: 46px; }
 .btn-edit-mini:hover { background: #fef08a; border-color: #facc15; }
-
-.btn-delete-clinica {
-    background: #fef2f2; color: #dc2626; border: 1px solid #fecaca;
-    border-radius: 8px; padding: 14px; font-weight: 800; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px;
-}
+.btn-delete-clinica { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; border-radius: 8px; padding: 14px; font-weight: 800; cursor: pointer; transition: 0.2s; width: 100%; margin-top: 10px; }
 .btn-delete-clinica:hover { background: #fee2e2; }
 
 .flex-row-responsivo { display: flex; gap: 20px; margin-bottom: 15px; }
 
-/* 🔥 TAGS DOS MÉDICOS ATUALIZADAS 🔥 */
+/* TAGS DOS MÉDICOS */
 .medicos-input-group { display: flex; gap: 10px; flex-wrap: wrap; }
 .medicos-input-group .input-field { flex: 1; min-width: 150px; }
-.btn-add-medico {
-    background: #0f172a; color: #fff; border: none; border-radius: 8px;
-    padding: 0 18px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap;
-}
+.btn-add-medico { background: #0f172a; color: #fff; border: none; border-radius: 8px; padding: 0 18px; font-weight: bold; cursor: pointer; transition: 0.2s; white-space: nowrap; }
 .btn-add-medico:hover { background: #1e293b; }
 .medicos-tags-container { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.medico-tag {
-    background: #eff6ff; color: #1e3a8a; padding: 6px 12px; border-radius: 20px;
-    font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px;
-    border: 1px solid #bfdbfe; animation: fadeIn 0.2s ease-in-out;
-}
-.medico-tag button {
-    background: transparent; border: none; color: #ef4444; cursor: pointer;
-    font-size: 16px; display: flex; align-items: center; justify-content: center;
-    padding: 0; line-height: 1; font-weight: bold; transition: 0.2s;
-}
+.medico-tag { background: #eff6ff; color: #1e3a8a; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: 700; display: flex; align-items: center; gap: 8px; border: 1px solid #bfdbfe; animation: fadeIn 0.2s ease-in-out; }
+.medico-tag button { background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 16px; display: flex; align-items: center; justify-content: center; padding: 0; line-height: 1; font-weight: bold; transition: 0.2s; }
 .medico-tag button:hover { color: #991b1b; transform: scale(1.1); }
 
 /* GRELHA DE SELEÇÃO DE RISCOS */
 .riscos-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.risco-label {
-    display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #cbd5e1;
-    border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #fff; font-size: 13px; color: #475569; user-select: none;
-}
+.risco-label { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; transition: all 0.2s; background: #fff; font-size: 13px; color: #475569; user-select: none; }
 .risco-label:hover { border-color: #94a3b8; background: #f8fafc; }
 .risco-label.ativo { border-color: #0f172a; background: #f8fafc; font-weight: 700; color: #0f172a; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
 .risco-label.ativo-ausente { border-color: #10b981; background: #f0fdf4; color: #166534; }
@@ -176,16 +131,23 @@ select.input-field { cursor: pointer; }
 .risco-label.ativo-ausente input[type="checkbox"] { accent-color: #10b981; }
 
 /* Upload Box Customizado */
-.upload-box {
-    border: 2px dashed #cbd5e1; border-radius: 12px; padding: 25px; text-align: center;
-    background: #f8fafc; cursor: pointer; transition: 0.2s; position: relative;
-}
+.upload-box { border: 2px dashed #cbd5e1; border-radius: 12px; padding: 25px; text-align: center; background: #f8fafc; cursor: pointer; transition: 0.2s; position: relative; }
 .upload-box:hover { border-color: #3b82f6; background: #eff6ff; }
 .upload-box i { font-size: 32px; color: #94a3b8; margin-bottom: 10px; display: block; transition: 0.2s; }
 .upload-box:hover i { color: #3b82f6; }
 .upload-box p { margin: 0; font-size: 13px; color: #475569; font-weight: 600; }
 .upload-box span { display: block; font-size: 11px; color: #94a3b8; margin-top: 5px; }
 .upload-input-hidden { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
+
+/* 🔥 HISTÓRICO DE ARQUIVOS (LINHA DO TEMPO) 🔥 */
+.historico-section { margin-top: 20px; border-top: 1px solid #e2e8f0; padding-top: 20px; }
+.historico-lista { display: flex; flex-direction: column; gap: 10px; }
+.historico-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 15px; background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 8px; }
+.historico-info { display: flex; flex-direction: column; gap: 4px; }
+.historico-info strong { font-size: 13px; color: #0f172a; }
+.historico-info span { font-size: 11px; color: #64748b; }
+.btn-arquivar { background: #fefce8; color: #a16207; border: 1px dashed #facc15; padding: 12px 15px; border-radius: 8px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 13px; transition: 0.2s; width: 100%; justify-content: center; margin-top: 15px; }
+.btn-arquivar:hover { background: #fef08a; border-style: solid; }
 
 .modal-acoes-footer { margin-top: 10px; border-top: 1px solid #e2e8f0; padding-top: 25px; display: flex; justify-content: flex-end; gap: 15px; }
 .btn-cancel { padding: 14px 30px; background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; font-weight: 800; color: #475569; transition: 0.2s; }
@@ -194,15 +156,53 @@ select.input-field { cursor: pointer; }
 .btn-submit:hover { background: #1e293b; transform: translateY(-1px); }
 
 /* =========================================
-   RESPONSIVIDADE (MOBILE)
+   🔥 MÓDULO DE IMPRESSÃO A4 NATIVO 🔥
 ========================================= */
+.print-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: #cbd5e1; z-index: 100000; overflow-y: auto; padding: 30px 20px; display: flex; flex-direction: column; align-items: center; }
+.print-toolbar { display: flex; justify-content: space-between; align-items: center; width: 100%; max-width: 210mm; background: #fff; padding: 15px 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; box-sizing: border-box; }
+.print-toolbar h3 { margin: 0; color: #0f172a; font-size: 16px; font-weight: 900; }
+.btn-imprimir-real { background: #2563eb; color: #fff; border: none; padding: 10px 20px; border-radius: 8px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 8px; font-size: 14px; transition: 0.2s; }
+.btn-imprimir-real:hover { background: #1d4ed8; }
+
+.a4-page { width: 100%; max-width: 210mm; min-height: 297mm; background: #fff; padding: 20mm; box-shadow: 0 10px 30px rgba(0,0,0,0.15); font-family: 'Arial', sans-serif; color: #000; box-sizing: border-box; }
+.a4-header { text-align: center; border-bottom: 2px solid #000; padding-bottom: 15px; margin-bottom: 20px; }
+.a4-header h1 { margin: 0 0 5px 0; font-size: 20px; text-transform: uppercase; font-weight: 900; letter-spacing: 1px; }
+.a4-header p { margin: 0; font-size: 12px; font-weight: bold; }
+.a4-row-dupla { display: flex; justify-content: space-between; margin-bottom: 20px; font-size: 12px; font-weight: bold; }
+
+.a4-section { margin-bottom: 25px; }
+.a4-section h2 { font-size: 14px; text-transform: uppercase; border-bottom: 1px solid #000; padding-bottom: 5px; margin-bottom: 15px; }
+.a4-linha { display: flex; font-size: 12px; margin-bottom: 12px; align-items: flex-end; gap: 5px; }
+.a4-linha strong { white-space: nowrap; }
+.a4-tracejado { flex: 1; border-bottom: 1px dashed #000; height: 16px; }
+
+.a4-grid-sinais { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+.a4-box { border: 1px solid #000; padding: 10px; display: flex; flex-direction: column; gap: 5px; }
+.a4-box span { font-size: 10px; font-weight: bold; text-transform: uppercase; }
+.a4-box-linha { border-bottom: 1px solid #000; height: 20px; width: 100%; }
+
+.a4-checkbox-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; font-size: 12px; }
+.a4-check-item { display: flex; align-items: center; gap: 8px; }
+.a4-quadradinho { width: 14px; height: 14px; border: 1px solid #000; display: inline-block; }
+
+.a4-assinaturas { display: flex; justify-content: space-between; margin-top: 60px; }
+.a4-ass-bloco { width: 45%; text-align: center; border-top: 1px solid #000; padding-top: 10px; font-size: 12px; }
+
+@media print {
+    body * { visibility: hidden; }
+    .print-overlay, .print-overlay * { visibility: visible; }
+    .print-overlay { position: absolute; left: 0; top: 0; width: 100%; padding: 0; background: transparent; }
+    .print-toolbar { display: none !important; }
+    .a4-page { box-shadow: none; margin: 0; padding: 0; max-width: 100%; width: 100%; min-height: auto; }
+}
+
 @media (max-width: 900px) {
     .aso-page-wrapper { padding: 15px 12px !important; overflow-x: hidden !important; }
     .header-top { flex-direction: column; align-items: flex-start; gap: 15px; }
+    .header-botoes { width: 100%; flex-direction: column; }
     .btn-voltar { width: 100%; justify-content: center; }
     .dashboard-asos { flex-direction: column; }
     .dash-card { width: 100%; min-width: 100%; }
-    
     .table-container { width: 100% !important; overflow-x: hidden !important; background: transparent !important; border: none !important; box-shadow: none !important; }
     .table-pro, .table-pro tbody, .table-pro tr, .table-pro td { display: block !important; width: 100% !important; max-width: 100% !important; box-sizing: border-box !important; }
     .table-pro thead { display: none !important; }
@@ -210,8 +210,7 @@ select.input-field { cursor: pointer; }
     .table-pro td { padding: 15px 20px !important; border: none !important; border-bottom: 1px solid #f1f5f9 !important; text-align: left !important; }
     .table-pro td:first-child { border-radius: 16px 16px 0 0 !important; background: #f8fafc; }
     .table-pro td:last-child { border-bottom: none !important; border-radius: 0 0 16px 16px !important; }
-    .acoes-tabela { justify-content: flex-start !important; }
-
+    .acoes-tabela { flex-wrap: wrap; justify-content: flex-start !important; }
     .modal-overlay-blur { align-items: flex-end; padding: 0; }
     .modal-card-aso { max-height: 95vh; border-radius: 20px 20px 0 0; margin: 0; }
     .modal-mini { max-height: 90vh; border-radius: 20px 20px 0 0; }
