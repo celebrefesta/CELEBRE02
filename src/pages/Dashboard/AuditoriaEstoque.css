@@ -18,14 +18,16 @@
     background: #ffffff;
     border-radius: 16px;
     width: 100%;
+    max-width: 850px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
     overflow: hidden;
     animation: slideUpAuditoria 0.4s ease-out;
 }
   
 .auditoria-header {
+    position: relative; /* 🔥 O segredo está aqui: prende o X dentro desta área! */
     background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
-    padding: 30px;
+    padding: 30px 45px 30px 45px;
     border-bottom: 1px solid #fecdd3;
     text-align: center;
 }
@@ -107,9 +109,33 @@
 .btn-auditoria-abrir { background: #0f172a; color: white; border: none; padding: 12px 20px; border-radius: 8px; font-weight: bold; font-size: 13px; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 6px rgba(15, 23, 42, 0.2); }
 .btn-auditoria-abrir:hover { background: #1e293b; transform: translateY(-1px); }
   
-.auditoria-footer { background: #ffffff; text-align: center; padding: 15px 20px; border-top: 1px solid #e2e8f0; }
-.btn-auditoria-ignore { background: none; border: none; color: #94a3b8; text-decoration: underline; cursor: pointer; font-size: 13px; transition: 0.2s; }
-.btn-auditoria-ignore:hover { color: #475569; }
-  
 @keyframes fadeInAuditoria { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideUpAuditoria { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+/* 🔥 FORÇA BRUTA NO BOTÃO X (!important evita que outras regras do sistema o desfaçam) */
+.btn-fechar-modal {
+    position: absolute !important;
+    top: 15px !important;
+    right: 15px !important;
+    width: 36px !important;
+    height: 36px !important;
+    border-radius: 50% !important;
+    background: rgba(225, 29, 72, 0.1) !important;
+    color: #e11d48 !important;
+    border: none !important;
+    font-size: 16px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    z-index: 10 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+.btn-fechar-modal:hover {
+    background: #e11d48 !important; 
+    color: #ffffff !important;
+    transform: scale(1.1) !important; 
+}

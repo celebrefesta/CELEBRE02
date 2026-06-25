@@ -9,15 +9,12 @@ import AuditoriaEstoque from './AuditoriaEstoque';
 const Dashboard = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
-  // 🔥 IDENTIFICAÇÃO CORPORATIVA (SaaS)
   const tenantIdLocal = localStorage.getItem('tenantId') || usuarioLogado?.uid;
   const nomeUsuario = localStorage.getItem('funcName') || usuarioLogado?.displayName || "Equipe";
 
-  // 🛡️ Identificação da Super-Adm
   const emailAdmin = "celebrefesta25@gmail.com";
   const isSuperAdmin = usuarioLogado?.email === emailAdmin;
   
@@ -32,9 +29,8 @@ const Dashboard = () => {
   const [cobrancasAtrasadas, setCobrancasAtrasadas] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // 🔥 Lógica do Ciclo de Vida do SaaS
   const [diasTeste, setDiasTeste] = useState(1);
-  const [statusConta, setStatusConta] = useState('ativo'); // 'ativo', 'bloqueado' ou 'excluido'
+  const [statusConta, setStatusConta] = useState('ativo'); 
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -47,24 +43,16 @@ const Dashboard = () => {
         const hojeISO = new Date().toISOString().split('T')[0];
         const mesAtual = hojeISO.substring(0, 7);
 
-        // =================================================================
-        // 🔥 A GRANDE CORREÇÃO: CAÇADOR DE VÍNCULOS EMPREGATÍCIOS 🔥
-        // =================================================================
         let idDaEmpresaCorreta = tenantIdLocal;
         
-        // Pergunta ao banco: "Este e-mail pertence à equipe de alguma empresa?"
         const qEquipe = query(collection(db, "equipe"), where("email", "==", usuarioLogado.email));
         const snapEquipe = await getDocs(qEquipe);
         
         if (!snapEquipe.empty) {
-            // Opa! Ele é funcionário! Pegamos o ID da PATROA.
             idDaEmpresaCorreta = snapEquipe.docs[0].data().empresaId;
-            
-            // Força a atualização da Chave Mestra no navegador para destrancar as outras telas!
             localStorage.setItem('tenantId', idDaEmpresaCorreta);
         }
 
-        // 🔥 CÁLCULO DOS DIAS E BLOQUEIOS (VERIFICA A CONTA DA PATROA, NÃO DO FUNCIONÁRIO)
         const userDocRef = doc(db, "usuarios", idDaEmpresaCorreta);
         const userDocSnap = await getDoc(userDocRef);
         
@@ -73,13 +61,9 @@ const Dashboard = () => {
 
         if (userDocSnap.exists()) {
             const userData = userDocSnap.data();
-            
-            // 🛡️ Verifica se a EMPRESA pagou
             if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa') {
                 usuarioJaPagou = true;
             }
-
-            // Pega a data de início de teste da EMPRESA
             if (userData.dataCadastro) {
                 dataCadastroSegura = userData.dataCadastro;
             }
@@ -101,7 +85,6 @@ const Dashboard = () => {
 
             setDiasTeste(diffDays);
 
-            // 🔐 BLINDAGEM: Se não for a Super-Adm e a EMPRESA não tiver pago, bloqueia.
             if (!isSuperAdmin && !usuarioJaPagou) {
                 if (diffDays > 180) {
                     setStatusConta('excluido');
@@ -115,7 +98,6 @@ const Dashboard = () => {
             }
         }
 
-        // 🔥 CARREGAMENTO DOS DADOS DO SISTEMA (PUXANDO DA EMPRESA CORRETA)
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", idDaEmpresaCorreta));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", idDaEmpresaCorreta));
 
@@ -262,12 +244,6 @@ const Dashboard = () => {
   const p3 = (statusChart.preparacao / totalG) * 100;
   const p4 = (statusChart.entregue / totalG) * 100;
   const p5 = (statusChart.finalizado / totalG) * 100;
-
-  const off1 = 0;
-  const off2 = 100 - p1;
-  const off3 = 100 - (p1 + p2);
-  const off4 = 100 - (p1 + p2 + p3);
-  const off5 = 100 - (p1 + p2 + p3 + p4);
   
   if (statusConta === 'excluido') {
       return (
@@ -304,7 +280,6 @@ const Dashboard = () => {
   return (
     <div className="dash-wide-container fade-in">
       
-      {/* 🛡️ Faixa de Teste: Só aparece se NÃO for a Super-Adm e ainda estiver no teste */}
       {!isSuperAdmin && statusConta === 'ativo' && diasTeste <= 7 && (
         <div style={{ background: '#fef3c7', color: '#b45309', padding: '12px', textAlign: 'center', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', border: '1px solid #fde68a' }}>
           ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito do Celebre. Aproveite!
@@ -344,24 +319,26 @@ const Dashboard = () => {
       <div className="dash-main-grid-wide">
         <div className="dash-column">
           <section className="dash-card-wide flex-grow" style={{ display: 'flex', flexDirection: 'column' }}>
-            <h3>📊 Status e Volume</h3>
-            <div className="chart-circle-container">
-                <svg viewBox="0 0 36 36" className="circular-chart">
-                <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f1f5f9" strokeWidth="4" />
-                {p1 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#f59e0b" strokeWidth="4" strokeDasharray={`${p1} ${100 - p1}`} strokeDashoffset={off1} strokeLinecap="round" />}
-                {p2 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#10b981" strokeWidth="4" strokeDasharray={`${p2} ${100 - p2}`} strokeDashoffset={off2} strokeLinecap="round" />}
-                {p3 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#8b5cf6" strokeWidth="4" strokeDasharray={`${p3} ${100 - p3}`} strokeDashoffset={off3} strokeLinecap="round" />}
-                {p4 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#ec4899" strokeWidth="4" strokeDasharray={`${p4} ${100 - p4}`} strokeDashoffset={off4} strokeLinecap="round" />}
-                {p5 > 0 && <circle cx="18" cy="18" r="15.915" fill="transparent" stroke="#3b82f6" strokeWidth="4" strokeDasharray={`${p5} ${100 - p5}`} strokeDashoffset={off5} strokeLinecap="round" />}
-              </svg>
-  
-              <div className="chart-center-text">
-                <strong>{statusChart.total}</strong>
-                <span>Pedidos</span>
-              </div>
+            
+            {/* 🔥 CABEÇALHO DO QUADRO COM O TOTAL DE PEDIDOS */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
+              <h3 style={{ margin: 0 }}>📊 Status e Volume</h3>
+              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+                {statusChart.total} PEDIDOS NO MÊS
+              </span>
             </div>
 
-            <div className="chart-legend-pills">
+            {/* 🔥 NOVO GRÁFICO: BARRA HORIZONTAL EMPILHADA (Ocupa apenas 16px de altura!) */}
+            <div className="horizontal-stacked-bar">
+                {p1 > 0 && <div style={{width: `${p1}%`, background: '#f59e0b'}} title={`Orçamentos: ${statusChart.orcamento}`}></div>}
+                {p2 > 0 && <div style={{width: `${p2}%`, background: '#10b981'}} title={`Confirmados: ${statusChart.confirmado}`}></div>}
+                {p3 > 0 && <div style={{width: `${p3}%`, background: '#8b5cf6'}} title={`Separação: ${statusChart.preparacao}`}></div>}
+                {p4 > 0 && <div style={{width: `${p4}%`, background: '#ec4899'}} title={`Entregue: ${statusChart.entregue}`}></div>}
+                {p5 > 0 && <div style={{width: `${p5}%`, background: '#3b82f6'}} title={`Finalizados: ${statusChart.finalizado}`}></div>}
+                {statusChart.total === 0 && <div style={{width: '100%', background: '#e2e8f0'}}></div>}
+            </div>
+
+            <div className="chart-legend-pills" style={{ marginTop: '15px', marginBottom: 'auto' }}>
               <div><span style={{background: '#f59e0b'}}></span> Orçamentos <b>{statusChart.orcamento}</b></div>
               <div><span style={{background: '#10b981'}}></span> Confirmados <b>{statusChart.confirmado}</b></div>
               <div><span style={{background: '#8b5cf6'}}></span> Separação <b>{statusChart.preparacao}</b></div>

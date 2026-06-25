@@ -7,7 +7,7 @@ import './AuditoriaEstoque.css';
 
 const AuditoriaEstoque = () => {
   const navigate = useNavigate();
-  
+
   // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -18,16 +18,14 @@ const AuditoriaEstoque = () => {
   const [visivel, setVisivel] = useState(false);
 
   useEffect(() => {
-    if (!usuarioLogado) return; // Se não tiver logado, nem tenta auditar
+    if (!usuarioLogado) return;
 
     const realizarAuditoriaUnificada = async () => {
       try {
         const tzoffset = (new Date()).getTimezoneOffset() * 60000;
         const hoje = (new Date(Date.now() - tzoffset)).toISOString().split('T')[0];
 
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Audita APENAS os pedidos da empresa
         const q = query(collection(db, "locacoes"), where("userId", "==", tenantId));
-        
         const snap = await getDocs(q);
         
         const anomalias = [];
@@ -39,39 +37,34 @@ const AuditoriaEstoque = () => {
           if (statusStr === 'cancelado') return;
 
           const isOrcamento = statusStr.includes('orcam');
-          if (isOrcamento && item.dataRetirada && item.dataRetirada < hoje) return; // Ignora orçamentos vencidos
+          if (isOrcamento && item.dataRetirada && item.dataRetirada < hoje) return; 
 
           let alertas = [];
           let permiteAcaoRapida = false;
 
-          // 1. Estoque Travado
           if (['confirmado', 'preparacao'].includes(statusStr) && item.dataRetirada && item.dataRetirada < hoje) {
             alertas.push({ tipo: 'estoque', texto: 'Estoque Travado (Data Passou)' });
-            permiteAcaoRapida = true; // Se for só isso, deixa resolver rápido
+            permiteAcaoRapida = true; 
           }
-          // 2. Atrasado para Entrega/Retirada
           else if (['confirmado', 'preparacao'].includes(statusStr) && item.dataRetirada === hoje) {
             alertas.push({ tipo: 'entrega', texto: 'Separar / Entregar Hoje!' });
           }
 
-          // 3. Devolução Atrasada
           if (statusStr === 'entregue' && item.dataDevolucao && item.dataDevolucao < hoje) {
             alertas.push({ tipo: 'devolucao', texto: 'Devolução Atrasada' });
           }
 
-          // 4. Financeiro
           const saldoDevedor = Number(item.valorTotal || 0) - Number(item.valorPago || 0);
           if (saldoDevedor > 0 && !isOrcamento && item.dataDevolucao && item.dataDevolucao <= hoje) {
             alertas.push({ tipo: 'financeiro', texto: `Pagamento Pendente (R$ ${saldoDevedor.toFixed(2)})` });
-            permiteAcaoRapida = false; // Tem dívida? Tira o botão rápido.
+            permiteAcaoRapida = false; 
           }
 
-          // 5. Avarias e Faltas
           const temAvaria = item.itens?.some(i => i.avaria);
           const temFalta = item.itens?.some(i => i.faltou);
           
           if (temAvaria) { 
-              alertas.push({ tipo: 'avaria', texto: 'Peça Avariada' }); 
+              alertas.push({ tipo: 'avaria', texto: 'Peça Avariada' });
               permiteAcaoRapida = false;
           }
           if (temFalta) { 
@@ -79,7 +72,6 @@ const AuditoriaEstoque = () => {
               permiteAcaoRapida = false; 
           }
 
-          // Se tiver alerta e o status for finalizado, só mostra se tiver BO de dinheiro/avaria
           if (statusStr === 'finalizado' && !temAvaria && !temFalta && saldoDevedor <= 0) return;
 
           if (alertas.length > 0) {
@@ -119,6 +111,15 @@ const AuditoriaEstoque = () => {
       <div className="auditoria-modal" style={{maxWidth: '850px'}}>
         
         <div className="auditoria-header">
+          {/* 🔥 BOTÃO X AGORA DENTRO DO HEADER PARA NÃO QUEBRAR O ALINHAMENTO */}
+          <button 
+              className="btn-fechar-modal" 
+              onClick={() => setVisivel(false)}
+              title="Fechar diagnóstico"
+          >
+              <i className="fas fa-times"></i>
+          </button>
+
           <div className="auditoria-icone">🚨</div>
           <h2>Atenção! Diagnóstico do Sistema</h2>
           <p>
@@ -139,7 +140,7 @@ const AuditoriaEstoque = () => {
 
                 <div className="auditoria-tags-erro">
                     {pedido.alertas.map((alerta, idx) => (
-                        <span key={idx} className={`tag-erro ${alerta.tipo}`}>
+                      <span key={idx} className={`tag-erro ${alerta.tipo}`}>
                             {alerta.texto}
                         </span>
                     ))}
@@ -165,13 +166,6 @@ const AuditoriaEstoque = () => {
             </div>
           ))}
         </div>
-
-        <div className="auditoria-footer">
-          <button className="btn-auditoria-ignore" onClick={() => setVisivel(false)}>
-            Minimizar avisos por agora
-          </button>
-        </div>
-        
       </div>
     </div>
   );

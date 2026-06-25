@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
-import { collection, query, where, getDocs } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'; 
 import { db } from './firebaseConfig'; 
 
 // --- MENU & TOPBAR ---
@@ -16,7 +16,6 @@ import Cadastro from './pages/Auth/Cadastro';
 import Checkout from './pages/Checkout/Checkout'; 
 import RotaPrivada from './components/RotaPrivada'; 
 import RotaAdmin from './components/RotaAdmin'; 
-import RotaProtegida from './components/RotaProtegida'; 
 
 // --- PÁGINAS ---
 import Dashboard from './pages/Dashboard/Dashboard';
@@ -67,8 +66,8 @@ import Planos from './pages/Planos/Planos';
 import AdminPlanos from './pages/Planos/AdminPlanos';
 import PaginaUpgrade from './pages/Planos/PaginaUpgrade';
 
-// 🛡️🔥 BLINDAGEM MÁXIMA DE ROTA (Consulta direta ao Banco de Dados)
-const BloqueioPermissao = ({ children, modulo }) => {
+// 🛡️🔥 BLINDAGEM MÁXIMA DE ROTA (Dupla Verificação em Tempo Real)
+const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
   const [statusAcesso, setStatusAcesso] = useState('verificando'); 
 
   useEffect(() => {
@@ -80,66 +79,113 @@ const BloqueioPermissao = ({ children, modulo }) => {
       }
 
       try {
-        // Ignora a memória do navegador e vai perguntar diretamente ao Firebase
+        const emailAdmin = "celebrefesta25@gmail.com";
+        if (user.email === emailAdmin) {
+            setStatusAcesso('permitido');
+            return;
+        }
+
+        // 1. Identificar quem está logado
         const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
         const snapFunc = await getDocs(qFunc);
 
-        // Se a busca voltar vazia, é porque é a conta da Administradora! Portas abertas!
-        if (snapFunc.empty) {
-          setStatusAcesso('permitido');
-          return;
+        const isFuncionarioReal = !snapFunc.empty;
+        let tenantId = user.uid;
+        let permissoesFuncionario = {};
+
+        if (isFuncionarioReal) {
+            const dadosFunc = snapFunc.docs[0].data();
+            tenantId = dadosFunc.empresaId || user.uid;
+            permissoesFuncionario = dadosFunc.permissoes || {};
         }
 
-        // A partir daqui, temos a certeza absoluta que é um Funcionário
-        
-        // 1. Áreas proibidas por padrão (Nem perca tempo a procurar)
-        if (['Financeiro', 'Relatorios', 'Assinatura', 'Equipe'].includes(modulo)) {
-          setStatusAcesso('bloqueado');
-          return;
-        }
+        // 2. VERIFICAÇÃO DO PLANO DA EMPRESA (Trava o Cadeado Vermelho na Rota)
+        if (recursoExigido) {
+            const userSnap = await getDoc(doc(db, "usuarios", tenantId));
+            let empresaPagou = false;
 
-        // 2. Verifica a aba específica no banco de dados dele
-        const dadosFunc = snapFunc.docs[0].data();
-        const permissoes = dadosFunc.permissoes || {};
+            if (userSnap.exists()) {
+                const dadosUsr = userSnap.data();
+                const testeAtivo = dadosUsr.dataFimTeste ? new Date() <= new Date(dadosUsr.dataFimTeste) : false;
+                const assinaturaAtiva = dadosUsr.assinaturaAtiva === true || dadosUsr.plano === 'pago' || dadosUsr.statusPagamentoVulso === 'pago';
+                const congelado = !testeAtivo && !assinaturaAtiva;
 
-        const removerAcentos = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        const moduloLimpo = removerAcentos(modulo);
-
-        let valorEncontrado = false;
-        
-        if (Array.isArray(permissoes)) {
-            valorEncontrado = permissoes.map(removerAcentos).includes(moduloLimpo);
-        } else if (typeof permissoes === 'object' && permissoes !== null) {
-            const chaves = Object.keys(permissoes);
-            for (let k of chaves) {
-                if (removerAcentos(k) === moduloLimpo) {
-                    valorEncontrado = permissoes[k] === true;
-                    break;
+                if (testeAtivo) {
+                    empresaPagou = true;
+                } else if (!congelado && dadosUsr.planoId) {
+                    const planoSnap = await getDoc(doc(db, "planos", dadosUsr.planoId));
+                    if (planoSnap.exists()) {
+                        const beneficios = planoSnap.data().beneficios || [];
+                        // Ignora maiúsculas e minúsculas para garantir a checagem
+                        empresaPagou = beneficios.some(b => b.toLowerCase().includes(recursoExigido.toLowerCase()));
+                    }
+                } else if (assinaturaAtiva && !dadosUsr.planoId) {
+                    // Fallback se tiver assinatura ativa mas sem planoId preenchido
+                    empresaPagou = true; 
                 }
+            }
+
+            // Se o plano não cobrir, bloqueia a URL na hora!
+            if (!empresaPagou) {
+                setStatusAcesso('bloqueado');
+                return;
             }
         }
 
-        setStatusAcesso(valorEncontrado ? 'permitido' : 'bloqueado');
+        // 3. VERIFICAÇÃO DO FUNCIONÁRIO (Trava o Cadeado Branco na Rota)
+        if (isFuncionarioReal && modulo) {
+            // Áreas expressamente proibidas para funcionários (Finanças, Relatórios, etc)
+            if (['Financeiro', 'Relatorios', 'Assinatura', 'Equipe'].includes(modulo)) {
+                setStatusAcesso('bloqueado');
+                return;
+            }
+
+            const removerAcentos = (str) => str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+            const moduloLimpo = removerAcentos(modulo);
+
+            let valorEncontrado = false;
+            
+            if (Array.isArray(permissoesFuncionario)) {
+                valorEncontrado = permissoesFuncionario.map(removerAcentos).includes(moduloLimpo);
+            } else if (typeof permissoesFuncionario === 'object' && permissoesFuncionario !== null) {
+                const chaves = Object.keys(permissoesFuncionario);
+                for (let k of chaves) {
+                    if (removerAcentos(k) === moduloLimpo) {
+                        valorEncontrado = permissoesFuncionario[k] === true;
+                        break;
+                    }
+                }
+            }
+
+            // Se o funcionário não tiver permissão para esse módulo, bloqueia a URL!
+            if (!valorEncontrado) {
+                setStatusAcesso('bloqueado');
+                return;
+            }
+        }
+
+        // Passou nos dois seguranças! Pode entrar.
+        setStatusAcesso('permitido');
 
       } catch (error) {
         console.error("Erro na blindagem de rota:", error);
-        setStatusAcesso('bloqueado'); // Na dúvida perante um erro, tranca a porta
+        setStatusAcesso('bloqueado'); 
       }
     });
 
     return () => unsubscribe();
-  }, [modulo]);
+  }, [modulo, recursoExigido]);
 
   if (statusAcesso === 'verificando') {
     return (
       <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#f8fafc', color: '#64748b' }}>
         <i className="fas fa-shield-alt fa-spin" style={{ marginRight: '10px', color: '#c5a059' }}></i>
-        Verificando credenciais de segurança...
+        Validando segurança da rota...
       </div>
     );
   }
 
-  // Se for permitido, mostra a página. Se for hackeado, pontapé para o Início!
+  // Se não foi permitido, atira de volta para o dashboard
   return statusAcesso === 'permitido' ? children : <Navigate to="/dashboard" replace />;
 };
 
@@ -177,60 +223,58 @@ const AppContent = () => {
 
           {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Base) */}
           <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
-          <Route path="/planos" element={<RotaPrivada><BloqueioPermissao modulo="Assinatura"><Planos /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/upgrade" element={<RotaPrivada><BloqueioPermissao modulo="Assinatura"><PaginaUpgrade /></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/planos" element={<RotaPrivada><Planos /></RotaPrivada>} />
+          <Route path="/upgrade" element={<RotaPrivada><PaginaUpgrade /></RotaPrivada>} />
           
           {/* ⚙️ ROTA ADMIN EXCLUSIVA */}
           <Route path="/admin-planos" element={<RotaAdmin><AdminPlanos /></RotaAdmin>} />
           
           {/* 👥 CLIENTES */}
-          <Route path="/clientes" element={<RotaPrivada><BloqueioPermissao modulo="Clientes"><Clientes /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/cadastro-cliente" element={<RotaPrivada><BloqueioPermissao modulo="Clientes"><CadastroCliente /></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/clientes" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><Clientes /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/cadastro-cliente" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><CadastroCliente /></TravaSeguranca></RotaPrivada>} />
           
           {/* 📦 ESTOQUE */}
-          <Route path="/estoque" element={<RotaPrivada><BloqueioPermissao modulo="Estoque"><RotaProtegida recursoExigido="Estoque"><Estoque /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/cadastro-estoque" element={<RotaPrivada><BloqueioPermissao modulo="Estoque"><RotaProtegida recursoExigido="Estoque"><CadastroEstoque /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/estoque" element={<RotaPrivada><TravaSeguranca modulo="Estoque" recursoExigido="Estoque"><Estoque /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/cadastro-estoque" element={<RotaPrivada><TravaSeguranca modulo="Estoque" recursoExigido="Estoque"><CadastroEstoque /></TravaSeguranca></RotaPrivada>} />
           
           {/* 📅 LOCAÇÕES */}
-          <Route path="/locacoes" element={<RotaPrivada><BloqueioPermissao modulo="Locacoes"><Locacoes /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/locacoes/nova" element={<RotaPrivada><BloqueioPermissao modulo="Locacoes"><NovaLocacao /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/locacoes/editar/:id" element={<RotaPrivada><BloqueioPermissao modulo="Locacoes"><EditarLocacao /></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/locacoes" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><Locacoes /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/locacoes/nova" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><NovaLocacao /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/locacoes/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><EditarLocacao /></TravaSeguranca></RotaPrivada>} />
           
           {/* 🤝 FORNECEDORES E COMPRAS */}
-          <Route path="/fornecedores" element={<RotaPrivada><BloqueioPermissao modulo="Compras"><Fornecedores /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/fornecedores/novo" element={<RotaPrivada><BloqueioPermissao modulo="Compras"><NovoFornecedor /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/fornecedores/editar/:id" element={<RotaPrivada><BloqueioPermissao modulo="Compras"><NovoFornecedor /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/compras" element={<RotaPrivada><BloqueioPermissao modulo="Compras"><Compras /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/compras/nova" element={<RotaPrivada><BloqueioPermissao modulo="Compras"><NovaCompra /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/compras/editar/:id" element={<RotaPrivada><BloqueioPermissao modulo="Compras"><NovaCompra /></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/fornecedores" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Fornecedores /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/fornecedores/novo" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovoFornecedor /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/fornecedores/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovoFornecedor /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/compras" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Compras /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/compras/nova" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovaCompra /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/compras/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovaCompra /></TravaSeguranca></RotaPrivada>} />
           
           {/* 💰 FINANCEIRO */}
-          <Route path="/financeiro" element={<RotaPrivada><BloqueioPermissao modulo="Financeiro"><Financeiro /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/financeiro/novo" element={<RotaPrivada><BloqueioPermissao modulo="Financeiro"><NovoLancamento /></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/financeiro" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><Financeiro /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/financeiro/novo" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><NovoLancamento /></TravaSeguranca></RotaPrivada>} />
           
           {/* 🚚 LOGÍSTICA E AGENDA */}
-          <Route path="/agenda" element={<RotaPrivada><BloqueioPermissao modulo="Agenda"><Agenda /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/logistica" element={<RotaPrivada><BloqueioPermissao modulo="Logistica"><RotaProtegida recursoExigido="Logística"><Logistica /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/agenda" element={<RotaPrivada><TravaSeguranca modulo="Agenda" recursoExigido="Agenda"><Agenda /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/logistica" element={<RotaPrivada><TravaSeguranca modulo="Logistica" recursoExigido="Logística"><Logistica /></TravaSeguranca></RotaPrivada>} />
           
           {/* 📝 CONTRATOS */}
-          <Route path="/contratos" element={<RotaPrivada><BloqueioPermissao modulo="Contratos"><RotaProtegida recursoExigido="Contratos"><Contratos /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/novo-contrato" element={<RotaPrivada><BloqueioPermissao modulo="Contratos"><RotaProtegida recursoExigido="Contratos"><NovoContrato /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/modelos-contrato" element={<RotaPrivada><BloqueioPermissao modulo="Contratos"><RotaProtegida recursoExigido="Contratos"><ModelosContrato /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/editar-contrato/:id" element={<RotaPrivada><BloqueioPermissao modulo="Contratos"><RotaProtegida recursoExigido="Contratos"><EditarContrato /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/contratos" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><Contratos /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/novo-contrato" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><NovoContrato /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/modelos-contrato" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><ModelosContrato /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/editar-contrato/:id" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><EditarContrato /></TravaSeguranca></RotaPrivada>} />
           
           {/* 📊 GESTÃO */}
-          <Route path="/relatorios" element={<RotaPrivada><BloqueioPermissao modulo="Relatorios"><Relatorios /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/moodboard" element={<RotaPrivada><BloqueioPermissao modulo="Moodboard"><Moodboard /></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/configuracoes" element={<RotaPrivada><BloqueioPermissao modulo="Equipe"><Configuracoes /></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/relatorios" element={<RotaPrivada><TravaSeguranca modulo="Relatorios" recursoExigido="Relatórios"><Relatorios /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/moodboard" element={<RotaPrivada><TravaSeguranca modulo="Moodboard" recursoExigido="Moodboard"><Moodboard /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/configuracoes" element={<RotaPrivada><TravaSeguranca modulo="Equipe"><Configuracoes /></TravaSeguranca></RotaPrivada>} />
           <Route path="/perfil" element={<RotaPrivada><Perfil /></RotaPrivada>} />
           <Route path="/notificacoes" element={<RotaPrivada><Notificacoes /></RotaPrivada>} /> 
           
           {/* 👥 GESTÃO DE EQUIPE E RH */}
-          <Route path="/usuarios" element={<RotaPrivada><BloqueioPermissao modulo="Equipe"><RotaProtegida recursoExigido="Equipe"><Usuarios /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
-          <Route path="/monitoramento" element={<RotaPrivada><BloqueioPermissao modulo="Equipe"><RotaProtegida recursoExigido="Equipe"><Monitoramento /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
-          
-          {/* 🔥 GESTÃO DE ASOS */}
-          <Route path="/asos" element={<RotaPrivada><BloqueioPermissao modulo="Equipe"><RotaProtegida recursoExigido="Equipe"><GestaoASO /></RotaProtegida></BloqueioPermissao></RotaPrivada>} />
+          <Route path="/usuarios" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><Usuarios /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/monitoramento" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><Monitoramento /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/asos" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><GestaoASO /></TravaSeguranca></RotaPrivada>} />
         </Routes>
       </main>
     </div>
