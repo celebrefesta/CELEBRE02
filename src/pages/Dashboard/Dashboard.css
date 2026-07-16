@@ -1,6 +1,7 @@
 /* =========================================
-   DASHBOARD CELEBRE v10.1 (PREMIUM SOFT UI)
+   DASHBOARD CELEBRE v10.2 (PREMIUM SOFT UI)
    VISÃO DE PÁGINA ÚNICA + DESIGN MODERNO + CORREÇÃO OVERFLOW
+   v10.2: estilos movidos do JSX para cá + polimento de estados vazios/status de conta
 ========================================= */
 
 .dash-wide-container {
@@ -65,6 +66,85 @@
   transform: translateY(-3px); 
   box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
   background: linear-gradient(135deg, #1e293b 0%, #334155 100%);
+}
+
+/* =========================================
+   AVISO DE PERÍODO DE TESTE (antes era style inline)
+========================================= */
+
+.dash-trial-banner {
+  background: #fef3c7;
+  color: #b45309;
+  padding: 12px 16px;
+  text-align: center;
+  border-radius: 12px;
+  margin-bottom: 20px;
+  font-weight: 700;
+  font-size: 13px;
+  border: 1px solid #fde68a;
+  flex-shrink: 0;
+}
+
+/* =========================================
+   TELAS DE STATUS DA CONTA (bloqueado / excluído)
+   Antes eram style inline direto no JSX
+========================================= */
+
+.dash-status-screen {
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+.dash-status-card {
+  background: #ffffff;
+  padding: 40px;
+  border-radius: 20px;
+  max-width: 480px;
+  width: 100%;
+  box-shadow: 0 20px 50px -20px rgba(15, 23, 42, 0.15);
+}
+
+.dash-status-card--danger { border: 1px solid #fee2e2; }
+.dash-status-card--warning { border: 1px solid #e2e8f0; }
+
+.dash-status-card h2 {
+  margin: 0 0 15px 0;
+  font-size: 21px;
+  letter-spacing: -0.5px;
+}
+.dash-status-card--danger h2 { color: #991b1b; }
+.dash-status-card--warning h2 { color: #0f172a; }
+
+.dash-status-card p {
+  color: #64748b;
+  line-height: 1.6;
+  margin: 0 0 22px 0;
+  font-size: 14px;
+}
+.dash-status-card__footnote {
+  font-size: 13px;
+  margin-bottom: 0 !important;
+}
+
+.dash-status-btn {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #fff;
+  padding: 13px 24px;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  width: 100%;
+  cursor: pointer;
+  border: none;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15);
+}
+.dash-status-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25);
 }
 
 /* =========================================
@@ -138,6 +218,8 @@
   transition: box-shadow 0.3s ease;
 }
 
+.dash-card-column { display: flex; flex-direction: column; }
+
 /* Barras de Rolagem invisíveis e elegantes para o próprio cartão (caso ele precise rolar) */
 .dash-card-wide::-webkit-scrollbar { width: 4px; }
 .dash-card-wide::-webkit-scrollbar-track { background: transparent; }
@@ -157,21 +239,55 @@
 .card-subtitle { font-size: 13px; color: #64748b; margin: -10px 0 15px 0; font-weight: 500; flex-shrink: 0; }
 
 /* =========================================
-   GRÁFICO DE STATUS E PÍLULAS
+   CABEÇALHO DE SEÇÃO (ex: "Status e Volume" + pill de total)
+   Antes era style inline
 ========================================= */
 
-.chart-circle-container {
-  position: relative; width: 130px; height: 130px; margin: 0 auto 20px auto; display: block; flex-shrink: 0;
+.dash-section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  flex-shrink: 0;
 }
-.circular-chart { width: 100%; height: 100%; transform: rotate(-90deg); filter: drop-shadow(0px 8px 10px rgba(0,0,0,0.08)); }
-.chart-center-text {
-  position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+.dash-section-header h3 { margin: 0; }
+
+.dash-count-pill {
+  font-size: 11px;
+  font-weight: 800;
+  color: #0f172a;
+  background: #f1f5f9;
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
 }
-.chart-center-text strong { font-size: 32px; font-weight: 900; color: #0f172a; line-height: 1; letter-spacing: -1px;}
-.chart-center-text span { font-size: 10px; color: #64748b; font-weight: 800; text-transform: uppercase; margin-top: 6px; letter-spacing: 1px;}
+
+/* =========================================
+   GRÁFICO DE STATUS (BARRA EMPILHADA) E PÍLULAS
+========================================= */
+
+.horizontal-stacked-bar {
+  display: flex;
+  width: 100%;
+  height: 16px;
+  border-radius: 20px;
+  overflow: hidden;
+  background: #f1f5f9;
+  flex-shrink: 0;
+}
+.horizontal-stacked-bar > div { transition: width 0.6s ease-out; }
+
+/* Cores por status — usadas na barra empilhada E nas bolinhas da legenda */
+.segment-orcamento { background: #f59e0b; }
+.segment-confirmado { background: #10b981; }
+.segment-preparacao { background: #8b5cf6; }
+.segment-entregue { background: #ec4899; }
+.segment-finalizado { background: #3b82f6; }
+.segment-empty { background: #e2e8f0; }
 
 .chart-legend-pills {
-  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-bottom: 25px; flex-shrink: 0;
+  display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 15px; margin-bottom: 25px; flex-shrink: 0;
 }
 .chart-legend-pills div {
   display: flex; align-items: center; gap: 6px; font-size: 11px; color: #475569; font-weight: 700;
@@ -198,6 +314,7 @@
     margin: 0 0 12px 0; font-size: 11px; color: #64748b; font-weight: 800;
     text-transform: uppercase; letter-spacing: 1px; display: flex; align-items: center; gap: 8px;
 }
+.dash-financial-summary__icon { font-size: 14px; }
 .summary-item {
     display: flex; justify-content: space-between; align-items: center;
     font-size: 13px; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px dashed #e2e8f0;
@@ -241,7 +358,21 @@
 .activity-feed::-webkit-scrollbar-thumb { background: rgba(203, 213, 225, 0.5); border-radius: 10px; }
 .activity-feed::-webkit-scrollbar-thumb:hover { background: rgba(148, 163, 184, 0.8); }
 
-.empty-feed { color: #94a3b8; font-size: 13px; text-align: center; margin: auto 0; font-weight: 500; }
+.empty-feed {
+  color: #94a3b8;
+  font-size: 13px;
+  text-align: center;
+  margin: auto 0;
+  font-weight: 500;
+}
+.empty-feed--success {
+  color: #10b981;
+  background: #ecfdf5;
+  padding: 12px;
+  border-radius: 10px;
+  font-weight: 700;
+  margin: auto 0;
+}
 
 .feed-row-moderno {
   display: flex; gap: 15px; padding: 12px; border-radius: 14px; margin-bottom: 6px;
@@ -261,11 +392,13 @@
 .blue-icon { background: #eff6ff; color: #2563eb; }
 .green-icon { background: #f0fdf4; color: #16a34a; }
 .danger-icon { background: #fef2f2; color: #ef4444; }
+.feed-icon--rank { background: #f8fafc; color: #64748b; font-size: 14px; font-weight: 800; }
 
 .feed-info { flex: 1; display: flex; flex-direction: column; gap: 3px;}
 .feed-info p { margin: 0; font-size: 13px; font-weight: 700; color: #0f172a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 170px; }
 .feed-sub { font-size: 11px; color: #64748b; font-weight: 500; }
 .feed-valor { font-size: 13px; font-weight: 800; color: #10b981; white-space: nowrap;}
+.feed-valor--danger { color: #dc2626; }
 
 /* =========================================
    RESPONSIVIDADE 

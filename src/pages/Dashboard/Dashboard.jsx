@@ -247,13 +247,13 @@ const Dashboard = () => {
   
   if (statusConta === 'excluido') {
       return (
-          <div className="dash-wide-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center' }}>
-              <div style={{ background: '#fff', padding: '40px', borderRadius: '15px', border: '1px solid #fee2e2', maxWidth: '500px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                  <h2 style={{ color: '#991b1b', marginBottom: '15px' }}>🚫 Conta Desativada</h2>
-                  <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '25px' }}>
+          <div className="dash-wide-container dash-status-screen fade-in">
+              <div className="dash-status-card dash-status-card--danger">
+                  <h2>🚫 Conta Desativada</h2>
+                  <p>
                       Seu período de inatividade ultrapassou <strong>6 meses</strong>. Por segurança e limpeza do sistema, o acesso a esta conta foi suspenso e os dados programados para exclusão.
                   </p>
-                  <p style={{ color: '#64748b', fontSize: '14px' }}>
+                  <p className="dash-status-card__footnote">
                       Dúvidas? Entre em contato com o suporte: contato@celebreapp.com
                   </p>
               </div>
@@ -263,13 +263,13 @@ const Dashboard = () => {
 
   if (statusConta === 'bloqueado') {
       return (
-          <div className="dash-wide-container fade-in" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '80vh', textAlign: 'center' }}>
-              <div style={{ background: '#fff', padding: '40px', borderRadius: '15px', border: '1px solid #e2e8f0', maxWidth: '500px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                  <h2 style={{ color: '#0f172a', marginBottom: '15px' }}>⏳ Seu período de teste voou!</h2>
-                  <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '25px' }}>
+          <div className="dash-wide-container dash-status-screen fade-in">
+              <div className="dash-status-card dash-status-card--warning">
+                  <h2>⏳ Seu período de teste voou!</h2>
+                  <p>
                       Esperamos que o <strong>Celebre</strong> tenha ajudado a organizar suas festas nestes últimos dias. Para destravar seu painel e não perder nenhum dado importante, escolha o seu plano.
                   </p>
-                  <button onClick={() => navigate('/planos')} style={{ background: '#0f172a', color: '#fff', padding: '12px 24px', borderRadius: '8px', fontWeight: 'bold', width: '100%', cursor: 'pointer', border: 'none' }}>
+                  <button onClick={() => navigate('/planos')} className="dash-status-btn">
                       Ver Planos e Assinar
                   </button>
               </div>
@@ -281,7 +281,7 @@ const Dashboard = () => {
     <div className="dash-wide-container fade-in">
       
       {!isSuperAdmin && statusConta === 'ativo' && diasTeste <= 7 && (
-        <div style={{ background: '#fef3c7', color: '#b45309', padding: '12px', textAlign: 'center', borderRadius: '8px', marginBottom: '20px', fontWeight: 'bold', border: '1px solid #fde68a' }}>
+        <div className="dash-trial-banner">
           ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito do Celebre. Aproveite!
         </div>
       )}
@@ -312,42 +312,40 @@ const Dashboard = () => {
         </div>
         <div className="stat-card-wide border-red">
           <span>A RECEBER TOTAL</span>
-          <strong style={{color: '#dc2626'}}>R$ {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+          <strong>R$ {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
         </div>
       </div>
 
       <div className="dash-main-grid-wide">
         <div className="dash-column">
-          <section className="dash-card-wide flex-grow" style={{ display: 'flex', flexDirection: 'column' }}>
+          <section className="dash-card-wide flex-grow dash-card-column">
             
-            {/* 🔥 CABEÇALHO DO QUADRO COM O TOTAL DE PEDIDOS */}
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
-              <h3 style={{ margin: 0 }}>📊 Status e Volume</h3>
-              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', background: '#f1f5f9', padding: '6px 12px', borderRadius: '20px', border: '1px solid #e2e8f0' }}>
+            <div className="dash-section-header">
+              <h3>📊 Status e Volume</h3>
+              <span className="dash-count-pill">
                 {statusChart.total} PEDIDOS NO MÊS
               </span>
             </div>
 
-            {/* 🔥 NOVO GRÁFICO: BARRA HORIZONTAL EMPILHADA (Ocupa apenas 16px de altura!) */}
             <div className="horizontal-stacked-bar">
-                {p1 > 0 && <div style={{width: `${p1}%`, background: '#f59e0b'}} title={`Orçamentos: ${statusChart.orcamento}`}></div>}
-                {p2 > 0 && <div style={{width: `${p2}%`, background: '#10b981'}} title={`Confirmados: ${statusChart.confirmado}`}></div>}
-                {p3 > 0 && <div style={{width: `${p3}%`, background: '#8b5cf6'}} title={`Separação: ${statusChart.preparacao}`}></div>}
-                {p4 > 0 && <div style={{width: `${p4}%`, background: '#ec4899'}} title={`Entregue: ${statusChart.entregue}`}></div>}
-                {p5 > 0 && <div style={{width: `${p5}%`, background: '#3b82f6'}} title={`Finalizados: ${statusChart.finalizado}`}></div>}
-                {statusChart.total === 0 && <div style={{width: '100%', background: '#e2e8f0'}}></div>}
+                {p1 > 0 && <div className="segment-orcamento" style={{width: `${p1}%`}} title={`Orçamentos: ${statusChart.orcamento}`}></div>}
+                {p2 > 0 && <div className="segment-confirmado" style={{width: `${p2}%`}} title={`Confirmados: ${statusChart.confirmado}`}></div>}
+                {p3 > 0 && <div className="segment-preparacao" style={{width: `${p3}%`}} title={`Separação: ${statusChart.preparacao}`}></div>}
+                {p4 > 0 && <div className="segment-entregue" style={{width: `${p4}%`}} title={`Entregue: ${statusChart.entregue}`}></div>}
+                {p5 > 0 && <div className="segment-finalizado" style={{width: `${p5}%`}} title={`Finalizados: ${statusChart.finalizado}`}></div>}
+                {statusChart.total === 0 && <div className="segment-empty" style={{width: '100%'}}></div>}
             </div>
 
-            <div className="chart-legend-pills" style={{ marginTop: '15px', marginBottom: 'auto' }}>
-              <div><span style={{background: '#f59e0b'}}></span> Orçamentos <b>{statusChart.orcamento}</b></div>
-              <div><span style={{background: '#10b981'}}></span> Confirmados <b>{statusChart.confirmado}</b></div>
-              <div><span style={{background: '#8b5cf6'}}></span> Separação <b>{statusChart.preparacao}</b></div>
-              <div><span style={{background: '#ec4899'}}></span> Entregue <b>{statusChart.entregue}</b></div>
-              <div><span style={{background: '#3b82f6'}}></span> Finalizados <b>{statusChart.finalizado}</b></div>
+            <div className="chart-legend-pills">
+              <div><span className="segment-orcamento"></span> Orçamentos <b>{statusChart.orcamento}</b></div>
+              <div><span className="segment-confirmado"></span> Confirmados <b>{statusChart.confirmado}</b></div>
+              <div><span className="segment-preparacao"></span> Separação <b>{statusChart.preparacao}</b></div>
+              <div><span className="segment-entregue"></span> Entregue <b>{statusChart.entregue}</b></div>
+              <div><span className="segment-finalizado"></span> Finalizados <b>{statusChart.finalizado}</b></div>
             </div>
 
             <div className="dash-financial-summary">
-              <h4><span style={{fontSize: '14px'}}>💰</span> PIPELINE FINANCEIRO</h4>
+              <h4><span className="dash-financial-summary__icon">💰</span> PIPELINE FINANCEIRO</h4>
                 <div className="summary-item warning-text">
                     <span>Orçamentos Abertos</span>
                     <strong>R$ {valoresPorStatus.orcamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
@@ -389,7 +387,7 @@ const Dashboard = () => {
                     <span className="feed-sub">Festa: {orc.dataRetirada ? orc.dataRetirada.split('-').reverse().join('/') : '?'}</span>
                   </div>
                 </div>
-              )) : <p className="empty-feed">Nenhum orçamento pendente.</p>}
+              )) : <p className="empty-feed">🗒️ Nenhum orçamento pendente.</p>}
             </div>
           </section>
 
@@ -405,7 +403,7 @@ const Dashboard = () => {
                     {a.valor && <span className="feed-valor">{a.valor}</span>}
                   </div>
                 </div>
-              )) : <p className="empty-feed">Nenhuma venda recente.</p>}
+              )) : <p className="empty-feed">🛍️ Nenhuma venda recente.</p>}
             </div>
           </section>
         </div>
@@ -413,7 +411,7 @@ const Dashboard = () => {
         <div className="dash-column">
           <section className="dash-card-wide border-top-red flex-grow">
             <h3>🚨 Radar de Cobrança</h3>
-            <p className="card-subtitle" style={{marginBottom: '10px'}}>A festa passou e o pagamento não concluiu.</p>
+            <p className="card-subtitle">A festa passou e o pagamento não concluiu.</p>
             <div className="activity-feed">
               {cobrancasAtrasadas.length > 0 ?
                 cobrancasAtrasadas.map((cob, i) => (
@@ -423,9 +421,9 @@ const Dashboard = () => {
                     <p>{cob.cliente}</p>
                     <span className="feed-sub">Data Festa: {cob.data}</span>
                   </div>
-                  <div className="feed-valor" style={{color: '#dc2626'}}>R$ {cob.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+                  <div className="feed-valor feed-valor--danger">R$ {cob.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
                 </div>
-              )) : <p className="empty-feed" style={{color: '#10b981', background: '#ecfdf5', padding: '10px', borderRadius: '8px'}}>✅ Nenhum atraso detectado.</p>}
+              )) : <p className="empty-feed empty-feed--success">✅ Nenhum atraso detectado.</p>}
             </div>
           </section>
 
@@ -435,13 +433,13 @@ const Dashboard = () => {
               {topPecas.length > 0 ?
                 topPecas.map((peca, i) => (
                 <div key={i} className="feed-row-moderno cursor-default">
-                  <div className="feed-icon" style={{background: '#f8fafc', color: '#64748b', fontSize: '14px', fontWeight: 'bold'}}>{i+1}º</div>
+                  <div className="feed-icon feed-icon--rank">{i+1}º</div>
                   <div className="feed-info">
                     <p>{peca.nome}</p>
                     <span className="feed-sub">Alugada {peca.qtd} vezes</span>
                   </div>
                 </div>
-              )) : <p className="empty-feed">Dados insuficientes.</p>}
+              )) : <p className="empty-feed">📊 Dados insuficientes.</p>}
             </div>
           </section>
         </div>

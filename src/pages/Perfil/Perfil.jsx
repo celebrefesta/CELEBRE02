@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Perfil.css';
 import { db } from '../../firebaseConfig';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, addDoc } from 'firebase/firestore';
+// 🔥 Adicionei o setDoc aqui na importação
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, addDoc, setDoc } from 'firebase/firestore';
 import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, updateProfile } from 'firebase/auth';
 
 const Perfil = () => {
@@ -25,7 +26,7 @@ const Perfil = () => {
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [cancelando, setCancelando] = useState(false);
 
-  // 🔥 FICHA DE FUNCIONÁRIO E ASO (SOMENTE LEITURA PARA COLABORADORES) 🔥
+  // 🔥 FICHA DE FUNCIONÁRIO E ASO
   const [dados, setDados] = useState({
     nome: '',
     sobrenome: '',
@@ -113,7 +114,6 @@ const Perfil = () => {
                 email: usuarioLogado.email || ''
             }));
 
-            // 🔥 Se for colaborador, busca os dados de ASO na ficha do RH da empresa
             if (isCollaborator) {
                 const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
                 const snapEquipe = await getDocs(qEquipe);
@@ -130,19 +130,25 @@ const Perfil = () => {
                 }
             }
 
-            // Verifica os dados de Plano apenas se não for Colaborador
             if (!isCollaborator) {
                 const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', tenantId);
                 const contaAlvoSnap = await getDoc(contaAlvoRef);
                 
+                // 🔥 CORREÇÃO: Valores padrão para não ficar preso no "Carregando..."
+                let statusReal = "Inativa / Sem Plano";
+                let corBg = "#fef2f2"; 
+                let corTexto = "#991b1b"; 
+                let textoMetodo = "Nenhum método cadastrado";
+                let isActive = false;
+                let nomeDoPlano = "Básico (Gratuito)";
+                let precoDoPlano = "0,00";
+                let limiteAtual = 1;
+                let emailCobranca = usuarioLogado.email;
+                let subId = null;
+
                 if (contaAlvoSnap.exists()) {
                     const cData = contaAlvoSnap.data();
-                    let statusReal = "Inativa";
-                    let corBg = "#fef2f2"; 
-                    let corTexto = "#991b1b"; 
-                    let textoMetodo = "Nenhum método cadastrado";
-                    let isActive = false;
-
+                    
                     let testeAtivo = false;
                     if (cData.dataFimTeste) {
                         testeAtivo = new Date() <= new Date(cData.dataFimTeste);
@@ -158,61 +164,57 @@ const Perfil = () => {
                         statusReal = "Em Período de Teste (VIP)";
                         corBg = "#fffbeb"; 
                         corTexto = "#b45309"; 
-                    } else {
-                        statusReal = "Cancelada / Inativa";
-                        corBg = "#fef2f2"; 
-                        corTexto = "#991b1b"; 
                     }
-
-                    let nomeDoPlano = "Básico";
-                    let precoDoPlano = "0,00";
-                    let limiteAtual = 1;
 
                     if (cData.planoId) {
                         const planoSnap = await getDoc(doc(db, "planos", cData.planoId));
                         if (planoSnap.exists()) {
                             nomeDoPlano = planoSnap.data().nome;
                             precoDoPlano = planoSnap.data().preco;
-                            
                             if (nomeDoPlano.toLowerCase().includes('premium')) limiteAtual = 3;
                             else if (nomeDoPlano.toLowerCase().includes('pro')) limiteAtual = 5;
                         }
                     }
 
-                    if (isSuperAdmin) {
-                        nomeDoPlano = "Plano Master (Ilimitado)";
-                        limiteAtual = 9999;
-                        statusReal = "Acesso Vitalício";
-                        corBg = "#fef3c7";
-                        corTexto = "#92400e";
-                        isActive = true;
-                        textoMetodo = "Administração Global";
-                    }
-
-                    setAssinatura(prev => ({
-                        ...prev,
-                        planoNome: nomeDoPlano,
-                        precoMensal: precoDoPlano,
-                        status: statusReal,
-                        corBg: corBg,
-                        corTexto: corTexto,
-                        metodoPagamento: textoMetodo,
-                        emailCobranca: cData.email || usuarioLogado.email,
-                        subscriptionId: cData.subscriptionId || null,
-                        isActive: isActive
-                    }));
-
-                    const qEquipe = query(collection(db, 'equipe'), where('empresaId', '==', tenantId));
-                    const snapEquipe = await getDocs(qEquipe);
-                    setUsoPlano({
-                        limite: limiteAtual,
-                        usado: snapEquipe.size + 1 
-                    });
+                    emailCobranca = cData.email || usuarioLogado.email;
+                    subId = cData.subscriptionId || null;
                 }
+
+                if (isSuperAdmin) {
+                    nomeDoPlano = "Plano Master (Ilimitado)";
+                    limiteAtual = 9999;
+                    statusReal = "Acesso Vitalício";
+                    corBg = "#fef3c7";
+                    corTexto = "#92400e";
+                    isActive = true;
+                    textoMetodo = "Administração Global";
+                }
+
+                // Aplica os estados, garantindo que "Carregando..." suma!
+                setAssinatura({
+                    planoNome: nomeDoPlano,
+                    precoMensal: precoDoPlano,
+                    status: statusReal,
+                    corBg: corBg,
+                    corTexto: corTexto,
+                    metodoPagamento: textoMetodo,
+                    emailCobranca: emailCobranca,
+                    subscriptionId: subId,
+                    isActive: isActive
+                });
+
+                const qEquipe = query(collection(db, 'equipe'), where('empresaId', '==', tenantId));
+                const snapEquipe = await getDocs(qEquipe);
+                setUsoPlano({
+                    limite: limiteAtual,
+                    usado: snapEquipe.size + 1 
+                });
             }
         }
       } catch (e) { 
           console.error('Erro ao buscar dados:', e);
+          // Em caso de erro, removemos o "Carregando..." também
+          setAssinatura(prev => ({ ...prev, planoNome: 'Básico', status: 'Erro ao carregar plano' }));
       }
     };
     carregarDadosReais();
@@ -230,10 +232,17 @@ const Perfil = () => {
             sobrenome: dados.sobrenome,
             cpf: dados.cpf,
             telefone: dados.telefone,
-            endereco: dados.endereco
+            endereco: dados.endereco,
+            empresa: empresa.nome // 🔥 Garante que salva no perfil do usuário também
         });
 
-        // Se for colaborador, atualiza apenas os dados pessoais na lista da patroa
+        // 🔥 CORREÇÃO: Salvar o nome da empresa diretamente pelo perfil!
+        if (!isCollaborator) {
+            const empRef = doc(db, 'configuracoes_empresa', tenantId);
+            // setDoc com merge:true cria o documento caso ele não exista!
+            await setDoc(empRef, { nomeEmpresa: empresa.nome }, { merge: true });
+        }
+
         if (isCollaborator) {
             const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
             const snapEquipe = await getDocs(qEquipe);
@@ -247,10 +256,11 @@ const Perfil = () => {
             }
         }
 
-        await registrarLog("ATUALIZAÇÃO DE PERFIL", `Atualizou os dados da ficha pessoal.`);
+        await registrarLog("ATUALIZAÇÃO DE PERFIL", `Atualizou os dados da ficha pessoal e empresa.`);
         alert('✅ Dados atualizados com sucesso!');
     } catch (error) {
         alert('Ocorreu um erro ao salvar o perfil.');
+        console.error(error);
     } finally {
         setSalvandoPerfil(false);
     }
@@ -399,7 +409,6 @@ const Perfil = () => {
             </div>
         </section>
 
-        {/* 🔥 BLINDAGEM ASO: Apenas Colaboradores enxergam a ficha de ASO (Somente Leitura) 🔥 */}
         {isCollaborator && (
             <section className="form-section" style={{ border: '1px solid #e2e8f0', background: '#fff', borderRadius: '12px' }}>
                 <h3><i className="fas fa-notes-medical" style={{ color: '#10b981', marginRight: '8px' }}></i> Saúde Ocupacional (ASO)</h3>
@@ -446,7 +455,8 @@ const Perfil = () => {
                 <div className="input-row">
                 <div className="input-group">
                     <label>Nome da Empresa</label>
-                    <input type="text" value={empresa.nome} readOnly style={{background: '#f1f5f9'}} />
+                    {/* 🔥 CORREÇÃO: Removido o readOnly. Agora o campo é editável e salva no Firebase! */}
+                    <input type="text" value={empresa.nome} onChange={(e) => setEmpresa({...empresa, nome: e.target.value})} placeholder="Digite o nome da empresa" style={{background: '#fff'}} />
                 </div>
                 <div className="input-group">
                     <label>Logo</label>
@@ -455,7 +465,7 @@ const Perfil = () => {
                         ? <img src={empresa.logo} alt="logo" style={{height: 54, borderRadius: 6, border: '1px solid #e6e6e6', background: '#fff'}} /> 
                         : <div style={{height:54,width:54,background:'#f3f4f6',borderRadius:6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#cbd5e1'}}>🏢</div>
                     }
-                    <Link to="/configuracoes" className="btn-edit-config">Editar em Configurações</Link>
+                    <Link to="/configuracoes" className="btn-edit-config">Configurações Avançadas</Link>
                     </div>
                 </div>
                 </div>
