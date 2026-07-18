@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth'; 
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-// 🔥 Precisamos do Firestore para verificar o cargo e gravar o log
 import { auth, db } from '../firebaseConfig';
 import SininhoNotificacoes from './SininhoNotificacoes';
 import './Topbar.css';
@@ -15,7 +14,6 @@ const Topbar = () => {
   const [isAdminConta, setIsAdminConta] = useState(false);
   const menuRef = useRef(null);
 
-  // Fica vigiando para ver quem está logado no sistema e verifica o cargo
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
@@ -26,15 +24,14 @@ const Topbar = () => {
           email: user.email
         });
 
-        // 🔥 Lógica para descobrir se é a Dona da Conta ou Funcionário
         try {
           const userRef = doc(db, 'usuarios', user.uid);
           const userSnap = await getDoc(userRef);
           
           if (userSnap.exists()) {
-            setIsAdminConta(true); // É a Dona!
+            setIsAdminConta(true); 
           } else {
-            setIsAdminConta(false); // É funcionário!
+            setIsAdminConta(false); 
           }
         } catch (error) {
           console.error("Erro ao verificar nível de acesso do topbar:", error);
@@ -49,7 +46,6 @@ const Topbar = () => {
     return () => unsubscribe();
   }, []);
 
-  // Fecha a gaveta se o usuário clicar fora dela
   useEffect(() => {
     const handleClickFora = (event) => {
       if (menuRef.current && !menuRef.current.contains(event.target)) {
@@ -60,13 +56,11 @@ const Topbar = () => {
     return () => document.removeEventListener("mousedown", handleClickFora);
   }, []);
 
-  // Função para navegar e fechar o menu ao mesmo tempo
   const irPara = (caminho) => {
     navigate(caminho);
     setMenuAberto(false);
   };
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE LOGOUT)
   const registrarLogLogout = async () => {
     if (!userAuthObj) return;
     try {
@@ -88,19 +82,14 @@ const Topbar = () => {
     }
   };
 
-  // 🔥 Função Oficial de Sair do Sistema 🔥
   const handleSair = async () => {
     try {
-      // 1. Grava o log de saída antes de perder a conexão
       await registrarLogLogout();
-
-      // 2. Limpa a memória do navegador por segurança
       localStorage.removeItem('tenantId');
       localStorage.removeItem('userRole');
       localStorage.removeItem('userPermissions');
       localStorage.removeItem('funcName');
 
-      // 3. Desconecta do Firebase e redireciona
       await signOut(auth);
       navigate('/login'); 
     } catch (error) {
@@ -113,21 +102,17 @@ const Topbar = () => {
     <div className="topbar-container">
       <div className="topbar-direita">
         
-        {/* O nosso sininho mágico de notificações */}
         <SininhoNotificacoes />
         
         <div className="topbar-divisor"></div>
 
-        {/* 🔥 MENU GAVETA ESTILO FACEBOOK 🔥 */}
         <div className="perfil-dropdown-container" ref={menuRef}>
           
-          {/* Botão que fica sempre visível na barra */}
           <button 
             className="perfil-btn-trigger" 
             onClick={() => setMenuAberto(!menuAberto)}
           >
             <div className="perfil-avatar">
-              {/* Se tiver foto do Google, mostra a foto. Se não, mostra o ícone */}
               {usuario?.foto ? (
                 <img src={usuario.foto} alt="Perfil" style={{width: '100%', height: '100%', borderRadius: '50%'}} />
               ) : (
@@ -135,12 +120,10 @@ const Topbar = () => {
               )}
             </div>
             
-            {/* O nome agora é dinâmico! */}
             <span className="perfil-nome">{usuario?.nome || "Carregando..."}</span>
             <i className={`fas fa-chevron-down seta-menu ${menuAberto ? 'girar' : ''}`}></i>
           </button>
 
-          {/* A Gaveta que abre ao clicar */}
           {menuAberto && (
             <div className="perfil-dropdown-menu">
               
@@ -149,28 +132,22 @@ const Topbar = () => {
                 <span style={{fontSize: '11px', color: '#94a3b8'}}>{usuario?.email || "Gerenciador do Sistema"}</span>
               </div>
               
-              <button className="dropdown-item" onClick={() => irPara('/perfil')}>
-                <i className="fas fa-user-circle"></i> 
-                Meu Perfil
+              {/* 🔥 BOTAO CENTRAL DE CONFIGURAÇÕES (Para todos) 🔥 */}
+              <button className="dropdown-item" onClick={() => irPara('/configuracoes')}>
+                <i className="fas fa-cog"></i> 
+                Configurações
               </button>
               
-              {/* 🔥 A MÁGICA AQUI: Equipe e Configurações SÓ aparecem se for a Dona da conta! */}
+              {/* 🔥 EQUPIE (Apenas para a Dona da Conta) 🔥 */}
               {isAdminConta && (
-                <>
-                  <button className="dropdown-item" onClick={() => irPara('/usuarios')}>
-                    <i className="fas fa-users-cog"></i> 
-                    Equipe
-                  </button>
-                  <button className="dropdown-item" onClick={() => irPara('/configuracoes')}>
-                    <i className="fas fa-cog"></i> 
-                    Configurações
-                  </button>
-                </>
+                <button className="dropdown-item" onClick={() => irPara('/usuarios')}>
+                  <i className="fas fa-users-cog"></i> 
+                  Equipe
+                </button>
               )}
               
               <div className="dropdown-divisor"></div>
               
-              {/* Botão Oficial de SAIR que dispara o handleSair() */}
               <button className="dropdown-item sair" onClick={handleSair}>
                 <i className="fas fa-sign-out-alt"></i> 
                 Sair do Sistema

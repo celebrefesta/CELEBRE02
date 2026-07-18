@@ -2,79 +2,49 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Perfil.css';
 import { db } from '../../firebaseConfig';
-// 🔥 Adicionei o setDoc aqui na importação
-import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, addDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, addDoc } from 'firebase/firestore';
 import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, updateProfile } from 'firebase/auth';
 
 const Perfil = () => {
   const navigate = useNavigate();
   
-  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
-  // 🔥 Identificação de Hierarquia
   const isSuperAdmin = usuarioLogado?.email === "celebrefesta25@gmail.com";
   const isOwner = tenantId === usuarioLogado?.uid;
   const isCollaborator = !isSuperAdmin && !isOwner;
 
-  // --- ESTADOS DO PERFIL ---
   const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
   const [mostrarSenhaAtual, setMostrarSenhaAtual] = useState(false);
   const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [cancelando, setCancelando] = useState(false);
 
-  // 🔥 FICHA DE FUNCIONÁRIO E ASO
   const [dados, setDados] = useState({
-    nome: '',
-    sobrenome: '',
-    cpf: '',
-    telefone: '',
-    endereco: '',
-    email: '',
-    senhaAtual: '', 
-    novaSenha: '',
-    confirmarSenha: '',
-    asoStatus: 'Pendente',
-    asoTipo: 'Admissional',
-    asoDataExame: '',
-    asoValidade: '',
-    asoObservacoes: ''
+    nome: '', sobrenome: '', cpf: '', telefone: '', endereco: '', email: '',
+    senhaAtual: '', novaSenha: '', confirmarSenha: '',
+    asoStatus: 'Pendente', asoTipo: 'Admissional', asoDataExame: '', asoValidade: '', asoObservacoes: ''
   });
 
-  const [empresa, setEmpresa] = useState({ nome: '', logo: '' });
   const [assinatura, setAssinatura] = useState({
-    planoNome: 'Carregando...',
-    precoMensal: '0,00',
-    status: 'Carregando...',
-    corBg: '#f1f5f9',
-    corTexto: '#64748b',
-    metodoPagamento: 'Nenhum',
-    emailCobranca: '-',
-    subscriptionId: null,
-    isActive: false 
+    planoNome: 'Carregando...', precoMensal: '0,00', status: 'Carregando...',
+    corBg: '#f1f5f9', corTexto: '#64748b', metodoPagamento: 'Nenhum', emailCobranca: '-',
+    subscriptionId: null, isActive: false 
   });
 
   const [usoPlano, setUsoPlano] = useState({ limite: 1, usado: 1 });
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [salvandoSenha, setSalvandoSenha] = useState(false);
 
-  // 🔥 ESPIÃO (AUDITORIA CORPORATIVA)
   const registrarLog = async (acao, detalhes) => {
     try {
       const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(),
-        criadoEm: serverTimestamp(),
-        funcionario: nomeEquipa,
-        usuarioNome: nomeEquipa,
-        usuarioEmail: usuarioLogado?.email || "Desconhecido",
-        acao: acao.toUpperCase(),
-        detalhes: detalhes,
-        userId: tenantId, 
-        empresaId: tenantId,
+        data: new Date(), criadoEm: serverTimestamp(), funcionario: nomeEquipa,
+        usuarioNome: nomeEquipa, usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(), detalhes: detalhes, userId: tenantId, empresaId: tenantId,
         funcionarioId: usuarioLogado?.uid
       });
     } catch (error) {
@@ -82,36 +52,21 @@ const Perfil = () => {
     }
   };
 
-  // --- CARREGAMENTO INICIAL (PERFIL) ---
   useEffect(() => {
-    if (!usuarioLogado) {
-        navigate('/login');
-        return;
-    }
+    if (!usuarioLogado) { navigate('/login'); return; }
 
     const carregarDadosReais = async () => {
       try {
-        const empRef = doc(db, 'configuracoes_empresa', tenantId);
-        const empSnap = await getDoc(empRef);
-        if (empSnap.exists()) {
-          const p = empSnap.data();
-          setEmpresa({ nome: p.nomeEmpresa || p.nome || 'Sua Empresa', logo: p.logotipo || p.logoUrl || '' });
-        }
-
         const userRef = doc(db, 'usuarios', usuarioLogado.uid);
         const userSnap = await getDoc(userRef);
         
         if (userSnap.exists()) {
             const uData = userSnap.data();
-            
             setDados(prev => ({
                 ...prev,
                 nome: uData.nomeCompleto || uData.nomeExibicao || usuarioLogado.displayName || (isCollaborator ? 'Colaborador' : 'Admin'),
-                sobrenome: uData.sobrenome || '',
-                cpf: uData.cpf || uData.documento || '',
-                telefone: uData.telefone || '',
-                endereco: uData.endereco || '',
-                email: usuarioLogado.email || ''
+                sobrenome: uData.sobrenome || '', cpf: uData.cpf || uData.documento || '',
+                telefone: uData.telefone || '', endereco: uData.endereco || '', email: usuarioLogado.email || ''
             }));
 
             if (isCollaborator) {
@@ -120,12 +75,8 @@ const Perfil = () => {
                 if (!snapEquipe.empty) {
                     const equipeData = snapEquipe.docs[0].data();
                     setDados(prev => ({
-                        ...prev,
-                        asoStatus: equipeData.asoStatus || 'Pendente',
-                        asoTipo: equipeData.asoTipo || 'Admissional',
-                        asoDataExame: equipeData.asoDataExame || '',
-                        asoValidade: equipeData.asoValidade || '',
-                        asoObservacoes: equipeData.asoObservacoes || ''
+                        ...prev, asoStatus: equipeData.asoStatus || 'Pendente', asoTipo: equipeData.asoTipo || 'Admissional',
+                        asoDataExame: equipeData.asoDataExame || '', asoValidade: equipeData.asoValidade || '', asoObservacoes: equipeData.asoObservacoes || ''
                     }));
                 }
             }
@@ -134,86 +85,50 @@ const Perfil = () => {
                 const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', tenantId);
                 const contaAlvoSnap = await getDoc(contaAlvoRef);
                 
-                // 🔥 CORREÇÃO: Valores padrão para não ficar preso no "Carregando..."
-                let statusReal = "Inativa / Sem Plano";
-                let corBg = "#fef2f2"; 
-                let corTexto = "#991b1b"; 
-                let textoMetodo = "Nenhum método cadastrado";
-                let isActive = false;
-                let nomeDoPlano = "Básico (Gratuito)";
-                let precoDoPlano = "0,00";
-                let limiteAtual = 1;
-                let emailCobranca = usuarioLogado.email;
-                let subId = null;
+                let statusReal = "Inativa / Sem Plano", corBg = "#fef2f2", corTexto = "#991b1b", textoMetodo = "Nenhum método cadastrado";
+                let isActive = false, nomeDoPlano = "Básico (Gratuito)", precoDoPlano = "0,00", limiteAtual = 1;
+                let emailCobranca = usuarioLogado.email, subId = null;
 
                 if (contaAlvoSnap.exists()) {
                     const cData = contaAlvoSnap.data();
-                    
-                    let testeAtivo = false;
-                    if (cData.dataFimTeste) {
-                        testeAtivo = new Date() <= new Date(cData.dataFimTeste);
-                    }
+                    let testeAtivo = cData.dataFimTeste ? new Date() <= new Date(cData.dataFimTeste) : false;
 
                     if (cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago') {
-                        statusReal = "Assinatura Ativa";
-                        corBg = "#f0fdf4"; 
-                        corTexto = "#166534"; 
-                        textoMetodo = cData.metodoPagamento || "Cartão de Crédito";
-                        isActive = true;
+                        statusReal = "Assinatura Ativa"; corBg = "#f0fdf4"; corTexto = "#166534"; 
+                        textoMetodo = cData.metodoPagamento || "Cartão de Crédito"; isActive = true;
                     } else if (testeAtivo) {
-                        statusReal = "Em Período de Teste (VIP)";
-                        corBg = "#fffbeb"; 
-                        corTexto = "#b45309"; 
+                        statusReal = "Em Período de Teste (VIP)"; corBg = "#fffbeb"; corTexto = "#b45309"; 
                     }
 
                     if (cData.planoId) {
                         const planoSnap = await getDoc(doc(db, "planos", cData.planoId));
                         if (planoSnap.exists()) {
-                            nomeDoPlano = planoSnap.data().nome;
-                            precoDoPlano = planoSnap.data().preco;
+                            nomeDoPlano = planoSnap.data().nome; precoDoPlano = planoSnap.data().preco;
                             if (nomeDoPlano.toLowerCase().includes('premium')) limiteAtual = 3;
                             else if (nomeDoPlano.toLowerCase().includes('pro')) limiteAtual = 5;
                         }
                     }
-
-                    emailCobranca = cData.email || usuarioLogado.email;
-                    subId = cData.subscriptionId || null;
+                    emailCobranca = cData.email || usuarioLogado.email; subId = cData.subscriptionId || null;
                 }
 
                 if (isSuperAdmin) {
-                    nomeDoPlano = "Plano Master (Ilimitado)";
-                    limiteAtual = 9999;
-                    statusReal = "Acesso Vitalício";
-                    corBg = "#fef3c7";
-                    corTexto = "#92400e";
-                    isActive = true;
-                    textoMetodo = "Administração Global";
+                    nomeDoPlano = "Plano Master (Ilimitado)"; limiteAtual = 9999; statusReal = "Acesso Vitalício";
+                    corBg = "#fef3c7"; corTexto = "#92400e"; isActive = true; textoMetodo = "Administração Global";
                 }
 
-                // Aplica os estados, garantindo que "Carregando..." suma!
                 setAssinatura({
-                    planoNome: nomeDoPlano,
-                    precoMensal: precoDoPlano,
-                    status: statusReal,
-                    corBg: corBg,
-                    corTexto: corTexto,
-                    metodoPagamento: textoMetodo,
-                    emailCobranca: emailCobranca,
-                    subscriptionId: subId,
-                    isActive: isActive
+                    planoNome: nomeDoPlano, precoMensal: precoDoPlano, status: statusReal, corBg: corBg,
+                    corTexto: corTexto, metodoPagamento: textoMetodo, emailCobranca: emailCobranca,
+                    subscriptionId: subId, isActive: isActive
                 });
 
                 const qEquipe = query(collection(db, 'equipe'), where('empresaId', '==', tenantId));
                 const snapEquipe = await getDocs(qEquipe);
-                setUsoPlano({
-                    limite: limiteAtual,
-                    usado: snapEquipe.size + 1 
-                });
+                setUsoPlano({ limite: limiteAtual, usado: snapEquipe.size + 1 });
             }
         }
       } catch (e) { 
           console.error('Erro ao buscar dados:', e);
-          // Em caso de erro, removemos o "Carregando..." também
           setAssinatura(prev => ({ ...prev, planoNome: 'Básico', status: 'Erro ao carregar plano' }));
       }
     };
@@ -228,39 +143,23 @@ const Perfil = () => {
         
         const userRef = doc(db, 'usuarios', usuarioLogado.uid);
         await updateDoc(userRef, { 
-            nomeCompleto: dados.nome,
-            sobrenome: dados.sobrenome,
-            cpf: dados.cpf,
-            telefone: dados.telefone,
-            endereco: dados.endereco,
-            empresa: empresa.nome // 🔥 Garante que salva no perfil do usuário também
+            nomeCompleto: dados.nome, sobrenome: dados.sobrenome, cpf: dados.cpf,
+            telefone: dados.telefone, endereco: dados.endereco
         });
-
-        // 🔥 CORREÇÃO: Salvar o nome da empresa diretamente pelo perfil!
-        if (!isCollaborator) {
-            const empRef = doc(db, 'configuracoes_empresa', tenantId);
-            // setDoc com merge:true cria o documento caso ele não exista!
-            await setDoc(empRef, { nomeEmpresa: empresa.nome }, { merge: true });
-        }
 
         if (isCollaborator) {
             const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
             const snapEquipe = await getDocs(qEquipe);
             if (!snapEquipe.empty) {
                 const funcDocId = snapEquipe.docs[0].id;
-                await updateDoc(doc(db, 'equipe', funcDocId), {
-                    nome: dados.nome,
-                    telefone: dados.telefone,
-                    cpf: dados.cpf
-                });
+                await updateDoc(doc(db, 'equipe', funcDocId), { nome: dados.nome, telefone: dados.telefone, cpf: dados.cpf });
             }
         }
 
-        await registrarLog("ATUALIZAÇÃO DE PERFIL", `Atualizou os dados da ficha pessoal e empresa.`);
+        await registrarLog("ATUALIZAÇÃO DE PERFIL", `Atualizou os dados da ficha pessoal.`);
         alert('✅ Dados atualizados com sucesso!');
     } catch (error) {
         alert('Ocorreu um erro ao salvar o perfil.');
-        console.error(error);
     } finally {
         setSalvandoPerfil(false);
     }
@@ -280,26 +179,13 @@ const Perfil = () => {
     e.preventDefault();
     setSalvandoSenha(true);
     try {
-        if (!dados.senhaAtual || !dados.novaSenha || !dados.confirmarSenha) {
-            alert('⚠️ Preencha todos os campos do cofre de segurança.');
-            return;
-        }
-        if (!isSenhaForte) {
-            alert('❌ A nova senha não atende aos critérios mínimos de segurança.');
-            return;
-        }
-        if (dados.novaSenha !== dados.confirmarSenha) {
-            alert('❌ As senhas novas não coincidem!');
-            return;
-        }
+        if (!dados.senhaAtual || !dados.novaSenha || !dados.confirmarSenha) return alert('⚠️ Preencha todos os campos do cofre de segurança.');
+        if (!isSenhaForte) return alert('❌ A nova senha não atende aos critérios mínimos de segurança.');
+        if (dados.novaSenha !== dados.confirmarSenha) return alert('❌ As senhas novas não coincidem!');
 
         const credential = EmailAuthProvider.credential(usuarioLogado.email, dados.senhaAtual);
-        try {
-            await reauthenticateWithCredential(usuarioLogado, credential);
-        } catch (authError) {
-            alert('❌ A Senha Atual está incorreta. Acesso negado.');
-            return;
-        }
+        try { await reauthenticateWithCredential(usuarioLogado, credential); } 
+        catch (authError) { return alert('❌ A Senha Atual está incorreta. Acesso negado.'); }
 
         await updatePassword(usuarioLogado, dados.novaSenha);
         await registrarLog("ALTERAÇÃO DE SENHA", `A palavra-passe foi alterada com sucesso.`);
@@ -347,12 +233,11 @@ const Perfil = () => {
       <div className="perfil-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', flexWrap: 'wrap', gap: '15px' }}>
         <div>
             <h1>Configurações da Conta</h1>
-            <p>Gerencie informações, faturamento e segurança.</p>
+            <p>Gerencie informações pessoais, faturamento e segurança.</p>
         </div>
       </div>
 
       <div className="perfil-container">
-        {/* COLUNA LATERAL ESQUERDA */}
         <div className="perfil-sidebar">
           <div className="avatar-large" style={{ background: isSuperAdmin ? '#c5a059' : '#0f172a' }}>{dados.nome ? dados.nome.charAt(0).toUpperCase() : 'U'}</div>
           <h3>{dados.nome}</h3>
@@ -363,9 +248,6 @@ const Perfil = () => {
           <button className="btn-change-photo">Alterar Foto</button>
         </div>
 
-        {/* =========================================
-            MEU PERFIL (FICHA RH / DADOS)
-        ========================================= */}
         <form className="perfil-form" onSubmit={handleSalvarPerfil} style={{ animation: 'fadeIn 0.3s' }}>
         
         {isCollaborator && (
@@ -412,14 +294,12 @@ const Perfil = () => {
         {isCollaborator && (
             <section className="form-section" style={{ border: '1px solid #e2e8f0', background: '#fff', borderRadius: '12px' }}>
                 <h3><i className="fas fa-notes-medical" style={{ color: '#10b981', marginRight: '8px' }}></i> Saúde Ocupacional (ASO)</h3>
-                
                 <div style={{ background: '#f8fafc', padding: '12px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', marginBottom: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                     <i className="fas fa-lock" style={{ color: '#64748b', fontSize: '16px' }}></i>
                     <p style={{ margin: 0, fontSize: '12px', color: '#475569', lineHeight: '1.5' }}>
                         Estes dados são preenchidos e geridos exclusivamente pelo RH ou Proprietário(a) da empresa.
                     </p>
                 </div>
-
                 <div className="input-row">
                     <div className="input-group">
                         <label>Status do Exame</label>
@@ -430,7 +310,6 @@ const Perfil = () => {
                         <input type="text" value={dados.asoTipo} readOnly style={{background: '#f1f5f9', cursor: 'not-allowed'}} />
                     </div>
                 </div>
-                
                 <div className="input-row">
                     <div className="input-group">
                         <label>Data de Realização</label>
@@ -441,7 +320,6 @@ const Perfil = () => {
                         <input type="text" value={dados.asoValidade ? dados.asoValidade.split('-').reverse().join('/') : 'Não informada'} readOnly style={{background: '#f1f5f9', cursor: 'not-allowed'}} />
                     </div>
                 </div>
-
                 <div className="input-group" style={{ marginTop: '15px' }}>
                     <label>Observações / Restrições Médicas</label>
                     <input type="text" value={dados.asoObservacoes || 'Nenhuma restrição registrada.'} readOnly style={{background: '#f1f5f9', cursor: 'not-allowed'}} />
@@ -451,33 +329,9 @@ const Perfil = () => {
 
         {!isCollaborator && (
             <section className="form-section">
-                <h3><i className="fas fa-building"></i> Dados da Empresa</h3>
-                <div className="input-row">
-                <div className="input-group">
-                    <label>Nome da Empresa</label>
-                    {/* 🔥 CORREÇÃO: Removido o readOnly. Agora o campo é editável e salva no Firebase! */}
-                    <input type="text" value={empresa.nome} onChange={(e) => setEmpresa({...empresa, nome: e.target.value})} placeholder="Digite o nome da empresa" style={{background: '#fff'}} />
-                </div>
-                <div className="input-group">
-                    <label>Logo</label>
-                    <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
-                    {empresa.logo 
-                        ? <img src={empresa.logo} alt="logo" style={{height: 54, borderRadius: 6, border: '1px solid #e6e6e6', background: '#fff'}} /> 
-                        : <div style={{height:54,width:54,background:'#f3f4f6',borderRadius:6, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#cbd5e1'}}>🏢</div>
-                    }
-                    <Link to="/configuracoes" className="btn-edit-config">Configurações Avançadas</Link>
-                    </div>
-                </div>
-                </div>
-            </section>
-        )}
-
-        {!isCollaborator && (
-            <section className="form-section">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '15px' }}>
                     <h3><i className="fas fa-crown"></i> Assinatura e Uso do Plano</h3>
                 </div>
-                
                 <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '10px', border: '1px solid #e2e8f0', marginBottom: '20px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px' }}>
                         <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Usuários Cadastrados (Você + Equipe)</span>
@@ -492,7 +346,6 @@ const Perfil = () => {
                         <p style={{ margin: '8px 0 0 0', fontSize: '11px', color: '#ef4444', fontWeight: 'bold' }}>⚠️ Limite de funcionários atingido. Faça upgrade para adicionar mais.</p>
                     )}
                 </div>
-
                 <div className="assinatura-card" style={{ display: 'block', width: '100%', minWidth: '100%', boxSizing: 'border-box', background: assinatura.corBg, border: `1px solid ${assinatura.corTexto}40` }}>
                     <div className="assinatura-header">
                         <div className="assinatura-titulo">
@@ -513,7 +366,6 @@ const Perfil = () => {
                         </div>
                     </div>
                 </div>
-                
                 <div style={{display:'flex', gap: '15px', marginTop: 20, flexWrap: 'wrap'}}>
                 <button type="button" className="btn-change-plan" onClick={() => navigate('/planos')}>Gerenciar Plano e Pagamentos <i className="fas fa-arrow-right" style={{marginLeft: '8px'}}></i></button>
                 {assinatura.isActive && !isSuperAdmin && (
@@ -533,12 +385,9 @@ const Perfil = () => {
 
         <button type="submit" className="btn-save-perfil" disabled={salvandoPerfil}>{salvandoPerfil ? 'Salvando Perfil...' : 'Salvar Alterações do Perfil'}</button>
         </form>
-
       </div>
 
-      {/* =========================================
-          MODAL DE TROCA DE SENHA
-      ========================================= */}
+      {/* MODAL DE TROCA DE SENHA */}
       {modalSenhaAberto && (
         <div className="modal-overlay-senha" onClick={() => setModalSenhaAberto(false)}>
             <div className="modal-senha-content" onClick={(e) => e.stopPropagation()}>
@@ -587,7 +436,6 @@ const Perfil = () => {
             </div>
         </div>
       )}
-
     </div>
   );
 };
