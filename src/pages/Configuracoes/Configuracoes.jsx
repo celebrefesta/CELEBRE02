@@ -2,15 +2,15 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, getDocs, where, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, updateProfile } from 'firebase/auth'; 
-import SignatureCanvas from 'react-signature-canvas'; 
+import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth'; 
 import './Configuracoes.css';
 
 import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
+import AbaMeuPerfil from './AbaMeuPerfil'; 
+import AbaEmpresa from './AbaEmpresa'; // 🔥 IMPORTÁMOS A ABA EMPRESA
 
 const Configuracoes = () => {
   const navigate = useNavigate();
-  // 🔥 Autenticação e Hierarquia
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
@@ -18,38 +18,30 @@ const Configuracoes = () => {
   const isOwner = tenantId === usuarioLogado?.uid;
   const isCollaborator = !isSuperAdmin && !isOwner;
 
-  // 🔥 ESTADOS GERAIS E ABAS
   const [abaAtiva, setAbaAtiva] = useState('meu_perfil'); 
   const [loading, setLoading] = useState(true);
 
   // ==========================================
-  // ESTADOS DO MEU PERFIL E ASSINATURA
+  // ESTADOS DO RESTO DO SISTEMA
   // ==========================================
-  const [dadosPerfil, setDadosPerfil] = useState({
-    nome: '', sobrenome: '', cpf: '', telefone: '', endereco: '', email: '',
-    senhaAtual: '', novaSenha: '', confirmarSenha: '',
-    asoStatus: 'Pendente', asoTipo: 'Admissional', asoDataExame: '', asoValidade: '', asoObservacoes: ''
-  });
-
   const [assinatura, setAssinatura] = useState({
     planoNome: 'Carregando...', precoMensal: '0,00', status: 'Carregando...',
     corBg: '#f1f5f9', corTexto: '#64748b', metodoPagamento: 'Nenhum', emailCobranca: '-',
     subscriptionId: null, isActive: false 
   });
-
   const [usoPlano, setUsoPlano] = useState({ limite: 1, usado: 1 });
-  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
-  
+  const [cancelando, setCancelando] = useState(false);
+
+  // 🔥 Estados Isolados para a Senha (Aba Segurança)
   const [modalSenhaAberto, setModalSenhaAberto] = useState(false);
+  const [senhaAtual, setSenhaAtual] = useState('');
+  const [novaSenha, setNovaSenha] = useState('');
+  const [confirmarSenha, setConfirmarSenha] = useState('');
   const [mostrarSenhaAtual, setMostrarSenhaAtual] = useState(false);
   const [mostrarNovaSenha, setMostrarNovaSenha] = useState(false);
   const [mostrarConfirmarSenha, setMostrarConfirmarSenha] = useState(false);
   const [salvandoSenha, setSalvandoSenha] = useState(false);
-  const [cancelando, setCancelando] = useState(false);
 
-  // ==========================================
-  // ESTADOS DE CONFIGURAÇÕES DO SISTEMA (MANTIDOS INTACTOS)
-  // ==========================================
   const [theme, setTheme] = useState(localStorage.getItem('theme') || 'light');
   const [fontSize, setFontSize] = useState(localStorage.getItem('fontSize') || 'padrao');
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'pt');
@@ -76,9 +68,6 @@ const Configuracoes = () => {
   const [grupoVitrineSelecionado, setGrupoVitrineSelecionado] = useState('');
   const [temaVitrineSelecionado, setTemaVitrineSelecionado] = useState('');
 
-  // ==========================================
-  // 🔥 AUDITORIA GERAL (UNIFICADA)
-  // ==========================================
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
@@ -94,9 +83,6 @@ const Configuracoes = () => {
     }
   };
 
-  // ==========================================
-  // EFEITOS GERAIS
-  // ==========================================
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-font-size', fontSize);
@@ -120,18 +106,14 @@ const Configuracoes = () => {
 
   useEffect(() => { 
     if (!usuarioLogado) { navigate('/login'); return; }
-    carregarTudoUnificado(); 
+    carregarConfiguracoesGerais(); 
   }, [usuarioLogado, navigate, tenantId]);
 
-  // ==========================================
-  // 🔥 CARREGAMENTO UNIFICADO (PERFIL E SISTEMA)
-  // ==========================================
   const getDocConfigRef = () => doc(db, "configuracoes_empresa", tenantId);
 
-  const carregarTudoUnificado = async () => {
+  const carregarConfiguracoesGerais = async () => {
     setLoading(true);
     try {
-        // 1. DADOS DE CONFIGURAÇÃO DO SISTEMA (A sua lógica intocada)
         const docRef = getDocConfigRef();
         const docSnap = await getDoc(docRef);
         let dadosConf = docSnap.exists() ? docSnap.data() : {};
@@ -163,107 +145,53 @@ const Configuracoes = () => {
         }
         setConfig(prev => ({ ...prev, ...newState }));
 
-        // 2. DADOS DO MEU PERFIL (Usuário Logado)
-        const userRef = doc(db, 'usuarios', usuarioLogado.uid);
-        const userSnap = await getDoc(userRef);
-        
-        if (userSnap.exists()) {
-            const uData = userSnap.data();
-            setDadosPerfil(prev => ({
-                ...prev,
-                nome: uData.nomeCompleto || uData.nomeExibicao || usuarioLogado.displayName || (isCollaborator ? 'Colaborador' : 'Admin'),
-                sobrenome: uData.sobrenome || '', cpf: uData.cpf || uData.documento || '',
-                telefone: uData.telefone || '', endereco: uData.endereco || '', email: usuarioLogado.email || ''
-            }));
+        if (!isCollaborator) {
+            const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', tenantId);
+            const contaAlvoSnap = await getDoc(contaAlvoRef);
+            
+            let statusReal = "Inativa / Sem Plano", corBg = "#fef2f2", corTexto = "#991b1b", textoMetodo = "Nenhum método cadastrado";
+            let isActive = false, nomeDoPlano = "Básico (Gratuito)", precoDoPlano = "0,00", limiteAtual = 1;
+            let emailCobranca = usuarioLogado.email, subId = null;
 
-            if (isCollaborator) {
-                const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
-                const snapEquipe = await getDocs(qEquipe);
-                if (!snapEquipe.empty) {
-                    const equipeData = snapEquipe.docs[0].data();
-                    setDadosPerfil(prev => ({
-                        ...prev, asoStatus: equipeData.asoStatus || 'Pendente', asoTipo: equipeData.asoTipo || 'Admissional',
-                        asoDataExame: equipeData.asoDataExame || '', asoValidade: equipeData.asoValidade || '', asoObservacoes: equipeData.asoObservacoes || ''
-                    }));
+            if (contaAlvoSnap.exists()) {
+                const cData = contaAlvoSnap.data();
+                let testeAtivo = cData.dataFimTeste ? new Date() <= new Date(cData.dataFimTeste) : false;
+
+                if (cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago') {
+                    statusReal = "Assinatura Ativa"; corBg = "#f0fdf4"; corTexto = "#166534"; 
+                    textoMetodo = cData.metodoPagamento || "Cartão de Crédito"; isActive = true;
+                } else if (testeAtivo) {
+                    statusReal = "Em Período de Teste (VIP)"; corBg = "#fffbeb"; corTexto = "#b45309"; 
                 }
+
+                if (cData.planoId) {
+                    const planoSnap = await getDoc(doc(db, "planos", cData.planoId));
+                    if (planoSnap.exists()) {
+                        nomeDoPlano = planoSnap.data().nome; precoDoPlano = planoSnap.data().preco;
+                        if (nomeDoPlano.toLowerCase().includes('premium')) limiteAtual = 3;
+                        else if (nomeDoPlano.toLowerCase().includes('pro')) limiteAtual = 5;
+                    }
+                }
+                emailCobranca = cData.email || usuarioLogado.email; subId = cData.subscriptionId || null;
             }
 
-            if (!isCollaborator) {
-                const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', tenantId);
-                const contaAlvoSnap = await getDoc(contaAlvoRef);
-                
-                let statusReal = "Inativa / Sem Plano", corBg = "#fef2f2", corTexto = "#991b1b", textoMetodo = "Nenhum método cadastrado";
-                let isActive = false, nomeDoPlano = "Básico (Gratuito)", precoDoPlano = "0,00", limiteAtual = 1;
-                let emailCobranca = usuarioLogado.email, subId = null;
-
-                if (contaAlvoSnap.exists()) {
-                    const cData = contaAlvoSnap.data();
-                    let testeAtivo = cData.dataFimTeste ? new Date() <= new Date(cData.dataFimTeste) : false;
-
-                    if (cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago') {
-                        statusReal = "Assinatura Ativa"; corBg = "#f0fdf4"; corTexto = "#166534"; 
-                        textoMetodo = cData.metodoPagamento || "Cartão de Crédito"; isActive = true;
-                    } else if (testeAtivo) {
-                        statusReal = "Em Período de Teste (VIP)"; corBg = "#fffbeb"; corTexto = "#b45309"; 
-                    }
-
-                    if (cData.planoId) {
-                        const planoSnap = await getDoc(doc(db, "planos", cData.planoId));
-                        if (planoSnap.exists()) {
-                            nomeDoPlano = planoSnap.data().nome; precoDoPlano = planoSnap.data().preco;
-                            if (nomeDoPlano.toLowerCase().includes('premium')) limiteAtual = 3;
-                            else if (nomeDoPlano.toLowerCase().includes('pro')) limiteAtual = 5;
-                        }
-                    }
-                    emailCobranca = cData.email || usuarioLogado.email; subId = cData.subscriptionId || null;
-                }
-
-                if (isSuperAdmin) {
-                    nomeDoPlano = "Plano Master (Ilimitado)"; limiteAtual = 9999; statusReal = "Acesso Vitalício";
-                    corBg = "#fef3c7"; corTexto = "#92400e"; isActive = true; textoMetodo = "Administração Global";
-                }
-
-                setAssinatura({
-                    planoNome: nomeDoPlano, precoMensal: precoDoPlano, status: statusReal, corBg: corBg,
-                    corTexto: corTexto, metodoPagamento: textoMetodo, emailCobranca: emailCobranca,
-                    subscriptionId: subId, isActive: isActive
-                });
-
-                const qEquipe = query(collection(db, 'equipe'), where('empresaId', '==', tenantId));
-                const snapEquipe = await getDocs(qEquipe);
-                setUsoPlano({ limite: limiteAtual, usado: snapEquipe.size + 1 });
+            if (isSuperAdmin) {
+                nomeDoPlano = "Plano Master (Ilimitado)"; limiteAtual = 9999; statusReal = "Acesso Vitalício";
+                corBg = "#fef3c7"; corTexto = "#92400e"; isActive = true; textoMetodo = "Administração Global";
             }
+
+            setAssinatura({
+                planoNome: nomeDoPlano, precoMensal: precoDoPlano, status: statusReal, corBg: corBg,
+                corTexto: corTexto, metodoPagamento: textoMetodo, emailCobranca: emailCobranca,
+                subscriptionId: subId, isActive: isActive
+            });
+
+            const qEquipe = query(collection(db, 'equipe'), where('empresaId', '==', tenantId));
+            const snapEquipe = await getDocs(qEquipe);
+            setUsoPlano({ limite: limiteAtual, usado: snapEquipe.size + 1 });
         }
     } catch (e) { console.error("Erro unificado:", e); }
     setLoading(false);
-  };
-
-  // ========================================================
-  // 🔥 LÓGICA DO MEU PERFIL E SEGURANÇA
-  // ========================================================
-  const handleSalvarPerfil = async (e) => {
-    e.preventDefault();
-    setSalvandoPerfil(true);
-    try {
-        await updateProfile(usuarioLogado, { displayName: dadosPerfil.nome });
-        const userRef = doc(db, 'usuarios', usuarioLogado.uid);
-        await updateDoc(userRef, { 
-            nomeCompleto: dadosPerfil.nome, sobrenome: dadosPerfil.sobrenome, cpf: dadosPerfil.cpf,
-            telefone: dadosPerfil.telefone, endereco: dadosPerfil.endereco
-        });
-
-        if (isCollaborator) {
-            const qEquipe = query(collection(db, 'equipe'), where('email', '==', usuarioLogado.email));
-            const snapEquipe = await getDocs(qEquipe);
-            if (!snapEquipe.empty) {
-                const funcDocId = snapEquipe.docs[0].id;
-                await updateDoc(doc(db, 'equipe', funcDocId), { nome: dadosPerfil.nome, telefone: dadosPerfil.telefone, cpf: dadosPerfil.cpf });
-            }
-        }
-        await registrarLog("ATUALIZAÇÃO DE PERFIL", `Atualizou os dados da ficha pessoal.`);
-        alert('✅ Dados atualizados com sucesso!');
-    } catch (error) { alert('Ocorreu um erro ao salvar o perfil.'); } 
-    finally { setSalvandoPerfil(false); }
   };
 
   const validarSenha = (senha) => ({
@@ -271,25 +199,25 @@ const Configuracoes = () => {
       numero: /[0-9]/.test(senha), especial: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]+/.test(senha)
   });
 
-  const criterios = validarSenha(dadosPerfil.novaSenha);
+  const criterios = validarSenha(novaSenha);
   const isSenhaForte = Object.values(criterios).every(Boolean);
 
   const handleTrocarSenha = async (e) => {
     e.preventDefault();
     setSalvandoSenha(true);
     try {
-        if (!dadosPerfil.senhaAtual || !dadosPerfil.novaSenha || !dadosPerfil.confirmarSenha) return alert('⚠️ Preencha todos os campos do cofre de segurança.');
+        if (!senhaAtual || !novaSenha || !confirmarSenha) return alert('⚠️ Preencha todos os campos do cofre de segurança.');
         if (!isSenhaForte) return alert('❌ A nova senha não atende aos critérios mínimos de segurança.');
-        if (dadosPerfil.novaSenha !== dadosPerfil.confirmarSenha) return alert('❌ As senhas novas não coincidem!');
+        if (novaSenha !== confirmarSenha) return alert('❌ As senhas novas não coincidem!');
 
-        const credential = EmailAuthProvider.credential(usuarioLogado.email, dadosPerfil.senhaAtual);
+        const credential = EmailAuthProvider.credential(usuarioLogado.email, senhaAtual);
         try { await reauthenticateWithCredential(usuarioLogado, credential); } 
         catch (authError) { return alert('❌ A Senha Atual está incorreta. Acesso negado.'); }
 
-        await updatePassword(usuarioLogado, dadosPerfil.novaSenha);
+        await updatePassword(usuarioLogado, novaSenha);
         await registrarLog("ALTERAÇÃO DE SENHA", `A palavra-passe foi alterada com sucesso.`);
         alert('✅ Senha atualizada com sucesso! Seu sistema está seguro.');
-        setDadosPerfil({...dadosPerfil, senhaAtual: '', novaSenha: '', confirmarSenha: ''});
+        setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha('');
         setModalSenhaAberto(false);
     } catch (error) { alert('Ocorreu um erro inesperado ao alterar a senha.'); } 
     finally { setSalvandoSenha(false); }
@@ -314,9 +242,6 @@ const Configuracoes = () => {
     finally { setCancelando(false); }
   };
 
-  // ========================================================
-  // 🔥 LÓGICA DAS CONFIGURAÇÕES DO SISTEMA (INTACTA)
-  // ========================================================
   const verificarUsoNoEstoque = async (nomeDoCampoDeBusca, valorProcurado) => {
       if (!usuarioLogado) return 0;
       const q = query(collection(db, "estoque"), where("userId", "==", tenantId), where(nomeDoCampoDeBusca, "==", valorProcurado));
@@ -458,7 +383,7 @@ const Configuracoes = () => {
           if (campoPrincipal === 'categoriasFisicas') setInputCatFisica('');
           if (campoSub === 'subcategoriasFisicas') setInputSubCatFisica('');
           if (campoSub === 'tamanhosPorCategoria') setInputTam('');
-          carregarTudoUnificado();
+          carregarConfiguracoesGerais();
       } catch (e) { alert("Erro ao adicionar."); console.error(e); }
   };
 
@@ -487,7 +412,7 @@ const Configuracoes = () => {
               await updateDoc(docRef, { [campoPrincipal]: arrayRemove(valorRemover) });
               if (campoPrincipal === 'categoriasFisicas' && catFisicaSelecionada === valorRemover) { setCatFisicaSelecionada(''); setSubCatFisicaSelecionada(''); }
           }
-          carregarTudoUnificado();
+          carregarConfiguracoesGerais();
       } catch (e) { alert("Erro ao remover."); }
   };
 
@@ -528,7 +453,7 @@ const Configuracoes = () => {
               }
               await updateDoc(docRef, dadosParaSalvar);
           }
-          carregarTudoUnificado();
+          carregarConfiguracoesGerais();
           await atualizarNomeNoEstoqueEmLote(campoBanco, valorAntigo, novoTrim);
       } catch (e) { alert("Erro ao editar."); console.error(e); }
   };
@@ -536,7 +461,7 @@ const Configuracoes = () => {
   const adicionarLocalizacao = async (valor) => {
     if (!valor.trim() || !usuarioLogado) return;
     const docRef = getDocConfigRef();
-    try { await updateDoc(docRef, { localizacoes: arrayUnion(valor.trim()) }); setInputLoc(''); carregarTudoUnificado(); } 
+    try { await updateDoc(docRef, { localizacoes: arrayUnion(valor.trim()) }); setInputLoc(''); carregarConfiguracoesGerais(); } 
     catch (e) { alert("Erro ao adicionar."); }
   };
 
@@ -544,7 +469,7 @@ const Configuracoes = () => {
     const quantidadeEmUso = await verificarUsoNoEstoque('localizacao', valor);
     if (quantidadeEmUso > 0) { alert(`⛔ AÇÃO BLOQUEADA!\n\nExistem ${quantidadeEmUso} peça(s) guardadas em "${valor}".`); return; }
     if (!window.confirm(`Remover prateleira/local "${valor}"?`)) return;
-    try { await updateDoc(getDocConfigRef(), { localizacoes: arrayRemove(valor) }); carregarTudoUnificado(); } 
+    try { await updateDoc(getDocConfigRef(), { localizacoes: arrayRemove(valor) }); carregarConfiguracoesGerais(); } 
     catch (e) { alert("Erro ao remover."); }
   };
 
@@ -556,7 +481,7 @@ const Configuracoes = () => {
       try {
           await updateDoc(getDocConfigRef(), { localizacoes: arrayRemove(valorAntigo) });
           await updateDoc(getDocConfigRef(), { localizacoes: arrayUnion(novoTrim) });
-          carregarTudoUnificado();
+          carregarConfiguracoesGerais();
           await atualizarNomeNoEstoqueEmLote('localizacao', valorAntigo, novoTrim);
       } catch (e) { alert("Erro ao editar localização."); }
   };
@@ -649,7 +574,6 @@ const Configuracoes = () => {
         </div>
       </header>
 
-      {/* 🔥 MENU DE ABAS ESTILO NOTION/SHOPIFY 🔥 */}
       <nav className="config-top-tabs" style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
         <button className={abaAtiva === 'meu_perfil' ? 'active' : ''} onClick={() => setAbaAtiva('meu_perfil')}>👤 Meu Perfil</button>
         {!isCollaborator && <button className={abaAtiva === 'empresa' ? 'active' : ''} onClick={() => setAbaAtiva('empresa')}>🏢 Empresa</button>}
@@ -661,206 +585,30 @@ const Configuracoes = () => {
 
       <main className="config-main-area">
         
-        {/* ========================================== */}
-        {/* ABA: MEU PERFIL (Trazida do antigo Perfil.jsx) */}
-        {/* ========================================== */}
         {abaAtiva === 'meu_perfil' && (
-          <form className="config-empresa-grid" onSubmit={handleSalvarPerfil}>
-            <div className="config-card span-2-col-full large-padding">
-              <div className="card-top-bar gray-bar"></div>
-              <h3>👤 Informações Pessoais (Ficha RH)</h3>
-              <p className="subtext">Dados da pessoa que está a operar a conta atualmente.</p>
-              
-              <div className="form-grid-2-col" style={{marginTop: '20px'}}>
-                <div className="f-group">
-                    <label>Nome Completo</label>
-                    <input type="text" value={dadosPerfil.nome} onChange={(e) => setDadosPerfil({...dadosPerfil, nome: e.target.value})} placeholder="Nome" />
-                </div>
-                <div className="f-group">
-                    <label>Sobrenome / Apelido</label>
-                    <input type="text" value={dadosPerfil.sobrenome} onChange={(e) => setDadosPerfil({...dadosPerfil, sobrenome: e.target.value})} placeholder="Sobrenome" />
-                </div>
-                <div className="f-group">
-                    <label>CPF do Titular</label>
-                    <input type="text" value={dadosPerfil.cpf} onChange={(e) => setDadosPerfil({...dadosPerfil, cpf: e.target.value})} placeholder="000.000.000-00" />
-                </div>
-                <div className="f-group">
-                    <label>Telefone / WhatsApp Pessoal</label>
-                    <input type="text" value={dadosPerfil.telefone} onChange={(e) => setDadosPerfil({...dadosPerfil, telefone: e.target.value})} placeholder="(00) 00000-0000" />
-                </div>
-                <div className="f-group span-2-col">
-                    <label>Endereço Residencial</label>
-                    <input type="text" value={dadosPerfil.endereco} onChange={(e) => setDadosPerfil({...dadosPerfil, endereco: e.target.value})} placeholder="Rua, Número, Bairro, Cidade - UF" />
-                </div>
-                <div className="f-group span-2-col">
-                    <label>E-mail de Login (Acesso ao Sistema)</label>
-                    <input type="email" value={dadosPerfil.email} readOnly style={{background: '#f1f5f9', cursor: 'not-allowed'}} title="Inalterável" />
-                </div>
-              </div>
-              <button type="submit" className="btn-salvar-config" style={{marginTop: '20px'}} disabled={salvandoPerfil}>{salvandoPerfil ? 'Salvando...' : 'Salvar Dados Pessoais'}</button>
-            </div>
-
-            {isCollaborator && (
-                <div className="config-card span-2-col-full large-padding" style={{ border: '1px solid #cbd5e1', background: '#f8fafc' }}>
-                    <h3 style={{color: '#0f172a'}}><i className="fas fa-notes-medical" style={{ color: '#10b981', marginRight: '8px' }}></i> Saúde Ocupacional (ASO)</h3>
-                    <p className="subtext">Ficha de saúde preenchida pelo seu gestor.</p>
-                    
-                    <div className="form-grid-2-col" style={{marginTop: '20px'}}>
-                        <div className="f-group">
-                            <label>Status do Exame</label>
-                            <input type="text" value={dadosPerfil.asoStatus} readOnly style={{background: '#e2e8f0', cursor: 'not-allowed', color: dadosPerfil.asoStatus === 'Apto' ? '#166534' : (dadosPerfil.asoStatus === 'Inapto' ? '#991b1b' : '#0f172a'), fontWeight: 'bold'}} />
-                        </div>
-                        <div className="f-group">
-                            <label>Tipo de Exame</label>
-                            <input type="text" value={dadosPerfil.asoTipo} readOnly style={{background: '#e2e8f0', cursor: 'not-allowed'}} />
-                        </div>
-                        <div className="f-group">
-                            <label>Data de Realização</label>
-                            <input type="text" value={dadosPerfil.asoDataExame ? dadosPerfil.asoDataExame.split('-').reverse().join('/') : 'Não informada'} readOnly style={{background: '#e2e8f0', cursor: 'not-allowed'}} />
-                        </div>
-                        <div className="f-group">
-                            <label>Validade do Exame</label>
-                            <input type="text" value={dadosPerfil.asoValidade ? dadosPerfil.asoValidade.split('-').reverse().join('/') : 'Não informada'} readOnly style={{background: '#e2e8f0', cursor: 'not-allowed'}} />
-                        </div>
-                        <div className="f-group span-2-col">
-                            <label>Observações / Restrições Médicas</label>
-                            <input type="text" value={dadosPerfil.asoObservacoes || 'Nenhuma restrição registrada.'} readOnly style={{background: '#e2e8f0', cursor: 'not-allowed'}} />
-                        </div>
-                    </div>
-                </div>
-            )}
-          </form>
+          <AbaMeuPerfil 
+            usuarioLogado={usuarioLogado}
+            isCollaborator={isCollaborator}
+            isSuperAdmin={isSuperAdmin}
+            isOwner={isOwner}
+            nomeEmpresa={config.nomeEmpresa}
+            registrarLog={registrarLog}
+          />
         )}
 
-        {/* ========================================== */}
-        {/* ABA: DADOS DA EMPRESA (Intacta) */}
-        {/* ========================================== */}
+        {/* 🔥 RENDERIZANDO A NOVA ABA EMPRESA AQUI 🔥 */}
         {abaAtiva === 'empresa' && (
-          <div className="config-empresa-grid">
-            <div className="config-card">
-              <div className="card-top-bar gold-bar"></div>
-              <h3>✨ Identidade Visual</h3>
-              <p className="subtext">A marca da sua empresa nos catálogos e orçamentos.</p>
-              
-              <div className="empresa-id-wrapper">
-                <div className="logo-preview-box">
-                  {config.logotipo ? <img src={config.logotipo} alt="Logo" /> : <span style={{fontSize: '30px', opacity: 0.3}}>📷</span>}
-                </div>
-                <div className="logo-actions">
-                  <label className="btn-outline">
-                    Carregar Nova Logo
-                    <input type="file" accept="image/*" style={{display: 'none'}} onChange={handleLogoUpload} />
-                  </label>
-                  {config.logotipo && <button className="btn-danger-outline" onClick={removerLogo}>Remover Logo</button>}
-                  <small>Use PNG com fundo transparente.</small>
-                </div>
-              </div>
-
-              <div className="f-group" style={{marginTop: '15px'}}>
-                <label>Razão Social / Nome Fantasia</label>
-                <input type="text" value={config.nomeEmpresa || ''} onChange={(e) => handleConfigChange('nomeEmpresa', e.target.value)} onBlur={(e) => salvarConfigTextual('nomeEmpresa', e.target.value)} placeholder="Ex: VICHINHSK FESTA" />
-              </div>
-              <div className="f-group" style={{marginTop: '15px'}}>
-                <label>Slogan ou Breve Descrição</label>
-                <input type="text" value={config.slogan || ''} onChange={(e) => handleConfigChange('slogan', e.target.value)} onBlur={(e) => salvarConfigTextual('slogan', e.target.value)} placeholder="Ex: Transformando sonhos em decorações inesquecíveis!" />
-              </div>
-            </div>
-
-            <div className="config-card">
-              <div className="card-top-bar blue-bar"></div>
-              <h3>📱 Atendimento e Redes</h3>
-              <p className="subtext">Canais de contato direto com o cliente.</p>
-              
-              <div className="form-grid-2-col">
-                <div className="f-group">
-                  <label>WhatsApp Comercial</label>
-                  <input type="text" value={config.telefone || ''} onChange={(e) => handleConfigChange('telefone', e.target.value)} onBlur={(e) => salvarConfigTextual('telefone', e.target.value)} placeholder="(00) 00000-0000" />
-                </div>
-                <div className="f-group">
-                  <label>Instagram</label>
-                  <input type="text" value={config.instagram || ''} onChange={(e) => handleConfigChange('instagram', e.target.value)} onBlur={(e) => salvarConfigTextual('instagram', e.target.value)} placeholder="@seuinstagram" />
-                </div>
-                <div className="f-group span-2-col">
-                  <label>E-mail de Contato</label>
-                  <input type="email" value={config.emailEmpresa || ''} onChange={(e) => handleConfigChange('emailEmpresa', e.target.value)} onBlur={(e) => salvarConfigTextual('emailEmpresa', e.target.value)} placeholder="contato@suaempresa.com.br" />
-                </div>
-                <div className="f-group span-2-col">
-                  <label>Site ou LinkTree</label>
-                  <input type="text" value={config.site || ''} onChange={(e) => handleConfigChange('site', e.target.value)} onBlur={(e) => salvarConfigTextual('site', e.target.value)} placeholder="https://www.suaempresa.com.br" />
-                </div>
-              </div>
-            </div>
-
-            <div className="config-card span-2-col-full">
-              <div className="card-top-bar gray-bar"></div>
-              <h3>🏢 Dados Fiscais e Sede</h3>
-              <p className="subtext">Informações legais para a geração de contratos.</p>
-              
-              <div className="form-grid-2-col">
-                <div className="f-group">
-                  <label>CNPJ / CPF</label>
-                  <input type="text" value={config.cnpj || ''} onChange={(e) => handleConfigChange('cnpj', e.target.value)} onBlur={(e) => salvarConfigTextual('cnpj', e.target.value)} placeholder="00.000.000/0001-00" />
-                </div>
-                <div className="f-group">
-                  <label>Endereço Completo (Sede / Galpão)</label>
-                  <textarea 
-                    rows="3" 
-                    value={config.endereco || ''} 
-                    onChange={(e) => handleConfigChange('endereco', e.target.value)} 
-                    onBlur={(e) => salvarConfigTextual('endereco', e.target.value)} 
-                    placeholder="Rua, Número, Complemento, Bairro - Cidade/UF"
-                    className="config-textarea"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="config-card span-2-col-full">
-              <div className="card-top-bar blue-bar"></div>
-              <h3>📈 Marketing e Rastreamento</h3>
-              <p className="subtext">Conecte o seu catálogo à inteligência do Instagram/Facebook Ads.</p>
-              
-              <div className="form-grid-2-col">
-                <div className="f-group span-2-col">
-                  <label>ID do Pixel (Facebook / Meta)</label>
-                  <input 
-                    type="text" 
-                    value={config.pixelFacebook || ''} 
-                    onChange={(e) => handleConfigChange('pixelFacebook', e.target.value)} 
-                    onBlur={(e) => salvarConfigTextual('pixelFacebook', e.target.value)} 
-                    placeholder="Ex: 123456789012345 (Apenas números)" 
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="config-card span-2-col-full">
-              <div className="card-top-bar gold-bar"></div>
-              <h3>✍️ Assinatura Oficial da Empresa</h3>
-              <p className="subtext">Assine aqui uma única vez. O sistema vai aplicar esta assinatura automaticamente em todos os novos contratos.</p>
-              
-              <div style={{ marginTop: '20px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                {config.assinatura ? (
-                  <div className="assinatura-trancada ouro-border" style={{width: '100%', maxWidth: '500px'}}>
-                    <div className="selo-ok">✅ ASSINATURA SALVA NO SISTEMA</div>
-                    <img src={config.assinatura} alt="Assinatura Padrão" />
-                    <button className="btn-danger-outline" onClick={removerAssinaturaGlobal} style={{marginTop: '15px'}}>Remover e Fazer Nova</button>
-                  </div>
-                ) : (
-                  <div style={{width: '100%', maxWidth: '500px'}}>
-                    <div className="canvas-border ouro-border">
-                      <SignatureCanvas ref={sigGlobal} penColor="#b48a3c" canvasProps={{ className: "sigCanvas" }} backgroundColor="transparent" />
-                    </div>
-                    <div style={{display: 'flex', gap: '15px', marginTop: '15px'}}>
-                      <button className="btn-outline" style={{flex: 1}} onClick={limparAssinatura}>Apagar Traço</button>
-                      <button className="btn-salvar-config" style={{flex: 2}} onClick={salvarAssinaturaGlobal}>Salvar Assinatura Padrão</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-          </div>
+          <AbaEmpresa 
+            config={config}
+            handleConfigChange={handleConfigChange}
+            salvarConfigTextual={salvarConfigTextual}
+            handleLogoUpload={handleLogoUpload}
+            removerLogo={removerLogo}
+            sigGlobal={sigGlobal}
+            limparAssinatura={limparAssinatura}
+            salvarAssinaturaGlobal={salvarAssinaturaGlobal}
+            removerAssinaturaGlobal={removerAssinaturaGlobal}
+          />
         )}
 
         {/* ========================================== */}
@@ -1068,9 +816,6 @@ const Configuracoes = () => {
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* ABA: ASSINATURA E USO DO PLANO */}
-        {/* ========================================== */}
         {abaAtiva === 'assinatura' && (
           <div className="config-empresa-grid">
             <div className="config-card span-2-col-full large-padding">
@@ -1126,9 +871,6 @@ const Configuracoes = () => {
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* ABA: SEGURANÇA E ACESSO */}
-        {/* ========================================== */}
         {abaAtiva === 'seguranca' && (
           <div className="config-empresa-grid">
             <div className="config-card span-2-col-full large-padding" style={{textAlign: 'center'}}>
@@ -1141,9 +883,6 @@ const Configuracoes = () => {
           </div>
         )}
 
-        {/* ========================================== */}
-        {/* ABA: APARÊNCIA */}
-        {/* ========================================== */}
         {abaAtiva === 'aparencia' && (
           <div className="config-empresa-grid">
             <div className="config-card large-padding">
@@ -1176,15 +915,12 @@ const Configuracoes = () => {
                 <button className={`btn-lang ${language === 'es' ? 'active' : ''}`} onClick={() => handleMudarIdiomaAutomatico('es')}>🇪🇸 Español</button>
               </div>
             </div>
-
           </div>
         )}
 
       </main>
 
-      {/* =========================================
-          MODAL DE TROCA DE SENHA
-      ========================================= */}
+      {/* MODAL DE TROCA DE SENHA */}
       {modalSenhaAberto && (
         <div className="modal-overlay-senha" onClick={() => setModalSenhaAberto(false)}>
             <div className="modal-senha-content" onClick={(e) => e.stopPropagation()}>
@@ -1197,7 +933,7 @@ const Configuracoes = () => {
                     <div className="input-group">
                         <label>PALAVRA-PASSE ATUAL <span style={{color: '#ef4444'}}>*</span></label>
                         <div className="password-wrapper">
-                            <input type={mostrarSenhaAtual ? "text" : "password"} value={dadosPerfil.senhaAtual} onChange={e => setDadosPerfil({...dadosPerfil, senhaAtual: e.target.value})} placeholder="Digite a sua senha atual" autoFocus />
+                            <input type={mostrarSenhaAtual ? "text" : "password"} value={senhaAtual} onChange={e => setSenhaAtual(e.target.value)} placeholder="Digite a sua senha atual" autoFocus />
                             <button type="button" className="btn-toggle-password" onClick={() => setMostrarSenhaAtual(!mostrarSenhaAtual)}><i className={`fas ${mostrarSenhaAtual ? "fa-eye-slash" : "fa-eye"}`}></i></button>
                         </div>
                     </div>
@@ -1205,7 +941,7 @@ const Configuracoes = () => {
                     <div className="input-group">
                         <label>NOVA PALAVRA-PASSE</label>
                         <div className="password-wrapper">
-                            <input type={mostrarNovaSenha ? "text" : "password"} value={dadosPerfil.novaSenha} onChange={e => setDadosPerfil({...dadosPerfil, novaSenha: e.target.value})} placeholder="Crie uma senha forte" />
+                            <input type={mostrarNovaSenha ? "text" : "password"} value={novaSenha} onChange={e => setNovaSenha(e.target.value)} placeholder="Crie uma senha forte" />
                             <button type="button" className="btn-toggle-password" onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}><i className={`fas ${mostrarNovaSenha ? "fa-eye-slash" : "fa-eye"}`}></i></button>
                         </div>
                         <div className="senha-criterios">
@@ -1221,19 +957,18 @@ const Configuracoes = () => {
                     <div className="input-group">
                         <label>CONFIRMAR NOVA PALAVRA-PASSE</label>
                         <div className="password-wrapper">
-                            <input type={mostrarConfirmarSenha ? "text" : "password"} value={dadosPerfil.confirmarSenha} onChange={e => setDadosPerfil({...dadosPerfil, confirmarSenha: e.target.value})} placeholder="Repita a nova senha" />
+                            <input type={mostrarConfirmarSenha ? "text" : "password"} value={confirmarSenha} onChange={e => setConfirmarSenha(e.target.value)} placeholder="Repita a nova senha" />
                             <button type="button" className="btn-toggle-password" onClick={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}><i className={`fas ${mostrarConfirmarSenha ? "fa-eye-slash" : "fa-eye"}`}></i></button>
                         </div>
                     </div>
                     <div className="modal-senha-footer">
-                        <button type="button" className="btn-cancelar-senha" onClick={() => { setModalSenhaAberto(false); setDadosPerfil({...dadosPerfil, senhaAtual: '', novaSenha: '', confirmarSenha: ''}); }}>Cancelar</button>
+                        <button type="button" className="btn-cancelar-senha" onClick={() => { setModalSenhaAberto(false); setSenhaAtual(''); setNovaSenha(''); setConfirmarSenha(''); }}>Cancelar</button>
                         <button type="submit" className="btn-confirmar-senha" disabled={salvandoSenha || !isSenhaForte}>{salvandoSenha ? 'Autenticando...' : 'Confirmar Alteração'}</button>
                     </div>
                 </form>
             </div>
         </div>
       )}
-
     </div>
   );
 };
