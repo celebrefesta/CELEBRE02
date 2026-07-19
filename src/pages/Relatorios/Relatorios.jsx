@@ -28,16 +28,15 @@ const Relatorios = () => {
       const nomeAba = abaCorrente.charAt(0).toUpperCase() + abaCorrente.slice(1);
       
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(),
-        criadoEm: serverTimestamp(),
-        funcionario: nomeEquipa,
-        usuarioNome: nomeEquipa,
+        empresaId: tenantId,
+        userId: tenantId,
+        funcionarioId: usuarioLogado?.uid,
+        nomeFuncionario: nomeEquipa,
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: "VISUALIZAÇÃO DE RELATÓRIO",
         detalhes: `Acedeu ao painel de relatórios estratégicos (Aba: ${nomeAba}).`,
-        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
-        empresaId: tenantId,
-        funcionarioId: usuarioLogado?.uid
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria de relatórios:", error);

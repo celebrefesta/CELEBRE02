@@ -53,14 +53,15 @@ const Catalogo = () => {
       if (!uid) return;
 
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(),
-        criadoEm: serverTimestamp(),
-        funcionario: nomeEquipa,
-        usuarioNome: nomeEquipa,
+        empresaId: tenantId,
+        userId: tenantId,
+        funcionarioId: usuarioLogado?.uid || "cliente_vitrine",
+        nomeFuncionario: nomeEquipa,
         usuarioEmail: usuarioLogado?.email || "N/A",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: uid
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
       });
 
     } catch (error) {

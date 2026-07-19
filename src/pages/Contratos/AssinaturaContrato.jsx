@@ -39,15 +39,15 @@ const AssinaturaContrato = () => {
       if (!donoDoContratoId) return;
       
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(),
-        criadoEm: serverTimestamp(),
-        funcionario: nomeResponsavel,
-        usuarioNome: nomeResponsavel,
+        empresaId: donoDoContratoId,
+        userId: donoDoContratoId,
+        funcionarioId: usuarioLogado?.uid || "externo",
+        nomeFuncionario: nomeResponsavel,
         usuarioEmail: usuarioLogado?.email || "N/A",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: donoDoContratoId, // 🎯 SALVA VINCULADO À EMPRESA
-        empresaId: donoDoContratoId
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
       });
     } catch (error) {
       console.error("Erro ao gravar log da assinatura:", error);

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { getAuth } from 'firebase/auth';
-import { collection, query, where, getDocs } from 'firebase/firestore'; 
+import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore'; 
 import { db } from '../firebaseConfig';
 import { useNavigate } from 'react-router-dom';
+import './Monitoramento.css';
+
 
 const Monitoramento = () => {
   const auth = getAuth();
@@ -28,11 +30,47 @@ const Monitoramento = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      // 1. Busca a lista de funcionários para montar o filtro (Select) vinculado à empresa
-      const qEquipe = query(collection(db, "usuarios_equipe"), where("empresaId", "==", tenantId));
+      // 1. Busca os dados do Administrador / Dono da conta
+      let adminInfo = null;
+      try {
+        const adminRef = doc(db, "usuarios", tenantId);
+        const adminSnap = await getDoc(adminRef);
+        if (adminSnap.exists()) {
+          const adminData = adminSnap.data();
+          adminInfo = {
+            email: adminData.email || "celebrefesta25@gmail.com",
+            nome: adminData.nomeCompleto || adminData.nomeExibicao || adminData.nome || "Proprietário Celebre"
+          };
+        }
+      } catch (errAdmin) {
+        console.error("Erro ao buscar dados do administrador:", errAdmin);
+      }
+
+      // 2. Busca a lista de funcionários para montar o filtro (Select) vinculado à empresa
+      const qEquipe = query(collection(db, "equipe"), where("empresaId", "==", tenantId));
       const snapEquipe = await getDocs(qEquipe);
-      const listaEquipe = snapEquipe.docs.map(doc => ({ id: doc.id, nome: doc.data().nome }));
-      setEquipe(listaEquipe);
+      const listaEquipe = snapEquipe.docs.map(doc => ({ 
+        email: doc.data().email, 
+        nome: doc.data().nome 
+      }));
+
+      // Combina Administrador e equipe na lista de filtros por email
+      const listagemFiltro = [];
+      if (adminInfo) {
+        listagemFiltro.push({
+          email: adminInfo.email,
+          nome: `${adminInfo.nome} (Admin)`
+        });
+      }
+      listaEquipe.forEach(func => {
+        if (func.email && !listagemFiltro.some(item => item.email?.toLowerCase() === func.email?.toLowerCase())) {
+          listagemFiltro.push({
+            email: func.email,
+            nome: func.nome
+          });
+        }
+      });
+      setEquipe(listagemFiltro);
 
       // 2. 🔥 BUSCA INTELIGENTE: Puxa tanto por empresaId como por userId no cofre da empresa
       const qAtividadesEmpresa = query(collection(db, "logs_atividades"), where("empresaId", "==", tenantId));
@@ -103,7 +141,7 @@ const Monitoramento = () => {
   // Filtro
   const atividadesFiltradas = filtroFuncionario === 'Todos' 
     ? atividades 
-    : atividades.filter(ativ => ativ.funcionarioId === filtroFuncionario);
+    : atividades.filter(ativ => ativ.usuarioEmail?.toLowerCase() === filtroFuncionario.toLowerCase());
 
   // Função centralizada para dar cores aos "Emblemas" (Badges) com base no texto da ação
   const obterEstiloBadge = (acao, tipo) => {
@@ -120,16 +158,16 @@ const Monitoramento = () => {
   if (loading) return <div style={{ padding: '50px', textAlign: 'center', color: '#64748b' }}>Buscando registros de atividades...</div>;
 
   return (
-    <div className="estoque-premium">
+    <div className="monitoramento-page-wrapper">
       <div className="header-top">
         <div className="titulo-bloco">
           <h1>Monitoramento de Atividades</h1>
           <p>Acompanhe em tempo real as ações da sua equipe no sistema.</p>
         </div>
         
-        <div className="acoes-top" style={{ display: 'flex', gap: '15px', alignItems: 'center' }}>
+        <div className="acoes-top">
           <button 
-            onClick={() => navigate('/perfil')}
+            onClick={() => navigate('/usuarios')}
             style={{ background: '#f8fafc', color: '#475569', border: '1px solid #cbd5e1', padding: '10px 15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '8px', transition: 'all 0.2s' }}
           >
             <i className="fas fa-arrow-left"></i> Voltar para Equipe
@@ -141,21 +179,22 @@ const Monitoramento = () => {
             style={{ padding: '10px 15px', borderRadius: '8px', border: '1px solid #cbd5e1', outline: 'none', cursor: 'pointer', background: '#fff', color: '#0f172a', fontWeight: 'bold' }}
           >
             <option value="Todos">Todos os Funcionários</option>
-            {equipe.map(func => (
-              <option key={func.id} value={func.id}>{func.nome}</option>
+            {equipe.map((func, index) => (
+              <option key={func.email || `func-${index}`} value={func.email || ''}>{func.nome}</option>
             ))}
           </select>
         </div>
       </div>
 
-      <div className="table-container" style={{ marginTop: '20px' }}>
-        <table className="table-pro" style={{ width: '100%', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px' }}>
+      {/* VERSÃO DESKTOP (TABELA TRADICIONAL) */}
+      <div className="table-container desktop-only-table">
+        <table className="table-pro">
           <thead>
-            <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-              <th style={{ padding: '15px 20px', textAlign: 'left', width: '20%' }}>DATA E HORA</th>
-              <th style={{ padding: '15px', textAlign: 'left', width: '25%' }}>FUNCIONÁRIO</th>
-              <th style={{ padding: '15px', textAlign: 'left', width: '15%' }}>AÇÃO</th>
-              <th style={{ padding: '15px', textAlign: 'left', width: '40%' }}>DETALHES</th>
+            <tr>
+              <th style={{ width: '20%' }}>DATA E HORA</th>
+              <th style={{ width: '25%' }}>FUNCIONÁRIO</th>
+              <th style={{ width: '15%' }}>AÇÃO</th>
+              <th style={{ width: '40%' }}>DETALHES</th>
             </tr>
           </thead>
           <tbody>
@@ -172,35 +211,75 @@ const Monitoramento = () => {
                 const inicial = atividade.nomeFuncionario ? atividade.nomeFuncionario.charAt(0).toUpperCase() : 'E';
 
                 return (
-                <tr key={atividade.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                  <td style={{ padding: '15px 20px', fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
-                    {formatarDataHora(atividade.dataHora)}
-                  </td>
-                  <td style={{ padding: '15px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                      <div style={{ width: '28px', height: '28px', backgroundColor: '#e2e8f0', color: '#475569', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '11px' }}>
-                        {inicial}
+                  <tr key={atividade.id}>
+                    <td>
+                      {formatarDataHora(atividade.dataHora)}
+                    </td>
+                    <td>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                        <div style={{ width: '28px', height: '28px', backgroundColor: '#e2e8f0', color: '#475569', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '11px' }}>
+                          {inicial}
+                        </div>
+                        <strong style={{ color: '#0f172a', fontSize: '13px' }}>{atividade.nomeFuncionario}</strong>
                       </div>
-                      <strong style={{ color: '#0f172a', fontSize: '13px' }}>{atividade.nomeFuncionario}</strong>
-                    </div>
-                  </td>
-                  <td style={{ padding: '15px' }}>
-                    <span style={{ 
-                      background: estilos.bg, 
-                      color: estilos.color, 
-                      padding: '4px 8px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold' 
-                    }}>
-                      {atividade.acao}
-                    </span>
-                  </td>
-                  <td style={{ padding: '15px', fontSize: '13px', color: '#334155' }}>
-                    {atividade.detalhes}
-                  </td>
-                </tr>
-              )})
+                    </td>
+                    <td>
+                      <span 
+                        className="action-badge" 
+                        style={{ background: estilos.bg, color: estilos.color }}
+                      >
+                        {atividade.acao}
+                      </span>
+                    </td>
+                    <td>
+                      {atividade.detalhes}
+                    </td>
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
+      </div>
+
+      {/* VERSÃO MOBILE (FEED ULTRA-COMPACTO E FRENTE-A-FRENTE) */}
+      <div className="mobile-only-list">
+        {atividadesFiltradas.length === 0 ? (
+          <div className="mobile-empty-state">
+            <i className="fas fa-search"></i>
+            <p>Nenhuma atividade registrada ainda.</p>
+          </div>
+        ) : (
+          atividadesFiltradas.map(atividade => {
+            const estilos = obterEstiloBadge(atividade.acao, atividade.tipo);
+            const inicial = atividade.nomeFuncionario ? atividade.nomeFuncionario.charAt(0).toUpperCase() : 'E';
+
+            return (
+              <div className="mobile-activity-card" key={atividade.id}>
+                <div className="mobile-card-header">
+                  <div className="mobile-card-user">
+                    <div className="mobile-avatar">{inicial}</div>
+                    <strong className="mobile-username">{atividade.nomeFuncionario}</strong>
+                  </div>
+                  <span className="mobile-card-date">
+                    {formatarDataHora(atividade.dataHora)}
+                  </span>
+                </div>
+                <div className="mobile-card-body">
+                  <span 
+                    className="action-badge" 
+                    style={{ background: estilos.bg, color: estilos.color }}
+                  >
+                    {atividade.acao}
+                  </span>
+                  <span className="mobile-card-details">
+                    {atividade.detalhes}
+                  </span>
+                </div>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

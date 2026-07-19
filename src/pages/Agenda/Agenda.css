@@ -108,7 +108,7 @@
   margin: 0 0 4px 6px; 
 }
 
-.menu-item {
+.agenda-sidebar .menu-item {
   display: flex;
   align-items: center;
   padding: 6px 10px; 
@@ -119,19 +119,19 @@
   font-size: 0.85rem;
   transition: all 0.15s ease; 
 }
-.menu-item:hover {
+.agenda-sidebar .menu-item:hover {
   background: #e2e8f0;
   color: #0f172a;
 }
-.menu-item.ativo {
+.agenda-sidebar .menu-item.ativo {
   background: #eff6ff; 
   color: #1d4ed8;
   font-weight: 600; 
 }
-.menu-item.highlight {
+.agenda-sidebar .menu-item.highlight {
   font-weight: 600;
 }
-.menu-item.highlight.ativo {
+.agenda-sidebar .menu-item.highlight.ativo {
   background: #0f172a;
   color: #ffffff;
 }
@@ -148,24 +148,24 @@
   border-radius: 10px;
   margin-left: 8px;
 }
-.menu-item.ativo .menu-badge { background: #dbeafe; color: #1d4ed8;}
+.agenda-sidebar .menu-item.ativo .menu-badge { background: #dbeafe; color: #1d4ed8;}
 .menu-badge.urgente { background: #fee2e2; color: #ef4444; }
 
 /* Cores ativas específicas baseadas na bolinha */
-.menu-item.ativo:has(.bg-orange) { background: #ffedd5; color: #c2410c; }
-.menu-item.ativo:has(.bg-orange) .menu-badge { background: #fed7aa; color: #c2410c;}
-.menu-item.ativo:has(.bg-green) { background: #dcfce7; color: #15803d; }
-.menu-item.ativo:has(.bg-green) .menu-badge { background: #bbf7d0; color: #15803d;}
-.menu-item.ativo:has(.bg-red) { background: #fee2e2; color: #b91c1c; }
-.menu-item.ativo:has(.bg-red) .menu-badge { background: #fecaca; color: #b91c1c;}
-.menu-item.ativo:has(.bg-purple) { background: #f3e8ff; color: #7e22ce; }
-.menu-item.ativo:has(.bg-purple) .menu-badge { background: #e9d5ff; color: #7e22ce;}
-.menu-item.ativo:has(.bg-yellow) { background: #fef9c3; color: #a16207; }
-.menu-item.ativo:has(.bg-yellow) .menu-badge { background: #fef08a; color: #a16207;}
-.menu-item.ativo:has(.bg-gray) { background: #f1f5f9; color: #334155; }
-.menu-item.ativo:has(.bg-gray) .menu-badge { background: #e2e8f0; color: #334155;}
-.menu-item.ativo:has(.bg-compras) { background: #fef3c7; color: #b45309; }
-.menu-item.ativo:has(.bg-compras) .menu-badge { background: #fde68a; color: #b45309;}
+.agenda-sidebar .menu-item.ativo:has(.bg-orange) { background: #ffedd5; color: #c2410c; }
+.agenda-sidebar .menu-item.ativo:has(.bg-orange) .menu-badge { background: #fed7aa; color: #c2410c;}
+.agenda-sidebar .menu-item.ativo:has(.bg-green) { background: #dcfce7; color: #15803d; }
+.agenda-sidebar .menu-item.ativo:has(.bg-green) .menu-badge { background: #bbf7d0; color: #15803d;}
+.agenda-sidebar .menu-item.ativo:has(.bg-red) { background: #fee2e2; color: #b91c1c; }
+.agenda-sidebar .menu-item.ativo:has(.bg-red) .menu-badge { background: #fecaca; color: #b91c1c;}
+.agenda-sidebar .menu-item.ativo:has(.bg-purple) { background: #f3e8ff; color: #7e22ce; }
+.agenda-sidebar .menu-item.ativo:has(.bg-purple) .menu-badge { background: #e9d5ff; color: #7e22ce;}
+.agenda-sidebar .menu-item.ativo:has(.bg-yellow) { background: #fef9c3; color: #a16207; }
+.agenda-sidebar .menu-item.ativo:has(.bg-yellow) .menu-badge { background: #fef08a; color: #a16207;}
+.agenda-sidebar .menu-item.ativo:has(.bg-gray) { background: #f1f5f9; color: #334155; }
+.agenda-sidebar .menu-item.ativo:has(.bg-gray) .menu-badge { background: #e2e8f0; color: #334155;}
+.agenda-sidebar .menu-item.ativo:has(.bg-compras) { background: #fef3c7; color: #b45309; }
+.agenda-sidebar .menu-item.ativo:has(.bg-compras) .menu-badge { background: #fde68a; color: #b45309;}
 
 /* Bolinhas menores */
 .dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; margin-right: 10px; flex-shrink: 0; }
@@ -562,7 +562,7 @@
   .agenda-sidebar { width: 100%; border-right: none; border-bottom: 1px solid #e2e8f0; padding: 20px;}
   .sidebar-menu { gap: 10px; }
   .menu-section-title { display: none;}
-  .menu-item { justify-content: center; background: white; border: 1px solid #e2e8f0;}
+  .agenda-sidebar .menu-item { justify-content: center; background: white; border: 1px solid #e2e8f0;}
   .agenda-header { flex-direction: column; gap: 15px; padding: 20px;}
   .nav-datas { width: 100%; justify-content: space-between;}
   .header-right { width: 100%; }

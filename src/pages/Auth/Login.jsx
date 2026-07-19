@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
 import './Auth.css'; 
 
@@ -38,6 +38,25 @@ const Login = () => {
       localStorage.setItem('userRole', 'owner');
     }
     
+    // 🔥 REGISTRAR LOG DE LOGIN
+    try {
+      const tenantId = localStorage.getItem('tenantId') || user.uid;
+      const nomeEquipe = localStorage.getItem('funcName') || user.displayName || user.email || 'Usuário';
+      await addDoc(collection(db, "logs_atividades"), {
+        empresaId: tenantId,
+        userId: tenantId,
+        funcionarioId: user.uid,
+        nomeFuncionario: nomeEquipe,
+        usuarioEmail: user.email,
+        acao: "LOGIN",
+        detalhes: "Iniciou sessão no sistema.",
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
+      });
+    } catch (logErr) {
+      console.error("Erro ao gravar log de login:", logErr);
+    }
+
     navigate('/dashboard');
   };
 

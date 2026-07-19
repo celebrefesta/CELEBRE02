@@ -66,6 +66,7 @@ service cloud.firestore {
       // Cobre tanto o get direto quanto a query "where email == ..." do Dashboard
       allow read: if isSuperAdmin()
                   || (logado() && resource.data.email == request.auth.token.email)
+                  || (logado() && resource.data.empresaId == request.auth.uid)
                   || souDonoOuFuncionario(resource.data.empresaId);
 
       // Só o dono da empresa (ou super admin) cadastra/edita/remove funcionários,
@@ -88,21 +89,91 @@ service cloud.firestore {
     // ---------------------------------------------------------------
     match /locacoes/{docId} {
       allow read: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
-      allow create: if souDonoOuFuncionario(request.resource.data.userId) || isSuperAdmin();
+      allow create: if souDonoOuFuncionario(request.resource.data.userId) || isSuperAdmin() || request.resource.data.origem == 'catalogo_publico';
       allow update, delete: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
     }
 
     // ---------------------------------------------------------------
-    // Mesmo padrão se aplica a "clientes" e "compras" (rotas /cadastro-cliente
-    // e /compras/nova indicam que essas coleções existem no projeto).
-    // Copie o bloco abaixo trocando o nome da coleção:
-    //
-    // match /clientes/{docId} {
-    //   allow read: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
-    //   allow create: if souDonoOuFuncionario(request.resource.data.userId) || isSuperAdmin();
-    //   allow update, delete: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
-    // }
+    // configuracoes_empresa/{tenantId}  → configurações da empresa
     // ---------------------------------------------------------------
+    match /configuracoes_empresa/{tenantId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(tenantId);
+      allow write: if isSuperAdmin() || (logado() && request.auth.uid == tenantId);
+    }
+
+    // ---------------------------------------------------------------
+    // logs_atividades/{docId}  → auditoria de ações
+    // ---------------------------------------------------------------
+    match /logs_atividades/{docId} {
+      allow create: if logado();
+      allow read: if isSuperAdmin() 
+                  || (logado() && resource.data.empresaId == request.auth.uid) 
+                  || (logado() && resource.data.userId == request.auth.uid) 
+                  || souDonoOuFuncionario(resource.data.empresaId) 
+                  || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // ---------------------------------------------------------------
+    // planos/{docId}  → detalhes dos planos de assinatura
+    // ---------------------------------------------------------------
+    match /planos/{docId} {
+      allow read: if true;
+      allow write: if isSuperAdmin();
+    }
+
+    // ---------------------------------------------------------------
+    // clientes/{docId}  → cadastro de clientes
+    // ---------------------------------------------------------------
+    match /clientes/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || (logado() && request.resource.data.userId == request.auth.uid) || request.resource.data.origem == 'Auto-Cadastro (Site)';
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // ---------------------------------------------------------------
+    // financeiro_lancamentos/{docId}
+    // ---------------------------------------------------------------
+    match /financeiro_lancamentos/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // ---------------------------------------------------------------
+    // lista_compras/{docId}
+    // ---------------------------------------------------------------
+    match /lista_compras/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // ---------------------------------------------------------------
+    // clinicas_aso/{docId}
+    // ---------------------------------------------------------------
+    match /clinicas_aso/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.empresaId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
+    }
+
+    // ---------------------------------------------------------------
+    // projetos_moodboard/{docId}
+    // ---------------------------------------------------------------
+    match /projetos_moodboard/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // ---------------------------------------------------------------
+    // usuarios_equipe/{docId}
+    // ---------------------------------------------------------------
+    match /usuarios_equipe/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.empresaId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
+    }
 
     // Qualquer coleção não listada explicitamente acima fica bloqueada
     // por padrão — mais seguro do que esquecer de proteger algo novo.

@@ -697,7 +697,7 @@ const CadastroEstoque = () => {
           empresaId: tenantId, 
           userId: tenantId,
           funcionarioId: usuarioLogado.uid,
-          nomeFuncionario: localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Equipa",
+          nomeFuncionario: localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Equipe",
           acao: itemEditando ? "EDIÇÃO DE ESTOQUE" : "NOVO ITEM NO ESTOQUE",
           tipo: itemEditando ? "EDICAO" : "CRIACAO",
           detalhes: detalhesAcao,

@@ -20,18 +20,17 @@ const Notificacoes = () => {
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
-      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(),
-        criadoEm: serverTimestamp(),
-        funcionario: nomeEquipa,
-        usuarioNome: nomeEquipa,
+        empresaId: tenantId,
+        userId: tenantId,
+        funcionarioId: usuarioLogado?.uid,
+        nomeFuncionario: nomeEquipa,
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
-        empresaId: tenantId,
-        funcionarioId: usuarioLogado?.uid
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria:", error);

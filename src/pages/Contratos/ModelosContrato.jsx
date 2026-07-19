@@ -25,18 +25,17 @@ const ModelosContrato = () => {
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO JURÍDICO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     try {
-      const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+      const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(),
-        criadoEm: serverTimestamp(),
-        funcionario: nomeEquipe,
-        usuarioNome: nomeEquipe,
+        empresaId: tenantId,
+        userId: tenantId,
+        funcionarioId: usuarioLogado?.uid,
+        nomeFuncionario: nomeEquipe,
         usuarioEmail: usuarioLogado?.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: tenantId, // 🎯 SALVA VINCULADO À EMPRESA
-        empresaId: tenantId,
-        funcionarioId: usuarioLogado?.uid
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
       });
     } catch (error) {
       console.error("Erro ao gravar log da auditoria jurídica:", error);

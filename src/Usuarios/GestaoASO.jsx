@@ -52,8 +52,15 @@ const GestaoASO = () => {
     try {
       const nomeLogado = localStorage.getItem('funcName') || usuarioLogado?.displayName || "Admin";
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(), criadoEm: serverTimestamp(), funcionario: nomeLogado, usuarioEmail: usuarioLogado?.email || "Desconhecido",
-        acao: acao.toUpperCase(), detalhes: detalhes, userId: tenantId, empresaId: tenantId
+        empresaId: tenantId,
+        userId: tenantId,
+        funcionarioId: usuarioLogado?.uid,
+        nomeFuncionario: nomeLogado,
+        usuarioEmail: usuarioLogado?.email || "Desconhecido",
+        acao: acao.toUpperCase(),
+        detalhes: detalhes,
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
       });
     } catch (error) { console.error("Erro ao gravar log:", error); }
   };

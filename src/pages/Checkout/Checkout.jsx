@@ -31,14 +31,15 @@ const Checkout = () => {
       const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Usuário";
       
       await addDoc(collection(db, "logs_atividades"), {
-        data: new Date(),
-        criadoEm: serverTimestamp(),
-        funcionario: nomeEquipe,
-        usuarioNome: nomeEquipe,
+        empresaId: tenantId,
+        userId: tenantId,
+        funcionarioId: usuarioLogado.uid,
+        nomeFuncionario: nomeEquipe,
         usuarioEmail: usuarioLogado.email || "Desconhecido",
         acao: acao.toUpperCase(),
         detalhes: detalhes,
-        userId: tenantId
+        dataHora: new Date().toISOString(),
+        criadoEm: serverTimestamp()
       });
     } catch (error) {
       console.error("Erro ao gravar log do checkout:", error);

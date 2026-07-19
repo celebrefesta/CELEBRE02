@@ -157,16 +157,15 @@ const Clientes = () => {
         try {
           const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
           await addDoc(collection(db, "logs_atividades"), {
-            data: new Date(),
-            criadoEm: serverTimestamp(),
-            funcionario: nomeEquipe,
-            usuarioNome: nomeEquipe,
+            empresaId: tenantId,
+            userId: tenantId,
+            funcionarioId: usuarioLogado?.uid,
+            nomeFuncionario: nomeEquipe,
             usuarioEmail: usuarioLogado?.email || "Desconhecido",
             acao: "EXCLUSÃO DE CLIENTE",
             detalhes: `Excluiu permanentemente o cliente "${nome}" e todos os seus pedidos vinculados.`,
-            userId: tenantId, 
-            empresaId: tenantId,
-            funcionarioId: usuarioLogado?.uid
+            dataHora: new Date().toISOString(),
+            criadoEm: serverTimestamp()
           });
         } catch (errorEspiao) {
           console.error("Erro no espião de exclusão:", errorEspiao);

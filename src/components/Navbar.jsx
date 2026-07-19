@@ -198,6 +198,7 @@ const Navbar = () => {
         
         <div className="sidebar-logo">
           <h1>CELEBRE</h1>
+          <p className="brand-subtitle">Sistema Integrado</p>
         </div>
 
         <nav className="sidebar-nav">
