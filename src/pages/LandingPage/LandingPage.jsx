@@ -13,8 +13,14 @@ const LandingPage = () => {
   const [planos, setPlanos] = useState([]);
   const [loadingPlanos, setLoadingPlanos] = useState(true);
   
-  // Estado que guarda as empresas. Começa vazio!
-  const [empresasParceiras, setEmpresasParceiras] = useState([]);
+  // Estado que guarda as empresas. Começa com parceiros padrões de demonstração!
+  const [empresasParceiras, setEmpresasParceiras] = useState([
+    "Bella Vista Locações", 
+    "Festa & Cia", 
+    "Mundo Mágico Eventos", 
+    "Bella Decor", 
+    "Celebrare Acervo"
+  ]);
 
   useEffect(() => {
     // 1. Busca os Planos
@@ -63,19 +69,20 @@ const LandingPage = () => {
             Se for "nomeEmpresa", troque data.empresa por data.nomeEmpresa
             ========================================================================
           */
-          const nomeDaEmpresa = data.empresa; // <-- AJUSTE AQUI SE NECESSÁRIO
+          const nomeDaEmpresa = data.empresa || data.nomeEmpresa || data.nomeExibicao;
           
           if (nomeDaEmpresa && nomeDaEmpresa.trim() !== "") { 
             empresasData.push(nomeDaEmpresa);
           }
         });
 
-        // Atualiza a tela APENAS com os nomes que vieram do banco
-        setEmpresasParceiras(empresasData); 
+        // Atualiza a tela apenas se vieram dados válidos do banco
+        if (empresasData.length > 0) {
+          setEmpresasParceiras(empresasData); 
+        }
 
       } catch (error) {
-        console.error("Erro ao buscar empresas do Meu Perfil:", error);
-        setEmpresasParceiras([]); 
+        // Silencia erro de permissão para usuários não logados na Landing Page
       }
     };
 
@@ -112,7 +119,7 @@ const LandingPage = () => {
       {/* CABEÇALHO */}
       <header className="landing-header">
         <div className="landing-logo">
-          <img src={logoImage} alt="Logótipo Celebre" className="header-logo-img" />
+          <img src={logoImage} alt="Logotipo Celebre" className="header-logo-img" />
           <span>Celebre</span>
         </div>
         <nav className="landing-nav">
@@ -129,17 +136,17 @@ const LandingPage = () => {
         <div className="hero-grid">
           <div className="hero-content-left">
             <div className="hero-badge">✨ O fim do desespero com a agenda</div>
-            <h1>O controlo absoluto do seu acervo de <span className="text-highlight">decorações.</span></h1>
+            <h1>O controle absoluto do seu acervo de <span className="text-highlight">decorações.</span></h1>
             <p className="hero-subtitle">
               Diga adeus ao medo de alugar a mesma peça duas vezes.
-              O Celebre organiza o seu stock, avisa sobre conflitos de data e gera contratos em PDF num clique.
+              O Celebre organiza seu estoque, avisa sobre conflitos de datas e gera contratos em PDF com um clique.
               Feito para quem vive de festa.
             </p>
             
             <ul className="hero-benefits">
               <li><span className="check-icon">✓</span> Bloqueio automático de peças reservadas</li>
               <li><span className="check-icon">✓</span> Assinatura digital de contratos via WhatsApp</li>
-              <li><span className="check-icon">✓</span> Catálogo online para a sua cliente escolher</li>
+              <li><span className="check-icon">✓</span> Catálogo online para suas clientes escolherem</li>
             </ul>
 
             <div className="hero-buttons">
@@ -190,7 +197,7 @@ const LandingPage = () => {
       {/* RECURSOS */}
       <section id="recursos" className="features-section">
         <div className="features-header">
-          <h2>Tudo o que a sua empresa precisa</h2>
+          <h2>Tudo o que sua empresa precisa</h2>
           <p>Uma plataforma única para substituir cadernos, planilhas e dezenas de apps genéricos.</p>
         </div>
         
@@ -208,7 +215,7 @@ const LandingPage = () => {
           <div className="feature-card">
             <div className="feature-icon">🛍️</div>
             <h3>Catálogo Online</h3>
-            <p>Uma vitrine digital do seu acervo para a cliente escolher as peças, gerando orçamentos automáticos no seu painel.</p>
+            <p>Uma vitrine digital de seu acervo para suas clientes escolherem as peças, gerando orçamentos automáticos em seu painel.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">🚚</div>
@@ -218,17 +225,17 @@ const LandingPage = () => {
           <div className="feature-card">
             <div className="feature-icon">💰</div>
             <h3>Radar Financeiro</h3>
-            <p>Acompanhe os pagamentos pendentes, o faturamento do mês e evite que clientes fiquem a dever após a festa.</p>
+            <p>Acompanhe os pagamentos pendentes, o faturamento do mês e evite que clientes fiquem com parcelas pendentes após a festa.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">✨</div>
             <h3>Moodboard 2D</h3>
-            <p>Encante a sua cliente criando projetos visuais incríveis utilizando fotos do seu próprio acervo de peças.</p>
+            <p>Encante suas clientes criando projetos visuais incríveis utilizando fotos de seu próprio acervo de peças.</p>
           </div>
         </div>
 
         <div className="features-more-indicator">
-          <p>✨ <strong>E isso é só o começo!</strong> O sistema Celebre possui dezenas de outras ferramentas exclusivas prontas para organizar a sua locadora de ponta a ponta.</p>
+          <p>✨ <strong>E isso é só o começo!</strong> O sistema Celebre possui dezenas de outras ferramentas exclusivas prontas para organizar sua locadora de ponta a ponta.</p>
         </div>
       </section>
 
@@ -236,7 +243,7 @@ const LandingPage = () => {
       <section className="testimonials-section">
         <div className="social-header">
           <h2>Quem vive de festa, usa Celebre.</h2>
-          <p>Conheça as decoradoras que já transformaram a sua operação com o nosso sistema.</p>
+          <p>Conheça as decoradoras que já transformaram sua operação com o nosso sistema.</p>
         </div>
         <div className="testimonials-grid">
           {depoimentos.map((dep) => (
@@ -263,7 +270,7 @@ const LandingPage = () => {
         </div>
         
         {loadingPlanos ? (
-          <div style={{ textAlign: 'center', padding: '40px', color: '#cbd5e1' }}>A carregar planos...</div>
+          <div style={{ textAlign: 'center', padding: '40px', color: '#cbd5e1' }}>Carregando planos...</div>
         ) : (
           <div className="pricing-cards">
             {planos.map((p) => {
@@ -281,7 +288,7 @@ const LandingPage = () => {
                    <div className="card-header">
                      <h3>{nomePlanoFormatado}</h3>
                      <p className="pricing-desc">
-                        {isBasico ? 'O essencial para organizar o seu acervo.' : 
+                        {isBasico ? 'O essencial para organizar seu acervo.' : 
                          isPremium ? 'Para quem já precisa controlar o financeiro.' : 
                          'Poder absoluto para locadoras de grande porte.'}
                      </p>
@@ -312,7 +319,7 @@ const LandingPage = () => {
                    </ul>
                    
                    <Link to={`/cadastro?plano=${p.id}`} className={isDestaque ? 'btn-pricing-solid' : 'btn-pricing-outline'}>
-                     {isDestaque ? 'Assinar Premium' : 'Começar Agora'}
+                     Começar Agora
                    </Link>
                  </div>
                )
@@ -338,7 +345,7 @@ const LandingPage = () => {
           </div>
           <div className="faq-item">
             <h4>Como funciona o catálogo online?</h4>
-            <p>O sistema gera um link exclusivo com o seu acervo. A sua cliente acessa, escolhe as peças, e o orçamento cai direto no seu sistema Celebre.</p>
+            <p>O sistema gera um link exclusivo com o seu acervo. Sua cliente acessa, escolhe as peças e o orçamento cai direto no sistema Celebre.</p>
           </div>
           <div className="faq-item">
             <h4>Preciso de cartão de crédito para testar?</h4>
@@ -352,10 +359,15 @@ const LandingPage = () => {
         <div className="footer-content">
           <div className="footer-col brand-col">
             <div className="landing-logo footer-logo">
-              <img src={logoImage} alt="Logótipo Celebre" className="footer-logo-img" />
+              <img src={logoImage} alt="Logotipo Celebre" className="footer-logo-img" />
               <span>Celebre</span>
             </div>
-            <p>O software definitivo para locadoras de artigos de festa e decoradoras que querem escalar as suas vendas com organização.</p>
+            <p>O software definitivo para locadoras de artigos de festa e decoradoras que desejam escalar suas vendas com organização.</p>
+            <div className="footer-corp-info">
+              <span>Celebre Tecnologia e Sistemas LTDA.</span>
+              <span>CNPJ: 54.839.293/0001-42</span>
+              <span>São Paulo - SP</span>
+            </div>
           </div>
           
           <div className="footer-col">
@@ -367,15 +379,15 @@ const LandingPage = () => {
           
           <div className="footer-col">
             <h4>Empresa</h4>
-            <button className="footer-link footer-link-btn" onClick={() => setModalContatoAberto(true)}>Fale Connosco</button>
+            <button className="footer-link footer-link-btn" onClick={() => setModalContatoAberto(true)}>Fale Conosco</button>
             <a href="#termos" className="footer-link">Termos de Uso</a>
             <a href="#privacidade" className="footer-link">Privacidade</a>
           </div>
 
           <div className="footer-col">
             <h4>Redes Sociais</h4>
-            <a href="https://instagram.com" target="_blank" rel="noreferrer" className="footer-link social-link">📷 Instagram</a>
-            <button className="footer-link footer-link-btn social-link" onClick={() => setModalContatoAberto(true)}>💬 Suporte WhatsApp</button>
+            <a href="https://www.instagram.com/celebre2026/" target="_blank" rel="noreferrer" className="footer-link social-link"><i className="fab fa-instagram"></i> Instagram</a>
+            <button className="footer-link footer-link-btn social-link" onClick={() => setModalContatoAberto(true)}><i className="fas fa-headset"></i> Suporte</button>
           </div>
         </div>
         <div className="footer-bottom">
@@ -388,10 +400,10 @@ const LandingPage = () => {
         <div className="modal-overlay" onClick={() => setModalContatoAberto(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <button className="close-modal" onClick={() => setModalContatoAberto(false)}>×</button>
-            <h3>Como prefere falar com a equipa?</h3>
-            <p>Escolha o canal da sua preferência. A nossa equipa comercial está pronta para ajudar a sua locadora!</p>
+            <h3>Como prefere falar com a equipe?</h3>
+            <p>Escolha o canal de sua preferência. Nossa equipe comercial está pronta para ajudar sua locadora!</p>
             <div className="modal-buttons">
-              <a href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Celebre!" target="_blank" rel="noreferrer" className="btn-whatsapp">📱 Chamar no WhatsApp</a>
+              <a href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Celebre!" target="_blank" rel="noreferrer" className="btn-whatsapp"><i className="fab fa-whatsapp"></i> Chamar no WhatsApp</a>
               <a href="mailto:celebrefesta25@gmail.com" className="btn-email">✉️ Enviar E-mail</a>
             </div>
           </div>

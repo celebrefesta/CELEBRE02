@@ -363,13 +363,13 @@ const CadastroCliente = () => {
                   </div>
                   <div style="padding: 30px;">
                     <h2 style="color: #0f172a; font-size: 20px;">Olá, ${nomePrimeiro}!</h2>
-                    <p style="font-size: 16px; line-height: 1.5;">O seu registo foi criado e atualizado em nosso sistema com sucesso.</p>
+                    <p style="font-size: 16px; line-height: 1.5;">Seu cadastro foi criado e atualizado em nosso sistema com sucesso.</p>
                     <div style="background-color: #f8fafc; border-left: 4px solid #3b82f6; padding: 15px; margin: 25px 0; border-radius: 0 8px 8px 0;">
                       <p style="margin: 0; font-weight: bold; color: #1e40af;">📝 O que acontece agora?</p>
-                      <p style="margin: 8px 0 0 0; font-size: 15px; color: #1e3a8a;">O seu perfil já está seguro com a nossa equipa. Em breve entraremos em contacto para enviar o seu orçamento ou alinhar os próximos detalhes do seu evento!</p>
+                      <p style="margin: 8px 0 0 0; font-size: 15px; color: #1e3a8a;">Seu perfil já está seguro com a nossa equipe. Em breve entraremos em contato para enviar seu orçamento ou alinhar os próximos detalhes do seu evento!</p>
                     </div>
-                    <p style="font-size: 16px; line-height: 1.5;">Se tiver qualquer dúvida, basta chamar-nos no WhatsApp.</p>
-                    <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>Nossa Equipa</strong></p>
+                    <p style="font-size: 16px; line-height: 1.5;">Se tiver qualquer dúvida, basta nos chamar no WhatsApp.</p>
+                    <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>Nossa Equipe</strong></p>
                   </div>
                 </div>
               `
@@ -435,7 +435,7 @@ const CadastroCliente = () => {
       navigate('/clientes');
     } catch (error) { 
       console.error(error);
-      alert("Erro ao guardar cliente.");
+      alert("Erro ao salvar cliente.");
     } finally { 
       setSalvando(false); 
     }
@@ -449,7 +449,7 @@ const CadastroCliente = () => {
       <div className="form-page-header">
         <div className="header-text">
           <h1 className="form-page-title">{clienteEditando ? 'PERFIL DO CLIENTE' : 'NOVO CLIENTE'}</h1>
-          <p className="form-page-subtitle">{clienteEditando ? 'Edite os dados e acompanhe o histórico' : 'Preencha os dados de contacto e faturação'}</p>
+          <p className="form-page-subtitle">{clienteEditando ? 'Edite os dados e acompanhe o histórico' : 'Preencha os dados de contato e faturamento'}</p>
         </div>
       </div>
 
@@ -639,7 +639,7 @@ const CadastroCliente = () => {
 
             <div className="form-actions mt-compact" style={{gridColumn: '1 / -1'}}>
               <Link to="/clientes" className="btn-voltar-link">Cancelar</Link>
-              <button type="submit" className="btn-salvar-form" disabled={salvando}>{salvando ? 'Aguarde...' : 'Guardar Cliente'}</button>
+              <button type="submit" className="btn-salvar-form" disabled={salvando}>{salvando ? 'Aguarde...' : 'Salvar Cliente'}</button>
             </div>
           </div>
         </form>

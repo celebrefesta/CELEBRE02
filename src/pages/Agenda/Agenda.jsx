@@ -6,7 +6,6 @@ import { getAuth } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Agenda.css';
-
 const TIPOS = {
   entrega:   { label: 'Entrega',   cor: '#3b82f6', dot: 'blue'   },
   devolucao: { label: 'Devolução', cor: '#f97316', dot: 'orange' },
@@ -68,6 +67,7 @@ const Agenda = () => {
   const [diaSelecionado, setDiaSelecionado] = useState(null);
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
   const [formData, setFormData] = useState(FORM_VAZIO);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 🔥 SISTEMA DE AUDITORIA PADRONIZADO
   const registrarLog = async (acao, detalhes) => {
@@ -131,11 +131,11 @@ const Agenda = () => {
       }
 
       try {
-        const snapConfig = await getDoc(doc(db, "sistema", "parametros"));
+        const snapConfig = await getDoc(doc(db, "configuracoes_empresa", tenantId));
         if (snapConfig.exists()) {
           const configData = snapConfig.data();
           setDadosEmpresa({
-            nomeEmpresa: configData.nomeEmpresa || 'Ágape Decorações',
+            nomeEmpresa: configData.nomeEmpresa || 'Celebre Festa',
             logotipo: configData.logotipo || ''
           });
         }
@@ -738,6 +738,10 @@ const Agenda = () => {
               </div>
             )}
           </div>
+          
+          <button className="btn-toggle-sidebar" onClick={() => setIsSidebarOpen(true)}>
+            <i className="fas fa-filter"></i> Filtros
+          </button>
         </div>
       </div>
     );
@@ -945,7 +949,10 @@ const Agenda = () => {
         </div>
       )}
 
-      <aside className="agenda-sidebar custom-scrollbar">
+      {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
+
+      <aside className={`agenda-sidebar custom-scrollbar ${isSidebarOpen ? 'open' : ''}`}>
+        <button className="btn-close-sidebar" onClick={() => setIsSidebarOpen(false)}>&times;</button>
         <div className="sidebar-header-fixed">
             <button className="btn-novo-agendamento" onClick={() => abrirModalForm(new Date().getDate())}>
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
@@ -959,20 +966,20 @@ const Agenda = () => {
             </div>
         </div>
 
-        <nav className="sidebar-menu">
+         <nav className="sidebar-menu">
             <div className={`menu-item highlight ${filtroAtivo === 'todos' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('todos'); if(viewPrincipal === 'calendario' && filtroAtivo === 'compras') setViewPrincipal('lista');}}>
-                <span className="menu-icon">📅</span>
+                <span className="menu-icon"><i className="fas fa-calendar-alt"></i></span>
                 <span className="menu-label">Visão Geral</span>
             </div>
 
             <div className="menu-section">
                 <h4 className="menu-section-title">Logística do Sistema</h4>
                 {[
-                  ['entrega',  'blue',   'Entregas',   contadores.entrega],
-                  ['devolucao','orange', 'Devoluções', contadores.devolucao],
-                ].map(([tipo, cor, label, count]) => (
+                  ['entrega',  'blue',   'Entregas',   contadores.entrega,   'fas fa-shipping-fast'],
+                  ['devolucao','orange', 'Devoluções', contadores.devolucao, 'fas fa-undo-alt'],
+                ].map(([tipo, cor, label, count, icon]) => (
                   <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
-                    <span className={`dot bg-${cor}`} />
+                    <span className="menu-icon"><i className={icon}></i></span>
                     <span className="menu-label">{label}</span>
                     {count > 0 && <span className="menu-badge">{count}</span>}
                   </div>
@@ -982,14 +989,14 @@ const Agenda = () => {
             <div className="menu-section">
                 <h4 className="menu-section-title">Administrativo</h4>
                 {[
-                  ['reuniao',  'purple', 'Reuniões',          contadores.reuniao],
-                  ['visita',   'green',  'Visitas Técnicas',  contadores.visita],
-                  ['pagamento','yellow', 'Cobranças',         contadores.pagamento],
-                  ['tarefa',   'gray',   'Tarefas Internas',  contadores.tarefa],
-                  ['bloqueio', 'red',    'Bloqueios de Data', contadores.bloqueio],
-                ].map(([tipo, cor, label, count]) => (
+                  ['reuniao',  'purple', 'Reuniões',          contadores.reuniao,   'fas fa-handshake'],
+                  ['visita',   'green',  'Visitas Técnicas',  contadores.visita,    'fas fa-map-marked-alt'],
+                  ['pagamento','yellow', 'Cobranças',         contadores.pagamento, 'fas fa-dollar-sign'],
+                  ['tarefa',   'gray',   'Tarefas Internas',  contadores.tarefa,    'fas fa-tasks'],
+                  ['bloqueio', 'red',    'Bloqueios de Data', contadores.bloqueio,  'fas fa-calendar-times'],
+                ].map(([tipo, cor, label, count, icon]) => (
                   <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista');}}>
-                    <span className={`dot bg-${cor}`} />
+                    <span className="menu-icon"><i className={icon}></i></span>
                     <span className="menu-label">{label}</span>
                     {count > 0 && <span className="menu-badge">{count}</span>}
                   </div>
@@ -999,7 +1006,7 @@ const Agenda = () => {
             <div className="menu-section">
                 <h4 className="menu-section-title">Estoque & Compras</h4>
                 <div className={`menu-item ${filtroAtivo === 'compras' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('compras'); setViewPrincipal('lista');}}>
-                  <span className="dot bg-compras" />
+                  <span className="menu-icon"><i className="fas fa-shopping-basket"></i></span>
                   <span className="menu-label">Lista de Compras</span>
                   {comprasPendentes.length > 0 && (
                     <span className={`menu-badge ${comprasUrgentes > 0 ? 'urgente' : ''}`}>
@@ -1011,8 +1018,7 @@ const Agenda = () => {
         </nav>
 
         <button className="btn-exportar" onClick={exportarPDF}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
-            Exportar Relatório
+            <i className="fas fa-file-pdf"></i> Exportar Relatório
         </button>
       </aside>
 

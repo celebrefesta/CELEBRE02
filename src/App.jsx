@@ -65,6 +65,7 @@ import GestaoASO from './Usuarios/GestaoASO';
 import Planos from './pages/Planos/Planos';
 import AdminPlanos from './pages/Planos/AdminPlanos';
 import PaginaUpgrade from './pages/Planos/PaginaUpgrade';
+import ControleGeral from './pages/Admin/ControleGeral';
 
 // 🛡️🔥 BLINDAGEM MÁXIMA DE ROTA (Dupla Verificação em Tempo Real)
 const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
@@ -191,6 +192,39 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
 
 const AppContent = () => {
   const location = useLocation();
+  const [usuarioLogado, setUsuarioLogado] = useState(null);
+
+  useEffect(() => {
+    localStorage.removeItem('simulatingName');
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUsuarioLogado(user);
+      if (user) {
+        // Ignora bypass do Super Admin e garante que seu tenantId está correto
+        if (user.email === "celebrefesta25@gmail.com") {
+          localStorage.setItem('tenantId', user.uid);
+          return;
+        }
+
+        try {
+          const userDoc = await getDoc(doc(db, "usuarios", user.uid));
+          if (!userDoc.exists()) {
+            const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+            const snapFunc = await getDocs(qFunc);
+            if (snapFunc.empty) {
+              console.warn("Usuário autenticado mas não encontrado no Firestore. Efetuando logout...");
+              await auth.signOut();
+              alert("Sua conta não foi encontrada ou foi removida. Por favor, cadastre-se novamente.");
+              window.location.href = '/cadastro';
+            }
+          }
+        } catch (error) {
+          console.error("Erro ao verificar integridade da conta:", error);
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   const rotasSemMenu = ['/', '/login', '/cadastro', '/checkout', '/planos', '/upgrade'];
 
@@ -228,6 +262,7 @@ const AppContent = () => {
           
           {/* ⚙️ ROTA ADMIN EXCLUSIVA */}
           <Route path="/admin-planos" element={<RotaAdmin><AdminPlanos /></RotaAdmin>} />
+          <Route path="/gestao-usuarios" element={<RotaAdmin><ControleGeral /></RotaAdmin>} />
           
           {/* 👥 CLIENTES */}
           <Route path="/clientes" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><Clientes /></TravaSeguranca></RotaPrivada>} />

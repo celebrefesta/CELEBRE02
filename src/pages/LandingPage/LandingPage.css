@@ -25,14 +25,27 @@ html { scroll-behavior: smooth; }
 /* =========================================
    CABEÇALHO
    ========================================= */
-.landing-header { display: flex; justify-content: space-between; align-items: center; padding: 15px 5%; background: rgba(255, 255, 255, 0.98); border-bottom: 1px solid var(--borda-suave); position: sticky; top: 0; z-index: 100; }
+.landing-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 8%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  transition: all 0.3s ease;
+}
 .landing-logo { display: flex; align-items: center; gap: 12px; font-size: 1.6rem; font-weight: 800; color: var(--azul-naval); }
-.header-logo-img { height: 45px; width: auto; object-fit: contain; }
-.landing-nav { display: flex; align-items: center; gap: 20px; }
-.nav-link { text-decoration: none; color: var(--texto-claro); font-weight: 600; transition: color 0.2s; }
-.nav-link:hover { color: var(--azul-naval); }
-.nav-btn-destaque { background: var(--azul-naval); color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 700; transition: background 0.2s; }
-.nav-btn-destaque:hover { background: var(--dourado); }
+.header-logo-img { height: 45px; width: auto; object-fit: contain; filter: drop-shadow(0 2px 4px rgba(15, 23, 42, 0.05)); }
+.landing-nav { display: flex; align-items: center; gap: 24px; }
+.nav-link { text-decoration: none; color: var(--texto-claro); font-weight: 600; transition: color 0.2s, transform 0.2s; position: relative; }
+.nav-link:hover { color: var(--azul-naval); transform: translateY(-1px); }
+.nav-btn-destaque { background: var(--azul-naval); color: white; padding: 12px 24px; border-radius: 30px; text-decoration: none; font-weight: 700; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
+.nav-btn-destaque:hover { background: var(--dourado); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(197, 160, 89, 0.3); }
 
 /* =========================================
    🔥 HERO SECTION ESCURO 🔥
@@ -48,7 +61,12 @@ html { scroll-behavior: smooth; }
 .hero-content-left { text-align: left; }
 .hero-badge { display: inline-block; background: rgba(197, 160, 89, 0.15); color: var(--dourado); padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; margin-bottom: 25px; border: 1px solid rgba(197, 160, 89, 0.3); }
 .hero-content-left h1 { font-size: 3.5rem; font-weight: 800; line-height: 1.15; letter-spacing: -1px; margin-bottom: 20px; color: white; }
-.text-highlight { color: var(--dourado); }
+.text-highlight {
+  background: linear-gradient(135deg, #c5a059 0%, #fde68a 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+}
 .hero-subtitle { font-size: 1.15rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 30px; font-weight: 400; }
 .hero-benefits { list-style: none; padding: 0; margin-bottom: 40px; }
 .hero-benefits li { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-weight: 600; color: #f1f5f9; font-size: 1.05rem; }
@@ -252,20 +270,35 @@ html { scroll-behavior: smooth; }
 /* =========================================
    FOOTER & LOGO
    ========================================= */
-.landing-footer { background: #020617; color: white; padding: 60px 5% 20px; }
-.footer-content { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 40px; max-width: 1200px; margin: 0 auto; align-items: start; }
+.landing-footer { background: #020617; color: white; padding: 70px 8% 30px; }
+.footer-content { display: grid; grid-template-columns: 2fr 1fr 1fr 1fr; gap: 45px; max-width: 1200px; margin: 0 auto; align-items: start; }
 .footer-col { display: flex; flex-direction: column; gap: 12px; }
-.footer-col h4 { color: #ffffff; font-size: 1.1rem; font-weight: 700; margin-bottom: 10px; }
-.brand-col p { color: #94a3b8; line-height: 1.6; font-size: 0.95rem; max-width: 300px; margin-top: 10px; }
+.footer-col h4 { color: #ffffff; font-size: 1.1rem; font-weight: 700; margin-bottom: 15px; letter-spacing: 0.5px; }
+.brand-col p { color: #94a3b8; line-height: 1.6; font-size: 0.95rem; max-width: 340px; margin-top: 10px; }
+
+/* INFORMAÇÕES CORPORATIVAS NO RODAPÉ */
+.footer-corp-info {
+  margin-top: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+}
+.footer-corp-info span {
+  display: block;
+}
 
 /* LOGO NO RODAPÉ */
 .footer-logo { display: flex; align-items: center; gap: 12px; font-size: 1.6rem; font-weight: 800; color: white; }
 .footer-logo-img { height: 45px; width: auto; object-fit: contain; } 
 
-.footer-link { color: #94a3b8; text-decoration: none; font-size: 0.95rem; transition: color 0.2s; }
-.footer-link:hover { color: #ffffff; }
+.footer-link { color: #94a3b8; text-decoration: none; font-size: 0.95rem; transition: color 0.2s, transform 0.2s; display: inline-flex; align-items: center; gap: 8px; }
+.footer-link:hover { color: #ffffff; transform: translateX(3px); }
 .footer-link-btn { background: none; border: none; padding: 0; font-family: inherit; cursor: pointer; text-align: left; }
-.social-link { display: flex; align-items: center; gap: 8px; }
+.social-link { display: inline-flex; align-items: center; gap: 8px; }
+.social-link i { font-size: 1rem; width: 16px; text-align: center; }
 .footer-bottom { text-align: center; border-top: 1px solid #1e293b; margin-top: 50px; padding-top: 25px; color: #64748b; font-size: 0.9rem; }
 
 /* =========================================

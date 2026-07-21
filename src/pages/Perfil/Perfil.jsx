@@ -193,7 +193,7 @@ const Perfil = () => {
         catch (authError) { return alert('❌ A Senha Atual está incorreta. Acesso negado.'); }
 
         await updatePassword(usuarioLogado, dados.novaSenha);
-        await registrarLog("ALTERAÇÃO DE SENHA", `A palavra-passe foi alterada com sucesso.`);
+        await registrarLog("ALTERAÇÃO DE SENHA", `A senha foi alterada com sucesso.`);
         alert('✅ Senha atualizada com sucesso! Seu sistema está seguro.');
         setDados({...dados, senhaAtual: '', novaSenha: '', confirmarSenha: ''});
         setModalSenhaAberto(false);
@@ -384,8 +384,8 @@ const Perfil = () => {
 
         <section className="form-section">
             <h3><i className="fas fa-shield-alt"></i> Segurança e Acesso</h3>
-            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px', lineHeight: '1.6' }}>A sua palavra-passe é criptografada de ponta a ponta. Caso suspeite de acessos indevidos ou queira atualizar as suas credenciais, inicie o processo seguro abaixo.</p>
-            <button type="button" className="btn-abrir-cofre" onClick={() => setModalSenhaAberto(true)}><i className="fas fa-lock"></i> Alterar Palavra-passe</button>
+            <p style={{ color: '#64748b', fontSize: '14px', marginBottom: '20px', lineHeight: '1.6' }}>Sua senha é criptografada de ponta a ponta. Caso suspeite de acessos indevidos ou queira atualizar suas credenciais, inicie o processo seguro abaixo.</p>
+            <button type="button" className="btn-abrir-cofre" onClick={() => setModalSenhaAberto(true)}><i className="fas fa-lock"></i> Alterar Senha</button>
         </section>
 
         <button type="submit" className="btn-save-perfil" disabled={salvandoPerfil}>{salvandoPerfil ? 'Salvando Perfil...' : 'Salvar Alterações do Perfil'}</button>
@@ -399,25 +399,25 @@ const Perfil = () => {
                 <div className="modal-senha-header">
                     <div className="icon-cofre"><i className="fas fa-key"></i></div>
                     <h2>Verificação de Segurança</h2>
-                    <p>Para alterar a sua palavra-passe, confirme a sua identidade.</p>
+                    <p>Para alterar sua senha, confirme sua identidade.</p>
                 </div>
                 <form onSubmit={handleTrocarSenha} className="modal-senha-body">
                     <div className="input-group">
-                        <label>PALAVRA-PASSE ATUAL <span style={{color: '#ef4444'}}>*</span></label>
+                        <label>SENHA ATUAL <span style={{color: '#ef4444'}}>*</span></label>
                         <div className="password-wrapper">
-                            <input type={mostrarSenhaAtual ? "text" : "password"} value={dados.senhaAtual} onChange={e => setDados({...dados, senhaAtual: e.target.value})} placeholder="Digite a sua senha atual" autoFocus />
+                            <input type={mostrarSenhaAtual ? "text" : "password"} value={dados.senhaAtual} onChange={e => setDados({...dados, senhaAtual: e.target.value})} placeholder="Digite sua senha atual" autoFocus />
                             <button type="button" className="btn-toggle-password" onClick={() => setMostrarSenhaAtual(!mostrarSenhaAtual)}><i className={`fas ${mostrarSenhaAtual ? "fa-eye-slash" : "fa-eye"}`}></i></button>
                         </div>
                     </div>
                     <div className="senha-divider"></div>
                     <div className="input-group">
-                        <label>NOVA PALAVRA-PASSE</label>
+                        <label>NOVA SENHA</label>
                         <div className="password-wrapper">
                             <input type={mostrarNovaSenha ? "text" : "password"} value={dados.novaSenha} onChange={e => setDados({...dados, novaSenha: e.target.value})} placeholder="Crie uma senha forte" />
                             <button type="button" className="btn-toggle-password" onClick={() => setMostrarNovaSenha(!mostrarNovaSenha)}><i className={`fas ${mostrarNovaSenha ? "fa-eye-slash" : "fa-eye"}`}></i></button>
                         </div>
                         <div className="senha-criterios">
-                            <p>Sua senha deve conter:</p>
+                            <p style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px', margin: '5px 0'}}>Todos os requisitos abaixo são obrigatórios:</p>
                             <ul>
                                 <li className={criterios.tamanho ? "criterio-ok" : "criterio-falha"}><i className={`fas ${criterios.tamanho ? "fa-check-circle" : "fa-circle"}`}></i> Mínimo de 8 caracteres</li>
                                 <li className={criterios.maiuscula && criterios.minuscula ? "criterio-ok" : "criterio-falha"}><i className={`fas ${criterios.maiuscula && criterios.minuscula ? "fa-check-circle" : "fa-circle"}`}></i> Letras maiúsculas e minúsculas</li>
@@ -427,7 +427,7 @@ const Perfil = () => {
                         </div>
                     </div>
                     <div className="input-group">
-                        <label>CONFIRMAR NOVA PALAVRA-PASSE</label>
+                        <label>CONFIRMAR NOVA SENHA</label>
                         <div className="password-wrapper">
                             <input type={mostrarConfirmarSenha ? "text" : "password"} value={dados.confirmarSenha} onChange={e => setDados({...dados, confirmarSenha: e.target.value})} placeholder="Repita a nova senha" />
                             <button type="button" className="btn-toggle-password" onClick={() => setMostrarConfirmarSenha(!mostrarConfirmarSenha)}><i className={`fas ${mostrarConfirmarSenha ? "fa-eye-slash" : "fa-eye"}`}></i></button>

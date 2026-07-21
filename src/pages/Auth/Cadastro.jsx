@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'; // 🔥 IMPORTAÇÃO CORRIGIDA AQUI
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
 import './Auth.css'; 
 
@@ -73,14 +73,28 @@ const Cadastro = () => {
     setErro('');
 
     if (!isSenhaForte) {
-      return setErro('A sua palavra-passe não cumpre todos os requisitos de segurança.');
+      return setErro('Sua senha não cumpre todos os requisitos de segurança.');
     }
     if (senha !== confirmarSenha) {
-      return setErro('As palavras-passe não coincidem.');
+      return setErro('As senhas não coincidem.');
+    }
+
+    const docLimpo = documento.replace(/\D/g, "");
+    if (!docLimpo) {
+      return setErro('Por favor, preencha o seu CPF ou CNPJ.');
     }
 
     try {
       setLoading(true);
+
+      // 🔥 PREVENIR DUPLICIDADE DE CONTA PELO DOCUMENTO (CPF/CNPJ)
+      const docRefCheck = doc(db, 'registros_documentos', docLimpo);
+      const docSnapCheck = await getDoc(docRefCheck);
+      if (docSnapCheck.exists()) {
+        setLoading(false);
+        return setErro('Este CPF/CNPJ já possui uma conta cadastrada no Celebre.');
+      }
+
       const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
       const user = userCredential.user;
 
@@ -113,19 +127,55 @@ const Cadastro = () => {
         criadoEm: serverTimestamp()
       });
 
+      // 🔥 SALVA REGISTRO DE CPF/CNPJ PARA PREVENIR FUTURAS DUPLICATAS
+      await setDoc(doc(db, 'registros_documentos', docLimpo), {
+        ownerUid: user.uid,
+        criadoEm: serverTimestamp()
+      });
+
+      // 🔥 E-MAIL DE BOAS-VINDAS PREMIUM
       await addDoc(collection(db, 'mail'), {
         to: email,
         message: {
-          subject: '🎉 Bem-vinda ao Celebre! O seu teste de 7 dias começou.',
-          html: `<p>Olá, ${nomeExibicao || nome}! Você tem 7 dias VIP no Celebre.</p>`
+          subject: '🎉 Bem-vindo(a) ao Celebre! Seu teste de 7 dias começou.',
+          html: `
+            <div style="font-family: sans-serif; color: #333; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin: 0 auto;">
+              <div style="background-color: #0f172a; padding: 30px; text-align: center;">
+                <h1 style="color: #c5a059; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Celebre</h1>
+                <p style="color: #94a3b8; margin: 5px 0 0 0; font-size: 14px;">O seu acervo organizado</p>
+              </div>
+              <div style="padding: 30px; background-color: #ffffff;">
+                <h2 style="color: #0f172a; font-size: 20px; margin-top: 0;">Olá, ${nomeExibicao || nome}! 🎉</h2>
+                <p style="font-size: 16px; line-height: 1.6; color: #475569;">Seja muito bem-vindo(a) ao Celebre. O seu teste gratuito de <strong>7 dias</strong> com acesso TOTAL ao sistema começou!</p>
+                
+                <div style="background-color: #f8fafc; border-left: 4px solid #c5a059; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
+                  <p style="margin: 0 0 10px 0; font-weight: bold; color: #0f172a; font-size: 16px;">🔑 Seus dados de acesso:</p>
+                  <p style="margin: 0; font-size: 15px; color: #475569;"><strong>E-mail:</strong> ${email}</p>
+                  <p style="margin: 5px 0 0 0; font-size: 15px; color: #475569;"><strong>Plano de Teste:</strong> 7 Dias VIP</p>
+                </div>
+
+                <p style="font-size: 16px; line-height: 1.6; color: #475569;">Com o Celebre você poderá cadastrar seus itens, gerenciar orçamentos, emitir contratos digitais e acompanhar seu faturamento de forma simples e intuitiva.</p>
+
+                <div style="text-align: center; margin: 30px 0;">
+                  <a href="https://celebreapp.com/login" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 14px 28px; border-radius: 8px; font-weight: bold; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(15,23,42,0.15);">Acessar Meu Painel</a>
+                </div>
+
+                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
+                
+                <p style="font-size: 14px; color: #64748b; line-height: 1.5; margin: 0;">Se tiver alguma dúvida durante o seu teste, basta nos chamar clicando no botão de Suporte diretamente do seu painel corporativo.</p>
+                <p style="margin-top: 25px; font-size: 15px; color: #475569;">Com carinho,<br><strong>Equipe Celebre</strong></p>
+              </div>
+            </div>
+          `
         }
       });
 
       navigate('/dashboard'); 
       
     } catch (error) {
+      console.error("Erro detalhado no cadastro:", error);
       if (error.code === 'auth/email-already-in-use') {
-        setErro('Esse e-mail já está registado. Faça login!');
+        setErro('Esse e-mail já está cadastrado. Faça login!');
       } else {
         setErro('Erro ao criar conta. Verifique os dados e tente novamente.');
       }
@@ -144,7 +194,7 @@ const Cadastro = () => {
             <span className="auth-logo-text">Celebre</span>
           </div>
           
-          <h2>Crie a sua conta ✨</h2>
+          <h2>Crie sua conta ✨</h2>
           <p>Rápido e fácil. 7 dias grátis com acesso TOTAL.</p>
           
           {erro && <div className="auth-erro">{erro}</div>}
@@ -193,7 +243,7 @@ const Cadastro = () => {
             
             <div className="input-row">
               <div className="input-group">
-                <label>PALAVRA-PASSE</label>
+                <label>SENHA</label>
                 <div className="input-with-icon">
                     <input 
                         type={mostrarSenha ? "text" : "password"} 
@@ -208,7 +258,7 @@ const Cadastro = () => {
                 </div>
               </div>
               <div className="input-group">
-                <label>REPETIR PALAVRA-PASSE</label>
+                <label>REPETIR SENHA</label>
                 <div className="input-with-icon">
                     <input 
                         type={mostrarConfirmarSenha ? "text" : "password"} 
@@ -226,6 +276,7 @@ const Cadastro = () => {
 
             {/* 🔥 INDICADORES DE SEGURANÇA DA SENHA 🔥 */}
             <div className="senha-criterios">
+              <span className="crit-titulo-obrigatorio">Todos os requisitos de senha são obrigatórios:</span>
               <ul>
                 <li className={criterios.tamanho ? "crit-ok" : "crit-falha"}>
                   <i className={`fas ${criterios.tamanho ? "fa-check" : "fa-times"}`}></i> 8+ Caracteres
@@ -246,7 +297,7 @@ const Cadastro = () => {
             </div>
             
             <button type="submit" disabled={loading || !isSenhaForte} className="btn-auth">
-              {loading ? 'A criar conta...' : 'Começar meu Teste Grátis'}
+              {loading ? 'Criando conta...' : 'Começar meu Teste Grátis'}
             </button>
           </form>
           

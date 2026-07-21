@@ -295,10 +295,10 @@ const Dashboard = () => {
         </div>
         
         <div className="dash-actions-row">
-          <button onClick={() => navigate('/cadastro-cliente')}>👤 NOVO CLIENTE</button>
-          <button onClick={() => navigate('/locacoes/nova')}>🛒 NOVA LOCAÇÃO</button>
-          <button onClick={() => navigate('/cadastro-estoque')}>📦 NOVO ITEM</button>
-          <button onClick={() => navigate('/compras/nova')}>💰 NOVA COMPRA</button>
+          <button onClick={() => navigate('/cadastro-cliente')}><i className="fas fa-user-plus"></i> NOVO CLIENTE</button>
+          <button onClick={() => navigate('/locacoes/nova')}><i className="fas fa-shopping-cart"></i> NOVA LOCAÇÃO</button>
+          <button onClick={() => navigate('/cadastro-estoque')}><i className="fas fa-box-open"></i> NOVO ITEM</button>
+          <button onClick={() => navigate('/compras/nova')}><i className="fas fa-hand-holding-usd"></i> NOVA COMPRA</button>
         </div>
       </header>
 
@@ -374,7 +374,7 @@ const Dashboard = () => {
         </div>
 
         <div className="dash-column">
-          <section className="dash-card-wide border-top-yellow flex-grow">
+          <section className="dash-card-wide flex-grow">
             <h3>📝 Orçamentos Pendentes</h3>
             <p className="card-subtitle">Negócios abertos aguardando fechamento.</p>
             <div className="activity-feed">
@@ -409,7 +409,7 @@ const Dashboard = () => {
         </div>
 
         <div className="dash-column">
-          <section className="dash-card-wide border-top-red flex-grow">
+          <section className="dash-card-wide flex-grow">
             <h3>🚨 Radar de Cobrança</h3>
             <p className="card-subtitle">A festa passou e o pagamento não concluiu.</p>
             <div className="activity-feed">

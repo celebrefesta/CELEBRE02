@@ -253,3 +253,38 @@ exports.cancelarAssinatura = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// ============================================================================
+// 🗑️ FUNÇÃO 5: EXCLUIR USUÁRIO DA AUTENTICAÇÃO (FIREBASE AUTH)
+// ============================================================================
+exports.excluirUsuarioAuth = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    // Permite solicitações preflight de CORS
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    if (req.method !== "POST") return res.status(405).send("Método não permitido");
+
+    try {
+      const { uid } = req.body;
+
+      if (!uid) {
+         return res.status(400).send({ error: "UID não fornecido" });
+      }
+
+      console.log(`Iniciando exclusão do usuário do Firebase Auth. UID: ${uid}`);
+      await admin.auth().deleteUser(uid);
+      console.log(`Usuário com UID: ${uid} excluído do Firebase Auth.`);
+
+      return res.status(200).send({ message: "Usuário excluído da autenticação com sucesso" });
+
+    } catch (error) {
+      console.error("Erro ao excluir usuário da autenticação:", error);
+      res.status(500).send({ error: "Erro interno ao excluir usuário da autenticação", details: error.message });
+    }
+  });
+});

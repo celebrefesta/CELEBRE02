@@ -254,47 +254,39 @@ const Clientes = () => {
           <h1>MEUS CLIENTES</h1>
           <p>Gestão de carteira, contatos e histórico financeiro.</p>
         </div>
-        <div style={{ display: 'flex', gap: '10px' }}>
+        <div className="header-actions">
           <Link to="/cadastro-cliente" className="btn-primary-celebre">+ NOVO CLIENTE</Link>
         </div>
       </header>
 
-      <div className="dashboard-cards">
-        <div className="dash-card neutral">
-          <div className="dash-icon" style={{background: '#e2e8f0', color: '#475569'}}>👥</div>
-          <div className="dash-info">
-            <h3 style={{color: '#64748b'}}>Total na Carteira</h3>
-            <h2 style={{color: '#0f172a'}}>{clientes.length}</h2>
-          </div>
+      <div className="clientes-stats-row">
+        <div className="stat-card-wide border-purple">
+          <span>Total na Carteira</span>
+          <strong>{clientes.length}</strong>
         </div>
  
-        <div className="dash-card success">
-          <div className="dash-icon">✅</div>
-          <div className="dash-info">
-            <h3>Adimplentes (Tudo OK)</h3>
-            <h2>{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</h2>
-          </div>
+        <div className="stat-card-wide border-green">
+          <span>Adimplentes (Tudo OK)</span>
+          <strong>{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</strong>
         </div>
-        <div className="dash-card danger">
-          <div className="dash-icon" style={{background: '#fef2f2', color: '#ef4444'}}>⚠️</div>
-          <div className="dash-info">
-            <h3 style={{color: '#b91c1c'}}>Com Pendências</h3>
-            <h2 style={{color: '#991b1b'}}>{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</h2>
-          </div>
+        
+        <div className="stat-card-wide border-red">
+          <span>Com Pendências</span>
+          <strong>{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong>
         </div>
       </div>
 
       <div className="advanced-filter-bar">
-        <div className="filter-main-row" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
-          <div className="search-group" style={{ flex: 2, minWidth: '200px' }}>
+        <div className="filter-main-row">
+          <div className="search-group">
             <span className="search-icon">🔍</span>
             <input type="text" placeholder="Buscar cliente por nome, CPF ou CNPJ..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
-          <button onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} style={{ flex: '0 0 auto', padding: '0 20px', background: '#fff', border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', fontSize: '13px', fontWeight: 'bold', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px', height: '42px' }}>
+          <button onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} className="btn-sort">
             {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
           </button>
-          <div className="select-group" style={{ flex: 1, minWidth: '150px' }}>
-            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} style={{width: '100%', height: '42px', borderRadius: '8px', border: '1px solid #cbd5e1', color: '#475569', fontWeight: 'bold', paddingLeft: '10px'}}>
+          <div className="select-group">
+            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className="select-status">
               <option value="todos">📊 Todos os Status</option>
               <option value="adimplentes">✅ Apenas Adimplentes</option>
               <option value="inadimplentes">⚠️ Apenas Inadimplentes</option>
@@ -319,39 +311,39 @@ const Clientes = () => {
             </thead>
             <tbody>
               {clientesFiltrados.length === 0 ? (
-                 <tr><td colSpan="5" style={{textAlign: "center", padding: "40px", color: "#94a3b8"}}>Nenhum cliente encontrado com estes filtros.</td></tr>
+                 <tr><td colSpan="5" className="empty-table-cell">Nenhum cliente encontrado com estes filtros.</td></tr>
               ) : (
                 clientesFiltrados.map(c => {
                   const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
                   const tagColorida = c.tags ? getTagStyle(c.tags) : null;
 
                   return (
-                    <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover" onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }} style={{cursor: 'pointer'}}> 
+                    <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover" onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }}> 
                       <td className="cliente-cell">
                         <div className="cliente-info-wrapper">
                           {c.foto ? (
                               <img src={c.foto} className="avatar-quadrado" alt={nomeBonito} />
                           ) : (
-                              <div className="avatar-quadrado" style={{background: '#f1f5f9', color: '#0f172a'}}>{nomeBonito.charAt(0)}</div>
+                              <div className="avatar-quadrado avatar-letra-gold">{nomeBonito.charAt(0)}</div>
                           )}
                           <div className="user-details">
-                            <div style={{display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap'}}>
-                               <strong style={{color: '#0f172a', fontSize: '15px'}}>{nomeBonito}</strong>
+                            <div className="client-header-info">
+                               <strong className="client-name">{nomeBonito}</strong>
                                 {tagColorida && (
-                                    <span style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}`, padding: '3px 10px', borderRadius: '12px', fontSize: '0.68rem', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', whiteSpace: 'nowrap' }}>
+                                    <span className="tag-badge-dynamic" style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}` }}>
                                         {c.tags}
                                     </span>
                                 )}
                             </div>
-                            <span style={{color: '#64748b', fontSize: '12px', marginTop: '4px', display: 'block'}}>{c.tipoPessoa === 'juridica' ? `CNPJ: ${c.cnpj}` : c.cpf ? `CPF: ${c.cpf}` : 'Sem documento'}</span>
+                            <span className="client-doc">{c.tipoPessoa === 'juridica' ? `CNPJ: ${c.cnpj}` : c.cpf ? `CPF: ${c.cpf}` : 'Sem documento'}</span>
                           </div>
                         </div>
                       </td>
 
                       <td className="info-cell mobile-stack" onClick={e => e.stopPropagation()}>
                         {c.celular ? (
-                          <div style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
-                            <span style={{fontWeight: '600', color: '#334155'}}>{formatarTelefone(c.celular)}</span>
+                          <div className="contact-whatsapp-row">
+                            <span className="contact-phone">{formatarTelefone(c.celular)}</span>
                             <a href={`https://wa.me/55${c.celular.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="btn-zap-icon" title="Chamar no WhatsApp">
                               <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12.031 0C5.385 0 0 5.386 0 12.032c0 2.13.553 4.212 1.602 6.046L.18 24l6.096-1.554a11.96 11.96 0 0 0 5.755 1.472h.004c6.645 0 12.03-5.386 12.03-12.031S18.676 0 12.031 0zm0 21.916a9.924 9.924 0 0 1-5.068-1.378l-.364-.216-3.766.96.994-3.67-.236-.376A9.927 9.927 0 0 1 2.083 12.03c0-5.492 4.473-9.965 9.966-9.965 5.49 0 9.963 4.473 9.963 9.965 0 5.49-4.471 9.965-9.963 9.965zm5.464-7.464c-.3-.15-1.774-.876-2.048-.976-.273-.102-.473-.152-.673.15-.2.3-.773.976-.948 1.176-.174.2-.348.226-.648.076-.3-.15-1.266-.465-2.41-1.314-.89-.661-1.49-1.477-1.664-1.777-.174-.3-.018-.462.132-.612.135-.135.3-.35.45-.525.15-.176.2-.3.3-.5.1-.2.05-.376-.025-.526-.075-.15-.673-1.62-.923-2.22-.243-.585-.49-.505-.673-.515-.173-.01-.373-.01-.573-.01-.2 0-.523.076-.798.376-.275.3-1.048 1.026-1.048 2.502 0 1.476 1.073 2.9 1.223 3.1.15.2 2.115 3.226 5.12 4.453.715.292 1.273.466 1.708.597.718.215 1.372.185 1.895.112.585-.08 1.774-.725 2.023-1.425.25-.7.25-1.3.175-1.425-.075-.126-.275-.2-.575-.35z"/></svg>
                             </a>
@@ -360,11 +352,11 @@ const Clientes = () => {
                       </td>
 
                       <td className="info-cell mobile-stack">
-                        {c.cidade ? (<span style={{display: 'inline-flex', alignItems: 'center', gap: '5px', color: '#475569'}}>📍 {c.cidade}{c.uf ? `/${c.uf}` : ''}</span>) : '--'}
+                        {c.cidade ? (<span className="loc-badge">📍 {c.cidade}{c.uf ? `/${c.uf}` : ''}</span>) : '--'}
                       </td>
 
                       <td className="status-cell text-center mobile-stack">
-                        <span onClick={(e) => verPorQueInadimplente(e, c)} className={`badge-status ${c.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`} style={{ cursor: c.situacaoFinanceira === 'inadimplente' ? 'pointer' : 'default', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: c.situacaoFinanceira === 'inadimplente' ? '0 2px 8px rgba(239, 68, 68, 0.2)' : 'none', transition: '0.2s' }}>
+                        <span onClick={(e) => verPorQueInadimplente(e, c)} className={`badge-status ${c.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`}>
                           {c.situacaoFinanceira === 'inadimplente' ? (<><span>⚠️</span> PENDÊNCIAS</>) : (<><span>✅</span> ADIMPLENTE</>)}
                         </span>
                       </td>
@@ -392,119 +384,119 @@ const Clientes = () => {
 
       {/* 🔥 FICHÁRIO COMPLETO DO CLIENTE (VISUALIZAÇÃO E HISTÓRICO) 🔥 */}
       {clienteVisualizacao && (
-        <div onClick={() => setClienteVisualizacao(null)} style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.6)', display: 'flex', justifyContent: 'center', alignItems: 'flex-start', overflowY: 'auto', padding: '20px 10px', zIndex: 9999 }}>
-          
-          <div onClick={e => e.stopPropagation()} style={{ background: '#fff', width: '100%', maxWidth: '850px', borderRadius: '12px', padding: '20px', position: 'relative', display: 'flex', flexWrap: 'wrap', gap: '30px', margin: 'auto' }}>
-            
-            <button onClick={() => setClienteVisualizacao(null)} style={{ position: 'absolute', top: '10px', right: '15px', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#64748b' }}>×</button>
+        <div onClick={() => setClienteVisualizacao(null)} className="modal-overlay-perfil">
+          <div onClick={e => e.stopPropagation()} className="modal-content-perfil-large">
+            <button onClick={() => setClienteVisualizacao(null)} className="btn-fechar-perfil">&times;</button>
 
-            {/* LADO ESQUERDO: FOTO E RESUMO */}
-            <div style={{ flex: '1 1 250px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '15px' }}>
-              <div style={{ width: '120px', height: '120px', minWidth: '120px', minHeight: '120px', borderRadius: '50%', overflow: 'hidden', border: '4px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#fff', fontSize: '40px', fontWeight: 'bold' }}>
-                {clienteVisualizacao.foto ? (
-                    <img src={clienteVisualizacao.foto} alt={perfilNomeBonito} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                ) : (
-                    perfilNomeBonito.charAt(0)
+            <div className="perfil-layout-split">
+              {/* LADO ESQUERDO: FOTO E RESUMO */}
+              <div className="perfil-left-col">
+                <div className={`perfil-foto-max ${!clienteVisualizacao.foto ? 'placeholder-foto-max' : ''}`}>
+                  {clienteVisualizacao.foto ? (
+                      <img src={clienteVisualizacao.foto} alt={perfilNomeBonito} />
+                  ) : (
+                      perfilNomeBonito.charAt(0)
+                  )}
+                </div>
+                
+                <h2 className="perfil-nome-titulo">{perfilNomeBonito}</h2>
+                {perfilTagColorida && (
+                    <span className="perfil-tag-destaque" style={{ backgroundColor: perfilTagColorida.bg, color: perfilTagColorida.color, border: `1px solid ${perfilTagColorida.border}` }}>
+                      {clienteVisualizacao.tags}
+                    </span>
                 )}
-              </div>
-              
-              <h2 style={{ fontSize: '20px', color: '#0f172a', textAlign: 'center', margin: 0 }}>{perfilNomeBonito}</h2>
-              {perfilTagColorida && (
-                  <span style={{ backgroundColor: perfilTagColorida.bg, color: perfilTagColorida.color, border: `1px solid ${perfilTagColorida.border}`, padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: 'bold' }}>
-                    {clienteVisualizacao.tags}
-                  </span>
-              )}
 
-              <div style={{ width: '100%', background: '#f8fafc', padding: '15px', borderRadius: '8px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}><span style={{ color: '#64748b' }}>💰 LTV (Gasto):</span> <strong style={{ color: '#0f172a' }}>R$ {perfilTotalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}><span style={{ color: '#64748b' }}>📦 Locações:</span> <strong style={{ color: '#0f172a' }}>{perfilHistorico.length}</strong></div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '14px' }}><span style={{ color: '#64748b' }}>📅 Desde:</span> <strong style={{ color: '#0f172a' }}>{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</strong></div>
+                <div className="perfil-mini-stats">
+                    <div className="stat-line"><span>💰 LTV (Gasto):</span> <strong>R$ {perfilTotalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
+                    <div className="stat-line"><span>📦 Locações:</span> <strong>{perfilHistorico.length}</strong></div>
+                    <div className="stat-line"><span>📅 Desde:</span> <strong>{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</strong></div>
+                </div>
+
+                <button onClick={() => { setClienteVisualizacao(null); navigate('/cadastro-cliente', { state: { clienteEditando: clienteVisualizacao } }); }} className="btn-editar-perfil-full">
+                  ✏️ Editar Cadastro
+                </button>
               </div>
 
-              <button onClick={() => { setClienteVisualizacao(null); navigate('/cadastro-cliente', { state: { clienteEditando: clienteVisualizacao } }); }} style={{ width: '100%', padding: '12px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer' }}>
-                ✏️ Editar Cadastro
-              </button>
-            </div>
+              {/* LADO DIREITO: ABAS E CONTEÚDO */}
+              <div className="perfil-right-col">
+                 <div className="perfil-tabs-header">
+                    <button onClick={() => setAbaAtiva('dados')} className={`ptab ${abaAtiva === 'dados' ? 'active' : ''}`}>👤 Dados Cadastrais</button>
+                    <button onClick={() => setAbaAtiva('registros')} className={`ptab ${abaAtiva === 'registros' ? 'active' : ''}`}>📜 Histórico</button>
+                 </div>
+                 
+                 <div className="perfil-tab-body">
+                    {/* DADOS */}
+                    {abaAtiva === 'dados' && (
+                        <div className="perfil-dados-grid-wrapper">
+                           <div className="perfil-dados-grid">
+                               <div className="d-group"><label>NOME / RAZÃO SOCIAL</label><span>{clienteVisualizacao.nome || clienteVisualizacao.razaoSocial || '-'}</span></div>
+                               <div className="d-group"><label>CPF / CNPJ</label><span>{clienteVisualizacao.cpf || clienteVisualizacao.cnpj || '-'}</span></div>
+                               <div className="d-group"><label>CELULAR / WHATSAPP</label><span>{formatarTelefone(clienteVisualizacao.celular) || '-'}</span></div>
+                               <div className="d-group"><label>EMAIL</label><span style={{ wordBreak: 'break-all' }}>{clienteVisualizacao.email || '-'}</span></div>
+                           </div>
+                           
+                           <div className="obs-group obs-box-wrapper" style={{ marginTop: '20px' }}>
+                              <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>ENDEREÇO COMPLETO</label>
+                              <div className="obs-box">
+                                <p style={{ fontStyle: 'normal', color: '#0f172a' }}>
+                                  {clienteVisualizacao.logradouro ? `${clienteVisualizacao.logradouro}, ${clienteVisualizacao.numero || 'S/N'} - ${clienteVisualizacao.complemento ? clienteVisualizacao.complemento + ' - ' : ''}${clienteVisualizacao.bairro}, ${clienteVisualizacao.cidade}/${clienteVisualizacao.uf} (CEP: ${clienteVisualizacao.cep})` : 'Endereço não cadastrado.'}
+                                </p>
+                              </div>
+                           </div>
+                           
+                           <div className="obs-group obs-box-wrapper" style={{ marginTop: '20px' }}>
+                                <label style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>OBSERVAÇÕES INTERNAS</label>
+                                <div className="obs-box" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                                  <p style={{ color: '#92400e', whiteSpace: 'pre-wrap', fontStyle: 'normal' }}>{clienteVisualizacao.observacoes || 'Nenhuma observação registrada.'}</p>
+                                </div>
+                           </div>
+                        </div>
+                    )}
 
-            {/* LADO DIREITO: ABAS E CONTEÚDO */}
-            <div style={{ flex: '2 1 300px', display: 'flex', flexDirection: 'column' }}>
-               <div style={{ display: 'flex', borderBottom: '2px solid #e2e8f0', marginBottom: '20px' }}>
-                  <button onClick={() => setAbaAtiva('dados')} style={{ flex: 1, padding: '15px', background: 'none', border: 'none', borderBottom: abaAtiva === 'dados' ? '3px solid #3b82f6' : '3px solid transparent', color: abaAtiva === 'dados' ? '#3b82f6' : '#64748b', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>👤 Dados Cadastrais</button>
-                  <button onClick={() => setAbaAtiva('registros')} style={{ flex: 1, padding: '15px', background: 'none', border: 'none', borderBottom: abaAtiva === 'registros' ? '3px solid #3b82f6' : '3px solid transparent', color: abaAtiva === 'registros' ? '#3b82f6' : '#64748b', fontWeight: 'bold', cursor: 'pointer', fontSize: '15px' }}>📜 Histórico</button>
-               </div>
-               
-               <div style={{ width: '100%' }}>
-                  
-                  {/* DADOS */}
-                  {abaAtiva === 'dados' && (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-                             <div style={{ flex: '1 1 200px' }}><label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>NOME / RAZÃO SOCIAL</label><span style={{ color: '#0f172a', fontWeight: '500' }}>{clienteVisualizacao.nome || clienteVisualizacao.razaoSocial || '-'}</span></div>
-                             <div style={{ flex: '1 1 120px' }}><label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>CPF / CNPJ</label><span style={{ color: '#0f172a', fontWeight: '500' }}>{clienteVisualizacao.cpf || clienteVisualizacao.cnpj || '-'}</span></div>
-                         </div>
-                         
-                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px' }}>
-                             <div style={{ flex: '1 1 120px' }}><label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>CELULAR / WHATSAPP</label><span style={{ color: '#0f172a', fontWeight: '500' }}>{formatarTelefone(clienteVisualizacao.celular) || '-'}</span></div>
-                             <div style={{ flex: '1 1 200px' }}><label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>EMAIL</label><span style={{ color: '#0f172a', fontWeight: '500', wordBreak: 'break-all' }}>{clienteVisualizacao.email || '-'}</span></div>
-                         </div>
-
-                         <div style={{ background: '#f8fafc', padding: '15px', borderRadius: '8px' }}>
-                            <label style={{ fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>ENDEREÇO COMPLETO</label>
-                            <span style={{ color: '#0f172a', fontWeight: '500', lineHeight: '1.4' }}>
-                              {clienteVisualizacao.logradouro ? `${clienteVisualizacao.logradouro}, ${clienteVisualizacao.numero || 'S/N'} - ${clienteVisualizacao.complemento ? clienteVisualizacao.complemento + ' - ' : ''}${clienteVisualizacao.bairro}, ${clienteVisualizacao.cidade}/${clienteVisualizacao.uf} (CEP: ${clienteVisualizacao.cep})` : 'Endereço não cadastrado.'}
-                            </span>
-                         </div>
-                         
-                         <div style={{ background: '#fffbeb', padding: '15px', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                              <label style={{ fontSize: '11px', color: '#b45309', display: 'block', marginBottom: '4px', fontWeight: 'bold' }}>OBSERVAÇÕES INTERNAS</label>
-                              <p style={{ margin: 0, color: '#92400e', fontSize: '14px', whiteSpace: 'pre-wrap' }}>{clienteVisualizacao.observacoes || 'Nenhuma observação registrada.'}</p>
-                         </div>
-                      </div>
-                  )}
-
-                  {/* REGISTROS */}
-                  {abaAtiva === 'registros' && (
-                      <div>
-                         {perfilHistorico.length === 0 ? (
-                             <div style={{ textAlign: 'center', padding: '40px', color: '#94a3b8', background: '#f8fafc', borderRadius: '8px' }}>Nenhuma locação encontrada.</div>
-                         ) : (
-                             <div style={{ overflowX: 'auto', width: '100%' }}>
-                               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
-                                 <thead>
-                                   <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', textAlign: 'left' }}>
-                                     <th style={{ padding: '12px 8px' }}>Data / Serviço</th>
-                                     <th style={{ padding: '12px 8px' }}>Valor</th>
-                                     <th style={{ padding: '12px 8px' }}>Status</th>
-                                   </tr>
-                                 </thead>
-                                 <tbody>
-                                   {perfilHistorico.map(loc => {
-                                     const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
-                                     const isCancelado = st.includes('cancelado') || loc.isOrcamentoVencido;
-                                     let tipoServico = "DECORAÇÃO";
-                                     if (loc.tipoServico || loc.modalidade) tipoServico = String(loc.tipoServico || loc.modalidade).toUpperCase();
-                                     else if (loc.logistica && String(loc.logistica.tipoFrete || loc.logistica.frete).toUpperCase().includes('RETIRADA')) tipoServico = "PEGUE E MONTE";
-                                     return (
-                                     <tr key={loc.id} onClick={() => irParaLocacaoEspecifica(loc.id)} style={{ borderBottom: '1px solid #f1f5f9', cursor: 'pointer' }}>
-                                        <td style={{ padding: '12px 8px', maxWidth: '150px' }}>
-                                            <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>{loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span>
-                                            <strong style={{ color: '#0f172a', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{loc.tema || loc.temaDaFesta || loc.nomeTema || 'Sem tema'}</strong>
-                                            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#94a3b8' }}>{tipoServico}</span>
-                                        </td>
-                                        <td style={{ padding: '12px 8px', textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : '#0f172a' }}>
-                                          R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                                        </td>
-                                        <td style={{ padding: '12px 8px' }}><span className={`h-badge-mini ${st}`}>{loc.status?.toUpperCase() || 'S/S'}</span></td>
+                    {/* REGISTROS */}
+                    {abaAtiva === 'registros' && (
+                        <div className="historico-wrapper">
+                           {perfilHistorico.length === 0 ? (
+                               <div className="empty-history">Nenhuma locação encontrada.</div>
+                           ) : (
+                               <div className="table-responsive">
+                                 <table className="table-historico-simples">
+                                   <thead>
+                                     <tr>
+                                       <th>Data / Serviço</th>
+                                       <th>Valor</th>
+                                       <th>Status</th>
                                      </tr>
-                                     );
-                                   })}
-                                 </tbody>
-                               </table>
-                             </div>
-                         )}
-                       </div>
-                  )}
-               </div>
+                                   </thead>
+                                   <tbody>
+                                     {perfilHistorico.map(loc => {
+                                       const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
+                                       const isCancelado = st.includes('cancelado') || loc.isOrcamentoVencido;
+                                       let tipoServico = "DECORAÇÃO";
+                                       if (loc.tipoServico || loc.modalidade) tipoServico = String(loc.tipoServico || loc.modalidade).toUpperCase();
+                                       else if (loc.logistica && String(loc.logistica.tipoFrete || loc.logistica.frete).toUpperCase().includes('RETIRADA')) tipoServico = "PEGUE E MONTE";
+                                       return (
+                                       <tr key={loc.id} onClick={() => irParaLocacaoEspecifica(loc.id)}>
+                                          <td>
+                                              <span className="h-date">{loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span>
+                                              <strong className="h-theme">{loc.tema || loc.temaDaFesta || loc.nomeTema || 'Sem tema'}</strong>
+                                              <span className="h-type">{tipoServico}</span>
+                                          </td>
+                                          <td style={{ textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : 'inherit' }}>
+                                            R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                                          </td>
+                                          <td><span className={`h-badge-mini ${st}`}>{loc.status?.toUpperCase() || 'S/S'}</span></td>
+                                       </tr>
+                                       );
+                                     })}
+                                   </tbody>
+                                 </table>
+                                </div>
+                           )}
+                        </div>
+                    )}
+                 </div>
+              </div>
             </div>
           </div>
         </div>

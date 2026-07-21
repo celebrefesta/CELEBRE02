@@ -175,6 +175,23 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
     }
 
+    // ---------------------------------------------------------------
+    // registros_documentos/{docId} → controle de duplicidade de CPF/CNPJ
+    // ---------------------------------------------------------------
+    match /registros_documentos/{docId} {
+      allow get: if true;
+      allow create: if true;
+      allow list, update, delete: if false;
+    }
+
+    // ---------------------------------------------------------------
+    // mail/{docId} → fila de e-mails (Firebase Trigger Email Extension)
+    // ---------------------------------------------------------------
+    match /mail/{docId} {
+      allow create: if logado();
+      allow read, update, delete: if false;
+    }
+
     // Qualquer coleção não listada explicitamente acima fica bloqueada
     // por padrão — mais seguro do que esquecer de proteger algo novo.
     match /{document=**} {

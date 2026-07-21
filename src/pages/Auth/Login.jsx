@@ -71,9 +71,9 @@ const Login = () => {
     } catch (error) {
       console.error("Erro no login:", error);
       if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-        setErro('E-mail ou palavra-passe incorretos.');
+        setErro('E-mail ou senha incorretos.');
       } else {
-        setErro('Erro ao iniciar sessão. Tente novamente.');
+        setErro('Erro ao entrar. Tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -122,7 +122,7 @@ const Login = () => {
 
     } catch (error) {
       console.error("Erro no login com Google:", error);
-      setErro('Erro ao iniciar sessão com o Google.');
+      setErro('Erro ao entrar com o Google.');
     } finally {
       setLoading(false);
     }
@@ -139,7 +139,7 @@ const Login = () => {
           </div>
           
           <h2>Bem-vindo de volta! 👋</h2>
-          <p>Insira seus dados para acessar o seu painel.</p>
+          <p>Insira seus dados para acessar seu painel.</p>
           
           {erro && <div className="auth-erro">{erro}</div>}
           
@@ -177,7 +177,7 @@ const Login = () => {
             </div>
             
             <button type="submit" disabled={loading} className="btn-auth">
-              {loading ? 'A entrar...' : 'Entrar no Sistema'}
+              {loading ? 'Entrando...' : 'Entrar no Sistema'}
             </button>
             
           </form>

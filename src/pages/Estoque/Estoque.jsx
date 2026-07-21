@@ -83,7 +83,35 @@ const Estoque = () => {
 
       if (userSnap.exists()) {
           const userData = userSnap.data();
-          if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa' || userData.assinaturaAtiva === true) {
+
+          // 🛡️ BYPASS DO SUPER ADMIN (Acesso irrestrito)
+          const isSuperAdmin = usuarioLogado?.email === "celebrefesta25@gmail.com";
+          if (isSuperAdmin) {
+              acessoLiberado = true;
+              limiteMaximo = 99999;
+          } else {
+          // 🔥 VERIFICAÇÃO DO PERÍODO DE TESTE GRÁTIS (7 DIAS) 🔥
+          let testeAtivo = false;
+          if (userData.dataFimTeste) {
+              const dataFim = new Date(userData.dataFimTeste);
+              if (new Date() <= dataFim) testeAtivo = true;
+          } else if (userData.dataCadastro) {
+              let dataCad = userData.dataCadastro;
+              if (dataCad.toDate) dataCad = dataCad.toDate();
+              const diffTime = new Date().getTime() - new Date(dataCad).getTime();
+              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
+              if (diffDays <= 7) testeAtivo = true;
+          } else {
+              // Fallback: se não encontrar data, libera para não travar o cliente
+              testeAtivo = true;
+          }
+
+          // Se está no teste grátis, acesso total com limite máximo
+          if (testeAtivo) {
+              acessoLiberado = true;
+              limiteMaximo = 10000; // Acesso completo durante o teste
+          } else if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa' || userData.assinaturaAtiva === true) {
+              // Teste acabou, mas a empresa pagou um plano
               acessoLiberado = true;
               limiteMaximo = 1000; // Assume Básico como padrão
 
@@ -107,6 +135,7 @@ const Estoque = () => {
                   }
               }
           }
+          } // fim do else do super admin
       }
 
       setTemAcesso(acessoLiberado);
