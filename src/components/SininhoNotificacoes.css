@@ -4,8 +4,8 @@
 
 /* O botão principal do sino */
 .sininho-btn-trigger {
-  background: #f1f5f9;
-  border: none;
+  background: var(--fundo-cinza);
+  border: 1px solid var(--borda);
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -15,7 +15,7 @@
   cursor: pointer;
   position: relative;
   transition: all 0.2s ease;
-  color: #475569;
+  color: var(--texto-principal);
 }
 
 .sininho-btn-trigger i {
@@ -24,8 +24,8 @@
 
 .sininho-btn-trigger:hover,
 .sininho-btn-trigger.ativo {
-  background: #e2e8f0;
-  color: #0f172a;
+  background: var(--borda);
+  color: var(--dourado);
 }
 
 /* A bolinha com o número */

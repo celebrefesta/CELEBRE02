@@ -31,7 +31,7 @@
 .view-switcher-log, .kanban-filters { display: flex; background: #ffffff; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
 .view-switcher-log button, .kanban-filters button { background: transparent; border: none; padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 700; color: #64748b; font-size: 0.8rem; transition: 0.2s; }
 .view-switcher-log button:hover, .kanban-filters button:hover { background: #f1f5f9; color: #0f172a;}
-.view-switcher-log button.ativo, .kanban-filters button.ativo { background: #0f172a; color: white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+.view-switcher-log button.ativo, .kanban-filters button.ativo { background: var(--dourado) !important; color: white !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
 
 /* =========================================
    🖥️ VISUALIZAÇÃO: KANBAN (QUADROS VERTICAIS)
@@ -48,7 +48,7 @@
 }
 
 .kanban-col {
-  background: #e2e8f0; 
+  background: var(--fundo-cinza); 
   border-radius: 12px;
   padding: 12px; 
   display: flex;
@@ -57,12 +57,13 @@
   width: 280px;
   height: 100%; 
   max-height: calc(100vh - 160px);
+  border: 1px solid var(--borda);
 }
 
 .col-header { display: flex; align-items: center; margin-bottom: 15px; flex-shrink: 0; }
 .col-header .dot { width: 12px; height: 12px; border-radius: 50%; margin-right: 8px; flex-shrink: 0; }
-.col-header h3 { font-size: 1rem; font-weight: 800; color: #0f172a; margin: 0; flex: 1; }
-.badge-count { background: #ffffff; color: #64748b; font-size: 0.8rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+.col-header h3 { font-size: 1rem; font-weight: 800; color: var(--texto-principal); margin: 0; flex: 1; }
+.badge-count { background: var(--branco); color: var(--texto-secundario); font-size: 0.8rem; font-weight: 800; padding: 2px 8px; border-radius: 20px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
 
 .col-body { 
   display: flex; 

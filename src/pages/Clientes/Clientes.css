@@ -42,14 +42,14 @@
 
 /* Botão Novo Cliente Dourado */
 .clientes-container .btn-primary-celebre {
-  background: linear-gradient(135deg, var(--gold-primary, #c5a059), var(--gold-dark, #a88532)) !important;
+  background: var(--dourado) !important;
   color: #ffffff !important;
   padding: 12px 24px !important;
   border-radius: 30px !important;
   font-weight: 800 !important;
   font-size: 0.78rem !important;
   border: none !important;
-  box-shadow: 0 4px 15px rgba(197, 160, 89, 0.25) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1) !important;
   text-transform: uppercase !important;
   letter-spacing: 0.8px !important;

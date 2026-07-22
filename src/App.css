@@ -5,6 +5,10 @@
 :root {
   --azul-escuro: #0f172a;
   --dourado: #c5a059;
+  --cor-destaque: var(--dourado);
+  --primary-color: var(--dourado);
+  --gold-primary: var(--dourado);
+  --gold-dark: var(--dourado);
   --fundo-cinza: #f1f5f9;
   --branco: #ffffff;
   --texto-principal: #0f172a;
@@ -13,15 +17,901 @@
   --largura-menu: 250px;
 }
 
-/* DARK MODE */
+/* =====================================================
+   🌙 MODO ESCURO 1: DARK MIDNIGHT (AZUL-PETRÓLEO VIBRANTE)
+   ===================================================== */
 [data-theme='dark'] {
-  --azul-escuro: #f1f5f9;
-  --dourado: #c5a059;
-  --fundo-cinza: #0f172a;
-  --branco: #1e293b;
-  --texto-principal: #f1f5f9;
-  --texto-secundario: #94a3b8;
-  --borda: #334155;
+  --azul-escuro: #f1f5f9 !important;
+  --fundo-cinza: #1f2937 !important;
+  --bg-main: #0b0f19 !important;
+  --fundo-principal: #0b0f19 !important;
+  --branco: #111827 !important;
+  --texto-principal: #f9fafb !important;
+  --texto-secundario: #cbd5e1 !important;
+  --borda: #374151 !important;
+  color-scheme: dark;
+}
+
+/* 🪨 SOBREPOSIÇÃO PARA O MODO ESCURO CINZA GRAFITE (CHARCOAL NEUTRO) */
+[data-theme='dark'][data-dark-style='gray'],
+[data-dark-style='gray'] {
+  --azul-escuro: #f4f4f5 !important;
+  --fundo-cinza: #27272a !important;
+  --bg-main: #121212 !important;
+  --fundo-principal: #121212 !important;
+  --branco: #18181b !important;
+  --texto-principal: #f4f4f5 !important;
+  --texto-secundario: #a1a1aa !important;
+  --borda: #3f3f46 !important;
+  color-scheme: dark;
+}
+
+/* 🌙 SOBREPOSIÇÃO PARA O MODO ESCURO AZUL MIDNIGHT */
+[data-theme='dark'][data-dark-style='midnight'],
+[data-dark-style='midnight'] {
+  --azul-escuro: #f1f5f9 !important;
+  --fundo-cinza: #1f2937 !important;
+  --bg-main: #0b0f19 !important;
+  --fundo-principal: #0b0f19 !important;
+  --branco: #111827 !important;
+  --texto-principal: #f9fafb !important;
+  --texto-secundario: #cbd5e1 !important;
+  --borda: #374151 !important;
+  color-scheme: dark;
+}
+
+[data-theme^='dark'] body,
+[data-theme^='dark'] #root,
+[data-theme^='dark'] .App,
+[data-theme^='dark'] .main-content,
+[data-theme^='dark'] .page-container,
+[data-theme^='dark'] .dashboard-container,
+[data-theme^='dark'] .dash-wide-container,
+[data-theme^='dark'] .pag-financeiro-main,
+[data-theme^='dark'] .compras-container,
+[data-theme^='dark'] .kanban-container,
+[data-theme^='dark'] .agenda-main,
+[data-theme^='dark'] .estoque-premium,
+[data-theme^='dark'] .cat-container-main,
+[data-theme^='dark'] .configuracoes-layout,
+[data-theme^='dark'] .config-container,
+[data-theme^='dark'] .locacao-form-container,
+[data-theme^='dark'] .cadastro-cliente-container {
+  background-color: var(--fundo-principal) !important;
+  color: var(--texto-principal) !important;
+}
+
+/* OVERRIDES DE ESTRUTURA PARA SUB-CARDS, INPUTS E SELECTS */
+[data-theme^='dark'] div[style*="var(--fundo-cinza)"],
+[data-theme^='dark'] div[style*="var(--branco)"] {
+  border-color: var(--borda) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme^='dark'] div[style*="var(--fundo-cinza)"] h4,
+[data-theme^='dark'] div[style*="var(--fundo-cinza)"] label,
+[data-theme^='dark'] div[style*="var(--fundo-cinza)"] strong,
+[data-theme^='dark'] div[style*="var(--fundo-cinza)"] span,
+[data-theme^='dark'] div[style*="var(--branco)"] h4,
+[data-theme^='dark'] div[style*="var(--branco)"] label,
+[data-theme^='dark'] div[style*="var(--branco)"] strong,
+[data-theme^='dark'] div[style*="var(--branco)"] span {
+  color: var(--texto-principal) !important;
+}
+
+[data-theme^='dark'] div[style*="var(--fundo-cinza)"] select,
+[data-theme^='dark'] div[style*="var(--fundo-cinza)"] input,
+[data-theme^='dark'] div[style*="var(--branco)"] select,
+[data-theme^='dark'] div[style*="var(--branco)"] input,
+[data-theme^='dark'] .form-group input,
+[data-theme^='dark'] .form-group select,
+[data-theme^='dark'] .form-group textarea {
+  background-color: var(--branco) !important;
+  color: var(--texto-principal) !important;
+  border-color: var(--borda) !important;
+}
+
+/* CARDS, SEÇÕES E BLOCOS NO MODO ESCURO */
+[data-theme^='dark'] div[style*="background: #ffffff"],
+[data-theme^='dark'] div[style*="background:#ffffff"],
+[data-theme^='dark'] div[style*="background: #fff"],
+[data-theme^='dark'] div[style*="background:#fff"],
+[data-theme^='dark'] div[style*="background: rgb(255, 255, 255)"],
+[data-theme^='dark'] .content-card,
+[data-theme^='dark'] .dashboard-card,
+[data-theme^='dark'] .dash-card-wide,
+[data-theme^='dark'] .stat-card-wide,
+[data-theme^='dark'] .border-gold,
+[data-theme^='dark'] .border-blue,
+[data-theme^='dark'] .border-green,
+[data-theme^='dark'] .border-purple,
+[data-theme^='dark'] .border-red,
+[data-theme^='dark'] .kpi-card,
+[data-theme^='dark'] .card-stat,
+[data-theme^='dark'] .fin-header-modern,
+[data-theme^='dark'] .dash-wide-header,
+[data-theme^='dark'] .dashboard-header,
+[data-theme^='dark'] .kanban-header-top,
+[data-theme^='dark'] .agenda-header,
+[data-theme^='dark'] .header-top,
+[data-theme^='dark'] .filtros-inteligentes-container,
+[data-theme^='dark'] .main-card-premium,
+[data-theme^='dark'] .form-section-card,
+[data-theme^='dark'] .cat-sidebar,
+[data-theme^='dark'] .card-resumo,
+[data-theme^='dark'] .form-widescreen,
+[data-theme^='dark'] .topbar,
+[data-theme^='dark'] .topbar-container,
+[data-theme^='dark'] .navbar,
+[data-theme^='dark'] .config-sidebar,
+[data-theme^='dark'] .config-main-area,
+[data-theme^='dark'] .config-tab-container,
+[data-theme^='dark'] .config-top-tabs,
+[data-theme^='dark'] .modal-box-pedido,
+[data-theme^='dark'] .modal-box,
+[data-theme^='dark'] .simulador-frete-box,
+[data-theme^='dark'] .auditoria-estoque-card,
+[data-theme^='dark'] .dash-status-card {
+  background: var(--branco) !important;
+  background-color: var(--branco) !important;
+  border-color: var(--borda) !important;
+  color: var(--texto-principal) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme='dark'] .sininho-btn-trigger,
+[data-theme='dark'] .btn-toggle-tema-topbar {
+  background: #1f2937 !important;
+  border-color: #374151 !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .sininho-btn-trigger:hover,
+[data-theme='dark'] .btn-toggle-tema-topbar:hover {
+  background: #374151 !important;
+  color: var(--dourado) !important;
+}
+
+[data-theme='dark'] .perfil-nome {
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .perfil-dropdown-menu {
+  background: var(--branco) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .topbar-divisor {
+  background-color: var(--borda) !important;
+}
+
+/* TEXTOS E TÍTULOS NO MODO ESCURO */
+[data-theme='dark'] h1,
+[data-theme='dark'] h2,
+[data-theme='dark'] h3,
+[data-theme='dark'] h4,
+[data-theme='dark'] h5,
+[data-theme='dark'] h6,
+[data-theme='dark'] strong,
+[data-theme='dark'] label,
+[data-theme='dark'] .dash-card-header h3,
+[data-theme='dark'] .dash-card-wide h3,
+[data-theme='dark'] .header-titles h1,
+[data-theme='dark'] h3[style*="color"],
+[data-theme='dark'] strong[style*="color"],
+[data-theme='dark'] label[style*="color"] {
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] p,
+[data-theme='dark'] span,
+[data-theme='dark'] small,
+[data-theme='dark'] .stat-card-wide span,
+[data-theme='dark'] p[style*="color"],
+[data-theme='dark'] span[style*="color"] {
+  color: var(--texto-secundario) !important;
+}
+
+/* COLORAÇÃO VIBRANTE DE KPIS E VALORES EM MODO ESCURO */
+[data-theme='dark'] .stat-card-wide strong,
+[data-theme='dark'] .value-stat {
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .border-gold strong,
+[data-theme='dark'] .text-accent {
+  color: #fbbf24 !important;
+}
+
+[data-theme='dark'] .border-blue strong {
+  color: #60a5fa !important;
+}
+
+[data-theme='dark'] .border-green strong,
+[data-theme='dark'] .text-green {
+  color: #34d399 !important;
+}
+
+[data-theme='dark'] .border-purple strong {
+  color: #c084fc !important;
+}
+
+[data-theme='dark'] .border-red strong,
+[data-theme='dark'] .text-red {
+  color: #f87171 !important;
+}
+
+/* SUB-CAIXAS E AVISOS VAZIOS EM MODO ESCURO */
+[data-theme='dark'] .resumo-orcamento-box,
+[data-theme='dark'] .atrasos-empty,
+[data-theme='dark'] .chart-summary-box,
+[data-theme='dark'] .badge-faturamento,
+[data-theme='dark'] .vazio-aviso {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-principal) !important;
+  border-color: var(--borda) !important;
+}
+
+/* MANTER COR DE TEXTO DOS BOTÕES DE AÇÃO DESTACADOS */
+[data-theme='dark'] .btn-primary,
+[data-theme='dark'] .btn-primary-celebre,
+[data-theme='dark'] .btn-novo,
+[data-theme='dark'] .btn-salvar,
+[data-theme='dark'] .btn-salvar-form,
+[data-theme='dark'] .btn-salvar-premium {
+  color: #ffffff !important;
+}
+
+/* INPUTS, SELECTS E TEXTAREAS NO MODO ESCURO */
+[data-theme='dark'] input,
+[data-theme='dark'] select,
+[data-theme='dark'] textarea {
+  background-color: var(--fundo-cinza) !important;
+  color: var(--texto-principal) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] input::placeholder,
+[data-theme='dark'] textarea::placeholder {
+  color: var(--texto-secundario) !important;
+}
+
+/* TABELAS NO MODO ESCURO */
+[data-theme='dark'] table {
+  background-color: var(--branco) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] th {
+  background-color: var(--fundo-cinza) !important;
+  color: var(--texto-secundario) !important;
+  border-bottom-color: var(--borda) !important;
+}
+
+[data-theme='dark'] td {
+  border-bottom-color: #1f2937 !important;
+  color: #e5e7eb !important;
+}
+
+[data-theme='dark'] tr:hover {
+  background-color: var(--fundo-cinza) !important;
+}
+
+/* =====================================================
+   🎯 AJUSTES ESPECÍFICOS DE VISIBILIDADE PARA MODO ESCURO
+   ===================================================== */
+
+/* 1. MEUS CLIENTES & TABELA DE CLIENTES (PRINT 1) */
+[data-theme='dark'] .clientes-container,
+[data-theme='dark'] .advanced-filter-bar,
+[data-theme='dark'] .clientes-stats-row,
+[data-theme='dark'] .table-responsive {
+  background: var(--fundo-principal) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .advanced-filter-bar {
+  background: var(--branco) !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .stat-card-wide span,
+[data-theme='dark'] .clientes-container .stat-card-wide span {
+  color: #cbd5e1 !important;
+  font-weight: 800 !important;
+  opacity: 1 !important;
+}
+
+[data-theme='dark'] .search-input-wrapper input,
+[data-theme='dark'] .select-status,
+[data-theme='dark'] .btn-sort {
+  background-color: var(--fundo-cinza) !important;
+  color: #f9fafb !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .table-row-hover,
+[data-theme='dark'] .custom-table tr,
+[data-theme='dark'] .custom-table td {
+  background: var(--branco) !important;
+  color: #f9fafb !important;
+  border-color: var(--fundo-cinza) !important;
+}
+
+[data-theme='dark'] .table-row-hover:hover {
+  background: var(--fundo-cinza) !important;
+}
+
+[data-theme='dark'] .custom-table th {
+  color: #94a3b8 !important;
+  background: var(--fundo-principal) !important;
+}
+
+/* 2. NOVO CLIENTE / CADASTRO DE CLIENTE (PRINT 2) */
+[data-theme='dark'] .left-photo-col,
+[data-theme='dark'] .form-widescreen,
+[data-theme='dark'] .resumo-card,
+[data-theme='dark'] .main-photo-display {
+  background: var(--branco) !important;
+  border-color: var(--fundo-cinza) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .tabs-container {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .tab-btn {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .tab-btn.active {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .resumo-info h4 {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .resumo-info p,
+[data-theme='dark'] .resumo-footer small {
+  color: #cbd5e1 !important;
+}
+
+/* 3. MINHAS LOCAÇÕES (PRINT 3) */
+[data-theme='dark'] .locacoes-container,
+[data-theme='dark'] .dash-card {
+  background: var(--branco) !important;
+  border-color: var(--fundo-cinza) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .dash-icon {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .dash-info h3 {
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .dash-info h2 {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .tabela-pedidos,
+[data-theme='dark'] .tabela-pedidos tr,
+[data-theme='dark'] .tabela-pedidos td {
+  background: var(--branco) !important;
+  color: #f9fafb !important;
+  border-color: var(--fundo-cinza) !important;
+}
+
+[data-theme='dark'] .vazio-pedidos,
+[data-theme='dark'] .empty-state,
+[data-theme='dark'] .empty-table-cell {
+  color: #cbd5e1 !important;
+}
+
+/* 4. LOGÍSTICA & NOVA LOCAÇÃO (PRINT 4) */
+[data-theme='dark'] .texto-aviso-logistica {
+  background: var(--fundo-cinza) !important;
+  color: #fbbf24 !important;
+  border: 1px solid var(--borda) !important;
+  font-weight: 700 !important;
+}
+
+[data-theme='dark'] .toggle-simples {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .toggle-simples button {
+  color: #94a3b8 !important;
+}
+
+[data-theme='dark'] .toggle-simples button.active {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .btn-secundario-alerta {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .btn-primary-outline {
+  background: var(--fundo-cinza) !important;
+  color: #ffffff !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .chip-btn {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .chip-btn.active {
+  background: var(--dourado) !important;
+  border-color: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+/* =====================================================
+   🎯 AJUSTES ESPECÍFICOS PARA OS 5 PRINTS ADICIONAIS
+   ===================================================== */
+
+/* 1. CADASTRAR NO ACERVO / ESTOQUE (PRINT 1) */
+[data-theme='dark'] .cadastro-estoque-container,
+[data-theme='dark'] .estoque-form-layout,
+[data-theme='dark'] .passo-box,
+[data-theme='dark'] .info-box,
+[data-theme='dark'] div[style*="background: #f8fafc"],
+[data-theme='dark'] div[style*="background:#f8fafc"],
+[data-theme='dark'] div[style*="backgroundColor: #f8fafc"],
+[data-theme='dark'] div[style*="background: #eff6ff"],
+[data-theme='dark'] div[style*="background: #fdf4ff"] {
+  background: var(--fundo-cinza) !important;
+  background-color: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .header-text h1,
+[data-theme='dark'] .page-title,
+[data-theme='dark'] label[style*="color: #0f172a"],
+[data-theme='dark'] label[style*="color:#0f172a"],
+[data-theme='dark'] strong[style*="color: #0f172a"],
+[data-theme='dark'] strong[style*="color:#0f172a"],
+[data-theme='dark'] h4[style*="color: #475569"],
+[data-theme='dark'] h4[style*="color:#475569"] {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] p[style*="color: #64748b"],
+[data-theme='dark'] span[style*="color: #64748b"],
+[data-theme='dark'] label[style*="color: #64748b"] {
+  color: #cbd5e1 !important;
+}
+
+/* 2. LISTA DE COMPRAS & NOVA SOLICITAÇÃO DE COMPRAS (PRINTS COMPRAS) */
+[data-theme='dark'] .tabela-secao,
+[data-theme='dark'] .compra-card-premium,
+[data-theme='dark'] .icone-titulo,
+[data-theme='dark'] .modal-box-pedido,
+[data-theme='dark'] .modal-header-pedido,
+[data-theme='dark'] .modal-search-box {
+  background: var(--branco) !important;
+  border-color: var(--fundo-cinza) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .custom-table-compras tbody tr {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .custom-table-compras td {
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .nome-produto,
+[data-theme='dark'] .preco-real {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .vinculo-tag {
+  background-color: var(--borda) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .prazo-badge {
+  background-color: var(--fundo-cinza) !important;
+  color: #cbd5e1 !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .btn-ordem,
+[data-theme='dark'] .btn-voltar-simples,
+[data-theme='dark'] .btn-cancelar-premium {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .btn-salvar-premium,
+[data-theme='dark'] .btn-novo-cliente {
+  background: var(--dourado) !important;
+  border-color: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .segment-control,
+[data-theme='dark'] .condition-toggle {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .segment-control button:not(.active),
+[data-theme='dark'] .condition-toggle button:not(.active) {
+  background: var(--branco) !important;
+  color: #9ca3af !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .segment-control button.active,
+[data-theme='dark'] .condition-toggle button.active {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+  border-color: var(--dourado) !important;
+}
+
+/* 2.1. RELATÓRIOS ESTRATÉGICOS E FILTROS DRE */
+[data-theme='dark'] .main-card,
+[data-theme='dark'] .main-card-premium,
+[data-theme='dark'] .kpi-card {
+  background: var(--branco) !important;
+  background-color: var(--branco) !important;
+  border-color: var(--fundo-cinza) !important;
+  color: #f9fafb !important;
+}
+
+[data-theme='dark'] .dre-filter-buttons {
+  background-color: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .dre-filter-buttons button:not(.active) {
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .dre-filter-buttons button.active {
+  background-color: var(--dourado) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2) !important;
+}
+
+/* 2.2. LOGÍSTICA KANBAN */
+[data-theme='dark'] .kanban-col {
+  border-color: var(--fundo-cinza) !important;
+}
+
+[data-theme='dark'] .col-header h3 {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .badge-count {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .view-switcher-log,
+[data-theme='dark'] .kanban-filters {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .view-switcher-log button:not(.ativo),
+[data-theme='dark'] .kanban-filters button:not(.ativo) {
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .view-switcher-log button.ativo,
+[data-theme='dark'] .kanban-filters button.ativo {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+/* 2.3. NOVO CONTRATO */
+[data-theme='dark'] .novo-contrato-layout {
+  background: var(--fundo-principal) !important;
+}
+
+[data-theme='dark'] .form-section-card {
+  background: var(--branco) !important;
+  border-color: var(--fundo-cinza) !important;
+  border-top-color: var(--dourado) !important;
+}
+
+[data-theme='dark'] .btn-import-acao {
+  background: transparent !important;
+  color: var(--dourado) !important;
+  border-color: var(--dourado) !important;
+}
+
+[data-theme='dark'] .btn-import-acao:hover {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .btn-finalizar-tudo {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+/* 2.4. INÍCIO / DASHBOARD */
+[data-theme='dark'] .dash-trial-banner {
+  background: rgba(234, 179, 8, 0.15) !important;
+  color: #facc15 !important;
+  border: 1px solid rgba(234, 179, 8, 0.3) !important;
+}
+
+[data-theme='dark'] .dash-count-pill {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-secundario) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .empty-feed--success {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+[data-theme='dark'] .dash-financial-summary {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .compact-bar-track {
+  background: var(--fundo-cinza) !important;
+}
+
+[data-theme='dark'] .compact-bar-value {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .feed-row-moderno {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .feed-info p {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .stat-card-wide {
+  background: var(--branco) !important;
+  border-color: var(--fundo-cinza) !important;
+}
+
+[data-theme='dark'] .stat-card-wide span {
+  color: var(--texto-secundario) !important;
+}
+
+/* 3. FINANCEIRO - NOVA RECEITA / DESPESA (PRINT 4) */
+[data-theme='dark'] .pag-novo-lancamento,
+[data-theme='dark'] .nl-container {
+  background: var(--fundo-principal) !important;
+}
+
+[data-theme='dark'] .header-nl,
+[data-theme='dark'] .nl-card,
+[data-theme='dark'] .nl-tipo-selector {
+  background: var(--branco) !important;
+  border-color: var(--fundo-cinza) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .nl-tipo-btn {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .nl-tipo-btn.ativo-entrada {
+  background: var(--branco) !important;
+  color: #34d399 !important;
+  border-bottom: 3px solid #34d399 !important;
+}
+
+[data-theme='dark'] .nl-tipo-btn.ativo-saida {
+  background: var(--branco) !important;
+  color: #f87171 !important;
+  border-bottom: 3px solid #f87171 !important;
+}
+
+[data-theme='dark'] .btn-voltar-nl {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+  color: var(--texto-principal) !important;
+}
+
+/* 4. RELATÓRIOS ESTRATÉGICOS (PRINT 5) */
+[data-theme='dark'] .tabs-relatorios-compacto button:not(.active) {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-secundario) !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .filter-btn-group button:not(.active),
+[data-theme='dark'] .tabs-filter-dre button:not(.active) {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-secundario) !important;
+  border: 1px solid var(--borda) !important;
+}
+
+/* 5. AGENDA / CALENDÁRIO MENSAL & LISTA */
+[data-theme='dark'] .calendar-wrapper,
+[data-theme='dark'] .agenda-container,
+[data-theme='dark'] .agenda-main {
+  background: var(--fundo-principal) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .day-cell {
+  background: var(--branco) !important;
+  border: 1px solid var(--fundo-cinza) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .day-cell:hover {
+  border-color: var(--dourado) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme='dark'] .day-cell.empty {
+  background: var(--fundo-cinza) !important;
+  border: 1.5px dashed var(--borda) !important;
+  opacity: 0.5 !important;
+}
+
+[data-theme='dark'] .day-number {
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .day-cell:hover .day-number {
+  background: var(--fundo-cinza) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .day-cell.today {
+  background: rgba(197, 160, 89, 0.15) !important;
+  border: 2px solid var(--dourado) !important;
+}
+
+[data-theme='dark'] .day-cell.today .day-number {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .view-switcher,
+[data-theme='dark'] .view-switcher.secondary {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .view-btn:not(.active) {
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .view-btn.active {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .btn-hoje,
+[data-theme='dark'] .nav-btn,
+[data-theme='dark'] .btn-nav,
+[data-theme='dark'] .btn-nav-mes {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .btn-nav:hover,
+[data-theme='dark'] .btn-nav-mes:hover {
+  background: var(--dourado) !important;
+  border-color: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .vista-vazia {
+  background: var(--branco) !important;
+  border: 1.5px dashed var(--borda) !important;
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .vista-dia-container,
+[data-theme='dark'] .list-view-container {
+  background: var(--fundo-principal) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .list-day-header,
+[data-theme='dark'] .list-day-subheader,
+[data-theme='dark'] .list-month-header {
+  color: var(--dourado) !important;
+}
+
+/* 6. MODAL NOVO COMPROMISSO / DETALHES */
+[data-theme='dark'] .modal-content,
+[data-theme='dark'] .modal-form-content {
+  background: var(--branco) !important;
+  border: 1px solid var(--fundo-cinza) !important;
+  color: var(--texto-principal) !important;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme='dark'] .modal-header {
+  background: transparent !important;
+  background-color: transparent !important;
+  border-bottom-color: var(--fundo-cinza) !important;
+}
+
+[data-theme='dark'] .modal-header h3 {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .form-section {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .form-section label {
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .btn-cancelar,
+[data-theme='dark'] .btn-cancelar-modal,
+[data-theme='dark'] .btn-close-modal {
+  background: var(--fundo-cinza) !important;
+  border: 1px solid var(--borda) !important;
+  color: var(--texto-secundario) !important;
+}
+
+/* 7. PAINEL DE RESUMO DO CLIENTE (NOVO CLIENTE) */
+.painel-resumo-lateral {
+  border: 1.5px solid var(--dourado) !important;
+  box-shadow: 0 4px 15px rgba(197, 160, 89, 0.15) !important;
+}
+
+[data-theme='dark'] .painel-resumo-lateral {
+  background: var(--branco) !important;
+  border: 1.5px solid var(--dourado) !important;
+  color: var(--texto-principal) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme='dark'] .painel-resumo-lateral .resumo-info h4 {
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .painel-resumo-lateral .resumo-info p,
+[data-theme='dark'] .painel-resumo-lateral small {
+  color: #cbd5e1 !important;
+}
+
+[data-theme='dark'] .badge-status.aprovado,
+[data-theme='dark'] .badge-financeiro {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
 }
 
 /* MOBILE REMOVE MENU LATERAL */
@@ -301,6 +1191,85 @@ main,
 
   .content-card,
   .form-widescreen {
-    padding: 16px;
+    padding: 16px !important;
   }
+}
+
+/* =====================================================
+   🎯 REGRAS GLOBAIS DE BOTÕES DE AÇÃO E ELEMENTOS COM COR DINÂMICA
+   ===================================================== */
+.btn-primary,
+.btn-primary-celebre,
+.btn-novo,
+.btn-salvar,
+.btn-salvar-form,
+.btn-salvar-premium,
+.btn-novo-cliente,
+.btn-action,
+.btn-quick-action,
+.btn-header-action,
+.btn-export,
+.btn-export-pdf,
+.btn-export-pdf-clientes,
+.btn-novo-lancamento-unico,
+.btn-dark-blue,
+.btn-adicionar,
+.btn-add,
+.btn-cadastrar,
+.btn-confirmar,
+.btn-salvar-form,
+.action-btn-primary,
+.quick-action-btn,
+.btn-salvar-modal,
+.btn-submit,
+.btn-exportar {
+  background: var(--dourado) !important;
+  border-color: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+.btn-voltar-link {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569 !important;
+  padding: 12px 24px;
+  border-radius: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+[data-theme='dark'] .btn-voltar-link {
+  background: #1f2937 !important;
+  border: 1px solid #374151 !important;
+  color: #cbd5e1 !important;
+}
+
+.view-btn.active,
+.sub-btn.active,
+.view-switcher-btn.active,
+.btn-toggle.active,
+.tabs-relatorios-compacto button.active,
+.relatorio-tab.active,
+.fin-tab.active,
+.view-switcher-log button.ativo,
+.kanban-filters button.ativo,
+.segment-control button.active,
+.condition-toggle button.active,
+.active-pegue,
+.active-deco,
+.sidebar-list li.destak,
+.chip-btn.active,
+.agenda-sidebar .menu-item.highlight.ativo {
+  background: var(--dourado) !important;
+  border-color: var(--dourado) !important;
+  color: #ffffff !important;
+}
+
+.agenda-sidebar .menu-item.highlight.ativo .menu-icon,
+.agenda-sidebar .menu-item.highlight.ativo .menu-label,
+.btn-exportar i {
+  color: #ffffff !important;
 }

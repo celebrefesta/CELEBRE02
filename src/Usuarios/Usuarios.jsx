@@ -151,7 +151,10 @@ const Usuarios = () => {
       const qUser = query(collection(db, "usuarios"), where("email", "==", novoUsuario.email));
       const snapUser = await getDocs(qUser);
       if (!snapUser.empty) {
-        await updateDoc(doc(db, "usuarios", snapUser.docs[0].id), { tenantId: tenantId, role: novoUsuario.cargo || "Funcionário" });
+        const uData = snapUser.docs[0].data();
+        if (uData.role !== 'owner') {
+          await updateDoc(doc(db, "usuarios", snapUser.docs[0].id), { tenantId: tenantId, role: novoUsuario.cargo || "Funcionário" });
+        }
       }
 
       setModalAberto(false); setEditandoId(null); carregarDadosDaConta();
@@ -170,18 +173,34 @@ const Usuarios = () => {
     }
   };
 
-  if (loading) return <div style={{ padding: '50px', textAlign: 'center', color: '#64748b' }}>Verificando permissões...</div>;
+  if (loading) return <div style={{ padding: '50px', textAlign: 'center', color: 'var(--texto-secundario)' }}>Verificando permissões...</div>;
 
   if (!temAcesso) {
     return (
-      <div style={{ padding: '60px', textAlign: 'center', backgroundColor: '#f8fafc', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <div style={{ background: '#fff', padding: '40px', borderRadius: '16px', border: '1px solid #e2e8f0', maxWidth: '500px', boxSizing: 'border-box' }}>
+      <div style={{ padding: '60px', textAlign: 'center', backgroundColor: 'var(--fundo-principal)', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ background: 'var(--branco)', padding: '40px', borderRadius: '16px', border: '1px solid var(--borda)', maxWidth: '500px', boxSizing: 'border-box', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
           <div style={{ fontSize: '48px', marginBottom: '15px' }}>👥</div>
-          <h2 style={{ color: '#0f172a', marginBottom: '15px' }}>Gestão de Equipe Exclusiva</h2>
-          <p style={{ color: '#64748b', lineHeight: '1.6', marginBottom: '25px' }}>
-            Para convidar funcionários e delegar funções, faça um upgrade para o <strong>Premium</strong> ou <strong>Pro</strong>.
+          <h2 style={{ color: 'var(--texto-principal)', marginBottom: '15px', fontWeight: '800' }}>Gestão de Equipe Exclusiva</h2>
+          <p style={{ color: 'var(--texto-secundario)', lineHeight: '1.6', marginBottom: '25px', fontSize: '14px' }}>
+            Para convidar funcionários e delegar funções, faça um upgrade para o <strong style={{ color: 'var(--texto-principal)' }}>Premium</strong> ou <strong style={{ color: 'var(--texto-principal)' }}>Pro</strong>.
           </p>
-          <button onClick={() => navigate('/planos')} className="btn-dark-blue" style={{ width: '100%' }}>Fazer Upgrade Agora</button>
+          <button 
+            onClick={() => navigate('/planos')} 
+            style={{ 
+              width: '100%', 
+              padding: '14px 24px', 
+              background: 'var(--dourado)', 
+              color: '#ffffff', 
+              border: 'none', 
+              borderRadius: '8px', 
+              fontWeight: '800', 
+              fontSize: '14px', 
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)' 
+            }}
+          >
+            Fazer Upgrade Agora
+          </button>
         </div>
       </div>
     );
@@ -203,7 +222,7 @@ const Usuarios = () => {
         
         <div className="acoes-top">
           <button onClick={() => navigate('/monitoramento')} className="btn-monitoramento">
-            <i className="fas fa-desktop" style={{ color: '#c5a059' }}></i> Ver Monitoramento
+            <i className="fas fa-desktop" style={{ color: 'var(--dourado)' }}></i> Ver Monitoramento
           </button>
           
           <button onClick={() => navigate('/asos')} className="btn-aso">
@@ -232,12 +251,12 @@ const Usuarios = () => {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
                   <div style={{ width: '40px', height: '40px', backgroundColor: '#c5a059', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>AD</div>
                   <div>
-                    <strong style={{ color: '#0f172a', display: 'block' }}>Você (Admin)</strong>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>{usuarioLogado.email}</span>
+                    <strong style={{ color: 'var(--texto-principal)', display: 'block' }}>Você (Admin)</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--texto-secundario)' }}>{usuarioLogado.email}</span>
                   </div>
                 </div>
               </td>
-              <td style={{ fontSize: '13px', color: '#334155', fontWeight: 'bold' }}>Administração Geral</td>
+              <td style={{ fontSize: '13px', color: 'var(--texto-principal)', fontWeight: 'bold' }}>Administração Geral</td>
               <td>
                   <div className="permissoes-container">
                       <span className="perm-badge financeiro">Acesso Total + Financeiro</span>
@@ -254,17 +273,17 @@ const Usuarios = () => {
               <tr key={membro.id} className="table-row-hover">
                 <td>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                    <div style={{ width: '40px', height: '40px', backgroundColor: '#e2e8f0', color: '#475569', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                    <div style={{ width: '40px', height: '40px', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
                       {membro.nome.charAt(0).toUpperCase()}
                     </div>
                     <div>
-                      <strong style={{ color: '#0f172a', display: 'block' }}>{membro.nome}</strong>
-                      <span style={{ fontSize: '11px', color: '#64748b' }}>{membro.email}</span>
+                      <strong style={{ color: 'var(--texto-principal)', display: 'block' }}>{membro.nome}</strong>
+                      <span style={{ fontSize: '11px', color: 'var(--texto-secundario)' }}>{membro.email}</span>
                     </div>
                   </div>
                 </td>
                 
-                <td style={{ fontSize: '13px', color: '#475569' }}>
+                <td style={{ fontSize: '13px', color: 'var(--texto-secundario)' }}>
                     {membro.cargo || "Não definido"}
                     {membro.monitorarAtividade && (
                         <span style={{ display: 'block', fontSize: '10px', color: '#10b981', marginTop: '4px' }}>
@@ -283,9 +302,9 @@ const Usuarios = () => {
                         {membro.permissoes?.logistica && <span className="perm-badge">Logística</span>}
                         {membro.permissoes?.contratos && <span className="perm-badge">Contratos</span>}
                         {membro.permissoes?.catalogo && <span className="perm-badge">Catálogo</span>}
-                        {membro.permissoes?.acessoFinanceiro && <span className="perm-badge financeiro">💰 Financeiro</span>}
-                        {membro.permissoes?.moodboard && isPro && <span className="perm-badge moodboard">✨ Moodboard</span>}
-                        {semAcesso && <span style={{ color: '#ef4444', fontSize: '11px' }}>Nenhum acesso</span>}
+                        {membro.permissoes?.acessoFinanceiro && <span className="perm-badge financeiro">Financeiro</span>}
+                        {membro.permissoes?.moodboard && isPro && <span className="perm-badge moodboard">Moodboard</span>}
+                        {semAcesso && <span style={{ fontSize: '12px', color: 'var(--texto-secundario)', fontStyle: 'italic' }}>Sem módulos ativos</span>}
                     </div>
                 </td>
                 
@@ -307,10 +326,10 @@ const Usuarios = () => {
             
             <div className="modal-header">
               <div>
-                <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>{editandoId ? 'Editar Funcionário' : 'Ficha do Funcionário'}</h3>
-                <p style={{ margin: '4px 0 0', fontSize: '12px', color: '#64748b' }}>Cadastre os dados, jornada de trabalho e defina o que ele pode acessar.</p>
+                <h3 style={{ margin: 0, color: 'var(--texto-principal)', fontSize: '18px' }}>{editandoId ? 'Editar Funcionário' : 'Ficha do Funcionário'}</h3>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--texto-secundario)' }}>Cadastre os dados, jornada de trabalho e defina o que ele pode acessar.</p>
               </div>
-              <button onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: '#94a3b8' }}>×</button>
+              <button onClick={() => setModalAberto(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--texto-secundario)' }}>×</button>
             </div>
 
             <div className="modal-body">
@@ -321,7 +340,7 @@ const Usuarios = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         
                         <div className="modal-section">
-                            <h4 className="modal-section-title"><i className="fas fa-id-card" style={{ color: '#c5a059' }}></i> Dados de Acesso</h4>
+                            <h4 className="modal-section-title"><i className="fas fa-id-card" style={{ color: 'var(--dourado)' }}></i> Dados de Acesso</h4>
                             <div style={{ marginBottom: '15px' }}>
                                 <label className="input-label">NOME COMPLETO *</label>
                                 <input required type="text" placeholder="Ex: Thiago Vitoriano" value={novoUsuario.nome} onChange={handleNomeChange} className="input-field" />
@@ -388,7 +407,7 @@ const Usuarios = () => {
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
                         
                         <div className="modal-section">
-                            <h4 className="modal-section-title"><i className="fas fa-briefcase" style={{ color: '#c5a059' }}></i> RH & Atividades</h4>
+                            <h4 className="modal-section-title"><i className="fas fa-briefcase" style={{ color: 'var(--dourado)' }}></i> RH & Atividades</h4>
                             <div style={{ marginBottom: '15px' }}>
                                 <label className="input-label">CARGO / FUNÇÃO</label>
                                 <select value={novoUsuario.cargo} onChange={e => setNovoUsuario({...novoUsuario, cargo: e.target.value})} className="input-field">
@@ -398,43 +417,43 @@ const Usuarios = () => {
                                     <option value="Gerente">Gerente</option>
                                 </select>
                             </div>
-                            <label className="checkbox-card" style={{ background: novoUsuario.monitorarAtividade ? '#f0fdf4' : '#f8fafc', borderColor: novoUsuario.monitorarAtividade ? '#bbf7d0' : '#e2e8f0' }}>
+                            <label className="checkbox-card" style={{ background: novoUsuario.monitorarAtividade ? 'rgba(16, 185, 129, 0.15)' : 'var(--fundo-cinza)', borderColor: novoUsuario.monitorarAtividade ? 'rgba(16, 185, 129, 0.3)' : 'var(--borda)' }}>
                                 <input type="checkbox" checked={novoUsuario.monitorarAtividade} onChange={e => setNovoUsuario({...novoUsuario, monitorarAtividade: e.target.checked})} style={{ width: '18px', height: '18px', accentColor: '#10b981', marginTop: '2px', cursor: 'pointer' }} />
                                 <div>
-                                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '13px' }}>Monitoramento de Atividades</strong>
-                                    <span style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: '2px' }}>Registrará automaticamente as ações feitas.</span>
+                                    <strong style={{ color: 'var(--texto-principal)', display: 'block', fontSize: '13px' }}>Monitoramento de Atividades</strong>
+                                    <span style={{ color: 'var(--texto-secundario)', fontSize: '11px', display: 'block', marginTop: '2px' }}>Registrará automaticamente as ações feitas.</span>
                                 </div>
                             </label>
                         </div>
 
                         <div className="modal-section">
-                            <h4 className="modal-section-title"><i className="fas fa-lock" style={{ color: '#c5a059' }}></i> Permissões de Acesso</h4>
+                            <h4 className="modal-section-title"><i className="fas fa-lock" style={{ color: 'var(--dourado)' }}></i> Permissões de Acesso</h4>
                             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                 {['agenda', 'clientes', 'locacoes', 'estoque', 'compras', 'logistica', 'contratos', 'catalogo'].map(mod => (
                                     <label key={mod} className={`checkbox-module ${novoUsuario.permissoes[mod] ? 'active' : ''}`}>
-                                        <input type="checkbox" checked={novoUsuario.permissoes[mod]} onChange={() => handleCheckbox(mod)} style={{ width: '16px', height: '16px', accentColor: '#0f172a' }} />
-                                        <span style={{ fontSize: '12px', color: '#0f172a', fontWeight: novoUsuario.permissoes[mod] ? '700' : '500', textTransform: 'capitalize' }}>{mod}</span>
+                                        <input type="checkbox" checked={novoUsuario.permissoes[mod]} onChange={() => handleCheckbox(mod)} style={{ width: '16px', height: '16px', accentColor: 'var(--dourado)' }} />
+                                        <span style={{ fontSize: '12px', color: 'var(--texto-principal)', fontWeight: novoUsuario.permissoes[mod] ? '700' : '500', textTransform: 'capitalize' }}>{mod}</span>
                                     </label>
                                 ))}
                             </div>
                         </div>
 
                         <div className="modal-section">
-                            <h4 className="modal-section-title"><i className="fas fa-star" style={{ color: '#c5a059' }}></i> Permissões Especiais</h4>
+                            <h4 className="modal-section-title"><i className="fas fa-star" style={{ color: 'var(--dourado)' }}></i> Permissões Especiais</h4>
                             <label className="checkbox-card" style={{ marginBottom: '10px' }}>
-                                <input type="checkbox" checked={novoUsuario.permissoes.acessoFinanceiro} onChange={() => handleCheckbox('acessoFinanceiro')} style={{ width: '18px', height: '18px', accentColor: '#0f172a', marginTop: '2px', cursor: 'pointer' }} />
+                                <input type="checkbox" checked={novoUsuario.permissoes.acessoFinanceiro} onChange={() => handleCheckbox('acessoFinanceiro')} style={{ width: '18px', height: '18px', accentColor: 'var(--dourado)', marginTop: '2px', cursor: 'pointer' }} />
                                 <div>
-                                    <strong style={{ color: '#0f172a', display: 'block', fontSize: '13px' }}>Acesso ao Financeiro</strong>
-                                    <span style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: '2px' }}>Ver fluxo de caixa, pagamentos e receitas.</span>
+                                    <strong style={{ color: 'var(--texto-principal)', display: 'block', fontSize: '13px' }}>Acesso ao Financeiro</strong>
+                                    <span style={{ color: 'var(--texto-secundario)', fontSize: '11px', display: 'block', marginTop: '2px' }}>Ver fluxo de caixa, pagamentos e receitas.</span>
                                 </div>
                             </label>
 
                             {isPro && (
                                 <label className="checkbox-card">
-                                    <input type="checkbox" checked={novoUsuario.permissoes.moodboard} onChange={() => handleCheckbox('moodboard')} style={{ width: '18px', height: '18px', accentColor: '#0f172a', marginTop: '2px', cursor: 'pointer' }} />
+                                    <input type="checkbox" checked={novoUsuario.permissoes.moodboard} onChange={() => handleCheckbox('moodboard')} style={{ width: '18px', height: '18px', accentColor: 'var(--dourado)', marginTop: '2px', cursor: 'pointer' }} />
                                     <div>
-                                        <strong style={{ color: '#0f172a', display: 'block', fontSize: '13px' }}>Acesso ao Moodboard</strong>
-                                        <span style={{ color: '#64748b', fontSize: '11px', display: 'block', marginTop: '2px' }}>Criar projetos em 2D usando o acervo.</span>
+                                        <strong style={{ color: 'var(--texto-principal)', display: 'block', fontSize: '13px' }}>Acesso ao Moodboard</strong>
+                                        <span style={{ color: 'var(--texto-secundario)', fontSize: '11px', display: 'block', marginTop: '2px' }}>Criar projetos em 2D usando o acervo.</span>
                                     </div>
                                 </label>
                             )}

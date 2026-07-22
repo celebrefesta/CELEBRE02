@@ -5,6 +5,44 @@ import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'fire
 import { db } from '../firebaseConfig';
 import "./Navbar.css";
 
+const parseFirestoreDate = (dateVal) => {
+  if (!dateVal) return null;
+  if (dateVal.toDate) {
+      try { return dateVal.toDate(); } catch (e) {}
+  }
+  if (dateVal.seconds) {
+      return new Date(dateVal.seconds * 1000);
+  }
+  
+  const str = String(dateVal).trim();
+  
+  // 1. Formato ISO ou AAAA-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+      const ano = parseInt(isoMatch[1], 10);
+      const mes = parseInt(isoMatch[2], 10) - 1;
+      const dia = parseInt(isoMatch[3], 10);
+      return new Date(ano, mes, dia);
+  }
+
+  // 2. Formato brasileiro DD/MM/AAAA
+  const brMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (brMatch) {
+      const dia = parseInt(brMatch[1], 10);
+      const mes = parseInt(brMatch[2], 10) - 1;
+      const ano = parseInt(brMatch[3], 10);
+      return new Date(ano, mes, dia);
+  }
+  
+  let parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+      parsed.setHours(0,0,0,0);
+      return parsed;
+  }
+  
+  return null;
+};
+
 const Navbar = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [permissoesAtivas, setPermissoesAtivas] = useState(null); 
@@ -19,7 +57,8 @@ const Navbar = () => {
   });
 
   const auth = getAuth();
-  const usuarioLogado = auth.currentUser;
+  const [usuarioLogado, setUsuarioLogado] = useState(auth.currentUser);
+  const [nomeUsuario, setNomeUsuario] = useState('');
   
   const emailAdmin = "celebrefesta25@gmail.com";
   const isSuperAdmin = usuarioLogado?.email === emailAdmin;
@@ -37,46 +76,113 @@ const Navbar = () => {
   useEffect(() => {
       let unsubSnapshot = null;
 
-      const unsubscribeAuth = onAuthStateChanged(auth, async (user) => {
-          if (user) {
-              try {
+      const unsubscribe = onAuthStateChanged(auth, async (user) => {
+          setUsuarioLogado(user);
+
+          if (!user) {
+              setAcesso({ carregando: false, testeAtivo: false, assinaturaAtiva: false, beneficios: [], congelado: false });
+              return;
+          }
+
+          if (user.email === "celebrefesta25@gmail.com") {
+              setAcesso({ carregando: false, testeAtivo: true, assinaturaAtiva: true, beneficios: [], congelado: false });
+              setIsDonoDaConta(true);
+              setNomeUsuario("Super Admin");
+              return;
+          }
+
+          try {
+              let idParaBusca = user.uid;
+              let isFuncionarioReal = false;
+
+              const ownDocSnap = await getDoc(doc(db, "usuarios", user.uid));
+              
+              if (ownDocSnap.exists()) {
+                  const userData = ownDocSnap.data();
+                  if (userData.role && userData.role !== 'owner' && userData.tenantId) {
+                      idParaBusca = userData.tenantId;
+                      isFuncionarioReal = true;
+                      localStorage.setItem('tenantId', idParaBusca);
+                      localStorage.setItem('userRole', userData.role);
+
+                      const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+                      const snapFunc = await getDocs(qFunc);
+                      if (!snapFunc.empty) {
+                          const funcDoc = snapFunc.docs[0];
+                          const dadosF = funcDoc.data();
+                          setPermissoesAtivas(dadosF.permissoes || dadosF);
+                          unsubSnapshot = onSnapshot(doc(db, "equipe", funcDoc.id), (docSnap) => {
+                              if (docSnap.exists()) {
+                                  const d = docSnap.data();
+                                  setPermissoesAtivas(d.permissoes || d);
+                              }
+                          });
+                      }
+                  } else {
+                      idParaBusca = user.uid;
+                      localStorage.setItem('tenantId', user.uid);
+                  }
+              } else {
                   const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
                   const snapFunc = await getDocs(qFunc);
                   
-                  const isFuncionarioReal = !snapFunc.empty;
-                  
-                  setIsDonoDaConta(!isFuncionarioReal);
-
-                  let idParaBusca = user.uid;
-
-                  if (isFuncionarioReal) {
-                      const funcDoc = snapFunc.docs[0]; 
+                  if (!snapFunc.empty && snapFunc.docs[0].data().empresaId) {
+                      isFuncionarioReal = true;
+                      const funcDoc = snapFunc.docs[0];
                       const dadosFunc = funcDoc.data();
+                      idParaBusca = dadosFunc.empresaId;
+                      localStorage.setItem('tenantId', idParaBusca);
+                      localStorage.setItem('userRole', dadosFunc.cargo || 'Funcionário');
+                      setPermissoesAtivas(dadosFunc.permissoes || dadosFunc);
                       
                       unsubSnapshot = onSnapshot(doc(db, "equipe", funcDoc.id), (docSnap) => {
-                          if (docSnap.exists()) setPermissoesAtivas(docSnap.data());
+                          if (docSnap.exists()) {
+                              const d = docSnap.data();
+                              setPermissoesAtivas(d.permissoes || d);
+                          }
                       });
-
-                      if (dadosFunc.empresaId) {
-                          idParaBusca = dadosFunc.empresaId;
-                          localStorage.setItem('tenantId', idParaBusca); 
-                      }
-                  } else {
-                      localStorage.setItem('userRole', 'admin');
-                      localStorage.setItem('tenantId', user.uid);
-                      idParaBusca = user.uid;
                   }
+              }
 
-                  const userSnap = await getDoc(doc(db, "usuarios", idParaBusca));
+              setIsDonoDaConta(!isFuncionarioReal);
 
-                  if (userSnap.exists()) {
-                      const dados = userSnap.data();
-                      let testeAtivo = false;
-                      if (dados.dataFimTeste) {
-                          testeAtivo = new Date() <= new Date(dados.dataFimTeste);
+              const userSnap = await getDoc(doc(db, "usuarios", idParaBusca));
+
+              if (userSnap.exists()) {
+                  const dados = userSnap.data();
+                  
+                  const assinaturaAtiva = 
+                      dados.assinaturaAtiva === true || 
+                      dados.statusAssinatura === 'ativa' || 
+                      dados.plano === 'pago' || 
+                      dados.statusPagamentoVulso === 'pago';
+
+                  // LÓGICA SIMPLES: 7 dias a partir do cadastro da empresa
+                  let testeAtivo = false;
+                  if (!assinaturaAtiva) {
+                      const rawDateCompany = dados.dataCadastro 
+                          || dados.criadoEm 
+                          || dados.createdAt 
+                          || dados.dataInicioTeste 
+                          || (!isFuncionarioReal ? user.metadata?.creationTime : null);
+
+                      const dataCadastroDate = parseFirestoreDate(rawDateCompany);
+                          
+                          if (dataCadastroDate) {
+                              const cadastroMeia = new Date(dataCadastroDate);
+                              cadastroMeia.setHours(0,0,0,0);
+                              
+                              const dataFimTeste = new Date(cadastroMeia);
+                              dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+
+                              const hojeNormalizado = new Date();
+                              hojeNormalizado.setHours(0,0,0,0);
+
+                              testeAtivo = hojeNormalizado < dataFimTeste;
+                          }
+                      } else {
+                          testeAtivo = true;
                       }
-                      
-                      const assinaturaAtiva = dados.assinaturaAtiva === true || dados.plano === 'pago' || dados.statusPagamentoVulso === 'pago';
                       
                       let beneficios = [];
                       if (dados.planoId && assinaturaAtiva) {
@@ -89,7 +195,7 @@ const Navbar = () => {
                           testeAtivo,
                           assinaturaAtiva,
                           beneficios,
-                          congelado: !testeAtivo && !assinaturaAtiva 
+                          congelado: !testeAtivo && !assinaturaAtiva
                       });
                   } else {
                       setAcesso(prev => ({...prev, carregando: false}));
@@ -98,18 +204,19 @@ const Navbar = () => {
                   console.error("Erro ao carregar permissões do menu:", error);
                   setAcesso(prev => ({...prev, carregando: false}));
               }
-          }
       });
 
       return () => {
-          unsubscribeAuth();
+          unsubscribe();
           if (unsubSnapshot) unsubSnapshot(); 
       };
   }, [auth]);
 
   // 🛡️ REGRA 1: A EMPRESA TEM ESSE RECURSO NO PLANO DELA?
-  const verificarPermissaoPlano = (recursoExigido) => {
+  const verificarPermissaoPlano = (recursoExigido, label) => {
       if (isSuperAdmin) return true;
+      // Início e Assinatura nunca ficam bloqueados para a empresa
+      if (label === 'Início' || label === 'Assinatura') return true;
       if (acesso.congelado) return false;
       if (acesso.testeAtivo) return true; 
       if (!recursoExigido) return true; 
@@ -154,22 +261,32 @@ const Navbar = () => {
   };
 
   const ItemMenuProtegido = ({ to, icon, label, recurso }) => {
-      
       const funcPodeVer = verificarAcessoFuncionario(label);
-      const empresaPagou = verificarPermissaoPlano(recurso);
+      const empresaPagou = verificarPermissaoPlano(recurso, label);
 
       // 🔥 LÓGICA DE CORES: Se NÃO tem permissão ou a empresa NÃO pagou, mostra o cadeado!
       if (!funcPodeVer || !empresaPagou) {
-          
-          // Se a empresa não pagou, o bloqueio é do plano (Vermelho). Caso contrário, é da gestão (Branco).
           const corCadeado = !empresaPagou ? '#ef4444' : '#ffffff';
 
           const mensagemBloqueio = !empresaPagou 
-              ? "A sua empresa precisa de um plano superior para acessar esta área."
+              ? "A sua empresa precisa de um plano ativo para acessar esta área."
               : "Você não tem permissão para acessar esta área. Solicite liberação ao administrador.";
 
           return (
-              <div className="menu-item locked" title={mensagemBloqueio}>
+              <div 
+                  className="menu-item locked" 
+                  title={mensagemBloqueio}
+                  onClick={() => {
+                      closeMenu();
+                      if (!empresaPagou) {
+                          alert("⏳ Período de testes expirado! Escolha um plano para liberar o acesso a todas as ferramentas do Celebre.");
+                          navigate('/upgrade');
+                      } else {
+                          alert("🔒 Seu perfil de colaborador não possui acesso a esta área. Solicite ao administrador da empresa para liberar em Equipe.");
+                      }
+                  }}
+                  style={{ cursor: 'pointer' }}
+              >
                   <div style={{ display: 'flex', alignItems: 'center' }}>
                       <i className={icon}></i> <span style={{ opacity: 0.6 }}>{label}</span>
                   </div>
@@ -231,13 +348,7 @@ const Navbar = () => {
               recurso="Catalago Digital" 
           />
 
-          {!isSuperAdmin ? (
-            <>
-              {/* O Funcionário não vê a aba de Assinatura, o admin vê */}
-              <div className="sidebar-divider"></div>
-              <ItemMenuProtegido to="/planos" icon="fas fa-star" label="Assinatura" />
-            </>
-          ) : (
+          {isSuperAdmin && (
             <>
               <div className="sidebar-divider" style={{ borderTop: '2px solid #c5a059' }}></div>
               <p style={{ color: '#c5a059', fontSize: '11px', marginLeft: '20px', fontWeight: 'bold' }}>PAINEL MASTER</p>

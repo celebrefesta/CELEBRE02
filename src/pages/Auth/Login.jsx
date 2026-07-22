@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
-import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
 import './Auth.css'; 
 
@@ -15,34 +15,90 @@ const Login = () => {
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
 
+  const handleEmailChange = (e) => {
+    setEmail(e.target.value);
+    if (erro) setErro('');
+  };
+
+  const handleSenhaChange = (e) => {
+    setSenha(e.target.value);
+    if (erro) setErro('');
+  };
+
   // 🔥 A MÁGICA ACONTECE AQUI: LÓGICA INTELIGENTE DE TENANT (EMPRESA)
   const finalizarLogin = async (user) => {
-    // Busca todos os dados do usuário no banco de dados
-    const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-    
-    if (userDoc.exists()) {
-      const userData = userDoc.data();
+    try {
+      // Busca todos os dados do usuário no banco de dados
+      const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
       
-      // Verifica se ele tem um tenantId associado (ou seja, se é funcionário). 
-      // Se não tiver, assume que ele é o dono e o tenantId é o próprio uid dele.
-      const tenantIdDaEmpresa = userData.tenantId || user.uid;
-      
-      localStorage.setItem('tenantId', tenantIdDaEmpresa);
-      localStorage.setItem('funcName', userData.nomeExibicao || userData.nomeCompleto);
-      localStorage.setItem('userRole', userData.role || 'owner'); // Salva o cargo (owner, admin, etc.)
-      
-    } else {
-      // Fallback de segurança caso o documento não exista
+      if (userDoc.exists()) {
+        let userData = userDoc.data();
+        
+        // RECUPERAÇÃO AUTOMÁTICA SE THIAGO FOI SEQUESTRADO COMO FUNCIONÁRIO
+        if (user.email === 'thidovi12@gmail.com' && (userData.role !== 'owner' || userData.tenantId !== user.uid)) {
+            await updateDoc(doc(db, 'usuarios', user.uid), {
+                role: 'owner',
+                tenantId: user.uid
+            });
+            userData.role = 'owner';
+            userData.tenantId = user.uid;
+        }
+
+        const tenantIdDaEmpresa = userData.tenantId || user.uid;
+        
+        localStorage.setItem('tenantId', tenantIdDaEmpresa);
+        localStorage.setItem('funcName', userData.nomeExibicao || userData.nomeCompleto || user.displayName || 'Usuário');
+        localStorage.setItem('userRole', userData.role || 'owner');
+      } else {
+        // Se o documento no /usuarios não existe, vamos checar se ele está cadastrado na equipe
+        const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+        const snapFunc = await getDocs(qFunc);
+        
+        if (!snapFunc.empty) {
+          const dadosFunc = snapFunc.docs[0].data();
+          const empresaId = dadosFunc.empresaId;
+          
+          // Criamos o documento /usuarios/{user.uid} para o funcionário ter permissões no firestore rules!
+          await setDoc(doc(db, "usuarios", user.uid), {
+            email: user.email,
+            nomeCompleto: dadosFunc.nome || user.displayName || 'Funcionário',
+            role: dadosFunc.cargo || 'Funcionário',
+            tenantId: empresaId,
+            criadoEm: new Date().toISOString()
+          });
+          
+          localStorage.setItem('tenantId', empresaId);
+          localStorage.setItem('funcName', dadosFunc.nome || 'Funcionário');
+          localStorage.setItem('userRole', dadosFunc.cargo || 'Funcionário');
+        } else {
+          // Não é funcionário e nem dono pré-existente (ex: novo cadastro via Google ou email novo)
+          // Criamos o perfil básico de owner
+          await setDoc(doc(db, "usuarios", user.uid), {
+            email: user.email,
+            nomeCompleto: user.displayName || user.email || 'Usuário',
+            role: 'owner',
+            tenantId: user.uid,
+            dataCadastro: new Date().toISOString(),
+            assinaturaAtiva: false
+          });
+          
+          localStorage.setItem('tenantId', user.uid);
+          localStorage.setItem('funcName', user.displayName || user.email || 'Usuário');
+          localStorage.setItem('userRole', 'owner');
+        }
+      }
+    } catch (errUserDoc) {
+      console.error("Erro ao carregar dados do usuário no Firestore:", errUserDoc);
       localStorage.setItem('tenantId', user.uid);
-      localStorage.setItem('funcName', user.displayName || 'Usuário');
+      localStorage.setItem('funcName', user.displayName || user.email || 'Usuário');
       localStorage.setItem('userRole', 'owner');
     }
     
-    // 🔥 REGISTRAR LOG DE LOGIN
+    // 🔥 REGISTRAR LOG DE LOGIN (Assíncrono sem await para não travar o fluxo de login nem o botão)
     try {
       const tenantId = localStorage.getItem('tenantId') || user.uid;
       const nomeEquipe = localStorage.getItem('funcName') || user.displayName || user.email || 'Usuário';
-      await addDoc(collection(db, "logs_atividades"), {
+      addDoc(collection(db, "logs_atividades"), {
         empresaId: tenantId,
         userId: tenantId,
         funcionarioId: user.uid,
@@ -52,9 +108,9 @@ const Login = () => {
         detalhes: "Iniciou sessão no sistema.",
         dataHora: new Date().toISOString(),
         criadoEm: serverTimestamp()
-      });
+      }).catch(logErr => console.error("Erro ao gravar log de login:", logErr));
     } catch (logErr) {
-      console.error("Erro ao gravar log de login:", logErr);
+      console.error("Erro ao tentar gravar log de login:", logErr);
     }
 
     navigate('/dashboard');
@@ -66,14 +122,21 @@ const Login = () => {
     setLoading(true);
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, senha);
+      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), senha);
       await finalizarLogin(userCredential.user);
     } catch (error) {
       console.error("Erro no login:", error);
-      if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+      const code = error.code || '';
+      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
         setErro('E-mail ou senha incorretos.');
+      } else if (code === 'auth/invalid-email') {
+        setErro('Formato de e-mail inválido.');
+      } else if (code === 'auth/too-many-requests') {
+        setErro('Muitas tentativas sem sucesso. Tente novamente em alguns instantes.');
+      } else if (code === 'auth/user-disabled') {
+        setErro('Esta conta de usuário foi desativada.');
       } else {
-        setErro('Erro ao entrar. Tente novamente.');
+        setErro('Erro ao entrar. Verifique seus dados e tente novamente.');
       }
     } finally {
       setLoading(false);
@@ -106,7 +169,7 @@ const Login = () => {
           email: user.email,
           dataCadastro: dataAtual.toISOString(),
           dataFimTeste: dataFimTeste.toISOString(), 
-          role: 'owner', // Quem cria via Google e não existe no banco, entra como dono da própria empresa
+          role: 'owner',
           planoId: 'plano_basico' 
         });
 
@@ -122,7 +185,11 @@ const Login = () => {
 
     } catch (error) {
       console.error("Erro no login com Google:", error);
-      setErro('Erro ao entrar com o Google.');
+      if (error.code === 'auth/popup-closed-by-user') {
+        setErro('Login com o Google cancelado.');
+      } else {
+        setErro('Erro ao entrar com o Google.');
+      }
     } finally {
       setLoading(false);
     }
@@ -151,7 +218,7 @@ const Login = () => {
                 type="email" 
                 placeholder="nome@exemplo.com" 
                 value={email} 
-                onChange={(e) => setEmail(e.target.value)} 
+                onChange={handleEmailChange} 
                 required 
               />
             </div>
@@ -163,7 +230,7 @@ const Login = () => {
                       type={mostrarSenha ? "text" : "password"} 
                       placeholder="••••••••" 
                       value={senha} 
-                      onChange={(e) => setSenha(e.target.value)} 
+                      onChange={handleSenhaChange} 
                       required 
                   />
                   <button 

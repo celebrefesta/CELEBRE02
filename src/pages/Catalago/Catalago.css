@@ -106,10 +106,9 @@
   margin-bottom: 2px;
 }
 
-.sidebar-list li:hover { background: #f1f5f9; }
-.sidebar-list li.active { background: #fdfbf7; color: #c5a059; font-weight: bold; border-left: 2px solid #c5a059;}
-.sidebar-list li.destak { background: #0f172a; color: white; text-align: center; margin-bottom: 10px; font-weight: bold; }
-.sidebar-list li.destak:hover { background: #1e293b; }
+.sidebar-list li.active { background: #fdfbf7; color: var(--dourado); font-weight: bold; border-left: 2px solid var(--dourado);}
+.sidebar-list li.destak { background: var(--dourado) !important; color: white !important; text-align: center; margin-bottom: 10px; font-weight: bold; }
+.sidebar-list li.destak:hover { filter: brightness(1.1); }
 
 .sidebar-divider { height: 1px; background: #e2e8f0; margin: 15px 0; }
 

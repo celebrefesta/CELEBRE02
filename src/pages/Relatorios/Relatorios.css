@@ -66,10 +66,10 @@
 
 .tabs-relatorios-compacto button:hover { border-color: #cbd5e1; transform: translateY(-1px);}
 .tabs-relatorios-compacto button.active {
-  background: #0f172a; 
-  color: white; 
-  border-color: #0f172a;
-  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+  background: var(--dourado) !important; 
+  color: white !important; 
+  border-color: var(--dourado) !important;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
 }
 
 .relatorio-content { margin-top: 10px; width: 100%; }
@@ -78,7 +78,15 @@
    3. ESTILOS INTERNOS: CARDS E TABELAS (TAB FINANCEIRO E OUTRAS)
 ========================================= */
 
-/* 🔥 CARDS KPI DESKTOP (AGORA MAIS COMPACTOS E DISCRETOS) 🔥 */
+/* 🔥 CARDS PRINCIPAIS E KPI DESKTOP 🔥 */
+.main-card {
+  background: var(--branco);
+  border: 1px solid var(--borda);
+  border-radius: 12px;
+  padding: 25px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+}
+
 .kpi-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -113,7 +121,8 @@
   justify-content: space-between; 
   align-items: flex-end; 
   flex-wrap: wrap; 
-  gap: 15px;
+  gap: 15px; 
+  margin-bottom: 20px; 
 }
 
 .dre-actions-group {
@@ -146,14 +155,16 @@
 }
 
 .dre-filter-buttons button:hover { color: #0f172a; }
-.dre-filter-buttons button.active { background-color: white; color: #0f172a; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
-.dre-filter-buttons button.active.btn-verde { color: #10b981; }
-.dre-filter-buttons button.active.btn-vermelho { color: #ef4444; }
+.dre-filter-buttons button.active { 
+  background-color: var(--dourado) !important; 
+  color: #ffffff !important; 
+  box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important; 
+}
 
-/* 🔥 O BOTÃO DE PDF VOLTOU PRO LADO NEGRO DA FORÇA 🔥 */
+/* 🔥 O BOTÃO DE PDF NA COR DA APARÊNCIA 🔥 */
 .btn-export-pdf {
-  background-color: #0f172a; 
-  color: white;
+  background-color: var(--dourado) !important; 
+  color: white !important;
   border: none;
   padding: 10px 20px; /* Mais delicado que o blocão original */
   border-radius: 8px;

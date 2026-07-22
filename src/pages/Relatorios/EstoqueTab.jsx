@@ -346,15 +346,15 @@ const EstoqueTab = () => {
       </div>
 
       <div className="kpi-grid" style={{ marginTop: '20px' }}>
-        <div className="kpi-card" style={{ borderLeft: '4px solid #c5a059' }}>
+        <div className="kpi-card" style={{ borderLeft: '4px solid var(--dourado)' }}>
           <span>CUSTO TOTAL INVESTIDO</span>
-          <h2 style={{ color: '#0f172a' }}>{formatarMoeda(financeiroAcervo.totalInvestido)}</h2>
-          <small style={{ color: '#b45309', background: '#fffbeb', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', width: 'max-content' }}>Soma do valor de compra das peças</small>
+          <h2 style={{ color: 'var(--texto-principal)' }}>{formatarMoeda(financeiroAcervo.totalInvestido)}</h2>
+          <small style={{ color: 'var(--dourado)', background: 'rgba(197, 160, 89, 0.15)', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', width: 'max-content' }}>Soma do valor de compra das peças</small>
         </div>
         <div className="kpi-card" style={{ borderLeft: '4px solid #3b82f6' }}>
           <span>COMPRAS NESTE MÊS</span>
-          <h2 style={{ color: '#0f172a' }}>{formatarMoeda(financeiroAcervo.totalEsteMes)}</h2>
-          <small style={{ color: '#1d4ed8', background: '#eff6ff', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', width: 'max-content' }}>Cadastros de acervo nos últimos 30 dias</small>
+          <h2 style={{ color: 'var(--texto-principal)' }}>{formatarMoeda(financeiroAcervo.totalEsteMes)}</h2>
+          <small style={{ color: '#3b82f6', background: 'rgba(59, 130, 246, 0.15)', padding: '4px 8px', borderRadius: '4px', fontWeight: 'bold', width: 'max-content' }}>Cadastros de acervo nos últimos 30 dias</small>
         </div>
       </div>
 
@@ -362,17 +362,17 @@ const EstoqueTab = () => {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', marginTop: '20px', marginBottom: '20px' }}>
          <div className="main-card-premium">
             <div className="card-header-flex"><h3>💰 Onde está o seu dinheiro?</h3></div>
-            <p style={{fontSize: '11px', color: '#64748b', marginBottom: '20px', marginTop: '-10px'}}>Acervo ordenado por volume de investimento.</p>
+            <p style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '20px', marginTop: '-10px'}}>Acervo ordenado por volume de investimento.</p>
             
             {financeiroAcervo.gastosCategoria.length === 0 ?
-              <p style={{color: '#94a3b8', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
+              <p style={{color: 'var(--texto-secundario)', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
               financeiroAcervo.gastosCategoria.map((cat, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: '15px', gap: '15px' }}>
-                   <div style={{ width: '100px', fontSize: '12px', fontWeight: 'bold', color: '#475569', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.nome}</div>
-                   <div style={{ flex: 1, height: '10px', background: '#f1f5f9', borderRadius: '10px', position: 'relative' }}>
-                      <div style={{ width: `${(cat.valor/maxCatFinanceiro)*100}%`, height: '100%', background: '#c5a059', borderRadius: '10px' }}></div>
+                   <div style={{ width: '100px', fontSize: '12px', fontWeight: 'bold', color: 'var(--texto-secundario)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{cat.nome}</div>
+                   <div style={{ flex: 1, height: '10px', background: 'var(--fundo-cinza)', borderRadius: '10px', position: 'relative' }}>
+                      <div style={{ width: `${(cat.valor/maxCatFinanceiro)*100}%`, height: '100%', background: 'var(--dourado)', borderRadius: '10px' }}></div>
                    </div>
-                   <div style={{ fontSize: '13px', fontWeight: '800', width: '90px', textAlign: 'right', color: '#0f172a' }}>{formatarMoeda(cat.valor)}</div>
+                   <div style={{ fontSize: '13px', fontWeight: '800', width: '90px', textAlign: 'right', color: 'var(--texto-principal)' }}>{formatarMoeda(cat.valor)}</div>
                 </div>
               ))
             }
@@ -380,17 +380,17 @@ const EstoqueTab = () => {
 
          <div className="main-card-premium">
             <div className="card-header-flex"><h3>📅 Histórico de Compras</h3></div>
-            <p style={{fontSize: '11px', color: '#64748b', marginBottom: '20px', marginTop: '-10px'}}>Evolução de aquisição de acervo por mês.</p>
+            <p style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '20px', marginTop: '-10px'}}>Evolução de aquisição de acervo por mês.</p>
             
             {financeiroAcervo.gastosMes.length === 0 ?
-              <p style={{color: '#94a3b8', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
+              <p style={{color: 'var(--texto-secundario)', fontSize: '12px'}}>Nenhum valor de compra cadastrado.</p> : 
               financeiroAcervo.gastosMes.map((mes, idx) => (
                 <div key={idx} style={{ display: 'flex', alignItems: 'center', marginBottom: '15px', gap: '15px' }}>
-                   <div style={{ width: '100px', fontSize: '12px', fontWeight: 'bold', color: '#475569' }}>Mês {mes.nome}</div>
-                   <div style={{ flex: 1, height: '10px', background: '#f1f5f9', borderRadius: '10px', position: 'relative' }}>
-                      <div style={{ width: `${(mes.valor/maxMesFinanceiro)*100}%`, height: '100%', background: '#0f172a', borderRadius: '10px' }}></div>
+                   <div style={{ width: '100px', fontSize: '12px', fontWeight: 'bold', color: 'var(--texto-secundario)' }}>Mês {mes.nome}</div>
+                   <div style={{ flex: 1, height: '10px', background: 'var(--fundo-cinza)', borderRadius: '10px', position: 'relative' }}>
+                      <div style={{ width: `${(mes.valor/maxMesFinanceiro)*100}%`, height: '100%', background: 'var(--dourado)', borderRadius: '10px' }}></div>
                    </div>
-                   <div style={{ fontSize: '13px', fontWeight: '800', width: '90px', textAlign: 'right', color: '#0f172a' }}>{formatarMoeda(mes.valor)}</div>
+                   <div style={{ fontSize: '13px', fontWeight: '800', width: '90px', textAlign: 'right', color: 'var(--texto-principal)' }}>{formatarMoeda(mes.valor)}</div>
                 </div>
               ))
             }
@@ -403,7 +403,7 @@ const EstoqueTab = () => {
           {/* 🔥 RADAR DE INFLAÇÃO INTERATIVO 🔥 */}
           <div className="main-card-premium" style={{ marginBottom: '20px', borderTop: '4px solid #ef4444' }}>
             <div className="card-header-flex"><h3>📈 Radar de Custos (Inflação)</h3></div>
-            <p style={{fontSize: '11px', color: '#64748b', marginBottom: '15px', marginTop: '-10px'}}>
+            <p style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '15px', marginTop: '-10px'}}>
               Alerta de diferença de valor pago em peças da mesma categoria. Clique para ver o histórico.
             </p>
             <div className="ranking-visual-container">
@@ -415,25 +415,25 @@ const EstoqueTab = () => {
                   title="Ver linha do tempo de preços"
                   style={{ 
                       flexDirection: 'column', alignItems: 'flex-start', gap: '5px', padding: '12px', 
-                      background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '8px', cursor: 'pointer', transition: '0.2s' 
+                      background: 'rgba(239, 68, 68, 0.1)', border: '1px solid rgba(239, 68, 68, 0.2)', borderRadius: '8px', cursor: 'pointer', transition: '0.2s' 
                   }}
-                  onMouseEnter={e => { e.currentTarget.style.background = '#fee2e2'; e.currentTarget.style.borderColor = '#fca5a5'; }}
-                  onMouseLeave={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.borderColor = '#fecaca'; }}
+                  onMouseEnter={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.2)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'rgba(239, 68, 68, 0.1)'; }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                      <strong style={{ color: '#991b1b', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <strong style={{ color: '#ef4444', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           {item.categoria} <span style={{fontSize: '12px', opacity: 0.6}}>🔍</span>
                       </strong>
-                      <span style={{ color: '#b91c1c', fontWeight: '900', fontSize: '13px', background: '#fee2e2', padding: '2px 6px', borderRadius: '4px' }}>+{item.percentual.toFixed(0)}%</span>
+                      <span style={{ color: '#ef4444', fontWeight: '900', fontSize: '13px', background: 'rgba(239, 68, 68, 0.2)', padding: '2px 6px', borderRadius: '4px' }}>+{item.percentual.toFixed(0)}%</span>
                   </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '11px', color: '#7f1d1d', marginTop: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '11px', color: 'var(--texto-secundario)', marginTop: '4px' }}>
                       <span>Menor pago: <strong>{formatarMoeda(item.min)}</strong></span>
                       <span>Maior pago: <strong>{formatarMoeda(item.max)}</strong></span>
                   </div>
                 </div>
               ))}
               {radarPrecos.length === 0 && (
-                <p style={{color: '#10b981', fontSize: '12px', fontWeight: 'bold', padding: '10px', textAlign: 'center', background: '#ecfdf5', borderRadius: '8px'}}>
+                <p style={{color: '#10b981', fontSize: '12px', fontWeight: 'bold', padding: '10px', textAlign: 'center', background: 'rgba(16, 185, 129, 0.15)', borderRadius: '8px'}}>
                   Nenhuma variação de custo de compra detectada no acervo!
                 </p>
               )}
@@ -462,7 +462,7 @@ const EstoqueTab = () => {
                 const porcentagem = metricas.totalPecas > 0 ? (total / metricas.totalPecas) * 100 : 0;
                 return (
                   <div key={i} className="rank-item-v4">
-                    <div className="rank-info-v4"><strong>{cat}</strong><span style={{ color: '#0f172a' }}>{total} pçs ({porcentagem.toFixed(0)}%)</span></div>
+                    <div className="rank-info-v4"><strong>{cat}</strong><span style={{ color: 'var(--texto-principal)' }}>{total} pçs ({porcentagem.toFixed(0)}%)</span></div>
                     <div className="rank-bar-bg-v4" style={{ height: '6px' }}><div className="rank-bar-fill-v4" style={{ width: `${porcentagem}%`, background: 'linear-gradient(90deg, #94a3b8, #334155)' }}></div></div>
                   </div>
                 );
@@ -472,7 +472,7 @@ const EstoqueTab = () => {
 
           <div className="main-card-premium">
             <div className="card-header-flex"><h3>🕸️ Estoque Ocioso</h3></div>
-            <p style={{fontSize: '11px', color: '#64748b', marginBottom: '15px', marginTop: '-10px'}}>% de peças paradas há mais de 6 meses.</p>
+            <p style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '15px', marginTop: '-10px'}}>% de peças paradas há mais de 6 meses.</p>
             <div className="ranking-visual-container">
               {taxaOciosidade.map((item, i) => (
                 <div key={i} className="rank-item-v4">
@@ -509,7 +509,7 @@ const EstoqueTab = () => {
                   <tr key={i} style={{ opacity: item.quantidade === 0 ? 0.6 : 1 }}>
                     <td className="td-name"><span className="estoque-name">{item.nome}</span></td>
                     <td className="centro"><span className="badge-categoria">{item.categoria}</span></td>
-                    <td className="centro bold" style={{color: item.quantidade <= 1 ? '#ef4444' : '#0f172a'}}>{item.quantidade}</td>
+                    <td className="centro bold" style={{color: item.quantidade <= 1 ? '#ef4444' : 'var(--texto-principal)'}}>{item.quantidade}</td>
                     <td className="direita"><span className={`badge-status-estoque ${item.precisaReparo ? 'status-reparo' : 'status-ok'}`}>{item.statusOriginal.toUpperCase()}</span></td>
                   </tr>
                 ))}

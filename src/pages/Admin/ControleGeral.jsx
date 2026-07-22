@@ -39,30 +39,57 @@ const ControleGeral = () => {
   const carregarDados = async () => {
     setLoading(true);
     try {
-      // 1. Carregar todos os planos para referência
+      // 1. Carregar Planos
       const planosSnap = await getDocs(collection(db, "planos"));
       const planosMap = {};
-      planosSnap.docs.forEach(d => {
-        planosMap[d.id] = d.data();
+      planosSnap.docs.forEach(docSnap => {
+        planosMap[docSnap.id] = { id: docSnap.id, ...docSnap.data() };
       });
       setPlanos(planosMap);
 
-      // 2. Carregar todos os usuários (empresas)
-      const usersSnap = await getDocs(collection(db, "usuarios"));
+      // 2. Carregar Usuários e Equipe simultaneamente
+      const [usersSnap, equipeSnap] = await Promise.all([
+        getDocs(collection(db, "usuarios")),
+        getDocs(collection(db, "equipe"))
+      ]);
+
       const hoje = new Date();
+
+      // Mapear equipe por email em minusculo
+      const equipeMap = {};
+      equipeSnap.docs.forEach(docSnap => {
+        const d = docSnap.data();
+        if (d.email) {
+          equipeMap[d.email.toLowerCase().trim()] = d;
+        }
+      });
+
+      // Mapear usuarios por UID para busca do empregador
+      const userDocsMap = {};
+      usersSnap.docs.forEach(docSnap => {
+        userDocsMap[docSnap.id] = docSnap.data();
+      });
 
       const listaClientes = usersSnap.docs.map(docSnap => {
         const data = docSnap.data();
         const uid = docSnap.id;
 
-        // Calcular status do teste/assinatura
+        // Verificar se é funcionário vinculado a uma empresa patrão
+        const regEquipe = equipeMap[data.email ? data.email.toLowerCase().trim() : ''];
+        const idEmpresaPatrao = (data.role && data.role !== 'owner' && data.tenantId && data.tenantId !== uid) 
+          ? data.tenantId 
+          : (regEquipe ? regEquipe.empresaId : null);
+
+        const isFuncionarioVinculado = Boolean(idEmpresaPatrao && idEmpresaPatrao !== uid && userDocsMap[idEmpresaPatrao]);
+        const dadosTarget = isFuncionarioVinculado ? userDocsMap[idEmpresaPatrao] : data;
+
+        // Calcular status do teste/assinatura baseado nos dados do alvo (Empresa Patrão ou Próprio)
         let status = 'bloqueado';
         let diasRestantes = 0;
         let diasTeste = 0;
 
-        // Verificar teste grátis
-        if (data.dataFimTeste) {
-          const dataFim = new Date(data.dataFimTeste);
+        if (dadosTarget.dataFimTeste) {
+          const dataFim = new Date(dadosTarget.dataFimTeste);
           const diffMs = dataFim.getTime() - hoje.getTime();
           diasRestantes = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
           
@@ -70,8 +97,8 @@ const ControleGeral = () => {
             status = 'teste';
             diasTeste = 7 - diasRestantes;
           }
-        } else if (data.dataCadastro) {
-          let dataCad = data.dataCadastro;
+        } else if (dadosTarget.dataCadastro) {
+          let dataCad = dadosTarget.dataCadastro;
           if (dataCad.toDate) dataCad = dataCad.toDate();
           const diffTime = hoje.getTime() - new Date(dataCad).getTime();
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
@@ -83,19 +110,19 @@ const ControleGeral = () => {
           }
         }
 
-        // Verificar se pagou
-        const pagou = data.assinaturaAtiva === true || 
-                      data.statusAssinatura === 'ativa' ||
-                      data.plano === 'pago' || 
-                      data.statusPagamentoVulso === 'pago';
+        // Verificar se a empresa pagou
+        const pagou = dadosTarget.assinaturaAtiva === true || 
+                      dadosTarget.statusAssinatura === 'ativa' ||
+                      dadosTarget.plano === 'pago' || 
+                      dadosTarget.statusPagamentoVulso === 'pago';
 
         if (pagou) {
           status = 'ativo';
         }
 
         // Verificar se está excluído (mais de 180 dias sem pagar)
-        if (status === 'bloqueado' && data.dataCadastro) {
-          let dataCad = data.dataCadastro;
+        if (status === 'bloqueado' && dadosTarget.dataCadastro) {
+          let dataCad = dadosTarget.dataCadastro;
           if (dataCad.toDate) dataCad = dataCad.toDate();
           const diffTime = hoje.getTime() - new Date(dataCad).getTime();
           const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
@@ -104,20 +131,26 @@ const ControleGeral = () => {
           }
         }
 
-        // Super admin é sempre ativo
+        // Super admin é sempre admin
         if (data.email === "celebrefesta25@gmail.com") {
           status = 'admin';
         }
 
         // Buscar nome do plano
-        const nomePlano = data.planoId && planosMap[data.planoId] 
-          ? planosMap[data.planoId].nome 
+        let nomePlano = dadosTarget.planoId && planosMap[dadosTarget.planoId] 
+          ? planosMap[dadosTarget.planoId].nome 
           : (pagou ? 'Plano Pago' : 'Sem plano');
+
+        if (isFuncionarioVinculado) {
+          const nomePatrao = dadosTarget.nomeExibicao || dadosTarget.nomeCompleto || 'Empresa';
+          nomePlano = `${nomePlano} (Equipe ${nomePatrao})`;
+        }
 
         // Formatar data de cadastro
         let dataCadastroFormatada = '—';
-        if (data.dataCadastro) {
-          let dc = data.dataCadastro;
+        const rawDateView = dadosTarget.dataCadastro || data.dataCadastro;
+        if (rawDateView) {
+          let dc = rawDateView;
           if (dc.toDate) dc = dc.toDate();
           try {
             dataCadastroFormatada = new Date(dc).toLocaleDateString('pt-BR');
@@ -140,12 +173,14 @@ const ControleGeral = () => {
           diasRestantes: status === 'teste' ? diasRestantes : 0,
           diasTeste,
           nomePlano,
-          planoId: data.planoId || 'plano_basico',
-          role: data.role || 'owner',
-          assinaturaAtiva: data.assinaturaAtiva || false,
-          statusPagamentoVulso: data.statusPagamentoVulso || '',
-          plano: data.plano || '',
-          statusAssinatura: data.statusAssinatura || ''
+          planoId: data.planoId || dadosTarget.planoId || 'plano_basico',
+          role: data.role || (isFuncionarioVinculado ? 'funcionario' : 'owner'),
+          isFuncionarioVinculado,
+          idEmpresaPatrao,
+          assinaturaAtiva: dadosTarget.assinaturaAtiva || false,
+          statusPagamentoVulso: dadosTarget.statusPagamentoVulso || '',
+          plano: dadosTarget.plano || '',
+          statusAssinatura: dadosTarget.statusAssinatura || ''
         };
       });
 
@@ -174,16 +209,19 @@ const ControleGeral = () => {
     try {
       const userRef = doc(db, 'usuarios', membroEdicao.uid);
       
+      const isVip = membroEdicao.assinaturaAtiva === true || membroEdicao.assinaturaAtiva === 'true';
+
       const payload = {
-        nomeExibicao: membroEdicao.nomeExibicao,
-        nomeCompleto: membroEdicao.nomeCompleto,
-        email: membroEdicao.email,
-        documento: membroEdicao.documento,
-        planoId: membroEdicao.planoId,
-        plano: membroEdicao.plano,
-        statusPagamentoVulso: membroEdicao.statusPagamentoVulso,
-        assinaturaAtiva: membroEdicao.assinaturaAtiva,
-        statusAssinatura: membroEdicao.statusAssinatura,
+        nomeExibicao: membroEdicao.nomeExibicao || '',
+        nomeCompleto: membroEdicao.nomeCompleto || '',
+        email: membroEdicao.email || '',
+        documento: membroEdicao.documento || '',
+        planoId: isVip ? (membroEdicao.planoId || 'plano_basico') : '',
+        plano: isVip ? (membroEdicao.plano || 'pago') : '',
+        statusPagamentoVulso: isVip ? (membroEdicao.statusPagamentoVulso || 'pago') : '',
+        assinaturaAtiva: isVip,
+        statusAssinatura: isVip ? (membroEdicao.statusAssinatura || 'ativa') : 'inativa',
+        dataCadastro: membroEdicao.dataCadastro ? new Date(membroEdicao.dataCadastro).toISOString() : null,
         dataFimTeste: membroEdicao.dataFimTeste ? new Date(membroEdicao.dataFimTeste).toISOString() : null
       };
 
@@ -581,13 +619,39 @@ const ControleGeral = () => {
                   <label>Plano Vinculado</label>
                   <select 
                     value={membroEdicao.planoId || ''} 
-                    onChange={e => setMembroEdicao({ ...membroEdicao, planoId: e.target.value })}
+                    onChange={e => {
+                      const selectedId = e.target.value;
+                      setMembroEdicao({ 
+                        ...membroEdicao, 
+                        planoId: selectedId,
+                        assinaturaAtiva: selectedId ? true : membroEdicao.assinaturaAtiva,
+                        plano: selectedId ? 'pago' : ''
+                      });
+                    }}
                   >
-                    <option value="">Nenhum</option>
-                    {Object.entries(planos).map(([id, p]) => (
-                      <option key={id} value={id}>{p.nome}</option>
-                    ))}
+                    <option value="">Sem plano / Nenhum</option>
+                    {Object.keys(planos).length > 0 ? (
+                      Object.entries(planos).map(([id, p]) => (
+                        <option key={id} value={id}>{p.nome || id}</option>
+                      ))
+                    ) : (
+                      <>
+                        <option value="plano_basico">Plano Básico</option>
+                        <option value="plano_profissional">Plano Profissional</option>
+                        <option value="plano_premium">Plano Premium</option>
+                      </>
+                    )}
                   </select>
+                </div>
+
+                <div className="cg-form-group">
+                  <label>Data de Cadastro da Empresa</label>
+                  <input 
+                    type="date" 
+                    value={membroEdicao.dataCadastro ? membroEdicao.dataCadastro.split('T')[0] : ''} 
+                    onChange={e => setMembroEdicao({ ...membroEdicao, dataCadastro: e.target.value })}
+                  />
+                  <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>Altere a data para estipular o início exato do cálculo de 7 dias.</small>
                 </div>
 
                 <div className="cg-form-group">

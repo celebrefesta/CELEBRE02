@@ -101,6 +101,13 @@ html, body {
 /* =========================================
    INPUTS E CAMPOS DE TEXTO
    ========================================= */
+div.input-field {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  box-shadow: none !important;
+}
+
 .grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .grid-inputs.three-cols { grid-template-columns: 1fr 1fr 1fr; }
 .input-field.full { grid-column: 1 / -1; }
@@ -117,9 +124,9 @@ html, body {
 .input-field input, .input-field select, .input-field textarea {
   width: 100%; 
   padding: 14px; 
-  border: 2px solid var(--borda, #e2e8f0); 
+  border: 1px solid var(--borda); 
   border-radius: 10px;
-  background: var(--fundo-cinza, #f8fafc); 
+  background: var(--fundo-cinza); 
   color: var(--texto-principal);
   box-sizing: border-box; 
   font-family: inherit; 
@@ -129,7 +136,7 @@ html, body {
 
 .input-field input:focus, .input-field textarea:focus, .input-field select:focus { 
   outline: none; 
-  border-color: #0f172a; 
+  border-color: var(--dourado); 
   background: var(--branco);
 }
 

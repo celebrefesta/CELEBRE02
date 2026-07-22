@@ -30,9 +30,8 @@
 }
 
 .sidebar-logo h1 {
-  background: linear-gradient(135deg, #f5d061 0%, #e6af2e 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  color: var(--dourado) !important;
+  -webkit-text-fill-color: var(--dourado) !important;
   font-size: 20px;
   font-weight: 800;
   letter-spacing: 3px;
@@ -41,7 +40,7 @@
 }
 
 .sidebar-logo .brand-subtitle {
-  color: rgba(255, 255, 255, 0.3);
+  color: rgba(255, 255, 255, 0.4);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: 1.5px;
@@ -96,39 +95,43 @@
 }
 
 .menu-item:hover i:not(.lock-icon) {
-  color: #c5a059;
-  text-shadow: 0 0 8px rgba(197, 160, 89, 0.5);
+  color: var(--dourado) !important;
 }
 
-/* Menu Ativo (Estilo Moderno com Borda Esquerda Dourada e Gradiente Sutil) */
+/* Menu Ativo (Estilo Moderno com Borda Esquerda Dinâmica) */
 .menu-item.active {
-  background: linear-gradient(90deg, rgba(197, 160, 89, 0.12) 0%, rgba(197, 160, 89, 0.01) 100%) !important;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.01) 100%) !important;
   color: #ffffff !important;
   font-weight: 600;
-  border-left: 3px solid #c5a059;
+  border-left: 3px solid var(--dourado) !important;
   border-radius: 0 8px 8px 0;
-  padding-left: 15px; /* Compensa o espaço da borda */
+  padding-left: 15px;
 }
 
 .menu-item.active i:not(.lock-icon) {
-  color: #c5a059 !important;
-  text-shadow: 0 0 10px rgba(197, 160, 89, 0.6);
+  color: var(--dourado) !important;
 }
 
-/* Itens Bloqueados (Com Cadeado) */
+/* Itens Bloqueados (Com Cadeado e Visual Semi-Transparente) */
 .menu-item.locked {
   justify-content: space-between;
-  opacity: 0.45;
-  cursor: not-allowed;
-  color: rgba(255, 255, 255, 0.35);
-  background-color: transparent;
+  opacity: 0.55;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.4);
+  background-color: rgba(255, 255, 255, 0.015);
+  border: 1px dashed rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
   transform: none !important;
-  border-left: 3px solid transparent;
+  margin-top: 3px;
+  margin-bottom: 3px;
+  transition: all 0.2s ease;
 }
 
 .menu-item.locked:hover {
-  background-color: transparent;
-  color: rgba(255, 255, 255, 0.35);
+  opacity: 0.85;
+  background-color: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.15);
+  color: rgba(255, 255, 255, 0.7);
 }
 
 .menu-item.locked > div {
@@ -138,14 +141,22 @@
 }
 
 .menu-item.locked i:not(.lock-icon) {
-  color: rgba(255, 255, 255, 0.2) !important;
+  color: rgba(255, 255, 255, 0.25) !important;
   text-shadow: none !important;
 }
 
 .menu-item.locked .lock-icon {
-  font-size: 11px;
-  opacity: 0.8;
+  font-size: 10px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   margin-left: auto;
+  transition: all 0.2s ease;
+}
+
+.menu-item.locked:hover .lock-icon {
+  transform: scale(1.1);
 }
 
 /* Linhas Divisórias Ultrafinas */

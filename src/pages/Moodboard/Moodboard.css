@@ -246,3 +246,97 @@ input[type=range]::-webkit-slider-runnable-track { width: 100%; height: 4px; cur
     .btn-header-action { padding: 8px; justify-content: center; }
     .btn-voltar-moodboard { padding: 8px 12px; font-size: 14px; }
 }
+
+/* =========================================
+   🌙 MODO ESCURO COMPLETO DO MOODBOARD
+   ========================================= */
+[data-theme='dark'] .studio-page {
+  background: var(--fundo-principal) !important;
+}
+
+[data-theme='dark'] .studio-panel {
+  background: var(--branco) !important;
+  border-color: var(--borda) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .panel-title,
+[data-theme='dark'] .selected-preview {
+  color: #ffffff !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .acervo-category {
+  background: var(--branco) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .acervo-category-header {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-principal) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .acervo-category-header:hover,
+[data-theme='dark'] .acervo-category-header.expanded {
+  background: var(--borda) !important;
+  color: #ffffff !important;
+}
+
+[data-theme='dark'] .acervo-category-header .count {
+  background: var(--branco) !important;
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .acervo-grid {
+  background: var(--branco) !important;
+}
+
+[data-theme='dark'] .acervo-card {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme='dark'] .card-thumb {
+  background: var(--branco) !important;
+}
+
+[data-theme='dark'] .card-name {
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .studio-canvas {
+  background-color: var(--fundo-principal) !important;
+  background-image: radial-gradient(var(--borda) 1px, transparent 1px) !important;
+}
+
+[data-theme='dark'] .edit-box,
+[data-theme='dark'] .font-selector,
+[data-theme='dark'] .style-controls-row {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .btn-secondary {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme='dark'] .canvas-artboard {
+  background: var(--branco) !important;
+  border: 1px solid var(--borda) !important;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5) !important;
+}
+
+[data-theme='dark'] .layer-wall {
+  background-color: var(--branco) !important;
+  border-bottom: 1px solid var(--borda) !important;
+}
+
+[data-theme='dark'] .layer-floor {
+  background-color: var(--fundo-cinza) !important;
+  box-shadow: inset 0 10px 20px rgba(0, 0, 0, 0.4) !important;
+}

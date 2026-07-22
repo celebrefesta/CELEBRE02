@@ -39,13 +39,17 @@ service cloud.firestore {
     }
 
     // O usuário é dono da empresa (o próprio tenant) OU é um funcionário
-    // vinculado a ela via coleção "equipe" (doc ID = uid do funcionário).
+    // com perfil em usuarios ou vinculado na coleção equipe (doc ID = uid).
     function souDonoOuFuncionario(tenantId) {
       return logado() && (
         request.auth.uid == tenantId ||
         (
           exists(/databases/$(database)/documents/equipe/$(request.auth.uid)) &&
           get(/databases/$(database)/documents/equipe/$(request.auth.uid)).data.empresaId == tenantId
+        ) ||
+        (
+          exists(/databases/$(database)/documents/usuarios/$(request.auth.uid)) &&
+          get(/databases/$(database)/documents/usuarios/$(request.auth.uid)).data.tenantId == tenantId
         )
       );
     }
@@ -54,7 +58,7 @@ service cloud.firestore {
     // usuarios/{tenantId}  → dados da empresa/assinatura
     // ---------------------------------------------------------------
     match /usuarios/{tenantId} {
-      allow read: if isSuperAdmin() || souDonoOuFuncionario(tenantId);
+      allow read: if isSuperAdmin() || (logado() && request.auth.uid == tenantId) || souDonoOuFuncionario(tenantId);
       // Só o dono (ou super admin) altera dados da própria empresa/assinatura
       allow write: if isSuperAdmin() || (logado() && request.auth.uid == tenantId);
     }
@@ -69,10 +73,13 @@ service cloud.firestore {
                   || (logado() && resource.data.empresaId == request.auth.uid)
                   || souDonoOuFuncionario(resource.data.empresaId);
 
-      // Só o dono da empresa (ou super admin) cadastra/edita/remove funcionários,
-      // e só dentro da própria empresa.
-      allow create: if isSuperAdmin() || (logado() && request.auth.uid == request.resource.data.empresaId);
-      allow update, delete: if isSuperAdmin() || (logado() && request.auth.uid == resource.data.empresaId);
+      // O próprio funcionário pode registrar/atualizar seu vínculo, além do dono.
+      allow create: if isSuperAdmin() 
+                    || (logado() && request.auth.uid == request.resource.data.empresaId)
+                    || (logado() && request.auth.uid == uid);
+      allow update, delete: if isSuperAdmin() 
+                            || (logado() && request.auth.uid == resource.data.empresaId)
+                            || (logado() && request.auth.uid == uid);
     }
 
     // ---------------------------------------------------------------

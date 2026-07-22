@@ -49,9 +49,9 @@
 
 /* Botões modernos em formato "Pill" */
 .dash-actions-row button {
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-  color: white; 
-  border: 1px solid rgba(255, 255, 255, 0.05); 
+  background: var(--dourado) !important;
+  color: white !important; 
+  border: 1px solid rgba(255, 255, 255, 0.1) !important; 
   padding: 12px 22px;
   border-radius: 30px; 
   font-weight: 800; 
@@ -60,16 +60,15 @@
   text-transform: uppercase; 
   letter-spacing: 0.8px; 
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.15);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15) !important;
   display: inline-flex;
   align-items: center;
   gap: 8px;
 }
 .dash-actions-row button:hover { 
   transform: translateY(-3px); 
-  box-shadow: 0 8px 25px rgba(15, 23, 42, 0.25);
-  background: linear-gradient(135deg, #c5a059 0%, #b48c48 100%);
-  border-color: rgba(197, 160, 89, 0.2);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25) !important;
+  filter: brightness(1.1) !important;
 }
 
 /* =========================================

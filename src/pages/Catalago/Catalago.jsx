@@ -318,21 +318,21 @@ const Catalogo = () => {
           <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', padding: '0 10px' }}>
              <button 
                 onClick={() => selecionarFiltro('modalidade', 'Todas')}
-                style={{ padding: '10px 20px', borderRadius: '25px', border: '1px solid #cbd5e1', background: filtroModalidade === 'Todas' ? '#0f172a' : '#fff', color: filtroModalidade === 'Todas' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '5px' }}
+                style={{ padding: '10px 20px', borderRadius: '25px', border: filtroModalidade === 'Todas' ? '1px solid var(--dourado)' : '1px solid #cbd5e1', background: filtroModalidade === 'Todas' ? 'var(--dourado)' : '#fff', color: filtroModalidade === 'Todas' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '5px' }}
              >
                {filtroModalidade === 'Todas' && <span>✓</span>} Todas
              </button>
 
              <button 
                 onClick={() => selecionarFiltro('modalidade', 'Pegue e Monte')}
-                style={{ padding: '10px 20px', borderRadius: '25px', border: '1px solid #cbd5e1', background: filtroModalidade === 'Pegue e Monte' ? '#0f172a' : '#fff', color: filtroModalidade === 'Pegue e Monte' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+                style={{ padding: '10px 20px', borderRadius: '25px', border: filtroModalidade === 'Pegue e Monte' ? '1px solid var(--dourado)' : '1px solid #cbd5e1', background: filtroModalidade === 'Pegue e Monte' ? 'var(--dourado)' : '#fff', color: filtroModalidade === 'Pegue e Monte' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
              >
                 📦 Pegue e Monte
              </button>
 
              <button 
                 onClick={() => selecionarFiltro('modalidade', 'Decoração Completa')}
-                style={{ padding: '10px 20px', borderRadius: '25px', border: '1px solid #cbd5e1', background: filtroModalidade === 'Decoração Completa' ? '#0f172a' : '#fff', color: filtroModalidade === 'Decoração Completa' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
+                style={{ padding: '10px 20px', borderRadius: '25px', border: filtroModalidade === 'Decoração Completa' ? '1px solid var(--dourado)' : '1px solid #cbd5e1', background: filtroModalidade === 'Decoração Completa' ? 'var(--dourado)' : '#fff', color: filtroModalidade === 'Decoração Completa' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
              >
                 ✨ Decoração
              </button>

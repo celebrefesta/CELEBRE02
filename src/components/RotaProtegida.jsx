@@ -1,8 +1,46 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { auth, db } from '../firebaseConfig';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+
+const parseFirestoreDate = (dateVal) => {
+  if (!dateVal) return null;
+  if (dateVal.toDate) {
+      try { return dateVal.toDate(); } catch (e) {}
+  }
+  if (dateVal.seconds) {
+      return new Date(dateVal.seconds * 1000);
+  }
+  
+  const str = String(dateVal).trim();
+  
+  // 1. Formato ISO ou AAAA-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+      const ano = parseInt(isoMatch[1], 10);
+      const mes = parseInt(isoMatch[2], 10) - 1;
+      const dia = parseInt(isoMatch[3], 10);
+      return new Date(ano, mes, dia);
+  }
+
+  // 2. Formato brasileiro DD/MM/AAAA
+  const brMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (brMatch) {
+      const dia = parseInt(brMatch[1], 10);
+      const mes = parseInt(brMatch[2], 10) - 1;
+      const ano = parseInt(brMatch[3], 10);
+      return new Date(ano, mes, dia);
+  }
+  
+  let parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+      parsed.setHours(0,0,0,0);
+      return parsed;
+  }
+  
+  return null;
+};
 
 const RotaProtegida = ({ recursoExigido, children }) => {
     const [temAcesso, setTemAcesso] = useState(null);
@@ -14,95 +52,101 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                 return;
             }
 
-            // 🔥 A CHAVE MESTRA: Ensina o porteiro a olhar para a Dona da Conta
-            const tenantId = localStorage.getItem('tenantId') || user.uid;
-            
-            // Bypass para a Super-Admin (Você)
-            const isSuperAdmin = user.email === "celebrefesta25@gmail.com";
-            if (isSuperAdmin) {
+            // Bypass para a Super-Admin
+            if (user.email === "celebrefesta25@gmail.com") {
                 setTemAcesso(true);
                 return;
             }
 
             try {
-                // 🎯 BUSCA O PLANO DA EMPRESA E NÃO DO FUNCIONÁRIO
-                const userRef = doc(db, "usuarios", tenantId);
-                const userSnap = await getDoc(userRef);
+                // RESOLUÇÃO CORRETA: Verifica doc próprio primeiro (é dono ou funcionário?)
+                const ownDocSnap = await getDoc(doc(db, "usuarios", user.uid));
+
+                let tenantId = user.uid;
+                let isFuncionarioReal = false;
+
+                 if (ownDocSnap.exists()) {
+                     const userData = ownDocSnap.data();
+                     if (userData.role && userData.role !== 'owner' && userData.tenantId) {
+                         tenantId = userData.tenantId;
+                         isFuncionarioReal = true;
+                         localStorage.setItem('tenantId', tenantId);
+                     } else {
+                         tenantId = user.uid;
+                         localStorage.setItem('tenantId', user.uid);
+                     }
+                 } else {
+                     // Verifica se é funcionário de outra empresa
+                     const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+                     const snapFunc = await getDocs(qFunc);
+                     if (!snapFunc.empty && snapFunc.docs[0].data().empresaId) {
+                         tenantId = snapFunc.docs[0].data().empresaId;
+                         isFuncionarioReal = true;
+                         localStorage.setItem('tenantId', tenantId);
+                     }
+                 }
+
+                const userSnap = await getDoc(doc(db, "usuarios", tenantId));
 
                 if (userSnap.exists()) {
                     const dadosUsuario = userSnap.data();
 
-                    // 🔥 CORREÇÃO CRUCIAL: CÁLCULO DO TESTE GRÁTIS IGUAL AO DO DASHBOARD 🔥
-                    let testeAtivo = false;
-                    
-                    if (dadosUsuario.dataFimTeste) {
-                        const dataFim = new Date(dadosUsuario.dataFimTeste);
-                        if (new Date() <= dataFim) testeAtivo = true;
-                    } else if (dadosUsuario.dataCadastro) {
-                        // Se não tem dataFimTeste, calcula 7 dias a partir do dia que a conta foi criada
-                        let dataCad = dadosUsuario.dataCadastro;
-                        if (dataCad.toDate) dataCad = dataCad.toDate();
-                        
-                        const diffTime = new Date().getTime() - new Date(dataCad).getTime();
-                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-                        
-                        if (diffDays <= 7) {
-                            testeAtivo = true;
-                        }
-                    } else {
-                        // Fallback de segurança: Se não achar a data, libera para não travar o cliente à toa
-                        testeAtivo = true;
-                    }
-
-                    // Identificação de pagamento ativo
-                    const usuarioPagou = 
+                    const assinaturaAtiva =
                         dadosUsuario.assinaturaAtiva === true || 
                         dadosUsuario.statusAssinatura === 'ativa' ||
                         dadosUsuario.plano === 'pago' || 
                         dadosUsuario.statusPagamentoVulso === 'pago';
 
-                    // 1. Se NÃO está no teste e NÃO pagou = Bloqueio (vai para /upgrade)
-                    if (!testeAtivo && !usuarioPagou) {
-                        setTemAcesso(false);
-                        return; 
+                    // LÓGICA SIMPLES DE TESTE: 7 dias a partir de dataCadastro da empresa
+                    let testeAtivo = false;
+                    if (!assinaturaAtiva) {
+                        const rawDateCompany = dadosUsuario.dataCadastro 
+                            || dadosUsuario.criadoEm 
+                            || dadosUsuario.createdAt 
+                            || dadosUsuario.dataInicioTeste 
+                            || (!isFuncionarioReal ? user.metadata?.creationTime : null);
+
+                        const dataCadastroDate = parseFirestoreDate(rawDateCompany);
+
+                        if (dataCadastroDate) {
+                            const cadastroMeia = new Date(dataCadastroDate);
+                            cadastroMeia.setHours(0,0,0,0);
+                            
+                            const dataFimTeste = new Date(cadastroMeia);
+                            dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+
+                            const hojeNormalizado = new Date();
+                            hojeNormalizado.setHours(0,0,0,0);
+
+                            testeAtivo = hojeNormalizado < dataFimTeste;
+                        }
+                    } else {
+                        testeAtivo = true;
                     }
 
-                    // 2. Se está no teste grátis, é VIP e tem passe livre para testar tudo
+                    // Teste expirou e não pagou → bloqueia
+                    if (!testeAtivo && !assinaturaAtiva) {
+                        setTemAcesso(false);
+                        return;
+                    }
+
+                    // Dentro do período de teste → acesso total
                     if (testeAtivo) {
                         setTemAcesso(true);
                         return;
                     }
 
-                    // 3. Se o teste acabou MAS A EMPRESA PAGOU
-                    if (usuarioPagou) {
+                    // Pagou — verifica o plano
+                    if (assinaturaAtiva) {
                         const planoId = dadosUsuario.planoId;
-                        if (planoId) {
-                            const planoRef = doc(db, "planos", planoId);
-                            const planoSnap = await getDoc(planoRef);
-                            
-                            if (planoSnap.exists()) {
-                                const nomePlano = (planoSnap.data().nome || '').toLowerCase();
-                                const beneficios = planoSnap.data().beneficios || [];
-                                
-                                // 1ª Tentativa: Busca no array de benefícios oficial do banco
-                                if (beneficios.includes(recursoExigido)) {
-                                    setTemAcesso(true);
-                                    return;
-                                }
-                                
-                                // 2ª Tentativa (SALVA-VIDAS)
-                                if (recursoExigido === "Equipe") {
-                                    // Apenas Premium e Pro podem acessar a tela de Equipe
-                                    if (nomePlano.includes('pro') || nomePlano.includes('premium')) {
-                                        setTemAcesso(true);
-                                        return;
-                                    }
-                                } else {
-                                    // Para Estoque, Logística, Contratos... Qualquer plano pago entra!
-                                    setTemAcesso(true);
-                                    return;
-                                }
-                            } else {
+                        if (!planoId || !recursoExigido) {
+                            setTemAcesso(true);
+                            return;
+                        }
+                        const planoSnap = await getDoc(doc(db, "planos", planoId));
+                        if (planoSnap.exists()) {
+                            const beneficios = planoSnap.data().beneficios || [];
+                            if (beneficios.some(b => b.toLowerCase().includes(recursoExigido.toLowerCase()))) {
                                 setTemAcesso(true);
                                 return;
                             }
@@ -113,7 +157,6 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                     }
                 }
                 
-                // Se o documento da empresa não existir, bloqueia por segurança
                 setTemAcesso(false);
             } catch (error) {
                 console.error("Erro ao verificar proteção de rota:", error);

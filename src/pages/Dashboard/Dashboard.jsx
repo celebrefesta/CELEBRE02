@@ -2,9 +2,47 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, query, where, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, updateDoc } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import AuditoriaEstoque from './AuditoriaEstoque';
+
+const parseFirestoreDate = (dateVal) => {
+  if (!dateVal) return null;
+  if (dateVal.toDate) {
+      try { return dateVal.toDate(); } catch (e) {}
+  }
+  if (dateVal.seconds) {
+      return new Date(dateVal.seconds * 1000);
+  }
+  
+  const str = String(dateVal).trim();
+  
+  // 1. Formato ISO ou AAAA-MM-DD
+  const isoMatch = str.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+      const ano = parseInt(isoMatch[1], 10);
+      const mes = parseInt(isoMatch[2], 10) - 1;
+      const dia = parseInt(isoMatch[3], 10);
+      return new Date(ano, mes, dia);
+  }
+
+  // 2. Formato brasileiro DD/MM/AAAA
+  const brMatch = str.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+  if (brMatch) {
+      const dia = parseInt(brMatch[1], 10);
+      const mes = parseInt(brMatch[2], 10) - 1;
+      const ano = parseInt(brMatch[3], 10);
+      return new Date(ano, mes, dia);
+  }
+  
+  // 3. Formato HTTP / GMT (ex: "Tue, 17 Apr 2026 18:31:45 GMT")
+  let parsed = new Date(str);
+  if (!isNaN(parsed.getTime())) {
+      return new Date(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+  }
+  
+  return null;
+};
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -31,6 +69,8 @@ const Dashboard = () => {
 
   const [diasTeste, setDiasTeste] = useState(1);
   const [statusConta, setStatusConta] = useState('ativo'); 
+  const [assinaturaAtiva, setAssinaturaAtiva] = useState(false);
+  const [erroCarregamento, setErroCarregamento] = useState(null);
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -40,64 +80,88 @@ const Dashboard = () => {
 
     const carregarDados = async () => {
       try {
-        const hojeISO = new Date().toISOString().split('T')[0];
+        const hoje = new Date();
+        const hojeISO = hoje.toISOString().split('T')[0];
         const mesAtual = hojeISO.substring(0, 7);
 
-        let idDaEmpresaCorreta = tenantIdLocal;
-        
-        const qEquipe = query(collection(db, "equipe"), where("email", "==", usuarioLogado.email));
-        const snapEquipe = await getDocs(qEquipe);
-        
-        if (!snapEquipe.empty) {
-            idDaEmpresaCorreta = snapEquipe.docs[0].data().empresaId;
-            localStorage.setItem('tenantId', idDaEmpresaCorreta);
-        }
+        let idDaEmpresaCorreta = usuarioLogado.uid;
+        let eUmFuncionario = false;
 
-        const userDocRef = doc(db, "usuarios", idDaEmpresaCorreta);
-        const userDocSnap = await getDoc(userDocRef);
-        
-        let dataCadastroSegura = usuarioLogado.metadata.creationTime; 
-        let usuarioJaPagou = false;
+        const ownDocSnap = await getDoc(doc(db, "usuarios", usuarioLogado.uid));
 
-        if (userDocSnap.exists()) {
-            const userData = userDocSnap.data();
-            if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa') {
-                usuarioJaPagou = true;
+        if (ownDocSnap.exists()) {
+            const userData = ownDocSnap.data();
+            if (userData.role && userData.role !== 'owner' && userData.tenantId) {
+                idDaEmpresaCorreta = userData.tenantId;
+                eUmFuncionario = true;
+            } else {
+                idDaEmpresaCorreta = usuarioLogado.uid;
             }
-            if (userData.dataCadastro) {
-                dataCadastroSegura = userData.dataCadastro;
+        } else {
+            const qEquipe = query(collection(db, "equipe"), where("email", "==", usuarioLogado.email));
+            const snapEquipe = await getDocs(qEquipe);
+            if (!snapEquipe.empty && snapEquipe.docs[0].data().empresaId) {
+                idDaEmpresaCorreta = snapEquipe.docs[0].data().empresaId;
+                eUmFuncionario = true;
             }
         }
 
-        if (dataCadastroSegura) {
-            let dataCadastroStr = dataCadastroSegura;
-            if (dataCadastroStr.toDate) {
-                dataCadastroStr = dataCadastroStr.toDate().toISOString();
-            }
-            
-            const hojeApenasData = new Date().toISOString().split('T')[0];
-            const cadastroApenasData = new Date(dataCadastroStr).toISOString().split('T')[0];
-            const hojeMilissegundos = new Date(hojeApenasData).getTime();
-            const cadastroMilissegundos = new Date(cadastroApenasData).getTime();
-            const diffTime = hojeMilissegundos - cadastroMilissegundos;
-            let diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            if (diffDays < 1) diffDays = 1;
+        localStorage.setItem('tenantId', idDaEmpresaCorreta);
 
-            setDiasTeste(diffDays);
+        if (!isSuperAdmin) {
+            const companySnap = await getDoc(doc(db, "usuarios", idDaEmpresaCorreta));
+            const companyData = companySnap.exists() ? companySnap.data() : (ownDocSnap.exists() ? ownDocSnap.data() : {});
 
-            if (!isSuperAdmin && !usuarioJaPagou) {
-                if (diffDays > 180) {
-                    setStatusConta('excluido');
-                    setLoading(false);
-                    return; 
-                } else if (diffDays > 7) {
+            const isPagante = companyData.assinaturaAtiva === true ||
+                companyData.statusAssinatura === 'ativa' ||
+                companyData.plano === 'pago' ||
+                companyData.statusPagamentoVulso === 'pago';
+
+            setAssinaturaAtiva(isPagante);
+
+            if (!isPagante) {
+                const rawDateCompany = companyData.dataCadastro 
+                    || companyData.criadoEm 
+                    || companyData.createdAt 
+                    || companyData.dataInicioTeste 
+                    || (!eUmFuncionario ? usuarioLogado.metadata?.creationTime : null);
+
+                const dataCadastroDate = parseFirestoreDate(rawDateCompany);
+
+                if (dataCadastroDate) {
+                    const cadastroMeia = new Date(dataCadastroDate);
+                    cadastroMeia.setHours(0,0,0,0);
+                    
+                    const dataFimTeste = new Date(cadastroMeia);
+                    dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+
+                    const hojeNormalizado = new Date();
+                    hojeNormalizado.setHours(0,0,0,0);
+
+                    const diffMs = hojeNormalizado.getTime() - cadastroMeia.getTime();
+                    const diaAtual = Math.floor(diffMs / (1000 * 60 * 60 * 24)) + 1;
+
+                    setDiasTeste(Math.max(1, diaAtual));
+
+                    const testeExpirou = hojeNormalizado >= dataFimTeste;
+
+                    if (testeExpirou) {
+                        setStatusConta('bloqueado');
+                        setLoading(false);
+                        return;
+                    }
+                } else {
+                    // Sem data de cadastro alguma → bloqueia por segurança
                     setStatusConta('bloqueado');
                     setLoading(false);
-                    return; 
+                    return;
                 }
             }
         }
 
+        // ════════════════════════════════════════════════════════════
+        // PASSO 3: CARREGAMENTO DOS DADOS DA EMPRESA
+        // ════════════════════════════════════════════════════════════
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", idDaEmpresaCorreta));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", idDaEmpresaCorreta));
 
@@ -137,13 +201,19 @@ const Dashboard = () => {
             const valorTotal = Number(l.valorTotal || 0);
             const valorPago = Number(l.valorPago || 0);
             const devendo = valorTotal - valorPago;
-            const dataFesta = l.dataRetirada || l.dataEvento;
+            
+            const rawDataFesta = l.dataRetirada || l.dataEvento;
+            let dataFesta = "";
+            if (rawDataFesta) {
+                const dateObj = parseFirestoreDate(rawDataFesta);
+                if (dateObj) dataFesta = dateObj.toISOString().split('T')[0];
+            }
 
             faturamentoGeral += valorTotal;
             qtdVendasGeral++;
 
             if (dataFesta && dataFesta.startsWith(mesAtual)) {
-                const dia = parseInt(dataFesta.split('-')[2]);
+                const dia = parseInt(dataFesta.split('-')[2], 10);
                 if (dia <= 7) fatSemanal[0] += valorTotal;
                 else if (dia <= 14) fatSemanal[1] += valorTotal;
                 else if (dia <= 21) fatSemanal[2] += valorTotal;
@@ -154,12 +224,7 @@ const Dashboard = () => {
               totalAReceber += devendo;
               if (dataFesta && dataFesta < hojeISO && l.status !== 'cancelado') {
                   const nomeCerto = l.clienteNome || l.cliente?.nome || l.razaoSocial || l.nomeFantasia || l.nome || 'Cliente Não Identificado';
-                  atrasados.push({
-                      id: l.id,
-                      cliente: nomeCerto,
-                      data: dataFesta.split('-').reverse().join('/'),
-                      valor: devendo
-                  });
+                  atrasados.push({ id: l.id, cliente: nomeCerto, data: dataFesta.split('-').reverse().join('/'), valor: devendo });
               }
             }
 
@@ -174,40 +239,39 @@ const Dashboard = () => {
         });
 
         const rankingPecas = Object.entries(contagemItens)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 5)
+            .sort((a, b) => b[1] - a[1]).slice(0, 5)
             .map(entry => ({ nome: entry[0], qtd: entry[1] }));
             
         const recents = confirmadas
-            .sort((a, b) => {
-                const dataA = a.criadoEm?.seconds ? a.criadoEm.seconds : 0;
-                const dataB = b.criadoEm?.seconds ? b.criadoEm.seconds : 0;
-                return dataB - dataA; 
-            })
+            .sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
             .slice(0, 5)
             .map(l => ({ 
                 id: l.id,
-                txt: `${l.clienteNome || 'Cliente Não Informado'}`, 
+                txt: l.clienteNome || 'Cliente Não Informado', 
                 valor: l.valorTotal ? `R$ ${Number(l.valorTotal).toLocaleString('pt-BR', {minimumFractionDigits: 2})}` : ''
             }));
             
         const proximos = confirmadas
-            .filter(l => l.dataRetirada && l.dataRetirada >= hojeISO && (l.status === 'confirmado' || l.status === 'preparacao'))
-            .sort((a, b) => a.dataRetirada.localeCompare(b.dataRetirada))
+            .filter(l => {
+                const rawData = l.dataRetirada;
+                if (!rawData) return false;
+                const dateObj = parseFirestoreDate(rawData);
+                if (!dateObj) return false;
+                return dateObj.toISOString().split('T')[0] >= hojeISO && (l.status === 'confirmado' || l.status === 'preparacao');
+            })
+            .sort((a, b) => {
+                const dA = parseFirestoreDate(a.dataRetirada)?.toISOString() || '';
+                const dB = parseFirestoreDate(b.dataRetirada)?.toISOString() || '';
+                return dA.localeCompare(dB);
+            })
             .slice(0, 5)
-            .map(l => ({
-                id: l.id,
-                cliente: l.clienteNome || 'Cliente',
-                data: l.dataRetirada.split('-').reverse().join('/'),
-                cidade: l.logistica?.cidade || 'Retirada na Loja'
-            }));
+            .map(l => {
+                const dateObj = parseFirestoreDate(l.dataRetirada);
+                return { id: l.id, cliente: l.clienteNome || 'Cliente', data: dateObj ? dateObj.toLocaleDateString('pt-BR') : '—', cidade: l.logistica?.cidade || 'Retirada na Loja' };
+            });
             
         const orcamentosRecentes = orcamentos
-            .sort((a, b) => {
-                const dataA = a.criadoEm?.seconds ? a.criadoEm.seconds : 0;
-                const dataB = b.criadoEm?.seconds ? b.criadoEm.seconds : 0;
-                return dataB - dataA; 
-            })
+            .sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
             .slice(0, 5);
             
         setEstatisticas({
@@ -227,13 +291,14 @@ const Dashboard = () => {
         
       } catch (e) { 
           console.error("Erro dashboard:", e);
-      } finally { 
+          setErroCarregamento(e.message || String(e));
+      } finally {  
           setLoading(false); 
       }
     };
     
     carregarDados();
-  }, [usuarioLogado, isSuperAdmin, navigate, tenantIdLocal]);
+  }, [usuarioLogado?.uid]);
 
   if (loading) return <div className="loading-v3">Atualizando central de comando...</div>;
 
@@ -280,7 +345,8 @@ const Dashboard = () => {
   return (
     <div className="dash-wide-container fade-in">
       
-      {!isSuperAdmin && statusConta === 'ativo' && diasTeste <= 7 && (
+
+      {!isSuperAdmin && !assinaturaAtiva && statusConta === 'ativo' && diasTeste <= 7 && (
         <div className="dash-trial-banner">
           ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito do Celebre. Aproveite!
         </div>

@@ -41,7 +41,7 @@ const Configuracoes = () => {
   const sigGlobal = useRef({});
   const [config, setConfig] = useState({
     localizacoes: [], categoriasFisicas: [], subcategoriasFisicas: {}, tamanhosPorCategoria: {}, catalogoVitrine: {}, 
-    nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '', endereco: '', instagram: '', logotipo: '', slogan: '', site: '', assinatura: '', pixelFacebook: '' 
+    nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '', endereco: '', cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', instagram: '', logotipo: '', slogan: '', site: '', assinatura: '', pixelFacebook: '' 
   });
 
 
@@ -246,28 +246,113 @@ const Configuracoes = () => {
     } catch (e) { console.error(e); }
   };
 
+  const [salvandoTudo, setSalvandoTudo] = useState(false);
+
+  const salvarConfiguracoesCompletas = async () => {
+    if (!usuarioLogado) return;
+    setSalvandoTudo(true);
+    try {
+      await setDoc(getDocConfigRef(), config, { merge: true });
+      await registrarLog("SALVAR CONFIGURAÇÕES", "Salvou todas as configurações do sistema.");
+      alert("✅ Configurações salvas com sucesso!");
+    } catch (err) {
+      console.error("Erro ao salvar configurações:", err);
+      alert("Erro ao salvar configurações do sistema.");
+    } finally {
+      setSalvandoTudo(false);
+    }
+  };
+
   if (loading) return <div className="loading-config">Carregando painel de controle...</div>;
   
 
-
-
-
   return (
     <div className="config-container fade-in">
-      <header className="config-header-top">
-        <div className="header-titles">
-          <h1>Painel de Controle Central</h1>
-          <p>Gerencie todos os aspetos do seu sistema num único lugar.</p>
+      <header className="config-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '15px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+          <button 
+            type="button" 
+            onClick={() => navigate('/dashboard')}
+            style={{
+              padding: '10px 16px',
+              backgroundColor: '#ffffff',
+              border: '1px solid #cbd5e1',
+              color: '#334155',
+              borderRadius: '8px',
+              fontWeight: '700',
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px',
+              boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <i className="fas fa-arrow-left"></i> Voltar ao Painel
+          </button>
+
+          <div>
+            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0 }}>Painel de Controle Central</h1>
+            <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}>Gerencie todos os aspectos do seu sistema em um único lugar.</p>
+          </div>
         </div>
       </header>
 
       <nav className="config-top-tabs">
-        <button className={abaAtiva === 'meu_perfil' ? 'active' : ''} onClick={() => setAbaAtiva('meu_perfil')}>👤 Meu Perfil</button>
-        {!isCollaborator && <button className={abaAtiva === 'empresa' ? 'active' : ''} onClick={() => setAbaAtiva('empresa')}>🏢 Empresa</button>}
-        {!isCollaborator && <button className={abaAtiva === 'listas' ? 'active' : ''} onClick={() => setAbaAtiva('listas')}>📦 Catálogo e Estoque</button>}
-        {!isCollaborator && <button className={abaAtiva === 'assinatura' ? 'active' : ''} onClick={() => setAbaAtiva('assinatura')}>💳 Assinatura e Uso</button>}
-        <button className={abaAtiva === 'seguranca' ? 'active' : ''} onClick={() => setAbaAtiva('seguranca')}>🛡️ Segurança</button>
-        <button className={abaAtiva === 'aparencia' ? 'active' : ''} onClick={() => setAbaAtiva('aparencia')}>🎨 Aparência</button>
+        <button 
+          className={abaAtiva === 'meu_perfil' ? 'active' : ''} 
+          onClick={() => setAbaAtiva('meu_perfil')}
+        >
+          <span className="tab-icon purple"><i className="fas fa-user"></i></span>
+          <span>Meu Perfil</span>
+        </button>
+
+        {!isCollaborator && (
+          <button 
+            className={abaAtiva === 'empresa' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('empresa')}
+          >
+            <span className="tab-icon blue"><i className="fas fa-building"></i></span>
+            <span>Empresa</span>
+          </button>
+        )}
+
+        {!isCollaborator && (
+          <button 
+            className={abaAtiva === 'listas' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('listas')}
+          >
+            <span className="tab-icon amber"><i className="fas fa-boxes"></i></span>
+            <span>Catálogo e Estoque</span>
+          </button>
+        )}
+
+        {!isCollaborator && (
+          <button 
+            className={abaAtiva === 'assinatura' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('assinatura')}
+          >
+            <span className="tab-icon green"><i className="fas fa-credit-card"></i></span>
+            <span>Assinatura e Uso</span>
+          </button>
+        )}
+
+        <button 
+          className={abaAtiva === 'seguranca' ? 'active' : ''} 
+          onClick={() => setAbaAtiva('seguranca')}
+        >
+          <span className="tab-icon cyan"><i className="fas fa-shield-alt"></i></span>
+          <span>Segurança</span>
+        </button>
+
+        <button 
+          className={abaAtiva === 'aparencia' ? 'active' : ''} 
+          onClick={() => setAbaAtiva('aparencia')}
+        >
+          <span className="tab-icon pink"><i className="fas fa-palette"></i></span>
+          <span>Aparência</span>
+        </button>
       </nav>
 
 

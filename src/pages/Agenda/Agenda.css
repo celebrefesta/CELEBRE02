@@ -7,9 +7,9 @@
 :root {
   --primary-dark: #0f172a;
   --secondary-dark: #1e293b;
-  --gold-primary: #c5a059;
-  --gold-dark: #a88532;
-  --gold-light: #f5efe6;
+  --gold-primary: var(--dourado, #c5a059);
+  --gold-dark: var(--dourado, #a88532);
+  --gold-light: rgba(255, 255, 255, 0.08);
   --bg-sidebar: #0f172a;
   --bg-main: #f1f5f9;
   --font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
@@ -382,9 +382,9 @@
 }
 .view-btn:hover:not(.active) { color: var(--primary-dark); }
 .view-btn.active { 
-  background: var(--primary-dark); 
-  color: #ffffff; 
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15); 
+  background: var(--dourado) !important; 
+  color: #ffffff !important; 
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important; 
 }
 
 .view-switcher.secondary { 

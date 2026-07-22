@@ -352,7 +352,7 @@ const Locacoes = () => {
             <button type="button" className={`chip-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Em Processo</button>
             <button type="button" className={`chip-btn ${filtroStatus === 'orcamentos' ? 'active orcamento' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>Orçamentos</button>
             <button type="button" className={`chip-btn ${filtroStatus === 'confirmados' ? 'active confirmado' : ''}`} onClick={() => setFiltroStatus('confirmados')}>Confirmados</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'finalizados' ? 'active' : ''}`} onClick={() => setFiltroStatus('finalizados')} style={{backgroundColor: filtroStatus === 'finalizados' ? '#0f172a' : '', color: filtroStatus === 'finalizados' ? '#fff' : ''}}>Arquivados ✔️</button>
+            <button type="button" className={`chip-btn ${filtroStatus === 'finalizados' ? 'active' : ''}`} onClick={() => setFiltroStatus('finalizados')}>Arquivados ✔️</button>
             <button type="button" className={`chip-btn ${filtroStatus === 'cancelados' ? 'active cancelado' : ''}`} onClick={() => setFiltroStatus('cancelados')}>Lixeira / Perdidos</button>
           </div>
         </div>

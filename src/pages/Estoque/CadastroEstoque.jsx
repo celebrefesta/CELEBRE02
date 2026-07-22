@@ -730,7 +730,7 @@ const CadastroEstoque = () => {
           <h1 className="page-title">
             {itemEditando ? 'EDITAR ACERVO' : itemDuplicando ? '📋 DUPLICAR PEÇA' : dadosCompra ? '✨ FINALIZAR COMPRA' : 'CADASTRAR NO ACERVO'}
           </h1>
-          <p style={{ color: '#64748b', marginTop: '5px' }}>
+          <p style={{ color: 'var(--texto-secundario)', marginTop: '5px' }}>
             {itemDuplicando ? 'Altere as especificações (como cor ou tamanho) da nova peça antes de salvar.' : 'Cadastre peças unitárias, conjuntos ou pacotes de decoração prontos.'}
           </p>
         </div>
@@ -739,55 +739,55 @@ const CadastroEstoque = () => {
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <form onSubmit={salvarItem}>
           
-          <div style={{ background: '#fff', padding: '25px', borderRadius: '12px', border: '1px solid #e2e8f0', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', marginBottom: '30px' }}>
-              <label style={{color: '#0f172a', fontWeight: '900', display: 'block', marginBottom: '15px', fontSize: '15px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>1. O QUE VOCÊ ESTÁ CADASTRANDO?</label>
+          <div style={{ background: 'var(--branco)', padding: '25px', borderRadius: '12px', border: '1px solid var(--borda)', boxShadow: '0 4px 15px rgba(0,0,0,0.03)', marginBottom: '30px' }}>
+              <label style={{color: 'var(--texto-principal)', fontWeight: '900', display: 'block', marginBottom: '15px', fontSize: '15px', textTransform: 'uppercase', letterSpacing: '0.5px'}}>1. O QUE VOCÊ ESTÁ CADASTRANDO?</label>
               
               <div style={{display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '15px'}}>
                 
-                <div onClick={() => handleTipoCadastroChange('avulsa')} style={{padding: '15px 20px', borderRadius: '10px', cursor: 'pointer', transition: '0.2s', border: tipoCadastro === 'avulsa' ? '2px solid #0f172a' : '1px solid #cbd5e1', background: tipoCadastro === 'avulsa' ? '#0f172a' : '#f8fafc', display: 'flex', alignItems: 'center', gap: '15px'}}>
+                <div onClick={() => handleTipoCadastroChange('avulsa')} style={{padding: '15px 20px', borderRadius: '10px', cursor: 'pointer', transition: '0.2s', border: tipoCadastro === 'avulsa' ? '2px solid var(--dourado)' : '1px solid var(--borda)', background: tipoCadastro === 'avulsa' ? 'var(--dourado)' : 'var(--fundo-cinza)', display: 'flex', alignItems: 'center', gap: '15px'}}>
                   <span style={{fontSize: '28px'}}>{tipoCadastro === 'avulsa' ? '🧩' : '⬜'}</span>
                   <div>
-                      <strong style={{color: tipoCadastro === 'avulsa' ? '#fff' : '#0f172a', fontSize: '15px', display: 'block'}}>PEÇA AVULSA / UNIDADE</strong>
-                      <span style={{color: tipoCadastro === 'avulsa' ? '#94a3b8' : '#64748b', fontSize: '12px'}}>Item único (ex: 1 Bandeja, 1 Painel)</span>
+                      <strong style={{color: tipoCadastro === 'avulsa' ? '#fff' : 'var(--texto-principal)', fontSize: '15px', display: 'block'}}>PEÇA AVULSA / UNIDADE</strong>
+                      <span style={{color: tipoCadastro === 'avulsa' ? 'rgba(255,255,255,0.85)' : 'var(--texto-secundario)', fontSize: '12px'}}>Item único (ex: 1 Bandeja, 1 Painel)</span>
                   </div>
                 </div>
                 
-                <div onClick={() => handleTipoCadastroChange('kit')} style={{padding: '15px 20px', borderRadius: '10px', cursor: 'pointer', transition: '0.2s', border: tipoCadastro === 'kit' ? '2px solid #3b82f6' : '1px solid #cbd5e1', background: tipoCadastro === 'kit' ? '#eff6ff' : '#f8fafc', display: 'flex', alignItems: 'center', gap: '15px'}}>
+                <div onClick={() => handleTipoCadastroChange('kit')} style={{padding: '15px 20px', borderRadius: '10px', cursor: 'pointer', transition: '0.2s', border: tipoCadastro === 'kit' ? '2px solid var(--dourado)' : '1px solid var(--borda)', background: tipoCadastro === 'kit' ? 'var(--dourado)' : 'var(--fundo-cinza)', display: 'flex', alignItems: 'center', gap: '15px'}}>
                   <span style={{fontSize: '28px'}}>{tipoCadastro === 'kit' ? '📦' : '⬜'}</span>
                   <div>
-                      <strong style={{color: tipoCadastro === 'kit' ? '#1d4ed8' : '#0f172a', fontSize: '15px', display: 'block'}}>KIT / CONJUNTO</strong>
-                      <span style={{color: tipoCadastro === 'kit' ? '#3b82f6' : '#64748b', fontSize: '12px'}}>Gera peças separadas (ex: Trio Cilindro)</span>
+                      <strong style={{color: tipoCadastro === 'kit' ? '#fff' : 'var(--texto-principal)', fontSize: '15px', display: 'block'}}>KIT / CONJUNTO</strong>
+                      <span style={{color: tipoCadastro === 'kit' ? 'rgba(255,255,255,0.85)' : 'var(--texto-secundario)', fontSize: '12px'}}>Gera peças separadas (ex: Trio Cilindro)</span>
                   </div>
                 </div>
 
-                <div onClick={() => handleTipoCadastroChange('decoracao')} style={{padding: '15px 20px', borderRadius: '10px', cursor: 'pointer', transition: '0.2s', border: tipoCadastro === 'decoracao' ? '2px solid #c5a059' : '1px solid #cbd5e1', background: tipoCadastro === 'decoracao' ? '#fffbeb' : '#f8fafc', display: 'flex', alignItems: 'center', gap: '15px'}}>
+                <div onClick={() => handleTipoCadastroChange('decoracao')} style={{padding: '15px 20px', borderRadius: '10px', cursor: 'pointer', transition: '0.2s', border: tipoCadastro === 'decoracao' ? '2px solid var(--dourado)' : '1px solid var(--borda)', background: tipoCadastro === 'decoracao' ? 'var(--dourado)' : 'var(--fundo-cinza)', display: 'flex', alignItems: 'center', gap: '15px'}}>
                   <span style={{fontSize: '28px'}}>{tipoCadastro === 'decoracao' ? '✨' : '⬜'}</span>
                   <div>
-                      <strong style={{color: tipoCadastro === 'decoracao' ? '#b45309' : '#0f172a', fontSize: '15px', display: 'block'}}>DECORAÇÃO COMPLETA</strong>
-                      <span style={{color: tipoCadastro === 'decoracao' ? '#c5a059' : '#64748b', fontSize: '12px'}}>Junta peças prontas que já existem.</span>
+                      <strong style={{color: tipoCadastro === 'decoracao' ? '#fff' : 'var(--texto-principal)', fontSize: '15px', display: 'block'}}>DECORAÇÃO COMPLETA</strong>
+                      <span style={{color: tipoCadastro === 'decoracao' ? 'rgba(255,255,255,0.85)' : 'var(--texto-secundario)', fontSize: '12px'}}>Junta peças prontas que já existem.</span>
                   </div>
                 </div>
 
               </div>
 
               {tipoCadastro === 'decoracao' && (
-                <div style={{ marginTop: '15px', padding: '15px', background: '#fffbeb', borderRadius: '10px', border: '1px dashed #f59e0b', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px', animation: 'fadeIn 0.3s' }}>
+                <div style={{ marginTop: '15px', padding: '15px', background: 'var(--fundo-cinza)', borderRadius: '10px', border: '1px dashed var(--dourado)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px', animation: 'fadeIn 0.3s' }}>
                     <div>
-                        <strong style={{color: '#b45309', display: 'block', fontSize: '14px'}}>Qual é a modalidade deste serviço? *</strong>
-                        <span style={{color: '#92400e', fontSize: '12px'}}>Isso ajuda o cliente a saber como funciona.</span>
+                        <strong style={{color: 'var(--texto-principal)', display: 'block', fontSize: '14px'}}>Qual é a modalidade deste serviço? *</strong>
+                        <span style={{color: 'var(--texto-secundario)', fontSize: '12px'}}>Isso ajuda o cliente a saber como funciona.</span>
                     </div>
                     <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
                         <button 
                             type="button" 
                             onClick={() => setTipoPacote('PEGUE E MONTE')}
-                            style={{padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', border: tipoPacote === 'PEGUE E MONTE' ? '2px solid #b45309' : '1px solid #fcd34d', background: tipoPacote === 'PEGUE E MONTE' ? '#b45309' : '#fff', color: tipoPacote === 'PEGUE E MONTE' ? '#fff' : '#b45309'}}
+                            style={{padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', border: tipoPacote === 'PEGUE E MONTE' ? '2px solid var(--dourado)' : '1px solid var(--borda)', background: tipoPacote === 'PEGUE E MONTE' ? 'var(--dourado)' : 'var(--branco)', color: tipoPacote === 'PEGUE E MONTE' ? '#fff' : 'var(--texto-principal)'}}
                         >
                             📦 Pegue e Monte
                         </button>
                         <button 
                             type="button" 
                             onClick={() => setTipoPacote('DECORAÇÃO')}
-                            style={{padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', border: tipoPacote === 'DECORAÇÃO' ? '2px solid #b45309' : '1px solid #fcd34d', background: tipoPacote === 'DECORAÇÃO' ? '#b45309' : '#fff', color: tipoPacote === 'DECORAÇÃO' ? '#fff' : '#b45309'}}
+                            style={{padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', border: tipoPacote === 'DECORAÇÃO' ? '2px solid var(--dourado)' : '1px solid var(--borda)', background: tipoPacote === 'DECORAÇÃO' ? 'var(--dourado)' : 'var(--branco)', color: tipoPacote === 'DECORAÇÃO' ? '#fff' : 'var(--texto-principal)'}}
                         >
                             ✨ Decoração (Nós Montamos)
                         </button>
@@ -800,10 +800,10 @@ const CadastroEstoque = () => {
             
             <div style={{ width: '100%', maxWidth: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '15px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+              <div style={{ background: 'var(--branco)', border: '1px solid var(--borda)', borderRadius: '12px', padding: '15px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
                   <h3 className="section-divider" style={{marginTop: 0, fontSize: '13px'}}>FOTO PRINCIPAL</h3>
                   
-                  <div style={{ width: '100%', height: '280px', backgroundColor: '#f8fafc', borderRadius: '8px', border: '2px dashed #cbd5e1', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ width: '100%', height: '280px', backgroundColor: 'var(--fundo-cinza)', borderRadius: '8px', border: '2px dashed var(--borda)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {fotos.length > 0 ? (
                       <>
                       <img 
@@ -829,21 +829,21 @@ const CadastroEstoque = () => {
                   ) : (
                       <label htmlFor="upload-principal" style={{cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
                       <span style={{fontSize:'45px', opacity:0.3, marginBottom: '10px'}}>📷</span>
-                      <span style={{color: '#64748b', fontWeight: 'bold', fontSize: '13px'}}>Adicionar Foto</span>
+                      <span style={{color: 'var(--texto-secundario)', fontWeight: 'bold', fontSize: '13px'}}>Adicionar Foto</span>
                       <input id="upload-principal" type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
                       </label>
                   )}
                   </div>
                   
                   {fotos.length > 0 && (
-                      <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '15px', background: '#f8fafc', padding: '10px 15px', borderRadius: '8px', border: '1px solid #e2e8f0'}}>
+                      <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '15px', background: 'var(--fundo-cinza)', padding: '10px 15px', borderRadius: '8px', border: '1px solid var(--borda)'}}>
                           <button 
                               type="button" 
                               onClick={(e) => { e.preventDefault(); setFotoPreencher(!fotoPreencher); }} 
                               style={{
-                                  background: fotoPreencher ? '#0f172a' : '#fff', 
-                                  color: fotoPreencher ? 'white' : '#64748b', 
-                                  border: '1px solid #cbd5e1', 
+                                  background: fotoPreencher ? 'var(--dourado)' : 'var(--branco)', 
+                                  color: fotoPreencher ? 'white' : 'var(--texto-secundario)', 
+                                  border: '1px solid var(--borda)', 
                                   padding: '8px 12px', 
                                   borderRadius: '6px', 
                                   fontSize: '11px', 
@@ -860,7 +860,7 @@ const CadastroEstoque = () => {
                               {fotoPreencher ? 'Preenchendo' : 'Foto Inteira'}
                           </button>
                           
-                          <div style={{width: '1px', height: '20px', background: '#cbd5e1', margin: '0 5px'}}></div>
+                          <div style={{width: '1px', height: '20px', background: 'var(--borda)', margin: '0 5px'}}></div>
                           
                           <span style={{fontSize: '16px'}}>🔍</span>
                           <input 
@@ -868,7 +868,7 @@ const CadastroEstoque = () => {
                               min="1" max="3" step="0.1" 
                               value={focoAtual.z || 1} 
                               onChange={handleZoomChange} 
-                              style={{flex: 1, cursor: 'pointer', accentColor: '#0f172a'}}
+                              style={{flex: 1, cursor: 'pointer', accentColor: 'var(--texto-principal)'}}
                           />
                       </div>
                   )}
@@ -878,12 +878,12 @@ const CadastroEstoque = () => {
                           {fotos.map((f, idx) => {
                           const tFoco = getFocoThumb(idx);
                           return (
-                          <div key={idx} style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '2px solid #0f172a' : '1px solid #cbd5e1', position: 'relative', cursor: 'pointer'}} onClick={() => setFotoPrincipalIndex(idx)}>
+                          <div key={idx} style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '2px solid var(--dourado)' : '1px solid var(--borda)', position: 'relative', cursor: 'pointer'}} onClick={() => setFotoPrincipalIndex(idx)}>
                               <img src={f} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
                               <button type="button" onClick={(e) => {e.stopPropagation(); removerFoto(idx)}} style={{position: 'absolute', top: 0, right: 0, background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>×</button>
                           </div>
                       )})}
-                      <label title="Adicionar mais fotos" style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', border: '1px dashed #94a3b8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '24px', color: '#94a3b8', background: '#f8fafc'}}>
+                      <label title="Adicionar mais fotos" style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', border: '1px dashed var(--borda)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '24px', color: 'var(--texto-secundario)', background: 'var(--fundo-cinza)'}}>
                           +
                           <input type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
                       </label>
@@ -892,39 +892,39 @@ const CadastroEstoque = () => {
               </div>
 
               {tipoCadastro === 'avulsa' && (
-                <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                  <label style={{color: '#0f172a', fontWeight: 'bold', marginBottom: '12px', display: 'block', fontSize: '13px'}}>CARACTERÍSTICAS (Opcional)</label>
+                <div style={{ background: 'var(--branco)', border: '1px solid var(--borda)', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
+                  <label style={{color: 'var(--texto-principal)', fontWeight: 'bold', marginBottom: '12px', display: 'block', fontSize: '13px'}}>CARACTERÍSTICAS (Opcional)</label>
                   
                   <div style={{display: 'flex', gap: '10px', marginBottom: '12px'}}>
                     <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>TAMANHO / REF.</label>
-                      <input value={tamanho} onChange={e => setTamanho(e.target.value)} placeholder="Ex: P" style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#f8fafc', outline: 'none'}} />
+                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>TAMANHO / REF.</label>
+                      <input value={tamanho} onChange={e => setTamanho(e.target.value)} placeholder="Ex: P" style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
                     </div>
                     <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>COR PREDOMINANTE</label>
-                      <input value={cor} onChange={handleTextChange(setCor)} placeholder="Ex: Rosa" style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#f8fafc', outline: 'none'}} />
+                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>COR PREDOMINANTE</label>
+                      <input value={cor} onChange={handleTextChange(setCor)} placeholder="Ex: Rosa" style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
                     </div>
                   </div>
 
                   <div style={{display: 'flex', gap: '10px'}}>
                     <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>LARG(cm)</label>
-                      <input type="number" value={largura} onChange={e => setLargura(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#f8fafc', outline: 'none'}} />
+                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>LARG(cm)</label>
+                      <input type="number" value={largura} onChange={e => setLargura(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
                     </div>
                     <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>ALT(cm)</label>
-                      <input type="number" value={altura} onChange={e => setAltura(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#f8fafc', outline: 'none'}} />
+                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>ALT(cm)</label>
+                      <input type="number" value={altura} onChange={e => setAltura(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
                     </div>
                     <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'#64748b'}}>DIÂM(cm)</label>
-                      <input type="number" value={diametro} onChange={e => setDiametro(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid #cbd5e1', backgroundColor: '#f8fafc', outline: 'none'}} />
+                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>DIÂM(cm)</label>
+                      <input type="number" value={diametro} onChange={e => setDiametro(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
                     </div>
                   </div>
                 </div>
               )}
           </div>
 
-            <div style={{ flex: 1, minWidth: '0', background: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ flex: 1, minWidth: '0', background: 'var(--branco)', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid var(--borda)', display: 'flex', flexDirection: 'column' }}>
               
               <h3 className="section-divider" style={{marginTop: 0}}>INFORMAÇÕES DO ITEM</h3>
               
@@ -937,7 +937,7 @@ const CadastroEstoque = () => {
                         value={codigo} 
                         onChange={(e) => setCodigo(e.target.value.toUpperCase())}
                         placeholder="Ex: CAP-001"
-                        style={{backgroundColor: '#fff', color: '#0f172a', fontWeight: 'bold', border: '1px solid #cbd5e1'}} 
+                        style={{backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontWeight: 'bold', border: '1px solid var(--borda)'}} 
                     />
                 </div>
               </div>
@@ -945,24 +945,24 @@ const CadastroEstoque = () => {
               <div style={{ display: 'flex', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
                   
                   {tipoCadastro !== 'decoracao' && (
-                    <div style={{ flex: 1, minWidth: '300px', background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '10px', padding: '20px' }}>
-                        <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#475569', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ flex: 1, minWidth: '300px', background: 'var(--fundo-cinza)', border: '1px solid var(--borda)', borderRadius: '10px', padding: '20px' }}>
+                        <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', color: 'var(--texto-principal)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                           <span style={{fontSize: '20px'}}>📦</span> 1. COMO GUARDAR NO GALPÃO?
                         </h4>
                         <div className="form-group mb-15">
-                            <label style={{color: '#334155'}}>CATEGORIA FÍSICA *</label>
-                            <select value={categoria} onChange={handleCategoriaChange} required style={{backgroundColor: '#fff'}}>
+                            <label style={{color: 'var(--texto-secundario)'}}>CATEGORIA FÍSICA *</label>
+                            <select value={categoria} onChange={handleCategoriaChange} required style={{backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}}>
                                 <option value="" disabled hidden>Selecione...</option>
                                 {categoriasFisicasUnicas.map(c => <option key={c} value={c}>{c}</option>)}
                             </select>
                         </div>
                         <div className="form-group">
-                            <label style={{color: '#334155'}}>SUBCATEGORIA DA PRATELEIRA *</label>
+                            <label style={{color: 'var(--texto-secundario)'}}>SUBCATEGORIA DA PRATELEIRA *</label>
                             <select value={subCategoria} onChange={e => {
                                 const novaSub = e.target.value;
                                 setSubCategoria(novaSub);
                                 autoPreencherVitrine(categoria, novaSub);
-                            }} disabled={!categoria} required style={{backgroundColor: '#fff'}}>
+                            }} disabled={!categoria} required style={{backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}}>
                                 <option value="" disabled hidden>{!categoria ? 'Escolha a Categoria antes...' : 'Selecione...'}</option>
                                 {subcategoriasFisicasDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
@@ -970,15 +970,15 @@ const CadastroEstoque = () => {
                     </div>
                   )}
 
-                  <div style={{ flex: 2, minWidth: '300px', background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '20px', position: 'relative' }}>
-                      <div style={{position: 'absolute', top: '-12px', right: '15px', background: '#3b82f6', color: 'white', padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold'}}>✨ Prenchimento Inteligente</div>
-                      <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', color: '#1e3a8a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{ flex: 2, minWidth: '300px', background: 'var(--fundo-cinza)', border: '1px solid var(--borda)', borderRadius: '10px', padding: '20px', position: 'relative' }}>
+                      <div style={{position: 'absolute', top: '-12px', right: '15px', background: 'var(--dourado)', color: 'white', padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold'}}>✨ Prenchimento Inteligente</div>
+                      <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', color: 'var(--texto-principal)', display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <span style={{fontSize: '20px'}}>🌐</span> 2. COMO O CLIENTE ACHA NO SITE?
                       </h4>
                       
                       <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
                         <div className="form-group">
-                            <label style={{color: '#1e40af'}}>CATEGORIA NA VITRINE *</label>
+                            <label style={{color: 'var(--texto-secundario)'}}>CATEGORIA NA VITRINE *</label>
                             <select value={categoriaTema} onChange={e => {
                                 const novaCat = e.target.value;
                                 setCategoriaTema(novaCat);
@@ -992,95 +992,95 @@ const CadastroEstoque = () => {
                                     setGrupoTemaSelecionado(''); 
                                 }
                                 setTemaSelecionado('');
-                            }} style={{borderColor: '#93c5fd', backgroundColor: '#fff'}} required>
+                            }} style={{borderColor: 'var(--borda)', backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}} required>
                                 <option value="" disabled hidden>Selecione...</option>
                                 {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
                             </select>
                         </div>
                         
                         <div className="form-group">
-                            <label style={{color: '#1e40af'}}>SUBCATEGORIA (Público/Tipo) *</label>
+                            <label style={{color: 'var(--texto-secundario)'}}>SUBCATEGORIA (Público/Tipo) *</label>
                             <select value={subcategoriaTema} onChange={e => {
                                 const novaSub = e.target.value;
                                 setSubcategoriaTema(novaSub);
                                 const gruposDaSub = (categoriaTema && novaSub) ? Object.keys(CATALOGO_TEMAS[categoriaTema][novaSub] || {}) : [];
                                 if (gruposDaSub.length === 1) { setGrupoTemaSelecionado(gruposDaSub[0]); } else { setGrupoTemaSelecionado(''); }
                                 setTemaSelecionado('');
-                            }} disabled={!categoriaTema || subcategoriasDisponiveis.length === 1} style={{borderColor: '#93c5fd', backgroundColor: '#fff'}} required>
+                            }} disabled={!categoriaTema || subcategoriasDisponiveis.length === 1} style={{borderColor: 'var(--borda)', backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}} required>
                                 <option value="" disabled hidden>{!categoriaTema ? 'Aguardando...' : 'Selecione...'}</option>
                                 {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
                             </select>
                         </div>
 
                         <div className="form-group">
-                            <label style={{color: '#1e40af'}}>FILTRO DE GRUPO *</label>
+                            <label style={{color: 'var(--texto-secundario)'}}>FILTRO DE GRUPO *</label>
                             <select value={grupoTemaSelecionado} onChange={e => {
                                 setGrupoTemaSelecionado(e.target.value);
                                 setTemaSelecionado('');
-                            }} disabled={!subcategoriaTema || gruposDisponiveis.length === 1} style={{borderColor: '#93c5fd', backgroundColor: '#fff'}} required>
+                            }} disabled={!subcategoriaTema || gruposDisponiveis.length === 1} style={{borderColor: 'var(--borda)', backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}} required>
                                 <option value="" disabled hidden>{!subcategoriaTema ? 'Aguardando...' : 'Selecione...'}</option>
                                 {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
                             </select>
                         </div>
 
                         <div className="form-group">
-                            <label style={{color: '#1e40af'}}>FILTRO ESPECÍFICO *</label>
-                            <select value={temaSelecionado} onChange={e => setTemaSelecionado(e.target.value)} disabled={(!grupoTemaSelecionado && temaSelecionado !== 'OUTRO_TEMA')} style={{borderColor: '#93c5fd', backgroundColor: '#fff'}} required>
+                            <label style={{color: 'var(--texto-secundario)'}}>FILTRO ESPECÍFICO *</label>
+                            <select value={temaSelecionado} onChange={e => setTemaSelecionado(e.target.value)} disabled={(!grupoTemaSelecionado && temaSelecionado !== 'OUTRO_TEMA')} style={{borderColor: 'var(--borda)', backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}} required>
                                 <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Aguardando...' : 'Selecione o item exato...'}</option>
                                 {temasDisponiveis.map(t => (
                                     <option key={t} value={t}>{t}</option>
                                 ))}
-                                <option value="OUTRO_TEMA" style={{fontWeight: 'bold', color: '#1d4ed8'}}>✏️ Digitar Outro Tema...</option>
+                                <option value="OUTRO_TEMA" style={{fontWeight: 'bold', color: 'var(--dourado)'}}>✏️ Digitar Outro Tema...</option>
                             </select>
                         </div>
                       </div>
 
                       {temaSelecionado === 'OUTRO_TEMA' && (
                           <div className="form-group" style={{animation: 'fadeIn 0.3s', marginTop: '15px'}}>
-                              <label style={{color: '#1d4ed8'}}>NOME DO TEMA PERSONALIZADO *</label>
-                              <input type="text" placeholder="Ex: Safari Baby..." value={temaDigitadoPersonalizado} onChange={e => setTemaDigitadoPersonalizado(e.target.value)} style={{borderColor: '#3b82f6', backgroundColor: '#fff'}} autoFocus/>
+                              <label style={{color: 'var(--texto-principal)'}}>NOME DO TEMA PERSONALIZADO *</label>
+                              <input type="text" placeholder="Ex: Safari Baby..." value={temaDigitadoPersonalizado} onChange={e => setTemaDigitadoPersonalizado(e.target.value)} style={{borderColor: 'var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)'}} autoFocus/>
                           </div>
                       )}
                   </div>
               </div>
 
               {tipoCadastro === 'decoracao' && (
-                <div style={{marginTop: '30px', border: '2px dashed #fde68a', padding: '20px', borderRadius: '10px', backgroundColor: '#fffbeb'}}>
-                  <h3 style={{margin: '0 0 5px 0', color: '#b45309'}}>✨ MONTAGEM DA DECORAÇÃO</h3>
-                  <p style={{fontSize: '12px', color: '#92400e', marginBottom: '15px'}}>
+                <div style={{marginTop: '30px', border: '2px dashed var(--dourado)', padding: '20px', borderRadius: '10px', backgroundColor: 'var(--fundo-cinza)'}}>
+                  <h3 style={{margin: '0 0 5px 0', color: 'var(--texto-principal)'}}>✨ MONTAGEM DA DECORAÇÃO</h3>
+                  <p style={{fontSize: '12px', color: 'var(--texto-secundario)', marginBottom: '15px'}}>
                     Abra o catálogo abaixo e selecione quais peças do seu galpão compõem esta Decoração. O sistema fará a baixa de todas elas no calendário juntas!
                   </p>
                   
-                  <button type="button" onClick={() => setModalCatalogoAberto(true)} style={{width: '100%', padding: '15px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '15px', fontSize: '14px', transition: '0.2s'}}>
+                  <button type="button" onClick={() => setModalCatalogoAberto(true)} className="btn-salvar-modal" style={{width: '100%', padding: '15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '15px', fontSize: '14px', transition: '0.2s'}}>
                       + ABRIR ACERVO E ADICIONAR PEÇAS
                   </button>
                   
                   {itensDoKit.length > 0 ? (
-                      <div style={{background: '#ffffff', borderRadius: '8px', border: '1px solid #fcd34d', overflow: 'hidden'}}>
+                      <div style={{background: 'var(--branco)', borderRadius: '8px', border: '1px solid var(--borda)', overflow: 'hidden'}}>
                           {itensDoKit.map((item, idx) => (
-                              <div key={item.id} style={{display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', borderBottom: idx !== itensDoKit.length - 1 ? '1px solid #fef3c7' : 'none'}}>
-                                  <div style={{width: '45px', height: '45px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', overflow: 'hidden', flexShrink: 0}}>
+                              <div key={item.id} style={{display: 'flex', alignItems: 'center', gap: '15px', padding: '12px', borderBottom: idx !== itensDoKit.length - 1 ? '1px solid var(--borda)' : 'none'}}>
+                                  <div style={{width: '45px', height: '45px', background: 'var(--fundo-cinza)', borderRadius: '8px', border: '1px solid var(--borda)', overflow: 'hidden', flexShrink: 0}}>
                                       {item.foto ? <img src={item.foto} alt="" style={{width:'100%', height:'100%', objectFit:'cover'}}/> : ''}
                                   </div>
                                   <div style={{flex: 1}}>
-                                      <strong style={{fontSize: '13px', color: '#0f172a', display: 'block'}}>{item.nome}</strong>
-                                      <span style={{fontSize: '12px', color: '#64748b'}}>Valor base: R$ {item.precoOriginal.toFixed(2)}</span>
+                                      <strong style={{fontSize: '13px', color: 'var(--texto-principal)', display: 'block'}}>{item.nome}</strong>
+                                      <span style={{fontSize: '12px', color: 'var(--texto-secundario)'}}>Valor base: R$ {item.precoOriginal.toFixed(2)}</span>
                                   </div>
-                                  <div style={{display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '6px', padding: '4px'}}>
-                                      <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd - 1)} : i))} style={{border: 'none', background: 'white', borderRadius: '4px', width: '25px', height: '25px', fontWeight: 'bold', cursor: 'pointer'}}>-</button>
-                                      <span style={{fontSize: '14px', fontWeight: 'bold', width: '30px', textAlign: 'center'}}>{item.qtd}</span>
-                                      <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? {...i, qtd: i.qtd + 1} : i))} style={{border: 'none', background: 'white', borderRadius: '4px', width: '25px', height: '25px', fontWeight: 'bold', cursor: 'pointer'}}>+</button>
+                                  <div style={{display: 'flex', alignItems: 'center', background: 'var(--fundo-cinza)', borderRadius: '6px', padding: '4px'}}>
+                                      <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? {...i, qtd: Math.max(1, i.qtd - 1)} : i))} style={{border: 'none', background: 'var(--branco)', color: 'var(--texto-principal)', borderRadius: '4px', width: '25px', height: '25px', fontWeight: 'bold', cursor: 'pointer'}}>-</button>
+                                      <span style={{fontSize: '14px', fontWeight: 'bold', width: '30px', textAlign: 'center', color: 'var(--texto-principal)'}}>{item.qtd}</span>
+                                      <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? {...i, qtd: i.qtd + 1} : i))} style={{border: 'none', background: 'var(--branco)', color: 'var(--texto-principal)', borderRadius: '4px', width: '25px', height: '25px', fontWeight: 'bold', cursor: 'pointer'}}>+</button>
                                   </div>
-                                  <button type="button" onClick={() => setItensDoKit(itensDoKit.filter(i => i.id !== item.id))} style={{background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', padding: '8px 12px', cursor: 'pointer', fontWeight: 'bold'}}>Remover</button>
+                                  <button type="button" onClick={() => setItensDoKit(itensDoKit.filter(i => i.id !== item.id))} style={{background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', borderRadius: '6px', padding: '8px 12px', cursor: 'pointer', fontWeight: 'bold'}}>Remover</button>
                               </div>
                           ))}
-                          <div style={{background: '#fef3c7', padding: '15px', textAlign: 'right', borderTop: '1px dashed #f59e0b'}}>
-                              <span style={{fontSize: '12px', color: '#b45309'}}>Se alugadas avulsas, dariam: </span>
-                              <strong style={{fontSize: '18px', color: '#92400e'}}>R$ {calcularTotalSomaAvulsaKit().toFixed(2)}</strong>
+                          <div style={{background: 'var(--fundo-cinza)', padding: '15px', textAlign: 'right', borderTop: '1px dashed var(--borda)'}}>
+                              <span style={{fontSize: '12px', color: 'var(--texto-secundario)'}}>Se alugadas avulsas, dariam: </span>
+                              <strong style={{fontSize: '18px', color: 'var(--texto-principal)'}}>R$ {calcularTotalSomaAvulsaKit().toFixed(2)}</strong>
                           </div>
                       </div>
                   ) : (
-                      <div style={{textAlign: 'center', padding: '30px', color: '#b45309', background: '#fff', borderRadius: '8px', fontSize: '13px'}}>
+                      <div style={{textAlign: 'center', padding: '30px', color: 'var(--texto-secundario)', background: 'var(--branco)', borderRadius: '8px', fontSize: '13px'}}>
                           Sua decoração ainda está vazia.
                       </div>
                   )}
@@ -1088,41 +1088,41 @@ const CadastroEstoque = () => {
               )}
 
               {tipoCadastro === 'kit' && (
-                <div style={{marginTop: '30px', border: '2px dashed #93c5fd', padding: '20px', borderRadius: '10px', backgroundColor: '#eff6ff'}}>
-                  <h3 style={{margin: '0 0 5px 0', color: '#1d4ed8'}}>📦 DESMEMBRAR CONJUNTO (PEÇAS FILHAS)</h3>
+                <div style={{marginTop: '30px', border: '2px dashed var(--dourado)', padding: '20px', borderRadius: '10px', backgroundColor: 'var(--fundo-cinza)'}}>
+                  <h3 style={{margin: '0 0 5px 0', color: 'var(--texto-principal)'}}>📦 DESMEMBRAR CONJUNTO (PEÇAS FILHAS)</h3>
                   <p style={{fontSize: '12px', color: '#ef4444', marginBottom: '15px', fontWeight: 'bold'}}>
                     ⚠️ Obrigatório: Defina o Tamanho ou a Cor de cada peça para que o sistema possa diferenciá-las.
                   </p>
                   
                   {pecasKitNovas.map((p, idx) => (
-                    <div key={p.id} style={{background: '#ffffff', border: '1px solid #bfdbfe', borderRadius: '8px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
+                    <div key={p.id} style={{background: 'var(--branco)', border: '1px solid var(--borda)', borderRadius: '8px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
                         <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap'}}>
                         <div style={{flex: 2, minWidth: '120px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>NOME (Ex: Tampo, Base)</label>
-                          <input type="text" placeholder="Pode ficar vazio..." value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box'}} />
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-secundario)'}}>NOME (Ex: Tampo, Base)</label>
+                          <input type="text" placeholder="Pode ficar vazio..." value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box'}} />
                         </div>
                         <div style={{flex: 1, minWidth: '80px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#1d4ed8'}}>TAMANHO *</label>
-                          <input type="text" placeholder="Ex: P, M, 2x2" value={p.tamanho} onChange={e => atualizarPecaKitNova(idx, 'tamanho', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #93c5fd', boxSizing: 'border-box'}} />
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-principal)'}}>TAMANHO *</label>
+                          <input type="text" placeholder="Ex: P, M, 2x2" value={p.tamanho} onChange={e => atualizarPecaKitNova(idx, 'tamanho', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box'}} />
                         </div>
                         <div style={{flex: 1, minWidth: '80px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#1d4ed8'}}>COR *</label>
-                          <input type="text" placeholder="Ex: Rosa" value={p.cor} onChange={e => atualizarPecaKitNova(idx, 'cor', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #93c5fd', boxSizing: 'border-box'}} />
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-principal)'}}>COR *</label>
+                          <input type="text" placeholder="Ex: Rosa" value={p.cor} onChange={e => atualizarPecaKitNova(idx, 'cor', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box'}} />
                         </div>
                         <div style={{flex: 1, minWidth: '100px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: '#64748b'}}>VALOR (R$) *</label>
+                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-secundario)'}}>VALOR (R$) *</label>
                           <input type="text" placeholder="0,00" value={p.valorAluguel} onChange={e => atualizarPecaKitNova(idx, 'valorAluguel', e.target.value)} onBlur={e => {
                               let val = e.target.value.replace(',', '.');
                               const num = parseFloat(val);
                               if(!isNaN(num)) atualizarPecaKitNova(idx, 'valorAluguel', num.toFixed(2).replace('.', ','));
-                          }} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid #cbd5e1', boxSizing: 'border-box', fontWeight: 'bold', color: '#1d4ed8'}} />
+                          }} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box', fontWeight: 'bold'}} />
                         </div>
                         
-                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', marginTop: '18px', padding: '0 15px', cursor: 'pointer', fontWeight: 'bold', height: '38px'}}>Remover</button>
+                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', borderRadius: '6px', marginTop: '18px', padding: '0 15px', cursor: 'pointer', fontWeight: 'bold', height: '38px'}}>Remover</button>
                       </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} style={{background: '#dbeafe', color: '#1d4ed8', border: 'none', width: '100%', padding: '15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', fontSize: '14px'}}>+ Adicionar Peça Filha</button>
+                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} className="btn-salvar-modal" style={{width: '100%', padding: '15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', fontSize: '14px'}}>+ Adicionar Peça Filha</button>
                 </div>
               )}
 
@@ -1131,8 +1131,8 @@ const CadastroEstoque = () => {
                   
                   <div className="form-grid-4">
                     <div className="form-group span-2">
-                        <label style={{color: '#10b981', fontWeight: 900, fontSize: '13px'}}>PREÇO DO ALUGUEL (R$) *</label>
-                        <input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: '#10b981', backgroundColor: '#ecfdf5', fontSize: '18px', fontWeight: 'bold', padding: '15px'}} placeholder="0,00"/>
+                        <label style={{color: 'var(--texto-principal)', fontWeight: 900, fontSize: '13px'}}>PREÇO DO ALUGUEL (R$) *</label>
+                        <input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: 'var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '18px', fontWeight: 'bold', padding: '15px'}} placeholder="0,00"/>
                     </div>
                     <div className="form-group span-1">
                         <label>VALOR COMPRA</label>
@@ -1148,7 +1148,7 @@ const CadastroEstoque = () => {
                     <div className="form-group">
                         <label>QUANTIDADE</label>
                         {tipoCadastro === 'decoracao' || tipoCadastro === 'kit' ? (
-                            <div style={{padding: '12px', background: '#f1f5f9', borderRadius: '6px', fontSize: '12px', color: '#64748b', fontWeight: 'bold', border: '1px solid #cbd5e1', textAlign: 'center'}}>
+                            <div style={{padding: '12px', background: 'var(--fundo-cinza)', borderRadius: '6px', fontSize: '12px', color: 'var(--texto-secundario)', fontWeight: 'bold', border: '1px solid var(--borda)', textAlign: 'center'}}>
                                 Automático
                             </div>
                         ) : (
@@ -1163,7 +1163,7 @@ const CadastroEstoque = () => {
                             <button 
                                 type="button" 
                                 onClick={abrirModalLocalizacao} 
-                                style={{ background: 'transparent', border: 'none', color: '#3b82f6', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--dourado)', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}
                             >
                                 + Gerenciar Prateleiras
                             </button>
@@ -1177,8 +1177,8 @@ const CadastroEstoque = () => {
               </div>
 
               <div style={{ marginTop: 'auto', paddingTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
-                <Link to={dadosCompra ? "/compras" : "/estoque"} style={{ padding: '16px 30px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '8px', color: '#475569', fontWeight: 'bold', textDecoration: 'none', transition: '0.2s' }}>Cancelar</Link>
-                <button type="submit" style={{ padding: '16px 40px', background: '#0f172a', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '900', cursor: 'pointer', fontSize: '16px', letterSpacing: '0.5px', boxShadow: '0 4px 15px rgba(15,23,42,0.3)', transition: '0.2s' }} disabled={salvando} onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'} onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                <Link to={dadosCompra ? "/compras" : "/estoque"} className="btn-voltar-link">Cancelar</Link>
+                <button type="submit" className="btn-salvar-form" disabled={salvando}>
                     {salvando ? 'Salvando...' : (tipoCadastro === 'decoracao' ? `💾 SALVAR ${tipoPacote}` : tipoCadastro === 'kit' ? '💾 SALVAR CONJUNTO' : '💾 SALVAR PEÇA')}
                 </button>
               </div>
@@ -1190,15 +1190,15 @@ const CadastroEstoque = () => {
 
       {modalCatalogoAberto && (
         <div className="modal-overlay-premium" style={{ zIndex: 99999 }}>
-          <div className="modal-box-premium catalogo-modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden' }}>
+          <div className="modal-box-premium catalogo-modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden', backgroundColor: 'var(--branco)' }}>
             
-            <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid #e2e8f0', background: '#fff', flexShrink: 0 }}>
-              <h3 style={{ margin: 0, fontSize: '18px' }}>📦 Acervo Físico <span style={{color: '#64748b', fontSize: '14px'}}>(Escolha as peças do pacote)</span></h3>
+            <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid var(--borda)', background: 'var(--branco)', flexShrink: 0 }}>
+              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--texto-principal)' }}>📦 Acervo Físico <span style={{color: 'var(--texto-secundario)', fontSize: '14px'}}>(Escolha as peças do pacote)</span></h3>
               <button className="btn-fechar" onClick={() => setModalCatalogoAberto(false)}>X</button>
             </div>
             
-            <div className="catalogo-filtros" style={{ padding: '15px 30px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0 }}>
-              <input type="text" className="search-input-clean" style={{ border: '1px solid #cbd5e1', padding: '14px 18px', borderRadius: '8px', width: '100%', maxWidth: '500px', fontSize: '15px', outline: 'none' }} placeholder="🔎 Buscar peça no acervo..." value={buscaCatalogo} onChange={e => setBuscaCatalogo(e.target.value)} onFocus={e => e.target.style.borderColor = '#0f172a'} onBlur={e => e.target.style.borderColor = '#cbd5e1'} />
+            <div className="catalogo-filtros" style={{ padding: '15px 30px', background: 'var(--fundo-cinza)', borderBottom: '1px solid var(--borda)', flexShrink: 0 }}>
+              <input type="text" className="search-input-clean" style={{ border: '1px solid var(--borda)', backgroundColor: 'var(--branco)', color: 'var(--texto-principal)', padding: '14px 18px', borderRadius: '8px', width: '100%', maxWidth: '500px', fontSize: '15px', outline: 'none' }} placeholder="🔎 Buscar peça no acervo..." value={buscaCatalogo} onChange={e => setBuscaCatalogo(e.target.value)} />
               <div className="chips-categorias" style={{ marginTop: '15px', gap: '8px' }}>
                 {categoriasCatalogoUnicas.map(cat => (
                   <button key={cat} type="button" className={`chip-cat ${filtroCategoriaCatalogo === cat ? 'active' : ''}`} onClick={() => setFiltroCategoriaCatalogo(cat)}>
@@ -1208,7 +1208,7 @@ const CadastroEstoque = () => {
               </div>
             </div>
 
-            <div className="catalogo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', overflowY: 'auto', padding: '20px 30px', background: '#f1f5f9', flexGrow: 1 }}>
+            <div className="catalogo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', overflowY: 'auto', padding: '20px 30px', background: 'var(--fundo-cinza)', flexGrow: 1 }}>
               {itensCatalogoFiltrados.map(item => {
                 const qtdFisica = parseInt(item.quantidade || 0) || parseInt(item.estoque || 0) || 0;
                 const qtdManutencao = parseInt(item.manutencao || 0) || parseInt(item.emManutencao || 0) || parseInt(item.qtdManutencao || 0) || parseInt(item.avariadas || 0) || parseInt(item.defeito || 0) || parseInt(item.quebradas || 0) || 0;
@@ -1219,15 +1219,15 @@ const CadastroEstoque = () => {
                 const foiAdicionado = qtdNoKit > 0;
 
                 return (
-                  <div key={item.id} onClick={() => adicionarPecaAoKit(item)} style={{ background: '#fff', border: foiAdicionado ? '2px solid #10b981' : '1px solid #e2e8f0', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '280px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; }}>
+                  <div key={item.id} onClick={() => adicionarPecaAoKit(item)} style={{ background: 'var(--branco)', border: foiAdicionado ? '2px solid var(--dourado)' : '1px solid var(--borda)', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '280px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; }}>
                     
-                    <div style={{ height: '140px', width: '100%', flexShrink: 0, backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ height: '140px', width: '100%', flexShrink: 0, backgroundColor: 'var(--fundo-cinza)', borderBottom: '1px solid var(--borda)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                         {item.foto ? <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <span style={{fontSize:'35px'}}>📷</span>}
                     </div>
                     
                     <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
                         <div>
-                            <strong style={{ fontSize: '14px', color: '#0f172a', marginBottom: '2px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.nome}</strong>
+                            <strong style={{ fontSize: '14px', color: 'var(--texto-principal)', marginBottom: '2px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.nome}</strong>
                             <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: '800' }}>{item.categoria}</span>
                         </div>
                         
@@ -1257,10 +1257,10 @@ const CadastroEstoque = () => {
       {/* 🔥 MODAL PARA GERENCIAR LOCALIZAÇÕES BLINDADO POR USER_ID 🔥 */}
       {modalLocalizacaoAberto && (
         <div className="modal-overlay-premium" style={{ zIndex: 100000 }}>
-          <div className="modal-box-premium" style={{ maxWidth: '400px', width: '90%', padding: '25px', borderRadius: '12px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: '#0f172a', fontSize: '18px' }}>📍 Gerenciar Prateleiras</h3>
-              <button onClick={() => setModalLocalizacaoAberto(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#64748b' }}>×</button>
+          <div className="modal-box-premium" style={{ maxWidth: '400px', width: '90%', padding: '25px', borderRadius: '12px', backgroundColor: 'var(--branco)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--borda)', paddingBottom: '15px', marginBottom: '20px' }}>
+              <h3 style={{ margin: 0, color: 'var(--texto-principal)', fontSize: '18px' }}>📍 Gerenciar Prateleiras</h3>
+              <button onClick={() => setModalLocalizacaoAberto(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--texto-secundario)' }}>×</button>
             </div>
             
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
@@ -1269,29 +1269,30 @@ const CadastroEstoque = () => {
                   placeholder="Ex: Corredor A, Gaveta 3..." 
                   value={novaLocalizacaoText}
                   onChange={e => setNovaLocalizacaoText(e.target.value)}
-                  style={{ flex: 1, padding: '10px', border: '1px solid #cbd5e1', borderRadius: '6px', outline: 'none' }}
+                  style={{ flex: 1, padding: '10px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', borderRadius: '6px', outline: 'none' }}
                   onKeyDown={e => e.key === 'Enter' && handleAddLocalizacao()}
               />
               <button 
                   type="button" 
                   onClick={handleAddLocalizacao}
-                  style={{ background: '#3b82f6', color: 'white', border: 'none', padding: '0 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                  className="btn-salvar-modal"
+                  style={{ padding: '0 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
               >
                   Adicionar
               </button>
             </div>
 
-            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '6px', background: '#f8fafc' }}>
+            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--borda)', borderRadius: '6px', background: 'var(--fundo-cinza)' }}>
                 {localizacoesEditaveis.length === 0 ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Nenhuma localização cadastrada.</div>
+                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--texto-secundario)', fontSize: '13px' }}>Nenhuma localização cadastrada.</div>
                 ) : (
                     localizacoesEditaveis.map((loc, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', borderBottom: idx !== localizacoesEditaveis.length - 1 ? '1px solid #e2e8f0' : 'none', background: '#fff' }}>
-                            <span style={{ fontSize: '14px', color: '#334155', fontWeight: '500' }}>{loc}</span>
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', borderBottom: idx !== localizacoesEditaveis.length - 1 ? '1px solid var(--borda)' : 'none', background: 'var(--branco)' }}>
+                            <span style={{ fontSize: '14px', color: 'var(--texto-principal)', fontWeight: '500' }}>{loc}</span>
                             <button 
                                 type="button" 
                                 onClick={() => handleRemoveLocalizacao(loc)}
-                                style={{ background: '#fee2e2', color: '#ef4444', border: 'none', width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+                                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
                                 title="Remover"
                             >
                               ×
@@ -1301,11 +1302,11 @@ const CadastroEstoque = () => {
                 )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #e2e8f0' }}>
-              <button type="button" onClick={() => setModalLocalizacaoAberto(false)} style={{ padding: '10px 20px', background: '#f1f5f9', border: '1px solid #cbd5e1', borderRadius: '6px', color: '#475569', fontWeight: 'bold', cursor: 'pointer' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid var(--borda)' }}>
+              <button type="button" onClick={() => setModalLocalizacaoAberto(false)} className="btn-voltar-link" style={{ padding: '10px 20px', borderRadius: '6px' }}>
                   Cancelar
               </button>
-              <button type="button" onClick={handleSaveLocalizacoes} disabled={salvandoLocalizacoes} style={{ padding: '10px 20px', background: '#10b981', color: 'white', border: 'none', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}>
+              <button type="button" onClick={handleSaveLocalizacoes} disabled={salvandoLocalizacoes} className="btn-salvar-modal" style={{ padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold' }}>
                   {salvandoLocalizacoes ? 'Salvando...' : 'Salvar no Sistema'}
               </button>
             </div>

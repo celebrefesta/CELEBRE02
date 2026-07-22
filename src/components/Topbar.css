@@ -3,8 +3,8 @@
   justify-content: flex-end;
   align-items: center;
   padding: 10px 30px;
-  background-color: white;
-  border-bottom: 1px solid #e2e8f0;
+  background-color: var(--branco);
+  border-bottom: 1px solid var(--borda);
   position: sticky;
   top: 0;
   z-index: 99;
@@ -21,7 +21,7 @@
 .topbar-divisor {
   height: 30px;
   width: 1px;
-  background-color: #e2e8f0;
+  background-color: var(--borda);
   margin: 0 5px;
 }
 
@@ -46,7 +46,7 @@
 }
 
 .perfil-btn-trigger:hover {
-  background-color: #f8fafc;
+  background-color: var(--fundo-cinza);
 }
 
 /* A bolinha com a foto/ícone */
@@ -54,7 +54,7 @@
   width: 35px;
   height: 35px;
   background-color: #0f172a; /* Cor da sua marca */
-  color: #c5a059; /* Dourado */
+  color: var(--dourado); /* Dourado */
   border-radius: 50%;
   display: flex;
   align-items: center;
@@ -65,7 +65,7 @@
 .perfil-nome {
   font-size: 0.9rem;
   font-weight: 700;
-  color: #334155;
+  color: var(--texto-principal);
 }
 
 .seta-menu {
@@ -84,11 +84,11 @@
   position: absolute;
   top: 120%;
   right: 0;
-  background-color: white; 
+  background-color: var(--branco); 
   width: 240px;
   border-radius: 12px;
   box-shadow: 0 10px 35px rgba(0,0,0,0.1);
-  border: 1px solid #e2e8f0;
+  border: 1px solid var(--borda);
   padding: 10px;
   display: flex;
   flex-direction: column;

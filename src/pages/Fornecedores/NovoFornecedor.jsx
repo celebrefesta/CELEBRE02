@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, doc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
+import { formatCpfCnpj, formatTelefone } from '../../utils/mascaras';
 import './NovoFornecedor.css';
 
 const NovoFornecedor = () => {
@@ -222,7 +223,7 @@ const NovoFornecedor = () => {
                         <label>Nome do Fornecedor *</label>
                     </div>
                     <div className="floating-label">
-                        <input type="text" placeholder=" " value={cnpj} onChange={e => setCnpj(e.target.value)} />
+                        <input type="text" placeholder=" " value={formatCpfCnpj(cnpj)} onChange={e => setCnpj(formatCpfCnpj(e.target.value))} />
                         <label>CNPJ / CPF</label>
                     </div>
                     <div className="floating-label">
@@ -230,7 +231,7 @@ const NovoFornecedor = () => {
                         <label>Prazo de Entrega</label>
                     </div>
                     <div className="floating-label">
-                        <input type="tel" placeholder=" " value={contato} onChange={e => setContato(e.target.value)} />
+                        <input type="tel" placeholder=" " value={formatTelefone(contato)} onChange={e => setContato(formatTelefone(e.target.value))} />
                         <label>WhatsApp</label>
                     </div>
                     <div className="floating-label">
