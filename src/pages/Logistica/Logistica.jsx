@@ -56,15 +56,15 @@ const Logistica = () => {
 
       // Busca parâmetros da empresa para o PDF (Logo, Nome, etc)
       const docRef = doc(db, "configuracoes_empresa", tenantId);
-      const docSnap = await getDoc(docRef);
-      if (docSnap.exists()) {
+      const docSnap = await getDoc(docRef).catch(() => ({ exists: () => false }));
+      if (docSnap && docSnap.exists()) {
         setParametros(docSnap.data());
       }
 
       // Busca texto base do relatório de avarias da empresa
       const contratoRef = doc(db, "relatorio_avarias", tenantId);
-      const contratoSnap = await getDoc(contratoRef);
-      if (contratoSnap.exists()) {
+      const contratoSnap = await getDoc(contratoRef).catch(() => ({ exists: () => false }));
+      if (contratoSnap && contratoSnap.exists()) {
         setTextoRelatorio(contratoSnap.data().conteudo || contratoSnap.data().texto || '');
       }
 

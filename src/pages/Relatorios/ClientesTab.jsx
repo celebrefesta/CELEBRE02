@@ -67,7 +67,7 @@ const ClientesTab = () => {
         const [snapClientes, snapLocacoes, snapConfig] = await Promise.all([
           getDocs(qClientes),
           getDocs(qLocacoes),
-          getDoc(doc(db, "sistema", "parametros"))
+          getDoc(doc(db, "sistema", "parametros")).catch(() => ({ exists: () => false }))
         ]);
 
         if (snapConfig.exists()) {
@@ -309,7 +309,7 @@ const ClientesTab = () => {
                       </div>
                     </td>
                     <td className="centro bold" style={{ color: 'var(--texto-secundario)' }}>{c.qtdLocacoes}x</td>
-                    <td className="centro" style={{ color: '#64748b', fontSize: '13px', fontWeight: '600' }}>R$ {ticketMedioVip.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
+                    <td className="centro" style={{ color: 'var(--texto-secundario)', fontSize: '13px', fontWeight: '600' }}>R$ {ticketMedioVip.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                     <td className="direita bold text-verde">R$ {c.gastoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</td>
                   </tr>
                 );

@@ -63,7 +63,7 @@ const FinanceiroTab = () => {
           getDocs(qLocacoes),
           getDocs(qCompras),
           getDocs(qLancamentos).catch(() => ({ docs: [] })),
-          getDoc(doc(db, "sistema", "parametros"))
+          getDoc(doc(db, "sistema", "parametros")).catch(() => ({ exists: () => false }))
         ]);
 
         if (snapConfig.exists()) {

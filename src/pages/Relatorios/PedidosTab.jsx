@@ -61,7 +61,7 @@ const PedidosTab = () => {
 
         const [snapLocacoes, snapConfig] = await Promise.all([
           getDocs(qLocacoes),
-          getDoc(doc(db, "sistema", "parametros"))
+          getDoc(doc(db, "sistema", "parametros")).catch(() => ({ exists: () => false }))
         ]);
 
         if (snapConfig.exists()) {

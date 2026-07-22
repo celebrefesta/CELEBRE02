@@ -78,7 +78,7 @@ const EstoqueTab = () => {
         const [snapEstoque, snapLocacoes, snapConfig] = await Promise.all([
           getDocs(qEstoque),
           getDocs(qLocacoes),
-          getDoc(doc(db, "sistema", "parametros"))
+          getDoc(doc(db, "sistema", "parametros")).catch(() => ({ exists: () => false }))
         ]);
 
         if (snapConfig.exists()) {
