@@ -65,6 +65,8 @@ const Dashboard = () => {
   const [valoresPorStatus, setValoresPorStatus] = useState({ orcamento: 0, confirmado: 0 });
   const [topPecas, setTopPecas] = useState([]);
   const [cobrancasAtrasadas, setCobrancasAtrasadas] = useState([]);
+  const [aniversariantesDoMes, setAniversariantesDoMes] = useState([]);
+  const [modalAniversariantesAberto, setModalAniversariantesAberto] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const [diasTeste, setDiasTeste] = useState(1);
@@ -289,6 +291,48 @@ const Dashboard = () => {
         setTopPecas(rankingPecas);
         setCobrancasAtrasadas(atrasados.sort((a, b) => b.valor - a.valor).slice(0, 5));
         
+        // BUSCA ANIVERSARIANTES DO MÊS NO DASHBOARD
+        try {
+          const qClientesDash = query(collection(db, "clientes"), where("userId", "==", idDaEmpresaCorreta));
+          const snapClientesDash = await getDocs(qClientesDash);
+          const todosClientesDash = snapClientesDash.docs.map(d => ({ ...d.data(), id: d.id }));
+
+          const isAniversarianteDoMes = (cliente) => {
+            if (!cliente) return false;
+            const dataVal = cliente.nascimento || cliente.dataNascimento || cliente.dataNasc || cliente.dataAniversario || cliente.aniversario;
+            if (!dataVal) return false;
+            try {
+              let mesNasc = -1;
+              if (typeof dataVal === 'object' && dataVal !== null) {
+                if (dataVal.toDate) mesNasc = dataVal.toDate().getMonth();
+                else if (dataVal.seconds) mesNasc = new Date(dataVal.seconds * 1000).getMonth();
+                else if (dataVal instanceof Date) mesNasc = dataVal.getMonth();
+              } else {
+                const str = String(dataVal).trim();
+                if (!str) return false;
+                if (str.includes('-')) {
+                  const partes = str.split('T')[0].split('-');
+                  if (partes.length === 3) mesNasc = parseInt(partes[1], 10) - 1;
+                } else if (str.includes('/')) {
+                  const partes = str.split('/');
+                  if (partes.length >= 2) mesNasc = parseInt(partes[1], 10) - 1;
+                } else {
+                  const d = new Date(str);
+                  if (!isNaN(d.getTime())) mesNasc = d.getMonth();
+                }
+              }
+              return mesNasc === new Date().getMonth();
+            } catch (e) {
+              return false;
+            }
+          };
+
+          const anivs = todosClientesDash.filter(c => isAniversarianteDoMes(c));
+          setAniversariantesDoMes(anivs);
+        } catch (errAniv) {
+          console.warn("Aviso ao carregar aniversariantes do mês:", errAniv);
+        }
+        
       } catch (e) { 
           console.error("Erro dashboard:", e);
           setErroCarregamento(e.message || String(e));
@@ -493,6 +537,79 @@ const Dashboard = () => {
             </div>
           </section>
 
+          {/* WIDGET CRM ANIVERSARIANTES DO MÊS */}
+          <section className="dash-card-wide flex-grow crm-birthday-card-dash">
+            <div className="dash-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <h3 style={{ margin: 0 }}>🎂 Aniversariantes do Mês</h3>
+                <span className="dash-count-pill" style={{ background: '#fdf2f8', color: '#be185d', border: '1px solid #fbcfe8', padding: '2px 8px', borderRadius: '10px', fontSize: '0.7rem', fontWeight: '800' }}>
+                  {aniversariantesDoMes.length} CLIENTE{aniversariantesDoMes.length === 1 ? '' : 'S'}
+                </span>
+              </div>
+
+              <button 
+                type="button" 
+                onClick={() => setModalAniversariantesAberto(true)}
+                className="btn-ver-todos-anivs"
+              >
+                <i className="fas fa-eye"></i> VISUALIZAR TODOS
+              </button>
+            </div>
+            <p className="card-subtitle" style={{ margin: '4px 0 10px 0', fontSize: '0.78rem', color: '#64748b' }}>Felicite e envie cupons via WhatsApp, E-mail ou Ambos!</p>
+
+            <div className="activity-feed">
+              {aniversariantesDoMes.length > 0 ? (
+                aniversariantesDoMes.slice(0, 5).map((c) => {
+                  const nomeFormat = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente';
+                  const fone = c.celular ? c.celular.replace(/\D/g, '') : '';
+                  const msgTexto = encodeURIComponent(`Olá ${nomeFormat}! 🎉 A equipe Celebre deseja um Feliz Aniversário! Como presente especial, preparamos 10% OFF na sua próxima locação. Vamos comemorar? 🎂🎈`);
+                  const zapLink = `https://wa.me/55${fone}?text=${msgTexto}`;
+                  const mailLink = `mailto:${c.email}?subject=Parabéns do Celebre! 🎂🎈&body=${msgTexto}`;
+
+                  return (
+                    <div key={c.id} className="feed-row-birthday">
+                      <div className="birthday-client-info">
+                        <div className="birthday-avatar">{nomeFormat.charAt(0)}</div>
+                        <div>
+                          <strong>{nomeFormat}</strong>
+                          <span className="birthday-date-sub">📅 Aniversário: {c.nascimento || c.dataNascimento || c.dataNasc || 'Este Mês'}</span>
+                        </div>
+                      </div>
+
+                      <div className="birthday-dispatch-actions">
+                        {c.celular && (
+                          <a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap" title="Enviar Whats">
+                            <i className="fab fa-whatsapp"></i> Whats
+                          </a>
+                        )}
+                        {c.email && (
+                          <a href={mailLink} className="btn-dispatch-email" title="Enviar E-mail">
+                            <i className="far fa-envelope"></i> E-mail
+                          </a>
+                        )}
+                        {c.celular && c.email && (
+                          <button 
+                            type="button" 
+                            onClick={() => {
+                              window.open(zapLink, '_blank');
+                              window.location.href = mailLink;
+                            }}
+                            className="btn-dispatch-both" 
+                            title="Disparar WhatsApp + E-mail simultaneamente"
+                          >
+                            <i className="fas fa-paper-plane"></i> Ambos
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <p className="empty-feed">🎂 Nenhum cliente faz aniversário este mês.</p>
+              )}
+            </div>
+          </section>
+
           <section className="dash-card-wide flex-grow">
             <h3>📈 Ranking de Peças (Top 5)</h3>
             <div className="activity-feed">
@@ -510,6 +627,99 @@ const Dashboard = () => {
           </section>
         </div>
       </div>
+
+      {/* MODAL CENTRAL DE ANIVERSARIANTES DO MÊS */}
+      {modalAniversariantesAberto && (
+        <div className="modal-overlay-celebre fade-in" onClick={() => setModalAniversariantesAberto(false)}>
+          <div className="modal-container-celebre modal-aniversariantes-lg" onClick={e => e.stopPropagation()}>
+            <div className="modal-header-celebre" style={{ background: 'linear-gradient(135deg, #be185d 0%, #9d174d 100%)', color: '#ffffff' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '28px' }}>🎂</span>
+                <div>
+                  <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#ffffff', fontWeight: '850' }}>Aniversariantes do Mês ({aniversariantesDoMes.length})</h2>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', opacity: 0.9 }}>Central CRM de Retenção & Disparo de Cupons</p>
+                </div>
+              </div>
+              <button type="button" className="btn-close-modal" onClick={() => setModalAniversariantesAberto(false)}>✕</button>
+            </div>
+
+            <div className="modal-body-celebre" style={{ padding: '20px', maxHeight: '65vh', overflowY: 'auto' }}>
+              {aniversariantesDoMes.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '40px 20px', color: '#64748b' }}>
+                  <span style={{ fontSize: '40px', display: 'block', marginBottom: '10px' }}>🎂</span>
+                  <p style={{ fontWeight: '700' }}>Nenhum cliente faz aniversário este mês.</p>
+                </div>
+              ) : (
+                <div className="anivs-grid-modal" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  {aniversariantesDoMes.map(c => {
+                    const nomeFormat = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente';
+                    const fone = c.celular ? c.celular.replace(/\D/g, '') : '';
+                    const msgTexto = encodeURIComponent(`Olá ${nomeFormat}! 🎉 A equipe Celebre deseja um Feliz Aniversário! Como presente especial, preparamos 10% OFF na sua próxima locação de acervo. Vamos comemorar? 🎂🎈`);
+                    const zapLink = `https://wa.me/55${fone}?text=${msgTexto}`;
+                    const mailLink = `mailto:${c.email}?subject=Parabéns do Celebre! 🎂🎈&body=${msgTexto}`;
+
+                    return (
+                      <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 16px', background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #e2e8f0)', borderRadius: '14px', gap: '14px', flexWrap: 'wrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                          <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'linear-gradient(135deg, #ec4899 0%, #be185d 100%)', color: '#ffffff', fontWeight: '850', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.9rem' }}>
+                            {nomeFormat.charAt(0)}
+                          </div>
+                          <div>
+                            <strong style={{ fontSize: '0.9rem', color: 'var(--texto-principal, #0f172a)', display: 'block' }}>{nomeFormat}</strong>
+                            <span style={{ fontSize: '0.75rem', color: 'var(--texto-secundario, #64748b)' }}>
+                              📅 Data: {c.nascimento || c.dataNascimento || c.dataNasc || 'Este Mês'} {c.celular ? `• 📱 ${c.celular}` : ''} {c.email ? `• ✉️ ${c.email}` : ''}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          {c.celular && (
+                            <a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap" style={{ padding: '6px 12px', fontSize: '0.76rem' }}>
+                              <i className="fab fa-whatsapp"></i> WhatsApp
+                            </a>
+                          )}
+                          {c.email && (
+                            <a href={mailLink} className="btn-dispatch-email" style={{ padding: '6px 12px', fontSize: '0.76rem' }}>
+                              <i className="far fa-envelope"></i> E-mail
+                            </a>
+                          )}
+                          {c.celular && c.email && (
+                            <button 
+                              type="button" 
+                              onClick={() => {
+                                window.open(zapLink, '_blank');
+                                window.location.href = mailLink;
+                              }}
+                              className="btn-dispatch-both" 
+                              style={{ padding: '6px 12px', fontSize: '0.76rem' }}
+                            >
+                              <i className="fas fa-paper-plane"></i> Ambos
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer-celebre" style={{ padding: '14px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--borda, #e2e8f0)', background: 'var(--fundo-card, #f8fafc)' }}>
+              <button 
+                type="button" 
+                onClick={() => { setModalAniversariantesAberto(false); navigate('/clientes'); }}
+                className="btn-secondary-celebre"
+                style={{ fontSize: '0.78rem' }}
+              >
+                <i className="fas fa-users"></i> Ir para Gestão de Clientes
+              </button>
+              <button type="button" className="btn-primary-celebre" onClick={() => setModalAniversariantesAberto(false)}>
+                Fechar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

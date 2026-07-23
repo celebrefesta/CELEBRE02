@@ -50,8 +50,8 @@ html, body {
 }
 .btn-voltar-link:hover { background: #f1f5f9; border-color: #94a3b8; }
 
-.header-title-row { display: flex; justify-content: space-between; align-items: center; }
-.header-title-row h1 { font-size: 28px; color: var(--texto-principal); margin: 0; font-weight: 900; letter-spacing: -0.5px;}
+.novo-contrato-container .header-title-row { display: flex; justify-content: space-between; align-items: center; }
+.novo-contrato-container .header-title-row h1 { font-size: 28px; color: var(--texto-principal); margin: 0; font-weight: 900; letter-spacing: -0.5px;}
 
 .btn-import-acao {
   background: var(--branco); 

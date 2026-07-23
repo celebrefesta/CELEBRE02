@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Clientes.css';
-import { db } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, query, where, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db, storage } from '../../firebaseConfig';
+import { collection, getDocs, deleteDoc, doc, updateDoc, query, where, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
 const getTagStyle = (tag) => {
@@ -30,7 +31,6 @@ const Clientes = () => {
   const usuarioLogado = auth.currentUser;
   const navigate = useNavigate();
 
-  // 🔥 IDENTIFICAÇÃO CORPORATIVA (A chave para puxar os dados da empresa)
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [clientes, setClientes] = useState([]);
@@ -47,6 +47,15 @@ const Clientes = () => {
   const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('dados');
 
+  // ESTADOS DA MODAL DE SELEÇÃO DE MENSAGEM E ANEXO DO WHATSAPP
+  const [modalZapCliente, setModalZapCliente] = useState(null);
+  const [tipoMensagemZap, setTipoMensagemZap] = useState('atendimento');
+  const [textoMensagemZap, setTextoMensagemZap] = useState('');
+  const [imagemAnexoFile, setImagemAnexoFile] = useState(null);
+  const [imagemPreviewUrl, setImagemPreviewUrl] = useState('');
+  const [carregandoUploadImg, setCarregandoUploadImg] = useState(false);
+  const [imagemCopiadaComSucesso, setImagemCopiadaComSucesso] = useState(false);
+
   useEffect(() => { 
     if (!usuarioLogado) {
         navigate('/login');
@@ -59,15 +68,13 @@ const Clientes = () => {
     if (!usuarioLogado) return;
     setLoading(true);
     try {
-      // 🎯 BUSCA PELO ID DA EMPRESA (TENANT), NÃO PELO ID DO FUNCIONÁRIO
       const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
       const querySnapshot = await getDocs(qClientes);
-      let listaClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      let listaClientes = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 
-      // 🎯 BUSCA PELO ID DA EMPRESA (TENANT)
       const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const snapLocacoes = await getDocs(qLocacoes);
-      const locacoes = snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() }));
+      const locacoes = snapLocacoes.docs.map(d => ({ ...d.data(), id: d.id }));
       setAllLocacoes(locacoes);
 
       const hoje = new Date(); 
@@ -93,7 +100,11 @@ const Clientes = () => {
           }
         });
 
-        const statusCorreto = temDivida ? 'inadimplente' : 'adimplente';
+        let statusCorreto = temDivida ? 'inadimplente' : 'adimplente';
+        if (cliente.statusAprovacao === 'pendente' || cliente.situacaoFinanceira === 'pendente') {
+          statusCorreto = 'pendente';
+        }
+
         if (cliente.situacaoFinanceira !== statusCorreto) {
            batch.update(doc(db, "clientes", cliente.id), { situacaoFinanceira: statusCorreto });
            precisaAtualizarBanco = true;
@@ -132,7 +143,7 @@ const Clientes = () => {
       return dataEvento < hoje && (vTotal - vPago) > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado';
     });
 
-    setDetalhesDivida({ cliente: cliente.nome || cliente.nomeFantasia, pendencias });
+    setDetalhesDivida({ clienteObj: cliente, cliente: cliente.nome || cliente.nomeFantasia, pendencias });
     setModalAberto(true);
   };
 
@@ -143,19 +154,28 @@ const Clientes = () => {
   };
 
   const excluirCliente = async (id, nome) => {
-    if (window.confirm(`ATENÇÃO: Excluir ${nome} apagará todos os pedidos vinculados. Deseja continuar?`)) {
+    if (!id) {
+      alert("⚠️ Não foi possível identificar o ID único do cliente para exclusão.");
+      return;
+    }
+
+    if (window.confirm(`ATENÇÃO: Excluir ${nome || 'este cliente'} apagará o cadastro e os pedidos vinculados. Deseja continuar?`)) {
       try {
         await deleteDoc(doc(db, "clientes", id));
-        const pedidosSnap = await getDocs(query(collection(db, "locacoes"), where("clienteId", "==", id)));
-        if (!pedidosSnap.empty) {
-            const batch = writeBatch(db);
-            pedidosSnap.forEach((docPedido) => batch.delete(docPedido.ref));
-            await batch.commit();
+
+        try {
+          const pedidosSnap = await getDocs(query(collection(db, "locacoes"), where("clienteId", "==", id)));
+          if (!pedidosSnap.empty) {
+              const batch = writeBatch(db);
+              pedidosSnap.forEach((docPedido) => batch.delete(docPedido.ref));
+              await batch.commit();
+          }
+        } catch (errPedidos) {
+          console.warn("Aviso ao buscar pedidos do cliente excluído:", errPedidos);
         }
         
-        // 🔥 INÍCIO DO ESPIÃO DE EXCLUSÃO 🔥
         try {
-          const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipa";
+          const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
           await addDoc(collection(db, "logs_atividades"), {
             empresaId: tenantId,
             userId: tenantId,
@@ -163,20 +183,54 @@ const Clientes = () => {
             nomeFuncionario: nomeEquipe,
             usuarioEmail: usuarioLogado?.email || "Desconhecido",
             acao: "EXCLUSÃO DE CLIENTE",
-            detalhes: `Excluiu permanentemente o cliente "${nome}" e todos os seus pedidos vinculados.`,
+            detalhes: `Excluiu permanentemente o cliente "${nome}" e seus pedidos vinculados.`,
             dataHora: new Date().toISOString(),
             criadoEm: serverTimestamp()
           });
         } catch (errorEspiao) {
           console.error("Erro no espião de exclusão:", errorEspiao);
         }
-        // 🔥 FIM DO ESPIÃO 🔥
 
+        alert("✅ Cliente excluído com sucesso!");
         carregarClientes(); 
         setClienteVisualizacao(null);
       } catch (error) { 
-        alert("Erro ao excluir.");
+        console.error("Erro ao excluir cliente:", error);
+        alert(`Erro ao excluir: ${error.message || "Erro de conexão"}`);
       }
+    }
+  };
+
+  const aprovarCliente = async (e, clienteId, clienteNome) => {
+    if (e) e.stopPropagation();
+    try {
+      await updateDoc(doc(db, "clientes", clienteId), {
+        statusAprovacao: 'aprovado',
+        situacaoFinanceira: 'adimplente'
+      });
+
+      try {
+        const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+        await addDoc(collection(db, "logs_atividades"), {
+          empresaId: tenantId,
+          userId: tenantId,
+          funcionarioId: usuarioLogado?.uid,
+          nomeFuncionario: nomeEquipe,
+          usuarioEmail: usuarioLogado?.email || "Desconhecido",
+          acao: "APROVAÇÃO DE CLIENTE",
+          detalhes: `Aprovou o cadastro do cliente "${clienteNome}".`,
+          dataHora: new Date().toISOString()
+        });
+      } catch (errLog) {}
+
+      alert(`✅ Cadastro de "${clienteNome}" aprovado com sucesso!`);
+      carregarClientes();
+      if (clienteVisualizacao?.id === clienteId) {
+        setClienteVisualizacao(prev => prev ? ({ ...prev, statusAprovacao: 'aprovado', situacaoFinanceira: 'adimplente' }) : null);
+      }
+    } catch (error) {
+      console.error("Erro ao aprovar cliente:", error);
+      alert("Erro ao aprovar cliente.");
     }
   };
 
@@ -199,6 +253,179 @@ const Clientes = () => {
     return { historico, totalGasto };
   };
 
+  const getUltimaLocacao = (clienteId) => {
+    const locs = allLocacoes.filter(loc => loc.clienteId === clienteId || loc.cliente?.id === clienteId);
+    const validas = locs.filter(loc => {
+      const st = String(loc.status || '').toLowerCase();
+      return !st.includes('cancelado') && !st.includes('orcam');
+    });
+
+    if (validas.length === 0) return null;
+
+    validas.sort((a, b) => {
+      const dataA = a.dataRetirada || a.dataEvento || a.dataDevolucao || '';
+      const dataB = b.dataRetirada || b.dataEvento || b.dataDevolucao || '';
+      return new Date(dataB).getTime() - new Date(dataA).getTime();
+    });
+
+    const ultima = validas[0];
+    const dataStr = ultima.dataRetirada || ultima.dataEvento || ultima.dataDevolucao;
+    const tema = ultima.tema || ultima.temaDaFesta || ultima.nomeTema || ultima.tipoServico || 'Locação';
+    return {
+      data: dataStr ? new Date(dataStr + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data',
+      tema: tema,
+      status: ultima.status
+    };
+  };
+
+  const isAniversarianteDoMes = (clienteOuDataStr) => {
+    if (!clienteOuDataStr) return false;
+    let dataVal = clienteOuDataStr;
+
+    if (typeof clienteOuDataStr === 'object' && clienteOuDataStr !== null && !(clienteOuDataStr instanceof Date)) {
+      dataVal = clienteOuDataStr.nascimento || clienteOuDataStr.dataNascimento || clienteOuDataStr.dataNasc || clienteOuDataStr.dataAniversario || clienteOuDataStr.aniversario;
+    }
+    if (!dataVal) return false;
+
+    try {
+      let mesNasc = -1;
+      if (typeof dataVal === 'object' && dataVal !== null) {
+        if (dataVal.toDate) mesNasc = dataVal.toDate().getMonth();
+        else if (dataVal.seconds) mesNasc = new Date(dataVal.seconds * 1000).getMonth();
+        else if (dataVal instanceof Date) mesNasc = dataVal.getMonth();
+      } else {
+        const str = String(dataVal).trim();
+        if (!str) return false;
+        if (str.includes('-')) {
+          const partes = str.split('T')[0].split('-');
+          if (partes.length === 3) mesNasc = parseInt(partes[1], 10) - 1;
+        } else if (str.includes('/')) {
+          const partes = str.split('/');
+          if (partes.length >= 2) mesNasc = parseInt(partes[1], 10) - 1;
+        } else {
+          const d = new Date(str);
+          if (!isNaN(d.getTime())) mesNasc = d.getMonth();
+        }
+      }
+      return mesNasc === new Date().getMonth();
+    } catch (e) {
+      return false;
+    }
+  };
+
+  // GERADOR DE MODELOS DE TEXTO PARA O WHATSAPP
+  const gerarTextoModeloWhatsApp = (cliente, tipo) => {
+    if (!cliente) return '';
+    const primeiroNome = (cliente.nome || cliente.nomeFantasia || 'Cliente').trim().split(' ')[0];
+
+    if (tipo === 'cobranca') {
+      const res = getHistoricoDoCliente(cliente.id);
+      const pendencias = res.historico.filter(loc => {
+        const st = String(loc.statusPagamento || '').toLowerCase();
+        return st !== 'pago' && st !== 'quitado' && !String(loc.status || '').toLowerCase().includes('cancel');
+      });
+      const totalDevido = pendencias.reduce((acc, p) => acc + (Number(p.valorTotal || p.total || 0) - Number(p.valorPago || 0)), 0);
+
+      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nPassando aqui da Celebre referente à sua locação de artigos para festa. Consta um valor pendente de *R$ ${totalDevido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}*.\n\nSe quiser, posso te mandar a chave Pix para facilitar o acerto! Como prefere fazer? 🎈✨`;
+    } else if (tipo === 'agradecimento') {
+      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nPassando em nome de toda a equipe Celebre para agradecer muito pela confiança em realizar a sua festa com a gente! 🎉💖\n\nEsperamos que tenha sido um momento inesquecível! Deu tudo certo com os itens? Estamos sempre à disposição para os próximos eventos! 🎈✨`;
+    } else if (tipo === 'aniversario') {
+      return `Olá, *${primeiroNome}*! 🎂🎉\n\nA equipe Celebre te deseja um Feliz Aniversário repleto de alegrias, saúde e muitas festas!\n\nPreparamos um desconto super especial para você comemorar essa data incrível com a gente. Vamos montar um projeto lindo? 🥳✨`;
+    } else if (tipo === 'promocao') {
+      return `Olá, *${primeiroNome}*! Como vai? 😊\n\nChegaram peças e acervos novos incríveis aqui na Celebre Festas! 🚚✨\n\nPreparamos uma condição exclusiva para o seu próximo evento. Vamos agendar uma visita ou montar um orçamento personalizado? 🎈🎨`;
+    } else {
+      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nEntro em contato pela Celebre para conversarmos sobre seus eventos e locações. Como posso te ajudar hoje? 🎉🎈`;
+    }
+  };
+
+  const abrirModalWhatsApp = (cliente, tipoInicial = null) => {
+    let tipo = tipoInicial;
+    if (!tipo) {
+      if (cliente.situacaoFinanceira === 'inadimplente') tipo = 'cobranca';
+      else if (isAniversarianteDoMes(cliente.dataNascimento || cliente.dataNasc)) tipo = 'aniversario';
+      else tipo = 'atendimento';
+    }
+    const textoInicial = gerarTextoModeloWhatsApp(cliente, tipo);
+    setModalZapCliente(cliente);
+    setTipoMensagemZap(tipo);
+    setTextoMensagemZap(textoInicial);
+    setImagemAnexoFile(null);
+    setImagemPreviewUrl('');
+    setImagemCopiadaComSucesso(false);
+  };
+
+  const selecionarModeloZap = (tipo) => {
+    setTipoMensagemZap(tipo);
+    if (tipo !== 'custom') {
+      let txt = gerarTextoModeloWhatsApp(modalZapCliente, tipo);
+      if (imagemPreviewUrl && !txt.includes('📸 Imagem anexada:')) {
+        txt += `\n\n📸 Imagem em anexo no link: ${imagemPreviewUrl}`;
+      }
+      setTextoMensagemZap(txt);
+    }
+  };
+
+  const handleUparImagemZap = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Criar preview local instantâneo
+    const previewUrlLocal = URL.createObjectURL(file);
+    setImagemAnexoFile(file);
+    setImagemPreviewUrl(previewUrlLocal);
+    setImagemCopiadaComSucesso(false);
+
+    // Tentar upload para o Firebase Storage para gerar link público de compartilhamento
+    if (storage) {
+      setCarregandoUploadImg(true);
+      try {
+        const storageRef = ref(storage, `whatsapp_anexos/${tenantId}/${Date.now()}_${file.name}`);
+        await uploadBytes(storageRef, file);
+        const urlPublica = await getDownloadURL(storageRef);
+        setImagemPreviewUrl(urlPublica);
+        
+        // Anexar o link da imagem ao texto da mensagem se ainda não estiver presente
+        if (!textoMensagemZap.includes(urlPublica)) {
+          setTextoMensagemZap(prev => `${prev}\n\n📸 Imagem do catálogo/anexo: ${urlPublica}`);
+        }
+      } catch (err) {
+        console.warn("Aviso ao salvar no Firebase Storage (usando preview local):", err);
+      } finally {
+        setCarregandoUploadImg(false);
+      }
+    }
+  };
+
+  const copiarImagemAreaTransferencia = async () => {
+    if (!imagemAnexoFile) return;
+    try {
+      // Converte imagem em blob e copia para a área de transferência do sistema
+      const blob = imagemAnexoFile.slice(0, imagemAnexoFile.size, imagemAnexoFile.type);
+      await navigator.clipboard.write([
+        new ClipboardItem({ [imagemAnexoFile.type]: blob })
+      ]);
+      setImagemCopiadaComSucesso(true);
+      setTimeout(() => setImagemCopiadaComSucesso(false), 4000);
+    } catch (err) {
+      console.error("Erro ao copiar imagem:", err);
+      alert("💡 Dica: A imagem foi salva! Você pode arrastar a imagem diretamente para o chat do WhatsApp Web.");
+    }
+  };
+
+  const removerImagemZap = () => {
+    setImagemAnexoFile(null);
+    setImagemPreviewUrl('');
+    setImagemCopiadaComSucesso(false);
+  };
+
+  const dispararWhatsAppFinal = () => {
+    if (!modalZapCliente?.celular) return;
+    const numLimpo = modalZapCliente.celular.replace(/\D/g, '');
+    const url = `https://wa.me/55${numLimpo}?text=${encodeURIComponent(textoMensagemZap)}`;
+    window.open(url, '_blank');
+    setModalZapCliente(null);
+  };
+
   const formatarTelefone = (tel) => {
     if (!tel) return '';
     const limpo = tel.replace(/\D/g, '');
@@ -217,12 +444,57 @@ const Clientes = () => {
     }).join(' ');
   };
 
+  const ltvTotalCarteira = allLocacoes.reduce((soma, loc) => {
+    const st = String(loc.status || '').toLowerCase();
+    if (!st.includes('cancelado') && !st.includes('orcam')) {
+      return soma + Number(loc.valorTotal || loc.total || 0);
+    }
+    return soma;
+  }, 0);
+
+  const [filtroTagCRM, setFiltroTagCRM] = useState('todas');
+
+  // Mapeamento de Ranking dos Melhores Clientes por locações/LTV
+  const rankingsClientesMap = React.useMemo(() => {
+    const map = {};
+    const listaComLocs = clientes.map(c => {
+      const res = getHistoricoDoCliente(c.id);
+      return { id: c.id, count: res.historico.length, gasto: res.totalGasto };
+    }).filter(c => c.count > 0);
+
+    listaComLocs.sort((a, b) => b.count - a.count || b.gasto - a.gasto);
+
+    listaComLocs.forEach((item, index) => {
+      if (index === 0) map[item.id] = { badge: '🥇 TOP 1', color: '#b45309', bg: '#fef3c7', border: '#fcd34d' };
+      else if (index === 1) map[item.id] = { badge: '🥈 TOP 2', color: '#475569', bg: '#f1f5f9', border: '#cbd5e1' };
+      else if (index === 2) map[item.id] = { badge: '🥉 TOP 3', color: '#7c2d12', bg: '#ffedd5', border: '#fdba74' };
+      else if (item.count >= 3) map[item.id] = { badge: '⭐ FREQUENTE', color: '#1d4ed8', bg: '#dbeafe', border: '#93c5fd' };
+    });
+
+    return map;
+  }, [clientes, allLocacoes]);
+
   let clientesFiltrados = clientes.filter(c => {
     const termo = busca.toLowerCase();
-    const matchBusca = (c.nome?.toLowerCase().includes(termo)) || (c.nomeFantasia?.toLowerCase().includes(termo)) || (c.cpf?.includes(termo)) || (c.cnpj?.includes(termo));
-    if (filtroStatus === 'adimplentes') return matchBusca && c.situacaoFinanceira === 'adimplente';
-    if (filtroStatus === 'inadimplentes') return matchBusca && c.situacaoFinanceira === 'inadimplente';
-    return matchBusca;
+    const matchBusca = (c.nome?.toLowerCase().includes(termo)) || 
+                       (c.nomeFantasia?.toLowerCase().includes(termo)) || 
+                       (c.cpf?.includes(termo)) || 
+                       (c.cnpj?.includes(termo)) ||
+                       (c.email?.toLowerCase().includes(termo));
+                       
+    let passStatus = true;
+    if (filtroStatus === 'adimplentes') passStatus = c.situacaoFinanceira === 'adimplente';
+    if (filtroStatus === 'inadimplentes') passStatus = c.situacaoFinanceira === 'inadimplente';
+    if (filtroStatus === 'pendentes') passStatus = c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente';
+    if (filtroStatus === 'vip') passStatus = (c.tags || '').toUpperCase().includes('VIP');
+    if (filtroStatus === 'aniversariantes') passStatus = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
+
+    let passTag = true;
+    if (filtroTagCRM !== 'todas') {
+      passTag = (c.tags || '').toUpperCase() === filtroTagCRM.toUpperCase();
+    }
+
+    return matchBusca && passStatus && passTag;
   });
 
   clientesFiltrados.sort((a, b) => {
@@ -246,79 +518,246 @@ const Clientes = () => {
       perfilTotalGasto = res.totalGasto;
   }
 
+  const numAniversariantes = clientes.filter(c => isAniversarianteDoMes(c.dataNascimento || c.dataNasc)).length;
+  const numPendentesAprovacao = clientes.filter(c => c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente').length;
+
+  const copiarLinkAutoCadastro = () => {
+    const link = `${window.location.origin}/autocadastro/${tenantId}`;
+    navigator.clipboard.writeText(link);
+    alert(`📋 Link de Auto-Cadastro copiado com sucesso!\n\n${link}\n\nEnvie este link para os seus clientes pelo WhatsApp para que eles preencham o cadastro diretamente no celular!`);
+  };
+
   return (
-    <div className="clientes-container dashboard-container">
+    <div className="clientes-container dashboard-container fade-in">
       
-      <header className="dashboard-header">
+      {/* HERO / CABEÇALHO */}
+      <header className="clientes-hero-header">
         <div className="welcome-text">
-          <h1>MEUS CLIENTES</h1>
-          <p>Gestão de carteira, contatos e histórico financeiro.</p>
+          <div className="header-title-row">
+            <span className="header-icon-badge"><i className="fas fa-users"></i></span>
+            <div>
+              <h1>Gestão de Clientes</h1>
+              <p>Carteira de clientes, CRM de aniversariantes e disparo inteligente de mensagens com foto.</p>
+            </div>
+          </div>
         </div>
+
         <div className="header-actions">
-          <Link to="/cadastro-cliente" className="btn-primary-celebre">+ NOVO CLIENTE</Link>
+          <button 
+            type="button"
+            onClick={copiarLinkAutoCadastro}
+            className="btn-secondary-celebre"
+            title="Copiar Link de Auto-Cadastro para enviar aos clientes pelo WhatsApp"
+          >
+            <i className="fas fa-link"></i> Link Auto-Cadastro
+          </button>
+
+          <Link to="/cadastro-cliente" className="btn-primary-celebre">
+            <i className="fas fa-plus"></i> NOVO CLIENTE
+          </Link>
         </div>
       </header>
 
-      <div className="clientes-stats-row">
-        <div className="stat-card-wide border-purple">
-          <span>Total na Carteira</span>
-          <strong>{clientes.length}</strong>
+      {/* BANNER INTERATIVO DE PENDENTES DE APROVAÇÃO (AUTO-CADASTRO) */}
+      {numPendentesAprovacao > 0 && (
+        <div className="crm-birthday-alert-banner fade-in" style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', borderColor: '#fdba74', marginBottom: '16px' }} onClick={() => setFiltroStatus('pendentes')}>
+          <div className="alert-banner-left">
+            <span className="banner-cake-icon" style={{ background: '#ffedd5', color: '#c2410c' }}>⏳</span>
+            <div>
+              <strong style={{ color: '#9a3412' }}>{numPendentesAprovacao} cadastro{numPendentesAprovacao === 1 ? '' : 's'} de auto-cadastro aguardando sua aprovação!</strong>
+              <p style={{ color: '#c2410c' }}>Revise as informações cadastradas via link público e aprove o perfil com 1 clique.</p>
+            </div>
+          </div>
+          <button type="button" className="btn-banner-action" style={{ background: '#c2410c', color: '#fff' }}>
+            Aprovar Cadastros <i className="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      )}
+
+      {/* BANNER INTERATIVO DE ANIVERSARIANTES DO MÊS */}
+      {numAniversariantes > 0 && (
+        <div className="crm-birthday-alert-banner fade-in" onClick={() => setFiltroStatus('aniversariantes')}>
+          <div className="alert-banner-left">
+            <span className="banner-cake-icon">🎂</span>
+            <div>
+              <strong style={{ color: '#be185d' }}>{numAniversariantes} cliente{numAniversariantes === 1 ? '' : 's'} faz{numAniversariantes === 1 ? '' : 'em'} aniversário este mês!</strong>
+              <p>Aproveite para enviar felicitações e cupons de desconto para impulsionar novas locações.</p>
+            </div>
+          </div>
+          <button type="button" className="btn-banner-action">
+            Ver Aniversariantes <i className="fas fa-arrow-right"></i>
+          </button>
+        </div>
+      )}
+
+      {/* KPI CARDS (MÉTRICAS DA CARTEIRA) */}
+      <div className="clientes-stats-grid">
+        <div className="stat-card-pro border-purple">
+          <div className="stat-icon-wrapper icon-purple">
+            <i className="fas fa-address-book"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">Total na Carteira</span>
+            <strong className="stat-value">{clientes.length}</strong>
+            <span className="stat-sub">Clientes cadastrados</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-amber" onClick={() => setFiltroStatus('pendentes')} style={{ cursor: 'pointer' }}>
+          <div className="stat-icon-wrapper icon-amber" style={{ background: '#fff7ed', color: '#d97706' }}>
+            <i className="fas fa-user-clock"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">Aguardando Aprovação</span>
+            <strong className="stat-value" style={{ color: '#d97706' }}>{numPendentesAprovacao}</strong>
+            <span className="stat-sub">Pendentes de análise</span>
+          </div>
         </div>
  
-        <div className="stat-card-wide border-green">
-          <span>Adimplentes (Tudo OK)</span>
-          <strong>{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</strong>
+        <div className="stat-card-pro border-green">
+          <div className="stat-icon-wrapper icon-green">
+            <i className="fas fa-user-check"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">Adimplentes (Ativos)</span>
+            <strong className="stat-value">{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</strong>
+            <span className="stat-sub">Aprovados sem pendências</span>
+          </div>
         </div>
         
-        <div className="stat-card-wide border-red">
-          <span>Com Pendências</span>
-          <strong>{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong>
+        <div className="stat-card-pro border-red">
+          <div className="stat-icon-wrapper icon-red">
+            <i className="fas fa-exclamation-triangle"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">Com Pendências</span>
+            <strong className="stat-value">{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong>
+            <span className="stat-sub">Exigem cobrança/atenção</span>
+          </div>
         </div>
       </div>
 
+      {/* BARRA DE FILTROS E BUSCA */}
       <div className="advanced-filter-bar">
         <div className="filter-main-row">
+          
           <div className="search-group">
-            <span className="search-icon">🔍</span>
-            <input type="text" placeholder="Buscar cliente por nome, CPF ou CNPJ..." value={busca} onChange={e => setBusca(e.target.value)} />
+            <span className="search-icon"><i className="fas fa-search"></i></span>
+            <input 
+              type="text" 
+              placeholder="Buscar por Nome, CPF, CNPJ ou E-mail..." 
+              value={busca} 
+              onChange={e => setBusca(e.target.value)} 
+            />
+            {busca && (
+              <button className="btn-clear-search" onClick={() => setBusca('')}>
+                <i className="fas fa-times"></i>
+              </button>
+            )}
           </div>
+
+          <div className="filter-pills-row">
+            <button 
+              className={`pill-btn ${filtroStatus === 'todos' ? 'active' : ''}`}
+              onClick={() => setFiltroStatus('todos')}
+            >
+              Todos ({clientes.length})
+            </button>
+            {numPendentesAprovacao > 0 && (
+              <button 
+                className={`pill-btn ${filtroStatus === 'pendentes' ? 'active' : ''}`}
+                style={{ background: filtroStatus === 'pendentes' ? '#d97706' : '#fff7ed', color: filtroStatus === 'pendentes' ? '#fff' : '#d97706', borderColor: '#fde047' }}
+                onClick={() => setFiltroStatus('pendentes')}
+              >
+                ⏳ Aguardando Aprovação ({numPendentesAprovacao})
+              </button>
+            )}
+            <button 
+              className={`pill-btn pill-green ${filtroStatus === 'adimplentes' ? 'active' : ''}`}
+              onClick={() => setFiltroStatus('adimplentes')}
+            >
+              Adimplentes ({clientes.filter(c => c.situacaoFinanceira === 'adimplente').length})
+            </button>
+            <button 
+              className={`pill-btn pill-red ${filtroStatus === 'inadimplentes' ? 'active' : ''}`}
+              onClick={() => setFiltroStatus('inadimplentes')}
+            >
+              Pendências ({clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length})
+            </button>
+            <button 
+              className={`pill-btn pill-cake ${filtroStatus === 'aniversariantes' ? 'active' : ''}`}
+              onClick={() => setFiltroStatus('aniversariantes')}
+            >
+              🎂 Aniversariantes ({numAniversariantes})
+            </button>
+            <button 
+              className={`pill-btn pill-gold ${filtroStatus === 'vip' ? 'active' : ''}`}
+              onClick={() => setFiltroStatus('vip')}
+            >
+              VIPs ({clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length})
+            </button>
+          </div>
+
+          <select 
+            value={filtroTagCRM} 
+            onChange={(e) => setFiltroTagCRM(e.target.value)}
+            className="select-tag-crm-filter"
+            style={{ height: '38px', borderRadius: '20px', padding: '0 12px', fontSize: '0.78rem', fontWeight: '700', border: '1px solid var(--borda, #cbd5e1)', outline: 'none', cursor: 'pointer', background: 'var(--fundo-card, #ffffff)', color: 'var(--texto-principal, #0f172a)' }}
+          >
+            <option value="todas">🏷️ Filtrar por Tag CRM</option>
+            <option value="VIP">👑 VIP</option>
+            <option value="RECORRENTE">🔄 RECORRENTE</option>
+            <option value="NOVO">✨ NOVO</option>
+            <option value="EXIGENTE">⭐ EXIGENTE</option>
+            <option value="ORGANIZADO">📋 ORGANIZADO</option>
+            <option value="ECONÔMICO">🏷️ ECONÔMICO</option>
+            <option value="FAMÍLIA">👪 FAMÍLIA</option>
+            <option value="PROBLEMÁTICO">⚠️ PROBLEMÁTICO</option>
+          </select>
+
           <button onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} className="btn-sort">
-            {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
+            <i className={ordemAlfabetica === 'A-Z' ? "fas fa-sort-alpha-down" : "fas fa-sort-alpha-up"}></i> {ordemAlfabetica}
           </button>
-          <div className="select-group">
-            <select value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)} className="select-status">
-              <option value="todos">📊 Todos os Status</option>
-              <option value="adimplentes">✅ Apenas Adimplentes</option>
-              <option value="inadimplentes">⚠️ Apenas Inadimplentes</option>
-            </select>
-          </div>
+
         </div>
       </div>
 
+      {/* TABELA DE CLIENTES */}
       {loading ? (
-        <div className="loading-state">Analisando histórico financeiro dos clientes...</div>
+        <div className="loading-state">
+          <i className="fas fa-spinner fa-spin"></i> Carregando carteira de clientes...
+        </div>
       ) : (
-        <div className="table-responsive">
-          <table className="custom-table">
+        <div className="table-responsive-card">
+          <table className="custom-table-pro">
             <thead>
               <tr>
-                <th width="40%">CLIENTE</th>
-                <th>CONTATO</th>
-                <th>LOCALIZAÇÃO</th>
-                <th className="text-center">SITUAÇÃO</th>
-                <th width="50px"></th> 
+                <th width="35%">CLIENTE</th>
+                <th width="23%">CONTATO</th>
+                <th width="22%">ÚLTIMA LOCAÇÃO</th>
+                <th width="15%" className="text-center">SITUAÇÃO</th>
+                <th width="5%" className="text-center">AÇÕES</th> 
               </tr>
             </thead>
             <tbody>
               {clientesFiltrados.length === 0 ? (
-                 <tr><td colSpan="5" className="empty-table-cell">Nenhum cliente encontrado com estes filtros.</td></tr>
+                 <tr>
+                   <td colSpan="5" className="empty-table-cell">
+                     <i className="fas fa-folder-open empty-icon"></i>
+                     <p>Nenhum cliente encontrado para os filtros selecionados.</p>
+                   </td>
+                 </tr>
               ) : (
                 clientesFiltrados.map(c => {
                   const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
                   const tagColorida = c.tags ? getTagStyle(c.tags) : null;
+                  const eAniversariante = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
+                  const isInadimplente = c.situacaoFinanceira === 'inadimplente';
 
                   return (
                     <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover" onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }}> 
+                      
+                      {/* CLIENTE & AVATAR */}
                       <td className="cliente-cell">
                         <div className="cliente-info-wrapper">
                           {c.foto ? (
@@ -327,52 +766,138 @@ const Clientes = () => {
                               <div className="avatar-quadrado avatar-letra-gold">{nomeBonito.charAt(0)}</div>
                           )}
                           <div className="user-details">
-                            <div className="client-header-info">
+                            <div className="client-header-info" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                <strong className="client-name">{nomeBonito}</strong>
+                               {rankingsClientesMap[c.id] && (
+                                 <span className="badge-ranking-cliente" style={{ backgroundColor: rankingsClientesMap[c.id].bg, color: rankingsClientesMap[c.id].color, border: `1px solid ${rankingsClientesMap[c.id].border}`, padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '850' }}>
+                                   {rankingsClientesMap[c.id].badge}
+                                 </span>
+                               )}
+                                {eAniversariante && (
+                                  <span className="badge-aniversario-mini" title="Aniversariante deste Mês!">
+                                    🎂 ANIVERSARIANTE
+                                  </span>
+                                )}
                                 {tagColorida && (
                                     <span className="tag-badge-dynamic" style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}` }}>
                                         {c.tags}
                                     </span>
                                 )}
                             </div>
-                            <span className="client-doc">{c.tipoPessoa === 'juridica' ? `CNPJ: ${c.cnpj}` : c.cpf ? `CPF: ${c.cpf}` : 'Sem documento'}</span>
+                            <span className="client-doc">
+                              <i className="far fa-id-card"></i> {c.tipoPessoa === 'juridica' ? `CNPJ: ${c.cnpj || '-'}` : c.cpf ? `CPF: ${c.cpf}` : 'Sem documento'}
+                            </span>
                           </div>
                         </div>
                       </td>
 
-                      <td className="info-cell mobile-stack" onClick={e => e.stopPropagation()}>
+                      {/* CONTATO & WHATSAPP */}
+                      <td className="info-cell" onClick={e => e.stopPropagation()}>
                         {c.celular ? (
                           <div className="contact-whatsapp-row">
                             <span className="contact-phone">{formatarTelefone(c.celular)}</span>
-                            <a href={`https://wa.me/55${c.celular.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="btn-zap-icon" title="Chamar no WhatsApp">
-                              <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12.031 0C5.385 0 0 5.386 0 12.032c0 2.13.553 4.212 1.602 6.046L.18 24l6.096-1.554a11.96 11.96 0 0 0 5.755 1.472h.004c6.645 0 12.03-5.386 12.03-12.031S18.676 0 12.031 0zm0 21.916a9.924 9.924 0 0 1-5.068-1.378l-.364-.216-3.766.96.994-3.67-.236-.376A9.927 9.927 0 0 1 2.083 12.03c0-5.492 4.473-9.965 9.966-9.965 5.49 0 9.963 4.473 9.963 9.965 0 5.49-4.471 9.965-9.963 9.965zm5.464-7.464c-.3-.15-1.774-.876-2.048-.976-.273-.102-.473-.152-.673.15-.2.3-.773.976-.948 1.176-.174.2-.348.226-.648.076-.3-.15-1.266-.465-2.41-1.314-.89-.661-1.49-1.477-1.664-1.777-.174-.3-.018-.462.132-.612.135-.135.3-.35.45-.525.15-.176.2-.3.3-.5.1-.2.05-.376-.025-.526-.075-.15-.673-1.62-.923-2.22-.243-.585-.49-.505-.673-.515-.173-.01-.373-.01-.573-.01-.2 0-.523.076-.798.376-.275.3-1.048 1.026-1.048 2.502 0 1.476 1.073 2.9 1.223 3.1.15.2 2.115 3.226 5.12 4.453.715.292 1.273.466 1.708.597.718.215 1.372.185 1.895.112.585-.08 1.774-.725 2.023-1.425.25-.7.25-1.3.175-1.425-.075-.126-.275-.2-.575-.35z"/></svg>
-                            </a>
+                            <button 
+                              onClick={() => abrirModalWhatsApp(c)}
+                              className={`btn-zap-icon ${isInadimplente ? 'btn-zap-cobranca' : eAniversariante ? 'btn-zap-aniversario' : ''}`}
+                              title="Enviar WhatsApp (Escolher modelo / Anexar Imagem)"
+                            >
+                              <i className="fab fa-whatsapp"></i>
+                            </button>
                           </div>
-                        ) : '--'}
+                        ) : (
+                          <span className="text-muted">--</span>
+                        )}
+                        {c.email && (
+                          <div className="contact-email-sub">{c.email}</div>
+                        )}
                       </td>
 
-                      <td className="info-cell mobile-stack">
-                        {c.cidade ? (<span className="loc-badge">📍 {c.cidade}{c.uf ? `/${c.uf}` : ''}</span>) : '--'}
+                      {/* ÚLTIMA LOCAÇÃO */}
+                      <td className="info-cell">
+                        {(() => {
+                          const ult = getUltimaLocacao(c.id);
+                          if (ult) {
+                            return (
+                              <div className="last-rental-box">
+                                <span className="rental-date">
+                                  <i className="far fa-calendar-alt text-amber"></i> {ult.data}
+                                </span>
+                                <span className="rental-theme" title={ult.tema}>
+                                  🎉 {ult.tema}
+                                </span>
+                              </div>
+                            );
+                          }
+                          return <span className="text-muted">-- Sem locações</span>;
+                        })()}
                       </td>
 
-                      <td className="status-cell text-center mobile-stack">
-                        <span onClick={(e) => verPorQueInadimplente(e, c)} className={`badge-status ${c.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`}>
-                          {c.situacaoFinanceira === 'inadimplente' ? (<><span>⚠️</span> PENDÊNCIAS</>) : (<><span>✅</span> ADIMPLENTE</>)}
-                        </span>
+                      {/* SITUAÇÃO FINANCEIRA E APROVAÇÃO */}
+                      <td className="status-cell text-center">
+                        {c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente' ? (
+                          <span className="badge-status-pro pendente" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74', fontWeight: '850' }}>
+                            <i className="fas fa-clock"></i> AGUARDANDO APROVAÇÃO
+                          </span>
+                        ) : c.situacaoFinanceira === 'inadimplente' ? (
+                          <span 
+                            onClick={(e) => verPorQueInadimplente(e, c)} 
+                            className="badge-status-pro devedor"
+                          >
+                            <i className="fas fa-exclamation-triangle"></i> PENDÊNCIAS
+                          </span>
+                        ) : (
+                          <span className="badge-status-pro ok">
+                            <i className="fas fa-check-circle"></i> ADIMPLENTE
+                          </span>
+                        )}
                       </td>
 
-                      <td className="actions-cell">
-                        <div className="dropdown-container">
-                         <button className="btn-pontinhos" onClick={(e) => { e.stopPropagation(); setMenuAberto(menuAberto === c.id ? null : c.id); }}>⋮</button>
+                      {/* MENU DE AÇÕES */}
+                      <td className="actions-cell text-center" onClick={e => e.stopPropagation()}>
+                        <div className="dropdown-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                          {(c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente') && (
+                            <button 
+                              type="button"
+                              onClick={(e) => aprovarCliente(e, c.id, c.nome || c.nomeFantasia)} 
+                              className="btn-aprovar-card"
+                              title="Aprovar Cadastro do Cliente"
+                              style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '14px', fontSize: '0.74rem', fontWeight: '850', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)' }}
+                            >
+                              ✓ Aprovar
+                            </button>
+                          )}
+
+                          <button className="btn-pontinhos" onClick={(e) => { e.stopPropagation(); setMenuAberto(menuAberto === c.id ? null : c.id); }}>
+                            <i className="fas fa-ellipsis-v"></i>
+                          </button>
+
                           {menuAberto === c.id && (
-                            <div className="menu-suspenso">
-                              <button onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }} className="item-menu">👁️ Ver Perfil</button>
-                              <button onClick={(e) => { e.stopPropagation(); navigate('/cadastro-cliente', { state: { clienteEditando: c } }); }} className="item-menu">✏️ Editar Cadastro</button>
-                              <button onClick={(e) => { e.stopPropagation(); excluirCliente(c.id, c.nome || c.nomeFantasia) }} className="item-menu item-excluir">🗑️ Excluir Cliente</button>
+                            <div className="menu-suspenso fade-in">
+                              {(c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente') && (
+                                <button onClick={(e) => { aprovarCliente(e, c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu" style={{ color: '#10b981', fontWeight: '800' }}>
+                                  <i className="fas fa-check-circle" style={{ color: '#10b981' }}></i> Aprovar Cadastro
+                                </button>
+                              )}
+
+                              <button onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); setMenuAberto(null); }} className="item-menu">
+                                <i className="fas fa-user-circle color-purple"></i> Ver Perfil Completo
+                              </button>
+
+                              <button onClick={() => { navigate('/cadastro-cliente', { state: { clienteEditando: c } }); setMenuAberto(null); }} className="item-menu">
+                                <i className="fas fa-edit color-blue"></i> Editar Cadastro
+                              </button>
+                              <button onClick={() => { navigate('/locacoes/nova', { state: { clienteSelecionado: c } }); setMenuAberto(null); }} className="item-menu">
+                                <i className="fas fa-cart-plus color-green"></i> Nova Locação
+                              </button>
+                              <div className="menu-divider"></div>
+                              <button onClick={() => { excluirCliente(c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu item-excluir">
+                                <i className="fas fa-trash-alt"></i> Excluir Cliente
+                              </button>
                             </div>
                           )}
                         </div>
                       </td>
+
                     </tr>
                   );
                 })
@@ -382,139 +907,307 @@ const Clientes = () => {
         </div>
       )}
 
-      {/* 🔥 FICHÁRIO COMPLETO DO CLIENTE (VISUALIZAÇÃO E HISTÓRICO) 🔥 */}
-      {clienteVisualizacao && (
-        <div onClick={() => setClienteVisualizacao(null)} className="modal-overlay-perfil">
-          <div onClick={e => e.stopPropagation()} className="modal-content-perfil-large">
-            <button onClick={() => setClienteVisualizacao(null)} className="btn-fechar-perfil">&times;</button>
+      {/* FICHÁRIO COMPLETO DO CLIENTE (PERFIL DE LUXO) */}
+      {clienteVisualizacao && (() => {
+        const perfilNomeBonito = formatarNomeCapitalizado(
+          clienteVisualizacao.tipoPessoa === 'juridica' 
+            ? (clienteVisualizacao.nomeFantasia || clienteVisualizacao.razaoSocial || clienteVisualizacao.nome) 
+            : (clienteVisualizacao.nome || clienteVisualizacao.razaoSocial)
+        );
 
-            <div className="perfil-layout-split">
-              {/* LADO ESQUERDO: FOTO E RESUMO */}
-              <div className="perfil-left-col">
-                <div className={`perfil-foto-max ${!clienteVisualizacao.foto ? 'placeholder-foto-max' : ''}`}>
-                  {clienteVisualizacao.foto ? (
-                      <img src={clienteVisualizacao.foto} alt={perfilNomeBonito} />
-                  ) : (
-                      perfilNomeBonito.charAt(0)
-                  )}
-                </div>
+        const { historico: perfilHistorico = [], totalGasto: perfilTotalGasto = 0 } = getHistoricoDoCliente(clienteVisualizacao.id);
+
+        const tagTexto = clienteVisualizacao.tags || (perfilTotalGasto >= 5000 || perfilHistorico.length >= 5 ? 'VIP' : perfilHistorico.length >= 2 ? 'RECORRENTE' : 'NOVO');
+        const perfilTagColorida = getTagStyle ? getTagStyle(tagTexto) : { bg: '#fef3c7', color: '#b45309', border: '#fcd34d' };
+        const historicoNotasCliente = clienteVisualizacao.historicoNotas || [];
+
+        const enderecoCompletoStr = clienteVisualizacao.logradouro 
+          ? `${clienteVisualizacao.logradouro}, ${clienteVisualizacao.numero || 'S/N'}${clienteVisualizacao.complemento ? ' - ' + clienteVisualizacao.complemento : ''}, ${clienteVisualizacao.bairro || ''}, ${clienteVisualizacao.cidade || ''}/${clienteVisualizacao.uf || ''} (CEP: ${clienteVisualizacao.cep || ''})` 
+          : null;
+
+        const mapsUrl = enderecoCompletoStr ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(enderecoCompletoStr)}` : null;
+
+        return (
+          <div onClick={() => setClienteVisualizacao(null)} className="modal-overlay-perfil fade-in">
+            <div onClick={e => e.stopPropagation()} className="modal-content-perfil-large">
+              <button onClick={() => setClienteVisualizacao(null)} className="btn-fechar-perfil">&times;</button>
+
+              <div className="perfil-layout-split">
                 
-                <h2 className="perfil-nome-titulo">{perfilNomeBonito}</h2>
-                {perfilTagColorida && (
+                {/* ESQUERDA: SIDEBAR EXECUTIVE DO CLIENTE */}
+                <div className="perfil-left-col">
+                  <div className={`perfil-foto-max ${!clienteVisualizacao.foto ? 'placeholder-foto-max' : ''}`}>
+                    {clienteVisualizacao.foto ? (
+                      <img src={clienteVisualizacao.foto} alt={perfilNomeBonito} />
+                    ) : (
+                      perfilNomeBonito.charAt(0)
+                    )}
+                  </div>
+                  
+                  <h2 className="perfil-nome-titulo">{perfilNomeBonito}</h2>
+                  
+                  {/* PÍLULAS DE ETIQUETAS E STAKEHOLDERS */}
+                  <div className="perfil-tags-row-flex" style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
                     <span className="perfil-tag-destaque" style={{ backgroundColor: perfilTagColorida.bg, color: perfilTagColorida.color, border: `1px solid ${perfilTagColorida.border}` }}>
-                      {clienteVisualizacao.tags}
+                      <i className="fas fa-crown"></i> {tagTexto}
                     </span>
-                )}
+                    <span className={`badge-status-pro ${clienteVisualizacao.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`}>
+                      {clienteVisualizacao.situacaoFinanceira === 'inadimplente' ? '⚠️ PENDÊNCIAS' : '✅ ADIMPLENTE'}
+                    </span>
+                    <span className="badge-tipo-pessoa" style={{ background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '800' }}>
+                      {clienteVisualizacao.tipoPessoa === 'juridica' ? '🏢 PJ' : '👤 PF'}
+                    </span>
+                  </div>
 
-                <div className="perfil-mini-stats">
-                    <div className="stat-line"><span>💰 LTV (Gasto):</span> <strong>R$ {perfilTotalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></div>
-                    <div className="stat-line"><span>📦 Locações:</span> <strong>{perfilHistorico.length}</strong></div>
-                    <div className="stat-line"><span>📅 Desde:</span> <strong>{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</strong></div>
+                  <div className="perfil-mini-stats">
+                    <div className="stat-line">
+                      <span><i className="fas fa-coins text-gold"></i> LTV (Gasto Acumulado):</span> 
+                      <strong>R$ {perfilTotalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                    </div>
+                    <div className="stat-line">
+                      <span><i className="fas fa-boxes text-blue"></i> Total Locações:</span> 
+                      <strong>{perfilHistorico.length} pedido{perfilHistorico.length === 1 ? '' : 's'}</strong>
+                    </div>
+                    <div className="stat-line">
+                      <span><i className="fas fa-calendar-alt text-purple"></i> Cliente Desde:</span> 
+                      <strong>{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</strong>
+                    </div>
+                  </div>
+
+                  <div className="perfil-actions-stack" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '14px' }}>
+                    {clienteVisualizacao.celular && (
+                      <button 
+                        onClick={() => abrirModalWhatsApp(clienteVisualizacao)}
+                        className="btn-primary-celebre"
+                        style={{ width: '100%', justifyContent: 'center' }}
+                      >
+                        <i className="fab fa-whatsapp"></i> Falar no WhatsApp
+                      </button>
+                    )}
+
+                    <button 
+                      onClick={() => { setClienteVisualizacao(null); navigate('/locacoes/nova', { state: { clienteSelecionado: clienteVisualizacao } }); }} 
+                      className="btn-add-nota"
+                      style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', height: '38px', borderRadius: '10px', fontSize: '0.78rem' }}
+                    >
+                      <i className="fas fa-cart-plus"></i> Criar Nova Locação
+                    </button>
+
+                    <button 
+                      onClick={() => { setClienteVisualizacao(null); navigate('/cadastro-cliente', { state: { clienteEditando: clienteVisualizacao } }); }} 
+                      className="btn-editar-perfil-full"
+                    >
+                      <i className="fas fa-edit"></i> Editar Cadastro
+                    </button>
+                  </div>
                 </div>
 
-                <button onClick={() => { setClienteVisualizacao(null); navigate('/cadastro-cliente', { state: { clienteEditando: clienteVisualizacao } }); }} className="btn-editar-perfil-full">
-                  ✏️ Editar Cadastro
-                </button>
-              </div>
-
-              {/* LADO DIREITO: ABAS E CONTEÚDO */}
-              <div className="perfil-right-col">
-                 <div className="perfil-tabs-header">
-                    <button onClick={() => setAbaAtiva('dados')} className={`ptab ${abaAtiva === 'dados' ? 'active' : ''}`}>👤 Dados Cadastrais</button>
-                    <button onClick={() => setAbaAtiva('registros')} className={`ptab ${abaAtiva === 'registros' ? 'active' : ''}`}>📜 Histórico</button>
-                 </div>
-                 
-                 <div className="perfil-tab-body">
-                    {/* DADOS */}
+                {/* DIREITA: ABAS E DETALHES RICAS */}
+                <div className="perfil-right-col">
+                  <div className="perfil-tabs-header">
+                    <button onClick={() => setAbaAtiva('dados')} className={`ptab ${abaAtiva === 'dados' ? 'active' : ''}`}>
+                      <i className="fas fa-user"></i> Dados Cadastrais & CRM
+                    </button>
+                    <button onClick={() => setAbaAtiva('registros')} className={`ptab ${abaAtiva === 'registros' ? 'active' : ''}`}>
+                      <i className="fas fa-history"></i> Histórico de Locações ({perfilHistorico.length})
+                    </button>
+                    <button onClick={() => setAbaAtiva('timeline')} className={`ptab ${abaAtiva === 'timeline' ? 'active' : ''}`}>
+                      <i className="fas fa-stream"></i> Linha do Tempo & CRM ({historicoNotasCliente.length})
+                    </button>
+                  </div>
+                  
+                  <div className="perfil-tab-body">
+                    {/* ABA 1: DADOS CADASTRAIS */}
                     {abaAtiva === 'dados' && (
-                        <div className="perfil-dados-grid-wrapper">
-                           <div className="perfil-dados-grid">
-                               <div className="d-group"><label>NOME / RAZÃO SOCIAL</label><span>{clienteVisualizacao.nome || clienteVisualizacao.razaoSocial || '-'}</span></div>
-                               <div className="d-group"><label>CPF / CNPJ</label><span>{clienteVisualizacao.cpf || clienteVisualizacao.cnpj || '-'}</span></div>
-                               <div className="d-group"><label>CELULAR / WHATSAPP</label><span>{formatarTelefone(clienteVisualizacao.celular) || '-'}</span></div>
-                               <div className="d-group"><label>EMAIL</label><span style={{ wordBreak: 'break-all' }}>{clienteVisualizacao.email || '-'}</span></div>
-                           </div>
-                           
-                           <div className="obs-group obs-box-wrapper" style={{ marginTop: '20px' }}>
-                              <label style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>ENDEREÇO COMPLETO</label>
-                              <div className="obs-box">
-                                <p style={{ fontStyle: 'normal', color: '#0f172a' }}>
-                                  {clienteVisualizacao.logradouro ? `${clienteVisualizacao.logradouro}, ${clienteVisualizacao.numero || 'S/N'} - ${clienteVisualizacao.complemento ? clienteVisualizacao.complemento + ' - ' : ''}${clienteVisualizacao.bairro}, ${clienteVisualizacao.cidade}/${clienteVisualizacao.uf} (CEP: ${clienteVisualizacao.cep})` : 'Endereço não cadastrado.'}
-                                </p>
-                              </div>
-                           </div>
-                           
-                           <div className="obs-group obs-box-wrapper" style={{ marginTop: '20px' }}>
-                                <label style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>OBSERVAÇÕES INTERNAS</label>
-                                <div className="obs-box" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-                                  <p style={{ color: '#92400e', whiteSpace: 'pre-wrap', fontStyle: 'normal' }}>{clienteVisualizacao.observacoes || 'Nenhuma observação registrada.'}</p>
-                                </div>
-                           </div>
+                      <div className="perfil-dados-grid-wrapper">
+                        
+                        {/* QUADRO 1: IDENTIFICAÇÃO */}
+                        <div className="perfil-section-box">
+                          <h4 className="p-sec-title"><i className="fas fa-id-card"></i> Identificação do Cliente</h4>
+                          <div className="perfil-dados-grid">
+                            <div className="d-group">
+                              <label>NOME / RAZÃO SOCIAL</label>
+                              <span>{perfilNomeBonito}</span>
+                            </div>
+                            <div className="d-group">
+                              <label>{clienteVisualizacao.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}</label>
+                              <span>{clienteVisualizacao.cpf || clienteVisualizacao.cnpj || '-'}</span>
+                            </div>
+                            <div className="d-group">
+                              <label>{clienteVisualizacao.tipoPessoa === 'juridica' ? 'INSCRIÇÃO ESTADUAL' : 'RG'}</label>
+                              <span>{clienteVisualizacao.rg || clienteVisualizacao.inscricaoEstadual || '-'}</span>
+                            </div>
+                            <div className="d-group">
+                              <label>🎂 DATA DE NASCIMENTO / ANIVERSÁRIO</label>
+                              <span>{clienteVisualizacao.dataNascimento || clienteVisualizacao.dataNasc || '-'}</span>
+                            </div>
+                          </div>
                         </div>
+
+                        {/* QUADRO 2: CONTATO & ORIGEM */}
+                        <div className="perfil-section-box" style={{ marginTop: '16px' }}>
+                          <h4 className="p-sec-title"><i className="fas fa-phone-alt"></i> Contatos e Origem</h4>
+                          <div className="perfil-dados-grid">
+                            <div className="d-group">
+                              <label>CELULAR / WHATSAPP</label>
+                              <span>{formatarTelefone(clienteVisualizacao.celular) || '-'}</span>
+                            </div>
+                            <div className="d-group">
+                              <label>TELEFONE FIXO</label>
+                              <span>{formatarTelefone(clienteVisualizacao.telefoneFixo) || '-'}</span>
+                            </div>
+                            <div className="d-group">
+                              <label>E-MAIL</label>
+                              <span style={{ wordBreak: 'break-all' }}>{clienteVisualizacao.email || '-'}</span>
+                            </div>
+                            <div className="d-group">
+                              <label>COMO NOS CONHECEU?</label>
+                              <span>{clienteVisualizacao.origem || 'Não informado'}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* QUADRO 3: CRM & DATAS FESTIVAS DA FAMÍLIA */}
+                        {clienteVisualizacao.datasComemorativas && (
+                          <div className="perfil-section-box" style={{ marginTop: '16px', background: '#fdf2f8', borderColor: '#fbcfe8' }}>
+                            <h4 className="p-sec-title" style={{ color: '#be185d' }}><i className="fas fa-gift"></i> 🎁 Aniversários da Família & Datas Festivas</h4>
+                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#9d174d', fontWeight: '600' }}>
+                              {clienteVisualizacao.datasComemorativas}
+                            </p>
+                          </div>
+                        )}
+
+                        {/* QUADRO 4: ENDEREÇO COMPLETO E ROTA NO GOOGLE MAPS */}
+                        <div className="obs-group obs-box-wrapper" style={{ marginTop: '16px' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
+                              <i className="fas fa-map-marker-alt" style={{ color: '#ef4444' }}></i> ENDEREÇO COMPLETO DE ENTREGA
+                            </label>
+                            {mapsUrl && (
+                              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="btn-tmpl-chip" style={{ background: '#3b82f6', color: '#ffffff', borderColor: '#2563eb', fontWeight: '800', textDecoration: 'none' }}>
+                                <i className="fas fa-directions"></i> Abrir Rota no Maps
+                              </a>
+                            )}
+                          </div>
+                          <div className="obs-box" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>
+                            <p style={{ fontStyle: 'normal', color: 'var(--texto-principal)', margin: 0, fontWeight: '500' }}>
+                              {enderecoCompletoStr || 'Endereço não cadastrado.'}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* QUADRO 5: OBSERVAÇÕES INTERNAS */}
+                        <div className="obs-group obs-box-wrapper" style={{ marginTop: '16px' }}>
+                          <label style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>
+                            <i className="far fa-sticky-note"></i> OBSERVAÇÕES INTERNAS GERAIS
+                          </label>
+                          <div className="obs-box" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
+                            <p style={{ color: '#92400e', whiteSpace: 'pre-wrap', fontStyle: 'normal', margin: 0 }}>
+                              {clienteVisualizacao.observacoes || 'Nenhuma observação registrada.'}
+                            </p>
+                          </div>
+                        </div>
+
+                      </div>
                     )}
 
-                    {/* REGISTROS */}
+                    {/* ABA 2: HISTÓRICO DE PEDIDOS */}
                     {abaAtiva === 'registros' && (
-                        <div className="historico-wrapper">
-                           {perfilHistorico.length === 0 ? (
-                               <div className="empty-history">Nenhuma locação encontrada.</div>
-                           ) : (
-                               <div className="table-responsive">
-                                 <table className="table-historico-simples">
-                                   <thead>
-                                     <tr>
-                                       <th>Data / Serviço</th>
-                                       <th>Valor</th>
-                                       <th>Status</th>
-                                     </tr>
-                                   </thead>
-                                   <tbody>
-                                     {perfilHistorico.map(loc => {
-                                       const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
-                                       const isCancelado = st.includes('cancelado') || loc.isOrcamentoVencido;
-                                       let tipoServico = "DECORAÇÃO";
-                                       if (loc.tipoServico || loc.modalidade) tipoServico = String(loc.tipoServico || loc.modalidade).toUpperCase();
-                                       else if (loc.logistica && String(loc.logistica.tipoFrete || loc.logistica.frete).toUpperCase().includes('RETIRADA')) tipoServico = "PEGUE E MONTE";
-                                       return (
-                                       <tr key={loc.id} onClick={() => irParaLocacaoEspecifica(loc.id)}>
-                                          <td>
-                                              <span className="h-date">{loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span>
-                                              <strong className="h-theme">{loc.tema || loc.temaDaFesta || loc.nomeTema || 'Sem tema'}</strong>
-                                              <span className="h-type">{tipoServico}</span>
-                                          </td>
-                                          <td style={{ textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : 'inherit' }}>
-                                            R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                                          </td>
-                                          <td><span className={`h-badge-mini ${st}`}>{loc.status?.toUpperCase() || 'S/S'}</span></td>
-                                       </tr>
-                                       );
-                                     })}
-                                   </tbody>
-                                 </table>
-                                </div>
-                           )}
-                        </div>
+                      <div className="historico-wrapper">
+                        {perfilHistorico.length === 0 ? (
+                          <div className="empty-history">
+                            <i className="fas fa-calendar-times"></i> Nenhuma locação encontrada para este cliente.
+                          </div>
+                        ) : (
+                          <div className="table-responsive">
+                            <table className="table-historico-simples">
+                              <thead>
+                                <tr>
+                                  <th>Data / Serviço</th>
+                                  <th>Valor Total</th>
+                                  <th>Status</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {perfilHistorico.map(loc => {
+                                  const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
+                                  const isCancelado = st.includes('cancelado') || loc.isOrcamentoVencido;
+                                  let tipoServico = "DECORAÇÃO";
+                                  if (loc.tipoServico || loc.modalidade) tipoServico = String(loc.tipoServico || loc.modalidade).toUpperCase();
+                                  else if (loc.logistica && String(loc.logistica.tipoFrete || loc.logistica.frete).toUpperCase().includes('RETIRADA')) tipoServico = "PEGUE E MONTE";
+                                  return (
+                                    <tr key={loc.id} onClick={() => irParaLocacaoEspecifica(loc.id)} style={{ cursor: 'pointer' }}>
+                                      <td>
+                                        <span className="h-date">{loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span>
+                                        <strong className="h-theme">{loc.tema || loc.temaDaFesta || loc.nomeTema || 'Sem tema'}</strong>
+                                        <span className="h-type">{tipoServico}</span>
+                                      </td>
+                                      <td style={{ textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : '#0f172a', fontWeight: '700' }}>
+                                        R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                                      </td>
+                                      <td><span className={`h-badge-mini ${st}`}>{loc.status?.toUpperCase() || 'S/S'}</span></td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
                     )}
-                 </div>
+
+                    {/* ABA 3: LINHA DO TEMPO & NOTAS CRM */}
+                    {abaAtiva === 'timeline' && (
+                      <div className="timeline-wrapper">
+                        {historicoNotasCliente.length === 0 ? (
+                          <div className="empty-timeline-box" style={{ padding: '24px' }}>
+                            <div className="empty-icon-circle"><i className="far fa-comments"></i></div>
+                            <h4>Nenhuma nota registrada na linha do tempo</h4>
+                            <p>Abra a página de edição do cliente para registrar novas ligações, acordos e preferências.</p>
+                          </div>
+                        ) : (
+                          <div className="timeline-feed-list" style={{ paddingLeft: '14px' }}>
+                            {historicoNotasCliente.map((nota) => (
+                              <div key={nota.id} className="timeline-feed-item">
+                                <div className="timeline-card-body">
+                                  <div className="timeline-card-header">
+                                    <div className="header-left">
+                                      <span className="cat-badge-pill" style={{ background: '#f1f5f9', color: '#475569' }}>{nota.tipo}</span>
+                                      <span className="author-name"><i className="far fa-user-circle"></i> {nota.autor}</span>
+                                    </div>
+                                    <span className="time-stamp"><i className="far fa-clock"></i> {new Date(nota.dataHora).toLocaleString('pt-BR')}</span>
+                                  </div>
+                                  <p className="timeline-text-content">{nota.texto}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                  </div>
+                </div>
+
               </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* MODAL ANÁLISE DE PENDÊNCIA */}
       {modalAberto && (
-        <div className="modal-overlay-financeiro">
+        <div className="modal-overlay-financeiro fade-in">
           <div className="modal-content-financeiro">
             <div className="modal-header-fin">
               <div className="header-icon-title">
-                  <div className="icon-warning">⚠️</div>
+                  <div className="icon-warning"><i className="fas fa-exclamation-triangle"></i></div>
                   <div>
                       <h2>Análise de Pendência</h2>
                       <p className="modal-subtitle">{detalhesDivida.cliente}</p>
                   </div>
               </div>
-              <button onClick={() => setModalAberto(false)} className="btn-close-modal">×</button>
+              <button onClick={() => setModalAberto(false)} className="btn-close-modal">&times;</button>
             </div>
             <div className="modal-body-fin">
               <div className="alerta-explicativo">
@@ -534,7 +1227,20 @@ const Clientes = () => {
                         <p>💰 <strong>Valor Total:</strong> R$ {vTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                         <p>🔴 <strong>Falta Pagar:</strong> <span style={{color: '#e53e3e', fontWeight: 'bold'}}>R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span></p>
                       </div>
-                      <button onClick={() => irParaLocacaoEspecifica(p.id)} className="btn-ir-locacao-destaque">Localizar e Receber 🔍</button>
+
+                      <div className="pendencia-actions-row">
+                        {detalhesDivida.clienteObj?.celular && (
+                          <button 
+                            onClick={() => { setModalAberto(false); abrirModalWhatsApp(detalhesDivida.clienteObj, 'cobranca'); }}
+                            className="btn-cobranca-whatsapp"
+                          >
+                            <i className="fab fa-whatsapp"></i> Enviar Cobrança Pix
+                          </button>
+                        )}
+                        <button onClick={() => irParaLocacaoEspecifica(p.id)} className="btn-ir-locacao-destaque">
+                          Localizar e Receber <i className="fas fa-arrow-right"></i>
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -543,6 +1249,140 @@ const Clientes = () => {
           </div>
         </div>
       )}
+
+      {/* 🔥 MODAL INTERATIVA DE SELEÇÃO DE MENSAGEM DO WHATSAPP + ANEXO DE IMAGEM 🔥 */}
+      {modalZapCliente && (
+        <div onClick={() => setModalZapCliente(null)} className="modal-overlay-zap fade-in">
+          <div onClick={e => e.stopPropagation()} className="modal-content-zap">
+            
+            <div className="modal-header-zap">
+              <div className="zap-header-title">
+                <span className="icon-zap-header"><i className="fab fa-whatsapp"></i></span>
+                <div>
+                  <h3>Enviar WhatsApp com Imagem</h3>
+                  <p>Para: <strong>{formatarNomeCapitalizado(modalZapCliente.nome || modalZapCliente.nomeFantasia)}</strong> ({formatarTelefone(modalZapCliente.celular)})</p>
+                </div>
+              </div>
+              <button onClick={() => setModalZapCliente(null)} className="btn-close-modal">&times;</button>
+            </div>
+
+            <div className="modal-body-zap">
+              
+              {/* MODELOS DE TEXTO */}
+              <label className="zap-section-title"><i className="fas fa-sliders-h"></i> 1. Escolha o modelo da mensagem:</label>
+              
+              <div className="zap-modelos-grid">
+                <button 
+                  className={`model-card-zap ${tipoMensagemZap === 'atendimento' ? 'active' : ''}`}
+                  onClick={() => selecionarModeloZap('atendimento')}
+                >
+                  <i className="fas fa-comment-dots icon-blue"></i>
+                  <span>Atendimento / Geral</span>
+                </button>
+
+                <button 
+                  className={`model-card-zap ${tipoMensagemZap === 'agradecimento' ? 'active' : ''}`}
+                  onClick={() => selecionarModeloZap('agradecimento')}
+                >
+                  <i className="fas fa-heart icon-green"></i>
+                  <span>Agradecimento Pós-Festa</span>
+                </button>
+
+                <button 
+                  className={`model-card-zap ${tipoMensagemZap === 'cobranca' ? 'active' : ''}`}
+                  onClick={() => selecionarModeloZap('cobranca')}
+                >
+                  <i className="fas fa-hand-holding-usd icon-red"></i>
+                  <span>Cobrança / Pendência Pix</span>
+                </button>
+
+                <button 
+                  className={`model-card-zap ${tipoMensagemZap === 'aniversario' ? 'active' : ''}`}
+                  onClick={() => selecionarModeloZap('aniversario')}
+                >
+                  <i className="fas fa-birthday-cake icon-pink"></i>
+                  <span>Feliz Aniversário</span>
+                </button>
+
+                <button 
+                  className={`model-card-zap ${tipoMensagemZap === 'promocao' ? 'active' : ''}`}
+                  onClick={() => selecionarModeloZap('promocao')}
+                >
+                  <i className="fas fa-gift icon-gold"></i>
+                  <span>Novidades / Promoção</span>
+                </button>
+              </div>
+
+              {/* UPLOAD / ANEXO DE IMAGEM */}
+              <div className="zap-image-upload-section">
+                <label className="zap-section-title"><i className="fas fa-paperclip"></i> 2. Anexar Imagem / Foto do Acervo ou Comprovante (Opcional):</label>
+                
+                {imagemPreviewUrl ? (
+                  <div className="zap-img-preview-card">
+                    <div className="preview-img-wrapper">
+                      <img src={imagemPreviewUrl} alt="Preview Anexo" />
+                    </div>
+                    <div className="preview-img-info">
+                      <strong>{imagemAnexoFile ? imagemAnexoFile.name : 'Imagem anexada'}</strong>
+                      {carregandoUploadImg ? (
+                        <span className="status-upload-link"><i className="fas fa-spinner fa-spin"></i> Gerando link de acesso...</span>
+                      ) : (
+                        <span className="status-upload-link ok"><i className="fas fa-check-circle"></i> Link da imagem adicionado ao texto!</span>
+                      )}
+
+                      <div className="preview-img-actions">
+                        <button onClick={copiarImagemAreaTransferencia} className="btn-copy-img" title="Copiar Imagem para colar (Ctrl+V) no WhatsApp">
+                          <i className="fas fa-copy"></i> {imagemCopiadaComSucesso ? 'COPIADA! (CTRL+V)' : 'COPIAR IMAGEM'}
+                        </button>
+                        <button onClick={removerImagemZap} className="btn-remove-img" title="Remover Imagem">
+                          <i className="fas fa-trash"></i> Remover
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <label className="zap-upload-dropzone">
+                    <i className="fas fa-cloud-upload-alt upload-icon"></i>
+                    <span>Clique aqui para selecionar uma Foto / Imagem do computador</span>
+                    <small>Formatações aceitas: PNG, JPG, JPEG ou WEBP</small>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleUparImagemZap} 
+                      style={{ display: 'none' }} 
+                    />
+                  </label>
+                )}
+              </div>
+
+              {/* TEXTAREA MENSAGEM */}
+              <div className="zap-edit-area">
+                <label className="zap-section-title">
+                  <i className="fas fa-edit"></i> 3. Texto Final da Mensagem (pode editar livremente):
+                </label>
+                <textarea 
+                  rows="5"
+                  className="zap-textarea"
+                  value={textoMensagemZap}
+                  onChange={(e) => { setTextoMensagemZap(e.target.value); setTipoMensagemZap('custom'); }}
+                />
+              </div>
+
+            </div>
+
+            <div className="modal-footer-zap">
+              <button onClick={() => setModalZapCliente(null)} className="btn-secondary-celebre">
+                Cancelar
+              </button>
+              <button onClick={dispararWhatsAppFinal} className="btn-send-zap">
+                <i className="fab fa-whatsapp"></i> ABRIR NO WHATSAPP
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

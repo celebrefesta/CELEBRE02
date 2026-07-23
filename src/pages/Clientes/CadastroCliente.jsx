@@ -16,6 +16,23 @@ const formatarNomeCapitalizado = (nomeBruto) => {
   }).join(' ');
 };
 
+const getTagIcon = (tag) => {
+  if (!tag) return '🏷️';
+  const t = tag.toUpperCase().trim();
+  if (t === 'VIP') return '👑';
+  if (t === 'RECORRENTE') return '🔄';
+  if (t === 'NOVO') return '✨';
+  if (t === 'ECONÔMICO' || t === 'ECONOMICO') return '💡';
+  if (t === 'PECHINCHA') return '🏷️';
+  if (t === 'INDECISO') return '🤔';
+  if (t === 'EXIGENTE') return '💎';
+  if (t === 'ORGANIZADO') return '📋';
+  if (t.includes('HORA')) return '⚡';
+  if (t === 'BÁSICO' || t === 'BASICO') return '🔹';
+  if (t === 'PROBLEMÁTICO' || t === 'PROBLEMATICO') return '⚠️';
+  return '🏷️';
+};
+
 const getTagStyle = (tag) => {
   if (!tag) return { bg: '#f1f5f9', color: '#475569', border: '#e2e8f0' };
   const normalizedTag = tag.toUpperCase().trim();
@@ -44,12 +61,60 @@ const TAGS_PERFIL = [
   'BÁSICO', 'PROBLEMÁTICO'
 ];
 
+const TIPOS_NOTAS_CRM = [
+  { id: '💬 Atendimento', label: 'Atendimento', icon: '💬', color: '#2563eb', bg: '#eff6ff' },
+  { id: '📱 WhatsApp', label: 'WhatsApp', icon: '📱', color: '#16a34a', bg: '#f0fdf4' },
+  { id: '📞 Ligação', label: 'Ligação', icon: '📞', color: '#9333ea', bg: '#faf5ff' },
+  { id: '🤝 Reunião', label: 'Reunião', icon: '🤝', color: '#0284c7', bg: '#f0f9ff' },
+  { id: '⭐ Preferência', label: 'Preferência', icon: '⭐', color: '#b45309', bg: '#fefce8' },
+  { id: '⚡ Urgente', label: 'Urgente', icon: '⚡', color: '#dc2626', bg: '#fef2f2' },
+];
+
+const TEMPLATES_NOTAS_RAPIDAS = [
+  "Solicitou orçamento",
+  "Negociação em andamento",
+  "Agendado retorno de contato",
+  "Retirada no galpão",
+  "Pagamento via PIX confirmado"
+];
+
+const calcularTagAutomaticaPorHistorico = (qtdLocacoes, somaGastoTotal) => {
+  if (somaGastoTotal >= 5000 || qtdLocacoes >= 5) {
+    return 'VIP';
+  }
+  if (qtdLocacoes >= 2) {
+    return 'RECORRENTE';
+  }
+  return 'NOVO';
+};
+
+const calcularDiasAteAniversario = (dataNascStr) => {
+  if (!dataNascStr) return null;
+  const hoje = new Date();
+  hoje.setHours(0,0,0,0);
+  
+  const partes = dataNascStr.split('-'); // YYYY-MM-DD
+  if (partes.length !== 3) return null;
+
+  const mesNasc = parseInt(partes[1]) - 1;
+  const diaNasc = parseInt(partes[2]);
+
+  let proxAniversario = new Date(hoje.getFullYear(), mesNasc, diaNasc);
+  if (proxAniversario < hoje) {
+    proxAniversario.setFullYear(hoje.getFullYear() + 1);
+  }
+
+  const diffTime = proxAniversario.getTime() - hoje.getTime();
+  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  return { dias: diffDays, dataFmt: `${String(diaNasc).padStart(2,'0')}/${String(mesNasc+1).padStart(2,'0')}` };
+};
+
 const CadastroCliente = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const clienteEditando = location.state?.clienteEditando || null;
 
-  // 🔥 Autenticação e Chave Mestra
+  // Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
@@ -60,13 +125,20 @@ const CadastroCliente = () => {
   const [calculandoFinancas, setCalculandoFinancas] = useState(!!clienteEditando);
   const [historicoLocacoes, setHistoricoLocacoes] = useState([]);
   const [totalGasto, setTotalGasto] = useState(0);
+  const [tagSugeridaAuto, setTagSugeridaAuto] = useState('NOVO');
+  const [buscandoCnpj, setBuscandoCnpj] = useState(false);
   const [fotoBase64, setFotoBase64] = useState('');
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
   const [dragging, setDragging] = useState(false);
   const [startMouse, setStartMouse] = useState({ x: 0, y: 0 });
 
+  // NOTAS & TIMELINE CRM
+  const [historicoNotas, setHistoricoNotas] = useState([]);
+  const [textoNovaNota, setTextoNovaNota] = useState('');
+  const [tipoNovaNota, setTipoNovaNota] = useState('💬 Atendimento');
+
   const [formData, setFormData] = useState({
-    nome: '', cpf: '', rg: '', nascimento: '', sexo: '',
+    nome: '', cpf: '', rg: '', nascimento: '', sexo: '', datasComemorativas: '',
     razaoSocial: '', nomeFantasia: '', cnpj: '', inscricaoEstadual: '',
     nomeContato: '', cargo: '',
     celular: '', telefoneFixo: '', email: '', origem: '',
@@ -87,13 +159,15 @@ const CadastroCliente = () => {
       setTipoPessoa(clienteEditando.tipoPessoa || 'fisica');
       setFotoBase64(clienteEditando.foto || '');
       setPosicaoFoto(clienteEditando.posicaoFoto || { x: 50, y: 50 });
-      
+      setHistoricoNotas(clienteEditando.historicoNotas || []);
+
       const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
       const statusReal = clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado');
    
       setFormData({
         nome: formatarNomeCapitalizado(clienteEditando.nome || ''), 
         cpf: clienteEditando.cpf || '', rg: clienteEditando.rg || '', nascimento: clienteEditando.nascimento || '', sexo: clienteEditando.sexo || '',
+        datasComemorativas: clienteEditando.datasComemorativas || '',
         razaoSocial: formatarNomeCapitalizado(clienteEditando.razaoSocial || ''), 
         nomeFantasia: formatarNomeCapitalizado(clienteEditando.nomeFantasia || ''), 
         cnpj: clienteEditando.cnpj || '', inscricaoEstadual: clienteEditando.inscricaoEstadual || '',
@@ -132,7 +206,6 @@ const CadastroCliente = () => {
       if (!clienteEditando?.id || !usuarioLogado) return; 
       
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa o histórico apenas da sua empresa
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
         const snap = await getDocs(qLocacoes);
         
@@ -181,6 +254,15 @@ const CadastroCliente = () => {
         setHistoricoLocacoes(locsDoCliente);
         setTotalGasto(somaGasto);
 
+        const autoTag = calcularTagAutomaticaPorHistorico(locsDoCliente.length, somaGasto);
+        setTagSugeridaAuto(autoTag);
+
+        if (!clienteEditando.tags || clienteEditando.tags === 'NOVO') {
+          if (autoTag !== 'NOVO') {
+            setFormData(prev => ({ ...prev, tags: autoTag }));
+          }
+        }
+
         setFormData(prev => ({
           ...prev,
           situacaoFinanceira: temDividaVencida ? 'inadimplente' : 'adimplente'
@@ -217,8 +299,135 @@ const CadastroCliente = () => {
     setFormData({ ...formData, [name]: newValue });
   };
 
+  const consultarCnpjNaReceita = async (cnpjEntrada) => {
+    const cnpjLimpo = String(cnpjEntrada || '').replace(/\D/g, '');
+    if (cnpjLimpo.length !== 14) return;
+
+    setBuscandoCnpj(true);
+    let dados = null;
+
+    try {
+      try {
+        const resp1 = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpjLimpo}`);
+        if (resp1.ok) {
+          dados = await resp1.json();
+        }
+      } catch (err1) {}
+
+      if (!dados) {
+        try {
+          const resp2 = await fetch(`https://minhareceita.org/${cnpjLimpo}`);
+          if (resp2.ok) {
+            dados = await resp2.json();
+          }
+        } catch (err2) {}
+      }
+
+      if (!dados) {
+        try {
+          const resp3 = await fetch(`https://publica.cnpj.ws/cnpj/${cnpjLimpo}`);
+          if (resp3.ok) {
+            const res3 = await resp3.json();
+            dados = {
+              razao_social: res3.razao_social,
+              nome_fantasia: res3.estabelecimento?.nome_fantasia || res3.razao_social,
+              logradouro: res3.estabelecimento?.logradouro,
+              numero: res3.estabelecimento?.numero,
+              bairro: res3.estabelecimento?.bairro,
+              municipio: res3.estabelecimento?.cidade?.nome,
+              uf: res3.estabelecimento?.estado?.sigla,
+              cep: res3.estabelecimento?.cep,
+              ddd_telefone_1: (res3.estabelecimento?.ddd1 || '') + (res3.estabelecimento?.telefone1 || ''),
+              email: res3.estabelecimento?.email
+            };
+          }
+        } catch (err3) {}
+      }
+
+      if (dados) {
+        const rawRSocial = dados.razao_social || dados.nome_razao_social || '';
+        const rawNFantasia = dados.nome_fantasia || rawRSocial;
+
+        const rSocial = formatarNomeCapitalizado(rawRSocial);
+        let nFantasiaLimpo = rawNFantasia.replace(/^[\d\.\/-]+\s*/, '').trim();
+        const nFantasia = formatarNomeCapitalizado(nFantasiaLimpo || rawRSocial);
+
+        const logr = formatarNomeCapitalizado(dados.logradouro || '');
+        const num = dados.numero || '';
+        const brm = formatarNomeCapitalizado(dados.bairro || '');
+        const cid = formatarNomeCapitalizado(dados.municipio || dados.localidade || '');
+        const ufSigla = (dados.uf || '').toUpperCase();
+        const cepFmt = dados.cep ? dados.cep.replace(/\D/g, '').replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9) : '';
+        const telFmt = dados.ddd_telefone_1 ? maskPhone(dados.ddd_telefone_1) : (dados.telefone ? maskPhone(dados.telefone) : '');
+        const emailFmt = (dados.email || '').toLowerCase();
+        
+        const nomeProprietarioContato = formatarNomeCapitalizado(rawRSocial.replace(/^[\d\.\/-]+\s*/, '').trim());
+
+        setFormData(prev => ({
+          ...prev,
+          cnpj: maskCNPJ(cnpjLimpo),
+          razaoSocial: rSocial || prev.razaoSocial,
+          nomeFantasia: nFantasia || prev.nomeFantasia,
+          nomeContato: prev.nomeContato || nomeProprietarioContato,
+          logradouro: logr || prev.logradouro,
+          numero: num || prev.numero,
+          bairro: brm || prev.bairro,
+          cidade: cid || prev.cidade,
+          uf: ufSigla || prev.uf,
+          cep: cepFmt || prev.cep,
+          celular: prev.celular || telFmt,
+          email: prev.email || emailFmt
+        }));
+      } else {
+        alert("⚠️ CNPJ não localizado nas consultas públicas da Receita Federal. Verifique se os números foram digitados corretamente.");
+      }
+    } catch (err) {
+      console.error("Erro na busca de CNPJ:", err);
+      alert("⚠️ Falha de conexão ao consultar a Receita Federal.");
+    } finally {
+      setBuscandoCnpj(false);
+    }
+  };
+
+  const buscarCnpjAuto = (e) => {
+    const rawVal = e.target.value;
+    const cnpjMascarado = maskCNPJ(rawVal);
+    const cnpjLimpo = rawVal.replace(/\D/g, '');
+
+    setFormData(prev => ({ ...prev, cnpj: cnpjMascarado }));
+
+    if (cnpjLimpo.length === 14) {
+      consultarCnpjNaReceita(cnpjLimpo);
+    }
+  };
+
   const selecionarTag = (tagEscolhida) => {
     setFormData({ ...formData, tags: tagEscolhida });
+  };
+
+  const aplicarTagAutomatica = () => {
+    setFormData({ ...formData, tags: tagSugeridaAuto });
+  };
+
+  const adicionarNotaHistorico = () => {
+    if (!textoNovaNota.trim()) return;
+    
+    const novaNota = {
+      id: Date.now(),
+      tipo: tipoNovaNota,
+      texto: textoNovaNota.trim(),
+      autor: usuarioLogado?.displayName || usuarioLogado?.email?.split('@')[0] || 'Equipe',
+      dataHora: new Date().toISOString()
+    };
+
+    const listaAtualizada = [novaNota, ...historicoNotas];
+    setHistoricoNotas(listaAtualizada);
+    setTextoNovaNota('');
+  };
+
+  const removerNotaHistorico = (idNota) => {
+    const listaAtualizada = historicoNotas.filter(n => n.id !== idNota);
+    setHistoricoNotas(listaAtualizada);
   };
 
   const handleFileChange = (e) => {
@@ -282,8 +491,6 @@ const CadastroCliente = () => {
 
   const verificarDuplicidade = async () => {
       if (!usuarioLogado) return false;
-      
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Verifica duplicidade apenas dentro da empresa
       const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
       const snap = await getDocs(qClientes);
       const todosClientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -336,20 +543,22 @@ const CadastroCliente = () => {
 
       const dadosParaSalvar = { 
           ...dadosLimpos, 
+          dataNascimento: formData.nascimento,
+          dataNasc: formData.nascimento,
           tipoPessoa, 
           foto: fotoBase64, 
           posicaoFoto, 
+          historicoNotas,
           atualizadoEm: new Date().toISOString(),
-          userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
+          userId: tenantId 
       };
 
       if (clienteEditando) {
         await updateDoc(doc(db, "clientes", clienteEditando.id), dadosParaSalvar);
-        alert("Cliente atualizado com sucesso!");
+        alert("✅ Cliente atualizado com sucesso!");
       } else {
         await addDoc(collection(db, "clientes"), { ...dadosParaSalvar, criadoEm: new Date().toISOString() });
         
-        // E-MAIL DE BOAS VINDAS
         if (dadosParaSalvar.email) {
           const nomePrimeiro = tipoPessoa === 'fisica' ? dadosParaSalvar.nome.split(' ')[0] : dadosParaSalvar.nomeFantasia.split(' ')[0];
           await addDoc(collection(db, 'mail'), {
@@ -369,17 +578,16 @@ const CadastroCliente = () => {
                       <p style="margin: 8px 0 0 0; font-size: 15px; color: #1e3a8a;">Seu perfil já está seguro com a nossa equipe. Em breve entraremos em contato para enviar seu orçamento ou alinhar os próximos detalhes do seu evento!</p>
                     </div>
                     <p style="font-size: 16px; line-height: 1.5;">Se tiver qualquer dúvida, basta nos chamar no WhatsApp.</p>
-                    <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>Nossa Equipe</strong></p>
+                    <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>Nossa Equipe Celebre</strong></p>
                   </div>
                 </div>
               `
             }
           });
         }
-        alert("Novo cliente cadastrado com sucesso!");
+        alert("✅ Novo cliente cadastrado com sucesso!");
       }
 
-      // 🔥 INÍCIO DO ESPIÃO NÍVEL 2 (COM DETALHES DE ALTERAÇÃO) 🔥
       try {
         let detalhesAcao = "";
 
@@ -430,7 +638,6 @@ const CadastroCliente = () => {
       } catch (errorEspiao) {
         console.error("Falha ao registrar auditoria:", errorEspiao);
       }
-      // 🔥 FIM DO ESPIÃO 🔥
 
       navigate('/clientes');
     } catch (error) { 
@@ -443,204 +650,724 @@ const CadastroCliente = () => {
 
   const tagsParaExibir = [...new Set([...TAGS_PERFIL, formData.tags])].filter(Boolean);
   const ehTagAntiga = formData.tags && !TAGS_PERFIL.includes(formData.tags);
+  const tagColorida = formData.tags ? getTagStyle(formData.tags) : null;
+  const tagIcon = formData.tags ? getTagIcon(formData.tags) : '🏷️';
+  const infoAniversario = calcularDiasAteAniversario(formData.nascimento);
 
   return (
-    <div className="form-page-container">
-      <div className="form-page-header">
-        <div className="header-text">
-          <h1 className="form-page-title">{clienteEditando ? 'PERFIL DO CLIENTE' : 'NOVO CLIENTE'}</h1>
-          <p className="form-page-subtitle">{clienteEditando ? 'Edite os dados e acompanhe o histórico' : 'Preencha os dados de contato e faturamento'}</p>
+    <div className="form-page-container fade-in">
+      
+      {/* HERO ENTERPRISE REPAGINADO */}
+      <header className="cadastro-hero-header">
+        <div className="cadastro-hero-left">
+          <div className="breadcrumb-nav">
+            <Link to="/clientes"><i className="fas fa-users"></i> Clientes</Link>
+            <span className="separator">/</span>
+            <span className="current-page">{clienteEditando ? 'Perfil do Cliente' : 'Novo Cadastro'}</span>
+          </div>
+
+          <div className="hero-title-group">
+            <span className="header-icon-badge">
+              <i className={clienteEditando ? "fas fa-user-edit" : "fas fa-user-plus"}></i>
+            </span>
+            <div className="header-text">
+              <h1 className="form-page-title">{clienteEditando ? 'PERFIL DO CLIENTE' : 'NOVO CLIENTE'}</h1>
+              <p className="form-page-subtitle">
+                {clienteEditando ? 'Edite as informações cadastrais, acompanhe a saúde financeira e o histórico de locações.' : 'Preencha os dados abaixo para cadastrar um novo cliente na carteira.'}
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
+
+        <div className="cadastro-hero-right-actions">
+          <button type="button" onClick={() => navigate('/clientes')} className="btn-secondary-celebre">
+            <i className="fas fa-arrow-left"></i> Voltar à Lista
+          </button>
+          
+          {clienteEditando && formData.celular && (
+            <a 
+              href={`https://wa.me/55${formData.celular.replace(/\D/g, '')}`} 
+              target="_blank" 
+              rel="noopener noreferrer" 
+              className="btn-secondary-celebre btn-hero-zap"
+              title="Abrir conversa no WhatsApp"
+            >
+              <i className="fab fa-whatsapp"></i> WhatsApp
+            </a>
+          )}
+
+          {clienteEditando && (
+            <button 
+              type="button" 
+              onClick={() => navigate('/locacoes/nova', { state: { clienteSelecionado: clienteEditando } })}
+              className="btn-secondary-celebre"
+              title="Criar nova locação para este cliente"
+            >
+              <i className="fas fa-shopping-cart"></i> Nova Locação
+            </button>
+          )}
+
+          <button type="submit" form="cliente-form-main" className="btn-primary-celebre" disabled={salvando}>
+            <i className={salvando ? "fas fa-spinner fa-spin" : "fas fa-save"}></i> {salvando ? 'Salvando...' : (clienteEditando ? 'Salvar Alterações' : 'Cadastrar Cliente')}
+          </button>
+        </div>
+      </header>
 
       <div className="form-widescreen">
-        <form onSubmit={salvarCliente} className="estoque-form-layout" autoComplete="on">
+        <form id="cliente-form-main" onSubmit={salvarCliente} className="estoque-form-layout" autoComplete="on">
+          
+          {/* COLUNA ESQUERDA: CARD EXECUTIVE PROFILE */}
           <div className="left-photo-col">
-            <h3 className="section-divider" style={{marginTop: 0, textAlign: 'center', width: '100%'}}>IMAGEM</h3>
-            <div className="main-photo-display">
-            {fotoBase64 ? (
-                <>
+            <div className="profile-card-banner"></div>
+            
+            {/* AVATAR COM ANEL DE DEGRADÊ DOURADO */}
+            <div className="avatar-circle-wrapper">
+              {fotoBase64 ? (
+                <div className="avatar-photo-box">
                   <img 
-                    src={fotoBase64} className="main-photo-preview" alt="Preview"
+                    src={fotoBase64} 
+                    className="avatar-photo-img" 
+                    alt="Foto do cliente"
                     style={{ objectPosition: `${posicaoFoto.x}% ${posicaoFoto.y}%`, cursor: dragging ? 'grabbing' : 'grab', touchAction: 'none' }}
                     onMouseDown={(e) => { e.preventDefault(); handleStart(e.clientX, e.clientY); }}
-                    onMouseMove={(e) => handleMove(e.clientX, e.clientY)} onMouseUp={handleEnd} onMouseLeave={handleEnd}
-                    onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)} onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)} onTouchEnd={handleEnd}
+                    onMouseMove={(e) => handleMove(e.clientX, e.clientY)} 
+                    onMouseUp={handleEnd} 
+                    onMouseLeave={handleEnd}
+                    onTouchStart={(e) => handleStart(e.touches[0].clientX, e.touches[0].clientY)} 
+                    onTouchMove={(e) => handleMove(e.touches[0].clientX, e.touches[0].clientY)} 
+                    onTouchEnd={handleEnd}
                   />
-                  <div className="drag-hint"><span>Arrastar para enquadrar</span></div>
-                </>
+                  <div className="drag-hint-overlay"><span><i className="fas fa-arrows-alt"></i> Arraste</span></div>
+                </div>
               ) : (
-                <label htmlFor="foto-upload" className="photo-upload-label"><span className="photo-icon">👤</span><span className="photo-text">Adicionar Foto</span><input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} /></label>
+                <label htmlFor="foto-upload" className="avatar-empty-label" title="Clique para adicionar foto">
+                  <i className="fas fa-camera avatar-camera-icon"></i>
+                  <span>+ Adicionar Foto</span>
+                  <input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} />
+                </label>
               )}
             </div>
+
             {fotoBase64 && (
-              <div className="photo-actions">
-                <label htmlFor="foto-upload" className="btn-action-photo">Trocar</label>
-                <button type="button" onClick={removerFoto} className="btn-action-photo btn-remove">Remover</button>
+              <div className="avatar-actions-row">
+                <label htmlFor="foto-upload" className="btn-avatar-mini" title="Trocar foto">
+                  <i className="fas fa-sync"></i> Trocar
+                </label>
+                <button type="button" onClick={removerFoto} className="btn-avatar-mini remove" title="Remover foto">
+                  <i className="fas fa-trash-alt"></i> Remover
+                </button>
                 <input id="foto-upload" type="file" accept="image/*" onChange={handleFileChange} style={{display:'none'}} />
               </div>
             )}
-      
-            <div className="painel-resumo-lateral">
-              <div className="resumo-badges">
-                <span className={`badge-status ${formData.statusCadastro}`}>
-                  {formData.statusCadastro === 'pendente' ? '⏳ Cadastro Pendente' : formData.statusCadastro === 'bloqueado' ? '🚫 Bloqueado' : '✅ Cadastro Aprovado'}
-                </span>
-                <span className="badge-financeiro" style={{
-                    backgroundColor: calculandoFinancas ? '#f1f5f9' : formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4',
-                    color: calculandoFinancas ? '#475569' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981',
-                    border: calculandoFinancas ? '1px solid #cbd5e1' : formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac'
-                }}>
-                  {calculandoFinancas ? '⏳ Calculando...' : (formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente')}
-                </span>
+
+            {/* INFORMACÕES DO CLIENTE */}
+            <div className="profile-identity-box">
+              <h3 className="profile-client-name">
+                {tipoPessoa === 'fisica' ? (formData.nome || 'Novo Cliente') : (formData.nomeFantasia || 'Nova Empresa')}
+              </h3>
+              
+              <div className="profile-document-pill">
+                <i className="far fa-id-card"></i> 
+                <span>{tipoPessoa === 'fisica' ? (formData.cpf || 'CPF não informado') : (formData.cnpj || 'CNPJ não informado')}</span>
               </div>
-              <div className="resumo-info">
-                <h4>{tipoPessoa === 'fisica' ? (formData.nome || 'Novo Cliente') : (formData.nomeFantasia || 'Nova Empresa')}</h4>
-                <p>{tipoPessoa === 'fisica' ? (formData.cpf || 'CPF não informado') : (formData.cnpj || 'CNPJ não informado')}</p>
-              </div>
-              {formData.celular && (
-                <a href={`https://wa.me/55${formData.celular.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" className="btn-whatsapp-resumo">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" width="18" height="18" fill="currentColor"><path d="M380.9 97.1C339 55.1 283.2 32 223.9 32c-122.4 0-222 99.6-222 222 0 39.1 10.2 77.3 29.6 111L0 480l117.7-30.9c32.4 17.7 68.9 27 106.1 27h.1c122.3 0 224.1-99.6 224.1-222 0-59.3-25.2-115-67.1-157zm-157 341.6c-33.2 0-65.7-8.9-94-25.7l-6.7-4-69.8 18.3L72 359.2l-4.4-7c-18.5-29.4-28.2-63.3-28.2-98.2 0-101.7 82.8-184.5 184.6-184.5 49.3 0 95.6 19.2 130.4 54.1 34.8 34.9 56.2 81.2 56.1 130.5 0 101.8-84.9 184.6-186.6 184.6zm101.2-138.2c-5.5-2.8-32.8-16.2-37.9-18-5.1-1.9-8.8-2.8-12.5 2.8-3.7 5.6-14.3 18-17.6 21.8-3.2 3.7-6.5 4.2-12 1.4-32.6-16.3-54-29.1-75.5-66-5.7-9.8 5.7-9.1 16.3-30.3 1.8-3.7 .9-6.9-.5-9.7-1.4-2.8-12.5-30.1-17.1-41.2-4.5-10.8-9.1-9.3-12.5-9.5-3.2-.2-6.9-.2-10.6-.2-3.7 0-9.7 1.4-14.8 6.9-5.1 5.6-19.4 19-19.4 46.3 0 27.3 19.9 53.7 22.6 57.4 2.8 3.7 39.1 59.7 94.8 83.8 35.2 15.2 49 16.5 66.6 13.9 10.7-1.6 32.8-13.4 37.4-26.4 4.6-13 4.6-24.1 3.2-26.4-1.3-2.5-5-3.9-10.5-6.6z"/></svg>
-                  Chamar no WhatsApp
-                </a>
+
+              {tagColorida && (
+                <div className="profile-tag-pill" style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}` }}>
+                  <span>{tagIcon} {formData.tags}</span>
+                </div>
               )}
-              <div className="resumo-footer" style={{display: 'flex', flexDirection: 'column', gap: '8px', borderTop: 'none', paddingTop: 0}}>
-                {clienteEditando && (
-                  <div style={{background: '#f1f5f9', padding: '12px', borderRadius: '8px', color: '#0f172a', fontWeight: '800', display: 'flex', justifyContent: 'space-between', border: '1px solid #e2e8f0'}}>
-                    <span style={{color: '#64748b'}}>Total Gasto:</span>
-                    <span>R$ {totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                  </div>
+            </div>
+
+            {/* BANNER DE ANIVERSÁRIO DE RETENÇÃO (CRM) */}
+            {infoAniversario && infoAniversario.dias <= 30 && (
+              <div className="profile-birthday-banner">
+                <div className="birthday-header">
+                  <i className="fas fa-birthday-cake"></i> 
+                  <span>{infoAniversario.dias === 0 ? '🎂 HOJE É O ANIVERSÁRIO!' : `🎁 Aniversário em ${infoAniversario.dias} dias (${infoAniversario.dataFmt})`}</span>
+                </div>
+                {formData.celular && (
+                  <a 
+                    href={`https://wa.me/55${formData.celular.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${(formData.nome || formData.nomeFantasia || '').trim().split(' ')[0]}! 🎉\n\nVimos que seu aniversário está chegando (${infoAniversario.dataFmt}) e preparamos um presente especial para celebrar essa data! 🎁\n\nQue tal um desconto exclusivo nos móveis para o seu evento? Conte conosco!`)}`}
+                    target="_blank" 
+                    rel="noreferrer" 
+                    className="btn-birthday-whatsapp"
+                  >
+                    <i className="fab fa-whatsapp"></i> Parabenizar no Whats
+                  </a>
                 )}
-                <small style={{textAlign: 'center', width: '100%', display: 'block'}}>📅 Cliente desde: {clienteEditando?.criadoEm ? new Date(clienteEditando.criadoEm).toLocaleDateString('pt-BR') : 'Hoje'}</small>
+              </div>
+            )}
+
+            {/* STATUS BADGES GRID */}
+            <div className="profile-status-cards">
+              <div className={`status-mini-card ${formData.statusCadastro}`}>
+                <span className="status-label">STATUS CADASTRO</span>
+                <strong className="status-val">
+                  {formData.statusCadastro === 'pendente' ? '⏳ Pendente' : formData.statusCadastro === 'bloqueado' ? '🚫 Bloqueado' : '✅ Aprovado'}
+                </strong>
+              </div>
+
+              <div className={`status-mini-card ${calculandoFinancas ? 'calculando' : formData.situacaoFinanceira}`}>
+                <span className="status-label">SAÚDE FINANCEIRA</span>
+                <strong className="status-val">
+                  {calculandoFinancas ? '⏳ Calculando...' : (formData.situacaoFinanceira === 'inadimplente' ? '🔴 Inadimplente' : '🟢 Adimplente')}
+                </strong>
               </div>
             </div>
+
+            {/* METRICA LTV DE CONSUMO */}
+            {clienteEditando && (
+              <div className="profile-ltv-banner">
+                <div className="ltv-title"><i className="fas fa-coins"></i> Total em Locações (LTV)</div>
+                <div className="ltv-amount">R$ {totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</div>
+              </div>
+            )}
+
+            {/* BOTÃO WHATSAPP DIRECT */}
+            {formData.celular && (
+              <a 
+                href={`https://wa.me/55${formData.celular.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá, ${(formData.nome || formData.nomeFantasia || '').trim().split(' ')[0]}! Tudo bem? Entro em contato pela Celebre Festas.`)}`} 
+                target="_blank" 
+                rel="noreferrer" 
+                className="btn-whatsapp-executive"
+              >
+                <i className="fab fa-whatsapp"></i> Chamar no WhatsApp
+              </a>
+            )}
+
+            {/* DATA DE CADASTRO */}
+            <div className="profile-since-footer">
+              <i className="far fa-calendar-alt"></i> Cliente desde: {clienteEditando?.criadoEm ? new Date(clienteEditando.criadoEm).toLocaleDateString('pt-BR') : 'Hoje'}
+            </div>
+
           </div>
 
+          {/* COLUNA DIREITA: FORMULÁRIO WIDESCREEN ALINHADO */}
           <div className="right-data-col">
+            
+            {/* SELETOR PESSOA FÍSICA / JURÍDICA */}
             <div className="tabs-container">
-              <button type="button" className={`tab-btn ${tipoPessoa === 'fisica' ? 'active' : ''}`} onClick={() => setTipoPessoa('fisica')}>👤 Pessoa Física</button>
-              <button type="button" className={`tab-btn ${tipoPessoa === 'juridica' ? 'active' : ''}`} onClick={() => setTipoPessoa('juridica')}>🏢 Pessoa Jurídica</button>
+              <button 
+                type="button" 
+                className={`tab-btn ${tipoPessoa === 'fisica' ? 'active' : ''}`} 
+                onClick={() => setTipoPessoa('fisica')}
+              >
+                <i className="fas fa-user"></i> Pessoa Física
+              </button>
+              <button 
+                type="button" 
+                className={`tab-btn ${tipoPessoa === 'juridica' ? 'active' : ''}`} 
+                onClick={() => setTipoPessoa('juridica')}
+              >
+                <i className="fas fa-building"></i> Pessoa Jurídica
+              </button>
             </div>
 
-            {tipoPessoa === 'fisica' ? (
-              <>
-                <h3 className="section-divider" style={{marginTop: 0}}>DADOS PESSOAIS</h3>
-                <div className="form-grid-4">
-                  <div className="form-group span-2"><label htmlFor="nome">NOME COMPLETO *</label><input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} required /></div>
-                  <div className="form-group span-1"><label htmlFor="cpf">CPF</label><input id="cpf" type="text" name="cpf" autoComplete="off" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label htmlFor="rg">RG (OPCIONAL)</label><input id="rg" type="text" name="rg" autoComplete="off" placeholder="00.000.000-0" value={formData.rg} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label htmlFor="nascimento">NASCIMENTO</label><input id="nascimento" type="date" name="nascimento" autoComplete="bday" value={formData.nascimento} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label htmlFor="sexo">SEXO</label><select id="sexo" name="sexo" autoComplete="sex" value={formData.sexo} onChange={handleChange}><option value="">Selecione...</option><option value="Feminino">Feminino</option><option value="Masculino">Masculino</option></select></div>
+            {/* CARD 1: DADOS PESSOAIS / EMPRESA */}
+            <div className="form-section-card">
+              <div className="form-section-header">
+                <span className="section-header-icon">
+                  <i className={tipoPessoa === 'fisica' ? "fas fa-id-card-alt" : "fas fa-building"}></i>
+                </span>
+                <div>
+                  <h3>{tipoPessoa === 'fisica' ? 'DADOS PESSOAIS' : 'DADOS DA EMPRESA'}</h3>
+                  <p>Informações principais de identificação do cliente</p>
                 </div>
-              </>
-            ) : (
-              <>
-                <h3 className="section-divider" style={{marginTop: 0}}>DADOS DA EMPRESA</h3>
+              </div>
+
+              {tipoPessoa === 'fisica' ? (
                 <div className="form-grid-4">
-                  <div className="form-group span-2"><label htmlFor="razaoSocial">RAZÃO SOCIAL</label><input id="razaoSocial" type="text" name="razaoSocial" autoComplete="organization" value={formData.razaoSocial} onChange={handleChange} /></div>
-                  <div className="form-group span-2"><label htmlFor="nomeFantasia">NOME FANTASIA *</label><input id="nomeFantasia" type="text" name="nomeFantasia" autoComplete="organization" value={formData.nomeFantasia} onChange={handleChange} required /></div>
-                  <div className="form-group span-1"><label htmlFor="cnpj">CNPJ</label><input id="cnpj" type="text" name="cnpj" autoComplete="off" placeholder="00.000.000/0000-00" value={formData.cnpj} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label htmlFor="inscricaoEstadual">INSCRIÇÃO ESTADUAL</label><input id="inscricaoEstadual" type="text" name="inscricaoEstadual" autoComplete="off" value={formData.inscricaoEstadual} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label htmlFor="nomeContato">NOME DO CONTATO</label><input id="nomeContato" type="text" name="nomeContato" autoComplete="name" value={formData.nomeContato} onChange={handleChange} /></div>
-                  <div className="form-group span-1"><label htmlFor="cargo">CARGO / DEPTO</label><input id="cargo" type="text" name="cargo" autoComplete="organization-title" value={formData.cargo} onChange={handleChange} /></div>
+                  <div className="form-group span-2">
+                    <label htmlFor="nome">NOME COMPLETO *</label>
+                    <div className="input-icon-wrapper">
+                      <span className="input-left-icon"><i className="far fa-user"></i></span>
+                      <input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} required placeholder="Ex: Rosa Maria Vichinhsk" />
+                    </div>
+                  </div>
+                  <div className="form-group span-1">
+                    <label htmlFor="cpf">CPF</label>
+                    <div className="input-icon-wrapper">
+                      <span className="input-left-icon"><i className="far fa-id-badge"></i></span>
+                      <input id="cpf" type="text" name="cpf" autoComplete="off" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} />
+                    </div>
+                  </div>
+                  <div className="form-group span-1">
+                    <label htmlFor="rg">RG (OPCIONAL)</label>
+                    <input id="rg" type="text" name="rg" autoComplete="off" placeholder="00.000.000-0" value={formData.rg} onChange={handleChange} />
+                  </div>
+                  <div className="form-group span-1">
+                    <label htmlFor="nascimento">🎂 ANIVERSÁRIO / NASCIMENTO</label>
+                    <input id="nascimento" type="date" name="nascimento" autoComplete="bday" value={formData.nascimento} onChange={handleChange} />
+                  </div>
+                  <div className="form-group span-1">
+                    <label htmlFor="sexo">SEXO</label>
+                    <select id="sexo" name="sexo" autoComplete="sex" value={formData.sexo} onChange={handleChange}>
+                      <option value="">Selecione...</option>
+                      <option value="Feminino">Feminino</option>
+                      <option value="Masculino">Masculino</option>
+                    </select>
+                  </div>
+                  <div className="form-group span-2">
+                    <label htmlFor="datasComemorativas">🎁 ANIVERSÁRIOS DA FAMÍLIA / DATAS FESTIVAS</label>
+                    <div className="input-icon-wrapper">
+                      <span className="input-left-icon"><i className="fas fa-gift" style={{color:'#c5a059'}}></i></span>
+                      <input id="datasComemorativas" type="text" name="datasComemorativas" autoComplete="off" value={formData.datasComemorativas} onChange={handleChange} placeholder="Ex: Filha Maria (15/09), Casamento (10/12)" />
+                    </div>
+                  </div>
                 </div>
-              </>
-            )}
-
-            <h3 className="section-divider mt-compact">CONTACTO E MARKETING</h3>
-            <div className="form-grid-4">
-              <div className="form-group span-1"><label htmlFor="celular">CELULAR / WHATSAPP</label><input id="celular" type="tel" name="celular" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} /></div>
-              <div className="form-group span-1"><label htmlFor="telefoneFixo">TELEFONE FIXO</label><input id="telefoneFixo" type="tel" name="telefoneFixo" autoComplete="tel" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label htmlFor="email">E-MAIL</label><input id="email" type="email" name="email" autoComplete="email" placeholder="nome@email.com" value={formData.email} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label htmlFor="origem">COMO NOS CONHECEU?</label><select id="origem" name="origem" autoComplete="off" value={formData.origem} onChange={handleChange}><option value="">Selecione...</option><option value="Instagram">Instagram</option><option value="WhatsApp">WhatsApp</option><option value="Facebook">Facebook</option><option value="Pesquisa Google">Pesquisa no Google</option><option value="Indicação">Indicação</option><option value="Auto-Cadastro (Site)">Auto-Cadastro (Site)</option><option value="Outros">Outros</option></select></div>
-            </div>
-
-            <h3 className="section-divider mt-compact">MORADA</h3>
-            <div className="form-grid-4">
-              <div className="form-group span-2"><label htmlFor="cep">CÓDIGO POSTAL (BUSCA AUTO)</label><input id="cep" type="text" name="cep" autoComplete="postal-code" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} /></div>
-              <div className="form-group span-2"><label htmlFor="logradouro">LOGRADOURO</label><input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} /></div>
-              <div className="form-group-row span-4">
-                <div className="form-group flex-1"><label htmlFor="numeroInput">NÚMERO</label><input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} /></div>
-                <div className="form-group flex-small"><label htmlFor="uf">UF</label><input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="EX: SP" value={formData.uf} onChange={handleChange} /></div>
-              </div>
-              <div className="form-group span-2"><label htmlFor="bairro">BAIRRO</label><input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} /></div>
-              <div className="form-group span-2"><label htmlFor="cidade">CIDADE</label><input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} /></div>
-            </div>
-
-            <h3 className="section-divider mt-compact">CONTROLO DE SISTEMA</h3>
-            <div className="form-grid-4">
-              <div className="form-group span-2">
-                <label htmlFor="statusCadastro" style={{ color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981', fontWeight: '800' }}>STATUS DO CADASTRO</label>
-                <select id="statusCadastro" name="statusCadastro" autoComplete="off" value={formData.statusCadastro} onChange={handleChange} className="status-select" style={{ backgroundColor: formData.statusCadastro === 'pendente' ? '#fef3c7' : formData.statusCadastro === 'bloqueado' ? '#fef2f2' : '#f0fdf4', color: formData.statusCadastro === 'pendente' ? '#d97706' : formData.statusCadastro === 'bloqueado' ? '#ef4444' : '#10b981', border: formData.statusCadastro === 'pendente' ? '1px solid #fcd34d' : formData.statusCadastro === 'bloqueado' ? '1px solid #fca5a5' : '1px solid #86efac' }}>
-                  {podeSerPendente && <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>}
-                  <option value="aprovado">✔️ Cadastro Aprovado</option><option value="bloqueado">🚫 Cadastro Bloqueado</option>
-                </select>
-              </div>
-
-              <div className="form-group span-2">
-                <label htmlFor="situacaoFinanceira" style={{ color: calculandoFinancas ? '#64748b' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>SITUAÇÃO FINANCEIRA <span title="Este campo é automático">🔒</span></label>
-                <select id="situacaoFinanceira" name="situacaoFinanceira" autoComplete="off" value={calculandoFinancas ? 'calculando' : formData.situacaoFinanceira} disabled={true} className="status-select" style={{ backgroundColor: calculandoFinancas ? '#f1f5f9' : formData.situacaoFinanceira === 'inadimplente' ? '#fef2f2' : '#f0fdf4', color: calculandoFinancas ? '#475569' : formData.situacaoFinanceira === 'inadimplente' ? '#ef4444' : '#10b981', border: calculandoFinancas ? '1px solid #cbd5e1' : formData.situacaoFinanceira === 'inadimplente' ? '1px solid #fca5a5' : '1px solid #86efac', cursor: 'not-allowed', opacity: 0.9 }}>
-                  <option value="calculando">⏳ Calculando...</option><option value="adimplente">✅ Nome Limpo (Adimplente)</option><option value="inadimplente">⚠️ Devendo (Inadimplente)</option>
-                </select>
-              </div>
-
-              <div className="form-group span-4">
-                <label>PERFIL DO CLIENTE (TAG ÚNICA)</label>
-                <div className="tags-selector-chips">
-                  {tagsParaExibir.map(tag => {
-                    const estaSelecionada = formData.tags === tag;
-                    const tagEstilo = getTagStyle(tag); 
-                    return (
-                      <button key={tag} type="button" className={`tag-chip-btn ${estaSelecionada ? 'selected' : ''}`} onClick={() => selecionarTag(tag)}
-                        style={estaSelecionada ? { backgroundColor: tagEstilo.bg, color: tagEstilo.color, borderColor: tagEstilo.color, boxShadow: `0 0 0 1px ${tagEstilo.color}, 0 4px 8px rgba(0,0,0,0.1)` } : { backgroundColor: tagEstilo.bg, color: tagEstilo.color, borderColor: tagEstilo.border }}
+              ) : (
+                <div className="form-grid-4">
+                  <div className="form-group span-2">
+                    <label htmlFor="cnpj">
+                      CNPJ {buscandoCnpj ? <span style={{color: '#c5a059', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px'}}>⏳ Buscando na Receita Federal...</span> : null}
+                    </label>
+                    <div className="input-icon-wrapper">
+                      <span className="input-left-icon"><i className="fas fa-building"></i></span>
+                      <input 
+                        id="cnpj" 
+                        type="text" 
+                        name="cnpj" 
+                        autoComplete="off" 
+                        placeholder="00.000.000/0000-00" 
+                        maxLength="18"
+                        value={formData.cnpj} 
+                        onChange={buscarCnpjAuto} 
+                      />
+                      <button 
+                        type="button" 
+                        className="badge-viacep-auto btn-cnpj-clickable"
+                        onClick={() => consultarCnpjNaReceita(formData.cnpj)}
+                        disabled={buscandoCnpj}
+                        title="Clique para consultar os dados da empresa na Receita Federal"
                       >
-                        {tag} {estaSelecionada && '✓'}
+                        {buscandoCnpj ? <i className="fas fa-spinner fa-spin"></i> : <><i className="fas fa-search"></i> Buscar CNPJ</>}
                       </button>
-                    )
-                  })}
+                    </div>
+                  </div>
+                  <div className="form-group span-2">
+                    <label htmlFor="nomeFantasia">NOME FANTASIA *</label>
+                    <input id="nomeFantasia" type="text" name="nomeFantasia" autoComplete="organization" value={formData.nomeFantasia} onChange={handleChange} required placeholder="Nome de exibição da empresa" />
+                  </div>
+                  <div className="form-group span-2">
+                    <label htmlFor="razaoSocial">RAZÃO SOCIAL</label>
+                    <input id="razaoSocial" type="text" name="razaoSocial" autoComplete="organization" value={formData.razaoSocial} onChange={handleChange} placeholder="Razão Social completa" />
+                  </div>
+                  <div className="form-group span-2">
+                    <label htmlFor="inscricaoEstadual">INSCRIÇÃO ESTADUAL</label>
+                    <input id="inscricaoEstadual" type="text" name="inscricaoEstadual" autoComplete="off" value={formData.inscricaoEstadual} onChange={handleChange} placeholder="Inscrição Estadual ou Isento" />
+                  </div>
+                  <div className="form-group span-2">
+                    <label htmlFor="nomeContato">NOME DO CONTATO</label>
+                    <input id="nomeContato" type="text" name="nomeContato" autoComplete="name" value={formData.nomeContato} onChange={handleChange} placeholder="Pessoa de contato" />
+                  </div>
+                  <div className="form-group span-2">
+                    <label htmlFor="cargo">CARGO / DEPTO</label>
+                    <input id="cargo" type="text" name="cargo" autoComplete="organization-title" value={formData.cargo} onChange={handleChange} placeholder="Ex: Gerente de Eventos" />
+                  </div>
+                  <div className="form-group span-4">
+                    <label htmlFor="datasComemorativas">🎁 EVENTOS ANUAIS / DATAS COMEMORATIVAS DA EMPRESA</label>
+                    <div className="input-icon-wrapper">
+                      <span className="input-left-icon"><i className="fas fa-gift" style={{color:'#c5a059'}}></i></span>
+                      <input id="datasComemorativas" type="text" name="datasComemorativas" autoComplete="off" value={formData.datasComemorativas} onChange={handleChange} placeholder="Ex: Festa de Fim de Ano (Dezembro), Aniversário da Empresa (14/05)" />
+                    </div>
+                  </div>
                 </div>
-                {ehTagAntiga && <span style={{fontSize: '0.75rem', color: '#ef4444', display: 'block', marginTop: '8px', fontWeight: '600'}}>👻 Tag Antiga detetada: "{formData.tags}". Clique numa das opções acima para atualizar.</span>}
-              </div>
-
-              <div className="form-group span-4"><label htmlFor="observacoes">OBSERVAÇÕES INTERNAS</label><textarea id="observacoes" name="observacoes" autoComplete="off" rows="2" value={formData.observacoes} onChange={handleChange}></textarea></div>
+              )}
             </div>
 
-            {clienteEditando && historicoLocacoes.length > 0 && (
-              <div style={{gridColumn: '1 / -1', width: '100%', marginTop: '20px'}}>
-                <h3 className="section-divider mt-compact">📜 HISTÓRICO DE LOCAÇÕES</h3>
-                <div className="historico-grid">
-                  {historicoLocacoes.map(loc => {
-                    const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
-                    const isCancelado = st.includes('cancelado');
+            {/* CARD 2: CONTATO E MARKETING */}
+            <div className="form-section-card">
+              <div className="form-section-header">
+                <span className="section-header-icon"><i className="fas fa-phone-alt"></i></span>
+                <div>
+                  <h3>CONTATO E MARKETING</h3>
+                  <p>Canais diretos para atendimento e orçamentos</p>
+                </div>
+              </div>
+
+              <div className="form-grid-4">
+                <div className="form-group span-1">
+                  <label htmlFor="celular">CELULAR / WHATSAPP *</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fab fa-whatsapp color-green"></i></span>
+                    <input id="celular" type="tel" name="celular" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-group span-1">
+                  <label htmlFor="telefoneFixo">TELEFONE FIXO</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fas fa-phone-square-alt"></i></span>
+                    <input id="telefoneFixo" type="tel" name="telefoneFixo" autoComplete="tel" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-group span-2">
+                  <label htmlFor="email">E-MAIL</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="far fa-envelope"></i></span>
+                    <input id="email" type="email" name="email" autoComplete="email" placeholder="nome@email.com" value={formData.email} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-group span-2">
+                  <label htmlFor="origem">COMO NOS CONHECEU?</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fas fa-bullhorn"></i></span>
+                    <select id="origem" name="origem" autoComplete="off" value={formData.origem} onChange={handleChange}>
+                      <option value="">Selecione...</option>
+                      <option value="Instagram">Instagram</option>
+                      <option value="WhatsApp">WhatsApp</option>
+                      <option value="Facebook">Facebook</option>
+                      <option value="Pesquisa Google">Pesquisa no Google</option>
+                      <option value="Indicação">Indicação</option>
+                      <option value="Auto-Cadastro (Site)">Auto-Cadastro (Site)</option>
+                      <option value="Outros">Outros</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 3: ENDEREÇO DA RESIDÊNCIA / ENTREGA */}
+            <div className="form-section-card">
+              <div className="form-section-header">
+                <span className="section-header-icon"><i className="fas fa-map-marked-alt"></i></span>
+                <div>
+                  <h3>ENDEREÇO DA RESIDÊNCIA / ENTREGA</h3>
+                  <p>Localização para frete, entrega e elaboração de contrato</p>
+                </div>
+              </div>
+
+              <div className="form-grid-4">
+                <div className="form-group span-2">
+                  <label htmlFor="cep">CEP (BUSCA AUTOMÁTICA)</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fas fa-search-location"></i></span>
+                    <input id="cep" type="text" name="cep" autoComplete="postal-code" placeholder="00000-000" maxLength="9" value={formData.cep} onChange={buscarCep} />
+                    <span className="badge-viacep-auto"><i className="fas fa-magic"></i> ViaCEP Auto</span>
+                  </div>
+                </div>
+                <div className="form-group span-2">
+                  <label htmlFor="logradouro">LOGRADOURO / RUA</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fas fa-road"></i></span>
+                    <input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} placeholder="Rua, Avenida, Alameda..." />
+                  </div>
+                </div>
+                <div className="form-group-row span-4">
+                  <div className="form-group flex-1">
+                    <label htmlFor="numeroInput">NÚMERO</label>
+                    <input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} placeholder="Ex: 123" />
+                  </div>
+                  <div className="form-group flex-small">
+                    <label htmlFor="uf">UF</label>
+                    <input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="SP" value={formData.uf} onChange={handleChange} />
+                  </div>
+                </div>
+                <div className="form-group span-2">
+                  <label htmlFor="bairro">BAIRRO</label>
+                  <input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} placeholder="Nome do Bairro" />
+                </div>
+                <div className="form-group span-2">
+                  <label htmlFor="cidade">CIDADE</label>
+                  <input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} placeholder="Cidade" />
+                </div>
+              </div>
+            </div>
+
+            {/* CARD 4: EXCLUSIVO DE CONTROLE E CLASSIFICAÇÃO CRM */}
+            <div className="crm-section-card">
+              <div className="form-section-header" style={{ marginBottom: '16px' }}>
+                <span className="section-header-icon"><i className="fas fa-sliders-h"></i></span>
+                <div>
+                  <h3 style={{ margin: 0 }}>CONTROLE E CLASSIFICAÇÃO CRM</h3>
+                  <p style={{ margin: '2px 0 0 0' }}>Classificação estratégica e tags para automação de atendimento</p>
+                </div>
+              </div>
+              
+              <div className="form-grid-4">
+                
+                {/* STATUS DO CADASTRO */}
+                <div className="form-group span-2">
+                  <label htmlFor="statusCadastro">
+                    STATUS DO CADASTRO
+                  </label>
+                  <div className="custom-select-wrapper">
+                    <select 
+                      id="statusCadastro" 
+                      name="statusCadastro" 
+                      autoComplete="off" 
+                      value={formData.statusCadastro} 
+                      onChange={handleChange} 
+                      className={`status-select-pro ${formData.statusCadastro}`}
+                    >
+                      {podeSerPendente && <option value="pendente">⏳ Pendente (Aguardando Aprovação)</option>}
+                      <option value="aprovado">✔️ Cadastro Aprovado</option>
+                      <option value="bloqueado">🚫 Cadastro Bloqueado</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* SITUAÇÃO FINANCEIRA */}
+                <div className="form-group span-2">
+                  <label htmlFor="situacaoFinanceira">
+                    SITUAÇÃO FINANCEIRA <i className="fas fa-lock lock-icon" title="Cálculo automático de locações passadas"></i>
+                  </label>
+                  <div className="custom-select-wrapper">
+                    <select 
+                      id="situacaoFinanceira" 
+                      name="situacaoFinanceira" 
+                      autoComplete="off" 
+                      value={calculandoFinancas ? 'calculando' : formData.situacaoFinanceira} 
+                      disabled={true} 
+                      className={`status-select-pro ${calculandoFinancas ? 'calculando' : formData.situacaoFinanceira}`}
+                    >
+                      <option value="calculando">⏳ Calculando...</option>
+                      <option value="adimplente">🟢 Adimplente (Sem pendências)</option>
+                      <option value="inadimplente">🔴 Inadimplente (Com pendências)</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* ETIQUETAS E TAGS CRM LUXURY COM BOTÃO DE CLASSIFICAÇÃO AUTOMÁTICA */}
+                <div className="form-group span-4">
+                  <div className="tag-header-row">
+                    <label className="label-tag-title">
+                      ETIQUETA DO CLIENTE (TAG CRM)
+                    </label>
+                    <button 
+                      type="button" 
+                      className="btn-auto-tag-suggest" 
+                      onClick={aplicarTagAutomatica}
+                      title="Clique para aplicar a sugestão automática calculada com base no histórico"
+                    >
+                      <i className="fas fa-robot"></i> Classificar Automático: <strong>{tagSugeridaAuto}</strong>
+                    </button>
+                  </div>
+
+                  <div className="tags-selector-chips">
+                    {tagsParaExibir.map(tag => {
+                      const estaSelecionada = formData.tags === tag;
+                      const tagEstilo = getTagStyle(tag); 
+                      const icon = getTagIcon(tag);
+                      return (
+                        <button 
+                          key={tag} 
+                          type="button" 
+                          className={`tag-chip-btn ${estaSelecionada ? 'selected' : ''}`} 
+                          onClick={() => selecionarTag(tag)}
+                          style={estaSelecionada ? { 
+                            backgroundColor: tagEstilo.bg, 
+                            color: tagEstilo.color, 
+                            borderColor: tagEstilo.color,
+                            boxShadow: `0 4px 14px rgba(0,0,0,0.12)`
+                          } : { 
+                            backgroundColor: tagEstilo.bg, 
+                            color: tagEstilo.color, 
+                            borderColor: tagEstilo.border 
+                          }}
+                        >
+                          <span className="tag-icon-emoji">{icon}</span> {tag} {estaSelecionada && <i className="fas fa-check check-icon"></i>}
+                        </button>
+                      )
+                    })}
+                  </div>
+                  {ehTagAntiga && (
+                    <span className="tag-warning-text">
+                      <i className="fas fa-exclamation-triangle"></i> Tag Antiga detectada: "{formData.tags}". Clique em uma opção acima para atualizar.
+                    </span>
+                  )}
+                </div>
+
+                {/* OBSERVAÇÕES INTERNAS DE ATENDIMENTO */}
+                <div className="form-group span-4">
+                  <label htmlFor="observacoes">
+                    <i className="far fa-sticky-note"></i> OBSERVAÇÕES INTERNAS GERAIS
+                  </label>
+                  <textarea 
+                    id="observacoes" 
+                    name="observacoes" 
+                    autoComplete="off" 
+                    rows="2" 
+                    className="observacoes-textarea"
+                    value={formData.observacoes} 
+                    onChange={handleChange} 
+                    placeholder="Preferências do cliente, restrições ou notas de atendimento gerais..."
+                  />
+                </div>
+
+              </div>
+            </div>
+
+            {/* CARD 5: LINHA DO TEMPO DE ATENDIMENTO & NOTAS CRM */}
+            <div className="form-section-card crm-timeline-card">
+              <div className="form-section-header">
+                <span className="section-header-icon gold-glow"><i className="fas fa-stream"></i></span>
+                <div style={{ flex: 1 }}>
+                  <div className="header-title-flex">
+                    <h3 style={{ margin: 0 }}>LINHA DO TEMPO DE ATENDIMENTO & NOTAS CRM</h3>
+                    <span className="timeline-counter-badge">
+                      {historicoNotas.length} {historicoNotas.length === 1 ? 'registro' : 'registros'}
+                    </span>
+                  </div>
+                  <p style={{ margin: '2px 0 0 0' }}>Registre ligações, preferências, acordos e histórico de atendimento com o cliente</p>
+                </div>
+              </div>
+
+              {/* SELETOR DE CATEGORIA DAS NOTAS (PÍLULAS INTERATIVAS) */}
+              <div className="note-category-pills">
+                <span className="pills-label"><i className="fas fa-filter"></i> Tipo de Registro:</span>
+                <div className="pills-flex">
+                  {TIPOS_NOTAS_CRM.map(cat => {
+                    const ativada = tipoNovaNota === cat.id;
                     return (
-                      <div key={loc.id} className="historico-card" onClick={() => navigate(`/locacoes/editar/${loc.id}`)}>
-                        <div className="h-info">
-                          <span className="h-title">
-                            Pedido {loc.numeroPedido ? `#${loc.numeroPedido}` : `#${loc.id.substring(0,6).toUpperCase()}`}
-                          </span>
-                          <span className="h-date">
-                            📅 Evento: {loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data'}
-                          </span>
-                        </div>
-                        <div className="h-status-valor">
-                          <span className={`h-badge ${st}`}>
-                            {loc.status?.toUpperCase() || 'S/S'}
-                          </span>
-                          <span className="h-value" style={{textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : '#0f172a'}}>
-                            R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
-                          </span>
-                        </div>
-                      </div>
-                    )
+                      <button 
+                        key={cat.id} 
+                        type="button" 
+                        className={`pill-cat-btn ${ativada ? 'active' : ''}`}
+                        onClick={() => setTipoNovaNota(cat.id)}
+                        style={ativada ? { backgroundColor: cat.color, color: '#ffffff', borderColor: cat.color, boxShadow: `0 4px 12px ${cat.color}40` } : { backgroundColor: cat.bg, color: cat.color, borderColor: `${cat.color}30` }}
+                      >
+                        <span>{cat.icon}</span> {cat.label}
+                      </button>
+                    );
                   })}
+                </div>
+              </div>
+
+              {/* CAIXA DE CRIAÇÃO DA NOTA COM ATALHOS RÁPIDOS */}
+              <div className="nova-nota-card-pro">
+                <textarea 
+                  rows="2"
+                  value={textoNovaNota} 
+                  onChange={(e) => setTextoNovaNota(e.target.value)} 
+                  placeholder={`Digite aqui o resumo do atendimento (${tipoNovaNota})...`}
+                  className="textarea-nota-pro"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); adicionarNotaHistorico(); } }}
+                />
+
+                <div className="nova-nota-footer-row">
+                  <div className="templates-rapidos-row">
+                    <span className="tmpl-title"><i className="fas fa-magic"></i> Atalhos rápidos:</span>
+                    {TEMPLATES_NOTAS_RAPIDAS.map((tmpl, idx) => (
+                      <button 
+                        key={idx} 
+                        type="button" 
+                        className="btn-tmpl-chip"
+                        onClick={() => setTextoNovaNota(prev => prev ? `${prev} - ${tmpl}` : tmpl)}
+                      >
+                        + {tmpl}
+                      </button>
+                    ))}
+                  </div>
+
+                  <button 
+                    type="button" 
+                    onClick={adicionarNotaHistorico}
+                    className="btn-salvar-nota-gold"
+                  >
+                    <i className="fas fa-paper-plane"></i> Registrar Nota
+                  </button>
+                </div>
+              </div>
+
+              {/* LISTA DE NOTAS DA TIMELINE */}
+              <div className="timeline-notes-container">
+                {historicoNotas.length === 0 ? (
+                  <div className="empty-timeline-box">
+                    <div className="empty-icon-circle"><i className="far fa-comments"></i></div>
+                    <h4>Nenhum registro na linha do tempo ainda</h4>
+                    <p>Selecione um tipo acima e registre a primeira nota de atendimento para este cliente!</p>
+                  </div>
+                ) : (
+                  <div className="timeline-feed-list">
+                    {historicoNotas.map((nota) => {
+                      const catInfo = TIPOS_NOTAS_CRM.find(c => c.id === nota.tipo) || { color: '#c5a059', bg: '#fefce8', icon: '📝' };
+                      return (
+                        <div key={nota.id} className="timeline-feed-item" style={{ borderLeftColor: catInfo.color }}>
+                          <div className="timeline-icon-node" style={{ backgroundColor: catInfo.bg, color: catInfo.color, borderColor: catInfo.color }}>
+                            <span>{catInfo.icon}</span>
+                          </div>
+                          <div className="timeline-card-body">
+                            <div className="timeline-card-header">
+                              <div className="header-left">
+                                <span className="cat-badge-pill" style={{ backgroundColor: catInfo.bg, color: catInfo.color, border: `1px solid ${catInfo.color}40` }}>
+                                  {nota.tipo}
+                                </span>
+                                <span className="author-name"><i className="far fa-user-circle"></i> {nota.autor}</span>
+                              </div>
+                              <div className="header-right">
+                                <span className="time-stamp"><i className="far fa-clock"></i> {new Date(nota.dataHora).toLocaleString('pt-BR')}</span>
+                                <button 
+                                  type="button" 
+                                  onClick={() => removerNotaHistorico(nota.id)} 
+                                  className="btn-trash-note"
+                                  title="Excluir nota"
+                                >
+                                  <i className="fas fa-trash-alt"></i>
+                                </button>
+                              </div>
+                            </div>
+                            <p className="timeline-text-content">{nota.texto}</p>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* CARD 6: HISTÓRICO DE LOCAÇÕES E CONTRATOS */}
+            {clienteEditando && historicoLocacoes.length > 0 && (
+              <div style={{gridColumn: '1 / -1', width: '100%'}}>
+                <div className="form-section-card">
+                  <div className="form-section-header">
+                    <span className="section-header-icon"><i className="fas fa-history"></i></span>
+                    <div>
+                      <h3 style={{ margin: 0 }}>HISTÓRICO DE LOCAÇÕES E CONTRATOS</h3>
+                      <p style={{ margin: '2px 0 0 0' }}>{historicoLocacoes.length} pedidos vinculados a este cliente</p>
+                    </div>
+                  </div>
+
+                  <div className="historico-grid">
+                    {historicoLocacoes.map(loc => {
+                      const st = String(loc.status || 'S/S').toLowerCase().replace(' ', '');
+                      const isCancelado = st.includes('cancelado');
+                      return (
+                        <div key={loc.id} className="historico-card" onClick={() => navigate(`/locacoes/editar/${loc.id}`)}>
+                          <div className="h-info">
+                            <span className="h-title">
+                              Pedido {loc.numeroPedido ? `#${loc.numeroPedido}` : `#${loc.id.substring(0,6).toUpperCase()}`}
+                            </span>
+                            <span className="h-date">
+                              📅 Evento: {loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data'}
+                            </span>
+                          </div>
+                          <div className="h-status-valor">
+                            <span className={`h-badge ${st}`}>
+                              {loc.status?.toUpperCase() || 'S/S'}
+                            </span>
+                            <span className="h-value" style={{textDecoration: isCancelado ? 'line-through' : 'none', color: isCancelado ? '#94a3b8' : '#0f172a'}}>
+                              R$ {Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
                 </div>
               </div>
             )}
 
-            <div className="form-actions mt-compact" style={{gridColumn: '1 / -1'}}>
-              <Link to="/clientes" className="btn-voltar-link">Cancelar</Link>
-              <button type="submit" className="btn-salvar-form" disabled={salvando}>{salvando ? 'Aguarde...' : 'Salvar Cliente'}</button>
+            {/* RODAPÉ DE AÇÕES LUXURY */}
+            <div className="form-actions mt-compact">
+              <Link to="/clientes" className="btn-cancelar-celebre">
+                Cancelar
+              </Link>
+              <button type="submit" className="btn-salvar-celebre-gold" disabled={salvando}>
+                <i className="fas fa-save"></i> {salvando ? 'Aguarde, salvando...' : clienteEditando ? 'Salvar Alterações' : 'Salvar Cliente'}
+              </button>
             </div>
+
           </div>
         </form>
       </div>

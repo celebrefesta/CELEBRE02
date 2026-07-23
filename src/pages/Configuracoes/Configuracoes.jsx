@@ -12,6 +12,7 @@ import AbaCatalogoEstoque from './AbaCatalogoEstoque';
 import AbaAssinaturaUso from './AbaAssinaturaUso';
 import AbaSeguranca from './AbaSeguranca';
 import AbaAparencia from './AbaAparencia';
+import AbaBackup from './AbaBackup';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -353,6 +354,16 @@ const Configuracoes = () => {
           <span className="tab-icon pink"><i className="fas fa-palette"></i></span>
           <span>Aparência</span>
         </button>
+
+        {!isCollaborator && (
+          <button 
+            className={abaAtiva === 'backup' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('backup')}
+          >
+            <span className="tab-icon indigo"><i className="fas fa-database"></i></span>
+            <span>Backup & LGPD</span>
+          </button>
+        )}
       </nav>
 
 
@@ -417,6 +428,14 @@ const Configuracoes = () => {
 
         {abaAtiva === 'aparencia' && (
           <AbaAparencia />
+        )}
+
+        {abaAtiva === 'backup' && (
+          <AbaBackup 
+            tenantId={tenantId}
+            usuarioLogado={usuarioLogado}
+            registrarLog={registrarLog}
+          />
         )}
 
       </main>

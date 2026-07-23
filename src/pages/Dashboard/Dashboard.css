@@ -448,6 +448,208 @@
 .feed-valor { font-size: 13px; font-weight: 800; color: #10b981; white-space: nowrap;}
 .feed-valor--danger { color: #dc2626; }
 
+/* WIDGET DE ANIVERSARIANTES DO MÊS NO DASHBOARD */
+.crm-birthday-card-dash {
+  border-top: 4px solid #be185d !important;
+}
+
+.btn-ver-todos-anivs {
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+  color: #be185d;
+  border: 1.5px solid #fbcfe8;
+  padding: 5px 14px;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 850;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.25s ease;
+  box-shadow: 0 2px 8px rgba(236, 72, 153, 0.1);
+}
+
+[data-theme='dark'] .btn-ver-todos-anivs {
+  background: #311227;
+  border-color: #831843;
+  color: #f472b6;
+}
+
+.btn-ver-todos-anivs:hover {
+  transform: translateY(-2px);
+  background: #be185d;
+  color: #ffffff;
+  border-color: #be185d;
+  box-shadow: 0 6px 16px rgba(190, 24, 93, 0.3);
+}
+
+/* MODAL DE ANIVERSARIANTES DO MÊS NO DASHBOARD */
+.modal-overlay-celebre {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-container-celebre {
+  background: var(--fundo-card, #ffffff);
+  border-radius: 24px;
+  width: 100%;
+  max-width: 780px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header-celebre {
+  padding: 20px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.btn-close-modal {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-close-modal:hover {
+  background: rgba(255, 255, 255, 0.35);
+  transform: scale(1.08);
+}
+
+.feed-row-birthday {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 14px;
+  margin-bottom: 8px;
+  gap: 10px;
+}
+
+[data-theme='dark'] .feed-row-birthday {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+.birthday-client-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.birthday-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+  color: #ffffff;
+  font-weight: 850;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+}
+
+.birthday-client-info strong {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--texto-principal, #0f172a);
+}
+
+.birthday-date-sub {
+  font-size: 0.7rem;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 600;
+}
+
+.birthday-dispatch-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-dispatch-zap {
+  background: #25d366;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-dispatch-zap:hover {
+  background: #16a34a;
+  transform: translateY(-1px);
+}
+
+.btn-dispatch-email {
+  background: #0284c7;
+  color: #ffffff;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-dispatch-email:hover {
+  background: #0369a1;
+  transform: translateY(-1px);
+}
+
+.btn-dispatch-both {
+  background: linear-gradient(135deg, #be185d 0%, #9d174d 100%);
+  color: #ffffff;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 0.7rem;
+  font-weight: 850;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-dispatch-both:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
 /* =========================================
    RESPONSIVIDADE 
 ========================================= */
