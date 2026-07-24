@@ -367,14 +367,20 @@ const Estoque = () => {
 
       if (dataFiltro) {
           const pedidosNessaData = locacoes.filter(loc => 
-              loc.dataRetirada === dataFiltro && 
+              !loc.arquivado &&
+              !loc.archived &&
               loc.status !== 'cancelado' && 
+              loc.status !== 'arquivado' &&
               loc.status !== 'finalizado'
           );
           pedidosNessaData.forEach(pedido => {
               if (pedido.itens && Array.isArray(pedido.itens)) {
-                  const itemEncontrado = pedido.itens.find(i => i.id === item.id);
-                  if (itemEncontrado) alugadosNaData += Number(itemEncontrado.qtd || 1);
+                  const itemEncontrado = pedido.itens.find(i => 
+                    i.id === item.id ||
+                    (i.codigo && item.codigo && i.codigo === item.codigo) ||
+                    (i.nome && item.nome && i.nome.trim().toLowerCase() === item.nome.trim().toLowerCase())
+                  );
+                  if (itemEncontrado) alugadosNaData += Number(itemEncontrado.qtd || itemEncontrado.quantidade || 1);
               }
           });
       }

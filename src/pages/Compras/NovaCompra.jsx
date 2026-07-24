@@ -77,6 +77,23 @@ const NovaCompra = () => {
     carregarPedidosFuturos();
     if (isEditing) {
         carregarDadosEdicao();
+    } else {
+        // 🔥 Captura parâmetros de Pedido em Aberto se vindo de NovaLocacao
+        const queryParams = new URLSearchParams(window.location.search);
+        const cliNome = queryParams.get('clienteNome');
+        const dRetirada = queryParams.get('dataRetirada');
+        const tFesta = queryParams.get('temaFesta');
+
+        if (cliNome) {
+          setDestino('pedido');
+          setPedidoSelecionado({
+            id: `temp_${Date.now()}`,
+            clienteNome: cliNome,
+            dataRetirada: dRetirada || '',
+            temaFesta: tFesta || 'Pedido em Aberto',
+            status: 'EM ABERTO'
+          });
+        }
     }
   }, [id, usuarioLogado, navigate, tenantId]);
 
@@ -88,7 +105,6 @@ const NovaCompra = () => {
         if (snap.exists()) {
             const data = snap.data();
             
-            // 🔥 CADEADO MULTI-EMPRESA: Verifica se a compra pertence à empresa
             if (data.userId && data.userId !== tenantId) {
                 alert("Acesso negado: Esta compra não pertence à sua empresa.");
                 navigate('/compras');
@@ -138,23 +154,42 @@ const NovaCompra = () => {
   const carregarPedidosFuturos = async () => {
     if (!usuarioLogado) return;
     try {
-      // 🔥 BLINDAGEM MULTI-EMPRESA: Busca apenas os pedidos da empresa
       const q = query(collection(db, "locacoes"), where("userId", "==", tenantId));
       const snapshot = await getDocs(q);
       
       let locacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // Ordena na memória para evitar problemas de índice no Firebase
+      // Ordena por data de criação / data de retirada (mais recentes primeiro)
       locacoes.sort((a, b) => {
-          const dataA = a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0;
-          const dataB = b.dataRetirada ? new Date(b.dataRetirada).getTime() : 0;
-          return dataB - dataA; // Mais recentes primeiro
+          const timeA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : (a.dataRetirada ? new Date(a.dataRetirada).getTime() : 0);
+          const timeB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : (b.dataRetirada ? new Date(b.dataRetirada).getTime() : 0);
+          return timeB - timeA;
       });
 
-      const pedidosAtivos = locacoes.filter(loc => !['cancelado', 'finalizado'].includes((loc.status || '').toLowerCase()));
+      // Inclui pedidos em aberto, orçamentos, confirmados, etc. (apenas exclui os estritamente cancelados)
+      const pedidosAtivos = locacoes.filter(loc => {
+        const st = (loc.status || '').toLowerCase().trim();
+        return !st.includes('cancelado');
+      });
+
       setPedidosDisponiveis(pedidosAtivos);
     } catch (error) { 
       console.error("Erro ao buscar pedidos:", error);
+    }
+  };
+
+  const cadastrarPedidoManual = () => {
+    const nomeCli = prompt("Digite o nome do Cliente ou Pedido em Aberto:");
+    if (nomeCli && nomeCli.trim()) {
+      const dataFesta = prompt("Data da festa (AAAA-MM-DD) [opcional]:", "") || "";
+      const novoPedido = {
+        id: `manual_${Date.now()}`,
+        clienteNome: nomeCli.trim(),
+        dataRetirada: dataFesta,
+        temaFesta: "Pedido em Aberto (Manual)",
+        status: "EM ABERTO"
+      };
+      selecionarPedido(novoPedido);
     }
   };
 
@@ -258,12 +293,11 @@ const NovaCompra = () => {
           await registrarLog("EDIÇÃO DE COMPRA", `Atualizou os dados da solicitação de compra: "${dadosDaCompra.nome}".`);
           alert("Solicitação atualizada com sucesso!");
       } else {
-          // 🔥 BLINDAGEM MULTI-EMPRESA: Salva a nova compra na conta principal
           await addDoc(collection(db, "lista_compras"), {
             ...dadosDaCompra,
             status: "pendente",
             createdAt: serverTimestamp(),
-            userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
+            userId: tenantId
           });
           await registrarLog("NOVA COMPRA", `Criou uma solicitação de compra para: "${dadosDaCompra.nome}" (Qtd: ${dadosDaCompra.quantidade}).`);
           alert("Nova solicitação de compra criada!");
@@ -282,7 +316,8 @@ const NovaCompra = () => {
     const termo = buscaPedido.toLowerCase();
     return (p.clienteNome || '').toLowerCase().includes(termo) || 
            (p.temaFesta || '').toLowerCase().includes(termo) ||
-           (p.numeroPedido || '').includes(termo);
+           (p.numeroPedido || '').includes(termo) ||
+           (p.status || '').toLowerCase().includes(termo);
   });
 
   if (carregandoEdicao) return <div style={{padding: '50px', textAlign: 'center'}}>Carregando dados da compra...</div>;
@@ -293,256 +328,204 @@ const NovaCompra = () => {
       <div className="page-header-premium">
         <div className="header-titles">
           <h1>{isEditing ? '✏️ Editar Solicitação de Compra' : 'Nova Solicitação de Compra'}</h1>
-          <p>{isEditing ? 'Altere as informações do item, fornecedor ou prazo abaixo.' : 'Adicione itens necessários para o acervo ou pedidos.'}</p>
+          <p>Cadastre pecas, insumos ou infraestrutura para sua empresa</p>
         </div>
-        <button className="btn-voltar-simples" onClick={() => navigate('/compras')}>
-          <span style={{marginRight: '5px'}}>←</span> Voltar para Lista
+        <button className="btn-voltar-premium" onClick={() => navigate('/compras')}>
+          ← Voltar para Lista
         </button>
       </div>
 
-      <form className="nova-compra-grid" onSubmit={salvarCompra}>
+      <form className="form-grid-layout" onSubmit={salvarCompra}>
         
-        {/* --- COLUNA ESQUERDA: O PRODUTO --- */}
-        <div className="compra-card-premium">
-          <div className="card-header-linha">
-            <div className="icone-titulo">🛍️</div>
-            <h3 className="card-title">O QUE PRECISA COMPRAR?</h3>
-          </div>
+        {/* BLUCO ESQUERDO: DADOS DO ITEM */}
+        <div className="form-card-section">
+          <h3>📦 Informações do Item</h3>
           
-          <div className="form-group-modern">
-            <label>NOME DO PRODUTO / ITEM *</label>
+          <div className="form-group-full mb-15">
+            <label>Nome do Item / Peça *</label>
             <input 
               type="text" 
-              placeholder="Ex: Cilindro M, Trio de Mesas..." 
-              required 
-              value={nome}
+              placeholder="Ex: Vaso de Cerâmica Rosa Bebê, Boleira Ouro..." 
+              value={nome} 
               onChange={e => setNome(e.target.value)}
-              autoFocus={!isEditing}
+              required 
             />
           </div>
 
-          <div className="form-row-modern">
-            <div className="form-group-modern" style={{ flex: 1 }}>
-              <label>QUANTIDADE *</label>
+          <div className="form-row-2 mb-15">
+            <div className="form-group">
+              <label>Quantidade *</label>
               <input 
                 type="number" 
                 min="1" 
+                value={quantidade} 
+                onChange={e => setQuantidade(e.target.value)} 
                 required 
-                value={quantidade}
-                onChange={e => setQuantidade(e.target.value)}
               />
             </div>
-            <div className="form-group-modern" style={{ flex: 2 }}>
-              <label>CUSTO ESTIMADO TOTAL (R$)</label>
-              <input 
-                type="text" 
-                placeholder="0,00" 
-                value={valorEstimado}
-                onChange={e => setValorEstimado(maskCurrency(e.target.value))}
-              />
-            </div>
-          </div>
-
-          <div className="form-group-modern mt-15">
-            <label>TIPO DE ITEM</label>
-            <div className="segment-control">
-              <button 
-                type="button" 
-                className={categoria === 'acervo' ? 'active' : ''} 
-                onClick={() => { setCategoria('acervo'); setFormato('unidade'); }}
-              >
-                🏺 Peça p/ Acervo
-              </button>
-              <button 
-                type="button" 
-                className={categoria === 'material' ? 'active' : ''} 
-                onClick={() => setCategoria('material')}
-              >
-                ✂️ Material Consumo
-              </button>
+            
+            <div className="form-group">
+              <label>Categoria *</label>
+              <select value={categoria} onChange={e => setCategoria(e.target.value)}>
+                <option value="acervo">📦 Peça de Acervo / Decoração</option>
+                <option value="insumo">🛠️ Insumo / Consumível (Balões, Fitas)</option>
+                <option value="infraestrutura">🏢 Infraestrutura / Escritório</option>
+              </select>
             </div>
           </div>
 
           {categoria === 'acervo' && (
-            <div className="form-group-modern mt-15 fade-in">
-              <label>FORMATO DO ITEM</label>
-              <div className="segment-control">
-                <button 
-                  type="button" 
-                  className={formato === 'unidade' ? 'active' : ''} 
-                  onClick={() => setFormato('unidade')}
-                >
-                  📦 Peça Única
-                </button>
-                <button 
-                  type="button" 
-                  className={formato === 'kit' ? 'active' : ''} 
-                  onClick={() => setFormato('kit')}
-                >
-                  🪆 É um Kit (Múltiplo)
-                </button>
+            <div className="form-row-2 mb-15">
+              <div className="form-group">
+                <label>Formato *</label>
+                <select value={formato} onChange={e => setFormato(e.target.value)}>
+                  <option value="unidade">Peça Avulsa / Única</option>
+                  <option value="kit">Kit / Conjunto de Peças</option>
+                </select>
               </div>
-            </div>
-          )}
 
-          {categoria === 'acervo' && formato === 'kit' && (
-            <div className="form-group-modern mt-15 fade-in box-destaque-kit">
-              <label style={{color: '#166534'}}>QUANTAS PEÇAS VÊM NESTE KIT?</label>
-              <input 
-                type="number" 
-                min="2" 
-                value={quantidadePecasKit}
-                onChange={e => setQuantidadePecasKit(e.target.value)}
-                style={{ borderColor: '#86efac', backgroundColor: 'white', color: '#14532d' }}
-              />
-              <span className="helper-text" style={{color: '#16a34a'}}>
-                Isso agilizará o desmembramento das peças quando a compra chegar no acervo!
-              </span>
-            </div>
-          )}
-
-          {categoria === 'acervo' && (
-            <div className="form-group-modern mt-15 fade-in input-destaque">
-              <label>SUGESTÃO DE ALUGUEL DO ITEM/KIT (R$)</label>
-              <input 
-                type="text" 
-                placeholder="Valor que será cobrado por locação..." 
-                value={valorAluguel}
-                onChange={e => setValorAluguel(maskCurrency(e.target.value))}
-              />
-            </div>
-          )}
-        </div>
-
-        {/* --- COLUNA DIREITA: LOGÍSTICA E VÍNCULO --- */}
-        <div className="compra-card-premium">
-          <div className="card-header-linha">
-            <div className="icone-titulo">🔗</div>
-            <h3 className="card-title">LOGÍSTICA E DESTINO</h3>
-          </div>
-
-          <div className="form-group-modern">
-            <label>PARA ONDE VAI ESSA COMPRA?</label>
-            <div className="segment-control">
-              <button 
-                type="button" 
-                className={destino === 'geral' ? 'active' : ''} 
-                onClick={() => { setPermitirSimulador(true); setDestino('geral'); setPedidoSelecionado(null); }}
-              >
-                📦 Estoque Geral
-              </button>
-              <button 
-                type="button" 
-                className={destino === 'pedido' ? 'active' : ''} 
-                onClick={() => setModalPedidosAberto(true)}
-              >
-                🎉 Vincular a um Pedido
-              </button>
-            </div>
-          </div>
-
-          {destino === 'pedido' && (
-            <div className="pedido-selecionado-box fade-in">
-              {pedidoSelecionado ? (
-                <>
-                  <div className="ps-info">
-                    <span className="ps-festa">{pedidoSelecionado.temaFesta || 'Tema não informado'}</span>
-                    <strong className="ps-cliente">{pedidoSelecionado.clienteNome}</strong>
-                    <span className="ps-data">📅 Festa: {pedidoSelecionado.dataRetirada.split('-').reverse().join('/')}</span>
-                  </div>
-                  <button type="button" className="btn-trocar-pedido" onClick={() => setModalPedidosAberto(true)}>Alterar</button>
-                </>
-              ) : (
-                <div className="ps-vazio">
-                  <span>Nenhum pedido selecionado.</span>
-                  <button type="button" onClick={() => setModalPedidosAberto(true)}>Buscar Pedido 🔍</button>
+              {formato === 'kit' && (
+                <div className="form-group">
+                  <label>Nº de Peças no Kit *</label>
+                  <input 
+                    type="number" 
+                    min="2" 
+                    value={quantidadePecasKit} 
+                    onChange={e => setQuantidadePecasKit(e.target.value)} 
+                  />
                 </div>
               )}
             </div>
           )}
 
-          <div className="form-group-modern mt-20">
-            <label>CONDIÇÃO DA PEÇA NA CHEGADA</label>
-            <div className="segment-control condition-toggle">
-              <button 
-                type="button" 
-                className={condicao === 'pronto' ? 'active ok' : ''} 
-                onClick={() => { setPermitirSimulador(true); setCondicao('pronto'); }}
-              >
-                ✅ Pronta p/ Uso
-              </button>
-              <button 
-                type="button" 
-                className={condicao === 'preparar' ? 'active alert' : ''} 
-                onClick={() => { setPermitirSimulador(true); setCondicao('preparar'); }}
-              >
-                🎨 Crua (Precisa Pintar)
-              </button>
-            </div>
-          </div>
-
-          <div className="simulador-frete-box mt-15">
-            <div className="form-group-modern">
-                <label style={{color: '#0f172a'}}>ONDE VOCÊ VAI COMPRAR? (Simulador)</label>
-                <select value={tipoEntrega} onChange={e => { setPermitirSimulador(true); setTipoEntrega(e.target.value); }}>
-                    <option value="0">Loja Física na Cidade (Pronta Entrega)</option>
-                    <option value="2">Mercado Livre (FULL) - ~2 dias</option>
-                    <option value="5">Mercado Livre (Normal) - ~5 dias</option>
-                    <option value="10">Shopee (Vendedor Nacional) - ~10 dias</option>
-                    <option value="25">Shopee/AliExpress (Internacional) - ~25 dias</option>
-                    <option value="outro">Outro Fornecedor Personalizado...</option>
-                </select>
-            </div>
-
-            {tipoEntrega === 'outro' && (
-                <div className="form-group-modern mt-10 fade-in">
-                    <label>QUANTOS DIAS DE FRETE?</label>
-                    <input 
-                        type="number" 
-                        min="0" 
-                        placeholder="Ex: 8"
-                        value={diasPersonalizados} 
-                        onChange={e => { setPermitirSimulador(true); setDiasPersonalizados(e.target.value); }} 
-                    />
-                </div>
-            )}
-
-            {destino === 'pedido' && mensagemPrazo && permitirSimulador && (
-                <div className={`mensagem-prazo-risco ${erroPrazo ? 'bloqueado' : 'ok'} mt-10`}>
-                    {mensagemPrazo}
-                </div>
-            )}
-          </div>
-
-          <div className="form-row-modern mt-15">
-            <div className="form-group-modern" style={{ flex: 1 }}>
-              <label>DATA LIMITE PREVISTA</label>
-              <input 
-                type="date" 
-                value={prazo}
-                onChange={e => { setPermitirSimulador(false); setPrazo(e.target.value); }}
-              />
-            </div>
-            <div className="form-group-modern" style={{ flex: 1.5 }}>
-              <label>NOME DO FORNECEDOR OU LINK</label>
+          <div className="form-row-2 mb-15">
+            <div className="form-group">
+              <label>Custo Estimado (Unitário R$)</label>
               <input 
                 type="text" 
-                placeholder="Cole o link ou digite o nome..." 
-                value={fornecedor}
-                onChange={e => setFornecedor(e.target.value)}
+                placeholder="0,00" 
+                value={valorEstimado} 
+                onChange={e => setValorEstimado(maskCurrency(e.target.value))} 
               />
             </div>
+
+            {categoria === 'acervo' && (
+              <div className="form-group">
+                <label>Preço Sugerido de Aluguel (R$)</label>
+                <input 
+                  type="text" 
+                  placeholder="0,00" 
+                  value={valorAluguel} 
+                  onChange={e => setValorAluguel(maskCurrency(e.target.value))} 
+                />
+              </div>
+            )}
           </div>
 
-          <div className="form-group-modern mt-15">
-            <label>OBSERVAÇÕES INTERNAS</label>
+          <div className="form-group-full mb-15">
+            <label>Fornecedor / Link da Compra (opcional)</label>
+            <input 
+              type="text" 
+              placeholder="Ex: Mercado Livre, Shopee, Armarinho Fernando..." 
+              value={fornecedor} 
+              onChange={e => setFornecedor(e.target.value)} 
+            />
+          </div>
+
+          <div className="form-group-full">
+            <label>Observações / Especificações de Cor ou Tamanho</label>
             <textarea 
-              rows="2" 
-              placeholder="Ex: Pedir para não envernizar, atenção na medida..."
-              value={observacoes}
+              rows="3" 
+              placeholder="Ex: Comprar preferencialmente na cor Dourado Fosco..." 
+              value={observacoes} 
               onChange={e => setObservacoes(e.target.value)}
             ></textarea>
           </div>
+        </div>
+
+        {/* BLOCO DIREITO: VÍNCULO & PRAZO */}
+        <div className="form-card-section">
+          <h3>🎯 Destino & Simulação de Prazo</h3>
+          
+          <div className="form-group-full mb-15">
+            <label>Destino da Compra *</label>
+            <div className="toggle-options-grid">
+              <button 
+                type="button" 
+                className={`btn-toggle-option ${destino === 'geral' ? 'active' : ''}`}
+                onClick={() => { setDestino('geral'); setPedidoSelecionado(null); }}
+              >
+                🏢 Reposição para Estoque Geral
+              </button>
+              <button 
+                type="button" 
+                className={`btn-toggle-option ${destino === 'pedido' ? 'active' : ''}`}
+                onClick={() => { setDestino('pedido'); setModalPedidosAberto(true); }}
+              >
+                🎈 Compra Exclusiva para Pedido/Cliente
+              </button>
+            </div>
+          </div>
+
+          {destino === 'pedido' && (
+            <div className="card-pedido-vinculado mb-15">
+              {pedidoSelecionado ? (
+                <div className="pedido-info-box">
+                  <div className="p-header">
+                    <strong>{pedidoSelecionado.clienteNome}</strong>
+                    <span className="p-badge-status">{pedidoSelecionado.status || 'EM ABERTO'}</span>
+                  </div>
+                  <p className="p-meta">🎉 Festa: <b>{pedidoSelecionado.temaFesta || 'Tema não informado'}</b></p>
+                  <p className="p-meta">📅 Data Retirada: <b>{pedidoSelecionado.dataRetirada ? pedidoSelecionado.dataRetirada.split('-').reverse().join('/') : 'A definir'}</b></p>
+                  <button type="button" className="btn-alterar-pedido" onClick={() => setModalPedidosAberto(true)}>
+                    🔄 Trocar Pedido
+                  </button>
+                </div>
+              ) : (
+                <div className="pedido-empty-box" onClick={() => setModalPedidosAberto(true)}>
+                  <span>🔍 Clique aqui para buscar e vincular o pedido do cliente...</span>
+                </div>
+              )}
+            </div>
+          )}
+
+          <div className="form-group-full mb-15">
+            <label>Condição de Chegada do Item *</label>
+            <select value={condicao} onChange={e => setCondicao(e.target.value)}>
+              <option value="pronto">✅ Item Pronto para Uso (Não precisa montagem/pintura)</option>
+              <option value="preparar">🛠️ Necessita Preparação (+3 dias úteis de lixa/pintura/montagem)</option>
+            </select>
+          </div>
+
+          <div className="form-group-full mb-15">
+            <label>Tipo de Frete / Prazo de Entrega Estimado *</label>
+            <select value={tipoEntrega} onChange={e => setTipoEntrega(e.target.value)}>
+              <option value="1">⚡ Retirada Presencial / Compra Local (1 dia)</option>
+              <option value="5">🚚 Frete Expresso / Sedex (Até 5 dias úteis)</option>
+              <option value="10">📦 Frete Padrão / PAC (Até 10 dias úteis)</option>
+              <option value="20">🚢 Frete Internacional / China (Até 20 dias úteis)</option>
+              <option value="outro">✏️ Informar Dias Personalizados</option>
+            </select>
+          </div>
+
+          {tipoEntrega === 'outro' && (
+            <div className="form-group-full mb-15">
+              <label>Nº de Dias Úteis de Frete *</label>
+              <input 
+                type="number" 
+                min="1" 
+                value={diasPersonalizados} 
+                onChange={e => setDiasPersonalizados(e.target.value)} 
+                placeholder="Ex: 15"
+              />
+            </div>
+          )}
+
+          {destino === 'pedido' && pedidoSelecionado && (
+            <div className={`alerta-prazo-box ${erroPrazo ? 'erro' : 'sucesso'}`}>
+              <p>{mensagemPrazo}</p>
+            </div>
+          )}
 
           <div className="form-actions-premium mt-20">
             <button type="button" className="btn-cancelar-premium" onClick={() => navigate('/compras')}>Cancelar</button>
@@ -557,13 +540,14 @@ const NovaCompra = () => {
         </div>
       </form>
 
+      {/* MODAL DE SELEÇÃO DE PEDIDOS COM SUPORTE A PEDIDOS EM ABERTO */}
       {modalPedidosAberto && (
         <div className="modal-overlay-premium">
           <div className="modal-box-pedido">
             <div className="modal-header-pedido">
               <div>
                 <h3>Selecione o Evento</h3>
-                <p>Busque o pedido do cliente na lista abaixo.</p>
+                <p>Busque o pedido do cliente na lista abaixo ou vincule a um pedido em atendimento.</p>
               </div>
               <button className="btn-fechar-modal" onClick={() => {
                 if(!pedidoSelecionado) setDestino('geral'); 
@@ -583,8 +567,24 @@ const NovaCompra = () => {
             </div>
 
             <div className="modal-lista-pedidos">
+              {/* BOTÃO PARA DIGITAR MANUALMENTE OU VINCULAR A PEDIDO EM ABERTO */}
+              <div 
+                className="card-pedido-select"
+                onClick={cadastrarPedidoManual}
+                style={{ background: '#fffbeb', borderColor: '#fde68a', cursor: 'pointer' }}
+              >
+                <div className="cp-left">
+                  <span className="cp-id">➕ NOVO</span>
+                  <strong className="cp-nome" style={{ color: '#b45309' }}>Vincular a Pedido em Aberto / Digitar Cliente</strong>
+                  <span className="cp-tema">Clique para digitar o nome do cliente em atendimento</span>
+                </div>
+                <div className="cp-right">
+                  <span className="cp-status" style={{ background: '#fef08a', color: '#854d0e', fontWeight: 'bold' }}>EM ABERTO</span>
+                </div>
+              </div>
+
               {pedidosFiltrados.length === 0 ? (
-                <div className="lista-vazia">Nenhum evento encontrado.</div>
+                <div className="lista-vazia">Nenhum evento encontrado no banco de dados. Use a opção acima para digitar o cliente.</div>
               ) : (
                 pedidosFiltrados.map(pedido => (
                   <div 
@@ -602,8 +602,8 @@ const NovaCompra = () => {
                         <span className="label">Data da Festa</span>
                         <strong>{pedido.dataRetirada ? pedido.dataRetirada.split('-').reverse().join('/') : 'S/D'}</strong>
                       </div>
-                      <span className={`cp-status ${pedido.status?.toLowerCase()}`}>
-                        {pedido.status}
+                      <span className={`cp-status ${(pedido.status || 'aberto').toLowerCase()}`}>
+                        {pedido.status || 'EM ABERTO'}
                       </span>
                     </div>
                   </div>

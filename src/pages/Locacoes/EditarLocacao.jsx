@@ -40,6 +40,7 @@ const EditarLocacao = () => {
   });
   
   const [desconto, setDesconto] = useState(0);
+  const [tipoDesconto, setTipoDesconto] = useState('R$'); // 'R$' ou '%'
   const [obsInternas, setObsInternas] = useState('');
   const [numeroPedido, setNumeroPedido] = useState('');
   const [statusAtual, setStatusAtual] = useState('');
@@ -48,8 +49,11 @@ const EditarLocacao = () => {
   const [modalSinalAberto, setModalSinalAberto] = useState(false);
   const [valorSinal, setValorSinal] = useState('');
   const [formaPagtoSinal, setFormaPagtoSinal] = useState('Pix');
+  const [linkMercadoPago, setLinkMercadoPago] = useState('');
+  const [gerandoLinkMP, setGerandoLinkMP] = useState(false);
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
+  const [configEmpresa, setConfigEmpresa] = useState(null); 
 
   const [dadosIniciais, setDadosIniciais] = useState(null);
 
@@ -93,16 +97,19 @@ const EditarLocacao = () => {
         const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
+        const docConfigRef = doc(db, "configuracoes_empresa", tenantId);
 
-        const [snapCli, snapEst, snapLoc] = await Promise.all([
+        const [snapCli, snapEst, snapLoc, snapConf] = await Promise.all([
           getDocs(qClientes),
           getDocs(qEstoque),
-          getDocs(qLocacoes)
+          getDocs(qLocacoes),
+          getDoc(docConfigRef)
         ]);
         
         setClientes(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
         setEstoque(snapEst.docs.map(d => ({ id: d.id, ...d.data() })));
         setTodasLocacoes(snapLoc.docs.map(d => ({ id: d.id, ...d.data() })));
+        if (snapConf.exists()) setConfigEmpresa(snapConf.data());
 
         if (id) {
           const docRef = doc(db, "locacoes", id);
@@ -177,7 +184,8 @@ const EditarLocacao = () => {
             }));
 
             setCarrinho(itensFormatados);
-            setDesconto(data.desconto || 0);
+            setDesconto(data.valorDescontoInput !== undefined ? data.valorDescontoInput : (data.desconto || 0));
+            if (data.tipoDesconto) setTipoDesconto(data.tipoDesconto);
             setObsInternas(data.obsInternas || '');
 
             setDadosIniciais({
@@ -221,7 +229,8 @@ const EditarLocacao = () => {
       const peca = estoque.find(e => e.id === pecaId);
       if (!peca) return { livresReais: 0, livresMaximos: 0, retornaNoDia: 0 };
       
-      const qtdFisica = parseInt(peca.quantidade || 0) || parseInt(peca.estoque || 0) || 0;
+      const isDeco = peca.especificacoes?.isDecoracao || peca.categoria === 'Decoração Completa';
+      const qtdFisica = isDeco ? 1 : (parseInt(peca.quantidade) || parseInt(peca.estoque) || parseInt(peca.qtd) || parseInt(peca.quantidadeTotal) || parseInt(peca.unidades) || parseInt(peca.quantidadeEstoque) || 1);
       const qtdManutencao = parseInt(peca.manutencao || 0) || parseInt(peca.emManutencao || 0) || parseInt(peca.qtdManutencao || 0) || parseInt(peca.avariadas || 0) || parseInt(peca.defeito || 0) || parseInt(peca.quebradas || 0) || 0;
       
       let disponiveisTotais = Math.max(0, qtdFisica - qtdManutencao);
@@ -231,13 +240,20 @@ const EditarLocacao = () => {
       if (datas.retirada && datas.devolucao) {
           todasLocacoes.forEach(loc => {
               if (loc.id === id) return; 
-              
-              const status = (loc.status || '').toLowerCase();
-              if (['confirmado', 'preparacao', 'entregue'].includes(status)) {
+              if (loc.arquivado || loc.archived) return;
+
+              const status = (loc.status || '').toLowerCase().trim();
+              if (['cancelado', 'arquivado', 'finalizado', 'orcamento', 'orçamento'].includes(status)) return;
+
+              if (['confirmado', 'preparacao', 'entregue', 'aprovado', 'em andamento'].includes(status)) {
                   if (isOverlapping(datas.retirada, datas.devolucao, loc.dataRetirada, loc.dataDevolucao)) {
-                      const itemNoPedido = loc.itens?.find(i => i.id === pecaId);
+                      const itemNoPedido = loc.itens?.find(i => 
+                        i.id === pecaId || 
+                        (i.codigo && peca.codigo && i.codigo === peca.codigo) ||
+                        (i.nome && peca.nome && i.nome.trim().toLowerCase() === peca.nome.trim().toLowerCase())
+                      );
                       if (itemNoPedido) {
-                          const qtdAlugada = parseInt(itemNoPedido.qtd) || 0;
+                          const qtdAlugada = parseInt(itemNoPedido.qtd) || parseInt(itemNoPedido.quantidade) || 1;
                           if (loc.dataDevolucao === datas.retirada) {
                               qtdRetornaNoDia += qtdAlugada;
                           } else {
@@ -367,13 +383,22 @@ const EditarLocacao = () => {
     return Number(logistica.frete.toString().replace(/\./g, "").replace(",", "."));
   };
 
+  const getValorDescontoCalculado = (subtotal) => {
+    const descNum = Number(desconto) || 0;
+    if (tipoDesconto === '%') {
+      return (subtotal * descNum) / 100;
+    }
+    return descNum;
+  };
+
   const calcularTotal = () => {
     const subtotal = carrinho.reduce((acc, item) => {
       const precoValido = Number(item.preco || item.financeiro?.valorAluguel || 0);
       return acc + (precoValido * (item.qtd || 1));
     }, 0);
-    const total = subtotal + getFreteNumerico() - Number(desconto || 0);
-    return { subtotal, total: Math.max(0, total) };
+    const valorDesconto = getValorDescontoCalculado(subtotal);
+    const total = subtotal + getFreteNumerico() - valorDesconto;
+    return { subtotal, valorDesconto, total: Math.max(0, total) };
   };
 
   const handleCepChange = async (e) => {
@@ -478,7 +503,9 @@ const EditarLocacao = () => {
         itens: carrinho, 
         logistica: logisticaParaSalvar,
         obsInternas,
-        desconto: Number(desconto),
+        desconto: calcularTotal().valorDesconto,
+        tipoDesconto,
+        valorDescontoInput: Number(desconto),
         valorTotal: totalFinalCalculado,
         valorPago: novoValorPagoTotal,
         sinalNegociado: valorSinalNegociado > 0 ? valorSinalNegociado : null,
@@ -618,14 +645,104 @@ const EditarLocacao = () => {
       }
   };
 
+  const gerarLinkMercadoPago = async () => {
+    const valorDigitadoNum = Number(valorSinal.replace(/\./g, "").replace(",", ".")) || (calcularTotal().total * 0.5);
+    if (valorDigitadoNum <= 0) {
+      alert("⚠️ Por favor, informe um valor de sinal/entrada válido maior que R$ 0,00!");
+      return;
+    }
+
+    setGerandoLinkMP(true);
+    try {
+      const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
+      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || 'Cliente Celebre') : 'Cliente Celebre';
+
+      const mpToken = configEmpresa?.mpAccessToken;
+      const mpLinkEmpresa = configEmpresa?.linkMercadoPago;
+
+      let linkFinal = "";
+
+      if (mpToken) {
+        try {
+          const response = await fetch("https://api.mercadopago.com/checkout/preferences", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${mpToken}`
+            },
+            body: JSON.stringify({
+              items: [
+                {
+                  title: `Sinal de Locação (${temaFesta || 'Celebre Festas'}) - ${nomeClienteVIP}`.substring(0, 250),
+                  quantity: 1,
+                  currency_id: "BRL",
+                  unit_price: Number(valorDigitadoNum.toFixed(2))
+                }
+              ],
+              back_urls: {
+                success: window.location.href,
+                failure: window.location.href,
+                pending: window.location.href
+              },
+              auto_return: "approved"
+            })
+          });
+          const data = await response.json();
+          if (data && (data.init_point || data.sandbox_init_point)) {
+            linkFinal = data.init_point || data.sandbox_init_point;
+          }
+        } catch (errApi) {
+          console.warn("Aviso API MP Empresa:", errApi);
+        }
+      }
+
+      if (!linkFinal && mpLinkEmpresa) {
+        linkFinal = mpLinkEmpresa.includes('http') ? mpLinkEmpresa : `https://${mpLinkEmpresa}`;
+      }
+
+      if (!linkFinal) {
+        const customUrl = prompt(
+          "⚠️ A sua empresa ainda não cadastrou o Access Token ou Link do Mercado Pago em Configurações -> Empresa.\n\nPara receber na sua conta bancária, cole o seu Link do Mercado Pago ou Chave Pix abaixo:",
+          ""
+        );
+        if (customUrl) {
+          linkFinal = customUrl;
+        } else {
+          setGerandoLinkMP(false);
+          return;
+        }
+      }
+
+      setLinkMercadoPago(linkFinal);
+      setFormaPagtoSinal('Mercado Pago');
+      alert("✅ Link de Pagamento configurado com sucesso para a SUA conta!");
+
+    } catch (e) {
+      console.error("Erro MP Preference:", e);
+    } finally {
+      setGerandoLinkMP(false);
+    }
+  };
+
   const abrirWhatsAppCobranca = () => {
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
-      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || '') : '';
+      const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || 'Cliente') : 'Cliente';
       const telefoneC = clienteEncontrado?.celular ? clienteEncontrado.celular.replace(/\D/g, '') : '';
       const vTotal = calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2});
-      const vSinalFormatado = valorSinal || '0,00';
+      const vSinalFormatado = valorSinal || (calcularTotal().total * 0.5).toFixed(2).replace('.', ',');
+      const chavePixEmpresa = configEmpresa?.chavePix;
       
-      const texto = `Olá, ${nomeClienteVIP}! 🎉\n\nSua locação no valor total de *R$ ${vTotal}* já foi separada em nosso sistema.\n\nPara confirmarmos a reserva das peças para a sua data, aguardamos o pagamento do sinal no valor de *R$ ${vSinalFormatado}*.\n\n💳 *Nossa Chave PIX:* \n(SUA CHAVE AQUI)\n\nAssim que o pagamento for feito, por favor, me envie o comprovante por aqui.\n\nMuito obrigada! 🥰`;
+      let texto = `Olá, *${nomeClienteVIP}*! 🎉\n\nSua reserva para o tema *${temaFesta || 'Festas'}* no valor de *R$ ${vTotal}* foi registrada!\n\nPara confirmarmos a data (*${datas.retirada || 'a combinar'}*), o valor da entrada é de *R$ ${vSinalFormatado}*.\n\n`;
+
+      if (linkMercadoPago) {
+        texto += `💳 *Link de Pagamento Automático (Pix / Cartão Mercado Pago):*\n${linkMercadoPago}\n\n`;
+      } else if (chavePixEmpresa) {
+        texto += `💳 *Chave PIX da Empresa:*\n${chavePixEmpresa}\n\n`;
+      } else {
+        texto += `💳 *Pagamento via PIX:*\nSolicite nossa chave por aqui!\n\n`;
+      }
+
+      texto += `Assim que efetuado, seu pedido é aprovado na hora! 🥰`;
       
       const msgEncoded = encodeURIComponent(texto);
       const url = telefoneC ? `https://wa.me/55${telefoneC}?text=${msgEncoded}` : `https://api.whatsapp.com/send?text=${msgEncoded}`;
@@ -886,7 +1003,18 @@ const EditarLocacao = () => {
             <div className="header-com-botoes">
               <h3 className="section-divider" style={{margin: 0, border: 'none'}}>📦 ITENS DO PEDIDO</h3>
               {!isFinalizado && (
-                  <div className="botoes-acoes-itens">
+                  <div className="botoes-acoes-itens" style={{ display: 'flex', gap: '10px' }}>
+                    <button 
+                      type="button" 
+                      className="btn-secundario-alerta" 
+                      onClick={() => { 
+                        const clienteObj = clientes.find(c => String(c.id) === String(clienteSelecionado));
+                        const nomeCli = clienteObj ? (clienteObj.nome || clienteObj.nomeFantasia || '') : '';
+                        window.open(`/compras/nova?cliente=${encodeURIComponent(nomeCli)}&tema=${encodeURIComponent(temaFesta || '')}`, '_blank');
+                      }}
+                    >
+                      🛒 Faltou algo? (Comprar)
+                    </button>
                     <button type="button" className="btn-primary-outline" onClick={() => setModalAberto(true)}>+ ADC. PEÇAS</button>
                   </div>
               )}
@@ -956,18 +1084,82 @@ const EditarLocacao = () => {
             <h3>💰 Financeiro</h3>
             <div className="fin-linha"><span>Subtotal Itens</span> <span>R$ {calcularTotal().subtotal.toFixed(2)}</span></div>
             <div className="fin-linha"><span>Frete</span> <span>+ R$ {getFreteNumerico().toFixed(2)}</span></div>
-            <div className="fin-linha desconto-linha">
-              <span>Desconto (R$)</span> 
-              {isFinalizado ? (
-                  <strong>{desconto}</strong>
-              ) : (
-                  <input type="number" min="0" value={desconto} onChange={e => setDesconto(e.target.value)} />
-              )}
+            <div className="fin-linha desconto-linha" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>Desconto</span>
+                {!isFinalizado && (
+                  <div className="tipo-desconto-toggle" style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '8px', padding: '2px', border: '1px solid #cbd5e1' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setTipoDesconto('R$')}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: '800',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: tipoDesconto === 'R$' ? '#c5a059' : 'transparent',
+                        color: tipoDesconto === 'R$' ? '#ffffff' : '#64748b',
+                        transition: '0.2s'
+                      }}
+                    >
+                      R$
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setTipoDesconto('%')}
+                      style={{
+                        padding: '3px 8px',
+                        fontSize: '0.72rem',
+                        fontWeight: '800',
+                        borderRadius: '6px',
+                        border: 'none',
+                        cursor: 'pointer',
+                        background: tipoDesconto === '%' ? '#c5a059' : 'transparent',
+                        color: tipoDesconto === '%' ? '#ffffff' : '#64748b',
+                        transition: '0.2s'
+                      }}
+                    >
+                      %
+                    </button>
+                  </div>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {isFinalizado ? (
+                  <strong>R$ {calcularTotal().valorDesconto.toFixed(2)}</strong>
+                ) : (
+                  <input 
+                    type="number" 
+                    min="0" 
+                    max={tipoDesconto === '%' ? 100 : undefined}
+                    step={tipoDesconto === '%' ? '1' : '0.01'}
+                    value={desconto} 
+                    onChange={e => setDesconto(e.target.value)} 
+                    style={{
+                      width: '90px',
+                      padding: '6px 10px',
+                      borderRadius: '8px',
+                      border: '1.5px solid #c5a059',
+                      fontSize: '0.9rem',
+                      fontWeight: '800',
+                      textAlign: 'right'
+                    }}
+                    placeholder={tipoDesconto === 'R$' ? '0,00' : '0%'}
+                  />
+                )}
+              </div>
             </div>
+            {!isFinalizado && tipoDesconto === '%' && Number(desconto) > 0 && (
+              <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700', textAlign: 'right', marginTop: '-6px', marginBottom: '8px' }}>
+                - R$ {calcularTotal().valorDesconto.toFixed(2)} ({desconto}% desc.)
+              </div>
+            )}
             
-            <div className="fin-total">
-              <span>TOTAL</span>
-              <strong>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <div className="fin-total" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0', padding: '12px 0', borderTop: '2px dashed #e2e8f0' }}>
+              <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem' }}>TOTAL</span>
+              <strong style={{ fontSize: '1.4rem', color: '#c5a059', fontWeight: '900' }}>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
             </div>
 
             {valorJaPago > 0 && (
@@ -1024,80 +1216,178 @@ const EditarLocacao = () => {
       </div>
 
       {modalSinalAberto && (
-        <div className="modal-overlay-premium" style={{zIndex: 99999}}>
-          <div className="modal-box-premium" style={{maxWidth: '500px', background: '#fff', borderRadius: '16px', overflow: 'hidden'}}>
-            <div style={{background: '#f8fafc', padding: '25px', borderBottom: '1px solid #e2e8f0', textAlign: 'center'}}>
-               <h3 style={{margin: 0, color: '#0f172a', fontSize: '22px'}}>💰 Confirmação e Sinal</h3>
-               
-               <div style={{marginTop: '20px', padding: '20px', background: '#eff6ff', border: '2px dashed #3b82f6', borderRadius: '12px'}}>
-                  <span style={{fontSize: '13px', color: '#1e3a8a', display: 'block', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Valor Total do Pedido</span>
-                  <strong style={{fontSize: '32px', color: '#1d4ed8'}}>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-               </div>
-            </div>
+        <div className="modal-overlay-premium" style={{ zIndex: 99999 }}>
+          <div className="modal-box-premium" style={{ maxWidth: '540px', background: '#ffffff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.35)', border: '1px solid #e2e8f0' }}>
             
-            <form onSubmit={(e) => e.preventDefault()} style={{padding: '25px'}}>
-               <div style={{display: 'flex', gap: '15px', marginBottom: '20px'}}>
-                   <div className="form-group-pag" style={{flex: 1}}>
-                     <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Valor da Entrada (R$)</label>
-                     <input 
-                        type="text" 
-                        placeholder="0,00" 
-                        autoFocus
-                        style={{fontSize: '22px', padding: '15px', textAlign: 'center', borderColor: '#3b82f6', color: '#1e3a8a', backgroundColor: '#fff', fontWeight: 'bold'}}
-                        value={valorSinal} 
-                        onChange={e => setValorSinal(maskCurrency(e.target.value))} 
-                     />
-                   </div>
+            {/* CABEÇALHO DOURADO LUXO */}
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '22px 28px', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: '850', color: '#ffffff' }}>💰 Confirmação de Pedido & Sinal</h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#94a3b8' }}>Escolha como registrar a entrada para garantir a reserva</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setModalSinalAberto(false)}
+                style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ✕
+              </button>
+            </div>
 
-                   <div className="form-group-pag" style={{flex: 1}}>
-                     <label style={{fontWeight: 'bold', color: '#334155', fontSize: '13px'}}>Forma de Pagto.</label>
-                     <select 
-                        value={formaPagtoSinal} 
-                        onChange={e => setFormaPagtoSinal(e.target.value)}
-                        style={{padding: '15px', fontSize: '16px', height: '100%', borderColor: '#cbd5e1', backgroundColor: '#fff'}}
-                     >
-                         <option value="Pix">Pix</option>
-                         <option value="Dinheiro">Dinheiro</option>
-                         <option value="Cartão de Crédito">Cartão de Crédito</option>
-                         <option value="Cartão de Débito">Cartão de Débito</option>
-                     </select>
-                   </div>
-               </div>
-
-               <div style={{ marginBottom: '20px' }}>
-                  <button
-                      type="button"
-                      onClick={abrirWhatsAppCobranca}
-                      style={{ width: '100%', padding: '14px', backgroundColor: '#22c55e', color: 'white', border: 'none', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px', fontSize: '15px', transition: '0.2s', boxShadow: '0 4px 6px rgba(34, 197, 94, 0.2)' }}
-                  >
-                       <span style={{fontSize: '20px'}}>📱</span> Enviar Cobrança no WhatsApp
-                  </button>
+            <div style={{ padding: '24px 28px' }}>
+              
+              {/* CARD DE VALOR TOTAL */}
+              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <div>
+                  <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>VALOR TOTAL DO PEDIDO</span>
+                  <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#0f172a', marginTop: '2px' }}>
+                    R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                  </div>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '6px' }}>
+                  <span style={{ fontSize: '0.68rem', color: '#64748b', fontWeight: '800' }}>SINAL RÁPIDO:</span>
+                  <div style={{ display: 'flex', gap: '6px' }}>
+                    <button 
+                      type="button" 
+                      onClick={() => setValorSinal((calcularTotal().total * 0.5).toFixed(2).replace('.', ','))}
+                      style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', padding: '4px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '850', cursor: 'pointer' }}
+                    >
+                      50% Sinal
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setValorSinal(calcularTotal().total.toFixed(2).replace('.', ','))}
+                      style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', padding: '4px 10px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '850', cursor: 'pointer' }}
+                    >
+                      100% Total
+                    </button>
+                  </div>
+                </div>
               </div>
 
-              <hr style={{border: 'none', borderTop: '1px solid #e2e8f0', margin: '25px 0'}} />
+              {/* CAMPOS DE VALOR E FORMA DE PAGAMENTO */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Valor da Entrada (R$)</label>
+                  <input 
+                    type="text" 
+                    placeholder="0,00" 
+                    autoFocus 
+                    value={valorSinal} 
+                    onChange={e => setValorSinal(maskCurrency(e.target.value))} 
+                    style={{ fontSize: '1.2rem', padding: '12px', textAlign: 'center', borderColor: '#c5a059', color: '#0f172a', fontWeight: '850', borderRadius: '12px', background: '#ffffff' }}
+                  />
+                </div>
+                
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Forma de Pagto.</label>
+                  <select 
+                    value={formaPagtoSinal} 
+                    onChange={e => setFormaPagtoSinal(e.target.value)} 
+                    style={{ padding: '12px', fontSize: '0.88rem', borderRadius: '12px', borderColor: '#cbd5e1', fontWeight: '700', background: '#ffffff' }}
+                  >
+                    <option value="Pix">📱 Pix Direto</option>
+                    <option value="Mercado Pago">✨ Link Mercado Pago</option>
+                    <option value="Dinheiro">💵 Dinheiro no Balcão</option>
+                    <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+                    <option value="Cartão de Débito">💳 Cartão de Débito</option>
+                  </select>
+                </div>
+              </div>
 
-              {valorDigitadoNum > 0 ? (
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                     <button type="button" onClick={salvarSinalRecebido} disabled={salvandoPedido} style={{padding: '16px', background: '#0f172a', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
-                       {salvandoPedido ? 'Salvando...' : '✅ O cliente JÁ PAGOU (Aprovar Pedido)'}
-                     </button>
-                     
-                     <button type="button" onClick={salvarAguardandoPagamento} disabled={salvandoPedido} style={{padding: '16px', background: '#fffbeb', border: '2px solid #fde68a', borderRadius: '10px', color: '#b45309', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
-                          {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento)'}
-                     </button>
+              {/* ÁREA INTEGRADA MERCADO PAGO */}
+              <div style={{ background: '#f0f9ff', border: '1.5px solid #bae6fd', borderRadius: '16px', padding: '14px 16px', marginBottom: '20px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '20px' }}>💳</span>
+                    <div>
+                      <strong style={{ fontSize: '0.85rem', color: '#0369a1', display: 'block' }}>Link / Cobrança Mercado Pago & Pix</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#0284c7' }}>Gere a cobrança ou cole o link para enviar no WhatsApp</span>
+                    </div>
                   </div>
-               ) : (
-                  <div style={{display: 'flex', flexDirection: 'column', gap: '12px'}}>
-                      <button type="button" onClick={salvarSemSinal} disabled={salvandoPedido} style={{padding: '16px', background: '#ef4444', border: 'none', borderRadius: '10px', color: 'white', fontWeight: 'bold', fontSize: '15px', cursor: salvandoPedido ? 'not-allowed' : 'pointer', transition: '0.2s'}}>
-                          {salvandoPedido ? 'Salvando...' : '⚠️ Aprovar Pedido SEM RECEBER SINAL'}
+                  <button 
+                    type="button" 
+                    onClick={gerarLinkMercadoPago}
+                    disabled={gerandoLinkMP}
+                    style={{ background: 'linear-gradient(135deg, #009ee3 0%, #0072bb 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '10px', fontWeight: '850', fontSize: '0.78rem', cursor: gerandoLinkMP ? 'not-allowed' : 'pointer', boxShadow: '0 4px 10px rgba(0,158,227,0.3)', whiteSpace: 'nowrap' }}
+                  >
+                    {gerandoLinkMP ? '⏳ Gerando...' : '⚡ Gerar Cobrança'}
+                  </button>
+                </div>
+
+                <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #7dd3fc', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label style={{ fontSize: '0.72rem', color: '#0369a1', fontWeight: '800' }}>Link de Pagamento / Chave Pix:</label>
+                  <input 
+                    type="text" 
+                    value={linkMercadoPago} 
+                    onChange={e => setLinkMercadoPago(e.target.value)} 
+                    placeholder="Cole seu link do Mercado Pago ou Chave Pix..." 
+                    style={{ width: '100%', padding: '10px 12px', borderRadius: '8px', border: '1px solid #7dd3fc', fontSize: '0.82rem', color: '#0f172a', fontWeight: '600', background: '#ffffff' }}
+                  />
+                  {linkMercadoPago && (
+                    <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                      <button 
+                        type="button" 
+                        onClick={() => { navigator.clipboard.writeText(linkMercadoPago); alert("✅ Link de cobrança copiado!"); }}
+                        style={{ flex: 1, padding: '8px', background: '#ffffff', border: '1px solid #38bdf8', color: '#0284c7', borderRadius: '8px', fontWeight: '800', fontSize: '0.75rem', cursor: 'pointer' }}
+                      >
+                        📋 Copiar Link
                       </button>
-                  </div>
-               )}
+                      <button 
+                        type="button" 
+                        onClick={abrirWhatsAppCobranca}
+                        style={{ flex: 1, padding: '8px', background: '#22c55e', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '850', fontSize: '0.75rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
+                      >
+                        📱 Enviar no WhatsApp
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
 
-               <button type="button" onClick={() => setModalSinalAberto(false)} style={{marginTop: '20px', width: '100%', padding: '14px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline'}}>
-                    Cancelar e Voltar
-               </button>
-            </form>
+              {/* BOTOES DE ACAO DO PEDIDO */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {Number(valorSinal.replace(/\./g, "").replace(",", ".")) > 0 ? (
+                  <>
+                    <button 
+                      type="button" 
+                      onClick={salvarSinalRecebido} 
+                      disabled={salvandoPedido} 
+                      style={{ padding: '14px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', border: 'none', borderRadius: '12px', color: '#ffffff', fontWeight: '850', fontSize: '0.9rem', cursor: salvandoPedido ? 'not-allowed' : 'pointer', boxShadow: '0 4px 14px rgba(197, 160, 89, 0.4)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                    >
+                      {salvandoPedido ? 'Salvando...' : '✅ O CLIENTE JÁ PAGOU (Confirmar e Registrar Caixa)'}
+                    </button>
+
+                    <button 
+                      type="button" 
+                      onClick={salvarAguardandoPagamento} 
+                      disabled={salvandoPedido} 
+                      style={{ padding: '12px', background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '12px', color: '#0f172a', fontWeight: '800', fontSize: '0.84rem', cursor: salvandoPedido ? 'not-allowed' : 'pointer' }}
+                    >
+                      {salvandoPedido ? 'Salvando...' : '⏳ AINDA VAI PAGAR (Manter Orçamento / Baixa Automática)'}
+                    </button>
+                  </>
+                ) : (
+                  <button 
+                    type="button" 
+                    onClick={salvarSemSinal} 
+                    disabled={salvandoPedido} 
+                    style={{ padding: '14px', background: '#ef4444', border: 'none', borderRadius: '12px', color: '#ffffff', fontWeight: '850', fontSize: '0.88rem', cursor: salvandoPedido ? 'not-allowed' : 'pointer', boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                  >
+                    {salvandoPedido ? 'Salvando...' : '⚠️ Aprovar Pedido SEM RECEBER SINAL (Risco)'}
+                  </button>
+                )}
+
+                <button 
+                  type="button" 
+                  onClick={() => setModalSinalAberto(false)} 
+                  style={{ padding: '8px', background: 'transparent', border: 'none', color: '#64748b', fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer' }}
+                >
+                  Cancelar e Voltar
+                </button>
+              </div>
+
+            </div>
           </div>
         </div>
       )}
@@ -1129,8 +1419,12 @@ const EditarLocacao = () => {
 
                   return (
                     <div key={item.id} className="peca-card" onClick={() => { if(!estaEsgotado) addCarrinho(item); }} style={{opacity: estaEsgotado ? 0.5 : 1, cursor: estaEsgotado ? 'not-allowed' : 'pointer'}}>
-                      <div className="peca-img" style={{position: 'relative'}}>
-                          {item.foto ? <img src={item.foto} alt=""/> : '📷'}
+                      <div className="peca-img" style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                          {item.foto ? (
+                              <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                          ) : (
+                              <span style={{ fontSize: '32px' }}>📷</span>
+                          )}
                           
                           {estaEsgotado ? (
                               <span style={badgeEsgotado}>ALUGADO</span>
@@ -1140,7 +1434,7 @@ const EditarLocacao = () => {
                               <span style={badgeLivres}>Livres: {disp.livresReais}</span>
                           )}
 
-                          {!estaEsgotado && <button className="btn-add-peca">+</button>}
+                          {!estaEsgotado && <button className="btn-add-peca" type="button">+</button>}
                       </div>
                       <div className="peca-info">
                          <strong>{item.nome}</strong>

@@ -637,88 +637,109 @@ const Clientes = () => {
         </div>
       </div>
 
-      {/* BARRA DE FILTROS E BUSCA */}
+      {/* BARRA DE FILTROS E BUSCA (NATIVO MOBILE + DESKTOP LUXURY) */}
       <div className="advanced-filter-bar">
-        <div className="filter-main-row">
+        <div className="filter-top-row">
           
-          <div className="search-group">
-            <span className="search-icon"><i className="fas fa-search"></i></span>
+          <div className="search-input-box">
+            <i className="fas fa-search search-box-icon"></i>
             <input 
               type="text" 
               placeholder="Buscar por Nome, CPF, CNPJ ou E-mail..." 
               value={busca} 
               onChange={e => setBusca(e.target.value)} 
+              className="search-input-field"
             />
             {busca && (
-              <button className="btn-clear-search" onClick={() => setBusca('')}>
+              <button type="button" className="btn-clear-input" onClick={() => setBusca('')} title="Limpar busca">
                 <i className="fas fa-times"></i>
               </button>
             )}
           </div>
 
-          <div className="filter-pills-row">
-            <button 
-              className={`pill-btn ${filtroStatus === 'todos' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('todos')}
+          <div className="filter-controls-group">
+            {/* DROPDOWN DE STATUS NATIVO EXCLUSIVO PARA CELULAR (SEM ROLAGEM) */}
+            <select 
+              value={filtroStatus} 
+              onChange={(e) => setFiltroStatus(e.target.value)} 
+              className="select-pill-filter mobile-status-select"
             >
-              Todos ({clientes.length})
-            </button>
-            {numPendentesAprovacao > 0 && (
-              <button 
-                className={`pill-btn ${filtroStatus === 'pendentes' ? 'active' : ''}`}
-                style={{ background: filtroStatus === 'pendentes' ? '#d97706' : '#fff7ed', color: filtroStatus === 'pendentes' ? '#fff' : '#d97706', borderColor: '#fde047' }}
-                onClick={() => setFiltroStatus('pendentes')}
-              >
-                ⏳ Aguardando Aprovação ({numPendentesAprovacao})
-              </button>
-            )}
-            <button 
-              className={`pill-btn pill-green ${filtroStatus === 'adimplentes' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('adimplentes')}
+              <option value="todos">👥 Todos os Clientes ({clientes.length})</option>
+              {numPendentesAprovacao > 0 && <option value="pendentes">⏳ Aguardando Aprovação ({numPendentesAprovacao})</option>}
+              <option value="adimplentes">✅ Adimplentes ({clientes.filter(c => c.situacaoFinanceira === 'adimplente').length})</option>
+              <option value="inadimplentes">⚠️ Pendências ({clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length})</option>
+              <option value="aniversariantes">🎂 Aniversariantes ({numAniversariantes})</option>
+              <option value="vip">👑 VIPs ({clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length})</option>
+            </select>
+
+            <select 
+              value={filtroTagCRM} 
+              onChange={(e) => setFiltroTagCRM(e.target.value)}
+              className="select-pill-filter"
             >
-              Adimplentes ({clientes.filter(c => c.situacaoFinanceira === 'adimplente').length})
-            </button>
-            <button 
-              className={`pill-btn pill-red ${filtroStatus === 'inadimplentes' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('inadimplentes')}
-            >
-              Pendências ({clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length})
-            </button>
-            <button 
-              className={`pill-btn pill-cake ${filtroStatus === 'aniversariantes' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('aniversariantes')}
-            >
-              🎂 Aniversariantes ({numAniversariantes})
-            </button>
-            <button 
-              className={`pill-btn pill-gold ${filtroStatus === 'vip' ? 'active' : ''}`}
-              onClick={() => setFiltroStatus('vip')}
-            >
-              VIPs ({clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length})
+              <option value="todas">🏷️ Filtrar por Tag CRM</option>
+              <option value="VIP">👑 VIP</option>
+              <option value="RECORRENTE">🔄 RECORRENTE</option>
+              <option value="NOVO">✨ NOVO</option>
+              <option value="EXIGENTE">⭐ EXIGENTE</option>
+              <option value="ORGANIZADO">📋 ORGANIZADO</option>
+              <option value="ECONÔMICO">🏷️ ECONÔMICO</option>
+              <option value="FAMÍLIA">👪 FAMÍLIA</option>
+              <option value="PROBLEMÁTICO">⚠️ PROBLEMÁTICO</option>
+            </select>
+
+            <button type="button" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} className="select-pill-filter btn-sort-celebre">
+              <i className={ordemAlfabetica === 'A-Z' ? "fas fa-sort-alpha-down" : "fas fa-sort-alpha-up"}></i> Ordem: {ordemAlfabetica}
             </button>
           </div>
+        </div>
 
-          <select 
-            value={filtroTagCRM} 
-            onChange={(e) => setFiltroTagCRM(e.target.value)}
-            className="select-tag-crm-filter"
-            style={{ height: '38px', borderRadius: '20px', padding: '0 12px', fontSize: '0.78rem', fontWeight: '700', border: '1px solid var(--borda, #cbd5e1)', outline: 'none', cursor: 'pointer', background: 'var(--fundo-card, #ffffff)', color: 'var(--texto-principal, #0f172a)' }}
+        {/* PÍLULAS DE STATUS DESKTOP */}
+        <div className="filter-pills-strip desktop-pills-only">
+          <button 
+            type="button"
+            className={`pill-btn ${filtroStatus === 'todos' ? 'active' : ''}`}
+            onClick={() => setFiltroStatus('todos')}
           >
-            <option value="todas">🏷️ Filtrar por Tag CRM</option>
-            <option value="VIP">👑 VIP</option>
-            <option value="RECORRENTE">🔄 RECORRENTE</option>
-            <option value="NOVO">✨ NOVO</option>
-            <option value="EXIGENTE">⭐ EXIGENTE</option>
-            <option value="ORGANIZADO">📋 ORGANIZADO</option>
-            <option value="ECONÔMICO">🏷️ ECONÔMICO</option>
-            <option value="FAMÍLIA">👪 FAMÍLIA</option>
-            <option value="PROBLEMÁTICO">⚠️ PROBLEMÁTICO</option>
-          </select>
-
-          <button onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} className="btn-sort">
-            <i className={ordemAlfabetica === 'A-Z' ? "fas fa-sort-alpha-down" : "fas fa-sort-alpha-up"}></i> {ordemAlfabetica}
+            Todos <span className="pill-badge">{clientes.length}</span>
           </button>
-
+          {numPendentesAprovacao > 0 && (
+            <button 
+              type="button"
+              className={`pill-btn ${filtroStatus === 'pendentes' ? 'active' : ''}`}
+              onClick={() => setFiltroStatus('pendentes')}
+            >
+              ⏳ Aguardando Aprovação <span className="pill-badge">{numPendentesAprovacao}</span>
+            </button>
+          )}
+          <button 
+            type="button"
+            className={`pill-btn ${filtroStatus === 'adimplentes' ? 'active' : ''}`}
+            onClick={() => setFiltroStatus('adimplentes')}
+          >
+            Adimplentes <span className="pill-badge">{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</span>
+          </button>
+          <button 
+            type="button"
+            className={`pill-btn ${filtroStatus === 'inadimplentes' ? 'active' : ''}`}
+            onClick={() => setFiltroStatus('inadimplentes')}
+          >
+            Pendências <span className="pill-badge">{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</span>
+          </button>
+          <button 
+            type="button"
+            className={`pill-btn ${filtroStatus === 'aniversariantes' ? 'active' : ''}`}
+            onClick={() => setFiltroStatus('aniversariantes')}
+          >
+            🎂 Aniversariantes <span className="pill-badge">{numAniversariantes}</span>
+          </button>
+          <button 
+            type="button"
+            className={`pill-btn ${filtroStatus === 'vip' ? 'active' : ''}`}
+            onClick={() => setFiltroStatus('vip')}
+          >
+            👑 VIPs <span className="pill-badge">{clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length}</span>
+          </button>
         </div>
       </div>
 

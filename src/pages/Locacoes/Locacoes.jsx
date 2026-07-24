@@ -22,14 +22,115 @@ const Locacoes = () => {
   const [filtroServico, setFiltroServico] = useState('todos'); 
   const [filtroOrdenacao, setFiltroOrdenacao] = useState('recentes');
   const [filtroDataEvento, setFiltroDataEvento] = useState(''); 
+  const [filtroPeriodo, setFiltroPeriodo] = useState('todos');
   
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
 
   const [modalPagamento, setModalPagamento] = useState(false);
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
-  const [pagamento, setPagamento] = useState({ valor: '', formaPagto: 'Pix', data: new Date().toISOString().split('T')[0] });
+  const [pagamento, setPagamento] = useState({ 
+    valor: '', 
+    formaPagto: 'Pix', 
+    data: new Date().toISOString().split('T')[0],
+    comprovanteNome: '',
+    comprovantePreview: ''
+  });
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
+
+  // 📲 DISPARO RÁPIDO VIA WHATSAPP DO PEDIDO
+  const enviarWhatsAppPedido = (pedido) => {
+    const tel = (pedido.clienteCelular || pedido.celular || pedido.telefone || '').replace(/\D/g, '');
+    const nome = (pedido.clienteNome || 'Cliente').split(' ')[0];
+    const num = pedido.numeroPedido || (pedido.id ? pedido.id.substring(0, 6).toUpperCase() : 'S/N');
+    const total = Number(pedido.valorTotal || pedido.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const dataEv = pedido.dataRetirada ? new Date(pedido.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'A definir';
+    
+    let msg = `Olá, *${nome}*! Tudo bem? 😊\n\nPassando para confirmar os detalhes do seu pedido *#${num}* na Celebre Festas:\n\n📅 *Data do Evento:* ${dataEv}\n💰 *Valor Total:* R$ ${total}\n\nQualquer dúvida estamos à disposição! 🎈✨`;
+    
+    if (tel) {
+      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+    } else {
+      alert("Telefone/WhatsApp do cliente não encontrado.");
+    }
+  };
+
+  // 🖨️ IMPRESSÃO DE RECIBO / COMPROVANTE DO PEDIDO EM PDF
+  const imprimirComprovante = (pedido) => {
+    const num = pedido.numeroPedido || (pedido.id ? pedido.id.substring(0, 6).toUpperCase() : 'S/N');
+    const cliente = pedido.clienteNome || 'Cliente';
+    const dataEv = pedido.dataRetirada ? new Date(pedido.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data';
+    const dataDev = pedido.dataDevolucao ? new Date(pedido.dataDevolucao + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data';
+    const itens = pedido.carrinho || pedido.itens || [];
+    const total = Number(pedido.valorTotal || pedido.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const pago = Number(pedido.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const saldo = (Number(pedido.valorTotal || pedido.total || 0) - Number(pedido.valorPago || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+
+    const win = window.open('', '_blank', 'width=800,height=900');
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Recibo - Pedido #${num}</title>
+          <style>
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #0f172a; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c5a059; padding-bottom: 15px; margin-bottom: 20px; }
+            .logo { font-size: 24px; font-weight: 900; color: #c5a059; letter-spacing: 1px; }
+            .title { font-size: 18px; font-weight: bold; text-align: right; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
+            .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            .table th { background: #0f172a; color: #fff; padding: 10px; font-size: 12px; text-transform: uppercase; text-align: left; }
+            .table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+            .totals { margin-left: auto; width: 280px; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; }
+            .totals-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
+            .totals-row.total { font-weight: 900; font-size: 18px; color: #c5a059; border-top: 1px solid #cbd5e1; padding-top: 8px; }
+            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="logo">CELEBRE FESTAS</div>
+            <div class="title">COMPROVANTE DE LOCAÇÃO<br><small style="color: #64748b; font-size: 12px;">Pedido #${num}</small></div>
+          </div>
+          <div class="info-grid">
+            <div><strong>Cliente:</strong> ${cliente}</div>
+            <div><strong>Serviço:</strong> ${pedido.tipoServicoFormatado || 'Locação'}</div>
+            <div><strong>Data Retirada/Evento:</strong> ${dataEv}</div>
+            <div><strong>Data Devolução:</strong> ${dataDev}</div>
+          </div>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Item / Peça</th>
+                <th style="text-align: center;">Qtd</th>
+                <th style="text-align: right;">Unitário</th>
+                <th style="text-align: right;">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${itens.length > 0 ? itens.map(i => `
+                <tr>
+                  <td>${i.nome || i.titulo || 'Item'}</td>
+                  <td style="text-align: center;">${i.qtd || 1}</td>
+                  <td style="text-align: right;">R$ ${Number(i.preco || 0).toFixed(2)}</td>
+                  <td style="text-align: right;">R$ ${(Number(i.preco || 0) * Number(i.qtd || 1)).toFixed(2)}</td>
+                </tr>
+              `).join('') : '<tr><td colspan="4" style="text-align:center;">Locação Registrada</td></tr>'}
+            </tbody>
+          </table>
+          <div class="totals">
+            <div class="totals-row"><span>Valor Total:</span> <strong>R$ ${total}</strong></div>
+            <div class="totals-row"><span>Valor Pago:</span> <span>R$ ${pago}</span></div>
+            <div class="totals-row total"><span>Saldo Restante:</span> <span>R$ ${saldo}</span></div>
+          </div>
+          <div class="footer">Obrigado pela preferência! Celebre Festas - Eventos & Locações</div>
+        </body>
+      </html>
+    `);
+    win.document.close();
+    win.focus();
+    setTimeout(() => win.print(), 500);
+  };
 
   useEffect(() => {
     if (!usuarioLogado) {
@@ -146,13 +247,84 @@ const Locacoes = () => {
     }
   };
 
+  // 📎 MANIPULADOR DE COMPROVANTE DE PAGAMENTO COM COMPRESSÃO AUTOMÁTICA DE IMAGEM
+  const handleFileComprovante = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("⚠️ O arquivo deve ter no máximo 10MB.");
+      return;
+    }
+
+    if (file.type.startsWith('image/')) {
+      const img = new Image();
+      const reader = new FileReader();
+
+      reader.onload = (event) => {
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          const maxDim = 800; // Redimensiona para no máximo 800px para caber com folga no Firestore (< 60kb)
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > maxDim) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            }
+          } else {
+            if (height > maxDim) {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Converte para JPEG ultra leve (qualidade 0.65 -> ~40kb)
+          const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.65);
+          setPagamento(prev => ({
+            ...prev,
+            comprovanteNome: file.name,
+            comprovantePreview: compressedDataUrl
+          }));
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    } else {
+      // Arquivo PDF ou documento
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setPagamento(prev => ({
+          ...prev,
+          comprovanteNome: file.name,
+          comprovantePreview: reader.result
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const registrarPagamento = async (e) => {
     e.preventDefault();
+    if (!pagamento.valor || Number(pagamento.valor) <= 0) {
+      alert("Por favor, digite um valor válido.");
+      return;
+    }
     setSalvandoPagamento(true);
     
     try {
       const novoValorPago = Number(pedidoSelecionado.valorPago || 0) + Number(pagamento.valor);
-      await updateDoc(doc(db, "locacoes", pedidoSelecionado.id), { valorPago: novoValorPago });
+      await updateDoc(doc(db, "locacoes", pedidoSelecionado.id), { 
+        valorPago: novoValorPago,
+        ultimoComprovanteUrl: pagamento.comprovantePreview || null,
+        ultimoComprovanteNome: pagamento.comprovanteNome || null
+      });
       
       // 🎯 CAIXA DA EMPRESA
       await addDoc(collection(db, "financeiro_lancamentos"), {
@@ -162,8 +334,10 @@ const Locacoes = () => {
         formaPagto: pagamento.formaPagto,
         data: pagamento.data, 
         status: 'pago', 
+        comprovanteUrl: pagamento.comprovantePreview || null,
+        comprovanteNome: pagamento.comprovanteNome || null,
         createdAt: serverTimestamp(),
-        descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido || pedidoSelecionado.id.substring(0,6)} - ${pedidoSelecionado.clienteNome}`,
+        descricao: `Ref. Pedido #${pedidoSelecionado.numeroPedido || (pedidoSelecionado.id ? pedidoSelecionado.id.substring(0,6) : 'S/N')} - ${pedidoSelecionado.clienteNome}`,
         userId: tenantId 
       });
 
@@ -187,7 +361,8 @@ const Locacoes = () => {
       carregarLocacoes();
       setModalPagamento(false);
     } catch (e) { 
-      alert("Erro ao salvar pagamento.");
+      console.error("Erro ao registrar pagamento:", e);
+      alert(`Erro ao salvar pagamento: ${e.message || 'Erro desconhecido'}`);
     } finally { 
       setSalvandoPagamento(false); 
     }
@@ -207,6 +382,24 @@ const Locacoes = () => {
 
   if (filtroDataEvento) {
       filtrados = filtrados.filter(i => i.dataRetirada === filtroDataEvento);
+  }
+
+  if (filtroPeriodo === 'hoje') {
+    const hojeStr = new Date().toISOString().split('T')[0];
+    filtrados = filtrados.filter(i => i.dataRetirada === hojeStr || i.dataEvento === hojeStr);
+  } else if (filtroPeriodo === 'fimsemana') {
+    const hojeObj = new Date();
+    const diaSemana = hojeObj.getDay();
+    const sabadoObj = new Date(hojeObj);
+    sabadoObj.setDate(hojeObj.getDate() + (6 - diaSemana));
+    const domingoObj = new Date(hojeObj);
+    domingoObj.setDate(hojeObj.getDate() + (7 - diaSemana));
+    const sabStr = sabadoObj.toISOString().split('T')[0];
+    const domStr = domingoObj.toISOString().split('T')[0];
+    filtrados = filtrados.filter(i => (i.dataRetirada >= sabStr && i.dataRetirada <= domStr));
+  } else if (filtroPeriodo === 'mes') {
+    const mesAnoAtual = new Date().toISOString().split('T')[0].substring(0, 7);
+    filtrados = filtrados.filter(i => (i.dataRetirada || '').startsWith(mesAnoAtual));
   }
 
   if (filtroStatus === 'todos') {
@@ -261,83 +454,182 @@ const Locacoes = () => {
       return dataA - dataB;
     } else if (filtroOrdenacao === 'maiorValor') {
       return Number(b.valorTotal || 0) - Number(a.valorTotal || 0);
-    } else if (filtroOrdenacao === 'menorValor') {
-      return Number(a.valorTotal || 0) - Number(b.valorTotal || 0);
     } else {
       return b.createdAtMs - a.createdAtMs; 
     }
   });
 
-  return (
-    <div className="locacoes-container dashboard-container">
-      <header className="dashboard-header">
-        <div className="welcome-text">
-          <h1>MINHAS LOCAÇÕES</h1>
-          <p>Gestão de pedidos, datas e recebimentos.</p>
-        </div>
-        <button className="btn-primary-celebre" onClick={() => navigate('/locacoes/nova')}>+ NOVA LOCAÇÃO</button>
-      </header>
+  // Helper function for golden avatars matching Clientes page
+  const getInitials = (name = 'Cliente') => {
+    const parts = name.trim().split(' ').filter(Boolean);
+    if (parts.length === 0) return 'C';
+    if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+    return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  };
 
-      <div className="dashboard-cards">
-        <div className="dash-card success">
-          <div className="dash-icon">✅</div>
-          <div className="dash-info">
-            <h3>Ativos (Em Processo)</h3>
-            <h2>{lista.filter(i => {
-                const s = String(i.status || '').toLowerCase();
-                return !s.includes('orcam') && !s.includes('cancelado') && !s.includes('finalizado') && !i.isOrcamentoVencido;
-              }).length}</h2>
+  // KPIs Calculations
+  const countAtivos = lista.filter(i => {
+    const s = String(i.status || '').toLowerCase();
+    return !s.includes('orcam') && !s.includes('cancelado') && !s.includes('finalizado') && !i.isOrcamentoVencido;
+  }).length;
+
+  const countOrcamentos = lista.filter(i => 
+    String(i.status || '').toLowerCase().includes('orcam') && !i.isOrcamentoVencido
+  ).length;
+
+  const countConfirmados = lista.filter(i => {
+    const s = String(i.status || '').toLowerCase();
+    return (s.includes('confirmado') || s.includes('preparacao') || s.includes('entregue')) && !s.includes('cancelado') && !i.isOrcamentoVencido;
+  }).length;
+
+  const totalAReceber = lista.filter(i => {
+    const s = String(i.status || '').toLowerCase();
+    return !s.includes('cancelado') && !i.isOrcamentoVencido;
+  }).reduce((acc, i) => acc + Math.max(0, Number(i.valorTotal || 0) - Number(i.valorPago || 0)), 0);
+
+  // Chips count
+  const chipCountEmProcesso = countAtivos;
+  const chipCountOrcamentos = countOrcamentos;
+  const chipCountConfirmados = countConfirmados;
+  const chipCountArquivados = lista.filter(i => String(i.status || '').toLowerCase().includes('finalizado')).length;
+  const chipCountCancelados = lista.filter(i => String(i.status || '').toLowerCase().includes('cancelado') || i.isOrcamentoVencido).length;
+
+  return (
+    <div className="locacoes-container dashboard-container fade-in">
+      {/* HERO CABEÇALHO (IDÊNTICO AO DA PÁGINA CLIENTES) */}
+      <header className="clientes-hero-header">
+        <div className="welcome-text">
+          <div className="header-title-row">
+            <span className="header-icon-badge"><i className="fas fa-boxes"></i></span>
+            <div>
+              <h1>Gestão de Locações</h1>
+              <p>Gestão de pedidos, datas e recebimentos.</p>
+            </div>
           </div>
         </div>
-        <div className="dash-card warning">
-          <div className="dash-icon">📂</div>
-          <div className="dash-info">
-            <h3>Orçamentos Futuros</h3>
-            <h2>{lista.filter(i => String(i.status || '').toLowerCase().includes('orcam') && !i.isOrcamentoVencido).length}</h2>
+        <div className="header-actions">
+          <button className="btn-primary-celebre" onClick={() => navigate('/locacoes/nova')}>
+            + NOVA LOCAÇÃO
+          </button>
+        </div>
+      </header>
+
+      {/* CARDS DE DASHBOARD (KPIs 4 COLUNAS NA MESMA LINHA - IDÊNTICO A CLIENTES) */}
+      <div className="clientes-stats-grid">
+        <div className="stat-card-pro border-green">
+          <div className="stat-icon-wrapper icon-green">
+            <i className="fas fa-check-circle"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">LOCAÇÕES ATIVAS</span>
+            <span className="stat-value">{countAtivos}</span>
+            <span className="stat-sub">Em andamento / preparação</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-amber">
+          <div className="stat-icon-wrapper icon-amber">
+            <i className="fas fa-folder"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">ORÇAMENTOS FUTUROS</span>
+            <span className="stat-value">{countOrcamentos}</span>
+            <span className="stat-sub">Aguardando confirmação</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-red">
+          <div className="stat-icon-wrapper icon-red">
+            <i className="fas fa-hand-holding-usd"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">TOTAL A RECEBER</span>
+            <span className="stat-value">R$ {totalAReceber.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+            <span className="stat-sub">Saldo pendente em aberto</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-purple">
+          <div className="stat-icon-wrapper icon-purple">
+            <i className="fas fa-gem"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">CONFIRMADOS / CONTRATADOS</span>
+            <span className="stat-value">{countConfirmados}</span>
+            <span className="stat-sub">Festas garantidas no calendário</span>
           </div>
         </div>
       </div>
 
+      {/* PAINEL DE FILTROS E BUSCA AVANÇADA (DESKTOP E MOBILE NATIVO) */}
       <div className="advanced-filter-bar">
-        <div className="filter-main-row" style={{ display: 'flex', gap: '15px', flexWrap: 'wrap' }}>
+        {/* NÍVEL 1: BUSCA DESTACADA + CONTROLES */}
+        <div className="filter-top-row">
           
-          <div className="search-group" style={{ flex: '1 1 250px' }}>
-            <span className="search-icon">🔍</span>
+          <div className="search-input-box">
+            <i className="fas fa-search search-box-icon"></i>
             <input 
               type="text" 
-              placeholder="Buscar por cliente ou pedido..." 
+              placeholder="Buscar por cliente, pedido, CPF..." 
               value={busca} 
               onChange={e => setBusca(e.target.value)} 
+              className="search-input-field"
             />
+            {busca && (
+              <button type="button" className="btn-clear-input" onClick={() => setBusca('')} title="Limpar busca">
+                <i className="fas fa-times"></i>
+              </button>
+            )}
           </div>
-         
-          <div className="date-filter-group" style={{ display: 'flex', alignItems: 'center', background: '#fff', borderRadius: '8px', border: '1px solid #cbd5e1', padding: '0 5px' }}>
-             <span style={{ padding: '0 10px', color: '#64748b' }}>📅 Data:</span>
-             <input 
-               type="date" 
-               value={filtroDataEvento} 
-               onChange={e => setFiltroDataEvento(e.target.value)} 
-               style={{ border: 'none', padding: '10px', outline: 'none', background: 'transparent' }}
-             />
-             {filtroDataEvento && (
+
+          <div className="filter-controls-group">
+            {/* DROPDOWN DE STATUS (EXCLUSIVO PARA CELULAR - SEM BARRA DE ROLAGEM) */}
+            <select 
+              value={filtroStatus} 
+              onChange={(e) => setFiltroStatus(e.target.value)} 
+              className="select-pill-filter mobile-status-select"
+            >
+              <option value="todos">📊 Em Processo ({chipCountEmProcesso})</option>
+              <option value="orcamentos">📋 Orçamentos ({chipCountOrcamentos})</option>
+              <option value="confirmados">✅ Confirmados ({chipCountConfirmados})</option>
+              <option value="finalizados">📁 Arquivados ({chipCountArquivados})</option>
+              <option value="cancelados">🗑️ Lixeira / Perdidos ({chipCountCancelados})</option>
+            </select>
+
+            <div className="date-input-wrapper">
+              <input 
+                type="date" 
+                value={filtroDataEvento} 
+                onChange={e => setFiltroDataEvento(e.target.value)} 
+                className="select-pill-filter"
+                title="Filtrar por data do evento"
+              />
+              {filtroDataEvento && (
                 <button 
+                  type="button"
                   onClick={() => setFiltroDataEvento('')} 
-                  style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: '0 10px', fontWeight: 'bold' }}
+                  className="btn-clear-search-date"
                   title="Limpar Data"
                 >
                   ✕
                 </button>
-             )}
-          </div>
-          
-          <div className="select-group" style={{ flex: '1 1 auto', justifyContent: 'flex-end' }}>
-            <select value={filtroServico} onChange={(e) => setFiltroServico(e.target.value)}>
-              <option value="todos">🔧 Todos os Serviços</option>
-              <option value="pegue">📦 Apenas Pegue e Monte</option>
-              <option value="decoracao">✨ Apenas Decoração</option>
+              )}
+            </div>
+
+            <select value={filtroPeriodo} onChange={(e) => setFiltroPeriodo(e.target.value)} className="select-pill-filter">
+              <option value="todos">🗓️ Todos os Períodos</option>
+              <option value="hoje">📅 Eventos de Hoje</option>
+              <option value="fimsemana">🎉 Fim de Semana</option>
+              <option value="mes">📅 Este Mês</option>
             </select>
 
-            <select value={filtroOrdenacao} onChange={(e) => setFiltroOrdenacao(e.target.value)}>
+            <select value={filtroServico} onChange={(e) => setFiltroServico(e.target.value)} className="select-pill-filter">
+              <option value="todos">🔧 Todos os Serviços</option>
+              <option value="pegue">📦 Pegue e Monte</option>
+              <option value="decoracao">✨ Decoração</option>
+            </select>
+
+            <select value={filtroOrdenacao} onChange={(e) => setFiltroOrdenacao(e.target.value)} className="select-pill-filter">
               <option value="recentes">🌟 Mais Recentes / Novos</option>
               <option value="proximos">📅 Eventos Mais Próximos</option>
               <option value="maiorValor">💰 Maior Valor</option>
@@ -346,18 +638,27 @@ const Locacoes = () => {
           </div>
         </div>
 
-        <div className="filter-chips-row">
-          <span className="chips-label">STATUS DOS PEDIDOS:</span>
-          <div className="chips-list">
-            <button type="button" className={`chip-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>Em Processo</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'orcamentos' ? 'active orcamento' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>Orçamentos</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'confirmados' ? 'active confirmado' : ''}`} onClick={() => setFiltroStatus('confirmados')}>Confirmados</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'finalizados' ? 'active' : ''}`} onClick={() => setFiltroStatus('finalizados')}>Arquivados ✔️</button>
-            <button type="button" className={`chip-btn ${filtroStatus === 'cancelados' ? 'active cancelado' : ''}`} onClick={() => setFiltroStatus('cancelados')}>Lixeira / Perdidos</button>
-          </div>
+        {/* NÍVEL 2: PÍLULAS DE STATUS (EXCLUSIVAS PARA DESKTOP) */}
+        <div className="filter-pills-strip desktop-pills-only">
+          <button type="button" className={`pill-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>
+            Em Processo <span className="pill-badge">{chipCountEmProcesso}</span>
+          </button>
+          <button type="button" className={`pill-btn ${filtroStatus === 'orcamentos' ? 'active' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>
+            Orçamentos <span className="pill-badge">{chipCountOrcamentos}</span>
+          </button>
+          <button type="button" className={`pill-btn ${filtroStatus === 'confirmados' ? 'active' : ''}`} onClick={() => setFiltroStatus('confirmados')}>
+            Confirmados <span className="pill-badge">{chipCountConfirmados}</span>
+          </button>
+          <button type="button" className={`pill-btn ${filtroStatus === 'finalizados' ? 'active' : ''}`} onClick={() => setFiltroStatus('finalizados')}>
+            Arquivados <span className="pill-badge">{chipCountArquivados}</span>
+          </button>
+          <button type="button" className={`pill-btn ${filtroStatus === 'cancelados' ? 'active' : ''}`} onClick={() => setFiltroStatus('cancelados')}>
+            Lixeira / Perdidos <span className="pill-badge">{chipCountCancelados}</span>
+          </button>
         </div>
       </div>
 
+      {/* TABELA DE PEDIDOS (ESTILO CLIENTES) */}
       <div className="table-responsive">
         <table className="custom-table">
           <thead>
@@ -374,11 +675,19 @@ const Locacoes = () => {
           <tbody>
             
             {loading && (
-              <tr><td colSpan="7" className="loading-td">Carregando locações...</td></tr>
+              <tr>
+                <td colSpan="7" style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>
+                  Carregando locações...
+                </td>
+              </tr>
             )}
 
             {!loading && filtrados.length === 0 && (
-              <tr><td colSpan="7" style={{textAlign: "center", padding: "40px", color: "#94a3b8"}}>Nenhum pedido encontrado nesta filtragem.</td></tr>
+              <tr>
+                <td colSpan="7" style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>
+                  Nenhum pedido encontrado nesta filtragem.
+                </td>
+              </tr>
             )}
 
             {!loading && filtrados.length > 0 && filtrados.map(item => {
@@ -392,6 +701,8 @@ const Locacoes = () => {
                 const temAvaria = item.itens?.some(i => i.avaria);
                 const temFalta = item.itens?.some(i => i.faltou);
                 const temAlertas = temAvaria || temFalta;
+
+                const initials = getInitials(item.clienteNome);
 
                 let alertaOperacional = null;
                 let corAlerta = '';
@@ -430,45 +741,62 @@ const Locacoes = () => {
                       ) : item.id ? (
                         `#${item.id.substring(0,6).toUpperCase()}`
                       ) : item.isOrcamentoVencido ? (
-                        <span style={{color: '#ef4444', fontWeight: 'bold', fontSize: '11px'}}>PERDIDO</span>
+                        <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '11px' }}>PERDIDO</span>
                       ) : isOrcamento ? (
-                        <span style={{color: '#f59e0b', fontWeight: 'bold', fontSize: '11px'}}>ORÇAMENTO</span>
+                        <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '11px' }}>ORÇAMENTO</span>
                       ) : (
-                        <span style={{color: '#94a3b8', fontWeight: 'bold'}}>#S/N</span>
+                        <span style={{ color: '#94a3b8', fontWeight: 'bold' }}>#S/N</span>
                       )}
                     </td>
+
                     <td className="cliente-info-cell">
-                      <strong style={{textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '15px'}}>
-                        {item.clienteNome}
-                      </strong>
-                      <div className="tags-row">
-                        <span className={`tag-servico ${item.tipoServicoFormatado.includes('PEGUE') ? 'pegue' : 'deco'}`}>
-                          {item.tipoServicoFormatado}
-                        </span>
-                        {temFalta && <span className="tag-alerta erro">FALTAM PEÇAS</span>}
-                        {temAvaria && <span className="tag-alerta aviso">AVARIAS</span>}
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        {/* AVATAR DOURADO PADRÃO CLIENTES */}
+                        <div className="avatar-quadrado avatar-letra-gold">
+                          {initials}
+                        </div>
+                        <div>
+                          <strong style={{ textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '0.94rem', fontWeight: '800' }}>
+                            {item.clienteNome}
+                          </strong>
+                          <div className="tags-row" style={{ marginTop: '4px' }}>
+                            <span className={`tag-servico ${item.tipoServicoFormatado.includes('PEGUE') ? 'pegue' : 'deco'}`}>
+                              {item.tipoServicoFormatado}
+                            </span>
+                            {temFalta && <span className="tag-alerta erro">FALTAM PEÇAS</span>}
+                            {temAvaria && <span className="tag-alerta aviso">AVARIAS</span>}
+                          </div>
+                        </div>
                       </div>
                     </td>
                     
                     <td className="mobile-stack">
                       <span className="mobile-label">DATA EVENTO:</span>
-                      <span>{item.dataRetirada ? new Date(item.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}</span>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '700' }}>
+                        {item.dataRetirada ? new Date(item.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                      </span>
                     </td>
                     
                     <td className="mobile-stack">
                       <span className="mobile-label">VALOR TOTAL:</span>
-                      <span className="valor-total">R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      <span className="valor-total" style={{ fontSize: '0.9rem', fontWeight: '800' }}>R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                     </td>
                     
                     <td className="mobile-stack">
                       <span className="mobile-label">A RECEBER:</span> 
-                      <span className={saldoDevedor > 0 ? "txt-perigo" : "txt-sucesso"}>
-                        {saldoDevedor > 0 ? `R$ ${saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '✅ PAGO'}
-                      </span>
+                      {saldoDevedor > 0 ? (
+                        <span className="badge-status-pro devedor">
+                          ▲ R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </span>
+                      ) : (
+                        <span className="badge-status-pro ok">
+                          ✓ PAGO
+                        </span>
+                      )}
                     </td>
                     
                     <td className="status-cell">
-                      <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr.replace(' ', '')}`}>
+                      <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr.replace(/\s+/g, '')}`}>
                         {item.isOrcamentoVencido ? 'PERDIDO / ABANDONADO' : item.status?.trim().toUpperCase() || 'S/S'}
                       </span>
                       {alertaOperacional && (
@@ -491,7 +819,50 @@ const Locacoes = () => {
                         </button>
                         
                         {menuAberto === item.id && (
-                          <div className="menu-suspenso">
+                          <div className="menu-suspenso" onClick={(e) => e.stopPropagation()}>
+                            <button 
+                              type="button"
+                              onClick={(e) => { 
+                                e.stopPropagation();
+                                enviarWhatsAppPedido(item);
+                                setMenuAberto(null);
+                              }} 
+                              className="item-menu"
+                              style={{ color: '#16a34a', fontWeight: '800' }}
+                            >
+                              💬 Enviar por WhatsApp
+                            </button>
+
+                            <button 
+                              type="button"
+                              onClick={(e) => { 
+                                e.stopPropagation();
+                                imprimirComprovante(item);
+                                setMenuAberto(null);
+                              }} 
+                              className="item-menu"
+                            >
+                              🖨️ Imprimir Recibo / PDF
+                            </button>
+
+                            {item.ultimoComprovanteUrl && (
+                              <button 
+                                type="button"
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  const win = window.open();
+                                  if (win) {
+                                    win.document.write(`<title>Comprovante - Pedido #${item.numeroPedido || item.id.substring(0,6)}</title><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#0f172a;"><img src="${item.ultimoComprovanteUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;" /></body>`);
+                                  }
+                                  setMenuAberto(null);
+                                }} 
+                                className="item-menu"
+                                style={{ color: '#0284c7', fontWeight: '800' }}
+                              >
+                                📎 Ver Comprovante
+                              </button>
+                            )}
+
                             {saldoDevedor > 0 && !isCancelado && !isOrcamento && (
                                <button 
                                 onClick={(e) => { 
@@ -546,38 +917,151 @@ const Locacoes = () => {
         </table>
       </div>
 
+      {/* MODAL DE PAGAMENTO ENTERPRISE LUXURY */}
       {modalPagamento && pedidoSelecionado && (
          <div className="modal-overlay-v2">
-            <div className="modal-box-v2 pagamento-box">
-                <div className="modal-header">
-                  <h3>💰 Registrar Pagamento</h3>
-                  <button className="btn-fechar" onClick={() => setModalPagamento(false)}>X</button>
+            <div className="modal-box-v2 pagamento-box-luxury">
+                {/* CABEÇALHO DOURADO */}
+                <div className="modal-header-luxury">
+                  <div className="header-title-flex">
+                    <div className="header-badge-gold">
+                      <i className="fas fa-wallet"></i>
+                    </div>
+                    <div>
+                      <h3>Registrar Recebimento</h3>
+                      <p>Baixa no caixa da empresa e anexo de comprovante</p>
+                    </div>
+                  </div>
+                  <button type="button" className="btn-fechar-modal" onClick={() => setModalPagamento(false)}>✕</button>
                 </div>
-                <div className="info-pedido-pagamento">
-                  <p>Recebendo de: <strong>{pedidoSelecionado.clienteNome}</strong></p>
-                  <p>Falta Receber: <strong className="txt-perigo">R$ {(Number(pedidoSelecionado.valorTotal || 0) - Number(pedidoSelecionado.valorPago || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></p>
+
+                {/* BANNER DO CLIENTE E SALDO PENDENTE */}
+                <div className="card-saldo-banner">
+                  <div className="saldo-main-info">
+                    <span className="cliente-label">CLIENTE</span>
+                    <strong className="cliente-nome-val">{pedidoSelecionado.clienteNome}</strong>
+                  </div>
+                  <div className="saldo-val-row">
+                    <div>
+                      <span className="sub-val-title">Total do Pedido</span>
+                      <strong className="sub-val-num">R$ {Number(pedidoSelecionado.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                    <div className="saldo-destaque-box">
+                      <span className="sub-val-title danger">Saldo Pendente</span>
+                      <strong className="sub-val-num danger">R$ {(Number(pedidoSelecionado.valorTotal || 0) - Number(pedidoSelecionado.valorPago || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                  <button 
+                    type="button" 
+                    className="btn-quitar-saldo"
+                    onClick={() => {
+                      const saldo = Number(pedidoSelecionado.valorTotal || 0) - Number(pedidoSelecionado.valorPago || 0);
+                      setPagamento(prev => ({ ...prev, valor: saldo > 0 ? saldo.toFixed(2) : '0.00' }));
+                    }}
+                  >
+                    ⚡ Preencher Saldo Total (R$ {(Number(pedidoSelecionado.valorTotal || 0) - Number(pedidoSelecionado.valorPago || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                  </button>
                 </div>
-                <form onSubmit={registrarPagamento} className="form-pagamento">
-                    <div className="form-group-pag">
-                      <label>Valor Recebido (R$)</label>
-                      <input type="number" step="0.01" value={pagamento.valor} onChange={e => setPagamento({...pagamento, valor: e.target.value})} required autoFocus />
+
+                <form onSubmit={registrarPagamento} className="form-pagamento-luxury">
+                    <div className="form-row-2col">
+                      <div className="form-group-pag">
+                        <label>VALOR RECEBIDO (R$)</label>
+                        <input 
+                          type="number" 
+                          step="0.01" 
+                          value={pagamento.valor} 
+                          onChange={e => setPagamento({...pagamento, valor: e.target.value})} 
+                          placeholder="0,00"
+                          required 
+                          autoFocus 
+                        />
+                      </div>
+                      <div className="form-group-pag">
+                        <label>DATA DO PAGAMENTO</label>
+                        <input 
+                          type="date" 
+                          value={pagamento.data} 
+                          onChange={e => setPagamento({...pagamento, data: e.target.value})} 
+                          required 
+                        />
+                      </div>
                     </div>
+
                     <div className="form-group-pag">
-                      <label>Forma de Pagamento</label>
-                      <select value={pagamento.formaPagto} onChange={e => setPagamento({...pagamento, formaPagto: e.target.value})}>
-                          <option value="Pix">Pix</option>
-                          <option value="Dinheiro">Dinheiro</option>
-                          <option value="Cartão de Crédito">Cartão de Crédito</option>
-                          <option value="Cartão de Débito">Cartão de Débito</option>
-                      </select>
+                      <label>FORMA DE PAGAMENTO</label>
+                      <div className="grid-metodos-pagamento">
+                        {[
+                          { id: 'Pix', label: 'Pix', icon: '⚡' },
+                          { id: 'Dinheiro', label: 'Dinheiro', icon: '💵' },
+                          { id: 'Cartão de Crédito', label: 'Crédito', icon: '💳' },
+                          { id: 'Cartão de Débito', label: 'Débito', icon: '💳' },
+                          { id: 'Transferência', label: 'Transferência', icon: '🏦' }
+                        ].map(m => (
+                          <button
+                            type="button"
+                            key={m.id}
+                            className={`btn-metodo-item ${pagamento.formaPagto === m.id ? 'active' : ''}`}
+                            onClick={() => setPagamento({...pagamento, formaPagto: m.id})}
+                          >
+                            <span>{m.icon}</span>
+                            <span>{m.label}</span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
+
+                    {/* UPLOAD DE COMPROVANTE DE PAGAMENTO */}
                     <div className="form-group-pag">
-                      <label>Data do Pagamento</label>
-                      <input type="date" value={pagamento.data} onChange={e => setPagamento({...pagamento, data: e.target.value})} required />
+                      <label>📎 COMPROVANTE DE PAGAMENTO (OPCIONAL)</label>
+                      {pagamento.comprovantePreview ? (
+                        <div className="comprovante-preview-box">
+                          {pagamento.comprovantePreview.startsWith('data:image') ? (
+                            <img src={pagamento.comprovantePreview} alt="Comprovante" className="img-comprovante-thumb" />
+                          ) : (
+                            <div className="pdf-comprovante-thumb">📄 PDF</div>
+                          )}
+                          <div className="comprovante-meta">
+                            <strong className="comprovante-nome">{pagamento.comprovanteNome}</strong>
+                            <span className="comprovante-success">✓ Anexado com sucesso</span>
+                          </div>
+                          <button 
+                            type="button" 
+                            className="btn-remover-comprovante"
+                            onClick={() => setPagamento(prev => ({ ...prev, comprovanteNome: '', comprovantePreview: '' }))}
+                            title="Remover Anexo"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ) : (
+                        <label className="dropzone-comprovante">
+                          <input 
+                            type="file" 
+                            accept="image/*,application/pdf" 
+                            onChange={handleFileComprovante} 
+                            style={{ display: 'none' }} 
+                          />
+                          <i className="fas fa-cloud-upload-alt dropzone-icon"></i>
+                          <span>Clique para anexar foto ou PDF do comprovante</span>
+                          <small>Formatos aceitos: JPG, PNG, PDF (Máx 5MB)</small>
+                        </label>
+                      )}
                     </div>
-                    <div className="modal-actions">
-                        <button type="button" className="btn-cancel" onClick={() => setModalPagamento(false)}>Cancelar</button>
-                        <button type="submit" className="btn-confirm" disabled={salvandoPagamento}>Confirmar</button>
+
+                    <div className="modal-actions-luxury">
+                        <button type="button" className="btn-cancel-luxury" onClick={() => setModalPagamento(false)}>Cancelar</button>
+                        <button type="submit" className="btn-confirm-gold" disabled={salvandoPagamento}>
+                          {salvandoPagamento ? (
+                            <>
+                              <i className="fas fa-spinner fa-spin"></i> Salvando...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fas fa-check-circle"></i> Confirmar Recebimento
+                            </>
+                          )}
+                        </button>
                     </div>
                 </form>
             </div>

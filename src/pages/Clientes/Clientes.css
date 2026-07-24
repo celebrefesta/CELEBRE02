@@ -272,82 +272,143 @@
 .border-red:hover { border-color: #f87171; }
 .border-amber:hover { border-color: #fbbf24; }
 
-/* --- BARRA DE FILTROS AVANÇADA --- */
+/* --- PAINEL DE FILTROS E BUSCA (DESIGN ULTRA CLEAN & RESPONSIVO) --- */
 .advanced-filter-bar {
   background: var(--fundo-card, #ffffff);
   border: 1px solid var(--borda, #e2e8f0);
   border-radius: 20px;
-  padding: 16px 20px;
+  padding: 18px 22px;
   margin-bottom: 24px;
-  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.03);
-}
-
-.filter-main-row {
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.03);
   display: flex;
-  gap: 16px;
-  align-items: center;
-  flex-wrap: wrap;
+  flex-direction: column;
+  gap: 14px;
+  box-sizing: border-box;
   width: 100%;
 }
 
-.search-group {
-  flex: 1.5;
-  min-width: 260px;
+.filter-top-row {
   display: flex;
   align-items: center;
-  background: var(--fundo-cinza, #f8fafc);
-  border: 1px solid var(--borda, #e2e8f0);
-  border-radius: 30px;
-  padding: 0 18px;
-  transition: all 0.25s ease;
-  height: 44px;
-}
-
-.search-group:focus-within {
-  border-color: #c5a059;
-  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
-  background: var(--fundo-card, #ffffff);
-}
-
-.search-icon {
-  font-size: 14px;
-  color: #94a3b8;
-  margin-right: 10px;
-}
-
-.search-group input {
-  flex: 1;
-  border: none;
-  background: transparent;
-  height: 100%;
-  font-size: 0.88rem;
-  color: var(--texto-principal, #0f172a);
-  outline: none;
-  font-weight: 500;
-}
-
-.btn-clear-search {
-  background: transparent;
-  border: none;
-  color: #94a3b8;
-  cursor: pointer;
-  padding: 4px;
-  font-size: 13px;
-}
-
-.btn-clear-search:hover {
-  color: #ef4444;
-}
-
-/* Filter Pills */
-.filter-pills-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  gap: 14px;
+  justify-content: space-between;
+  width: 100%;
   flex-wrap: wrap;
 }
 
-.pill-btn {
+/* CAIXA DE BUSCA COM ÍCONE ABSOLUTO (IMPOSSÍVEL FICAR FORA DO CAMPO) */
+.search-input-box {
+  position: relative !important;
+  flex: 2 1 360px;
+  min-width: 260px;
+  display: flex !important;
+  align-items: center !important;
+  box-sizing: border-box !important;
+}
+
+.search-box-icon {
+  position: absolute !important;
+  left: 16px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  color: #94a3b8 !important;
+  font-size: 15px !important;
+  pointer-events: none !important;
+  z-index: 2 !important;
+}
+
+.search-input-field {
+  width: 100% !important;
+  height: 46px !important;
+  padding-left: 44px !important;
+  padding-right: 38px !important;
+  border-radius: 30px !important;
+  background: var(--fundo-cinza, #f8fafc) !important;
+  border: 1.5px solid var(--borda, #cbd5e1) !important;
+  font-size: 0.88rem !important;
+  color: var(--texto-principal, #0f172a) !important;
+  outline: none !important;
+  font-weight: 500 !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+}
+
+.search-input-field:focus {
+  border-color: #c5a059 !important;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15) !important;
+  background: var(--fundo-card, #ffffff) !important;
+}
+
+.btn-clear-input {
+  position: absolute !important;
+  right: 14px !important;
+  top: 50% !important;
+  transform: translateY(-50%) !important;
+  background: transparent !important;
+  border: none !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  padding: 4px !important;
+  font-size: 13px !important;
+  z-index: 2 !important;
+}
+
+.btn-clear-input:hover {
+  color: #ef4444 !important;
+}
+
+.filter-controls-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* Dropdown Móbile de Status (Oculto no Desktop) */
+.mobile-status-select {
+  display: none !important;
+}
+
+.select-pill-filter {
+  height: 44px !important;
+  border-radius: 30px !important;
+  padding: 0 16px !important;
+  font-size: 0.8rem !important;
+  font-weight: 700 !important;
+  border: 1.5px solid var(--borda, #cbd5e1) !important;
+  outline: none !important;
+  cursor: pointer !important;
+  background: var(--fundo-card, #ffffff) !important;
+  color: var(--texto-principal, #0f172a) !important;
+  font-family: inherit !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.select-pill-filter:hover {
+  border-color: #c5a059 !important;
+}
+
+.btn-sort-celebre {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+/* PÍLULAS DE STATUS DESKTOP */
+.desktop-pills-only {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border-top: 1px solid var(--borda, #f1f5f9);
+  padding-top: 14px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-wrap: wrap;
+}
+
+.clientes-container .desktop-pills-only .pill-btn {
   background: var(--fundo-cinza, #f1f5f9);
   border: 1px solid var(--borda, #e2e8f0);
   padding: 8px 16px;
@@ -358,11 +419,24 @@
   cursor: pointer;
   transition: all 0.2s ease;
   outline: none;
+  font-family: inherit;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: auto !important;
 }
 
-.pill-btn:hover {
+.clientes-container .desktop-pills-only .pill-btn:hover {
   background: var(--fundo-hover, #e2e8f0);
   color: var(--texto-principal, #0f172a);
+}
+
+.clientes-container .desktop-pills-only .pill-btn.active {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border-color: #c5a059 !important;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35) !important;
 }
 
 .pill-btn.active {
@@ -1559,67 +1633,259 @@
   box-shadow: 0 10px 24px rgba(37, 211, 102, 0.5);
 }
 
-/* RESPONSIVIDADE */
+/* RESPONSIVIDADE CELULAR BLINDADA (< 768px) */
 @media (max-width: 768px) {
-  .perfil-layout-split {
-    grid-template-columns: 1fr;
+  .clientes-container { 
+    padding: 14px 10px !important; 
   }
 
-  .perfil-left-col {
-    border-right: none;
-    border-bottom: 1px solid var(--borda, #e2e8f0);
-    padding-right: 0;
-    padding-bottom: 24px;
-  }
-
-  .pendencia-actions-row {
-    flex-direction: column;
-  }
-}
-
-@media (max-width: 640px) {
-  .clientes-container {
-    padding: 20px 16px;
-  }
-
-  .clientes-stats-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .clientes-hero-header {
-    flex-direction: column;
+  .clientes-hero-header { 
+    flex-direction: column; 
     align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 16px;
   }
 
   .header-actions {
     width: 100%;
-    justify-content: space-between;
+    display: flex;
+    gap: 8px;
   }
 
-  .filter-main-row {
-    flex-direction: column;
-    align-items: stretch;
+  .btn-primary-celebre, .btn-secondary-celebre {
+    flex: 1;
+    justify-content: center;
   }
 
-  .search-group {
-    width: 100%;
+  .clientes-stats-grid { 
+    grid-template-columns: repeat(2, 1fr) !important; 
+    gap: 8px !important; 
+    margin-bottom: 16px;
   }
 
-  .filter-pills-row {
-    justify-content: flex-start;
+  .stat-card-pro {
+    padding: 12px !important;
+    gap: 8px !important;
+    border-radius: 14px !important;
   }
 
-  .zap-modelos-grid {
-    grid-template-columns: 1fr;
+  .stat-icon-wrapper {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 15px !important;
+    border-radius: 10px !important;
   }
 
-  .clientes-stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+  .stat-title {
+    font-size: 0.62rem !important;
+  }
+
+  .stat-value {
+    font-size: 1.15rem !important;
+  }
+
+  .stat-sub {
+    font-size: 0.62rem !important;
+  }
+
+  /* BARRA DE FILTROS MOBILE STACKED CLEAN & NATIVA */
+  .advanced-filter-bar {
+    padding: 12px !important;
+    border-radius: 16px !important;
+    margin-bottom: 16px !important;
+    gap: 10px !important;
+  }
+
+  .filter-top-row { 
+    flex-direction: column !important; 
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .search-input-box {
+    width: 100% !important;
+    min-width: 100% !important;
+    flex: 1 1 100% !important;
+  }
+
+  .search-input-field {
+    width: 100% !important;
+    height: 44px !important;
+    padding-left: 42px !important;
+    font-size: 0.84rem !important;
+    border-radius: 25px !important;
+  }
+
+  .filter-controls-group {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  /* Oculta as pílulas de rolagem no celular e exibe o seletor nativo */
+  .desktop-pills-only {
+    display: none !important;
+  }
+
+  .mobile-status-select {
+    display: block !important;
+    grid-column: span 2 !important;
+    width: 100% !important;
+    height: 44px !important;
+    font-size: 0.84rem !important;
+    font-weight: 800 !important;
+    background: #f8fafc !important;
+    border-color: #cbd5e1 !important;
+    color: #0f172a !important;
+  }
+
+  .select-pill-filter {
+    width: 100% !important;
+    height: 42px !important;
+    font-size: 0.82rem !important;
+    padding: 0 14px !important;
+    border-radius: 25px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* TABELA DE CLIENTES EM CARDS MOBILE COMPACTOS E LINDOS (100% BLINDADOS CONTRA CORTES) */
+  .table-responsive-card {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    overflow-x: hidden !important;
+    width: 100% !important;
+  }
+
+  .custom-table-pro, 
+  .custom-table-pro tbody, 
+  .custom-table-pro tr, 
+  .custom-table-pro td {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  .custom-table-pro thead {
+    display: none !important;
+  }
+
+  .custom-table-pro tbody tr {
+    background: var(--fundo-card, #ffffff) !important;
+    border: 1.5px solid var(--borda, #e2e8f0) !important;
+    border-radius: 18px !important;
+    margin-bottom: 14px !important;
+    padding: 16px !important;
+    box-shadow: 0 4px 18px rgba(15, 23, 42, 0.04) !important;
+    position: relative !important;
+    overflow: hidden !important;
+  }
+
+  .custom-table-pro td.cliente-cell {
+    border-bottom: 1px dashed var(--borda, #f1f5f9) !important;
+    padding-bottom: 10px !important;
+    margin-bottom: 10px !important;
+    padding-right: 40px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .cliente-info-wrapper {
+    display: flex !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .user-details {
+    min-width: 0 !important;
+    flex: 1 1 0% !important;
+    width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  .client-header-info {
+    min-width: 0 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 4px !important;
+  }
+
+  .client-name {
+    word-break: break-word !important;
+    overflow-wrap: anywhere !important;
+    white-space: normal !important;
+    font-size: 0.95rem !important;
+    font-weight: 850 !important;
+    color: var(--texto-principal, #0f172a) !important;
+  }
+
+  .client-doc {
+    word-break: break-all !important;
+    font-size: 0.76rem !important;
+  }
+
+  .custom-table-pro td.info-cell, 
+  .custom-table-pro td.text-center {
+    border: none !important;
+    padding: 6px 0 !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .contact-whatsapp-row {
+    width: 100% !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+  }
+
+  .contact-phone {
+    font-size: 0.86rem !important;
+    font-weight: 700 !important;
+    word-break: break-word !important;
+  }
+
+  .custom-table-pro td.text-center:last-child {
+    position: absolute !important;
+    top: 14px !important;
+    right: 12px !important;
+    width: auto !important;
+    padding: 0 !important;
+    border: none !important;
+  }
+
+  .perfil-layout-split {
+    grid-template-columns: 1fr !important;
+  }
+
+  .perfil-left-col {
+    border-right: none !important;
+    border-bottom: 1px solid var(--borda, #e2e8f0) !important;
+    padding-right: 0 !important;
+    padding-bottom: 24px !important;
+  }
+
+  .pendencia-actions-row {
+    flex-direction: column !important;
   }
 }
 
-@media (max-width: 600px) {
+@media (max-width: 480px) {
   .clientes-stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: 1fr !important;
   }
 }

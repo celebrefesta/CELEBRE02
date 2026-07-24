@@ -433,6 +433,65 @@ const AbaEmpresa = ({
         </div>
       </div>
 
+      {/* CARD CONTA BANCÁRIA E MERCADO PAGO DA EMPRESA */}
+      <div className="config-card span-2-col-full">
+        <div className="card-top-bar blue-bar" style={{ background: 'linear-gradient(90deg, #009ee3 0%, #0072bb 100%)' }}></div>
+        <div className="config-card-header">
+          <div className="card-header-icon blue" style={{ background: 'rgba(0, 158, 227, 0.1)', color: '#009ee3' }}>
+            <i className="fas fa-university"></i>
+          </div>
+          <div>
+            <h3>Recebimento de Pagamentos da Empresa</h3>
+            <p className="subtext">Configure os dados da SUA conta para que os pagamentos dos clientes caiam direto para você.</p>
+          </div>
+        </div>
+        
+        <div className="form-grid-2-col" style={{ marginTop: '15px' }}>
+          <div className="f-group span-2-col">
+            <label><i className="fas fa-key" style={{ color: '#009ee3' }}></i> Mercado Pago Access Token da SUA Empresa</label>
+            <div className="input-with-icon">
+              <i className="fas fa-key input-icon" style={{ color: '#009ee3' }}></i>
+              <input 
+                type="text" 
+                value={config.mpAccessToken || ''} 
+                onChange={(e) => handleConfigChange('mpAccessToken', e.target.value)} 
+                onBlur={(e) => salvarConfigTextual('mpAccessToken', e.target.value)} 
+                placeholder="Ex: APP_USR-1234567890..." 
+              />
+            </div>
+            <span style={{ fontSize: '11px', color: '#64748b', marginTop: '4px' }}>Obtenha no painel do Mercado Pago -&gt; Desenvolvedores -&gt; Suas Aplicações -&gt; Credenciais de Produção.</span>
+          </div>
+
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-qrcode" style={{ color: '#10b981' }}></i> Chave PIX Oficial da Empresa</label>
+            <div className="input-with-icon">
+              <i className="fas fa-qrcode input-icon" style={{ color: '#10b981' }}></i>
+              <input 
+                type="text" 
+                value={config.chavePix || ''} 
+                onChange={(e) => handleConfigChange('chavePix', e.target.value)} 
+                onBlur={(e) => salvarConfigTextual('chavePix', e.target.value)} 
+                placeholder="CPF, CNPJ, E-mail ou Celular" 
+              />
+            </div>
+          </div>
+
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-link" style={{ color: '#009ee3' }}></i> Link Mercado Pago Fixo (Opção)</label>
+            <div className="input-with-icon">
+              <i className="fas fa-link input-icon" style={{ color: '#009ee3' }}></i>
+              <input 
+                type="text" 
+                value={config.linkMercadoPago || ''} 
+                onChange={(e) => handleConfigChange('linkMercadoPago', e.target.value)} 
+                onBlur={(e) => salvarConfigTextual('linkMercadoPago', e.target.value)} 
+                placeholder="Ex: https://link.mercadopago.com.br/sualoja" 
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* CARD 5: ASSINATURA OFICIAL DA EMPRESA */}
       <div className="config-card span-2-col-full">
         <div className="card-top-bar gold-bar"></div>

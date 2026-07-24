@@ -43,3 +43,231 @@ input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radiu
 .grid-prods { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; overflow-y: auto; margin-top: 15px; }
 .prod-card { border: 1px solid #eee; padding: 10px; text-align: center; cursor: pointer; border-radius: 8px; }
 .prod-card:hover { background: #f0f9ff; border-color: #2563eb; }
+
+/* =========================================
+   👑 CATÁLOGO DE PEÇAS MODAL LUXURY GRID
+========================================= */
+.modal-overlay-premium {
+  position: fixed !important;
+  inset: 0 !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(4px) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  z-index: 99999 !important;
+  padding: 20px !important;
+}
+
+.catalogo-modal {
+  background: #ffffff !important;
+  border-radius: 24px !important;
+  width: 95% !important;
+  max-width: 960px !important;
+  max-height: 85vh !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.4) !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.modal-header {
+  background: #ffffff !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  border-bottom: 1.5px solid #f1f5f9 !important;
+}
+
+.modal-header h3 {
+  margin: 0 !important;
+  color: #0f172a !important;
+  font-size: 1.25rem !important;
+  font-weight: 850 !important;
+}
+
+.btn-fechar {
+  background: #f1f5f9 !important;
+  color: #64748b !important;
+  border: none !important;
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 50% !important;
+  font-weight: 850 !important;
+  font-size: 16px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-fechar:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.catalogo-filtros {
+  padding: 16px 24px !important;
+  background: #f8fafc !important;
+  border-bottom: 1.5px solid #e2e8f0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+}
+
+.search-input-clean {
+  width: 100% !important;
+  height: 44px !important;
+  padding: 0 16px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  font-size: 0.88rem !important;
+  outline: none !important;
+  background: #ffffff !important;
+  font-weight: 600 !important;
+  color: #0f172a !important;
+}
+
+.search-input-clean:focus {
+  border-color: #c5a059 !important;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.18) !important;
+}
+
+.chips-categorias {
+  display: flex !important;
+  gap: 8px !important;
+  overflow-x: auto !important;
+  padding-bottom: 4px !important;
+}
+
+.chip-cat {
+  padding: 6px 16px !important;
+  border-radius: 20px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  background: #ffffff !important;
+  color: #64748b !important;
+  font-weight: 800 !important;
+  font-size: 0.78rem !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.2s ease !important;
+}
+
+.chip-cat:hover {
+  border-color: #c5a059 !important;
+  color: #0f172a !important;
+}
+
+.chip-cat.active {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border-color: #c5a059 !important;
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3) !important;
+}
+
+.catalogo-grid {
+  padding: 24px !important;
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)) !important;
+  gap: 16px !important;
+  overflow-y: auto !important;
+  max-height: 55vh !important;
+}
+
+.peca-card {
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 16px !important;
+  padding: 10px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 10px !important;
+  cursor: pointer !important;
+  transition: all 0.25s ease !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03) !important;
+  overflow: hidden !important;
+}
+
+.peca-card:hover {
+  transform: translateY(-3px) !important;
+  border-color: #c5a059 !important;
+  box-shadow: 0 8px 24px rgba(197, 160, 89, 0.18) !important;
+}
+
+.peca-img {
+  width: 100% !important;
+  height: 140px !important;
+  max-height: 140px !important;
+  overflow: hidden !important;
+  border-radius: 12px !important;
+  position: relative !important;
+  background: #f8fafc !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.peca-img img {
+  width: 100% !important;
+  height: 100% !important;
+  max-height: 140px !important;
+  object-fit: cover !important;
+  display: block !important;
+  border-radius: 12px !important;
+}
+
+.btn-add-peca {
+  position: absolute !important;
+  bottom: 8px !important;
+  right: 8px !important;
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 50% !important;
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-size: 20px !important;
+  font-weight: 900 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.4) !important;
+  transition: transform 0.2s ease !important;
+}
+
+.btn-add-peca:hover {
+  transform: scale(1.15) !important;
+}
+
+.peca-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 3px !important;
+  padding: 0 4px 4px 4px !important;
+}
+
+.peca-info strong {
+  font-size: 0.88rem !important;
+  font-weight: 850 !important;
+  color: #0f172a !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.peca-info span {
+  font-size: 0.72rem !important;
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+.peca-info b.txt-sucesso {
+  font-size: 0.92rem !important;
+  font-weight: 850 !important;
+  color: #16a34a !important;
+  margin-top: 2px !important;
+}
