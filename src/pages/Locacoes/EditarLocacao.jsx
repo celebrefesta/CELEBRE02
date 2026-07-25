@@ -915,7 +915,20 @@ const EditarLocacao = () => {
             <div className="header-com-toggle">
               <h3 className="section-divider" style={{margin: 0, border: 'none'}}>🚚 LOGÍSTICA & ENTREGA</h3>
               <div className="toggle-simples" style={{pointerEvents: isFinalizado ? 'none' : 'auto'}}>
-                <button type="button" className={logistica.tipo === 'entrega' ? 'active' : ''} onClick={() => setLogistica({...logistica, tipo: 'entrega'})}>Com Frete</button>
+                <button 
+                  type="button" 
+                  className={logistica.tipo === 'entrega' ? 'active' : ''} 
+                  onClick={() => {
+                    if (tipoServico === 'PEGUE E MONTE') {
+                      alert("📦 Na modalidade Pegue e Monte, a retirada e devolução são feitas pelo cliente no balcão da loja. Se precisar de frete, altere a modalidade do serviço para DECORAÇÃO COMPLETA.");
+                      return;
+                    }
+                    setLogistica({...logistica, tipo: 'entrega'});
+                  }}
+                  style={tipoServico === 'PEGUE E MONTE' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
+                >
+                  Com Frete {tipoServico === 'PEGUE E MONTE' && '🔒'}
+                </button>
                 <button type="button" className={logistica.tipo === 'retirada' ? 'active' : ''} onClick={() => setLogistica({...logistica, tipo: 'retirada', frete: ''})}>Retirada na Loja</button>
               </div>
             </div>
@@ -1009,8 +1022,10 @@ const EditarLocacao = () => {
                       className="btn-secundario-alerta" 
                       onClick={() => { 
                         const clienteObj = clientes.find(c => String(c.id) === String(clienteSelecionado));
-                        const nomeCli = clienteObj ? (clienteObj.nome || clienteObj.nomeFantasia || '') : '';
-                        window.open(`/compras/nova?cliente=${encodeURIComponent(nomeCli)}&tema=${encodeURIComponent(temaFesta || '')}`, '_blank');
+                        const nomeCli = clienteObj ? (clienteObj.nome || clienteObj.nomeFantasia || clienteObj.razaoSocial || '') : (clienteSelecionado || 'Cliente em Atendimento');
+                        const nomeTema = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : (temaFesta || '');
+                        const url = `/compras/nova?clienteNome=${encodeURIComponent(nomeCli)}&temaFesta=${encodeURIComponent(nomeTema)}&dataRetirada=${encodeURIComponent(datas.retirada || '')}`;
+                        window.open(url, '_blank');
                       }}
                     >
                       🛒 Faltou algo? (Comprar)

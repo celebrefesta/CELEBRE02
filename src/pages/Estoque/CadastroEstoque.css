@@ -1,72 +1,152 @@
-@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@700;800&display=swap');
+/* ==========================================================================
+   ✨ ESTILOS DO CADASTRO E EDIÇÃO DE ESTOQUE / ACERVO (PADRONIZADO E TIPOGRAFIA SUAVE)
+   ========================================================================== */
 
-/* =========================================
-   BLINDAGEM GERAL DE LARGURA
-========================================= */
-.page-container, .page-container * {
-    box-sizing: border-box;
-    max-width: 100%;
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Outfit:wght@500;600;700&display=swap');
+
+.page-container,
+.clientes-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  width: 100%;
+  padding: 30px 40px;
+  box-sizing: border-box;
+  background-color: var(--fundo-principal, #f8fafc);
+  min-height: calc(100vh - 60px);
+  color: var(--texto-principal, #0f172a);
 }
 
-.page-container {
-  width: 100% !important;
-  margin: 0 !important;
-  padding: 30px 40px !important;
-  background-color: var(--fundo-cinza);
-  min-height: 100vh;
-  transition: 0.3s;
-  overflow-x: hidden; 
+/* ANIMAÇÃO ENTRADA SUAVE */
+.fade-in {
+  animation: fadeInCelebre 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
-/* =========================================
-   CABEÇALHO DINÂMICO
-========================================= */
-.page-header {
+@keyframes fadeInCelebre {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --- HERO CABEÇALHO IDÊNTICO AO GESTÃO DE CLIENTES --- */
+.clientes-hero-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-top: 10px;
-  border-bottom: 2px solid var(--borda) !important; 
-  padding-bottom: 15px !important; 
-  margin-bottom: 25px !important;
+  margin-bottom: 28px;
+  flex-wrap: wrap;
+  gap: 20px;
 }
 
-.page-title {
-  color: var(--texto-principal);
-  font-size: 24px;
-  font-weight: 800;
-  text-transform: uppercase;
-  margin: 0;
-  font-family: 'Montserrat', sans-serif;
+.header-title-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.header-icon-badge {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #c5a059 0%, #9e7a3b 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  box-shadow: 0 10px 20px rgba(197, 160, 89, 0.25);
+}
+
+.welcome-text h1 {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--texto-principal, #0f172a);
   letter-spacing: -0.5px;
+  margin: 0 0 4px 0;
+}
+
+.welcome-text p {
+  font-size: 0.88rem;
+  color: var(--texto-secundario, #64748b);
+  margin: 0;
+  font-weight: 500;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.btn-primary-celebre {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  padding: 12px 26px !important;
+  border-radius: 30px !important;
+  font-weight: 700 !important;
+  font-size: 0.82rem !important;
+  border: none !important;
+  box-shadow: 0 8px 20px rgba(197, 160, 89, 0.3) !important;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.8px !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+}
+
+.btn-primary-celebre:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 12px 25px rgba(197, 160, 89, 0.45) !important;
+  filter: brightness(1.08) !important;
+}
+
+.btn-secondary-celebre {
+  background: var(--fundo-card, #ffffff);
+  color: var(--texto-principal, #0f172a);
+  padding: 12px 20px;
+  border-radius: 30px;
+  font-weight: 600;
+  font-size: 0.78rem;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);
+  transition: all 0.25s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  text-decoration: none;
+}
+
+.btn-secondary-celebre:hover {
+  background: var(--fundo-hover, #f1f5f9);
+  transform: translateY(-2px);
+  border-color: #c5a059;
+  color: #c5a059;
 }
 
 /* =========================================
-   CONTAINER BRANCO (FORMULÁRIO)
+   CONTAINER DO FORMULÁRIO
 ========================================= */
 .form-widescreen {
-  background: var(--branco);
-  padding: 35px;
-  border-radius: 12px;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
+  background: #ffffff;
+  padding: 32px;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px -10px rgba(15, 23, 42, 0.05);
   width: 100%;
-  border: 1px solid var(--borda);
-  transition: 0.3s;
+  border: 1px solid #e2e8f0;
 }
 
-/* =========================================
-   DIVISÃO DA TELA (ESQUERDA FOTO / DIREITA DADOS)
-========================================= */
 .estoque-form-layout {
   display: flex;
-  gap: 40px;
+  gap: 36px;
   align-items: flex-start;
   width: 100%;
 }
 
 .left-photo-col {
-  width: 240px; 
-  min-width: 240px; 
+  width: 260px;
+  min-width: 260px;
   flex-shrink: 0;
   position: sticky;
   top: 30px;
@@ -74,29 +154,35 @@
 
 .right-data-col {
   flex-grow: 1;
-  min-width: 0; 
+  min-width: 0;
 }
 
 /* =========================================
-   ÁREA DE FOTOS E UPLOADS
+   ÁREA DE FOTOS E UPLOADS ELEGANTE
 ========================================= */
 .main-photo-display {
-  width: 240px;
-  height: 240px; 
-  border-radius: 8px;
-  background: var(--fundo-cinza);
-  border: 2px dashed var(--borda);
+  width: 260px;
+  height: 260px;
+  border-radius: 18px;
+  background: #f8fafc;
+  border: 2px dashed #cbd5e1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  margin-bottom: 15px;
+  margin-bottom: 16px;
   overflow: hidden;
   position: relative;
+  transition: all 0.2s ease;
+}
+
+.main-photo-display:hover {
+  border-color: #c5a059;
+  background: #fffbeb;
 }
 
 .main-photo-display > * {
-  width: 100%; 
+  width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
@@ -104,100 +190,194 @@
   justify-content: center;
 }
 
-.main-photo-preview { 
-  width: 100%; 
-  height: 100%; 
-  object-fit: cover; 
-  touch-action: none; 
+.main-photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  touch-action: none;
 }
 
 .photo-thumbnails-row {
   display: flex;
-  gap: 10px; flex-wrap: wrap;
+  gap: 10px;
+  flex-wrap: wrap;
   justify-content: flex-start;
 }
 
 .thumb-item {
-  width: 50px; height: 50px; 
-  border-radius: 6px;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
   border: 2px solid transparent;
   cursor: pointer;
   position: relative;
 }
-.thumb-item.active { border-color: var(--dourado); }
-.thumb-item img { width: 100%; height: 100%; object-fit: cover; border-radius: 4px;
+
+.thumb-item.active {
+  border-color: #c5a059;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.2);
+}
+
+.thumb-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 10px;
 }
 
 .btn-remove-thumb {
-  position: absolute; top: -5px; right: -5px;
-  background: #ef4444; color: white;
-  border: none; border-radius: 50%;
-  width: 18px;
-  height: 18px; font-size: 10px; cursor: pointer;
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .thumb-upload-btn {
-  width: 50px; height: 50px; 
-  border-radius: 6px; border: 1px dashed var(--borda);
-  display: flex; align-items: center; justify-content: center;
-  cursor: pointer; color: var(--texto-secundario); font-size: 20px; transition: 0.2s;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  border: 1.5px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: #64748b;
+  font-size: 20px;
+  transition: 0.2s;
+  background: #ffffff;
 }
-.thumb-upload-btn:hover { border-color: var(--texto-principal); color: var(--texto-principal);
+
+.thumb-upload-btn:hover {
+  border-color: #c5a059;
+  color: #c5a059;
+  background: #fffbeb;
 }
 
 /* =========================================
-   GRIDS, INPUTS E DIVISORES
+   DIVISORES E INPUTS EXECUTIVOS E SUAVES
 ========================================= */
 .section-divider {
-  font-size: 12px; color: var(--texto-secundario); font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  margin-bottom: 15px; border-bottom: 1px solid var(--borda); padding-bottom: 6px;
+  font-size: 0.72rem !important;
+  color: #b48a3c !important;
+  background: rgba(197, 160, 89, 0.12) !important;
+  border: 1px solid rgba(197, 160, 89, 0.3) !important;
+  padding: 5px 14px !important;
+  border-radius: 20px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+  display: inline-block !important;
+  margin-bottom: 18px !important;
+  text-transform: uppercase !important;
 }
 
-.mt-compact { margin-top: 25px;
+.mt-compact {
+  margin-top: 28px;
 }
 
-/* GRID PRINCIPAL (COMPUTADOR) */
-.form-grid-4 { 
-  display: grid; 
-  grid-template-columns: repeat(4, 1fr); 
-  gap: 15px; 
-  margin-bottom: 25px; 
+.form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
   width: 100%;
 }
 
 .span-1 { grid-column: span 1; }
 .span-2 { grid-column: span 2; }
 .span-3 { grid-column: span 3; }
-.span-4 { grid-column: span 4;
-}
+.span-4 { grid-column: span 4; }
 
-/* AGRUPAMENTO BLINDADO (SEMPRE LADO A LADO) */
 .flex-row-always {
   display: flex;
-  gap: 15px;
+  gap: 16px;
   width: 100%;
 }
+
 .flex-row-always > .form-group {
   flex: 1;
   min-width: 0;
 }
 
-.form-group { display: flex; flex-direction: column; gap: 6px;
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
-.form-group label { font-size: 11px; font-weight: 700; color: var(--texto-secundario); text-transform: uppercase;}
 
-.form-group input, .form-group select, .form-group textarea {
-  padding: 12px 14px;
-  border: 1px solid var(--borda); border-radius: 8px;
-  font-size: 14px; color: var(--texto-principal); background-color: #fcfcfc;
-  transition: all 0.2s; font-family: inherit; outline: none;
-  width: 100%; box-sizing: border-box;
+.form-group label {
+  font-size: 0.75rem !important;
+  font-weight: 650 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  margin-bottom: 4px !important;
 }
-.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
-  border-color: var(--dourado); background-color: var(--branco);
-  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
+
+/* 🔥 CENTRALIZAÇÃO VERTICAL E CORREÇÃO DE TEXTO CORTADO NOS SELECTS & INPUTS 🔥 */
+.form-group input,
+.form-group select {
+  min-height: 46px !important;
+  height: 46px !important;
+  padding: 10px 16px !important;
+  line-height: normal !important;
+  display: flex !important;
+  align-items: center !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important; /* PESO NORMAL CONFORTÁVEL, SEM NEGRIÇÃO EXAGERADA */
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 14px !important;
+  outline: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  vertical-align: middle !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+}
+
+.form-group select {
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+  appearance: none !important;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") !important;
+  background-repeat: no-repeat !important;
+  background-position: right 14px center !important;
+  background-size: 16px !important;
+  padding-right: 40px !important;
+}
+
+.form-group textarea {
+  padding: 12px 16px !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+  color: #0f172a !important;
+  background-color: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 14px !important;
+  outline: none !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  font-family: inherit !important;
+  line-height: 1.5 !important;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+  border-color: #c5a059 !important;
+  background-color: #ffffff !important;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15) !important;
 }
 
 /* =========================================
@@ -205,42 +385,65 @@
 ========================================= */
 .form-actions {
   display: flex;
-  justify-content: flex-end; gap: 15px;
-  padding-top: 20px; border-top: 1px solid var(--borda);
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 24px;
+  border-top: 1px solid #e2e8f0;
 }
 
 .btn-voltar {
-  padding: 12px 24px; background-color: var(--branco); color: var(--texto-secundario);
-  border: 1px solid var(--borda); border-radius: 8px; text-decoration: none;
-  font-weight: 700; font-size: 14px; transition: 0.2s;
+  padding: 12px 24px;
+  background-color: #ffffff;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.8rem;
+  transition: 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
-.btn-voltar:hover { background-color: var(--fundo-cinza); color: var(--texto-principal);
+
+.btn-voltar:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
 }
 
 .btn-salvar {
-  padding: 12px 30px; background-color: #0f172a; color: white;
-  border: none; border-radius: 8px; font-weight: 700; font-size: 14px; cursor: pointer;
-  transition: 0.2s;
+  padding: 12px 30px;
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border: none;
+  border-radius: 30px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(197, 160, 89, 0.3) !important;
+  transition: all 0.25s ease;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
 }
-.btn-salvar:hover { background-color: #1e293b; }
 
-[data-theme='dark'] .btn-salvar { background-color: var(--dourado); color: white; }
-[data-theme='dark'] .btn-salvar:hover { background: #b48a3c;
+.btn-salvar:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 25px rgba(197, 160, 89, 0.45) !important;
 }
 
 /* =========================================
-   🔥 TOGGLE SWITCH À PROVA DE BALAS 🔥
+   TOGGLE SWITCH PREMIUM SUAVE
 ========================================= */
 .ios-toggle-wrapper {
   display: inline-flex !important;
-  align-items: center !important; 
-  gap: 12px !important; 
+  align-items: center !important;
+  gap: 12px !important;
   cursor: pointer;
-  user-select: none; 
-  background: var(--branco);
-  border: 1px solid var(--borda);
-  padding: 8px 16px !important;
-  border-radius: 8px;
+  user-select: none;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  padding: 10px 18px !important;
+  border-radius: 14px;
   width: fit-content;
   max-width: 100%;
   transition: 0.3s;
@@ -248,190 +451,102 @@
 
 .ios-toggle-wrapper:hover {
   background: #f8fafc;
+  border-color: #c5a059;
 }
 
-.ios-toggle-switch {
-  width: 46px !important;
-  height: 26px !important; 
-  background-color: var(--borda); 
-  border-radius: 30px;
-  position: relative; 
-  transition: 0.3s ease; 
-  flex-shrink: 0 !important;
-  /* BLINDA O BOTÃO PARA NÃO ENCOLHER */
-}
-
-.ios-toggle-wrapper.active .ios-toggle-switch { 
-  background-color: #10b981 !important;
-}
-[data-theme='dark'] .ios-toggle-wrapper.active .ios-toggle-switch { 
-  background-color: #059669 !important; 
-}
-
-.ios-toggle-knob {
-  width: 20px !important; 
-  height: 20px !important;
-  background-color: white !important; 
-  border-radius: 50% !important;
-  position: absolute !important; 
-  top: 3px !important; 
-  left: 3px !important;
-  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
-}
-
-.ios-toggle-wrapper.active .ios-toggle-knob { 
-  transform: translateX(20px) !important; 
-}
-
-.ios-toggle-text { 
-  font-size: 13px !important; 
-  font-weight: 800 !important; 
-  color: var(--texto-secundario);
-  white-space: nowrap !important; /* TEXTO NUNCA QUEBRA DE LINHA */
-  letter-spacing: 0.5px !important;
-}
-
-.ios-toggle-wrapper.active .ios-toggle-text { 
-  color: #10b981 !important; 
-}
-[data-theme='dark'] .ios-toggle-wrapper.active .ios-toggle-text { 
-  color: #34d399 !important;
-}
-
-/* =========================================
-   📱 RESPONSIVIDADE MOBILE (A MÁGICA FINAL)
-========================================= */
-@media (max-width: 1000px) {
-  
-  .page-container { padding: 10px 0 0 0 !important;
-}
-  .page-header { padding: 0 15px 15px 15px !important; margin-bottom: 10px !important;
-}
-
-  .form-widescreen { 
-      padding: 25px 15px !important; 
-      border-radius: 0 !important; 
-      border-left: none !important;
-      border-right: none !important;
+@media (max-width: 900px) {
+  .page-container,
+  .clientes-container {
+    padding: 14px 12px !important;
   }
 
-  /* 1. Desempilha Foto e Formulário */
-  .estoque-form-layout { flex-direction: column !important;
-  position: static !important; gap: 30px !important;}
-  
-  /* 2. Centraliza a área da Foto no Celular e Aumenta o tamanho dela */
-  .left-photo-col { width: 100% !important;
-  max-width: 100% !important; position: static !important; display: flex; flex-direction: column; align-items: center;}
-  
-  .main-photo-display { width: 100% !important;
-  max-width: 280px !important; height: 280px !important; }
-  
-  /* 3. A Mágica do Formulário (Vira Coluna) */
-  .right-data-col { width: 100% !important;
-}
-  
-  .form-grid-4 { 
-      display: flex !important;
-      flex-direction: column !important;
-      gap: 15px !important; 
-      margin-bottom: 20px !important; 
-  }
-  
-  .span-1, .span-2, .span-3, .span-4 { 
-      width: 100% !important;
-      min-width: 100% !important; 
-  }
-  
-  /* 🔥 AQUI OS CAMPOS PEQUENOS FICAM LADO A LADO 🔥 */
-  .flex-row-always {
-      display: flex !important;
-      flex-direction: row !important;
-      gap: 10px !important;
-      width: 100% !important;
+  .form-widescreen {
+    padding: 16px 14px !important;
+    border-radius: 16px !important;
   }
 
-  .flex-row-always > .form-group {
-      flex: 1 !important;
-      min-width: 0 !important; /* Impede vazamento se o texto for grande */
+  .estoque-form-layout {
+    flex-direction: column !important;
+    gap: 20px !important;
   }
 
-  .flex-row-always label {
-      font-size: 9px !important;
-      /* Diminui a letra pra caber 3 itens */
-      white-space: nowrap !important;
-      overflow: hidden !important;
-      text-overflow: ellipsis !important;
-  }
-
-  .flex-row-always input, .flex-row-always select {
-      padding: 12px 8px !important;
-      font-size: 13px !important;
-  }
-
-  /* 4. Ajuste Botões de Salvar */
-  .form-actions { flex-direction: column;
-}
-  .btn-voltar { width: 100%; text-align: center; }
-  .btn-salvar { width: 100%; padding: 16px !important;
-}
-}
-
-/* 🔥 AJUSTE DEFINITIVO PARA O ZOOM DO CROPPER 🔥 */
-
-/* 1. Garante que o contêiner do cropper tenha um fundo limpo */
-.cropper-container {
-    background-color: #f8fafc !important;
-    /* Fundo cinza bem clarinho igual ao da página */
-    border-radius: 8px;
-    overflow: hidden;
-}
-
-/* 2. 🔥 A MÁGICA: Muda o comportamento da imagem de 'cover' para 'contain' 🔥 */
-.cropper-view-box img,
-.cropper-canvas img {
-    object-fit: contain !important;
-    /* Faz a imagem caber inteira no quadrado, sem cortar nada */
+  .left-photo-col {
     width: 100% !important;
-    height: 100% !important;
     max-width: 100% !important;
-    max-height: 100% !important;
-}
-
-/* 3. Ajusta o visual do controle de zoom (slider) para ficar mais elegante */
-.zoom-control-wrapper {
-    margin-top: 15px;
-    padding: 0 10px;
+    min-width: 100% !important;
+    position: static !important;
     display: flex;
+    flex-direction: column;
     align-items: center;
-    gap: 10px;
-    background: #fff;
-    border-radius: 20px;
-    border: 1px solid #e2e8f0;
-    height: 36px;
+  }
+
+  .form-grid-4 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .span-1, .span-2, .span-3, .span-4 {
+    grid-column: span 1 !important;
+  }
 }
 
-.zoom-slider {
-    flex: 1;
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    height: 4px;
-    background: #e2e8f0;
-    border-radius: 2px;
-    outline: none;
+@media (max-width: 768px) {
+  .page-container,
+  .clientes-container {
+    padding: 10px 8px !important;
+  }
+
+  .clientes-hero-header {
+    margin-bottom: 16px !important;
+    gap: 12px !important;
+  }
+
+  .welcome-text h1 {
+    font-size: 1.35rem !important;
+  }
+
+  .welcome-text p {
+    font-size: 0.8rem !important;
+  }
+
+  .form-widescreen {
+    padding: 12px 10px !important;
+    border-radius: 14px !important;
+  }
+
+  .vitrine-grid-responsive,
+  .financeiro-grid-responsive,
+  .estoque-grid-responsive {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .form-group select,
+  .form-group input {
+    font-size: 0.85rem !important;
+    text-overflow: ellipsis !important;
+    overflow: hidden !important;
+    white-space: nowrap !important;
+  }
 }
 
-.zoom-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    -moz-appearance: none;
-    appearance: none;
-    width: 16px;
-    height: 16px;
-    background: #c5a059;
-    /* Cor dourada do seu sistema */
-    border-radius: 50%;
-    cursor: pointer;
-    border: 2px solid #fff;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+@media (max-width: 480px) {
+  .page-container,
+  .clientes-container {
+    padding: 6px 4px !important;
+  }
+
+  .form-widescreen {
+    padding: 10px 8px !important;
+  }
+
+  .header-actions {
+    width: 100% !important;
+    justify-content: stretch !important;
+  }
+
+  .header-actions button,
+  .header-actions a {
+    flex: 1 !important;
+    justify-content: center !important;
+  }
 }

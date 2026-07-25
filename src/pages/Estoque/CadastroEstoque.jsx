@@ -52,6 +52,71 @@ const CadastroEstoque = () => {
   }]);
   const [itensDoKit, setItensDoKit] = useState([]); 
   const [modalCatalogoAberto, setModalCatalogoAberto] = useState(false);
+  const [modalNovaPecaAberto, setModalNovaPecaAberto] = useState(false);
+  const [novaPecaNome, setNovaPecaNome] = useState('');
+  const [novaPecaCategoria, setNovaPecaCategoria] = useState('Geral');
+  const [novaPecaPreco, setNovaPecaPreco] = useState('');
+  const [novaPecaQtd, setNovaPecaQtd] = useState(1);
+  const [salvandoNovaPecaRapida, setSalvandoNovaPecaRapida] = useState(false);
+
+  const salvarNovaPecaRapidaNoAcervo = async (e) => {
+    e.preventDefault();
+    if (!novaPecaNome.trim()) return alert("Digite o nome da nova peça!");
+    if (!usuarioLogado) return alert("Erro: Você precisa estar logado!");
+
+    setSalvandoNovaPecaRapida(true);
+    try {
+      const valNumber = Number(String(novaPecaPreco).replace(',', '.')) || 0;
+      const prefixo = novaPecaCategoria ? novaPecaCategoria.substring(0, 3).toUpperCase() : 'PEC';
+      const novoCodigo = `${prefixo}-${String(itensExistentes.length + 1).padStart(3, '0')}`;
+
+      const novaPecaDados = {
+        userId: tenantId,
+        nome: novaPecaNome.trim(),
+        codigo: novoCodigo,
+        categoria: novaPecaCategoria || 'Geral',
+        subCategoria: 'Peça Avulsa',
+        categoriaTema: novaPecaCategoria || 'Acessórios e Decoração',
+        subcategoriaTema: 'Objetos Decorativos',
+        grupoTema: 'Geral',
+        tema: 'Geral',
+        status: 'ok',
+        quantidade: Number(novaPecaQtd) || 1,
+        estoqueMinimo: 1,
+        financeiro: { valorAluguel: valNumber, valorCompra: 0, valorReposicao: 0 },
+        especificacoes: { isDecoracao: false, isKitPai: false, isSubPeca: false, tamanho: '', cor: '' },
+        configuracao: { tipoDisponibilidade: 'Aluguel', visivelCatalogo: true },
+        foto: '', fotos: [],
+        criadoEm: serverTimestamp(),
+        atualizadoEm: serverTimestamp()
+      };
+
+      const docRef = await addDoc(collection(db, "estoque"), novaPecaDados);
+      const novaPecaCriada = { id: docRef.id, ...novaPecaDados };
+
+      setItensExistentes(prev => [novaPecaCriada, ...prev]);
+
+      // Adiciona automaticamente à Decoração Completa
+      adicionarPecaAoKit({
+        id: docRef.id,
+        nome: novaPecaNome.trim(),
+        precoOriginal: valNumber,
+        categoria: novaPecaCategoria || 'Geral',
+        foto: ''
+      });
+
+      setNovaPecaNome('');
+      setNovaPecaPreco('');
+      setNovaPecaQtd(1);
+      setModalNovaPecaAberto(false);
+      alert(`✨ Peça "${novaPecaNome.trim()}" cadastrada no acervo e adicionada ao pacote!`);
+    } catch (err) {
+      console.error("Erro ao cadastrar nova peça rápida:", err);
+      alert("Erro ao cadastrar peça no acervo.");
+    } finally {
+      setSalvandoNovaPecaRapida(false);
+    }
+  };
   const [buscaCatalogo, setBuscaCatalogo] = useState('');
   const [filtroCategoriaCatalogo, setFiltroCategoriaCatalogo] = useState('Todos');
   const [quantidade, setQuantidade] = useState(1);
@@ -82,11 +147,44 @@ const CadastroEstoque = () => {
 
   const [modalLocalizacaoAberto, setModalLocalizacaoAberto] = useState(false);
   const [novaLocalizacaoText, setNovaLocalizacaoText] = useState('');
+  const [modalCorredor, setModalCorredor] = useState('');
+  const [modalPrateleira, setModalPrateleira] = useState('');
+  const [modalBandeja, setModalBandeja] = useState('');
   const [localizacoesEditaveis, setLocalizacoesEditaveis] = useState([]);
   const [salvandoLocalizacoes, setSalvandoLocalizacoes] = useState(false);
 
-  const categoriasFisicasUnicas = Object.keys(CATEGORIAS_FISICAS);
-  const subcategoriasFisicasDisponiveis = categoria ? CATEGORIAS_FISICAS[categoria] || [] : [];
+  const gerarPreviewModalEndereco = () => {
+    const partes = [];
+    if (modalCorredor.trim()) partes.push(modalCorredor.trim().toUpperCase().startsWith('CORREDOR') ? modalCorredor.trim() : `Corredor ${modalCorredor.trim()}`);
+    if (modalPrateleira.trim()) partes.push(modalPrateleira.trim().toUpperCase().startsWith('PRATELEIRA') || modalPrateleira.trim().toUpperCase().startsWith('ESTANTE') ? modalPrateleira.trim() : `Prateleira ${modalPrateleira.trim()}`);
+    if (modalBandeja.trim()) partes.push(modalBandeja.trim().toUpperCase().startsWith('BANDEJA') || modalBandeja.trim().toUpperCase().startsWith('CAIXOTÃO') || modalBandeja.trim().toUpperCase().startsWith('NICHO') ? modalBandeja.trim() : `Bandeja ${modalBandeja.trim()}`);
+    if (partes.length === 0 && novaLocalizacaoText.trim()) return novaLocalizacaoText.trim();
+    if (partes.length === 0) return '';
+    return partes.join(' - ');
+  };
+
+  const handleAddLocalizacaoEspecial = () => {
+    const endereco = gerarPreviewModalEndereco();
+    if (!endereco) {
+      alert("Preencha pelo menos o Corredor ou a Prateleira.");
+      return;
+    }
+    if (localizacoesEditaveis.includes(endereco)) {
+      alert("Esta localização já foi adicionada!");
+      return;
+    }
+    setLocalizacoesEditaveis([...localizacoesEditaveis, endereco].sort());
+    setModalCorredor('');
+    setModalPrateleira('');
+    setModalBandeja('');
+    setNovaLocalizacaoText('');
+  };
+
+  const [categoriasFisicasDict, setCategoriasFisicasDict] = useState(CATEGORIAS_FISICAS);
+  const [catalogoVitrineDict, setCatalogoVitrineDict] = useState(CATALOGO_TEMAS);
+
+  const categoriasFisicasUnicas = Object.keys(categoriasFisicasDict);
+  const subcategoriasFisicasDisponiveis = categoria ? categoriasFisicasDict[categoria] || [] : [];
   const ocultarVitrineFisica = categoria === "Capas e Têxteis" && (subCategoria === "Capas de Painel" || subCategoria === "Capas de Cilindro" || subCategoria === "Kits de Capas (Painel + Cilindros)");
   const EVENTOS_VITRINE = [
       "Aniversário", "Casamento", "Mêsversário", "Chá de Bebê", 
@@ -94,7 +192,7 @@ const CadastroEstoque = () => {
       "15 anos", "Formatura", "Religioso", "Corporativo", 
       "Escolar", "Datas Comemorativas"
   ];
-  const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS).filter(cat => {
+  const categoriasDeTemaUnicas = Object.keys(catalogoVitrineDict).filter(cat => {
       if (tipoCadastro === 'decoracao') {
           return EVENTOS_VITRINE.includes(cat);
       } else {
@@ -105,42 +203,76 @@ const CadastroEstoque = () => {
       }
   });
 
-  const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
-  const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
-  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
+  const subcategoriasDisponiveis = categoriaTema ? Object.keys(catalogoVitrineDict[categoriaTema] || {}) : [];
+  const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(catalogoVitrineDict[categoriaTema]?.[subcategoriaTema] || {}) : [];
+  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? catalogoVitrineDict[categoriaTema]?.[subcategoriaTema]?.[grupoTemaSelecionado] || [] : [];
 
   useEffect(() => {
-    if (!usuarioLogado) {
-      alert("Sessão expirada. Faça login novamente.");
-      navigate('/login');
-      return;
-    }
+    const unsub = auth.onAuthStateChanged(async (user) => {
+      const activeTenant = localStorage.getItem('tenantId') || user?.uid;
+      if (!user && !activeTenant) {
+        alert("Sessão expirada. Faça login novamente.");
+        navigate('/login');
+        return;
+      }
 
-    const fetchItens = async () => {
-      // 🎯 BUSCA VINCULADA À EMPRESA (TENANT)
-      const q = query(collection(db, "estoque"), where("userId", "==", tenantId));
-      const snap = await getDocs(q);
-      const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      setItensExistentes(docs);
-    };
-    fetchItens();
+      if (!activeTenant) return;
 
-    const fetchConfiguracoes = async () => {
-      try {
-        // 🎯 BUSCA CONFIGURAÇÕES (PRATELEIRAS) DA EMPRESA
-        const docRef = doc(db, "parametros_usuarios", tenantId);
-        const docSnap = await getDoc(docRef);
-        if (docSnap.exists()) {
-          const dados = docSnap.data();
-          setListasSistema({
-            localizacoes: dados.localizacoes || [], 
-            tamanhos: dados.tamanhos || []
-          });
+      const fetchItensEConfig = async () => {
+        let locsEstoque = [];
+        try {
+          const q = query(collection(db, "estoque"), where("userId", "==", activeTenant));
+          const snap = await getDocs(q);
+          const docs = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          setItensExistentes(docs);
+          locsEstoque = docs.map(d => d.localizacao).filter(Boolean);
+        } catch (e) {
+          console.error("Erro ao buscar itens de estoque:", e);
         }
-      } catch (e) { console.error("Erro:", e); }
-    };
-    fetchConfiguracoes();
 
+        let locsConfig = [];
+        let tamsConfig = [];
+
+        try {
+          const docRefEmpresa = doc(db, "configuracoes_empresa", activeTenant);
+          const docSnapEmpresa = await getDoc(docRefEmpresa);
+          if (docSnapEmpresa.exists()) {
+            const dadosE = docSnapEmpresa.data();
+            if (Array.isArray(dadosE.localizacoes) && dadosE.localizacoes.length > 0) {
+              locsConfig = dadosE.localizacoes;
+            }
+            if (Array.isArray(dadosE.categoriasFisicas) && dadosE.categoriasFisicas.length > 0) {
+              const mapFisico = {};
+              dadosE.categoriasFisicas.forEach(cat => {
+                mapFisico[cat] = dadosE.subcategoriasFisicas?.[cat] || CATEGORIAS_FISICAS[cat] || [];
+              });
+              setCategoriasFisicasDict(mapFisico);
+            }
+            if (dadosE.catalogoVitrine && Object.keys(dadosE.catalogoVitrine).length > 0) {
+              setCatalogoVitrineDict(dadosE.catalogoVitrine);
+            }
+          }
+        } catch (eEmpresa) {
+          // Silenciosamente ignora qualquer restricao sem poluir o console
+        }
+
+        // 🎯 UNIFICA PRATELEIRAS SALVAS EM CONFIGURAÇÕES COM AS PRATELEIRAS JÁ EM USO NOS ITENS DO GALPÃO
+        const locsUnificadas = Array.from(new Set([...locsConfig, ...locsEstoque])).filter(Boolean).sort();
+
+        setListasSistema({
+          localizacoes: locsUnificadas,
+          tamanhos: tamsConfig
+        });
+        setLocalizacoesEditaveis(locsUnificadas);
+      };
+
+      fetchItensEConfig();
+    });
+
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
     const itemBase = itemEditando || itemDuplicando;
     if (itemBase) {
       let nomeLimpo = itemBase.nome || '';
@@ -205,31 +337,46 @@ const CadastroEstoque = () => {
     }
   }, [itemEditando, itemDuplicando, dadosCompra, usuarioLogado, navigate, tenantId]);
 
-  const atualizarSKU = (tipo, cat) => {
-    let catAlvo = tipo === 'decoracao' ? 'Decoração Completa' : cat;
-    if (!catAlvo) {
-        setCodigo('');
-        return;
+  const gerarSKUAutomatico = (tipo = tipoCadastro, catTema = categoriaTema, nomeItem = nome) => {
+    if (itemEditando) return; // Mantém código salvo em peças que estão sendo editadas
+
+    let prefixo = 'PEC';
+    if (tipo === 'decoracao') {
+      prefixo = 'DEC';
+    } else if (tipo === 'kit') {
+      prefixo = 'KIT';
+    } else if (catTema && catTema.trim()) {
+      const palavras = catTema.trim().split(' ');
+      const palavraChave = palavras[0].length >= 3 ? palavras[0] : (palavras[1] || palavras[0]);
+      prefixo = palavraChave.substring(0, 3).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    } else if (nomeItem && nomeItem.trim()) {
+      const palavras = nomeItem.trim().split(' ');
+      const palavraChave = palavras[0].length >= 3 ? palavras[0] : (palavras[1] || palavras[0]);
+      prefixo = palavraChave.substring(0, 3).toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
     }
-    const prefixo = catAlvo === 'Decoração Completa' ? 'DEC' : catAlvo.substring(0, 3).toUpperCase();
-    const matches = itensExistentes.filter(i => {
-        const catStr = i.categoria || '';
-        const pref = catStr === 'Decoração Completa' ? 'DEC' : catStr.substring(0, 3).toUpperCase();
-        return pref === prefixo && i.id !== itemEditando?.id;
+
+    if (!prefixo || prefixo.length < 2) prefixo = 'PEC';
+
+    let maiorNumero = 0;
+    itensExistentes.forEach(item => {
+      if (item.codigo && item.codigo.toUpperCase().startsWith(`${prefixo}-`)) {
+        const parteNum = item.codigo.split('-')[1];
+        const num = parseInt(parteNum, 10);
+        if (!isNaN(num) && num > maiorNumero) {
+          maiorNumero = num;
+        }
+      }
     });
-    const novoNumero = matches.length + 1;
-    setCodigo(`${prefixo}-${String(novoNumero).padStart(3, '0')}`);
+
+    const proximoNumero = String(maiorNumero + 1).padStart(3, '0');
+    setCodigo(`${prefixo}-${proximoNumero}`);
   };
 
   useEffect(() => {
-    if (!itemEditando && !itemDuplicando && itensExistentes.length > 0 && !codigo) {
-        if (tipoCadastro === 'decoracao') {
-            atualizarSKU('decoracao', '');
-        } else if (categoria) {
-            atualizarSKU(tipoCadastro, categoria);
-        }
+    if (!itemEditando) {
+      gerarSKUAutomatico();
     }
-  }, [itensExistentes]);
+  }, [itensExistentes, tipoCadastro, categoriaTema]);
 
   const handleTipoCadastroChange = (novoTipo) => {
       setTipoCadastro(novoTipo);
@@ -244,7 +391,6 @@ const CadastroEstoque = () => {
           setTipoDisponibilidade('Aluguel');
           setCategoria('Decoração Completa');
           setSubCategoria('Pacote');
-          atualizarSKU('decoracao', 'Decoração Completa');
       } else if (novoTipo === 'kit') {
           setUnidadeMedida('Kit');
           setCategoria('');
@@ -321,8 +467,8 @@ const CadastroEstoque = () => {
     atualizarSKU(tipoCadastro, novaCat);
     
     let novaSub = '';
-    if (CATEGORIAS_FISICAS[novaCat] && CATEGORIAS_FISICAS[novaCat].length > 0) {
-        novaSub = CATEGORIAS_FISICAS[novaCat][0];
+    if (categoriasFisicasDict[novaCat] && categoriasFisicasDict[novaCat].length > 0) {
+        novaSub = categoriasFisicasDict[novaCat][0];
         setSubCategoria(novaSub);
     } else {
         setSubCategoria('');
@@ -468,9 +614,10 @@ const CadastroEstoque = () => {
       if (!usuarioLogado) return;
       setSalvandoLocalizacoes(true);
       try {
-          // 🎯 SALVA CONFIGURAÇÕES (PRATELEIRAS) VINCULADAS À EMPRESA
-          const docRef = doc(db, "parametros_usuarios", tenantId);
-          await setDoc(docRef, { localizacoes: localizacoesEditaveis }, { merge: true });
+          // 🎯 SALVA CONFIGURAÇÕES (PRATELEIRAS) DA EMPRESA EM 'configuracoes_empresa'
+          const refEmpresa = doc(db, "configuracoes_empresa", tenantId);
+          await setDoc(refEmpresa, { localizacoes: localizacoesEditaveis }, { merge: true });
+
           setListasSistema(prev => ({ ...prev, localizacoes: localizacoesEditaveis }));
           setModalLocalizacaoAberto(false);
       } catch (error) {
@@ -495,8 +642,6 @@ const CadastroEstoque = () => {
     const isDecoracao = tipoCadastro === 'decoracao';
     const isKitNovo = tipoCadastro === 'kit';
 
-    if (!isDecoracao && !categoria) return alert("❌ Selecione a Categoria física da peça (Ex: Móveis).");
-    if (!isDecoracao && !subCategoria) return alert("❌ Selecione a Subcategoria física.");
     if (!categoriaTema) return alert("❌ Selecione a Categoria da Vitrine do Site.");
     if (!subcategoriaTema) return alert("❌ Selecione a Subcategoria da Vitrine.");
     if (!grupoTemaSelecionado) return alert("❌ Selecione o Grupo na Vitrine.");
@@ -507,11 +652,11 @@ const CadastroEstoque = () => {
         return alert("❌ Selecione o Tema/Filtro Específico.");
     }
     
-    if (isKitNovo && pecasKitNovas.some(p => (!p.tamanho.trim() && !p.cor.trim()))) {
-        return alert("❌ OBRIGATÓRIO: Preencha o TAMANHO ou a COR de todas as peças filhas do Kit para o sistema não gerar nomes duplicados!");
+    if (isKitNovo && pecasKitNovas.some(p => (!p.nome.trim() && !p.tamanho.trim() && !p.cor.trim()))) {
+        return alert("❌ Preencha a identificação (Nome, Tamanho ou Cor) de cada peça do Kit.");
     }
     if (isKitNovo && pecasKitNovas.some(p => !p.valorAluguel.trim())) {
-        return alert("❌ Todas as peças filhas precisam ter um valor de aluguel preenchido.");
+        return alert("❌ Todas as peças do Kit precisam ter um valor de aluguel avulso preenchido.");
     }
 
     if (isDecoracao && itensDoKit.length === 0) {
@@ -521,8 +666,8 @@ const CadastroEstoque = () => {
     setSalvando(true);
     try {
       const limparValor = (val) => Number(String(val).replace(',', '.'));
-      const catFinal = isDecoracao ? 'Decoração Completa' : categoria;
-      const subCatFinal = isDecoracao ? 'Pacote' : subCategoria;
+      const catFinal = isDecoracao ? 'Decoração Completa' : (categoria || 'Geral');
+      const subCatFinal = isDecoracao ? 'Pacote' : (subCategoria || 'Geral');
       const temaFinalParaSalvar = temaSelecionado === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaSelecionado;
 
       const nomePrincipalFormatado = (isKitNovo && !nome.toUpperCase().includes('KIT')) ? `KIT ${nome.trim()}` : nome.trim();
@@ -724,15 +869,26 @@ const CadastroEstoque = () => {
   const focoAtual = getFocoAtual();
 
   return (
-    <div className="page-container">
-      <div className="page-header" style={{marginBottom: '20px'}}>
-        <div className="header-text">
-          <h1 className="page-title">
-            {itemEditando ? 'EDITAR ACERVO' : itemDuplicando ? '📋 DUPLICAR PEÇA' : dadosCompra ? '✨ FINALIZAR COMPRA' : 'CADASTRAR NO ACERVO'}
-          </h1>
-          <p style={{ color: 'var(--texto-secundario)', marginTop: '5px' }}>
-            {itemDuplicando ? 'Altere as especificações (como cor ou tamanho) da nova peça antes de salvar.' : 'Cadastre peças unitárias, conjuntos ou pacotes de decoração prontos.'}
-          </p>
+    <div className="clientes-container fade-in">
+      
+      {/* HERO CABEÇALHO IDÊNTICO AO GESTÃO DE CLIENTES */}
+      <div className="clientes-hero-header">
+        <div className="header-title-row">
+          <div className="header-icon-badge">
+            {itemEditando ? '✏️' : '✨'}
+          </div>
+          <div className="welcome-text">
+            <h1>{itemEditando ? 'Editar Peça / Acervo' : itemDuplicando ? 'Duplicar Peça' : dadosCompra ? 'Finalizar Cadastro de Compra' : 'Cadastro de Acervo'}</h1>
+            <p>{itemDuplicando ? 'Altere as especificações (como cor ou tamanho) da nova peça antes de salvar.' : 'Cadastre peças unitárias, conjuntos ou pacotes de decoração prontos.'}</p>
+          </div>
+        </div>
+        <div className="header-actions">
+          <Link to="/estoque" className="btn-secondary-celebre">
+            ⬅️ VOLTAR AO ESTOQUE
+          </Link>
+          <button type="button" onClick={salvarItem} className="btn-primary-celebre" disabled={salvando}>
+            {salvando ? '💾 SALVANDO...' : '💾 SALVAR ACERVO'}
+          </button>
         </div>
       </div>
 
@@ -800,183 +956,211 @@ const CadastroEstoque = () => {
             
             <div style={{ width: '100%', maxWidth: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
               
-              <div style={{ background: 'var(--branco)', border: '1px solid var(--borda)', borderRadius: '12px', padding: '15px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                  <h3 className="section-divider" style={{marginTop: 0, fontSize: '13px'}}>FOTO PRINCIPAL</h3>
-                  
-                  <div style={{ width: '100%', height: '280px', backgroundColor: 'var(--fundo-cinza)', borderRadius: '8px', border: '2px dashed var(--borda)', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  {fotos.length > 0 ? (
-                      <>
-                      <img 
-                          src={fotos[fotoPrincipalIndex]} 
-                          draggable={false} 
-                          style={{ 
-                            width: '100%', height: '100%', 
-                            objectFit: fotoPreencher ? 'cover' : 'contain', 
-                            objectPosition: `${focoAtual.x}% ${focoAtual.y}%`, 
-                            transform: `scale(${focoAtual.z || 1})`,
-                            cursor: dragging ? 'grabbing' : 'grab',
-                            transition: dragging ? 'none' : 'transform 0.2s ease-out',
-                            transformOrigin: 'center center'
-                          }} 
-                          onMouseDown={handlePointerDown} onTouchStart={handlePointerDown}
-                          onMouseMove={handlePointerMove} onTouchMove={handlePointerMove}
-                          onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp} onTouchEnd={handlePointerUp}
-                      />
-                      <div style={{position: 'absolute', top: '10px', right: '10px', background: 'rgba(0,0,0,0.6)', color: 'white', fontSize: '11px', padding: '6px 12px', borderRadius: '12px', fontWeight: 'bold', pointerEvents: 'none'}}>
-                          ✥ Arraste
-                      </div>
-                      </>
-                  ) : (
-                      <label htmlFor="upload-principal" style={{cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center'}}>
-                      <span style={{fontSize:'45px', opacity:0.3, marginBottom: '10px'}}>📷</span>
-                      <span style={{color: 'var(--texto-secundario)', fontWeight: 'bold', fontSize: '13px'}}>Adicionar Foto</span>
-                      <input id="upload-principal" type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
-                      </label>
-                  )}
+              {/* CARD 1: FOTOS DO PRODUTO (DESIGN EXECUTIVO CLIENTES) */}
+              <div style={{ background: '#ffffff', border: '1.5px solid #e2e8f0', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 10px 30px -10px rgba(15,23,42,0.08)' }}>
+                  {/* Banner Escuro Topo */}
+                  <div style={{ background: '#0f172a', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '2px solid #c5a059' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '18px' }}>📸</span>
+                      <span style={{ color: '#ffffff', fontSize: '0.82rem', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                        FOTO PRINCIPAL DO ACERVO
+                      </span>
+                    </div>
+                    {fotos.length > 0 && (
+                      <span style={{ fontSize: '0.72rem', color: '#0f172a', background: 'linear-gradient(135deg, #c5a059 0%, #fde68a 100%)', padding: '3px 10px', borderRadius: '20px', fontWeight: '800' }}>
+                        {fotos.length} foto(s)
+                      </span>
+                    )}
                   </div>
                   
-                  {fotos.length > 0 && (
-                      <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '15px', background: 'var(--fundo-cinza)', padding: '10px 15px', borderRadius: '8px', border: '1px solid var(--borda)'}}>
-                          <button 
-                              type="button" 
-                              onClick={(e) => { e.preventDefault(); setFotoPreencher(!fotoPreencher); }} 
-                              style={{
-                                  background: fotoPreencher ? 'var(--dourado)' : 'var(--branco)', 
-                                  color: fotoPreencher ? 'white' : 'var(--texto-secundario)', 
-                                  border: '1px solid var(--borda)', 
-                                  padding: '8px 12px', 
-                                  borderRadius: '6px', 
-                                  fontSize: '11px', 
-                                  fontWeight: 'bold', 
-                                  cursor: 'pointer', 
-                                  transition: '0.2s', 
-                                  flexShrink: 0,
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '6px'
-                              }}
-                          >
-                              <span style={{fontSize: '14px'}}>{fotoPreencher ? '🔲' : '🖼️'}</span>
-                              {fotoPreencher ? 'Preenchendo' : 'Foto Inteira'}
-                          </button>
-                          
-                          <div style={{width: '1px', height: '20px', background: 'var(--borda)', margin: '0 5px'}}></div>
-                          
-                          <span style={{fontSize: '16px'}}>🔍</span>
-                          <input 
-                              type="range" 
-                              min="1" max="3" step="0.1" 
-                              value={focoAtual.z || 1} 
-                              onChange={handleZoomChange} 
-                              style={{flex: 1, cursor: 'pointer', accentColor: 'var(--texto-principal)'}}
-                          />
-                      </div>
-                  )}
+                  <div style={{ padding: '20px' }}>
+                    {/* Moldura da Imagem */}
+                    <div style={{ width: '100%', height: '310px', backgroundColor: '#f8fafc', borderRadius: '16px', border: fotos.length > 0 ? '3px solid #c5a059' : '2px dashed #cbd5e1', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: fotos.length > 0 ? '0 10px 25px rgba(197, 160, 89, 0.2)' : 'none', transition: '0.2s' }}>
+                    {fotos.length > 0 ? (
+                        <>
+                        <img 
+                            src={fotos[fotoPrincipalIndex]} 
+                            draggable={false} 
+                            style={{ 
+                              width: '100%', height: '100%', 
+                              objectFit: fotoPreencher ? 'cover' : 'contain', 
+                              objectPosition: `${focoAtual.x}% ${focoAtual.y}%`, 
+                              transform: `scale(${focoAtual.z || 1})`,
+                              cursor: dragging ? 'grabbing' : 'grab',
+                              transition: dragging ? 'none' : 'transform 0.2s ease-out',
+                              transformOrigin: 'center center'
+                            }} 
+                            onMouseDown={handlePointerDown} onTouchStart={handlePointerDown}
+                            onMouseMove={handlePointerMove} onTouchMove={handlePointerMove}
+                            onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp} onTouchEnd={handlePointerUp}
+                        />
+                        <div style={{position: 'absolute', top: '12px', right: '12px', background: 'rgba(15, 23, 42, 0.82)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '11px', padding: '6px 14px', borderRadius: '20px', fontWeight: '700', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.2)'}}>
+                            ✥ Arraste para enquadrar
+                        </div>
+                        </>
+                    ) : (
+                        <label htmlFor="upload-principal" style={{cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center'}}>
+                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#ffffff', border: '3px solid #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#c5a059', marginBottom: '14px', boxShadow: '0 8px 20px rgba(197, 160, 89, 0.25)' }}>📸</div>
+                        <span style={{color: '#0f172a', fontWeight: '800', fontSize: '0.95rem', marginBottom: '4px'}}>+ Adicionar Foto</span>
+                        <span style={{color: '#64748b', fontSize: '0.75rem'}}>PNG, JPG ou WebP sem fundo ou decorada</span>
+                        <input id="upload-principal" type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
+                        </label>
+                    )}
+                    </div>
+                    
+                    {fotos.length > 0 && (
+                        <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px', background: '#0f172a', padding: '12px 16px', borderRadius: '14px', border: '1px solid #1e293b'}}>
+                            <button 
+                                type="button" 
+                                onClick={(e) => { e.preventDefault(); setFotoPreencher(!fotoPreencher); }} 
+                                style={{
+                                    background: fotoPreencher ? 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)' : '#1e293b', 
+                                    color: '#ffffff', 
+                                    border: fotoPreencher ? 'none' : '1px solid #334155', 
+                                    padding: '8px 14px', 
+                                    borderRadius: '8px', 
+                                    fontSize: '0.78rem', 
+                                    fontWeight: '800', 
+                                    cursor: 'pointer', 
+                                    transition: '0.2s', 
+                                    flexShrink: 0,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '6px',
+                                    boxShadow: fotoPreencher ? '0 2px 8px rgba(197, 160, 89, 0.3)' : 'none'
+                                }}
+                            >
+                                <span style={{fontSize: '13px'}}>{fotoPreencher ? '🔲' : '🖼️'}</span>
+                                {fotoPreencher ? 'Preenchendo' : 'Foto Inteira'}
+                            </button>
+                            
+                            <div style={{width: '1px', height: '22px', background: '#334155', margin: '0 2px'}}></div>
+                            
+                            <span style={{fontSize: '14px', color: '#c5a059'}}>🔍</span>
+                            <input 
+                                type="range" 
+                                min="1" max="3" step="0.1" 
+                                value={focoAtual.z || 1} 
+                                onChange={handleZoomChange} 
+                                style={{flex: 1, cursor: 'pointer', accentColor: '#c5a059'}}
+                            />
+                        </div>
+                    )}
 
-                  {fotos.length > 0 && (
-                      <div className="photo-thumbnails-row" style={{display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '5px', marginTop: '15px'}}>
-                          {fotos.map((f, idx) => {
-                          const tFoco = getFocoThumb(idx);
-                          return (
-                          <div key={idx} style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '2px solid var(--dourado)' : '1px solid var(--borda)', position: 'relative', cursor: 'pointer'}} onClick={() => setFotoPrincipalIndex(idx)}>
-                              <img src={f} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
-                              <button type="button" onClick={(e) => {e.stopPropagation(); removerFoto(idx)}} style={{position: 'absolute', top: 0, right: 0, background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', width: '20px', height: '20px', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>×</button>
-                          </div>
-                      )})}
-                      <label title="Adicionar mais fotos" style={{width: '60px', height: '60px', flexShrink: 0, borderRadius: '6px', border: '1px dashed var(--borda)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '24px', color: 'var(--texto-secundario)', background: 'var(--fundo-cinza)'}}>
-                          +
-                          <input type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
-                      </label>
-                      </div>
-                  )}
+                    {fotos.length > 0 && (
+                        <div className="photo-thumbnails-row" style={{display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', marginTop: '16px'}}>
+                            {fotos.map((f, idx) => {
+                            const tFoco = getFocoThumb(idx);
+                            return (
+                            <div key={idx} style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '3px solid #c5a059' : '1.5px solid #cbd5e1', position: 'relative', cursor: 'pointer', boxShadow: idx === fotoPrincipalIndex ? '0 4px 12px rgba(197, 160, 89, 0.4)' : 'none', background: '#ffffff'}} onClick={() => setFotoPrincipalIndex(idx)}>
+                                <img src={f} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
+                                <button type="button" onClick={(e) => {e.stopPropagation(); removerFoto(idx)}} style={{position: 'absolute', top: '2px', right: '2px', background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', width: '20px', height: '20px', borderRadius: '50%', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}} title="Remover foto">×</button>
+                            </div>
+                        )})}
+                        <label title="Adicionar mais fotos" style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', border: '2px dashed #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '22px', color: '#b48a3c', background: '#fef3c7', transition: '0.2s'}}>
+                            +
+                            <input type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
+                        </label>
+                        </div>
+                    )}
+                  </div>
               </div>
 
+              {/* CARD 2: CARACTERÍSTICAS FÍSICAS (OPCIONAL) */}
               {tipoCadastro === 'avulsa' && (
-                <div style={{ background: 'var(--branco)', border: '1px solid var(--borda)', borderRadius: '12px', padding: '20px', boxShadow: '0 4px 6px rgba(0,0,0,0.05)' }}>
-                  <label style={{color: 'var(--texto-principal)', fontWeight: 'bold', marginBottom: '12px', display: 'block', fontSize: '13px'}}>CARACTERÍSTICAS (Opcional)</label>
+                <div style={{ background: '#ffffff', border: '1.5px solid #e2e8f0', borderRadius: '18px', padding: '20px', boxShadow: '0 10px 25px -5px rgba(15,23,42,0.04)' }}>
+                  <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#0f172a', letterSpacing: '0.5px', textTransform: 'uppercase', marginBottom: '14px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    📏 CARACTERÍSTICAS & DIMENSÕES <span style={{fontSize: '0.7rem', color: '#94a3b8', fontWeight: '600'}}>(OPCIONAL)</span>
+                  </div>
                   
-                  <div style={{display: 'flex', gap: '10px', marginBottom: '12px'}}>
-                    <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>TAMANHO / REF.</label>
-                      <input value={tamanho} onChange={e => setTamanho(e.target.value)} placeholder="Ex: P" style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px'}}>
+                    <div>
+                      <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>TAMANHO / REF.</label>
+                      <input value={tamanho} onChange={e => setTamanho(e.target.value.toUpperCase())} placeholder="Ex: P / M / G / 20CM" style={{width:'100%', height:'44px', padding:'0 12px', borderRadius:'10px', border:'1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontSize: '0.85rem', fontWeight: '700', textTransform: 'uppercase'}} />
                     </div>
-                    <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>COR PREDOMINANTE</label>
-                      <input value={cor} onChange={handleTextChange(setCor)} placeholder="Ex: Rosa" style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
+                    <div>
+                      <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>COR PREDOMINANTE</label>
+                      <input value={cor} onChange={handleTextChange(setCor)} placeholder="Ex: Rosa Gold" style={{width:'100%', height:'44px', padding:'0 12px', borderRadius:'10px', border:'1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontSize: '0.85rem', fontWeight: '500'}} />
                     </div>
                   </div>
 
-                  <div style={{display: 'flex', gap: '10px'}}>
-                    <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>LARG(cm)</label>
-                      <input type="number" value={largura} onChange={e => setLargura(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
+                  <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px'}}>
+                    <div>
+                      <label style={{fontSize: '0.68rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>LARG (cm)</label>
+                      <input type="number" value={largura} onChange={e => setLargura(e.target.value)} placeholder="0" style={{width:'100%', height:'42px', padding:'0 8px', borderRadius:'10px', border:'1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontSize: '0.85rem', textAlign: 'center', fontWeight: '600'}} />
                     </div>
-                    <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>ALT(cm)</label>
-                      <input type="number" value={altura} onChange={e => setAltura(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
+                    <div>
+                      <label style={{fontSize: '0.68rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>ALT (cm)</label>
+                      <input type="number" value={altura} onChange={e => setAltura(e.target.value)} placeholder="0" style={{width:'100%', height:'42px', padding:'0 8px', borderRadius:'10px', border:'1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontSize: '0.85rem', textAlign: 'center', fontWeight: '600'}} />
                     </div>
-                    <div style={{flex: 1}}>
-                      <label style={{fontSize:'10px', fontWeight:'bold', color:'var(--texto-secundario)'}}>DIÂM(cm)</label>
-                      <input type="number" value={diametro} onChange={e => setDiametro(e.target.value)} style={{width:'100%', padding:'10px', borderRadius:'6px', border:'1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', outline: 'none'}} />
+                    <div>
+                      <label style={{fontSize: '0.68rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>DIÂM (cm)</label>
+                      <input type="number" value={diametro} onChange={e => setDiametro(e.target.value)} placeholder="0" style={{width:'100%', height:'42px', padding:'0 8px', borderRadius:'10px', border:'1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontSize: '0.85rem', textAlign: 'center', fontWeight: '600'}} />
                     </div>
                   </div>
                 </div>
               )}
-          </div>
+            </div>
 
             <div style={{ flex: 1, minWidth: '0', background: 'var(--branco)', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)', border: '1px solid var(--borda)', display: 'flex', flexDirection: 'column' }}>
               
               <h3 className="section-divider" style={{marginTop: 0}}>INFORMAÇÕES DO ITEM</h3>
               
               <div className="form-grid-4">
-                <div className="form-group span-3"><label>NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label><input value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} style={{fontSize: '16px', fontWeight: 'bold'}} /></div>
+                <div className="form-group span-3"><label>NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label><input value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} /></div>
                 
                 <div className="form-group span-1">
-                    <label>CÓDIGO SKU</label>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
+                      <span>CÓDIGO SKU *</span>
+                      <span style={{ fontSize: '10px', color: '#b48a3c', background: '#fef3c7', padding: '2px 6px', borderRadius: '8px', fontWeight: '800' }}>⚡ Automático</span>
+                    </label>
                     <input 
                         value={codigo} 
-                        onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-                        placeholder="Ex: CAP-001"
-                        style={{backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontWeight: 'bold', border: '1px solid var(--borda)'}} 
+                        readOnly
+                        title="Código SKU gerado automaticamente pelo sistema"
+                        style={{ fontWeight: '800', letterSpacing: '1px', color: '#0f172a', background: '#f1f5f9', cursor: 'not-allowed', border: '1.5px solid #cbd5e1' }}
                     />
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '20px', marginTop: '10px', flexWrap: 'wrap' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '10px' }}>
                   
                   {tipoCadastro !== 'decoracao' && (
-                    <div style={{ flex: 1, minWidth: '300px', background: 'var(--fundo-cinza)', border: '1px solid var(--borda)', borderRadius: '10px', padding: '20px' }}>
-                        <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', color: 'var(--texto-principal)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                          <span style={{fontSize: '20px'}}>📦</span> 1. COMO GUARDAR NO GALPÃO?
-                        </h4>
-                        <div className="form-group mb-15">
-                            <label style={{color: 'var(--texto-secundario)'}}>CATEGORIA FÍSICA *</label>
-                            <select value={categoria} onChange={handleCategoriaChange} required style={{backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}}>
-                                <option value="" disabled hidden>Selecione...</option>
-                                {categoriasFisicasUnicas.map(c => <option key={c} value={c}>{c}</option>)}
-                            </select>
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '20px', marginBottom: '15px' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                          <h4 style={{ margin: 0, fontSize: '0.85rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                            <span style={{fontSize: '18px'}}>📦</span> 1. COMO GUARDAR NO GALPÃO?
+                          </h4>
+                          <button 
+                              type="button" 
+                              onClick={abrirModalLocalizacao} 
+                              style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#b48a3c', padding: '6px 14px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                              + Gerenciar Prateleiras
+                          </button>
                         </div>
-                        <div className="form-group">
-                            <label style={{color: 'var(--texto-secundario)'}}>SUBCATEGORIA DA PRATELEIRA *</label>
-                            <select value={subCategoria} onChange={e => {
-                                const novaSub = e.target.value;
-                                setSubCategoria(novaSub);
-                                autoPreencherVitrine(categoria, novaSub);
-                            }} disabled={!categoria} required style={{backgroundColor: 'var(--branco)', color: 'var(--texto-principal)'}}>
-                                <option value="" disabled hidden>{!categoria ? 'Escolha a Categoria antes...' : 'Selecione...'}</option>
-                                {subcategoriasFisicasDisponiveis.map(s => <option key={s} value={s}>{s}</option>)}
+
+                        <div className="form-group" style={{ margin: 0 }}>
+                            <label style={{color: '#475569', fontSize: '0.72rem', fontWeight: '800', letterSpacing: '0.5px', marginBottom: '6px', display: 'block'}}>PRATELEIRA / LOCAL DE ARMAZENAGEM *</label>
+                            <select 
+                              value={localizacao} 
+                              onChange={e => setLocalizacao(e.target.value)}
+                              style={{ width: '100%', height: '46px', lineHeight: 'normal', fontSize: '0.84rem', fontWeight: '600', color: '#0f172a', backgroundColor: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '12px', padding: '0 36px 0 14px' }}
+                            >
+                                <option value="">Selecione a Prateleira / Local...</option>
+                                {listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}
                             </select>
                         </div>
                     </div>
                   )}
 
-                  <div style={{ flex: 2, minWidth: '300px', background: 'var(--fundo-cinza)', border: '1px solid var(--borda)', borderRadius: '10px', padding: '20px', position: 'relative' }}>
-                      <div style={{position: 'absolute', top: '-12px', right: '15px', background: 'var(--dourado)', color: 'white', padding: '3px 8px', borderRadius: '12px', fontSize: '10px', fontWeight: 'bold'}}>✨ Prenchimento Inteligente</div>
-                      <h4 style={{ margin: '0 0 15px 0', fontSize: '13px', color: 'var(--texto-principal)', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{fontSize: '20px'}}>🌐</span> 2. COMO O CLIENTE ACHA NO SITE?
+                  <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '22px', position: 'relative' }}>
+                      <div style={{position: 'absolute', top: '-12px', right: '20px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: 'white', padding: '4px 12px', borderRadius: '20px', fontSize: '10px', fontWeight: '800', boxShadow: '0 2px 8px rgba(197, 160, 89, 0.4)'}}>✨ Preenchimento Inteligente</div>
+                      <h4 style={{ margin: '0 0 16px 0', fontSize: '0.85rem', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px', letterSpacing: '0.3px', textTransform: 'uppercase' }}>
+                        <span style={{fontSize: '18px'}}>🌐</span> 2. COMO O CLIENTE ACHA NO SITE?
                       </h4>
                       
-                      <div style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
+                      <div className="vitrine-grid-responsive" style={{display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px'}}>
                         <div className="form-group">
                             <label style={{color: 'var(--texto-secundario)'}}>CATEGORIA NA VITRINE *</label>
                             <select value={categoriaTema} onChange={e => {
@@ -1045,15 +1229,27 @@ const CadastroEstoque = () => {
               </div>
 
               {tipoCadastro === 'decoracao' && (
-                <div style={{marginTop: '30px', border: '2px dashed var(--dourado)', padding: '20px', borderRadius: '10px', backgroundColor: 'var(--fundo-cinza)'}}>
-                  <h3 style={{margin: '0 0 5px 0', color: 'var(--texto-principal)'}}>✨ MONTAGEM DA DECORAÇÃO</h3>
-                  <p style={{fontSize: '12px', color: 'var(--texto-secundario)', marginBottom: '15px'}}>
-                    Abra o catálogo abaixo e selecione quais peças do seu galpão compõem esta Decoração. O sistema fará a baixa de todas elas no calendário juntas!
-                  </p>
+                <div style={{marginTop: '25px', border: '1.5px solid #e2e8f0', padding: '24px', borderRadius: '18px', backgroundColor: '#ffffff', boxShadow: '0 10px 25px -5px rgba(15,23,42,0.04)'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div>
+                      <h3 style={{margin: '0 0 4px 0', color: '#0f172a', fontSize: '1rem', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px'}}>
+                        <span>✨</span> MONTAGEM DA DECORAÇÃO
+                      </h3>
+                      <p style={{fontSize: '0.8rem', color: '#64748b', margin: 0}}>
+                        Abra o acervo do galpão para selecionar peças existentes ou cadastre peças novas na hora para este pacote!
+                      </p>
+                    </div>
+                  </div>
                   
-                  <button type="button" onClick={() => setModalCatalogoAberto(true)} className="btn-salvar-modal" style={{width: '100%', padding: '15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', marginBottom: '15px', fontSize: '14px', transition: '0.2s'}}>
-                      + ABRIR ACERVO E ADICIONAR PEÇAS
-                  </button>
+                  <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
+                    <button type="button" onClick={() => setModalCatalogoAberto(true)} style={{ flex: 1, minWidth: '200px', height: '46px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      📦 ABRIR ACERVO E ADICIONAR PEÇAS
+                    </button>
+
+                    <button type="button" onClick={() => setModalNovaPecaAberto(true)} style={{ flex: 1, minWidth: '200px', height: '46px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      ➕ CADASTRA PEÇA NOVA NO ACERVO
+                    </button>
+                  </div>
                   
                   {itensDoKit.length > 0 ? (
                       <div style={{background: 'var(--branco)', borderRadius: '8px', border: '1px solid var(--borda)', overflow: 'hidden'}}>
@@ -1088,97 +1284,153 @@ const CadastroEstoque = () => {
               )}
 
               {tipoCadastro === 'kit' && (
-                <div style={{marginTop: '30px', border: '2px dashed var(--dourado)', padding: '20px', borderRadius: '10px', backgroundColor: 'var(--fundo-cinza)'}}>
-                  <h3 style={{margin: '0 0 5px 0', color: 'var(--texto-principal)'}}>📦 DESMEMBRAR CONJUNTO (PEÇAS FILHAS)</h3>
-                  <p style={{fontSize: '12px', color: '#ef4444', marginBottom: '15px', fontWeight: 'bold'}}>
-                    ⚠️ Obrigatório: Defina o Tamanho ou a Cor de cada peça para que o sistema possa diferenciá-las.
+                <div style={{marginTop: '25px', border: '1.5px solid #e2e8f0', padding: '24px', borderRadius: '18px', backgroundColor: '#ffffff', boxShadow: '0 10px 25px -5px rgba(15,23,42,0.04)'}}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '6px' }}>
+                    <span style={{ fontSize: '20px' }}>🧩</span>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: '800' }}>
+                      DESMEMBRAR KIT EM PEÇAS AVULSAS
+                    </h3>
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: '#64748b', marginBottom: '20px', lineHeight: '1.4' }}>
+                    💡 <strong>Opcional:</strong> Adicione as peças individuais deste kit se você desejar alugá-las separadamente no sistema (ex: alugar apenas um vaso do conjunto).
                   </p>
                   
                   {pecasKitNovas.map((p, idx) => (
-                    <div key={p.id} style={{background: 'var(--branco)', border: '1px solid var(--borda)', borderRadius: '8px', padding: '15px', marginBottom: '15px', boxShadow: '0 2px 4px rgba(0,0,0,0.02)'}}>
-                        <div style={{display: 'flex', gap: '10px', marginBottom: '10px', flexWrap: 'wrap'}}>
-                        <div style={{flex: 2, minWidth: '120px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-secundario)'}}>NOME (Ex: Tampo, Base)</label>
-                          <input type="text" placeholder="Pode ficar vazio..." value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box'}} />
-                        </div>
-                        <div style={{flex: 1, minWidth: '80px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-principal)'}}>TAMANHO *</label>
-                          <input type="text" placeholder="Ex: P, M, 2x2" value={p.tamanho} onChange={e => atualizarPecaKitNova(idx, 'tamanho', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box'}} />
-                        </div>
-                        <div style={{flex: 1, minWidth: '80px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-principal)'}}>COR *</label>
-                          <input type="text" placeholder="Ex: Rosa" value={p.cor} onChange={e => atualizarPecaKitNova(idx, 'cor', e.target.value)} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box'}} />
+                    <div key={p.id} style={{background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '14px', padding: '16px', marginBottom: '14px'}}>
+                        <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center'}}>
+                        <div style={{flex: 2, minWidth: '150px'}}>
+                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>NOME DA PEÇA (Ex: Vaso M, Tampo)</label>
+                          <input type="text" placeholder="Ex: Vaso Médio Palha" value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
                         </div>
                         <div style={{flex: 1, minWidth: '100px'}}>
-                          <label style={{fontSize: '10px', fontWeight: 'bold', color: 'var(--texto-secundario)'}}>VALOR (R$) *</label>
+                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>TAMANHO <span style={{fontSize: '10px', color: '#94a3b8'}}>(opcional)</span></label>
+                          <input type="text" placeholder="Ex: P, M, 2X2" value={p.tamanho} onChange={e => atualizarPecaKitNova(idx, 'tamanho', e.target.value.toUpperCase())} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontWeight: '700', textTransform: 'uppercase'}} />
+                        </div>
+                        <div style={{flex: 1, minWidth: '100px'}}>
+                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>COR <span style={{fontSize: '10px', color: '#94a3b8'}}>(opcional)</span></label>
+                          <input type="text" placeholder="Ex: Rosa" value={p.cor} onChange={e => atualizarPecaKitNova(idx, 'cor', e.target.value)} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
+                        </div>
+                        <div style={{flex: 1, minWidth: '120px'}}>
+                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>VALOR AVULSO (R$) *</label>
                           <input type="text" placeholder="0,00" value={p.valorAluguel} onChange={e => atualizarPecaKitNova(idx, 'valorAluguel', e.target.value)} onBlur={e => {
                               let val = e.target.value.replace(',', '.');
                               const num = parseFloat(val);
                               if(!isNaN(num)) atualizarPecaKitNova(idx, 'valorAluguel', num.toFixed(2).replace('.', ','));
-                          }} style={{width: '100%', padding: '10px', fontSize: '13px', borderRadius: '6px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', boxSizing: 'border-box', fontWeight: 'bold'}} />
+                          }} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.9rem', fontWeight: '800', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
                         </div>
                         
-                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', borderRadius: '6px', marginTop: '18px', padding: '0 15px', cursor: 'pointer', fontWeight: 'bold', height: '38px'}}>Remover</button>
+                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '10px', padding: '0 14px', cursor: 'pointer', fontWeight: '800', height: '42px', marginTop: '18px', fontSize: '0.8rem'}}>Remover</button>
                       </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} className="btn-salvar-modal" style={{width: '100%', padding: '15px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', fontSize: '14px'}}>+ Adicionar Peça Filha</button>
+                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} style={{width: '100%', height: '46px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)'}}>+ Adicionar Peça ao Kit</button>
                 </div>
               )}
 
-              <div style={{ opacity: tipoCadastro === 'decoracao' ? 0.3 : 1, pointerEvents: tipoCadastro === 'decoracao' ? 'none' : 'auto', transition: '0.3s', marginTop: '30px' }}>
-                  <h3 className="section-divider mt-compact">FINANCEIRO & ESTOQUE (Do Item Principal)</h3>
+              {/* CARD: FINANCEIRO & ESTOQUE */}
+              <div style={{ marginTop: '25px', border: '1.5px solid #e2e8f0', padding: '24px', borderRadius: '18px', backgroundColor: '#ffffff', boxShadow: '0 10px 25px -5px rgba(15,23,42,0.04)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '20px', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '12px' }}>
+                    <span style={{ fontSize: '20px' }}>💰</span>
+                    <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1rem', fontWeight: '800', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
+                      {tipoCadastro === 'decoracao' ? 'PREÇO DO PACOTE DE DECORAÇÃO' : 'FINANCEIRO & ESTOQUE (DO ITEM PRINCIPAL)'}
+                    </h3>
+                  </div>
                   
-                  <div className="form-grid-4">
-                    <div className="form-group span-2">
-                        <label style={{color: 'var(--texto-principal)', fontWeight: 900, fontSize: '13px'}}>PREÇO DO ALUGUEL (R$) *</label>
-                        <input type="text" value={valorAluguel} onChange={e => setValorAluguel(e.target.value)} onBlur={formatarMoedaBlur(setValorAluguel)} required style={{borderColor: 'var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '18px', fontWeight: 'bold', padding: '15px'}} placeholder="0,00"/>
+                  {/* Grid Valores */}
+                  <div className="financeiro-grid-responsive" style={{ display: 'grid', gridTemplateColumns: tipoCadastro === 'decoracao' ? '1fr' : '2fr 1fr 1fr', gap: '16px', marginBottom: tipoCadastro === 'decoracao' ? '12px' : '20px' }}>
+                    <div style={{ background: '#fffdfa', border: '2px solid #c5a059', borderRadius: '14px', padding: '16px 20px', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.15)' }}>
+                        <label style={{ color: '#0f172a', fontWeight: '800', fontSize: '0.8rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span>{tipoCadastro === 'decoracao' ? 'VALOR DO ALUGUEL DESTE PACOTE DE DECORAÇÃO (R$) *' : 'PREÇO DO ALUGUEL (R$) *'}</span>
+                          <span style={{ fontSize: '11px', color: '#b48a3c', background: '#fef3c7', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
+                            {tipoCadastro === 'decoracao' ? '✨ Aluguel Decoração Completa' : '⭐ Valor Principal'}
+                          </span>
+                        </label>
+                        <input 
+                          type="text" 
+                          value={valorAluguel} 
+                          onChange={e => setValorAluguel(e.target.value)} 
+                          onBlur={formatarMoedaBlur(setValorAluguel)} 
+                          required 
+                          style={{ width: '100%', height: '48px', border: '1.5px solid #c5a059', borderRadius: '12px', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '1.3rem', fontWeight: '800', padding: '0 16px', outline: 'none' }} 
+                          placeholder="0,00"
+                        />
                     </div>
-                    <div className="form-group span-1">
-                        <label>VALOR COMPRA</label>
-                        <input type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00" tabIndex={tipoCadastro === 'decoracao' ? -1 : 0}/>
-                    </div>
-                    <div className="form-group span-1">
-                        <label>REPOSIÇÃO</label>
-                        <input type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00" tabIndex={tipoCadastro === 'decoracao' ? -1 : 0}/>
-                    </div>
+
+                    {tipoCadastro !== 'decoracao' && (
+                      <>
+                        <div>
+                            <label style={{ color: '#475569', fontWeight: '800', fontSize: '0.75rem', display: 'block', marginBottom: '6px' }}>VALOR COMPRA (R$)</label>
+                            <input type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00" style={{ width: '100%', height: '48px', border: '1.5px solid #cbd5e1', borderRadius: '12px', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700', padding: '0 14px', outline: 'none' }} />
+                        </div>
+                        <div>
+                            <label style={{ color: '#475569', fontWeight: '800', fontSize: '0.75rem', display: 'block', marginBottom: '6px' }}>VALOR REPOSIÇÃO (R$)</label>
+                            <input type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00" style={{ width: '100%', height: '48px', border: '1.5px solid #cbd5e1', borderRadius: '12px', backgroundColor: '#ffffff', color: '#0f172a', fontSize: '0.95rem', fontWeight: '700', padding: '0 14px', outline: 'none' }} />
+                        </div>
+                      </>
+                    )}
                   </div>
 
-                  <div className="form-grid-4 mt-15">
-                    <div className="form-group">
-                        <label>QUANTIDADE</label>
-                        {tipoCadastro === 'decoracao' || tipoCadastro === 'kit' ? (
-                            <div style={{padding: '12px', background: 'var(--fundo-cinza)', borderRadius: '6px', fontSize: '12px', color: 'var(--texto-secundario)', fontWeight: 'bold', border: '1px solid var(--borda)', textAlign: 'center'}}>
-                                Automático
-                            </div>
-                        ) : (
-                            <input type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} min="1" style={{fontWeight: 'bold', fontSize: '16px', textAlign: 'center'}}/>
-                        )}
+                  {/* Banner de Comparativo se for Decoração Completa */}
+                  {tipoCadastro === 'decoracao' && (
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '14px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+                      <div>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700', display: 'block', textTransform: 'uppercase' }}>
+                          Soma das peças selecionadas no acervo:
+                        </span>
+                        <strong style={{ fontSize: '1.1rem', color: '#0f172a', fontWeight: '800' }}>
+                          R$ {calcularTotalSomaAvulsaKit().toFixed(2).replace('.', ',')}
+                        </strong>
+                      </div>
+                      <div style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#b48a3c', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800' }}>
+                        💡 Pacote de Decoração
+                      </div>
                     </div>
-                    <div className="form-group"><label>ESTOQUE MÍNIMO</label><input type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'}/></div>
-                    
-                    <div className="form-group span-2">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                            <label style={{ margin: 0 }}>LOCALIZAÇÃO NO GALPÃO</label>
-                            <button 
-                                type="button" 
-                                onClick={abrirModalLocalizacao} 
-                                style={{ background: 'transparent', border: 'none', color: 'var(--dourado)', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', textDecoration: 'underline' }}
-                            >
-                                + Gerenciar Prateleiras
-                            </button>
-                        </div>
-                        <select value={localizacao} onChange={e => setLocalizacao(e.target.value)}>
-                            <option value="" disabled hidden>Corredor / Prateleira...</option>
-                            {listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}
-                        </select>
+                  )}
+
+                  {/* Grid Quantidade & Estoque */}
+                  {tipoCadastro !== 'decoracao' && (
+                    <div className="estoque-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 2fr', gap: '16px' }}>
+                      <div>
+                          <label style={{ color: '#475569', fontWeight: '800', fontSize: '0.75rem', display: 'block', marginBottom: '6px' }}>QUANTIDADE</label>
+                          {tipoCadastro === 'kit' ? (
+                              <div style={{ height: '48px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc', borderRadius: '12px', fontSize: '0.85rem', color: '#b48a3c', fontWeight: '800', border: '1.5px solid #e2e8f0' }}>
+                                ⚡ Automático
+                              </div>
+                          ) : (
+                              <input type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} min="1" style={{ width: '100%', height: '48px', fontWeight: '800', fontSize: '1rem', textAlign: 'center', border: '1.5px solid #cbd5e1', borderRadius: '12px', color: '#0f172a', outline: 'none' }}/>
+                          )}
+                      </div>
+                      <div>
+                        <label style={{ color: '#475569', fontWeight: '800', fontSize: '0.75rem', display: 'block', marginBottom: '6px' }}>ESTOQUE MÍNIMO</label>
+                        <input type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'} style={{ width: '100%', height: '48px', fontWeight: '700', fontSize: '0.95rem', textAlign: 'center', border: '1.5px solid #cbd5e1', borderRadius: '12px', color: '#0f172a', outline: 'none', background: alertaEstoque === 'NaoAvisar' ? '#f1f5f9' : '#ffffff' }} />
+                      </div>
+                      
+                      <div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <label style={{ margin: 0, color: '#475569', fontWeight: '800', fontSize: '0.75rem' }}>LOCALIZAÇÃO NO GALPÃO</label>
+                              <button 
+                                  type="button" 
+                                  onClick={abrirModalLocalizacao} 
+                                  style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#b48a3c', padding: '3px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer', transition: '0.2s' }}
+                              >
+                                  + Gerenciar Prateleiras
+                              </button>
+                          </div>
+                          <select value={localizacao} onChange={e => setLocalizacao(e.target.value)} style={{ width: '100%', minHeight: '48px', padding: '0 36px 0 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', color: '#0f172a', fontWeight: '600', backgroundColor: '#ffffff', outline: 'none', cursor: 'pointer' }}>
+                              <option value="" disabled hidden>Corredor / Prateleira...</option>
+                              {listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}
+                          </select>
+                      </div>
                     </div>
-                  </div>
+                  )}
               </div>
 
-              <div style={{ marginTop: 'auto', paddingTop: '30px', display: 'flex', justifyContent: 'flex-end', gap: '15px' }}>
-                <Link to={dadosCompra ? "/compras" : "/estoque"} className="btn-voltar-link">Cancelar</Link>
-                <button type="submit" className="btn-salvar-form" disabled={salvando}>
+              {/* BARRA FIXA DE AÇÃO: CANCELAR E SALVAR */}
+              <div style={{ marginTop: '30px', paddingTop: '20px', borderTop: '1.5px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
+                <Link to={dadosCompra ? "/compras" : "/estoque"} style={{ height: '48px', padding: '0 24px', borderRadius: '12px', border: '1.5px solid #cbd5e1', background: '#ffffff', color: '#64748b', fontSize: '0.9rem', fontWeight: '700', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: '0.2s' }}>
+                  Cancelar
+                </Link>
+                <button type="submit" disabled={salvando} style={{ height: '48px', padding: '0 36px', borderRadius: '12px', border: 'none', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', fontSize: '0.95rem', fontWeight: '800', cursor: 'pointer', transition: '0.2s', boxShadow: '0 4px 15px rgba(197, 160, 89, 0.4)', display: 'inline-flex', alignItems: 'center', gap: '8px' }}>
                     {salvando ? 'Salvando...' : (tipoCadastro === 'decoracao' ? `💾 SALVAR ${tipoPacote}` : tipoCadastro === 'kit' ? '💾 SALVAR CONJUNTO' : '💾 SALVAR PEÇA')}
                 </button>
               </div>
@@ -1192,9 +1444,18 @@ const CadastroEstoque = () => {
         <div className="modal-overlay-premium" style={{ zIndex: 99999 }}>
           <div className="modal-box-premium catalogo-modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden', backgroundColor: 'var(--branco)' }}>
             
-            <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid var(--borda)', background: 'var(--branco)', flexShrink: 0 }}>
-              <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--texto-principal)' }}>📦 Acervo Físico <span style={{color: 'var(--texto-secundario)', fontSize: '14px'}}>(Escolha as peças do pacote)</span></h3>
-              <button className="btn-fechar" onClick={() => setModalCatalogoAberto(false)}>X</button>
+            <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid var(--borda)', background: 'var(--branco)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--texto-principal)', fontWeight: '800' }}>
+                  📦 Acervo Físico <span style={{color: 'var(--texto-secundario)', fontSize: '14px', fontWeight: '500'}}>(Escolha as peças do pacote)</span>
+                </h3>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <button type="button" onClick={() => setModalNovaPecaAberto(true)} style={{ background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)' }}>
+                  ➕ Cadastrar Nova Peça no Acervo
+                </button>
+                <button className="btn-fechar" onClick={() => setModalCatalogoAberto(false)}>X</button>
+              </div>
             </div>
             
             <div className="catalogo-filtros" style={{ padding: '15px 30px', background: 'var(--fundo-cinza)', borderBottom: '1px solid var(--borda)', flexShrink: 0 }}>
@@ -1254,45 +1515,180 @@ const CadastroEstoque = () => {
         </div>
       )}
 
-      {/* 🔥 MODAL PARA GERENCIAR LOCALIZAÇÕES BLINDADO POR USER_ID 🔥 */}
+      {/* 🔥 MODAL DE CADASTRO RÁPIDO DE NOVA PEÇA NO ACERVO 🔥 */}
+      {modalNovaPecaAberto && (
+        <div className="modal-overlay-premium" style={{ zIndex: 999999, background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)' }}>
+          <div className="modal-box-premium" style={{ maxWidth: '520px', width: '92%', padding: '28px', borderRadius: '20px', backgroundColor: '#ffffff', boxShadow: '0 20px 40px rgba(0,0,0,0.25)', border: '1px solid #e2e8f0' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '12px' }}>
+              <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>✨</span> Cadastrar Nova Peça no Acervo
+              </h3>
+              <button type="button" className="btn-fechar" onClick={() => setModalNovaPecaAberto(false)}>X</button>
+            </div>
+
+            <form onSubmit={salvarNovaPecaRapidaNoAcervo}>
+              <div className="form-group" style={{ marginBottom: '16px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>NOME DA NOVA PEÇA *</label>
+                <input 
+                  type="text" 
+                  required 
+                  placeholder="Ex: Vaso Murano Dourado, Painel Rústico" 
+                  value={novaPecaNome} 
+                  onChange={e => setNovaPecaNome(e.target.value)} 
+                  style={{ width: '100%', height: '46px', padding: '0 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.9rem', outline: 'none' }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '16px' }}>
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>CATEGORIA *</label>
+                  <select 
+                    value={novaPecaCategoria} 
+                    onChange={e => setNovaPecaCategoria(e.target.value)} 
+                    style={{ width: '100%', height: '46px', padding: '0 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', outline: 'none' }}
+                  >
+                    <option value="Vasos">Vasos</option>
+                    <option value="Utensílios de Festa">Utensílios de Festa</option>
+                    <option value="Móveis">Móveis</option>
+                    <option value="Painéis">Painéis</option>
+                    <option value="Tapetes e Pisos">Tapetes e Pisos</option>
+                    <option value="Iluminação">Iluminação</option>
+                    <option value="Capas e Têxteis">Capas e Têxteis</option>
+                    <option value="Geral">Geral / Outros</option>
+                  </select>
+                </div>
+
+                <div className="form-group">
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>VALOR ALUGUEL (R$) *</label>
+                  <input 
+                    type="text" 
+                    required 
+                    placeholder="0,00" 
+                    value={novaPecaPreco} 
+                    onChange={e => setNovaPecaPreco(e.target.value)} 
+                    onBlur={formatarMoedaBlur(setNovaPecaPreco)}
+                    style={{ width: '100%', height: '46px', padding: '0 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.9rem', fontWeight: '700', outline: 'none' }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group" style={{ marginBottom: '24px' }}>
+                <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569' }}>QUANTIDADE EM ESTOQUE *</label>
+                <input 
+                  type="number" 
+                  min="1" 
+                  required 
+                  value={novaPecaQtd} 
+                  onChange={e => setNovaPecaQtd(e.target.value)} 
+                  style={{ width: '100%', height: '46px', padding: '0 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.9rem', fontWeight: '700', outline: 'none', textAlign: 'center' }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                <button type="button" onClick={() => setModalNovaPecaAberto(false)} style={{ height: '44px', padding: '0 20px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#ffffff', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+                <button type="submit" disabled={salvandoNovaPecaRapida} style={{ height: '44px', padding: '0 26px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)' }}>
+                  {salvandoNovaPecaRapida ? 'Salvando...' : '💾 Cadastrar e Incluir no Pacote'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🔥 MODAL EXECUTIVE PARA GERENCIAR PRATELEIRAS & ENDEREÇAMENTO FÍSICO 🔥 */}
       {modalLocalizacaoAberto && (
-        <div className="modal-overlay-premium" style={{ zIndex: 100000 }}>
-          <div className="modal-box-premium" style={{ maxWidth: '400px', width: '90%', padding: '25px', borderRadius: '12px', backgroundColor: 'var(--branco)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid var(--borda)', paddingBottom: '15px', marginBottom: '20px' }}>
-              <h3 style={{ margin: 0, color: 'var(--texto-principal)', fontSize: '18px' }}>📍 Gerenciar Prateleiras</h3>
-              <button onClick={() => setModalLocalizacaoAberto(false)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: 'var(--texto-secundario)' }}>×</button>
+        <div className="modal-overlay-premium" style={{ zIndex: 100000, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)' }}>
+          <div className="modal-box-premium" style={{ maxWidth: '540px', width: '92%', padding: '30px', borderRadius: '24px', backgroundColor: '#ffffff', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)', border: '1px solid #e2e8f0' }}>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#b48a3c' }}>
+                  📍
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>Gerenciar Prateleiras do Galpão</h3>
+                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Cadastre corredores, prateleiras e caixotões</span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setModalLocalizacaoAberto(false)} 
+                style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '18px', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+              >
+                ×
+              </button>
             </div>
             
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <input 
-                  type="text" 
-                  placeholder="Ex: Corredor A, Gaveta 3..." 
-                  value={novaLocalizacaoText}
-                  onChange={e => setNovaLocalizacaoText(e.target.value)}
-                  style={{ flex: 1, padding: '10px', border: '1px solid var(--borda)', backgroundColor: 'var(--fundo-cinza)', color: 'var(--texto-principal)', borderRadius: '6px', outline: 'none' }}
-                  onKeyDown={e => e.key === 'Enter' && handleAddLocalizacao()}
-              />
+            {/* CONSTRUTOR RÁPIDO DE ENDEREÇO */}
+            <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
+              <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>
+                + CADASTRAR NOVO ENDEREÇO
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
+                <div>
+                  <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', display: 'block', marginBottom: '3px' }}>CORREDOR</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Corredor A" 
+                    value={modalCorredor} 
+                    onChange={e => setModalCorredor(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', background: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', display: 'block', marginBottom: '3px' }}>PRATELEIRA</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Prateleira 1" 
+                    value={modalPrateleira} 
+                    onChange={e => setModalPrateleira(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', background: '#fff' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', display: 'block', marginBottom: '3px' }}>BANDEJA</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Bandeja 3" 
+                    value={modalBandeja} 
+                    onChange={e => setModalBandeja(e.target.value)}
+                    style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', background: '#fff' }}
+                  />
+                </div>
+              </div>
+
+              {gerarPreviewModalEndereco() && (
+                <div style={{ fontSize: '0.78rem', color: '#b48a3c', background: '#fef3c7', padding: '6px 12px', borderRadius: '8px', border: '1px solid #fde68a', fontWeight: '700', marginBottom: '10px' }}>
+                  Prévia: {gerarPreviewModalEndereco()}
+                </div>
+              )}
+
               <button 
-                  type="button" 
-                  onClick={handleAddLocalizacao}
-                  className="btn-salvar-modal"
-                  style={{ padding: '0 15px', borderRadius: '6px', fontWeight: 'bold', cursor: 'pointer' }}
+                type="button" 
+                onClick={handleAddLocalizacaoEspecial}
+                style={{ width: '100%', height: '38px', borderRadius: '20px', fontWeight: '800', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', cursor: 'pointer', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}
               >
-                  Adicionar
+                + Adicionar esta Prateleira
               </button>
             </div>
 
-            <div style={{ maxHeight: '250px', overflowY: 'auto', border: '1px solid var(--borda)', borderRadius: '6px', background: 'var(--fundo-cinza)' }}>
+            {/* LISTA DE LOCALIZAÇÕES CADASTRADAS */}
+            <div style={{ marginBottom: '8px', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
+              PRATELEIRAS SALVAS NO SISTEMA:
+            </div>
+
+            <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff', padding: '6px' }}>
                 {localizacoesEditaveis.length === 0 ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: 'var(--texto-secundario)', fontSize: '13px' }}>Nenhuma localização cadastrada.</div>
+                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Nenhuma localização cadastrada ainda.</div>
                 ) : (
                     localizacoesEditaveis.map((loc, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', borderBottom: idx !== localizacoesEditaveis.length - 1 ? '1px solid var(--borda)' : 'none', background: 'var(--branco)' }}>
-                            <span style={{ fontSize: '14px', color: 'var(--texto-principal)', fontWeight: '500' }}>{loc}</span>
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '8px', marginBottom: '4px', background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+                            <span style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '600' }}>📍 {loc}</span>
                             <button 
                                 type="button" 
                                 onClick={() => handleRemoveLocalizacao(loc)}
-                                style={{ background: 'rgba(239,68,68,0.15)', color: '#ef4444', border: 'none', width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+                                style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', width: '26px', height: '26px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}
                                 title="Remover"
                             >
                               ×
@@ -1302,12 +1698,22 @@ const CadastroEstoque = () => {
                 )}
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '20px', paddingTop: '15px', borderTop: '1px solid var(--borda)' }}>
-              <button type="button" onClick={() => setModalLocalizacaoAberto(false)} className="btn-voltar-link" style={{ padding: '10px 20px', borderRadius: '6px' }}>
+            {/* BOTÕES DE AÇÃO */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+              <button 
+                type="button" 
+                onClick={() => setModalLocalizacaoAberto(false)} 
+                style={{ padding: '10px 20px', borderRadius: '30px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
                   Cancelar
               </button>
-              <button type="button" onClick={handleSaveLocalizacoes} disabled={salvandoLocalizacoes} className="btn-salvar-modal" style={{ padding: '10px 20px', borderRadius: '6px', fontWeight: 'bold' }}>
-                  {salvandoLocalizacoes ? 'Salvando...' : 'Salvar no Sistema'}
+              <button 
+                type="button" 
+                onClick={handleSaveLocalizacoes} 
+                disabled={salvandoLocalizacoes} 
+                style={{ padding: '10px 24px', borderRadius: '30px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.35)', textTransform: 'uppercase' }}
+              >
+                  {salvandoLocalizacoes ? 'Salvando...' : '💾 Salvar no Sistema'}
               </button>
             </div>
 

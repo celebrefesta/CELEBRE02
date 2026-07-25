@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NovaLocacao.css';
 import { db } from '../../firebaseConfig'; 
-import { collection, getDocs, addDoc, getCountFromServer, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, addDoc, getCountFromServer, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 
@@ -731,14 +731,20 @@ const NovaLocacao = () => {
                 <button 
                   type="button" 
                   className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`} 
-                  onClick={() => setTipoServico('PEGUE E MONTE')}
+                  onClick={() => {
+                    setTipoServico('PEGUE E MONTE');
+                    setLogistica(prev => ({ ...prev, tipo: 'retirada', frete: '' }));
+                  }}
                 >
                   📦 PEGUE E MONTE
                 </button>
                 <button 
                   type="button" 
                   className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`} 
-                  onClick={() => setTipoServico('DECORACAO COMPLETA')}
+                  onClick={() => {
+                    setTipoServico('DECORACAO COMPLETA');
+                    setLogistica(prev => ({ ...prev, tipo: 'entrega' }));
+                  }}
                 >
                   ✨ DECORAÇÃO COMPLETA
                 </button>
@@ -827,7 +833,12 @@ const NovaLocacao = () => {
                           type="text" 
                           placeholder="Ex: Bailarina Rosa com Ouro..." 
                           value={temaDigitadoPersonalizado} 
-                          onChange={e => setTemaDigitadoPersonalizado(e.target.value)} 
+                          onChange={e => {
+                            const val = e.target.value;
+                            const formatado = val.replace(/(?:^|\s)\S/g, a => a.toUpperCase());
+                            setTemaDigitadoPersonalizado(formatado);
+                          }} 
+                          autoCapitalize="words"
                           style={{borderColor: '#bfdbfe'}} 
                           autoFocus
                         />
@@ -855,9 +866,16 @@ const NovaLocacao = () => {
                 <button 
                   type="button" 
                   className={logistica.tipo === 'entrega' ? 'active' : ''} 
-                  onClick={() => setLogistica({...logistica, tipo: 'entrega'})}
+                  onClick={() => {
+                    if (tipoServico === 'PEGUE E MONTE') {
+                      alert("📦 Na modalidade Pegue e Monte, a retirada e devolução são feitas pelo cliente no balcão da loja. Se precisar de frete, altere a modalidade do serviço para DECORAÇÃO COMPLETA.");
+                      return;
+                    }
+                    setLogistica({...logistica, tipo: 'entrega'});
+                  }}
+                  style={tipoServico === 'PEGUE E MONTE' ? { opacity: 0.5, cursor: 'not-allowed' } : {}}
                 >
-                  Com Frete
+                  Com Frete {tipoServico === 'PEGUE E MONTE' && '🔒'}
                 </button>
                 <button 
                   type="button" 
@@ -927,8 +945,10 @@ const NovaLocacao = () => {
                   className="btn-secundario-alerta" 
                   onClick={() => { 
                     const clienteObj = clientes.find(c => String(c.id) === String(clienteSelecionado));
-                    const nomeCli = clienteObj ? (clienteObj.nome || clienteObj.nomeFantasia || '') : '';
-                    window.open(`/compras/nova?cliente=${encodeURIComponent(nomeCli)}&tema=${encodeURIComponent(temaFesta || '')}`, '_blank');
+                    const nomeCli = clienteObj ? (clienteObj.nome || clienteObj.nomeFantasia || clienteObj.razaoSocial || '') : (clienteSelecionado || 'Cliente em Atendimento');
+                    const nomeTema = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : (temaFesta || '');
+                    const url = `/compras/nova?clienteNome=${encodeURIComponent(nomeCli)}&temaFesta=${encodeURIComponent(nomeTema)}&dataRetirada=${encodeURIComponent(datas.retirada || '')}`;
+                    window.open(url, '_blank');
                   }}
                 >
                   🛒 Faltou algo? (Comprar)

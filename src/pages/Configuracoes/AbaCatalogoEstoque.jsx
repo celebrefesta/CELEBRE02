@@ -24,6 +24,9 @@ const AbaCatalogoEstoque = ({
   const [inputGrupoVitrine, setInputGrupoVitrine] = useState('');
   const [inputTemaVitrine, setInputTemaVitrine] = useState('');
   const [inputLoc, setInputLoc] = useState('');
+  const [inputCorredor, setInputCorredor] = useState('');
+  const [inputPrateleira, setInputPrateleira] = useState('');
+  const [inputBandeja, setInputBandeja] = useState('');
   const [inputTam, setInputTam] = useState('');
 
   const [mostrarGuia, setMostrarGuia] = useState(true);
@@ -678,6 +681,27 @@ const AbaCatalogoEstoque = ({
     catch (e) { alert("Erro ao adicionar."); }
   };
 
+  const gerarPreviewEndereco = () => {
+    const partes = [];
+    if (inputCorredor.trim()) partes.push(inputCorredor.trim().toUpperCase().startsWith('CORREDOR') ? inputCorredor.trim() : `Corredor ${inputCorredor.trim()}`);
+    if (inputPrateleira.trim()) partes.push(inputPrateleira.trim().toUpperCase().startsWith('PRATELEIRA') || inputPrateleira.trim().toUpperCase().startsWith('ESTANTE') ? inputPrateleira.trim() : `Prateleira ${inputPrateleira.trim()}`);
+    if (inputBandeja.trim()) partes.push(inputBandeja.trim().toUpperCase().startsWith('BANDEJA') || inputBandeja.trim().toUpperCase().startsWith('CAIXOTÃO') || inputBandeja.trim().toUpperCase().startsWith('NICHO') ? inputBandeja.trim() : `Bandeja ${inputBandeja.trim()}`);
+    if (partes.length === 0) return 'Preencha o Corredor, Prateleira ou Bandeja acima...';
+    return partes.join(' - ');
+  };
+
+  const salvarNovoEnderecado = () => {
+    const endereco = gerarPreviewEndereco();
+    if (endereco === 'Preencha o Corredor, Prateleira ou Bandeja acima...') {
+      alert("Preencha pelo menos o Corredor ou a Prateleira.");
+      return;
+    }
+    adicionarLocalizacao(endereco);
+    setInputCorredor('');
+    setInputPrateleira('');
+    setInputBandeja('');
+  };
+
   const removerLocalizacao = async (valor) => {
     const quantidadeEmUso = await verificarUsoNoEstoque('localizacao', valor);
     if (quantidadeEmUso > 0) { alert(`⛔ AÇÃO BLOQUEADA!\n\nExistem ${quantidadeEmUso} peça(s) guardadas em "${valor}".`); return; }
@@ -837,17 +861,67 @@ const AbaCatalogoEstoque = ({
                   </button>
                 </div>
               </div>
-              <p className="subtext" style={{ fontSize: '12px', marginBottom: '10px' }}>Ex: Corredor A - Prateleira 2, Caixotão 05</p>
+              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '18px', marginBottom: '20px', marginTop: '10px' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <i className="fas fa-cubes" style={{ color: '#c5a059' }}></i>
+                  <span>CONSTRUTOR DE ENDEREÇO (CORREDOR ➔ PRATELEIRA ➔ BANDEJA / CAIXOTÃO)</span>
+                </div>
 
-              <div className="add-item-box">
-                <input 
-                  type="text" 
-                  placeholder="Ex: Corredor A, Prateleira 2..." 
-                  value={inputLoc} 
-                  onChange={(e) => setInputLoc(e.target.value)} 
-                  onKeyDown={(e) => e.key === 'Enter' && adicionarLocalizacao(inputLoc)} 
-                />
-                <button className="btn-add" onClick={() => adicionarLocalizacao(inputLoc)}>+ Add Prateleira</button>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>🚪 CORREDOR</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: Corredor A" 
+                      value={inputCorredor} 
+                      onChange={(e) => setInputCorredor(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
+                      style={{ width: '100%', height: '42px', padding: '0 14px', border: '1.5px solid #cbd5e1', borderRadius: '10px', fontSize: '0.88rem', outline: 'none', background: '#ffffff', fontWeight: '500' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>🧱 PRATELEIRA / ESTANTE</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: Prateleira 01" 
+                      value={inputPrateleira} 
+                      onChange={(e) => setInputPrateleira(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
+                      style={{ width: '100%', height: '42px', padding: '0 14px', border: '1.5px solid #cbd5e1', borderRadius: '10px', fontSize: '0.88rem', outline: 'none', background: '#ffffff', fontWeight: '500' }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>📥 BANDEJA / CAIXOTÃO / NICHO</label>
+                    <input 
+                      type="text" 
+                      placeholder="Ex: Bandeja 02 (Opcional)" 
+                      value={inputBandeja} 
+                      onChange={(e) => setInputBandeja(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
+                      style={{ width: '100%', height: '42px', padding: '0 14px', border: '1.5px solid #cbd5e1', borderRadius: '10px', fontSize: '0.88rem', outline: 'none', background: '#ffffff', fontWeight: '500' }}
+                    />
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '12px', borderTop: '1px dashed #cbd5e1' }}>
+                  <div style={{ fontSize: '0.82rem', color: '#0f172a' }}>
+                    <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700' }}>PRÉ-VISUALIZAÇÃO DO ENDEREÇO: </span>
+                    <strong style={{ color: '#b48a3c', background: '#fef3c7', padding: '4px 10px', borderRadius: '12px', border: '1px solid #fde68a' }}>{gerarPreviewEndereco()}</strong>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={salvarNovoEnderecado}
+                    style={{ padding: '10px 22px', borderRadius: '30px', fontWeight: '800', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', cursor: 'pointer', fontSize: '0.78rem', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                  >
+                    + ADICIONAR ENDEREÇO
+                  </button>
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '10px', fontSize: '0.75rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
+                📍 ENDEREÇOS E PRATELEIRAS JÁ CADASTRADAS NO GALPÃO:
               </div>
 
               <ul className="config-list" style={{ maxHeight: '250px' }}>

@@ -103,8 +103,10 @@ const Compras = () => {
       let updatePayload = { status: novoStatus };
 
       if (novoStatus === 'chegou') {
+        updatePayload.dataChegada = new Date().toISOString();
+        if (!item.dataCompra) updatePayload.dataCompra = new Date().toISOString();
+
         if (!snapshotEstoque.empty) {
-          updatePayload.dataChegada = new Date().toISOString();
           const itemRef = doc(db, "lista_compras", item.id);
           await updateDoc(itemRef, updatePayload);
 
@@ -116,19 +118,21 @@ const Compras = () => {
           });
 
           await registrarLog("COMPRA RECEBIDA", `Registrou a chegada de "${item.nome}" e adicionou ao estoque.`);
-          alert(`📦 Caixa recebida!\n\nA peça "${item.nome}" já existe no seu acervo. A quantidade no estoque foi somada automaticamente!`);
+          alert(`📦 Compra Concluída!\n\nA peça "${item.nome}" já existe no seu acervo. A quantidade no estoque foi somada automaticamente!`);
         } else {
           if (item.categoria === "material") {
-             updatePayload.dataChegada = new Date().toISOString();
              const itemRef = doc(db, "lista_compras", item.id);
              await updateDoc(itemRef, updatePayload);
              
              await registrarLog("COMPRA RECEBIDA", `Registrou a chegada do material "${item.nome}".`);
              alert(`📦 Material de consumo recebido e baixado da lista!`);
           } else {
-             const querCadastrarAgora = window.confirm(`✨ A caixa de "${item.nome}" chegou!\n\nMas atenção: Como é uma peça INÉDITA, ela só vai constar como "No Acervo" após você preencher a foto e os detalhes dela.\n\nDeseja ir para a tela de Cadastro de Estoque AGORA?`);
+             const itemRef = doc(db, "lista_compras", item.id);
+             await updateDoc(itemRef, updatePayload);
+
+             const querCadastrarAgora = window.confirm(`✨ Compra concluída com sucesso!\n\nComo "${item.nome}" é uma peça INÉDITA, deseja ir para a tela de Cadastro de Estoque AGORA para registrar fotos e detalhes?`);
              if (querCadastrarAgora) {
-                 await registrarLog("COMPRA RECEBIDA", `Registrou a chegada de "${item.nome}" e iniciou cadastro inédito no acervo.`);
+                 await registrarLog("COMPRA RECEBIDA", `Registrou a compra de "${item.nome}" e iniciou cadastro inédito no acervo.`);
                  navigate('/cadastro-estoque', { state: { dadosCompra: item } });
              }
              return;
@@ -199,64 +203,82 @@ const Compras = () => {
   };
 
   return (
-    <div className="compras-container dashboard-container">
+    <div className="clientes-container fade-in">
       
-      <div className="dashboard-header">
-        <div className="header-text">
-          <h1>LISTA DE COMPRAS</h1>
-          <p>Gerencie aquisições vinculadas aos pedidos e ao acervo.</p>
-        </div>
-        <button className="btn-novo-cliente" onClick={() => navigate("/compras/nova")}>
-          + Adicionar Item
-        </button>
-      </div>
-
-      <div className="resumo-grid">
-        <div className="card-resumo card-azul">
-          <div className="card-info">
-            <label>TOTAL NA LISTA</label>
-            <h2>{itens.length}</h2>
-            <p style={{color: '#3b82f6'}}>Itens cadastrados</p>
+      {/* HERO CABEÇALHO IDÊNTICO AO GESTÃO DE CLIENTES */}
+      <div className="clientes-hero-header">
+        <div className="header-title-row">
+          <div className="header-icon-badge">
+            🛒
           </div>
-          <div className="card-icon">🛒</div>
-        </div>
-
-        <div className="card-resumo card-laranja">
-          <div className="card-info">
-            <label>ORÇAMENTO PENDENTE</label>
-            <h2>R$ {totais.pendente.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h2>
-            <p>Estimado p/ compras</p>
+          <div className="welcome-text">
+            <h1>Lista de Compras & Aquisições</h1>
+            <p>Gerencie aquisições vinculadas aos pedidos, fornecedores e peças do acervo.</p>
           </div>
-          <div className="card-icon">📂</div>
         </div>
-
-        <div className="card-resumo card-vermelho">
-          <div className="card-info">
-            <label>ITENS EM ALERTA</label>
-            <h2>{totais.urgente}</h2>
-            <p style={{color: '#ef4444', fontWeight: 'bold'}}>Perto do prazo limite</p>
-          </div>
-          <div className="card-icon">🚨</div>
-        </div>
-
-        <div className="card-resumo card-verde">
-          <div className="card-info">
-            <label>REALIZADO (MÊS)</label>
-            <h2>R$ {totais.realizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h2>
-            <p style={{color: '#10b981'}}>Investimento aprovado</p>
-          </div>
-          <div className="card-icon">✅</div>
+        <div className="header-actions">
+          <button className="btn-primary-celebre" onClick={() => navigate("/compras/nova")}>
+            + ADICIONAR ITEM
+          </button>
         </div>
       </div>
 
-      <div className="tabela-secao">
-        <div className="filtros-area">
-          <div className="search-box-container">
+      {/* CARDS DE DASHBOARD 4 COLUNAS IDÊNTICOS AO GESTÃO DE CLIENTES */}
+      <div className="clientes-stats-grid">
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-purple">
+            🛒
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">TOTAL NA LISTA</span>
+            <strong className="stat-number">{itens.length}</strong>
+            <small style={{color: '#7e22ce', fontSize: '0.75rem', fontWeight: '600'}}>Itens cadastrados</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-amber">
+            📂
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">ORÇAMENTO PENDENTE</span>
+            <strong className="stat-number">R$ {totais.pendente.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <small style={{color: '#b45309', fontSize: '0.75rem', fontWeight: '600'}}>Estimado p/ compras</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-red">
+            🚨
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">ITENS EM ALERTA</span>
+            <strong className="stat-number">{totais.urgente}</strong>
+            <small style={{color: '#b91c1c', fontSize: '0.75rem', fontWeight: 'bold'}}>Perto do prazo limite</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-green">
+            ✅
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">REALIZADO (MÊS)</span>
+            <strong className="stat-number">R$ {totais.realizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <small style={{color: '#15803d', fontSize: '0.75rem', fontWeight: '600'}}>Investimento aprovado</small>
+          </div>
+        </div>
+      </div>
+
+      {/* CONTAINER TABELA E FILTROS IDÊNTICOS AO GESTÃO DE CLIENTES */}
+      <div className="table-card-container">
+        <div className="table-filter-bar">
+          <div className="search-input-wrapper">
             <span className="search-icon">🔍</span>
-            <input type="text" className="search-input" placeholder="Buscar por item ou pedido..." value={busca} onChange={e => setBusca(e.target.value)} />
+            <input type="text" placeholder="Buscar por item ou pedido..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
 
-          <button className="btn-ordem" onClick={alternarOrdem} title="Mudar Ordem">
+          <button className="btn-secondary-celebre" onClick={alternarOrdem} title="Mudar Ordem">
               {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : ordemAlfabetica === 'Z-A' ? '⬆️ Z - A' : '📅 Recentes'}
           </button>
           
@@ -270,8 +292,8 @@ const Compras = () => {
           </div>
         </div>
 
-        <div className="tabela-wrapper">
-          <table className="custom-table-compras">
+        <div className="table-responsive-wrapper">
+          <table className="pro-table">
             <thead>
               <tr>
                 <th>ITEM & VÍNCULO</th>
@@ -291,6 +313,7 @@ const Compras = () => {
                 itensFiltrados.map((item) => {
                   const subtotal = (Number(item.quantidade) || 1) * (Number(item.valorEstimado) || 0);
                   const isPedido = item.vinculoTipo === 'pedido'; 
+                  const isPresencial = item.tipoEntrega === '1' || Number(item.diasFrete) === 1;
                   
                   const hoje = new Date();
                   hoje.setHours(0,0,0,0);
@@ -301,7 +324,12 @@ const Compras = () => {
                   let dataExibicao = 'S/D';
 
                   if (item.status === 'pendente') {
-                      if (isPedido && item.prazo) {
+                      if (isPresencial) {
+                          labelPrazo = '📍 Local:';
+                          dataExibicao = 'Compra Presencial';
+                          alertaClasse = 'alerta-seguro';
+                          alertaTexto = '⚡ Na Cidade';
+                      } else if (isPedido && item.prazo) {
                           const dataPrazo = new Date(item.prazo + 'T00:00:00');
                           const diasParaPrazo = Math.ceil((dataPrazo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
                           
@@ -364,7 +392,7 @@ const Compras = () => {
                   } 
                   else if (item.status === 'chegou') {
                       labelPrazo = '✅ Status:';
-                      dataExibicao = 'Entregue';
+                      dataExibicao = isPresencial ? 'Comprado na Loja' : 'Entregue';
                       alertaClasse = '';
                       alertaTexto = '';
                   }
@@ -380,7 +408,7 @@ const Compras = () => {
                     <tr key={item.id} className={item.status === 'chegou' ? 'linha-comprado' : ''}>
                       <td>
                         <span className="nome-produto" style={{ textDecoration: item.status === 'chegou' ? 'line-through' : 'none' }}>
-                          {item.nome} {item.formato === 'kit' && <span style={{fontSize: '10px', color: '#c5a059', fontWeight: 'bold'}}>(KIT)</span>}
+                          {item.nome} {item.formato === 'kit' && <span className="tag-kit-gold">(KIT)</span>}
                         </span>
                         <div className="vinculo-tag" style={{ marginTop: '4px' }}>
                           {isPedido ? '🔗' : '📦'} {item.vinculo || "Estoque Geral"}
@@ -427,10 +455,14 @@ const Compras = () => {
                       </td>
 
                       <td>
-                        <div className="botoes-acao-container">
+                        <div className="table-actions-container">
                           {item.status === 'pendente' && (
-                             <button className="btn-acao-status comprar" onClick={() => handleStatusChange(item, 'comprado')}>
-                               🛒 Comprado
+                             <button 
+                               className="btn-acao-status comprar" 
+                               onClick={() => isPresencial ? handleStatusChange(item, 'chegou') : handleStatusChange(item, 'comprado')}
+                               title={isPresencial ? "Compra presencial (Já está com você)" : "Marcar como comprado via frete"}
+                             >
+                               🛒 {isPresencial ? 'Comprado (Já Comigo)' : 'Comprado'}
                              </button>
                           )}
                           
@@ -455,8 +487,8 @@ const Compras = () => {
                                </button>
                           )}
 
-                          <button className="btn-action edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar">✏️</button>
-                          <button className="btn-action delete" onClick={() => handleExcluir(item.id, item.nome)} title="Excluir">🗑️</button>
+                          <button className="action-btn edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar">✏️</button>
+                          <button className="action-btn delete" onClick={() => handleExcluir(item.id, item.nome)} title="Excluir">🗑️</button>
                         </div>
                       </td>
                     </tr>

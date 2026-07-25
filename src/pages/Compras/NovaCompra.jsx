@@ -80,15 +80,15 @@ const NovaCompra = () => {
     } else {
         // 🔥 Captura parâmetros de Pedido em Aberto se vindo de NovaLocacao
         const queryParams = new URLSearchParams(window.location.search);
-        const cliNome = queryParams.get('clienteNome');
-        const dRetirada = queryParams.get('dataRetirada');
-        const tFesta = queryParams.get('temaFesta');
+        const cliNome = queryParams.get('clienteNome') || queryParams.get('cliente');
+        const dRetirada = queryParams.get('dataRetirada') || queryParams.get('data');
+        const tFesta = queryParams.get('temaFesta') || queryParams.get('tema');
 
-        if (cliNome) {
+        if (cliNome || tFesta) {
           setDestino('pedido');
           setPedidoSelecionado({
             id: `temp_${Date.now()}`,
-            clienteNome: cliNome,
+            clienteNome: cliNome || 'Cliente em Atendimento',
             dataRetirada: dRetirada || '',
             temaFesta: tFesta || 'Pedido em Aberto',
             status: 'EM ABERTO'
@@ -323,12 +323,13 @@ const NovaCompra = () => {
   if (carregandoEdicao) return <div style={{padding: '50px', textAlign: 'center'}}>Carregando dados da compra...</div>;
 
   return (
-    <div className="nova-compra-page">
+    <div className="nova-compra-page fade-in">
       
       <div className="page-header-premium">
         <div className="header-titles">
+          <span className="badge-header-gold">✨ GESTÃO DE COMPRAS & AQUISIÇÕES</span>
           <h1>{isEditing ? '✏️ Editar Solicitação de Compra' : 'Nova Solicitação de Compra'}</h1>
-          <p>Cadastre pecas, insumos ou infraestrutura para sua empresa</p>
+          <p>Cadastre peças, insumos ou infraestrutura para sua empresa.</p>
         </div>
         <button className="btn-voltar-premium" onClick={() => navigate('/compras')}>
           ← Voltar para Lista
@@ -337,9 +338,19 @@ const NovaCompra = () => {
 
       <form className="form-grid-layout" onSubmit={salvarCompra}>
         
-        {/* BLUCO ESQUERDO: DADOS DO ITEM */}
+        {/* BLOCO ESQUERDO: DADOS DO ITEM */}
         <div className="form-card-section">
-          <h3>📦 Informações do Item</h3>
+          <div className="card-top-accent gold"></div>
+          
+          <div className="card-header-styled">
+            <div className="icon-pill-gold">
+              <span>📦</span>
+            </div>
+            <div>
+              <h3>Informações do Item</h3>
+              <p className="card-subtext">Preencha os detalhes e especificações da peça ou insumo</p>
+            </div>
+          </div>
           
           <div className="form-group-full mb-15">
             <label>Nome do Item / Peça *</label>
@@ -347,7 +358,12 @@ const NovaCompra = () => {
               type="text" 
               placeholder="Ex: Vaso de Cerâmica Rosa Bebê, Boleira Ouro..." 
               value={nome} 
-              onChange={e => setNome(e.target.value)}
+              onChange={e => {
+                const val = e.target.value;
+                const formatado = val.replace(/(?:^|\s)\S/g, a => a.toUpperCase());
+                setNome(formatado);
+              }}
+              autoCapitalize="words"
               required 
             />
           </div>
@@ -423,7 +439,7 @@ const NovaCompra = () => {
           </div>
 
           <div className="form-group-full mb-15">
-            <label>Fornecedor / Link da Compra (opcional)</label>
+            <label>Fornecedor / Link da Compra (Opcional)</label>
             <input 
               type="text" 
               placeholder="Ex: Mercado Livre, Shopee, Armarinho Fernando..." 
@@ -445,7 +461,17 @@ const NovaCompra = () => {
 
         {/* BLOCO DIREITO: VÍNCULO & PRAZO */}
         <div className="form-card-section">
-          <h3>🎯 Destino & Simulação de Prazo</h3>
+          <div className="card-top-accent blue"></div>
+
+          <div className="card-header-styled">
+            <div className="icon-pill-blue">
+              <span>🎯</span>
+            </div>
+            <div>
+              <h3>Destino & Simulação de Prazo</h3>
+              <p className="card-subtext">Defina se a compra é para um cliente específico ou estoque geral</p>
+            </div>
+          </div>
           
           <div className="form-group-full mb-15">
             <label>Destino da Compra *</label>
@@ -521,7 +547,7 @@ const NovaCompra = () => {
             </div>
           )}
 
-          {destino === 'pedido' && pedidoSelecionado && (
+          {destino === 'pedido' && pedidoSelecionado && mensagemPrazo && (
             <div className={`alerta-prazo-box ${erroPrazo ? 'erro' : 'sucesso'}`}>
               <p>{mensagemPrazo}</p>
             </div>

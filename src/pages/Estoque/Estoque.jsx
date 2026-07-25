@@ -503,129 +503,145 @@ const Estoque = () => {
   }
 
   return (
-    <div className="estoque-premium" onClick={() => setMenuAberto(null)}>
-      <div className="header-top">
-        <div className="titulo-bloco">
-          <h1>Gestão de Acervo e Estoque</h1>
-          <p>Controle logístico, financeiro e catálogo online. <strong style={{color: totalItens >= limiteEstoque ? '#ef4444' : '#10b981'}}>(Limite: {totalItens.toLocaleString('pt-BR')} / {limiteEstoque.toLocaleString('pt-BR')})</strong></p>
+    <div className="clientes-container fade-in" onClick={() => setMenuAberto(null)}>
+      
+      {/* HERO CABEÇALHO IDÊNTICO AO GESTÃO DE CLIENTES */}
+      <div className="clientes-hero-header">
+        <div className="header-title-row">
+          <div className="header-icon-badge">
+            📦
+          </div>
+          <div className="welcome-text">
+            <h1>Gestão de Acervo e Estoque</h1>
+            <p>Controle logístico, financeiro e catálogo online. <strong style={{color: totalItens >= limiteEstoque ? '#ef4444' : '#15803d'}}>(Limite: {totalItens.toLocaleString('pt-BR')} / {limiteEstoque.toLocaleString('pt-BR')})</strong></p>
+          </div>
         </div>
-        <div className="acoes-top" style={{ display: 'flex', gap: '10px' }}>
-         
+        <div className="header-actions">
           <button 
+            className="btn-secondary-celebre" 
             onClick={corrigirNomesDuplicados} 
-            style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fcd34d', padding: '10px 20px', borderRadius: '8px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s', display: 'flex', alignItems: 'center', gap: '8px' }}
             disabled={limpandoNomes}
             title="Adiciona 'KIT' nos pacotes e puxa as características das filhas"
           >
-            {limpandoNomes ? '⏳ Ajustando...' : '🧹 Ajustar Nomes (Kits e Peças)'}
+            {limpandoNomes ? '⏳ Ajustando...' : '🧹 Ajustar Nomes'}
           </button>
-
-          <button 
-            className="btn-dark-blue" 
-            onClick={imprimirListaFiltrada} 
-            style={{ background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1' }}
-          >
+          <button className="btn-secondary-celebre" onClick={imprimirListaFiltrada}>
             🖨️ Imprimir Lista
           </button>
-          
-          <button 
-            className="btn-dark-blue" 
-            onClick={() => irParaCadastro()}
-            style={{ opacity: totalItens >= limiteEstoque ? 0.7 : 1 }}
-          >
-            + Novo Item
+          <button className="btn-primary-celebre" onClick={() => irParaCadastro()} style={{ opacity: totalItens >= limiteEstoque ? 0.7 : 1 }}>
+            + NOVO ITEM
           </button>
         </div>
       </div>
 
-      <div className="stats-row">
-        <div className="card-stat"><span className="label-stat">TOTAL DE ITENS</span><div className="value-stat">{totalItens}</div><div className="icon-stat">📦</div></div>
-        <div className="card-stat"><span className="label-stat">VALOR DO ACERVO</span><div className="value-stat text-accent">R$ {valorAcervo.toLocaleString('pt-BR')}</div><div className="icon-stat">📊</div></div>
-        <div className="card-stat"><span className="label-stat">EM MANUTENÇÃO</span><div className="value-stat text-orange">{emManutencaoTotal}</div><div className="icon-stat">🛠️</div></div>
-        <div className="card-stat"><span className="label-stat">VISÍVEL NO CATÁLOGO</span><div className="value-stat text-green">{percentualVisivel}%</div><div className="icon-stat">👁️</div></div>
+      {/* CARDS DE DASHBOARD 4 COLUNAS IDÊNTICOS AO GESTÃO DE CLIENTES */}
+      <div className="clientes-stats-grid">
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-purple">
+            📦
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">TOTAL DE ITENS</span>
+            <strong className="stat-number">{totalItens}</strong>
+            <small style={{color: '#7e22ce', fontSize: '0.75rem', fontWeight: '600'}}>Cadastrados no acervo</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-amber">
+            📊
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">VALOR DO ACERVO</span>
+            <strong className="stat-number">R$ {valorAcervo.toLocaleString('pt-BR')}</strong>
+            <small style={{color: '#b45309', fontSize: '0.75rem', fontWeight: '600'}}>Patrimônio investido</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-red">
+            🛠️
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">EM MANUTENÇÃO</span>
+            <strong className="stat-number">{emManutencaoTotal}</strong>
+            <small style={{color: '#b91c1c', fontSize: '0.75rem', fontWeight: 'bold'}}>Necessitam reparos</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-green">
+            👁️
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">VISÍVEL CATÁLOGO</span>
+            <strong className="stat-number">{percentualVisivel}%</strong>
+            <small style={{color: '#15803d', fontSize: '0.75rem', fontWeight: '600'}}>Disponível no catálogo</small>
+          </div>
+        </div>
       </div>
 
-      <div className="filtros-inteligentes-container">
-          
-          <div className="filtro-grupo barra-pesquisa">
-              <span className="filtro-icone">🔍</span>
-              <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
+      {/* CONTAINER TABELA E FILTROS IDÊNTICOS AO GESTÃO DE CLIENTES */}
+      <div className="table-card-container">
+        <div className="table-filter-bar">
+          <div className="search-input-wrapper">
+            <span className="search-icon">🔍</span>
+            <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
 
-          <div className="filtro-grupo">
-              <span className="filtro-label">ORDEM:</span>
-              <button 
-                  onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')}
-                  style={{ 
-                      height: '42px', width: '100%', background: '#fff', 
-                      border: '1px solid #cbd5e1', borderRadius: '8px', cursor: 'pointer', 
-                      fontSize: '13px', fontWeight: 'bold', color: '#475569', 
-                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', transition: '0.2s',
-                      boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
-                  }}
-                  onMouseEnter={e => {e.currentTarget.style.borderColor = '#94a3b8'; e.currentTarget.style.color = '#0f172a';}}
-                  onMouseLeave={e => {e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.color = '#475569';}}
-                  title="Alterar Ordem Alfabética"
-              >
-                  {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
-              </button>
+          <button className="btn-secondary-celebre" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} title="Alterar Ordem Alfabética">
+              {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
+          </button>
+
+          <div className="filter-select-container">
+            <select className="filter-select" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
+              <option value="">📂 Categoria: Todas</option>
+              {categoriasUnicas.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="filtro-grupo barra-select">
-              <span className="filtro-label">📂 CATEGORIA:</span>
-              <select className="filtro-select" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
-                  <option value="">Todas as Categorias</option>
-                  {categoriasUnicas.map(cat => (
-                      <option key={cat} value={cat}>{cat}</option>
-                  ))}
-              </select>
+          <div className="filter-select-container">
+            <select className="filter-select" value={localizacaoFiltro} onChange={e => setLocalizacaoFiltro(e.target.value)}>
+              <option value="">📍 Galpão: Todos</option>
+              {localizacoesUnicas.map(loc => (
+                  <option key={loc} value={loc}>{loc}</option>
+              ))}
+            </select>
           </div>
 
-          <div className="filtro-grupo barra-select">
-              <span className="filtro-label">📍 LOCAL:</span>
-              <select className="filtro-select" value={localizacaoFiltro} onChange={e => setLocalizacaoFiltro(e.target.value)}>
-                  <option value="">Todo o Galpão</option>
-                  {localizacoesUnicas.map(loc => (
-                      <option key={loc} value={loc}>{loc}</option>
-                  ))}
-              </select>
+          <div className="filter-select-container">
+            <select className="filter-select" value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}>
+              <option value="">🚦 Status: Todos</option>
+              <option value="disponivel">✅ Somente Disponíveis</option>
+              <option value="manutencao">🛠️ Somente em Manutenção</option>
+              {dataFiltro && <option value="indisponivel">🚫 Somente Alugados / Esgotados</option>}
+            </select>
           </div>
 
-          <div className="filtro-grupo barra-select">
-              <span className="filtro-label">🚦 STATUS:</span>
-              <select className="filtro-select" value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}>
-                  <option value="">Todos (Livres e Alugados)</option>
-                  <option value="disponivel">✅ Somente Disponíveis</option>
-                  <option value="manutencao">🛠️ Somente em Manutenção</option>
-                  {dataFiltro && <option value="indisponivel">🚫 Somente Alugados / Esgotados</option>}
-              </select>
+          <div className="filter-select-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input type="date" className="filter-select" value={dataFiltro} onChange={e => {
+                setDataFiltro(e.target.value);
+                if (!e.target.value && statusFiltro === 'indisponivel') setStatusFiltro('');
+            }} />
+            {dataFiltro && <button className="btn-limpar-data" onClick={limparFiltroData} title="Limpar Data">✕</button>}
           </div>
-          
-          <div className="filtro-grupo seletor-data">
-              <span className="filtro-label">📅 VER NO DIA:</span>
-              <div className="data-input-wrapper">
-                  <input type="date" value={dataFiltro} onChange={e => {
-                      setDataFiltro(e.target.value);
-                      if (!e.target.value && statusFiltro === 'indisponivel') setStatusFiltro('');
-                  }} />
-                  {dataFiltro && <button className="btn-limpar-data" onClick={limparFiltroData} title="Limpar Data">✕</button>}
-              </div>
-          </div>
-      </div>
+        </div>
 
-      {loading ? (
+        {loading ? (
           <div style={{padding: '50px', textAlign: 'center', color: '#64748b'}}>Carregando acervo...</div>
-      ) : (
-          <div className="table-container" style={{overflow: 'visible'}}> 
-            <table className="table-pro" style={{ borderSpacing: '0', borderCollapse: 'collapse', backgroundColor: '#fff', borderRadius: '8px', overflow: 'visible', width: '100%' }}>
+        ) : (
+          <div className="table-responsive-wrapper">
+            <table className="pro-table">
               <thead>
-                <tr style={{ borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase' }}>
-                  <th style={{padding: '15px 20px', textAlign: 'left'}}>PRODUTO</th>
-                  <th style={{padding: '15px', textAlign: 'left'}}>CATEGORIA</th>
-                  <th style={{padding: '15px', textAlign: 'left'}}>VALOR LOCAÇÃO</th>
-                  <th style={{padding: '15px', textAlign: 'center'}}>{dataFiltro ? 'NO DIA' : 'ESTOQUE'}</th>
-                  <th style={{padding: '15px', textAlign: 'center'}}>STATUS</th>
-                  <th style={{padding: '15px', textAlign: 'right'}}>AÇÕES</th>
+                <tr>
+                  <th>PRODUTO</th>
+                  <th>CATEGORIA</th>
+                  <th>VALOR LOCAÇÃO</th>
+                  <th style={{textAlign: 'center'}}>{dataFiltro ? 'NO DIA' : 'ESTOQUE'}</th>
+                  <th style={{textAlign: 'center'}}>STATUS</th>
+                  <th style={{textAlign: 'right'}}>AÇÕES</th>
                 </tr>
               </thead>
               <tbody>
@@ -655,25 +671,25 @@ const Estoque = () => {
                   const ehSubPeca = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKitPai);
 
                   return (
-                    <tr key={item.id} style={{ borderBottom: '1px solid #f1f5f9', opacity: estaTotalmenteAlugado ? 0.6 : 1 }}>
+                    <tr key={item.id} style={{ opacity: estaTotalmenteAlugado ? 0.6 : 1 }}>
                       
-                      <td style={{ padding: '15px 20px' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                          <div style={{ width: '45px', height: '45px', backgroundColor: '#f8fafc', borderRadius: '8px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0 }}>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ width: '44px', height: '44px', backgroundColor: '#f8fafc', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0 }}>
                               {item.foto ? (
                                 <img src={item.foto} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} onClick={(e) => { e.stopPropagation(); setImagemAmpliada(item.foto); }} title="Ampliar"/>
                               ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
                               
-                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '14px', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '0.95rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   {item.nome}
-                                  {ehKitPai && <span style={{background: '#1d4ed8', color: '#fff', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px'}}>📦 KIT PAI</span>}
-                                  {ehSubPeca && <span style={{background: '#f1f5f9', color: '#475569', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px', border: '1px solid #cbd5e1'}}>🧩 PEÇA FILHA</span>}
+                                  {ehKitPai && <span style={{background: '#0f172a', color: '#fde68a', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #c5a059'}}>📦 CONJUNTO / KIT</span>}
+                                  {ehSubPeca && <span style={{background: '#fef3c7', color: '#b48a3c', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #fde68a'}}>🧩 PEÇA DO KIT</span>}
                                   {isDeco && <span style={{background: '#b45309', color: '#fff', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px'}}>✨ DECORAÇÃO</span>}
                               </strong>
                               
-                              <span style={{ fontSize: '11px', color: '#94a3b8', marginTop: '4px' }}>
+                              <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
                                   CÓD: {item.codigo || 'S/N'} 
                                   {item.localizacao ? ` • 📍 ${item.localizacao}` : ''}
                               </span>
@@ -681,80 +697,61 @@ const Estoque = () => {
                         </div>
                       </td>
                       
-                      <td style={{ color: '#475569', fontSize: '13px', padding: '15px' }}>
+                      <td style={{ color: '#475569', fontSize: '0.85rem' }}>
                         {item.categoria || '-'}
                       </td>
                       
-                      <td style={{ padding: '15px' }}>
-                        <strong style={{ color: '#0f172a', fontSize: '14px' }}>R$ {valorAluguelFormatado}</strong>
+                      <td>
+                        <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>R$ {valorAluguelFormatado}</strong>
                       </td>
                       
-                      <td style={{ textAlign: 'center', padding: '15px' }}>
+                      <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
-                            <strong style={{ fontSize: '14px', color: (estaTotalmenteAlugado || tudoQuebrado || (qtdBase===0 && !isDeco)) ? '#94a3b8' : '#334155' }}>
-                                {disponivelTotal} <span style={{fontSize: '12px', fontWeight: 'normal'}}>{isDeco ? 'kit' : 'un'}</span>
+                            <strong style={{ fontSize: '0.95rem', color: (estaTotalmenteAlugado || tudoQuebrado || (qtdBase===0 && !isDeco)) ? '#94a3b8' : '#334155' }}>
+                                {disponivelTotal} <span style={{fontSize: '0.75rem', fontWeight: 'normal'}}>{isDeco ? 'kit' : 'un'}</span>
                             </strong>
-                            {estoqueBaixo && <span style={{fontSize: '10px', color: '#ea580c', background: '#ffedd5', padding: '2px 6px', borderRadius: '4px', marginTop: '4px'}}>Baixo</span>}
+                            {estoqueBaixo && <span style={{fontSize: '9px', color: '#ea580c', background: '#ffedd5', padding: '2px 6px', borderRadius: '4px', marginTop: '4px'}}>Baixo</span>}
                         </div>
                       </td>
                       
-                      <td style={{ textAlign: 'center', padding: '15px' }}>
-                        <span style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}`, padding: '4px 10px', borderRadius: '6px', fontSize: '11px', fontWeight: 'bold' }}>
+                      <td style={{ textAlign: 'center' }}>
+                        <span className="badge" style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}` }}>
                             {labelPill}
                         </span>
                       </td>
               
-                      <td style={{ textAlign: 'right', padding: '15px', position: 'relative' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '5px' }}>
+                      <td style={{ textAlign: 'right' }}>
+                        <div className="table-actions-container">
                             
                             <button 
+                                className="action-btn"
                                 onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }}
-                                style={{ background: '#fff', color: '#10b981', border: '1px solid #10b981', width: '32px', height: '32px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', transition: '0.2s' }}
                                 title="Inserir direto num Pedido"
-                                onMouseEnter={e => { e.currentTarget.style.background = '#10b981'; e.currentTarget.style.color = '#fff'; }}
-                                onMouseLeave={e => { e.currentTarget.style.background = '#fff'; e.currentTarget.style.color = '#10b981'; }}
                             >
                                 🛒
                             </button>
 
-                            <div style={{ position: 'relative' }}>
-                                <button 
-                                    onClick={(e) => { 
-                                       e.stopPropagation();
-                                       setMenuAberto(isMenuOpen ? null : item.id); 
-                                    }}
-                                    style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', width: '32px', height: '32px', borderRadius: '6px', fontSize: '16px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
-                                    onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
-                                    onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
-                                >
-                                    ⋮
-                                </button>
-                                
-                                {isMenuOpen && (
-                                    <div style={{ position: 'absolute', top: '100%', right: '0', marginTop: '5px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 10px 25px rgba(0,0,0,0.15)', zIndex: 99999, minWidth: '150px', display: 'flex', flexDirection: 'column', padding: '5px' }}>
-                                        <button onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>✏️ Editar</button>
-                                        <button onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>📋 Duplicar</button>
-                                        <button onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); setMenuAberto(null); }} style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#334155', textAlign: 'left', display: 'flex', gap: '8px' }} onMouseEnter={e=>e.currentTarget.style.background='#f1f5f9'} onMouseLeave={e=>e.currentTarget.style.background='transparent'}>🛠️ Manutenção</button>
-                                        <div style={{ height: '1px', background: '#f1f5f9', margin: '4px 0' }}></div>
-                                        
-                                        {/* 🔥 AÇÃO COM ESPIÃO NÍVEL MÁXIMO 🔥 */}
-                                        <button 
-                                          onClick={async (e) => { 
-                                            e.stopPropagation();
-                                            if(window.confirm("Excluir permanentemente do acervo?")) {
-                                              await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`);
-                                              deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); 
-                                            }
-                                          }} 
-                                          style={{ padding: '8px 12px', background: 'transparent', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '13px', color: '#ef4444', textAlign: 'left', fontWeight: 'bold', display: 'flex', gap: '8px' }} 
-                                          onMouseEnter={e=>e.currentTarget.style.background='#fef2f2'} 
-                                          onMouseLeave={e=>e.currentTarget.style.background='transparent'}
-                                        >
-                                          🗑️ Excluir
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
+                            <button 
+                                className="action-btn edit" 
+                                onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} 
+                                title="Editar"
+                            >
+                                ✏️
+                            </button>
+
+                            <button 
+                                className="action-btn delete" 
+                                onClick={async (e) => { 
+                                  e.stopPropagation();
+                                  if(window.confirm("Excluir permanentemente do acervo?")) {
+                                    await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`);
+                                    deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); 
+                                  }
+                                }} 
+                                title="Excluir"
+                            >
+                                🗑️
+                            </button>
                         </div>
                       </td>
                     </tr>
@@ -772,7 +769,8 @@ const Estoque = () => {
               </tbody>
             </table>
           </div>
-      )}
+        )}
+      </div>
 
       {modalAddPedidoAberto && (
         <div className="modal-overlay-blur">
