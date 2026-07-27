@@ -41,6 +41,11 @@ const Estoque = () => {
   const [adicionandoAoPedido, setAdicionandoAoPedido] = useState(false);
   const [menuAberto, setMenuAberto] = useState(null);
 
+  // ☑️ SELEÇÃO EM MASSA
+  const [itensSelecionados, setItensSelecionados] = useState(new Set());
+  // 🔢 MODO DE VISUALIZAÇÃO
+  const [modoVisualizacao, setModoVisualizacao] = useState('lista'); // 'lista' | 'grid'
+
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ESTOQUE - LISTAGEM)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
@@ -277,6 +282,33 @@ const Estoque = () => {
       if (confirmar) navigate('/cadastro-estoque', { state: { itemDuplicando: item } });
   };
 
+  // ☑️ TOGGLE DE SELEÇÃO INDIVIDUAL
+  const toggleSelecao = (id) => {
+      setItensSelecionados(prev => {
+          const novo = new Set(prev);
+          if (novo.has(id)) novo.delete(id);
+          else novo.add(id);
+          return novo;
+      });
+  };
+
+  // 🗑️ EXCLUIR SELECIONADOS EM MASSA
+  const excluirEmMassa = async () => {
+      if (itensSelecionados.size === 0) return;
+      const qtd = itensSelecionados.size;
+      if (!window.confirm(`⚠️ Excluir permanentemente ${qtd} item${qtd > 1 ? 'ns' : ''} do acervo?\n\nEsta ação NÃO pode ser desfeita.`)) return;
+      try {
+          const batch = writeBatch(db);
+          itensSelecionados.forEach(id => batch.delete(doc(db, 'estoque', id)));
+          await batch.commit();
+          await registrarLog('EXCLUSÃO EM MASSA', `Excluiu ${qtd} itens do acervo em massa via seleção.`);
+          setItensSelecionados(new Set());
+          carregarDados();
+      } catch (e) {
+          alert('Erro ao excluir os itens selecionados.');
+      }
+  };
+
   const abrirModalManutencao = (item) => {
     setItemParaManutencao(item);
     const qtdAtual = item.qtdManutencao !== undefined ? item.qtdManutencao : (item.status === 'manutencao' ? item.quantidade : 0);
@@ -446,21 +478,68 @@ const Estoque = () => {
   });
 
   const imprimirListaFiltrada = async () => {
-      const doc = new jsPDF();
-      const dataHoje = new Date().toLocaleDateString('pt-BR');
-      
-      let tituloRelatorio = "Lista de Verificação de Estoque";
-      if (localizacaoFiltro) tituloRelatorio += ` - ${localizacaoFiltro.toUpperCase()}`;
-      else if (categoriaFiltro) tituloRelatorio += ` - Categoria: ${categoriaFiltro}`;
-      
-      doc.setFontSize(18);
-      doc.setTextColor(15, 23, 42); 
-      doc.text(tituloRelatorio, 14, 22);
+      const pdfDoc = new jsPDF();
+      const agora = new Date();
+      const dataHora = agora.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-      doc.setFontSize(11);
-      doc.setTextColor(100);
-      doc.text(`Gerado em: ${dataHoje} | Peças Listadas: ${itensFiltrados.length}`, 14, 30);
+      // 🔥 Busca dados da empresa no Firestore (configuracoes_empresa)
+      let nomeEmpresa = 'CELEBRE SISTEMA DE GESTÃO';
+      let logoUrl = null;
+      try {
+          const confRef = doc(db, 'configuracoes_empresa', tenantId);
+          const confSnap = await getDoc(confRef);
+          if (confSnap.exists()) {
+              const data = confSnap.data();
+              if (data.nomeEmpresa) nomeEmpresa = data.nomeEmpresa.toUpperCase();
+              if (data.logotipo) logoUrl = data.logotipo;
+          }
+      } catch (e) { console.warn('Erro ao buscar config empresa para PDF:', e); }
 
+      const nomeImpressor = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || 'Usuário';
+
+      // ── CABEÇALHO ──────────────────────────────────────────────
+      const pageWidth = pdfDoc.internal.pageSize.getWidth();
+
+      // Fundo do cabeçalho
+      pdfDoc.setFillColor(15, 23, 42);
+      pdfDoc.rect(0, 0, pageWidth, 38, 'F');
+
+      // Logo da empresa (se existir)
+      if (logoUrl) {
+          try {
+              const formato = logoUrl.startsWith('data:image/jpeg') ? 'JPEG' : 'PNG';
+              pdfDoc.addImage(logoUrl, formato, 10, 5, 28, 28);
+          } catch (e) { console.warn('Erro ao inserir logo no PDF:', e); }
+      }
+
+      const textoX = logoUrl ? 44 : 14;
+
+      // Nome da empresa
+      pdfDoc.setFontSize(15);
+      pdfDoc.setFont('helvetica', 'bold');
+      pdfDoc.setTextColor(255, 255, 255);
+      pdfDoc.text(nomeEmpresa, textoX, 14);
+
+      // Título do relatório
+      let tituloRelatorio = 'Lista de Verificação de Estoque';
+      if (localizacaoFiltro) tituloRelatorio += ` · ${localizacaoFiltro}`;
+      else if (categoriaFiltro) tituloRelatorio += ` · Categoria: ${categoriaFiltro}`;
+
+      pdfDoc.setFontSize(10);
+      pdfDoc.setFont('helvetica', 'normal');
+      pdfDoc.setTextColor(203, 213, 225);
+      pdfDoc.text(tituloRelatorio, textoX, 23);
+
+      // Linha separadora fina
+      pdfDoc.setDrawColor(71, 85, 105);
+      pdfDoc.line(textoX, 27, pageWidth - 14, 27);
+
+      // Data, hora e quem imprimiu
+      pdfDoc.setFontSize(8);
+      pdfDoc.setTextColor(148, 163, 184);
+      pdfDoc.text(`Impresso em: ${dataHora}   |   Por: ${nomeImpressor}   |   Peças listadas: ${itensFiltrados.length}`, textoX, 34);
+
+      // ── TABELA ──────────────────────────────────────────────────
       const colunas = [["CÓDIGO", "PRODUTO", "CATEGORIA", "LOCALIZAÇÃO", "QTD FÍSICA"]];
       const linhas = itensFiltrados.map(item => {
           const { qtdBase, isDeco } = calcularDisponibilidadeNaData(item);
@@ -473,18 +552,39 @@ const Estoque = () => {
           ];
       });
 
-      autoTable(doc, {
+      autoTable(pdfDoc, {
           head: colunas,
           body: linhas,
-          startY: 38,
-          theme: 'grid', 
-          headStyles: { fillColor: [15, 23, 42] },
-          styles: { fontSize: 9 }
+          startY: 44,
+          theme: 'grid',
+          headStyles: { fillColor: [30, 41, 59], textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 9 },
+          alternateRowStyles: { fillColor: [248, 250, 252] },
+          styles: { fontSize: 9, cellPadding: 3 },
+          columnStyles: {
+              0: { cellWidth: 28, fontStyle: 'bold', textColor: [30, 41, 59] },
+              4: { halign: 'center', fontStyle: 'bold' }
+          },
+          didDrawPage: () => {
+              const paginaAtual = pdfDoc.internal.getCurrentPageInfo().pageNumber;
+              pdfDoc.setFontSize(8);
+              pdfDoc.setTextColor(148, 163, 184);
+              pdfDoc.text(
+                  `${nomeEmpresa}  ·  Página ${paginaAtual}`,
+                  14,
+                  pdfDoc.internal.pageSize.getHeight() - 8
+              );
+              pdfDoc.text(
+                  dataHora,
+                  pageWidth - 14,
+                  pdfDoc.internal.pageSize.getHeight() - 8,
+                  { align: 'right' }
+              );
+          }
       });
 
-      doc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}.pdf`);
-      
-      await registrarLog("EXPORTAÇÃO DE INVENTÁRIO", "Fez o download da lista de verificação de estoque em PDF.");
+      pdfDoc.save(`Lista_Estoque_${localizacaoFiltro || 'Geral'}_${agora.toLocaleDateString('pt-BR').replace(/\//g, '-')}.pdf`);
+
+      await registrarLog("EXPORTAÇÃO DE INVENTÁRIO", `Imprimiu a lista de verificação de estoque em PDF. Filtro: ${localizacaoFiltro || categoriaFiltro || 'Geral'}. Itens: ${itensFiltrados.length}.`);
   };
 
   if (loading) return <div style={{padding: '50px', textAlign: 'center', color: '#64748b'}}>Verificando permissões de acesso...</div>;
@@ -517,6 +617,23 @@ const Estoque = () => {
           </div>
         </div>
         <div className="header-actions">
+          {/* 🔢 Toggle de Visualização */}
+          <div className="view-toggle-group">
+            <button
+              className={`view-toggle-btn${modoVisualizacao === 'lista' ? ' active' : ''}`}
+              onClick={() => setModoVisualizacao('lista')}
+              title="Visão em Lista"
+            >
+              ☰ Lista
+            </button>
+            <button
+              className={`view-toggle-btn${modoVisualizacao === 'grid' ? ' active' : ''}`}
+              onClick={() => setModoVisualizacao('grid')}
+              title="Visão em Cards"
+            >
+              ⊞ Cards
+            </button>
+          </div>
           <button 
             className="btn-secondary-celebre" 
             onClick={corrigirNomesDuplicados} 
@@ -629,13 +746,115 @@ const Estoque = () => {
           </div>
         </div>
 
+        {/* ── BARRA DE SELEÇÃO EM MASSA ── */}
+        {itensSelecionados.size > 0 && (
+          <div className="bulk-action-bar">
+            <div className="bulk-info">
+              <input
+                type="checkbox"
+                title="Marcar/desmarcar todos"
+                checked={itensFiltrados.length > 0 && itensSelecionados.size === itensFiltrados.length}
+                onChange={() => {
+                  if (itensSelecionados.size === itensFiltrados.length) setItensSelecionados(new Set());
+                  else setItensSelecionados(new Set(itensFiltrados.map(i => i.id)));
+                }}
+              />
+              <span><strong>{itensSelecionados.size}</strong> {itensSelecionados.size === 1 ? 'item selecionado' : 'itens selecionados'}</span>
+            </div>
+            <div className="bulk-buttons">
+              <button className="bulk-btn-danger" onClick={excluirEmMassa}>🗑️ Excluir Selecionados</button>
+              <button className="bulk-btn-cancel" onClick={() => setItensSelecionados(new Set())}>✕ Cancelar Seleção</button>
+            </div>
+          </div>
+        )}
+
         {loading ? (
           <div style={{padding: '50px', textAlign: 'center', color: '#64748b'}}>Carregando acervo...</div>
+        ) : modoVisualizacao === 'grid' ? (
+
+          /* ── VISÃO EM CARDS ── */
+          <div className="estoque-cards-grid">
+            {itensFiltrados.map(item => {
+              const { qtdBase, disponivelTotal, estaTotalmenteAlugado, tudoQuebrado, isDeco } = calcularDisponibilidadeNaData(item);
+              let labelPill = 'DISPONÍVEL';
+              let bgPill = '#f0fdf4', colorPill = '#166534', borderPill = '#bbf7d0';
+              if (estaTotalmenteAlugado) { labelPill = 'ALUGADO'; bgPill = '#fef2f2'; colorPill = '#b91c1c'; borderPill = '#fecaca'; }
+              else if (tudoQuebrado) { labelPill = 'EM REPARO'; bgPill = '#fffbeb'; colorPill = '#b45309'; borderPill = '#fde68a'; }
+              else if (qtdBase === 0 && !isDeco) { labelPill = 'S/ ESTOQUE'; bgPill = '#f8fafc'; colorPill = '#64748b'; borderPill = '#e2e8f0'; }
+              const valorAluguelFormatado = item.financeiro?.valorAluguel ? Number(item.financeiro.valorAluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
+              const posImg = item.posicoesFoco?.[0];
+              const ehKitPai = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit?.length > 0);
+              const ehSubPeca = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKitPai);
+              const selecionado = itensSelecionados.has(item.id);
+
+              return (
+                <div key={item.id} className={`estoque-card${selecionado ? ' estoque-card-selected' : ''}`} style={{ opacity: estaTotalmenteAlugado ? 0.75 : 1 }}>
+                  <input type="checkbox" className="estoque-card-check" checked={selecionado} onChange={() => toggleSelecao(item.id)} onClick={e => e.stopPropagation()} />
+
+                  <div className="estoque-card-photo" onClick={() => item.foto && setImagemAmpliada(item.foto)}>
+                    {item.foto
+                      ? <img src={item.foto} alt={item.nome} style={{ objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} />
+                      : <div className="estoque-card-no-photo">📷</div>}
+                    <span className="badge estoque-card-status" style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}` }}>{labelPill}</span>
+                  </div>
+
+                  {(ehKitPai || ehSubPeca || isDeco) && (
+                    <div className="estoque-card-badges">
+                      {ehKitPai && <span className="card-badge-kit">📦 KIT</span>}
+                      {ehSubPeca && <span className="card-badge-peca">🧩 PEÇA</span>}
+                      {isDeco && <span className="card-badge-deco">✨ DECO</span>}
+                    </div>
+                  )}
+
+                  <div className="estoque-card-info">
+                    <strong className="estoque-card-nome" style={{ color: item.nome.includes('⚠️') ? '#ef4444' : 'var(--texto-principal, #0f172a)' }}>{item.nome}</strong>
+                    <span className="estoque-card-codigo">CÓD: {item.codigo || 'S/N'}</span>
+                    <span className="estoque-card-cat">{item.categoria || '—'}</span>
+                    {item.localizacao && <span className="estoque-card-loc">📍 {item.localizacao}</span>}
+                  </div>
+
+                  <div className="estoque-card-footer">
+                    <div className="estoque-card-price-row">
+                      <strong>R$ {valorAluguelFormatado}</strong>
+                      <span>{disponivelTotal} {isDeco ? 'kit' : 'un'} disp.</span>
+                    </div>
+                    <div className="estoque-card-actions">
+                      <button className="action-btn" onClick={() => { setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Adicionar ao Pedido">🛒</button>
+                      <button className="action-btn edit" onClick={() => irParaCadastro(item)} title="Editar">✏️</button>
+                      <button className="action-btn duplicate" onClick={() => duplicarItem(item)} title="Duplicar Item">📋</button>
+                      <button className="action-btn delete" onClick={async () => { if(window.confirm('Excluir permanentemente do acervo?')) { await registrarLog('EXCLUSÃO DE ACERVO', `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, 'estoque', item.id)).then(carregarDados); }}} title="Excluir">🗑️</button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+            {itensFiltrados.length === 0 && (
+              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: '#64748b' }}>
+                <div style={{ fontSize: '40px', marginBottom: '10px' }}>🕵️‍♀️</div>
+                <strong>Nenhuma peça encontrada com esses filtros!</strong>
+                <p style={{ fontSize: '12px', marginTop: '5px' }}>Tente mudar a categoria, o status ou limpar a data.</p>
+              </div>
+            )}
+          </div>
+
         ) : (
+
+          /* ── VISÃO EM LISTA ── */
           <div className="table-responsive-wrapper">
             <table className="pro-table">
               <thead>
                 <tr>
+                  <th style={{width:'40px', textAlign:'center'}}>
+                    <input
+                      type="checkbox"
+                      title="Selecionar todos visíveis"
+                      checked={itensFiltrados.length > 0 && itensSelecionados.size === itensFiltrados.length}
+                      onChange={() => {
+                        if (itensSelecionados.size === itensFiltrados.length) setItensSelecionados(new Set());
+                        else setItensSelecionados(new Set(itensFiltrados.map(i => i.id)));
+                      }}
+                    />
+                  </th>
                   <th>PRODUTO</th>
                   <th>CATEGORIA</th>
                   <th>VALOR LOCAÇÃO</th>
@@ -646,33 +865,24 @@ const Estoque = () => {
               </thead>
               <tbody>
                 {itensFiltrados.map(item => {
-                  
                   const { qtdBase, disponivelTotal, estaTotalmenteAlugado, tudoQuebrado, isDeco } = calcularDisponibilidadeNaData(item);
                   let labelPill = 'DISPONÍVEL';
                   let bgPill = '#f0fdf4'; let colorPill = '#166534'; let borderPill = '#bbf7d0';
-
-                  if (estaTotalmenteAlugado) { 
-                      labelPill = 'ALUGADO';
-                      bgPill = '#fef2f2'; colorPill = '#b91c1c'; borderPill = '#fecaca';
-                  } else if (tudoQuebrado) { 
-                      labelPill = 'EM REPARO';
-                      bgPill = '#fffbeb'; colorPill = '#b45309'; borderPill = '#fde68a';
-                  } else if (qtdBase === 0 && !isDeco) {
-                      labelPill = 'S/ ESTOQUE';
-                      bgPill = '#f8fafc'; colorPill = '#64748b'; borderPill = '#e2e8f0';
-                  }
-
+                  if (estaTotalmenteAlugado) { labelPill = 'ALUGADO'; bgPill = '#fef2f2'; colorPill = '#b91c1c'; borderPill = '#fecaca'; }
+                  else if (tudoQuebrado) { labelPill = 'EM REPARO'; bgPill = '#fffbeb'; colorPill = '#b45309'; borderPill = '#fde68a'; }
+                  else if (qtdBase === 0 && !isDeco) { labelPill = 'S/ ESTOQUE'; bgPill = '#f8fafc'; colorPill = '#64748b'; borderPill = '#e2e8f0'; }
                   const estoqueBaixo = !dataFiltro && item.configuracao?.alertaEstoque === 'Avisar' && qtdBase > 0 && disponivelTotal <= item.estoqueMinimo;
                   const valorAluguelFormatado = item.financeiro?.valorAluguel ? Number(item.financeiro.valorAluguel).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '0,00';
                   const posImg = item.posicoesFoco?.[0];
-                  const isMenuOpen = menuAberto === item.id;
-                  
                   const ehKitPai = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit && item.especificacoes?.pecasKit.length > 0);
                   const ehSubPeca = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKitPai);
+                  const selecionado = itensSelecionados.has(item.id);
 
                   return (
-                    <tr key={item.id} style={{ opacity: estaTotalmenteAlugado ? 0.6 : 1 }}>
-                      
+                    <tr key={item.id} style={{ opacity: estaTotalmenteAlugado ? 0.6 : 1, background: selecionado ? 'var(--azul-selecionado, #eff6ff)' : undefined }}>
+                      <td style={{textAlign:'center'}}>
+                        <input type="checkbox" checked={selecionado} onChange={() => toggleSelecao(item.id)} onClick={e => e.stopPropagation()} />
+                      </td>
                       <td>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
                           <div style={{ width: '44px', height: '44px', backgroundColor: '#f8fafc', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0 }}>
@@ -681,14 +891,12 @@ const Estoque = () => {
                               ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              
                               <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '0.95rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                   {item.nome}
                                   {ehKitPai && <span style={{background: '#0f172a', color: '#fde68a', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #c5a059'}}>📦 CONJUNTO / KIT</span>}
                                   {ehSubPeca && <span style={{background: '#fef3c7', color: '#b48a3c', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #fde68a'}}>🧩 PEÇA DO KIT</span>}
                                   {isDeco && <span style={{background: '#b45309', color: '#fff', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px'}}>✨ DECORAÇÃO</span>}
                               </strong>
-                              
                               <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
                                   CÓD: {item.codigo || 'S/N'} 
                                   {item.localizacao ? ` • 📍 ${item.localizacao}` : ''}
@@ -696,15 +904,8 @@ const Estoque = () => {
                           </div>
                         </div>
                       </td>
-                      
-                      <td style={{ color: '#475569', fontSize: '0.85rem' }}>
-                        {item.categoria || '-'}
-                      </td>
-                      
-                      <td>
-                        <strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>R$ {valorAluguelFormatado}</strong>
-                      </td>
-                      
+                      <td style={{ color: '#475569', fontSize: '0.85rem' }}>{item.categoria || '-'}</td>
+                      <td><strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>R$ {valorAluguelFormatado}</strong></td>
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
                             <strong style={{ fontSize: '0.95rem', color: (estaTotalmenteAlugado || tudoQuebrado || (qtdBase===0 && !isDeco)) ? '#94a3b8' : '#334155' }}>
@@ -713,45 +914,15 @@ const Estoque = () => {
                             {estoqueBaixo && <span style={{fontSize: '9px', color: '#ea580c', background: '#ffedd5', padding: '2px 6px', borderRadius: '4px', marginTop: '4px'}}>Baixo</span>}
                         </div>
                       </td>
-                      
                       <td style={{ textAlign: 'center' }}>
-                        <span className="badge" style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}` }}>
-                            {labelPill}
-                        </span>
+                        <span className="badge" style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}` }}>{labelPill}</span>
                       </td>
-              
                       <td style={{ textAlign: 'right' }}>
                         <div className="table-actions-container">
-                            
-                            <button 
-                                className="action-btn"
-                                onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }}
-                                title="Inserir direto num Pedido"
-                            >
-                                🛒
-                            </button>
-
-                            <button 
-                                className="action-btn edit" 
-                                onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} 
-                                title="Editar"
-                            >
-                                ✏️
-                            </button>
-
-                            <button 
-                                className="action-btn delete" 
-                                onClick={async (e) => { 
-                                  e.stopPropagation();
-                                  if(window.confirm("Excluir permanentemente do acervo?")) {
-                                    await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`);
-                                    deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); 
-                                  }
-                                }} 
-                                title="Excluir"
-                            >
-                                🗑️
-                            </button>
+                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido">🛒</button>
+                            <button className="action-btn edit" onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} title="Editar">✏️</button>
+                            <button className="action-btn duplicate" onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} title="Duplicar Item">📋</button>
+                            <button className="action-btn delete" onClick={async (e) => { e.stopPropagation(); if(window.confirm("Excluir permanentemente do acervo?")) { await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); }}} title="Excluir">🗑️</button>
                         </div>
                       </td>
                     </tr>
@@ -759,7 +930,7 @@ const Estoque = () => {
                 })}
                 {itensFiltrados.length === 0 && (
                     <tr>
-                        <td colSpan="6" style={{textAlign:'center', padding:'40px', color:'#64748b'}}>
+                        <td colSpan="7" style={{textAlign:'center', padding:'40px', color:'#64748b'}}>
                             <div style={{fontSize: '40px', marginBottom: '10px'}}>🕵️‍♀️</div>
                             <strong>Nenhuma peça encontrada com esses filtros!</strong>
                             <p style={{fontSize: '12px', marginTop: '5px'}}>Tente mudar a categoria, o status ou limpar a data.</p>

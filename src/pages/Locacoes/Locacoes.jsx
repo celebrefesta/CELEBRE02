@@ -5,6 +5,19 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 
+// 🏷️ TIPOS DE EVENTO DISPONÍVEIS
+const TIPOS_EVENTO = [
+  { value: 'aniversario',       label: 'Aniversário',       emoji: '🎂' },
+  { value: 'casamento',         label: 'Casamento',         emoji: '💍' },
+  { value: 'formatura',         label: 'Formatura',         emoji: '🎓' },
+  { value: 'corporativo',       label: 'Corporativo',       emoji: '💼' },
+  { value: 'cha_bebe',          label: 'Chá de Bebê',       emoji: '👶' },
+  { value: 'debutante',         label: 'Debutante',         emoji: '👑' },
+  { value: 'batizado',          label: 'Batizado',          emoji: '⛪' },
+  { value: 'confraternizacao',  label: 'Confraternização', emoji: '🥂' },
+  { value: 'outro',             label: 'Outro',             emoji: '🎉' },
+];
+
 const Locacoes = () => {
   const navigate = useNavigate();
   const location = useLocation(); 
@@ -26,6 +39,12 @@ const Locacoes = () => {
   
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
+
+  // 👁️ PREVIEW AO PAIRAR
+  const [hoveredPedido, setHoveredPedido] = useState(null);
+  const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
+  // 🏷️ MODAL DE TIPO DE EVENTO
+  const [modalEvento, setModalEvento] = useState(null);
 
   const [modalPagamento, setModalPagamento] = useState(false);
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
@@ -494,6 +513,20 @@ const Locacoes = () => {
   const chipCountArquivados = lista.filter(i => String(i.status || '').toLowerCase().includes('finalizado')).length;
   const chipCountCancelados = lista.filter(i => String(i.status || '').toLowerCase().includes('cancelado') || i.isOrcamentoVencido).length;
 
+  // 📈 TAXA DE CONVERSÃO
+  const totalParaConversao = countAtivos + countOrcamentos;
+  const taxaConversao = totalParaConversao > 0 ? Math.round((countAtivos / totalParaConversao) * 100) : 0;
+
+  // 🏷️ SALVAR TIPO DE EVENTO
+  const salvarTipoEvento = async (tipoValue) => {
+      if (!modalEvento) return;
+      try {
+          await updateDoc(doc(db, 'locacoes', modalEvento.id), { tipoEvento: tipoValue || null });
+          setLista(prev => prev.map(i => i.id === modalEvento.id ? { ...i, tipoEvento: tipoValue || null } : i));
+          setModalEvento(null);
+      } catch (e) { alert('Erro ao salvar tipo de evento.'); }
+  };
+
   return (
     <div className="locacoes-container dashboard-container fade-in">
       {/* HERO CABEÇALHO (IDÊNTICO AO DA PÁGINA CLIENTES) */}
@@ -560,6 +593,30 @@ const Locacoes = () => {
           </div>
         </div>
       </div>
+
+      {/* 📈 TAXA DE CONVERSÃO */}
+      {totalParaConversao > 0 && (
+        <div className="conversao-strip">
+          <div className="conversao-left">
+            <span className="conversao-strip-icon">📈</span>
+            <div className="conversao-strip-text">
+              <span className="conversao-strip-title">TAXA DE CONVERSÃO</span>
+              <span className="conversao-strip-sub">{countAtivos} confirmados de {totalParaConversao} ativos</span>
+            </div>
+          </div>
+          <div className="conversao-strip-center">
+            <div className="conversao-strip-barra">
+              <div className="conversao-strip-fill" style={{ width: `${taxaConversao}%` }} />
+            </div>
+          </div>
+          <div className="conversao-strip-right">
+            <strong className="conversao-strip-pct">{taxaConversao}%</strong>
+            <span className="conversao-strip-desc">
+              {taxaConversao >= 70 ? '🔥 Excelente' : taxaConversao >= 40 ? '👍 Bom ritmo' : '📊 Crescendo'}
+            </span>
+          </div>
+        </div>
+      )}
 
       {/* PAINEL DE FILTROS E BUSCA AVANÇADA (DESKTOP E MOBILE NATIVO) */}
       <div className="advanced-filter-bar">
@@ -703,6 +760,7 @@ const Locacoes = () => {
                 const temAlertas = temAvaria || temFalta;
 
                 const initials = getInitials(item.clienteNome);
+                const tipoEventoInfo = item.tipoEvento ? TIPOS_EVENTO.find(t => t.value === item.tipoEvento) : null;
 
                 let alertaOperacional = null;
                 let corAlerta = '';
@@ -734,6 +792,9 @@ const Locacoes = () => {
                     style={{ opacity: isCancelado ? 0.6 : 1, cursor: 'pointer' }}
                     onClick={() => navigate(`/locacoes/editar/${item.id}`)}
                     title="Clique para abrir detalhes do pedido"
+                    onMouseEnter={(e) => { setHoveredPedido(item); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                    onMouseLeave={() => setHoveredPedido(null)}
+                    onMouseMove={(e) => setHoverPos({ x: e.clientX, y: e.clientY })}
                   >
                     <td className="pedido-id-cell">
                       {item.numeroPedido ? (
@@ -763,6 +824,24 @@ const Locacoes = () => {
                             <span className={`tag-servico ${item.tipoServicoFormatado.includes('PEGUE') ? 'pegue' : 'deco'}`}>
                               {item.tipoServicoFormatado}
                             </span>
+                            {/* 🏷️ TAG TIPO DE EVENTO */}
+                            {tipoEventoInfo ? (
+                              <span
+                                className="tag-evento"
+                                onClick={(e) => { e.stopPropagation(); setModalEvento(item); }}
+                                title="Clique para alterar tipo de evento"
+                              >
+                                {tipoEventoInfo.emoji} {tipoEventoInfo.label}
+                              </span>
+                            ) : (
+                              <button
+                                className="btn-add-tipo-evento"
+                                onClick={(e) => { e.stopPropagation(); setModalEvento(item); }}
+                                title="Definir tipo de evento"
+                              >
+                                + Evento
+                              </button>
+                            )}
                             {temFalta && <span className="tag-alerta erro">FALTAM PEÇAS</span>}
                             {temAvaria && <span className="tag-alerta aviso">AVARIAS</span>}
                           </div>
@@ -1066,6 +1145,79 @@ const Locacoes = () => {
                 </form>
             </div>
          </div>
+      )}
+
+      {/* 👁️ PREVIEW FLUTUANTE AO PAIRAR */}
+      {hoveredPedido && !menuAberto && (() => {
+        const itensPreview = hoveredPedido.itens || hoveredPedido.carrinho || [];
+        const saldoPreview = Number(hoveredPedido.valorTotal || 0) - Number(hoveredPedido.valorPago || 0);
+        return (
+          <div
+            className="preview-hover-card"
+            style={{
+              top: Math.min(hoverPos.y + 18, window.innerHeight - 340),
+              left: Math.min(hoverPos.x + 18, window.innerWidth - 300),
+            }}
+          >
+            <div className="phc-header">
+              <strong>#{hoveredPedido.numeroPedido || hoveredPedido.id?.substring(0,6).toUpperCase() || 'S/N'}</strong>
+              <span className="phc-status">{String(hoveredPedido.status || '').toUpperCase()}</span>
+            </div>
+            <div className="phc-body">
+              {!itensPreview.length
+                ? <p className="phc-empty">Nenhum item cadastrado</p>
+                : itensPreview.slice(0, 6).map((it, i) => (
+                    <div key={i} className="phc-row">
+                      <div className="phc-thumb">
+                        {it.foto ? <img src={it.foto} alt="" /> : <span>📦</span>}
+                      </div>
+                      <span className="phc-name">{it.nome}</span>
+                      <span className="phc-qty">×{it.qtd || it.quantidade || 1}</span>
+                    </div>
+                  ))
+              }
+              {itensPreview.length > 6 && (
+                <p className="phc-more">+{itensPreview.length - 6} itens…</p>
+              )}
+            </div>
+            <div className="phc-footer">
+              <span>💰 R$ {Number(hoveredPedido.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              {saldoPreview > 0 && (
+                <span className="phc-devedor">A receber: R$ {saldoPreview.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              )}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* 🏷️ MODAL TIPO DE EVENTO */}
+      {modalEvento && (
+        <div className="modal-overlay-evento" onClick={() => setModalEvento(null)}>
+          <div className="modal-evento-card" onClick={e => e.stopPropagation()}>
+            <div className="modal-evento-header">
+              <h3>🏷️ Tipo de Evento</h3>
+              <button className="btn-fechar-evento" onClick={() => setModalEvento(null)}>×</button>
+            </div>
+            <p className="modal-evento-sub">Selecione o tipo de evento para <strong>{modalEvento.clienteNome}</strong>:</p>
+            <div className="grid-tipos-evento">
+              {TIPOS_EVENTO.map(tipo => (
+                <button
+                  key={tipo.value}
+                  className={`btn-tipo-evento${modalEvento.tipoEvento === tipo.value ? ' ativo' : ''}`}
+                  onClick={() => salvarTipoEvento(tipo.value)}
+                >
+                  <span className="btn-tipo-emoji">{tipo.emoji}</span>
+                  <span>{tipo.label}</span>
+                </button>
+              ))}
+              {modalEvento.tipoEvento && (
+                <button className="btn-tipo-evento remover" onClick={() => salvarTipoEvento(null)}>
+                  <span>✕</span><span>Remover Tag</span>
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
       )}
 
     </div>

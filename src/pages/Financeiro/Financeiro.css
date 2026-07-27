@@ -1,42 +1,42 @@
 /* =========================================
    PROTEÇÃO DE ESCOPO E LAYOUT BASE
    ========================================= */
-.pag-financeiro-main, 
+.pag-financeiro-main,
 .pag-financeiro-main * {
   box-sizing: border-box;
   max-width: 100%;
 }
 
 .pag-financeiro-main {
-  background-color: var(--fundo-cinza); 
+  background-color: var(--fundo-cinza);
   min-height: 100vh;
   width: 100%;
   font-family: 'Inter', system-ui, sans-serif;
   color: var(--texto-principal);
   transition: background-color 0.3s ease, color 0.3s ease;
-  overflow-x: hidden; 
+  overflow-x: hidden;
 }
 
 .financeiro-content {
-  width: 100%; 
-  margin: 0 auto; 
-  padding: 30px; 
+  width: 100%;
+  margin: 0 auto;
+  padding: 30px;
 }
 
 /* =========================================
    HEADER DA PÁGINA (CARD PREMIUM)
    ========================================= */
 .fin-header-modern {
-  background: var(--branco); 
+  background: var(--branco);
   padding: 25px 30px;
   border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); 
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
   border: 1px solid var(--borda);
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 30px;
-  flex-wrap: wrap; 
+  flex-wrap: wrap;
   gap: 15px;
 }
 
@@ -76,7 +76,7 @@
   border: none;
   cursor: pointer;
   color: white;
-  background-color: #0f172a; 
+  background-color: #0f172a;
   transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
   box-shadow: 0 4px 6px -1px rgba(15, 23, 42, 0.2);
 }
@@ -97,7 +97,7 @@
    ========================================= */
 .fin-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); 
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
@@ -115,11 +115,39 @@
   transition: transform 0.2s;
 }
 
-.kpi-card:hover { transform: translateY(-2px); }
+.kpi-card:hover {
+  transform: translateY(-2px);
+}
 
-.card-entradas::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: #10b981; }
-.card-saidas::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: #ef4444; }
-.card-saldo::before { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 5px; background: var(--texto-principal); }
+.card-entradas::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: #10b981;
+}
+
+.card-saidas::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: #ef4444;
+}
+
+.card-saldo::before {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 5px;
+  background: var(--texto-principal);
+}
 
 .kpi-header {
   display: flex;
@@ -148,12 +176,25 @@
   letter-spacing: -1px;
 }
 
-.card-entradas h2 { color: #10b981; }
-.card-saidas h2 { color: #ef4444; }
-.card-saldo h2 { color: var(--texto-principal); }
+.card-entradas h2 {
+  color: #10b981;
+}
 
-[data-theme='dark'] .card-entradas h2 { color: #4ade80; }
-[data-theme='dark'] .card-saidas h2 { color: #f87171; }
+.card-saidas h2 {
+  color: #ef4444;
+}
+
+.card-saldo h2 {
+  color: var(--texto-principal);
+}
+
+[data-theme='dark'] .card-entradas h2 {
+  color: #4ade80;
+}
+
+[data-theme='dark'] .card-saidas h2 {
+  color: #f87171;
+}
 
 .kpi-subtitle {
   margin: 8px 0 0 0;
@@ -170,13 +211,13 @@
   border-radius: 12px;
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
   border: 1px solid var(--borda);
-  overflow-x: auto; 
+  overflow-x: auto;
 }
 
 .fin-table-modern {
   width: 100%;
   border-collapse: collapse;
-  min-width: 800px; 
+  min-width: 800px;
 }
 
 .fin-table-modern th {
@@ -199,12 +240,31 @@
   vertical-align: middle;
 }
 
-.fin-table-modern tr { transition: all 0.2s; background: var(--branco);}
-.fin-table-modern tr:hover { background: var(--fundo-cinza); }
+.fin-table-modern tr {
+  transition: all 0.2s;
+  background: var(--branco);
+}
 
-.col-data { font-size: 13px !important; font-weight: 600; color: var(--texto-secundario); }
-.col-desc strong { color: var(--texto-principal); font-weight: 700; font-size: 15px;}
-.col-valor { font-weight: 800; font-size: 16px !important; }
+.fin-table-modern tr:hover {
+  background: var(--fundo-cinza);
+}
+
+.col-data {
+  font-size: 13px !important;
+  font-weight: 600;
+  color: var(--texto-secundario);
+}
+
+.col-desc strong {
+  color: var(--texto-principal);
+  font-weight: 700;
+  font-size: 15px;
+}
+
+.col-valor {
+  font-weight: 800;
+  font-size: 16px !important;
+}
 
 /* =========================================
    BADGES E UTILITÁRIOS
@@ -218,20 +278,51 @@
   text-transform: uppercase;
 }
 
-.badge-categoria.entrada { background: rgba(21, 128, 61, 0.1); color: #15803d; border: 1px solid #bbf7d0; }
-.badge-categoria.saida { background: rgba(185, 28, 28, 0.1); color: #b91c1c; border: 1px solid #fecaca; }
+.badge-categoria.entrada {
+  background: rgba(21, 128, 61, 0.1);
+  color: #15803d;
+  border: 1px solid #bbf7d0;
+}
 
-[data-theme='dark'] .badge-categoria.entrada { color: #4ade80; border-color: transparent; }
-[data-theme='dark'] .badge-categoria.saida { color: #f87171; border-color: transparent; }
+.badge-categoria.saida {
+  background: rgba(185, 28, 28, 0.1);
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+}
 
-.txt-verde { color: #10b981; }
-.txt-vermelho { color: #ef4444; }
+[data-theme='dark'] .badge-categoria.entrada {
+  color: #4ade80;
+  border-color: transparent;
+}
 
-[data-theme='dark'] .txt-verde { color: #4ade80; }
-[data-theme='dark'] .txt-vermelho { color: #f87171; }
+[data-theme='dark'] .badge-categoria.saida {
+  color: #f87171;
+  border-color: transparent;
+}
 
-.direita { text-align: right; }
-.centro { text-align: center; }
+.txt-verde {
+  color: #10b981;
+}
+
+.txt-vermelho {
+  color: #ef4444;
+}
+
+[data-theme='dark'] .txt-verde {
+  color: #4ade80;
+}
+
+[data-theme='dark'] .txt-vermelho {
+  color: #f87171;
+}
+
+.direita {
+  text-align: right;
+}
+
+.centro {
+  text-align: center;
+}
 
 .btn-icon-excluir {
   background: white;
@@ -246,209 +337,273 @@
   font-size: 14px;
   transition: all 0.2s;
 }
-.btn-icon-excluir:hover { background: #fef2f2; border-color: #fecaca; transform: scale(1.1); color: #ef4444; }
-.fin-empty { text-align: center; padding: 40px !important; color: var(--texto-secundario) !important; font-weight: 600;}
+
+.btn-icon-excluir:hover {
+  background: #fef2f2;
+  border-color: #fecaca;
+  transform: scale(1.1);
+  color: #ef4444;
+}
+
+.fin-empty {
+  text-align: center;
+  padding: 40px !important;
+  color: var(--texto-secundario) !important;
+  font-weight: 600;
+}
 
 
 /* =========================================
    📱 RESPONSIVIDADE MOBILE (TELA INFINITA & GRID EXPERT)
    ========================================= */
 @media (max-width: 900px) {
-  
-  .financeiro-content { padding: 45px 0 20px 0 !important; }
 
-  .fin-header-modern { 
-      padding: 20px 12px !important; 
-      margin-bottom: 20px !important; 
-      flex-direction: column !important;
-      align-items: flex-start !important; 
-      gap: 20px !important;
-      border-radius: 0 !important; 
-      border-left: none !important;
-      border-right: none !important;
-      box-shadow: none !important; 
-  }
-  
-  .fin-action-buttons { width: 100% !important; }
-  .btn-novo-lancamento-unico { 
-      width: 100% !important; 
-      padding: 16px !important; 
-      font-size: 16px !important; 
-      justify-content: center !important;
+  .financeiro-content {
+    padding: 45px 0 20px 0 !important;
   }
 
-  .fin-kpi-grid { 
-      grid-template-columns: repeat(2, 1fr) !important; 
-      gap: 10px !important; 
-      padding: 0 10px !important; 
-      margin-bottom: 25px !important;
+  .fin-header-modern {
+    padding: 20px 12px !important;
+    margin-bottom: 20px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 20px !important;
+    border-radius: 0 !important;
+    border-left: none !important;
+    border-right: none !important;
+    box-shadow: none !important;
   }
 
-  .kpi-card { 
-      padding: 20px 12px !important; 
-      text-align: center !important;
-      border-radius: 12px !important;
-      border: 1px solid var(--borda) !important;
-      align-items: center !important;
+  .fin-action-buttons {
+    width: 100% !important;
   }
 
-  .kpi-header { width: 100%; justify-content: center !important; margin-bottom: 8px !important; flex-direction: column; gap: 5px;}
-  .kpi-header span { font-size: 9px !important; text-align: center;}
-  .kpi-icon { display: none !important; } 
-
-  .kpi-card h2 { font-size: 20px !important; margin: 0 !important; }
-  .kpi-subtitle { display: none !important; }
-
-  .card-saldo { 
-      grid-column: 1 / span 2 !important; 
-      padding: 25px 15px !important;
+  .btn-novo-lancamento-unico {
+    width: 100% !important;
+    padding: 16px !important;
+    font-size: 16px !important;
+    justify-content: center !important;
   }
-  .card-saldo h2 { font-size: 32px !important; }
-  .card-saldo .kpi-subtitle { display: block !important; margin-top: 5px !important;} 
+
+  .fin-kpi-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    padding: 0 10px !important;
+    margin-bottom: 25px !important;
+  }
+
+  .kpi-card {
+    padding: 20px 12px !important;
+    text-align: center !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--borda) !important;
+    align-items: center !important;
+  }
+
+  .kpi-header {
+    width: 100%;
+    justify-content: center !important;
+    margin-bottom: 8px !important;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .kpi-header span {
+    font-size: 9px !important;
+    text-align: center;
+  }
+
+  .kpi-icon {
+    display: none !important;
+  }
+
+  .kpi-card h2 {
+    font-size: 20px !important;
+    margin: 0 !important;
+  }
+
+  .kpi-subtitle {
+    display: none !important;
+  }
+
+  .card-saldo {
+    grid-column: 1 / span 2 !important;
+    padding: 25px 15px !important;
+  }
+
+  .card-saldo h2 {
+    font-size: 32px !important;
+  }
+
+  .card-saldo .kpi-subtitle {
+    display: block !important;
+    margin-top: 5px !important;
+  }
 
 
   /* -------------------------------------
      🔥 A MÁGICA: GRID AREAS NO CARD 🔥
   ---------------------------------------- */
-  .fin-table-container { 
-      padding: 0 !important; 
-      width: 100% !important; 
-      border-radius: 0 !important;
-      border: none !important;
-      box-shadow: none !important;
-      background: transparent !important; /* Fundo transparente revela o cinza de fora */
+  .fin-table-container {
+    padding: 0 !important;
+    width: 100% !important;
+    border-radius: 0 !important;
+    border: none !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    /* Fundo transparente revela o cinza de fora */
   }
-  
+
   .fin-table-modern,
   .fin-table-modern tbody {
-      display: block !important;
-      width: 100% !important;
-      min-width: 0 !important; 
-      background: transparent !important;
+    display: block !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    background: transparent !important;
   }
-  
-  .fin-table-modern thead { display: none !important; }
+
+  .fin-table-modern thead {
+    display: none !important;
+  }
 
   /* Cada linha agora é um Grid Matematicamente Perfeito */
-  .fin-table-modern tr { 
-      display: grid !important;
-      grid-template-columns: 1fr auto !important; 
-      grid-template-areas:
-          "cat data"
-          "desc desc"
-          "valor status"
-          "pagamento pagamento"
-          "acoes acoes" !important;
-      width: 100% !important;
-      height: auto !important; 
-      background: var(--branco) !important;
-      padding: 20px 15px 0 15px !important;
-      margin-bottom: 20px !important; /* Separação claríssima entre os blocos! */
-      border-top: 1px solid var(--borda) !important;
-      border-bottom: 1px solid var(--borda) !important;
-      gap: 10px 15px !important; /* Distância perfeita entre os itens internos */
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04) !important; /* Sombra suave para destacar do fundo cinza */
-      overflow: visible !important; 
+  .fin-table-modern tr {
+    display: grid !important;
+    grid-template-columns: 1fr auto !important;
+    grid-template-areas:
+      "cat data"
+      "desc desc"
+      "valor status"
+      "pagamento pagamento"
+      "acoes acoes" !important;
+    width: 100% !important;
+    height: auto !important;
+    background: var(--branco) !important;
+    padding: 20px 15px 0 15px !important;
+    margin-bottom: 20px !important;
+    /* Separação claríssima entre os blocos! */
+    border-top: 1px solid var(--borda) !important;
+    border-bottom: 1px solid var(--borda) !important;
+    gap: 10px 15px !important;
+    /* Distância perfeita entre os itens internos */
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.04) !important;
+    /* Sombra suave para destacar do fundo cinza */
+    overflow: visible !important;
   }
-  
+
   /* Reset nas células para o grid funcionar perfeito */
-  .fin-table-modern td { 
-      display: flex !important; 
-      flex-direction: column !important; 
-      padding: 0 !important; 
-      border: none !important; 
-      box-sizing: border-box !important;
-      justify-content: center !important;
+  .fin-table-modern td {
+    display: flex !important;
+    flex-direction: column !important;
+    padding: 0 !important;
+    border: none !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
   }
 
   /* 1. DATA (Canto superior direito) */
-  .col-data { 
-      grid-area: data !important;
-      flex-direction: row !important; 
-      align-items: center !important;
-      justify-content: flex-end !important;
-      font-size: 12px !important;
-      color: var(--texto-secundario) !important;
-      gap: 5px !important;
+  .col-data {
+    grid-area: data !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    font-size: 12px !important;
+    color: var(--texto-secundario) !important;
+    gap: 5px !important;
   }
-  .col-data::before { content: '📅'; }
+
+  .col-data::before {
+    content: '📅';
+  }
 
   /* 2. CATEGORIA (Canto superior esquerdo) */
-  .fin-table-modern td:nth-child(2) { 
-      grid-area: cat !important;
-      align-items: flex-start !important;
+  .fin-table-modern td:nth-child(2) {
+    grid-area: cat !important;
+    align-items: flex-start !important;
   }
-  .badge-categoria { font-size: 10px !important; padding: 4px 8px !important;}
+
+  .badge-categoria {
+    font-size: 10px !important;
+    padding: 4px 8px !important;
+  }
 
   /* 3. DESCRIÇÃO (No meio, grandão) */
-  .col-desc { 
-      grid-area: desc !important;
-      margin: 5px 0 !important;
+  .col-desc {
+    grid-area: desc !important;
+    margin: 5px 0 !important;
   }
-  .col-desc strong { font-size: 18px !important; line-height: 1.3 !important;}
+
+  .col-desc strong {
+    font-size: 18px !important;
+    line-height: 1.3 !important;
+  }
 
   /* 4. VALOR (À esquerda, em destaque) */
-  .col-valor { 
-      grid-area: valor !important;
-      align-items: flex-start !important; 
-      font-size: 26px !important; /* Aumentei o Valor! */
-      margin-bottom: 0 !important;
+  .col-valor {
+    grid-area: valor !important;
+    align-items: flex-start !important;
+    font-size: 26px !important;
+    /* Aumentei o Valor! */
+    margin-bottom: 0 !important;
   }
 
   /* 5. STATUS (Canto direito do valor) */
-  .fin-table-modern td:nth-child(6) { 
-      grid-area: status !important;
-      align-items: flex-end !important;
+  .fin-table-modern td:nth-child(6) {
+    grid-area: status !important;
+    align-items: flex-end !important;
   }
 
   /* 🔥 6. FORMA DE PAGAMENTO (A "Pílula" Bonitinha em vez de texto solto) 🔥 */
-  .fin-table-modern td:nth-child(4) { 
-      grid-area: pagamento !important;
-      flex-direction: row !important;
-      align-items: center !important;
-      justify-content: flex-start !important;
-      font-size: 13px !important;
-      color: var(--texto-secundario) !important;
-      font-weight: 600 !important;
-      background-color: var(--fundo-cinza) !important;
-      padding: 6px 12px !important;
-      border-radius: 6px !important;
-      width: fit-content !important;
-      gap: 6px !important;
-      margin-bottom: 10px !important; /* Empurra a lixeira pra baixo */
+  .fin-table-modern td:nth-child(4) {
+    grid-area: pagamento !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    font-size: 13px !important;
+    color: var(--texto-secundario) !important;
+    font-weight: 600 !important;
+    background-color: var(--fundo-cinza) !important;
+    padding: 6px 12px !important;
+    border-radius: 6px !important;
+    width: fit-content !important;
+    gap: 6px !important;
+    margin-bottom: 10px !important;
+    /* Empurra a lixeira pra baixo */
   }
+
   .fin-table-modern td:nth-child(4)::before {
-      content: '💳 Forma de Pagamento: '; /* Transforma "Pix" em algo compreensível */
-      font-weight: 400;
+    content: '💳 Forma de Pagamento: ';
+    /* Transforma "Pix" em algo compreensível */
+    font-weight: 400;
   }
 
   /* 🔥 7. BOTÃO EXCLUIR NA BASE DO CARD 🔥 */
   .fin-table-modern td:last-child {
-      grid-area: acoes !important;
-      width: 100% !important;
-      padding: 15px 0 !important; 
-      border-top: 1px solid var(--borda) !important; 
+    grid-area: acoes !important;
+    width: 100% !important;
+    padding: 15px 0 !important;
+    border-top: 1px solid var(--borda) !important;
   }
-  
+
   .btn-icon-excluir {
-      width: 100% !important; 
-      height: 48px !important;
-      font-size: 18px !important;
-      border-radius: 8px !important;
-      background-color: #fef2f2 !important; 
-      color: #ef4444 !important; 
-      border: 1px solid #fecaca !important; 
-      display: flex !important;
-      align-items: center !important;
-      justify-content: center !important;
-      gap: 10px !important;
+    width: 100% !important;
+    height: 48px !important;
+    font-size: 18px !important;
+    border-radius: 8px !important;
+    background-color: #fef2f2 !important;
+    color: #ef4444 !important;
+    border: 1px solid #fecaca !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 10px !important;
   }
 
   .btn-icon-excluir::after {
-      content: "Excluir Lançamento";
-      font-weight: 700;
-      font-size: 15px;
-      font-family: 'Inter', system-ui, sans-serif;
+    content: "Excluir Lançamento";
+    font-weight: 700;
+    font-size: 15px;
+    font-family: 'Inter', system-ui, sans-serif;
   }
 }
 

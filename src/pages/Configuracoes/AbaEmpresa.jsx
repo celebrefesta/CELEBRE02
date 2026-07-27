@@ -11,7 +11,9 @@ const AbaEmpresa = ({
   sigGlobal,
   limparAssinatura,
   salvarAssinaturaGlobal,
-  removerAssinaturaGlobal
+  removerAssinaturaGlobal,
+  salvarTudo,
+  salvandoTudo
 }) => {
 
   const atualizarEnderecoCompleto = (overrideObj = {}) => {
@@ -537,6 +539,53 @@ const AbaEmpresa = ({
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── BOTÃO SALVAR EMPRESA ── */}
+      <div style={{
+        display: 'flex',
+        justifyContent: 'flex-end',
+        alignItems: 'center',
+        gap: '12px',
+        marginTop: '32px',
+        padding: '20px 24px',
+        background: 'var(--fundo-card, #ffffff)',
+        border: '1px solid var(--borda-card, #e2e8f0)',
+        borderRadius: '16px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.06)'
+      }}>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontSize: '13px', color: '#64748b' }}>
+            <i className="fas fa-info-circle" style={{ marginRight: '6px', color: '#3b82f6' }}></i>
+            Os campos são salvos individualmente ao sair de cada campo. Use este botão para <strong>confirmar todas as alterações</strong> de uma vez.
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={salvarTudo}
+          disabled={salvandoTudo}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px',
+            padding: '12px 28px',
+            background: salvandoTudo ? '#94a3b8' : 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '10px',
+            fontSize: '14px',
+            fontWeight: '700',
+            cursor: salvandoTudo ? 'not-allowed' : 'pointer',
+            boxShadow: salvandoTudo ? 'none' : '0 4px 14px rgba(15,23,42,0.35)',
+            transition: 'all 0.2s ease',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {salvandoTudo
+            ? <><i className="fas fa-spinner fa-spin"></i> Salvando...</>
+            : <><i className="fas fa-save"></i> Salvar Dados da Empresa</>
+          }
+        </button>
       </div>
 
     </div>

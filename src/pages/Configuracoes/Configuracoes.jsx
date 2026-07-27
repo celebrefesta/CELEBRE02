@@ -393,6 +393,8 @@ const Configuracoes = () => {
             limparAssinatura={limparAssinatura}
             salvarAssinaturaGlobal={salvarAssinaturaGlobal}
             removerAssinaturaGlobal={removerAssinaturaGlobal}
+            salvarTudo={salvarConfiguracoesCompletas}
+            salvandoTudo={salvandoTudo}
           />
         )}
 
