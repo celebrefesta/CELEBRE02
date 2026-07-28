@@ -1,10 +1,23 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './NovaLocacao.css';
 import { db } from '../../firebaseConfig'; 
 import { collection, getDocs, doc, getDoc, addDoc, getCountFromServer, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
+
+// 🏷️ TIPOS DE EVENTO (mesmos da tela de Locações)
+const TIPOS_EVENTO = [
+  { value: 'aniversario',      label: 'Aniversário',      emoji: '🎂' },
+  { value: 'casamento',        label: 'Casamento',        emoji: '💍' },
+  { value: 'formatura',        label: 'Formatura',        emoji: '🎓' },
+  { value: 'corporativo',      label: 'Corporativo',      emoji: '💼' },
+  { value: 'cha_bebe',         label: 'Chá de Bebê',      emoji: '👶' },
+  { value: 'debutante',        label: 'Debutante',        emoji: '👑' },
+  { value: 'batizado',         label: 'Batizado',         emoji: '⛪' },
+  { value: 'confraternizacao', label: 'Confraternização', emoji: '🥂' },
+  { value: 'outro',            label: 'Outro',            emoji: '🎉' },
+];
 
 const NovaLocacao = () => {
   const navigate = useNavigate();
@@ -78,6 +91,7 @@ const NovaLocacao = () => {
   const [gerandoLinkMP, setGerandoLinkMP] = useState(false);
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [statusParaSalvar, setStatusParaSalvar] = useState('');
+  const [tipoEvento, setTipoEvento] = useState('');  // 🏷️ Tipo de Evento (Aniversário, Casamento, etc.)
 
   const badgeEsgotado = { position: 'absolute', top: 5, left: 5, background: '#ef4444', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
   const badgeBateVolta = { position: 'absolute', top: 5, left: 5, background: '#f59e0b', color: '#fff', fontSize: '10px', padding: '2px 6px', borderRadius: '4px', fontWeight: 'bold' };
@@ -458,7 +472,9 @@ const NovaLocacao = () => {
     
     try {
       const coll = collection(db, "locacoes");
-      const snap = await getCountFromServer(coll);
+      // ✅ Filtrar por tenantId para respeitar as regras de segurança do Firestore
+      const qCount = query(coll, where("userId", "==", tenantId));
+      const snap = await getCountFromServer(qCount);
       const count = snap.data().count + 1;
       const codigo = `${new Date().getFullYear()}-${count.toString().padStart(3, '0')}`;
 
@@ -472,6 +488,7 @@ const NovaLocacao = () => {
         clienteNome: nomeClienteReal, 
         temaFesta: temaFinalParaSalvar, 
         tipoServico, 
+        tipoEvento: tipoEvento || null,  // 🏷️ Tipo de evento salvo automaticamente
         dataRetirada: datas.retirada, 
         dataDevolucao: datas.devolucao, 
         itens: carrinho, 
@@ -596,17 +613,17 @@ const NovaLocacao = () => {
       }
 
       if (!linkFinal) {
-        linkFinal = `https://link.mercadopago.com.br/sualoja?valor=${valorDigitadoNum.toFixed(2)}`;
+        // Link fixo da empresa Celebre como fallback seguro
+        linkFinal = `https://link.mercadopago.com.br/celebresistema`;
       }
 
       setLinkMercadoPago(linkFinal);
       setFormaPagtoSinal('Mercado Pago');
-      alert("✅ Cobrança gerada com sucesso! Você pode editar o link no campo abaixo se desejar.");
+      alert("✅ Cobrança gerada com sucesso para a SUA conta! Você pode editar o link no campo abaixo se desejar.");
 
     } catch (e) {
       console.error("Erro MP Preference:", e);
-      setLinkMercadoPago(`https://link.mercadopago.com.br/sualoja`);
-      setFormaPagtoSinal('Mercado Pago');
+      alert("❌ Erro ao gerar cobrança. Verifique suas configurações de pagamento em Configurações > Empresa.");
     } finally {
       setGerandoLinkMP(false);
     }
@@ -856,6 +873,41 @@ const NovaLocacao = () => {
                 <label>Data de Devolução *</label>
                 <input type="date" min={datas.retirada} value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} />
               </div>
+            </div>
+
+            {/* 🏷️ TIPO DE EVENTO */}
+            <div className="form-group mt-10">
+              <label style={{ fontWeight: '700', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                🏷️ TIPO DE EVENTO
+              </label>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                {TIPOS_EVENTO.map(tipo => (
+                  <button
+                    key={tipo.value}
+                    type="button"
+                    onClick={() => setTipoEvento(prev => prev === tipo.value ? '' : tipo.value)}
+                    style={{
+                      padding: '6px 14px',
+                      borderRadius: '20px',
+                      border: tipoEvento === tipo.value ? '2px solid #c5a059' : '1.5px solid #e2e8f0',
+                      background: tipoEvento === tipo.value ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'var(--fundo-card, #fff)',
+                      color: tipoEvento === tipo.value ? '#92400e' : '#64748b',
+                      fontWeight: tipoEvento === tipo.value ? '800' : '600',
+                      fontSize: '0.78rem',
+                      cursor: 'pointer',
+                      transition: 'all 0.18s ease',
+                      boxShadow: tipoEvento === tipo.value ? '0 4px 12px rgba(197,160,89,0.25)' : 'none',
+                    }}
+                  >
+                    {tipo.emoji} {tipo.label}
+                  </button>
+                ))}
+              </div>
+              {tipoEvento && (
+                <p style={{ marginTop: '6px', fontSize: '0.73rem', color: '#10b981', fontWeight: '600' }}>
+                  ✅ Tag selecionada: {TIPOS_EVENTO.find(t => t.value === tipoEvento)?.emoji} {TIPOS_EVENTO.find(t => t.value === tipoEvento)?.label}
+                </p>
+              )}
             </div>
           </div>
 

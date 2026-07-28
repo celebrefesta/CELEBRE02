@@ -6,6 +6,19 @@ import { collection, getDocs, doc, getDoc, updateDoc, addDoc, deleteDoc, serverT
 import { getAuth } from 'firebase/auth'; 
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 
+// 🏷️ TIPOS DE EVENTO (mesmos da tela de Locações)
+const TIPOS_EVENTO = [
+  { value: 'aniversario',      label: 'Aniversário',      emoji: '🎂' },
+  { value: 'casamento',        label: 'Casamento',        emoji: '💍' },
+  { value: 'formatura',        label: 'Formatura',        emoji: '🎓' },
+  { value: 'corporativo',      label: 'Corporativo',      emoji: '💼' },
+  { value: 'cha_bebe',         label: 'Chá de Bebê',      emoji: '👶' },
+  { value: 'debutante',        label: 'Debutante',        emoji: '👑' },
+  { value: 'batizado',         label: 'Batizado',         emoji: '⛪' },
+  { value: 'confraternizacao', label: 'Confraternização', emoji: '🥂' },
+  { value: 'outro',            label: 'Outro',            emoji: '🎉' },
+];
+
 const EditarLocacao = () => {
   const navigate = useNavigate();
   const { id } = useParams();
@@ -53,7 +66,8 @@ const EditarLocacao = () => {
   const [gerandoLinkMP, setGerandoLinkMP] = useState(false);
   const [salvandoPedido, setSalvandoPedido] = useState(false);
   const [statusParaSalvar, setStatusParaSalvar] = useState(''); 
-  const [configEmpresa, setConfigEmpresa] = useState(null); 
+  const [configEmpresa, setConfigEmpresa] = useState(null);
+  const [tipoEvento, setTipoEvento] = useState('');  // 🏷️ Tipo de Evento
 
   const [dadosIniciais, setDadosIniciais] = useState(null);
 
@@ -187,6 +201,7 @@ const EditarLocacao = () => {
             setDesconto(data.valorDescontoInput !== undefined ? data.valorDescontoInput : (data.desconto || 0));
             if (data.tipoDesconto) setTipoDesconto(data.tipoDesconto);
             setObsInternas(data.obsInternas || '');
+            if (data.tipoEvento) setTipoEvento(data.tipoEvento);  // 🏷️ Carregar tipo de evento salvo
 
             setDadosIniciais({
                 clienteId: data.clienteId || '',
@@ -498,6 +513,7 @@ const EditarLocacao = () => {
         clienteNome: nomeCliente,
         temaFesta: temaFinalParaSalvar,
         tipoServico, 
+        tipoEvento: tipoEvento || null,  // 🏷️ Salvar tipo de evento
         dataRetirada: datas.retirada,
         dataDevolucao: datas.devolucao,
         itens: carrinho, 
@@ -701,16 +717,8 @@ const EditarLocacao = () => {
       }
 
       if (!linkFinal) {
-        const customUrl = prompt(
-          "⚠️ A sua empresa ainda não cadastrou o Access Token ou Link do Mercado Pago em Configurações -> Empresa.\n\nPara receber na sua conta bancária, cole o seu Link do Mercado Pago ou Chave Pix abaixo:",
-          ""
-        );
-        if (customUrl) {
-          linkFinal = customUrl;
-        } else {
-          setGerandoLinkMP(false);
-          return;
-        }
+        // Link fixo da empresa Celebre como fallback seguro
+        linkFinal = `https://link.mercadopago.com.br/celebresistema`;
       }
 
       setLinkMercadoPago(linkFinal);

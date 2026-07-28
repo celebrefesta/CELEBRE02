@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Clientes.css';
 import { db, storage } from '../../firebaseConfig';
@@ -55,6 +55,12 @@ const Clientes = () => {
   const [imagemPreviewUrl, setImagemPreviewUrl] = useState('');
   const [carregandoUploadImg, setCarregandoUploadImg] = useState(false);
   const [imagemCopiadaComSucesso, setImagemCopiadaComSucesso] = useState(false);
+
+  // NOVOS ESTADOS: Filtro por Tipo de Evento e Exportar
+  const [filtroTipoEvento, setFiltroTipoEvento] = useState('todos');
+  const [exportandoLista, setExportandoLista] = useState(false);
+  const exportMenuRef = useRef(null);
+  const [showExportMenu, setShowExportMenu] = useState(false);
 
   useEffect(() => { 
     if (!usuarioLogado) {
@@ -454,6 +460,130 @@ const Clientes = () => {
 
   const [filtroTagCRM, setFiltroTagCRM] = useState('todas');
 
+  // ============================================================
+  // LISTA DE TIPOS DE EVENTOS ÚNICOS (para o filtro)
+  // ============================================================
+  const tiposEventoUnicos = React.useMemo(() => {
+    const tipos = new Set();
+    allLocacoes.forEach(loc => {
+      const tipo = loc.tipoServico || loc.modalidade || loc.tema || loc.temaDaFesta || loc.nomeTema;
+      if (tipo) tipos.add(String(tipo).trim());
+    });
+    return Array.from(tipos).sort();
+  }, [allLocacoes]);
+
+  // ============================================================
+  // BADGE RECORRENTE: clientes com 2+ locações confirmadas
+  // ============================================================
+  const clientesRecorrentesSet = React.useMemo(() => {
+    const s = new Set();
+    clientes.forEach(c => {
+      const locs = allLocacoes.filter(loc => (loc.clienteId === c.id || loc.cliente?.id === c.id));
+      const confirmadas = locs.filter(loc => {
+        const st = String(loc.status || '').toLowerCase();
+        return !st.includes('cancelado') && !st.includes('orcam');
+      });
+      if (confirmadas.length >= 2) s.add(c.id);
+    });
+    return s;
+  }, [clientes, allLocacoes]);
+
+  // ============================================================
+  // LINHA DO TEMPO DO PEDIDO: marcos das locações do cliente
+  // ============================================================
+  const gerarTimelineCompleta = (clienteId) => {
+    const locs = allLocacoes.filter(loc => loc.clienteId === clienteId || loc.cliente?.id === clienteId);
+    const eventos = [];
+
+    locs.forEach(loc => {
+      const tema = loc.tema || loc.temaDaFesta || loc.nomeTema || 'Locação';
+      const pedidoNum = loc.numeroPedido ? `#${loc.numeroPedido}` : `#${loc.id.substring(0,6).toUpperCase()}`;
+
+      // Evento: criação do pedido
+      if (loc.criadoEm || loc.dataCriacao) {
+        const dt = loc.criadoEm || loc.dataCriacao;
+        const data = dt?.toDate ? dt.toDate() : new Date(dt);
+        if (!isNaN(data.getTime())) {
+          eventos.push({ data, tipo: 'criacao', icone: '📝', cor: '#6366f1', bg: '#eef2ff', label: `Pedido ${pedidoNum} criado`, sub: tema, id: `${loc.id}-criacao` });
+        }
+      }
+
+      // Evento: data do evento/retirada
+      if (loc.dataRetirada || loc.dataEvento) {
+        const str = loc.dataRetirada || loc.dataEvento;
+        const data = new Date(str + 'T12:00:00');
+        if (!isNaN(data.getTime())) {
+          eventos.push({ data, tipo: 'evento', icone: '🎉', cor: '#f59e0b', bg: '#fffbeb', label: `Evento: ${tema}`, sub: `Pedido ${pedidoNum}`, id: `${loc.id}-evento` });
+        }
+      }
+
+      // Evento: devolução
+      if (loc.dataDevolucao) {
+        const data = new Date(loc.dataDevolucao + 'T12:00:00');
+        if (!isNaN(data.getTime())) {
+          eventos.push({ data, tipo: 'devolucao', icone: '📦', cor: '#64748b', bg: '#f1f5f9', label: `Devolução ${pedidoNum}`, sub: tema, id: `${loc.id}-devolucao` });
+        }
+      }
+
+      // Evento: pagamento quitado
+      const pagSt = String(loc.statusPagamento || '').toLowerCase();
+      if (pagSt === 'pago' || pagSt === 'quitado') {
+        const str = loc.dataPagamento || loc.dataRetirada || loc.dataEvento;
+        if (str) {
+          const data = new Date(str + 'T12:00:00');
+          if (!isNaN(data.getTime())) {
+            eventos.push({ data, tipo: 'pagamento', icone: '✅', cor: '#10b981', bg: '#ecfdf5', label: `Pagamento quitado ${pedidoNum}`, sub: `R$ ${Number(loc.valorTotal || loc.total || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}`, id: `${loc.id}-pag` });
+          }
+        }
+      }
+    });
+
+    eventos.sort((a, b) => b.data - a.data);
+    return eventos;
+  };
+
+  // ============================================================
+  // EXPORTAR LISTA DE CLIENTES (CSV e IMPRESSÃO)
+  // ============================================================
+  const exportarCSV = () => {
+    setExportandoLista(true);
+    try {
+      const cabecalho = ['Nome', 'Tipo', 'CPF/CNPJ', 'Celular', 'E-mail', 'Situação', 'Tag CRM', 'Total Locações', 'LTV (R$)'];
+      const linhas = clientesFiltrados.map(c => {
+        const res = getHistoricoDoCliente(c.id);
+        return [
+          formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || ''),
+          c.tipoPessoa === 'juridica' ? 'PJ' : 'PF',
+          c.cpf || c.cnpj || '',
+          c.celular || '',
+          c.email || '',
+          c.situacaoFinanceira || '',
+          c.tags || '',
+          res.historico.length,
+          res.totalGasto.toFixed(2).replace('.', ',')
+        ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(';');
+      });
+      const csvContent = '\uFEFF' + [cabecalho.map(h => `"${h}"`).join(';'), ...linhas].join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `clientes_celebre_${new Date().toLocaleDateString('pt-BR').replace(/\//g,'-')}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    } finally {
+      setExportandoLista(false);
+      setShowExportMenu(false);
+    }
+  };
+
+  const exportarImprimir = () => {
+    setShowExportMenu(false);
+    window.print();
+  };
+
   // Mapeamento de Ranking dos Melhores Clientes por locações/LTV
   const rankingsClientesMap = React.useMemo(() => {
     const map = {};
@@ -494,7 +624,17 @@ const Clientes = () => {
       passTag = (c.tags || '').toUpperCase() === filtroTagCRM.toUpperCase();
     }
 
-    return matchBusca && passStatus && passTag;
+    // FILTRO POR TIPO DE EVENTO
+    let passTipoEvento = true;
+    if (filtroTipoEvento !== 'todos') {
+      const locsCliente = allLocacoes.filter(loc => loc.clienteId === c.id || loc.cliente?.id === c.id);
+      passTipoEvento = locsCliente.some(loc => {
+        const tipo = loc.tipoServico || loc.modalidade || loc.tema || loc.temaDaFesta || loc.nomeTema || '';
+        return String(tipo).trim().toLowerCase() === filtroTipoEvento.toLowerCase();
+      });
+    }
+
+    return matchBusca && passStatus && passTag && passTipoEvento;
   });
 
   clientesFiltrados.sort((a, b) => {
@@ -551,6 +691,39 @@ const Clientes = () => {
           >
             <i className="fas fa-link"></i> Link Auto-Cadastro
           </button>
+
+          {/* BOTÃO EXPORTAR LISTA */}
+          <div className="export-dropdown-wrapper" ref={exportMenuRef} style={{ position: 'relative' }}>
+            <button
+              type="button"
+              className="btn-export-celebre"
+              onClick={() => setShowExportMenu(v => !v)}
+              disabled={exportandoLista}
+              title="Exportar lista de clientes"
+            >
+              {exportandoLista
+                ? <><i className="fas fa-spinner fa-spin"></i> Exportando...</>
+                : <><i className="fas fa-file-export"></i> Exportar</>}
+            </button>
+            {showExportMenu && (
+              <div className="export-dropdown-menu fade-in">
+                <button onClick={exportarCSV} className="export-dropdown-item">
+                  <i className="fas fa-file-csv" style={{ color: '#16a34a' }}></i>
+                  <div>
+                    <strong>Planilha CSV</strong>
+                    <span>Abre no Excel e Google Sheets</span>
+                  </div>
+                </button>
+                <button onClick={exportarImprimir} className="export-dropdown-item">
+                  <i className="fas fa-print" style={{ color: '#6366f1' }}></i>
+                  <div>
+                    <strong>Imprimir / Salvar PDF</strong>
+                    <span>Gera PDF pelo navegador</span>
+                  </div>
+                </button>
+              </div>
+            )}
+          </div>
 
           <Link to="/cadastro-cliente" className="btn-primary-celebre">
             <i className="fas fa-plus"></i> NOVO CLIENTE
@@ -688,6 +861,20 @@ const Clientes = () => {
               <option value="PROBLEMÁTICO">⚠️ PROBLEMÁTICO</option>
             </select>
 
+            {/* FILTRO POR TIPO DE EVENTO */}
+            {tiposEventoUnicos.length > 0 && (
+              <select
+                value={filtroTipoEvento}
+                onChange={(e) => setFiltroTipoEvento(e.target.value)}
+                className="select-pill-filter"
+              >
+                <option value="todos">🎭 Filtrar por Evento</option>
+                {tiposEventoUnicos.map(tipo => (
+                  <option key={tipo} value={tipo}>🎉 {tipo}</option>
+                ))}
+              </select>
+            )}
+
             <button type="button" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} className="select-pill-filter btn-sort-celebre">
               <i className={ordemAlfabetica === 'A-Z' ? "fas fa-sort-alpha-down" : "fas fa-sort-alpha-up"}></i> Ordem: {ordemAlfabetica}
             </button>
@@ -774,6 +961,7 @@ const Clientes = () => {
                   const tagColorida = c.tags ? getTagStyle(c.tags) : null;
                   const eAniversariante = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
                   const isInadimplente = c.situacaoFinanceira === 'inadimplente';
+                  const isRecorrente = clientesRecorrentesSet.has(c.id);
 
                   return (
                     <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover" onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }}> 
@@ -792,6 +980,11 @@ const Clientes = () => {
                                {rankingsClientesMap[c.id] && (
                                  <span className="badge-ranking-cliente" style={{ backgroundColor: rankingsClientesMap[c.id].bg, color: rankingsClientesMap[c.id].color, border: `1px solid ${rankingsClientesMap[c.id].border}`, padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '850' }}>
                                    {rankingsClientesMap[c.id].badge}
+                                 </span>
+                               )}
+                               {isRecorrente && !rankingsClientesMap[c.id] && (
+                                 <span className="badge-recorrente-cliente" title="Cliente Recorrente: 2 ou mais locações confirmadas">
+                                   💎 RECORRENTE
                                  </span>
                                )}
                                 {eAniversariante && (
@@ -1033,7 +1226,7 @@ const Clientes = () => {
                       <i className="fas fa-history"></i> Histórico de Locações ({perfilHistorico.length})
                     </button>
                     <button onClick={() => setAbaAtiva('timeline')} className={`ptab ${abaAtiva === 'timeline' ? 'active' : ''}`}>
-                      <i className="fas fa-stream"></i> Linha do Tempo & CRM ({historicoNotasCliente.length})
+                      <i className="fas fa-stream"></i> Linha do Tempo ({gerarTimelineCompleta(clienteVisualizacao.id).length + historicoNotasCliente.length})
                     </button>
                   </div>
                   
@@ -1178,34 +1371,69 @@ const Clientes = () => {
                     )}
 
                     {/* ABA 3: LINHA DO TEMPO & NOTAS CRM */}
-                    {abaAtiva === 'timeline' && (
-                      <div className="timeline-wrapper">
-                        {historicoNotasCliente.length === 0 ? (
-                          <div className="empty-timeline-box" style={{ padding: '24px' }}>
-                            <div className="empty-icon-circle"><i className="far fa-comments"></i></div>
-                            <h4>Nenhuma nota registrada na linha do tempo</h4>
-                            <p>Abra a página de edição do cliente para registrar novas ligações, acordos e preferências.</p>
+                    {abaAtiva === 'timeline' && (() => {
+                      const eventosLocacoes = gerarTimelineCompleta(clienteVisualizacao.id);
+                      const notasCRM = historicoNotasCliente.map(n => ({
+                        ...n,
+                        _isNota: true,
+                        data: new Date(n.dataHora)
+                      }));
+
+                      // Mesclar eventos de locação + notas CRM, ordenados por data desc
+                      const todasEntradas = [
+                        ...eventosLocacoes.map(e => ({ ...e, _isNota: false })),
+                        ...notasCRM
+                      ].sort((a, b) => b.data - a.data);
+
+                      if (todasEntradas.length === 0) {
+                        return (
+                          <div className="timeline-wrapper">
+                            <div className="empty-timeline-box" style={{ padding: '24px' }}>
+                              <div className="empty-icon-circle"><i className="fas fa-route"></i></div>
+                              <h4>Nenhum evento na linha do tempo</h4>
+                              <p>Os marcos das locações e as notas CRM aparecerão aqui automaticamente.</p>
+                            </div>
                           </div>
-                        ) : (
-                          <div className="timeline-feed-list" style={{ paddingLeft: '14px' }}>
-                            {historicoNotasCliente.map((nota) => (
-                              <div key={nota.id} className="timeline-feed-item">
-                                <div className="timeline-card-body">
-                                  <div className="timeline-card-header">
-                                    <div className="header-left">
-                                      <span className="cat-badge-pill" style={{ background: '#f1f5f9', color: '#475569' }}>{nota.tipo}</span>
-                                      <span className="author-name"><i className="far fa-user-circle"></i> {nota.autor}</span>
+                        );
+                      }
+
+                      return (
+                        <div className="timeline-wrapper">
+                          <div className="timeline-feed-list-v2">
+                            {todasEntradas.map((entrada, idx) => (
+                              entrada._isNota ? (
+                                // NOTA CRM
+                                <div key={`nota-${entrada.id || idx}`} className="tl-item tl-nota">
+                                  <div className="tl-dot" style={{ background: '#8b5cf6', borderColor: '#6d28d9' }}>💬</div>
+                                  <div className="tl-card tl-card-nota">
+                                    <div className="tl-card-header">
+                                      <span className="tl-badge" style={{ background: '#f5f3ff', color: '#6d28d9' }}>{entrada.tipo || 'Nota'}</span>
+                                      <span className="tl-author"><i className="far fa-user-circle"></i> {entrada.autor}</span>
+                                      <span className="tl-date">{new Date(entrada.dataHora).toLocaleString('pt-BR')}</span>
                                     </div>
-                                    <span className="time-stamp"><i className="far fa-clock"></i> {new Date(nota.dataHora).toLocaleString('pt-BR')}</span>
+                                    <p className="tl-text">{entrada.texto}</p>
                                   </div>
-                                  <p className="timeline-text-content">{nota.texto}</p>
                                 </div>
-                              </div>
+                              ) : (
+                                // EVENTO DE LOCAÇÃO
+                                <div key={entrada.id} className="tl-item tl-evento">
+                                  <div className="tl-dot" style={{ background: entrada.bg, borderColor: entrada.cor, fontSize: '14px', display:'flex',alignItems:'center',justifyContent:'center' }}>
+                                    {entrada.icone}
+                                  </div>
+                                  <div className="tl-card" style={{ borderLeft: `3px solid ${entrada.cor}` }}>
+                                    <div className="tl-card-header">
+                                      <span className="tl-badge" style={{ background: entrada.bg, color: entrada.cor }}>{entrada.label}</span>
+                                      <span className="tl-date">{entrada.data.toLocaleDateString('pt-BR')}</span>
+                                    </div>
+                                    {entrada.sub && <p className="tl-text" style={{ color: '#64748b', marginTop: '4px' }}>{entrada.sub}</p>}
+                                  </div>
+                                </div>
+                              )
                             ))}
                           </div>
-                        )}
-                      </div>
-                    )}
+                        </div>
+                      );
+                    })()}
 
                   </div>
                 </div>

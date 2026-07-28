@@ -487,7 +487,7 @@ const AbaEmpresa = ({
                 value={config.linkMercadoPago || ''} 
                 onChange={(e) => handleConfigChange('linkMercadoPago', e.target.value)} 
                 onBlur={(e) => salvarConfigTextual('linkMercadoPago', e.target.value)} 
-                placeholder="Ex: https://link.mercadopago.com.br/sualoja" 
+                placeholder="Ex: https://link.mercadopago.com.br/celebresistema" 
               />
             </div>
           </div>
