@@ -19,7 +19,7 @@
 .card-edit h3 { margin-top: 0; border-bottom: 1px solid #eee; padding-bottom: 10px; color: #0f3460; }
 
 .row-dates { display: flex; gap: 15px; margin-top: 15px; }
-input, select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+
 
 .top-itens { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
 .top-itens button { background: #0f3460; color: white; border: none; padding: 8px 15px; border-radius: 5px; cursor: pointer; }

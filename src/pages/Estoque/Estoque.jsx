@@ -9,6 +9,7 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
 
+// Page component for Estoque Management
 const Estoque = () => {
   const navigate = useNavigate();
   const auth = getAuth();
@@ -34,6 +35,10 @@ const Estoque = () => {
   const [modalManutencao, setModalManutencao] = useState(false);
   const [itemParaManutencao, setItemParaManutencao] = useState(null);
   const [qtdMaint, setQtdMaint] = useState(1);
+  const [motivoManutencao, setMotivoManutencao] = useState('');
+  const [custoManutencao, setCustoManutencao] = useState('');
+  const [dataInicioManutencao, setDataInicioManutencao] = useState(new Date().toISOString().split('T')[0]);
+  const [dataPrevisaoRetorno, setDataPrevisaoRetorno] = useState('');
 
   const [modalAddPedidoAberto, setModalAddPedidoAberto] = useState(false);
   const [itemParaPedido, setItemParaPedido] = useState(null);
@@ -309,29 +314,212 @@ const Estoque = () => {
       }
   };
 
+  const parseValorCusto = (valStr) => {
+    if (!valStr) return 0;
+    const limpo = String(valStr).replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(limpo);
+    return isNaN(num) ? 0 : num;
+  };
+
+  const handleBlurCusto = () => {
+    if (!custoManutencao || String(custoManutencao).trim() === '') return;
+    const valNum = parseValorCusto(custoManutencao);
+    if (valNum >= 0) {
+      setCustoManutencao(valNum.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }));
+    }
+  };
+
   const abrirModalManutencao = (item) => {
     setItemParaManutencao(item);
     const qtdAtual = item.qtdManutencao !== undefined ? item.qtdManutencao : (item.status === 'manutencao' ? item.quantidade : 0);
     setQtdMaint(qtdAtual === 0 ? 1 : qtdAtual);
+    setMotivoManutencao(item.motivoManutencao || '');
+    
+    const valCustoExistente = item.custoManutencao !== undefined && item.custoManutencao !== null ? Number(item.custoManutencao) : 0;
+    setCustoManutencao(valCustoExistente > 0 ? valCustoExistente.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '');
+    
+    setDataInicioManutencao(item.dataInicioManutencao ? item.dataInicioManutencao.split('T')[0] : new Date().toISOString().split('T')[0]);
+    setDataPrevisaoRetorno(item.dataPrevisaoRetorno || '');
     setModalManutencao(true);
+  };
+
+  const formatarDataBR = (dataIso) => {
+    if (!dataIso) return '';
+    const [a, m, d] = dataIso.split('-');
+    return `${d}/${m}/${a}`;
+  };
+
+  const somarDiasISO = (dataIso, dias) => {
+    if (!dataIso) return '';
+    const parts = dataIso.split('-');
+    const dt = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]) + dias);
+    const ano = dt.getFullYear();
+    const mes = String(dt.getMonth() + 1).padStart(2, '0');
+    const dia = String(dt.getDate()).padStart(2, '0');
+    return `${ano}-${mes}-${dia}`;
+  };
+
+  const verificarConflitoManutencaoLocacao = (item, valorQtdMaint, dataPrevisao) => {
+    if (!item || valorQtdMaint <= 0) return null;
+
+    const hojeStr = new Date().toISOString().split('T')[0];
+    const conflitos = [];
+
+    (locacoes || []).forEach(loc => {
+      if (loc.arquivado || loc.archived) return;
+      const status = (loc.status || '').toLowerCase().trim();
+      if (['cancelado', 'arquivado', 'finalizado', 'orcamento', 'orçamento'].includes(status)) return;
+
+      if (!loc.dataRetirada || !loc.dataDevolucao) return;
+      if (loc.dataDevolucao < hojeStr) return;
+
+      const itemNoPedido = (loc.itens || loc.carrinho || []).find(i => 
+        String(i.id) === String(item.id) ||
+        (i.codigo && item.codigo && i.codigo === item.codigo) ||
+        (i.nome && item.nome && i.nome.trim().toLowerCase() === item.nome.trim().toLowerCase())
+      );
+
+      if (itemNoPedido) {
+        const qtdAlugada = parseInt(itemNoPedido.qtd || itemNoPedido.quantidade || 1);
+        const qtdFisica = Math.max(1, Number(item.quantidade || 1));
+        const estoqueRestanteSemMaint = qtdFisica - valorQtdMaint;
+
+        if (qtdAlugada > estoqueRestanteSemMaint) {
+          // A peça entra em reparo HOJE. Ela DEVE ficar pronta no máximo até 1 dia ANTES da retirada da locação
+          const dataLimiteProntidao = somarDiasISO(loc.dataRetirada, -1);
+
+          // Se a prontidão não foi informada OU se a prontidão for DEPOIS da data limite (invadindo o período do pedido)
+          if (!dataPrevisao || dataPrevisao > dataLimiteProntidao) {
+            conflitos.push({
+              numPedido: loc.numeroPedido || loc.id?.substring(0,6).toUpperCase(),
+              clienteNome: loc.clienteNome || 'Cliente',
+              dataRetirada: loc.dataRetirada,
+              dataDevolucao: loc.dataDevolucao,
+              dataLimiteProntidao,
+              qtdAlugada
+            });
+          }
+        }
+      }
+    });
+
+    return conflitos;
   };
 
   const salvarManutencao = async () => {
     if (!itemParaManutencao) return;
-    const valor = parseInt(qtdMaint);
-    if (isNaN(valor) || valor < 0 || valor > itemParaManutencao.quantidade) {
-      alert("Quantidade inválida!");
+    const valorQtd = parseInt(qtdMaint);
+    if (isNaN(valorQtd) || valorQtd < 0 || valorQtd > itemParaManutencao.quantidade) {
+      alert("Quantidade em manutenção não pode exceder a quantidade total em estoque!");
       return;
     }
+
+    // 🛡️ VALIDAÇÃO DE CONFLITO: Garante que o reparo fique pronto antes da saída do próximo pedido
+    if (valorQtd > 0) {
+      const conflitos = verificarConflitoManutencaoLocacao(itemParaManutencao, valorQtd, dataPrevisaoRetorno);
+      if (conflitos && conflitos.length > 0) {
+        const p = conflitos[0];
+        const dataLimiteBR = formatarDataBR(p.dataLimiteProntidao);
+        alert(
+          `🚫 MANUTENÇÃO BLOQUEADA - CONFLITO COM LOCAÇÃO!\n\n` +
+          `A peça "${itemParaManutencao.nome}" possui locação confirmada para o Pedido #${p.numPedido} (${p.clienteNome}) no período de ${formatarDataBR(p.dataRetirada)} a ${formatarDataBR(p.dataDevolucao)}.\n\n` +
+          `⚠️ Como a manutenção inicia hoje, a peça DEVE ficar pronta no máximo até dia ${dataLimiteBR} (1 dia antes da saída) para atender o cliente!\n\n` +
+          `👉 Defina a Previsão de Prontidão para até ${dataLimiteBR}.`
+        );
+        return;
+      }
+    }
+
+    const valCustoNum = parseValorCusto(custoManutencao);
+
     try {
+      // 1. Atualizar estoque com os dados de manutenção
       await updateDoc(doc(db, "estoque", itemParaManutencao.id), {
-        qtdManutencao: valor,
-        status: valor === itemParaManutencao.quantidade ? 'manutencao' : 'ok'
+        qtdManutencao: valorQtd,
+        motivoManutencao: motivoManutencao.trim(),
+        custoManutencao: valCustoNum,
+        dataInicioManutencao: dataInicioManutencao || new Date().toISOString().split('T')[0],
+        dataPrevisaoRetorno: dataPrevisaoRetorno || '',
+        status: valorQtd === itemParaManutencao.quantidade ? 'manutencao' : 'ok'
       });
-      await registrarLog("MANUTENÇÃO DE ACERVO", `Moveu ${valor} unidades da peça "${itemParaManutencao.nome}" para o status de manutenção/reparo.`);
+
+      // 2. Se houver custo de manutenção > 0 e a quantidade for > 0, lançar automaticamente no Financeiro como DESPESA (Saída)
+      if (valCustoNum > 0 && valorQtd > 0) {
+        const descFinanceiro = `🛠️ Manutenção/Reparo: ${itemParaManutencao.nome}${motivoManutencao ? ` (${motivoManutencao})` : ''}`;
+        await addDoc(collection(db, "financeiro_lancamentos"), {
+          userId: tenantId,
+          empresaId: tenantId,
+          tipo: "saida",
+          categoria: "Manutenção de Acervo",
+          descricao: descFinanceiro,
+          valor: valCustoNum,
+          valorTotal: valCustoNum,
+          data: new Date().toISOString().split('T')[0],
+          status: "pago",
+          formaPagamento: "Outros",
+          origem: "manutencao_estoque",
+          itemId: itemParaManutencao.id,
+          itemNome: itemParaManutencao.nome,
+          createdAt: serverTimestamp()
+        });
+
+        await registrarLog("DESPESA FINANCEIRA", `Lançou despesa de R$ ${valCustoNum.toFixed(2)} referente à manutenção da peça "${itemParaManutencao.nome}".`);
+      }
+
+      const msg = valorQtd === 0 
+        ? `Devolveu todas as unidades da peça "${itemParaManutencao.nome}" ao estoque livre.`
+        : `Definiu ${valorQtd} unidade(s) da peça "${itemParaManutencao.nome}" em manutenção (Motivo: ${motivoManutencao || 'Reparo generalizado'}${valCustoNum > 0 ? `, Custo: R$ ${valCustoNum.toFixed(2)}` : ''}).`;
+
+      await registrarLog("MANUTENÇÃO DE ACERVO", msg);
       setModalManutencao(false);
       carregarDados();
-    } catch (error) { alert("Erro ao atualizar."); }
+    } catch (error) { 
+      console.error("Erro ao atualizar manutenção:", error);
+      alert("Erro ao atualizar manutenção."); 
+    }
+  };
+
+  const concluirManutencaoHoje = async () => {
+    if (!itemParaManutencao) return;
+    setQtdMaint(0);
+    const valCustoNum = parseValorCusto(custoManutencao);
+    
+    try {
+      await updateDoc(doc(db, "estoque", itemParaManutencao.id), {
+        qtdManutencao: 0,
+        motivoManutencao: motivoManutencao.trim(),
+        custoManutencao: valCustoNum,
+        dataPrevisaoRetorno: '',
+        status: 'ok'
+      });
+
+      if (valCustoNum > 0 && Number(itemParaManutencao.qtdManutencao || itemParaManutencao.manutencao || 0) > 0) {
+        const descFinanceiro = `🛠️ Manutenção Concluída (Antecipada): ${itemParaManutencao.nome}${motivoManutencao ? ` (${motivoManutencao})` : ''}`;
+        await addDoc(collection(db, "financeiro_lancamentos"), {
+          userId: tenantId,
+          empresaId: tenantId,
+          tipo: "saida",
+          categoria: "Manutenção de Acervo",
+          descricao: descFinanceiro,
+          valor: valCustoNum,
+          valorTotal: valCustoNum,
+          data: new Date().toISOString().split('T')[0],
+          status: "pago",
+          formaPagamento: "Outros",
+          origem: "manutencao_estoque",
+          itemId: itemParaManutencao.id,
+          itemNome: itemParaManutencao.nome,
+          createdAt: serverTimestamp()
+        });
+      }
+
+      await registrarLog("MANUTENÇÃO DE ACERVO", `🎉 Concluiu o reparo antecipadamente e liberou "${itemParaManutencao.nome}" de volta ao acervo!`);
+      setModalManutencao(false);
+      carregarDados();
+    } catch (error) {
+      console.error("Erro ao concluir manutenção:", error);
+      alert("Erro ao concluir manutenção.");
+    }
   };
 
   const salvarItemNoPedido = async () => {
@@ -820,6 +1008,7 @@ const Estoque = () => {
                     </div>
                     <div className="estoque-card-actions">
                       <button className="action-btn" onClick={() => { setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Adicionar ao Pedido">🛒</button>
+                      <button className="action-btn" onClick={() => abrirModalManutencao(item)} title="Manutenção / Reparo" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#b45309' }}>🛠️</button>
                       <button className="action-btn edit" onClick={() => irParaCadastro(item)} title="Editar">✏️</button>
                       <button className="action-btn duplicate" onClick={() => duplicarItem(item)} title="Duplicar Item">📋</button>
                       <button className="action-btn delete" onClick={async () => { if(window.confirm('Excluir permanentemente do acervo?')) { await registrarLog('EXCLUSÃO DE ACERVO', `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, 'estoque', item.id)).then(carregarDados); }}} title="Excluir">🗑️</button>
@@ -920,6 +1109,7 @@ const Estoque = () => {
                       <td style={{ textAlign: 'right' }}>
                         <div className="table-actions-container">
                             <button className="action-btn" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido">🛒</button>
+                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); }} title="Manutenção / Reparo" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#b45309' }}>🛠️</button>
                             <button className="action-btn edit" onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} title="Editar">✏️</button>
                             <button className="action-btn duplicate" onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} title="Duplicar Item">📋</button>
                             <button className="action-btn delete" onClick={async (e) => { e.stopPropagation(); if(window.confirm("Excluir permanentemente do acervo?")) { await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); }}} title="Excluir">🗑️</button>
@@ -1027,27 +1217,151 @@ const Estoque = () => {
       )}
 
       {modalManutencao && (
-        <div className="modal-overlay-blur">
-          <div className="modal-maintenance-card">
-            <div className="modal-maintenance-header">
-              <h3>🛠️ Enviar para Manutenção</h3>
-              <button className="close-btn-modern" onClick={() => setModalManutencao(false)}>×</button>
-            </div>
-            <div className="modal-maintenance-body">
-              <p>Quantas unidades de <strong>{itemParaManutencao?.nome}</strong> precisam de reparos?</p>
-              <div className="input-group-modern">
-                <label>QUANTIDADE (MÁX: {itemParaManutencao?.quantidade})</label>
-                <input 
-                  type="number" value={qtdMaint} onChange={(e) => setQtdMaint(e.target.value)}
-                  min="0" max={itemParaManutencao?.quantidade} className="modal-input-highlight"
-                />
-                <span className="helper-text">Dica: Digite 0 para devolver todas as peças ao estoque livre.</span>
+        <div className="modal-overlay-blur" onClick={() => setModalManutencao(false)}>
+          <div className="modal-maintenance-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', borderRadius: '20px', overflow: 'hidden' }}>
+            
+            {/* CABEÇALHO */}
+            <div className="modal-maintenance-header" style={{ background: '#0f172a', color: '#fff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fde68a', fontWeight: '800' }}>🛠️ Controle de Manutenção & Reparabilidade</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#cbd5e1' }}>
+                  Gerencie o status de avaria, reparo e prontidão da peça
+                </p>
               </div>
+              <button className="close-btn-modern" onClick={() => setModalManutencao(false)} style={{ color: '#fff', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
             </div>
-            <div className="modal-maintenance-footer">
-              <button className="btn-modal-cancel" onClick={() => setModalManutencao(false)}>Cancelar</button>
-              <button className="btn-modal-save" onClick={salvarManutencao}>Atualizar</button>
+
+            <div className="modal-maintenance-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              
+              {/* ITEM SELECIONADO INFO CARD */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
+                  {itemParaManutencao?.foto ? (
+                    <img src={itemParaManutencao.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📷</div>
+                  )}
+                </div>
+                <div>
+                  <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem' }}>{itemParaManutencao?.nome}</div>
+                  <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                    CÓD: <b>{itemParaManutencao?.codigo || 'S/N'}</b> | Estoque Total: <b>{itemParaManutencao?.quantidade || 1} un</b>
+                  </div>
+                </div>
+              </div>
+
+              {/* QUANTIDADE EM MANUTENÇÃO */}
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  QUANTIDADE NECESSITANDO REPARO (MÁX: {itemParaManutencao?.quantidade})
+                </label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input 
+                    type="number" 
+                    value={qtdMaint} 
+                    onChange={(e) => setQtdMaint(e.target.value)}
+                    min="0" 
+                    max={itemParaManutencao?.quantidade} 
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '1rem', fontWeight: 'bold' }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => setQtdMaint(itemParaManutencao?.quantidade || 1)}
+                    style={{ padding: '10px 14px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '10px', fontWeight: 'bold', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    Selecionar Todas ({itemParaManutencao?.quantidade})
+                  </button>
+                </div>
+              </div>
+
+              {/* MOTIVO DO REPARO / AVARIA */}
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  MOTIVO DO REPARO / DESCRIÇÃO DA AVARIA
+                </label>
+                <input 
+                  type="text" 
+                  placeholder="Ex: Tinta descascada, perna trincada, limpeza profunda..." 
+                  value={motivoManutencao} 
+                  onChange={(e) => setMotivoManutencao(e.target.value)}
+                  style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem' }}
+                />
+                
+                {/* TAGS RÁPIDAS DE MOTIVOS */}
+                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginTop: '8px' }}>
+                  {['🎨 Retoque de Pintura', '🔨 Marcenaria', '🧼 Higienização Profunda', '💥 Avaria Pós-Festa', '✨ Restauração'].map(tag => (
+                    <button
+                      key={tag}
+                      type="button"
+                      onClick={() => setMotivoManutencao(tag)}
+                      style={{ fontSize: '0.7rem', background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* CUSTO ESTIMADO DO CONSERTO E PREVISÃO DE PRONTIDÃO */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    CUSTO ESTIMADO (R$)
+                  </label>
+                  <input 
+                    type="text" 
+                    placeholder="0,00" 
+                    value={custoManutencao} 
+                    onChange={(e) => setCustoManutencao(e.target.value)}
+                    onBlur={handleBlurCusto}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.9rem', fontWeight: 'bold' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '4px' }}>
+                    PREVISÃO DE PRONTIDÃO
+                  </label>
+                  <input 
+                    type="date" 
+                    value={dataPrevisaoRetorno} 
+                    onChange={(e) => setDataPrevisaoRetorno(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem' }}
+                  />
+                </div>
+              </div>
+
             </div>
+
+            {/* RODAPÉ DO MODAL */}
+            <div className="modal-maintenance-footer" style={{ padding: '16px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', borderRadius: '0 0 20px 20px', display: 'flex', gap: '8px' }}>
+              <button 
+                type="button" 
+                className="btn-modal-cancel" 
+                onClick={() => setModalManutencao(false)}
+                style={{ padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: 'bold', cursor: 'pointer', background: '#ffffff', color: '#475569' }}
+              >
+                Cancelar
+              </button>
+
+              {(Number(itemParaManutencao?.manutencao || itemParaManutencao?.emManutencao || itemParaManutencao?.qtdManutencao || 0) > 0 || itemParaManutencao?.status === 'manutencao') && (
+                <button 
+                  type="button" 
+                  onClick={concluirManutencaoHoje}
+                  style={{ flex: 1, padding: '12px 10px', background: '#16a34a', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(22,163,74,0.25)' }}
+                >
+                  ✅ Reparo Concluído (Liberar)
+                </button>
+              )}
+
+              <button 
+                type="button" 
+                onClick={salvarManutencao}
+                style={{ flex: 1, padding: '12px 10px', background: '#c5a059', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: 'bold', fontSize: '0.82rem', cursor: 'pointer' }}
+              >
+                🛠️ Confirmar Manutenção ({qtdMaint} un)
+              </button>
+            </div>
+
           </div>
         </div>
       )}

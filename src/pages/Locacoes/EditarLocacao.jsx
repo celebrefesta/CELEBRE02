@@ -5,6 +5,8 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, updateDoc, addDoc, deleteDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
+import { gerarPropostaPDF } from '../../utils/gerarPropostaPDF';
+import ModalCalendarioDisponibilidade from './ModalCalendarioDisponibilidade';
 
 // 🏷️ TIPOS DE EVENTO (mesmos da tela de Locações)
 const TIPOS_EVENTO = [
@@ -35,8 +37,33 @@ const EditarLocacao = () => {
   const [todasLocacoes, setTodasLocacoes] = useState([]); 
   const [carrinho, setCarrinho] = useState([]);
   const [modalAberto, setModalAberto] = useState(false);
+  const [modalCalendarioAberto, setModalCalendarioAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
+
+  const handleGerarPropostaPDF = () => {
+    const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado)) || {};
+    const temaFinal = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
+
+    const objPedidoAtual = {
+      id,
+      numeroPedido,
+      status: statusAtual,
+      clienteNome: clienteEncontrado.nome || clienteEncontrado.nomeFantasia || 'Cliente',
+      clienteCelular: clienteEncontrado.celular || clienteEncontrado.telefone || '',
+      temaFesta: temaFinal,
+      tipoServico,
+      dataRetirada: datas.retirada,
+      dataDevolucao: datas.devolucao,
+      logistica,
+      itens: carrinho,
+      desconto: calcularTotal().valorDesconto,
+      valorTotal: calcularTotal().total,
+      valorPago: valorJaPago
+    };
+
+    gerarPropostaPDF(objPedidoAtual, configEmpresa, clienteEncontrado, 'preview');
+  };
   
   const [clienteSelecionado, setClienteSelecionado] = useState('');
   const [tipoServico, setTipoServico] = useState('PEGUE E MONTE');
@@ -282,7 +309,7 @@ const EditarLocacao = () => {
 
       const livresReais = Math.max(0, disponiveisTotais - qtdReservadaForte - qtdRetornaNoDia);
       const livresMaximos = Math.max(0, disponiveisTotais - qtdReservadaForte);
-      return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia };
+      return { livresReais, livresMaximos, retornaNoDia: qtdRetornaNoDia, emManutencao: qtdManutencao >= qtdFisica };
   };
 
   const addCarrinho = (item) => {
@@ -793,7 +820,15 @@ const EditarLocacao = () => {
              {badgeInfo.txt}
             </span>
         </div>
-        <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar à Lista</button>
+        <div className="header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button type="button" className="btn-secundario-alerta" onClick={() => setModalCalendarioAberto(true)}>
+            📅 Disponibilidade (Calendário)
+          </button>
+          <button type="button" className="btn-primary-outline" onClick={handleGerarPropostaPDF}>
+            📄 Proposta PDF (Luxo)
+          </button>
+          <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar à Lista</button>
+        </div>
       </header>
 
       {isFinalizado && (
@@ -1449,7 +1484,9 @@ const EditarLocacao = () => {
                               <span style={{ fontSize: '32px' }}>📷</span>
                           )}
                           
-                          {estaEsgotado ? (
+                          {disp.emManutencao ? (
+                              <span style={{ ...badgeEsgotado, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>🛠️ MANUTENÇÃO</span>
+                          ) : estaEsgotado ? (
                               <span style={badgeEsgotado}>ALUGADO</span>
                           ) : ehBateVolta ? (
                               <span style={badgeBateVolta}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
@@ -1472,6 +1509,14 @@ const EditarLocacao = () => {
           </div>
         </div>
       )}
+
+      {/* 📅 MODAL CALENDÁRIO DE DISPONIBILIDADE */}
+      <ModalCalendarioDisponibilidade
+        isOpen={modalCalendarioAberto}
+        onClose={() => setModalCalendarioAberto(false)}
+        estoque={estoque}
+        locacoes={todasLocacoes}
+      />
     </div>
   );
 };

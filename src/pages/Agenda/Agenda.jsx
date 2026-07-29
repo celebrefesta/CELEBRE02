@@ -24,10 +24,23 @@ const FORM_VAZIO = {
 
 const isoParaDMA = (iso) => {
   if (!iso || typeof iso !== 'string') return null;
-  const dataPura = iso.split('T')[0];
-  const partes = dataPura.split('-');
-  if (partes.length !== 3) return null;
-  const [ano, mes, dia] = partes.map(Number);
+  const dataPura = iso.split('T')[0].trim();
+  let ano, mes, dia;
+  if (dataPura.includes('/')) {
+    const partes = dataPura.split('/');
+    if (partes.length === 3) {
+      dia = Number(partes[0]);
+      mes = Number(partes[1]);
+      ano = Number(partes[2]);
+    }
+  } else if (dataPura.includes('-')) {
+    const partes = dataPura.split('-');
+    if (partes.length === 3) {
+      ano = Number(partes[0]);
+      mes = Number(partes[1]);
+      dia = Number(partes[2]);
+    }
+  }
   if (isNaN(ano) || isNaN(mes) || isNaN(dia)) return null;
   return { dia, mes: mes - 1, ano };
 };
@@ -152,24 +165,49 @@ const Agenda = () => {
     locacoes.forEach(loc => {
       const nome = loc.clienteNome || 'Cliente';
       const num  = loc.numeroPedido ? `#${loc.numeroPedido}` : '';
+      const servicoStr = String(loc.tipoServico || '').toUpperCase();
+      
+      let rotuloServico = '🚚 Entrega';
+      if (servicoStr.includes('DECORA')) {
+        rotuloServico = '✨ Decoração Completa';
+      } else if (servicoStr.includes('PEGUE')) {
+        rotuloServico = '📦 Pegue e Monte';
+      }
+
       const base = {
-        clienteId: loc.clienteId || '', clienteNome: nome,
-        origem: 'locacao', locacaoId: loc.id,
-        numeroPedido: loc.numeroPedido, tipoServico: loc.tipoServico,
-        valorTotal: loc.valorTotal, valorPago: loc.valorPago, status: loc.status,
-        local: loc.enderecoEntrega || '', 
+        clienteId: loc.clienteId || '', 
+        clienteNome: nome,
+        origem: 'locacao', 
+        locacaoId: loc.id,
+        numeroPedido: loc.numeroPedido, 
+        tipoServico: loc.tipoServico,
+        valorTotal: loc.valorTotal, 
+        valorPago: loc.valorPago, 
+        status: loc.status,
+        local: loc.logistica?.rua ? `${loc.logistica.rua}, ${loc.logistica.numero || ''} - ${loc.logistica.bairro || ''} (${loc.logistica.cidade || ''})` : (loc.enderecoEntrega || ''), 
       };
       
-      if (loc.dataRetirada && !['cancelado'].includes((loc.status || '').toLowerCase())) {
+      const stLoc = (loc.status || '').toLowerCase();
+      const isLocInativa = (
+        stLoc.includes('cancelad') ||
+        stLoc.includes('perdid') ||
+        stLoc.includes('abandonad') ||
+        stLoc.includes('esquecid') ||
+        stLoc.includes('finalizad') ||
+        stLoc.includes('devolv') ||
+        stLoc.includes('concluid')
+      );
+
+      if (loc.dataRetirada && !isLocInativa) {
         const dma = isoParaDMA(loc.dataRetirada);
         const horarioExt = (typeof loc.dataRetirada === 'string' && loc.dataRetirada.includes('T')) ? loc.dataRetirada.split('T')[1].substring(0, 5) : '';
-        if (dma) evs.push({ ...base, id: `loc-ent-${loc.id}`, tipo: 'entrega', titulo: `Entrega ${num}`, horario: horarioExt, ...dma });
+        if (dma) evs.push({ ...base, id: `loc-ent-${loc.id}`, tipo: 'entrega', titulo: `${rotuloServico} ${num} - ${nome}`, horario: horarioExt, ...dma });
       }
     
-      if (loc.dataDevolucao && !['cancelado'].includes((loc.status || '').toLowerCase())) {
+      if (loc.dataDevolucao && !isLocInativa) {
         const dma = isoParaDMA(loc.dataDevolucao);
         const horarioExt = (typeof loc.dataDevolucao === 'string' && loc.dataDevolucao.includes('T')) ? loc.dataDevolucao.split('T')[1].substring(0, 5) : '';
-        if (dma) evs.push({ ...base, id: `loc-dev-${loc.id}`, tipo: 'devolucao', titulo: `Devolução ${num}`, horario: horarioExt, ...dma });
+        if (dma) evs.push({ ...base, id: `loc-dev-${loc.id}`, tipo: 'devolucao', titulo: `Devolução ${num} - ${nome}`, horario: horarioExt, ...dma });
       }
     });
     return evs;

@@ -450,51 +450,72 @@
   justify-content: center !important;
 }
 
+/* --- MODAL DE MANUTENÇÃO & REPARABILIDADE --- */
 .modal-maintenance-card {
   background: #ffffff !important;
-  width: 480px !important;
-  max-width: 90% !important;
+  width: 520px !important;
+  max-width: 95% !important;
   border-radius: 20px !important;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35) !important;
-  padding: 28px !important;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.4) !important;
+  padding: 0 !important;
   border: 1px solid #e2e8f0 !important;
+  overflow: hidden !important;
 }
 
 .modal-maintenance-header {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  padding: 20px 24px !important;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  margin-bottom: 20px !important;
-  border-bottom: 1px solid #e2e8f0 !important;
-  padding-bottom: 14px !important;
+  margin-bottom: 0 !important;
+  border-bottom: 2px solid #c5a059 !important;
 }
 
 .modal-maintenance-header h3 {
   margin: 0 !important;
-  color: #0f172a !important;
-  font-size: 1.1rem !important;
-  font-weight: 800 !important;
+  color: #fde68a !important;
+  font-size: 1.15rem !important;
+  font-weight: 850 !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
 }
 
+.modal-maintenance-header p {
+  margin: 4px 0 0 0 !important;
+  font-size: 0.76rem !important;
+  color: #cbd5e1 !important;
+  font-weight: 500 !important;
+}
+
 .close-btn-modern {
-  background: #f1f5f9 !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   border: none !important;
   width: 32px !important;
   height: 32px !important;
   border-radius: 50% !important;
   font-size: 18px !important;
-  color: #64748b !important;
+  color: #ffffff !important;
   cursor: pointer !important;
   font-weight: bold !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
   transition: all 0.2s ease !important;
 }
 
 .close-btn-modern:hover {
-  background: #fef2f2 !important;
-  color: #ef4444 !important;
+  background: #ef4444 !important;
+  color: #ffffff !important;
+}
+
+.modal-maintenance-body {
+  padding: 24px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
 }
 
 .modal-maintenance-body p {
@@ -537,10 +558,44 @@
 .modal-maintenance-footer {
   display: flex !important;
   justify-content: flex-end !important;
-  gap: 10px !important;
-  margin-top: 24px !important;
+  gap: 12px !important;
+  margin-top: 0 !important;
+  background: #f8fafc !important;
   border-top: 1px solid #e2e8f0 !important;
-  padding-top: 18px !important;
+  padding: 16px 24px !important;
+}
+
+.btn-modal-cancel {
+  background: #ffffff !important;
+  color: #475569 !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 12px 20px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-modal-cancel:hover {
+  background: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.btn-modal-save {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 12px 24px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35) !important;
+  transition: all 0.2s ease !important;
+}
+
+.btn-modal-save:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(197, 160, 89, 0.45) !important;
 }
 
 .btn-modal-cancel {

@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Locacoes.css';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, serverTimestamp, query, where } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
+import { gerarPropostaPDF } from '../../utils/gerarPropostaPDF';
+import ModalCalendarioDisponibilidade from './ModalCalendarioDisponibilidade';
 
 // 🏷️ TIPOS DE EVENTO DISPONÍVEIS
 const TIPOS_EVENTO = [
@@ -39,6 +41,12 @@ const Locacoes = () => {
   
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
+
+  // 📅 MODAL CALENDÁRIO & ESTOQUE / CONFIG
+  const [modalCalendarioAberto, setModalCalendarioAberto] = useState(false);
+  const [estoque, setEstoque] = useState([]);
+  const [configEmpresa, setConfigEmpresa] = useState({});
+  const [clientesObjMap, setClientesObjMap] = useState({});
 
   // 👁️ PREVIEW AO PAIRAR
   const [hoveredPedido, setHoveredPedido] = useState(null);
@@ -169,18 +177,32 @@ const Locacoes = () => {
     setLoading(true);
     
     try {
-      // 🎯 BUSCA CLIENTES DA EMPRESA
+      // 🎯 BUSCA DADOS DA EMPRESA EM PARALELO
       const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
-      const clientesSnapshot = await getDocs(qClientes);
-      const dicionarioClientes = {};
-      clientesSnapshot.forEach(doc => {
-          const cData = doc.data();
-          dicionarioClientes[doc.id] = cData.nome || cData.nomeFantasia || cData.razaoSocial || cData.nomeCompleto || "Sem Nome";
-      });
-
-      // 🎯 BUSCA LOCAÇÕES DA EMPRESA
+      const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
       const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
-      const querySnapshot = await getDocs(qLocacoes);
+      const docConfigRef = doc(db, "configuracoes_empresa", tenantId);
+
+      const [clientesSnapshot, snapEstoque, querySnapshot, docConf] = await Promise.all([
+        getDocs(qClientes),
+        getDocs(qEstoque),
+        getDocs(qLocacoes),
+        getDoc(docConfigRef)
+      ]);
+
+      const dicionarioClientes = {};
+      const mapaObjetosClientes = {};
+      clientesSnapshot.forEach(d => {
+          const cData = d.data();
+          const nomeC = cData.nome || cData.nomeFantasia || cData.razaoSocial || cData.nomeCompleto || "Sem Nome";
+          dicionarioClientes[d.id] = nomeC;
+          mapaObjetosClientes[d.id] = { id: d.id, ...cData };
+      });
+      setClientesObjMap(mapaObjetosClientes);
+
+      setEstoque(snapEstoque.docs.map(d => ({ id: d.id, ...d.data() })));
+      if (docConf.exists()) setConfigEmpresa(docConf.data());
+
       const hojeStr = new Date().toISOString().split('T')[0];
 
       const dados = querySnapshot.docs.map(doc => {
@@ -541,6 +563,13 @@ const Locacoes = () => {
           </div>
         </div>
         <div className="header-actions">
+          <button 
+            className="btn-secundario-alerta" 
+            onClick={() => setModalCalendarioAberto(true)}
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+          >
+            📅 DISPONIBILIDADE (CALENDÁRIO)
+          </button>
           <button className="btn-primary-celebre" onClick={() => navigate('/locacoes/nova')}>
             + NOVA LOCAÇÃO
           </button>
@@ -792,11 +821,13 @@ const Locacoes = () => {
                     style={{ opacity: isCancelado ? 0.6 : 1, cursor: 'pointer' }}
                     onClick={() => navigate(`/locacoes/editar/${item.id}`)}
                     title="Clique para abrir detalhes do pedido"
-                    onMouseEnter={(e) => { setHoveredPedido(item); setHoverPos({ x: e.clientX, y: e.clientY }); }}
-                    onMouseLeave={() => setHoveredPedido(null)}
-                    onMouseMove={(e) => setHoverPos({ x: e.clientX, y: e.clientY })}
                   >
-                    <td className="pedido-id-cell">
+                    <td 
+                      className="pedido-id-cell"
+                      onMouseEnter={(e) => { setHoveredPedido(item); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                      onMouseLeave={() => setHoveredPedido(null)}
+                      onMouseMove={(e) => setHoverPos({ x: e.clientX, y: e.clientY })}
+                    >
                       {item.numeroPedido ? (
                         `#${item.numeroPedido}`
                       ) : item.id ? (
@@ -820,7 +851,13 @@ const Locacoes = () => {
                           <strong style={{ textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '0.94rem', fontWeight: '800' }}>
                             {item.clienteNome}
                           </strong>
-                          <div className="tags-row" style={{ marginTop: '4px' }}>
+                          <div 
+                            className="tags-row" 
+                            style={{ marginTop: '4px' }}
+                            onMouseEnter={(e) => { setHoveredPedido(item); setHoverPos({ x: e.clientX, y: e.clientY }); }}
+                            onMouseLeave={() => setHoveredPedido(null)}
+                            onMouseMove={(e) => setHoverPos({ x: e.clientX, y: e.clientY })}
+                          >
                             <span className={`tag-servico ${item.tipoServicoFormatado.includes('PEGUE') ? 'pegue' : 'deco'}`}>
                               {item.tipoServicoFormatado}
                             </span>
@@ -910,6 +947,20 @@ const Locacoes = () => {
                               style={{ color: '#16a34a', fontWeight: '800' }}
                             >
                               💬 Enviar por WhatsApp
+                            </button>
+
+                            <button 
+                              type="button"
+                              onClick={(e) => { 
+                                e.stopPropagation();
+                                const cliObj = clientesObjMap[item.clienteId] || {};
+                                gerarPropostaPDF(item, configEmpresa, cliObj, 'preview');
+                                setMenuAberto(null);
+                              }} 
+                              className="item-menu"
+                              style={{ color: '#c5a059', fontWeight: '800' }}
+                            >
+                              📄 Proposta PDF (Luxo)
                             </button>
 
                             <button 
@@ -1155,6 +1206,8 @@ const Locacoes = () => {
           <div
             className="preview-hover-card"
             style={{
+              pointerEvents: 'none',
+              zIndex: 99999,
               top: Math.min(hoverPos.y + 18, window.innerHeight - 340),
               left: Math.min(hoverPos.x + 18, window.innerWidth - 300),
             }}
@@ -1219,6 +1272,14 @@ const Locacoes = () => {
           </div>
         </div>
       )}
+
+      {/* 📅 MODAL CALENDÁRIO DE DISPONIBILIDADE */}
+      <ModalCalendarioDisponibilidade
+        isOpen={modalCalendarioAberto}
+        onClose={() => setModalCalendarioAberto(false)}
+        estoque={estoque}
+        locacoes={lista}
+      />
 
     </div>
   );

@@ -66,11 +66,15 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ---
 
-### 📦 4.4. Controle de Acervo e Estoque (`/src/pages/Estoque/`)
+### 📦 4.4. Controle de Acervo, Estoque & Manutenção (`/src/pages/Estoque/`)
 - **Gestão de Peças e Kits (`Estoque.jsx`, `CadastroEstoque.jsx`)**:
   - Organização por categorias, valor de locação, valor de reposição e estado de conservação (Excelente, Bom, Avariado).
 - **Cálculo de Disponibilidade Inteligente**:
   - Algoritmo que cruza o período desejado com as locações confirmadas, desconsiderando pedidos cancelados ou orçamentos expirados para evitar reservas duplicadas.
+- **Módulo Avançado de Manutenção & Reparabilidade**:
+  - **Validação de Conflito Manutenção x Locação**: Impede o envio de peças alugadas para manutenção sem prazo hábil de retorno. Quando um item entra em reparo hoje, o sistema calcula a data limite de prontidão (1 dia antes da saída para a festa) e bloqueia prazos que comprometam o pedido do cliente.
+  - **Baixa Rápida de Conserto**: Botão integrado `✅ Reparo Concluído (Liberar)` no rodapé do controle de manutenção para retornar peças instantaneamente ao estoque disponível.
+  - **Painel & Calendário de Avarias (`ModalCalendarioDisponibilidade.jsx`)**: Indicador `🛠️ N` na grade de dias, detalhamento de peças sob reparo (fotos, motivo, custo e prontidão) e alertas visuais de conflito operacional.
 
 ---
 
