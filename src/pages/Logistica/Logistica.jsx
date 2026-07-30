@@ -4,6 +4,7 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, updateDoc, getDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore'; 
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
+import ModalCheckinLocacao from '../Locacoes/ModalCheckinLocacao';
 
 const Logistica = () => {
   const navigate = useNavigate();
@@ -21,6 +22,17 @@ const Logistica = () => {
   const [vistaAtual, setVistaAtual] = useState('kanban');
   const [parametros, setParametros] = useState(null);
   const [textoRelatorio, setTextoRelatorio] = useState('');
+
+  // 🛫🛬 MODAL DE CHECK-IN DE IDA E VOLTA
+  const [modalCheckinAberta, setModalCheckinAberta] = useState(false);
+  const [locacaoCheckin, setLocacaoCheckin] = useState(null);
+  const [modoCheckin, setModoCheckin] = useState('IDA');
+
+  const abrirCheckin = (loc, modo) => {
+    setLocacaoCheckin(loc);
+    setModoCheckin(modo);
+    setModalCheckinAberta(true);
+  };
 
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO CORPORATIVO)
   const registrarLog = async (acao, detalhes, pedidoId = "S/N", numeroPedido = "S/N") => {
@@ -280,8 +292,10 @@ const Logistica = () => {
                 key={loc.id} loc={loc} navigate={navigate} 
                 onAvancar={() => moverCard(loc.id, 'entregue')} 
                 btnTxt="Enviar ➔" btnCor="#8b5cf6" 
-                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirChecklist={() => abrirCheckin(loc, 'IDA')} 
                 onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                 isModoLista={vistaAtual === 'lista'} 
               />
             ))}
@@ -300,8 +314,10 @@ const Logistica = () => {
                 key={loc.id} loc={loc} navigate={navigate} 
                 onAvancar={() => moverCard(loc.id, 'finalizado')} 
                 btnTxt="Receber ➔" btnCor="#10b981" 
-                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirChecklist={() => abrirCheckin(loc, 'VOLTA')} 
                 onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                 isModoLista={vistaAtual === 'lista'} 
               />
             ))}
@@ -319,8 +335,10 @@ const Logistica = () => {
               <CartaoKanban 
                 key={loc.id} loc={loc} navigate={navigate} isFinal={true} 
                 onVoltar={() => moverCard(loc.id, 'entregue')} 
-                onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                onAbrirChecklist={() => abrirCheckin(loc, 'VOLTA')} 
                 onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                 isModoLista={vistaAtual === 'lista'} 
               />
             ))}
@@ -329,6 +347,17 @@ const Logistica = () => {
         </div>
 
       </div>
+
+      {/* 🛫🛬 MODAL CHECK-IN DE IDA E VOLTA */}
+      <ModalCheckinLocacao 
+        isOpen={modalCheckinAberta}
+        onClose={() => setModalCheckinAberta(false)}
+        locacao={locacaoCheckin}
+        modo={modoCheckin}
+        tenantId={tenantId}
+        usuarioLogado={usuarioLogado}
+        onSalvarSucesso={carregarDados}
+      />
 
       {locacaoModalAtiva && (
         <ModalChecklist 

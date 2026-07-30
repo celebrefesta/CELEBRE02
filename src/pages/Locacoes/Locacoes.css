@@ -548,7 +548,54 @@
   border: 1px solid #fca5a5;
 }
 
-/* Menu de Ações (3 Pontinhos) */
+/* Menu de Ações (3 Pontinhos) & Botões Rápidos */
+.actions-row-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.btn-quick-checkin {
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn-quick-checkin.ida {
+  background: #fef3c7;
+  color: #92400e;
+  border-color: #fde68a;
+}
+
+.btn-quick-checkin.ida:hover {
+  background: #c5a059;
+  color: #ffffff;
+  border-color: #b38e46;
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.3);
+}
+
+.btn-quick-checkin.volta {
+  background: #ecfdf5;
+  color: #047857;
+  border-color: #a7f3d0;
+}
+
+.btn-quick-checkin.volta:hover {
+  background: #10b981;
+  color: #ffffff;
+  border-color: #059669;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
 .dropdown-container {
   position: relative;
   display: flex;
@@ -557,12 +604,12 @@
 
 .btn-pontinhos {
   background: transparent;
-  border: none;
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
+  border: 1px solid transparent;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   cursor: pointer;
-  color: #94a3b8;
+  color: #64748b;
   font-size: 18px;
   display: flex;
   align-items: center;
@@ -571,45 +618,53 @@
 }
 
 .btn-pontinhos:hover {
-  background: var(--fundo-hover, #f1f5f9);
+  background: #f1f5f9;
+  border-color: #cbd5e1;
   color: #0f172a;
 }
 
 .menu-suspenso {
   position: absolute;
   right: 0;
-  top: 38px;
+  top: calc(100% + 4px);
   background: #ffffff;
-  border: 1px solid #cbd5e1;
+  border: 1px solid #e2e8f0;
   border-radius: 14px;
-  box-shadow: 0 15px 35px rgba(15, 23, 42, 0.22);
-  z-index: 99999 !important;
-  min-width: 210px !important;
-  white-space: nowrap !important;
-  padding: 6px;
-  animation: menuPop 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 15px 35px -5px rgba(15, 23, 42, 0.22);
+  z-index: 100 !important;
+  min-width: 220px !important;
+  max-height: 290px;
+  overflow-y: auto;
+  padding: 5px;
+  animation: menuPop 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 @keyframes menuPop {
-  from { opacity: 0; transform: scale(0.95) translateY(-8px); }
+  from { opacity: 0; transform: scale(0.95) translateY(-6px); }
   to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.menu-divider {
+  height: 1px;
+  background: #f1f5f9;
+  margin: 4px 2px;
 }
 
 .item-menu {
   width: 100%;
   text-align: left;
-  padding: 10px 14px;
+  padding: 6px 10px;
   border: none;
   background: transparent;
-  font-size: 13px;
+  font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
   border-radius: 8px;
-  transition: 0.15s;
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
   gap: 10px;
-  color: #334155;
+  color: #1e293b;
   font-family: inherit;
   white-space: nowrap !important;
 }
@@ -619,8 +674,34 @@
   color: #0f172a;
 }
 
-.item-menu.item-excluir { color: #dc2626; }
-.item-menu.item-excluir:hover { background: #fef2f2; }
+.item-menu.item-excluir {
+  color: #dc2626;
+}
+
+.item-menu.item-excluir:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.item-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.item-icon.green { background: #dcfce7; color: #166534; }
+.item-icon.gold { background: #fef3c7; color: #92400e; }
+.item-icon.blue { background: #e0f2fe; color: #075985; }
+.item-icon.emerald { background: #d1fae5; color: #065f46; }
+.item-icon.gold-dark { background: #fff7ed; color: #c5a059; border: 1px solid #fed7aa; }
+.item-icon.green-dark { background: #ecfdf5; color: #059669; border: 1px solid #a7f3d0; }
+.item-icon.red { background: #fee2e2; color: #991b1b; }
+.item-icon.slate { background: #f1f5f9; color: #475569; }
 
 /* MODAL DE PAGAMENTO */
 .modal-overlay-v2 {

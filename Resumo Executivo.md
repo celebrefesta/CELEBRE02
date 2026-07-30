@@ -158,3 +158,31 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 - **Pronto para Escala**: Estrutura modular preparada para receber novos tenants e suportar a operação diária com estabilidade e elegância visual.
 - **Próximos Passos**: Acessar a aba **Configurações -> Empresa** para inserir o seu `mpAccessToken` do Mercado Pago ou sua Chave PIX oficial.
 - **Testes**: Realizar testes de ponta a ponta na criação de orçamentos e locações na rotina diária da Celebre Decorações.
+
+---
+
+## 📅 7. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 30/07/2026 — 14h00 às 18h04 (BRT)
+
+**Funcionalidades entregues:**
+- ✅ **CheckinPage** — lista de peças expandida, cards alinhados, mobile 100% corrigido
+- ✅ **Modal de conferência** — altura dinâmica (auto → 90vh) conforme quantidade de peças
+- ✅ **CheckoutPage** (NOVA) — página dedicada de devolução/vistoria em `/checkout/:id`
+  - Classificação por item: 🟢 OK · 🛠️ Avaria · ❌ Faltou
+  - Banner de progresso, alerta de avarias, fotos e assinatura de devolução
+- ✅ **Header do Check-in** — removido botão de "Mudar para Devolução" e WhatsApp
+- ✅ **Sistema de temas** — todos os botões primários usam `var(--cor-destaque)` dinamicamente (Dourado / Azul / Roxo / Verde respondem em tempo real)
+- ✅ **Dark mode** — overrides abrangentes: pills, filtros, modais, cards de itens, toasts, assinatura, avarias e mais ~30 grupos de elementos
+
+**Pendente para próxima sessão:**
+- 🔴 Auditoria de `style={{}}` inline no `CheckinPage.jsx` e `CheckoutPage.jsx` (texto apagado em dark mode vem de estilos inline que CSS não consegue sobrescrever)
+- 🟡 CheckoutPage — verificar dark mode nos elementos próprios da página de devolução
+- 🟢 PDF de Check-in e Check-out (lógica de geração)
+- 🟢 Salvar conferência no Firestore
+
+---
+
+> **⏱️ Última atualização:** 30/07/2026 às 18:04 (BRT)  
+> **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02
+

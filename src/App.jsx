@@ -32,6 +32,8 @@ import CadastroEstoque from './pages/Estoque/CadastroEstoque';
 import Locacoes from './pages/Locacoes/Locacoes';
 import NovaLocacao from './pages/Locacoes/NovaLocacao';
 import EditarLocacao from './pages/Locacoes/EditarLocacao';
+import CheckinPage from './pages/Locacoes/CheckinPage';
+import CheckoutPage from './pages/Locacoes/CheckoutPage';
 
 // --- FINANCEIRO & COMPRAS ---
 import Fornecedores from './pages/Fornecedores/Fornecedores';
@@ -459,6 +461,8 @@ const AppContent = () => {
           <Route path="/locacoes" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><Locacoes /></TravaSeguranca></RotaPrivada>} />
           <Route path="/locacoes/nova" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><NovaLocacao /></TravaSeguranca></RotaPrivada>} />
           <Route path="/locacoes/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><EditarLocacao /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/checkin/:id/:modo?" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckinPage /></TravaSeguranca></RotaPrivada>} />
+          <Route path="/checkout/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckoutPage /></TravaSeguranca></RotaPrivada>} />
           
           {/* 🤝 FORNECEDORES E COMPRAS */}
           <Route path="/fornecedores" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Fornecedores /></TravaSeguranca></RotaPrivada>} />

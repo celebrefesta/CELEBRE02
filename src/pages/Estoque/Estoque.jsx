@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './Estoque.css';
+import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, query, deleteDoc, updateDoc, writeBatch, where, getDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
@@ -50,6 +51,50 @@ const Estoque = () => {
   const [itensSelecionados, setItensSelecionados] = useState(new Set());
   // 🔢 MODO DE VISUALIZAÇÃO
   const [modoVisualizacao, setModoVisualizacao] = useState('lista'); // 'lista' | 'grid'
+
+  // 📷 CÂMERA DE ESCANEAMENTO DE ACERVO
+  const [cameraEstoqueAberta, setCameraEstoqueAberta] = useState(false);
+  const html5QrCodeEstoqueRef = useRef(null);
+
+  const iniciarScannerEstoque = async () => {
+    setCameraEstoqueAberta(true);
+    setTimeout(async () => {
+      try {
+        const html5QrCode = new Html5Qrcode("reader-camera-estoque");
+        html5QrCodeEstoqueRef.current = html5QrCode;
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (decodedText) => {
+            setBusca(decodedText);
+            if (html5QrCodeEstoqueRef.current) {
+              html5QrCodeEstoqueRef.current.stop().then(() => {
+                html5QrCodeEstoqueRef.current.clear();
+                html5QrCodeEstoqueRef.current = null;
+                setCameraEstoqueAberta(false);
+              }).catch(() => setCameraEstoqueAberta(false));
+            }
+          },
+          () => {}
+        );
+      } catch (err) {
+        console.error("Erro ao iniciar câmera no estoque:", err);
+        alert("⚠️ Permissão de câmera negada ou dispositivo sem câmera.");
+        setCameraEstoqueAberta(false);
+      }
+    }, 350);
+  };
+
+  const pararScannerEstoque = async () => {
+    if (html5QrCodeEstoqueRef.current) {
+      try {
+        await html5QrCodeEstoqueRef.current.stop();
+        html5QrCodeEstoqueRef.current.clear();
+      } catch (e) {}
+      html5QrCodeEstoqueRef.current = null;
+    }
+    setCameraEstoqueAberta(false);
+  };
 
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE ESTOQUE - LISTAGEM)
   const registrarLog = async (acao, detalhes) => {
@@ -830,6 +875,9 @@ const Estoque = () => {
           >
             {limpandoNomes ? '⏳ Ajustando...' : '🧹 Ajustar Nomes'}
           </button>
+          <button className="btn-secondary-celebre" onClick={iniciarScannerEstoque} title="Escanear com Câmera (QR Code ou Código de Barras)">
+            📷 Escanear Acervo
+          </button>
           <button className="btn-secondary-celebre" onClick={imprimirListaFiltrada}>
             🖨️ Imprimir Lista
           </button>
@@ -838,6 +886,20 @@ const Estoque = () => {
           </button>
         </div>
       </div>
+
+      {/* MODAL DE CÂMERA AO VIVO NO ESTOQUE */}
+      {cameraEstoqueAberta && (
+        <div className="modal-checkin-overlay">
+          <div className="modal-checkin-box animate-pop" style={{ maxWidth: '420px', padding: '16px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: '#0f172a' }}>
+              <strong style={{ fontSize: '0.9rem' }}>📷 Escanear Código de Barras / QR Code</strong>
+              <button type="button" onClick={pararScannerEstoque} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.75rem' }}>✕ Fechar</button>
+            </div>
+            <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 10px 0' }}>Aproxime a etiqueta com QR Code ou Código de Barras da peça para localizá-la no acervo.</p>
+            <div id="reader-camera-estoque" style={{ width: '100%', borderRadius: '10px', overflow: 'hidden', background: '#000' }}></div>
+          </div>
+        </div>
+      )}
 
       {/* CARDS DE DASHBOARD 4 COLUNAS IDÊNTICOS AO GESTÃO DE CLIENTES */}
       <div className="clientes-stats-grid">

@@ -6,6 +6,7 @@ import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, getDoc, serverT
 import { getAuth } from 'firebase/auth'; 
 import { gerarPropostaPDF } from '../../utils/gerarPropostaPDF';
 import ModalCalendarioDisponibilidade from './ModalCalendarioDisponibilidade';
+import ModalCheckinLocacao from './ModalCheckinLocacao';
 
 // 🏷️ TIPOS DE EVENTO DISPONÍVEIS
 const TIPOS_EVENTO = [
@@ -47,6 +48,27 @@ const Locacoes = () => {
   const [estoque, setEstoque] = useState([]);
   const [configEmpresa, setConfigEmpresa] = useState({});
   const [clientesObjMap, setClientesObjMap] = useState({});
+
+  // 🛫🛬 MODAL DE CHECK-IN DE IDA E VOLTA
+  const [modalCheckinAberta, setModalCheckinAberta] = useState(false);
+  const [locacaoCheckin, setLocacaoCheckin] = useState(null);
+  const [modoCheckin, setModoCheckin] = useState('IDA');
+
+  const abrirCheckin = (loc, modo) => {
+    setMenuAberto(null);
+    if (modo === 'volta' || modo === 'VOLTA') {
+      navigate(`/checkout/${loc.id}`);
+    } else {
+      navigate(`/checkin/${loc.id}/ida`);
+    }
+  };
+
+  // Fecha o menu suspenso de ações ao clicar em qualquer lugar da tela
+  useEffect(() => {
+    const handleFecharMenuGlobal = () => setMenuAberto(null);
+    window.addEventListener('click', handleFecharMenuGlobal);
+    return () => window.removeEventListener('click', handleFecharMenuGlobal);
+  }, []);
 
   // 👁️ PREVIEW AO PAIRAR
   const [hoveredPedido, setHoveredPedido] = useState(null);
@@ -923,121 +945,145 @@ const Locacoes = () => {
                     </td>
                   
                     <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                      <div className="dropdown-container">
-                        <button 
-                          className="btn-pontinhos" 
-                          onClick={(e) => { 
-                            e.stopPropagation();
-                            setMenuAberto(menuAberto === item.id ? null : item.id); 
-                          }}
-                        >
-                          ⋮
-                        </button>
-                        
-                        {menuAberto === item.id && (
-                          <div className="menu-suspenso" onClick={(e) => e.stopPropagation()}>
+                      <div className="actions-row-cell">
+                        {!isOrcamento && !isCancelado && (
+                          <>
                             <button 
                               type="button"
-                              onClick={(e) => { 
-                                e.stopPropagation();
-                                enviarWhatsAppPedido(item);
-                                setMenuAberto(null);
-                              }} 
-                              className="item-menu"
-                              style={{ color: '#16a34a', fontWeight: '800' }}
+                              className="btn-quick-checkin ida"
+                              title="Fazer Check-in de Saída (IDA)"
+                              onClick={(e) => { e.stopPropagation(); abrirCheckin(item, 'IDA'); }}
                             >
-                              💬 Enviar por WhatsApp
+                              🛫 IDA
                             </button>
-
                             <button 
                               type="button"
-                              onClick={(e) => { 
-                                e.stopPropagation();
-                                const cliObj = clientesObjMap[item.clienteId] || {};
-                                gerarPropostaPDF(item, configEmpresa, cliObj, 'preview');
-                                setMenuAberto(null);
-                              }} 
-                              className="item-menu"
-                              style={{ color: '#c5a059', fontWeight: '800' }}
+                              className="btn-quick-checkin volta"
+                              title="Fazer Check-in de Devolução (VOLTA)"
+                              onClick={(e) => { e.stopPropagation(); abrirCheckin(item, 'VOLTA'); }}
                             >
-                              📄 Proposta PDF (Luxo)
+                              🛬 VOLTA
                             </button>
+                          </>
+                        )}
 
-                            <button 
-                              type="button"
-                              onClick={(e) => { 
-                                e.stopPropagation();
-                                imprimirComprovante(item);
-                                setMenuAberto(null);
-                              }} 
-                              className="item-menu"
-                            >
-                              🖨️ Imprimir Recibo / PDF
-                            </button>
-
-                            {item.ultimoComprovanteUrl && (
+                        <div className="dropdown-container">
+                          <button 
+                            className="btn-pontinhos" 
+                            onClick={(e) => { 
+                              e.stopPropagation();
+                              setMenuAberto(menuAberto === item.id ? null : item.id); 
+                            }}
+                          >
+                            ⋮
+                          </button>
+                          
+                          {menuAberto === item.id && (
+                            <div className="menu-suspenso animate-pop" onClick={(e) => e.stopPropagation()}>
                               <button 
                                 type="button"
                                 onClick={(e) => { 
                                   e.stopPropagation();
-                                  const win = window.open();
-                                  if (win) {
-                                    win.document.write(`<title>Comprovante - Pedido #${item.numeroPedido || item.id.substring(0,6)}</title><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#0f172a;"><img src="${item.ultimoComprovanteUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;" /></body>`);
-                                  }
+                                  enviarWhatsAppPedido(item);
                                   setMenuAberto(null);
                                 }} 
                                 className="item-menu"
-                                style={{ color: '#0284c7', fontWeight: '800' }}
                               >
-                                📎 Ver Comprovante
+                                <span className="item-icon green">💬</span> Enviar por WhatsApp
                               </button>
-                            )}
 
-                            {saldoDevedor > 0 && !isCancelado && !isOrcamento && (
-                               <button 
+                              <button 
+                                type="button"
                                 onClick={(e) => { 
                                   e.stopPropagation();
-                                  setPedidoSelecionado(item); 
-                                  setPagamento({ valor: '', formaPagto: 'Pix', data: new Date().toISOString().split('T')[0] });
-                                  setModalPagamento(true); 
-                                  setMenuAberto(null); 
+                                  const cliObj = clientesObjMap[item.clienteId] || {};
+                                  gerarPropostaPDF(item, configEmpresa, cliObj, 'preview');
+                                  setMenuAberto(null);
                                 }} 
                                 className="item-menu"
                               >
-                                💰 Receber Pagamento
+                                <span className="item-icon gold">📄</span> Proposta PDF (Luxo)
                               </button>
-                            )}
 
-                            {!isOrcamento && !isCancelado && (
                               <button 
+                                type="button"
                                 onClick={(e) => { 
                                   e.stopPropagation();
-                                  navigate(`/logistica`); 
+                                  imprimirComprovante(item);
+                                  setMenuAberto(null);
                                 }} 
                                 className="item-menu"
-                                style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}
                               >
-                                📦 Check-in / Logística
+                                <span className="item-icon slate">🖨️</span> Imprimir Recibo / PDF
                               </button>
-                            )}
 
-                            {temAlertas && (
+                              {item.ultimoComprovanteUrl && (
+                                <button 
+                                  type="button"
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    const win = window.open();
+                                    if (win) {
+                                      win.document.write(`<title>Comprovante - Pedido #${item.numeroPedido || item.id.substring(0,6)}</title><body style="margin:0;display:flex;align-items:center;justify-content:center;background:#0f172a;"><img src="${item.ultimoComprovanteUrl}" style="max-width:100%;max-height:100vh;object-fit:contain;" /></body>`);
+                                    }
+                                    setMenuAberto(null);
+                                  }} 
+                                  className="item-menu"
+                                >
+                                  <span className="item-icon blue">📎</span> Ver Comprovante
+                                </button>
+                              )}
+
+                              {saldoDevedor > 0 && !isCancelado && !isOrcamento && (
+                                <button 
+                                  type="button"
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    setPedidoSelecionado(item); 
+                                    setPagamento({ valor: '', formaPagto: 'Pix', data: new Date().toISOString().split('T')[0] });
+                                    setModalPagamento(true); 
+                                    setMenuAberto(null); 
+                                  }} 
+                                  className="item-menu"
+                                >
+                                  <span className="item-icon emerald">💰</span> Receber Pagamento
+                                </button>
+                              )}
+
+                              <div className="menu-divider" />
+
+                              {temAlertas && (
+                                <button 
+                                  type="button"
+                                  onClick={(e) => { 
+                                    e.stopPropagation(); 
+                                    navigate(`/termo-ocorrencia/${item.id}`); 
+                                  }} 
+                                  className="item-menu"
+                                  style={{ color: '#b91c1c' }}
+                                >
+                                  <span className="item-icon red">⚠️</span> Termo (Avaria/Falta)
+                                </button>
+                              )}
+
                               <button 
-                                onClick={(e) => { 
-                                  e.stopPropagation(); 
-                                  navigate(`/termo-ocorrencia/${item.id}`); 
-                                }} 
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); navigate(`/locacoes/editar/${item.id}`); }} 
                                 className="item-menu"
-                                style={{ backgroundColor: '#fef2f2', color: '#b91c1c', fontWeight: '700' }}
                               >
-                                ⚠️ Imprimir Termo (Avaria/Falta)
+                                <span className="item-icon slate">✏️</span> Editar Pedido
                               </button>
-                            )}
 
-                            <button onClick={(e) => { e.stopPropagation(); navigate(`/locacoes/editar/${item.id}`); }} className="item-menu" style={{ borderTop: '1px solid #f1f5f9', marginTop: '4px', paddingTop: '8px' }}>✏️ Editar Pedido</button>
-                            <button onClick={(e) => { e.stopPropagation(); handleExcluir(item.id); }} className="item-menu item-excluir">🗑️ Excluir</button>
-                          </div>
-                        )}
+                              <button 
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleExcluir(item.id); }} 
+                                className="item-menu item-excluir"
+                              >
+                                <span className="item-icon red">🗑️</span> Excluir Pedido
+                              </button>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </td>
                   </tr>
@@ -1279,6 +1325,17 @@ const Locacoes = () => {
         onClose={() => setModalCalendarioAberto(false)}
         estoque={estoque}
         locacoes={lista}
+      />
+
+      {/* 🛫🛬 MODAL CHECK-IN DE IDA E VOLTA */}
+      <ModalCheckinLocacao 
+        isOpen={modalCheckinAberta}
+        onClose={() => setModalCheckinAberta(false)}
+        locacao={locacaoCheckin}
+        modo={modoCheckin}
+        tenantId={tenantId}
+        usuarioLogado={usuarioLogado}
+        onSalvarSucesso={carregarLocacoes}
       />
 
     </div>

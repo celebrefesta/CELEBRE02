@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroEstoque.css';
+import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, updateDoc, doc, serverTimestamp, getDocs, getDoc, query, setDoc, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
@@ -58,6 +59,50 @@ const CadastroEstoque = () => {
   const [novaPecaPreco, setNovaPecaPreco] = useState('');
   const [novaPecaQtd, setNovaPecaQtd] = useState(1);
   const [salvandoNovaPecaRapida, setSalvandoNovaPecaRapida] = useState(false);
+
+  // 📷 LEITOR DE CÂMERA DE QR/BARCODE PARA O SKU DA PEÇA
+  const [cameraCadastroAberta, setCameraCadastroAberta] = useState(false);
+  const html5QrCodeCadastroRef = useRef(null);
+
+  const iniciarScannerCadastro = async () => {
+    setCameraCadastroAberta(true);
+    setTimeout(async () => {
+      try {
+        const html5QrCode = new Html5Qrcode("reader-camera-cadastro");
+        html5QrCodeCadastroRef.current = html5QrCode;
+        await html5QrCode.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (decodedText) => {
+            setCodigo(decodedText);
+            if (html5QrCodeCadastroRef.current) {
+              html5QrCodeCadastroRef.current.stop().then(() => {
+                html5QrCodeCadastroRef.current.clear();
+                html5QrCodeCadastroRef.current = null;
+                setCameraCadastroAberta(false);
+              }).catch(() => setCameraCadastroAberta(false));
+            }
+          },
+          () => {}
+        );
+      } catch (err) {
+        console.error("Erro ao iniciar câmera no cadastro:", err);
+        alert("⚠️ Permissão de câmera negada ou dispositivo sem câmera.");
+        setCameraCadastroAberta(false);
+      }
+    }, 350);
+  };
+
+  const pararScannerCadastro = async () => {
+    if (html5QrCodeCadastroRef.current) {
+      try {
+        await html5QrCodeCadastroRef.current.stop();
+        html5QrCodeCadastroRef.current.clear();
+      } catch (e) {}
+      html5QrCodeCadastroRef.current = null;
+    }
+    setCameraCadastroAberta(false);
+  };
 
   const salvarNovaPecaRapidaNoAcervo = async (e) => {
     e.preventDefault();
@@ -1111,17 +1156,39 @@ const CadastroEstoque = () => {
                 
                 <div className="form-group span-1">
                     <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '4px' }}>
-                      <span>CÓDIGO SKU *</span>
-                      <span style={{ fontSize: '10px', color: '#b48a3c', background: '#fef3c7', padding: '2px 6px', borderRadius: '8px', fontWeight: '800' }}>⚡ Automático</span>
+                      <span>CÓDIGO SKU / BARCODE *</span>
+                      <button 
+                        type="button" 
+                        onClick={iniciarScannerCadastro}
+                        style={{ fontSize: '10px', color: '#ffffff', background: '#0f172a', border: 'none', padding: '2px 8px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer' }}
+                        title="Escanear Etiqueta de Código de Barras / QR Code com a Câmera"
+                      >
+                        📷 Escanear
+                      </button>
                     </label>
                     <input 
                         value={codigo} 
-                        readOnly
-                        title="Código SKU gerado automaticamente pelo sistema"
-                        style={{ fontWeight: '800', letterSpacing: '1px', color: '#0f172a', background: '#f1f5f9', cursor: 'not-allowed', border: '1.5px solid #cbd5e1' }}
+                        onChange={(e) => setCodigo(e.target.value)}
+                        placeholder="Ex: VAS-001 ou código de barras"
+                        title="Digite o código SKU ou escaneie o código de barras da peça"
+                        style={{ fontWeight: '800', letterSpacing: '1px', color: '#0f172a', background: '#ffffff', border: '1.5px solid #cbd5e1' }}
                     />
                 </div>
               </div>
+
+              {/* MODAL CÂMERA SCANNER NO CADASTRO DE ESTOQUE */}
+              {cameraCadastroAberta && (
+                <div className="modal-checkin-overlay">
+                  <div className="modal-checkin-box animate-pop" style={{ maxWidth: '420px', padding: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: '#0f172a' }}>
+                      <strong style={{ fontSize: '0.9rem' }}>📷 Escanear Código para o SKU da Peça</strong>
+                      <button type="button" onClick={pararScannerCadastro} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.75rem' }}>✕ Fechar</button>
+                    </div>
+                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 10px 0' }}>Aproxime o Código de Barras ou QR Code da etiqueta para preencher o código da peça.</p>
+                    <div id="reader-camera-cadastro" style={{ width: '100%', borderRadius: '10px', overflow: 'hidden', background: '#000' }}></div>
+                  </div>
+                </div>
+              )}
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '10px' }}>
                   
