@@ -77,10 +77,11 @@ const AuditoriaEstoque = () => {
           }
         });
 
-        if (anomalias.length > 0) {
+        if (anomalias.length > 0 && !sessionStorage.getItem('auditoria_fechada')) {
           setPedidosComProblema(anomalias);
           setVisivel(true);
         }
+
       } catch (error) {
         console.error("Erro na auditoria unificada:", error);
       } finally {
@@ -142,11 +143,15 @@ const AuditoriaEstoque = () => {
         <div className="auditoria-header-luxury">
           <button 
             className="btn-fechar-modal-luxury" 
-            onClick={() => setVisivel(false)}
+            onClick={() => {
+              sessionStorage.setItem('auditoria_fechada', 'true');
+              setVisivel(false);
+            }}
             title="Fechar diagnóstico"
           >
             ✕
           </button>
+
 
           <div className="header-badge-pulse">
             <span className="pulse-dot"></span> CENTRAL DE AUDITORIA OPERACIONAL E RAIO-X

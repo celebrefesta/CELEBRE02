@@ -448,3 +448,181 @@
     padding: 0 !important;
   }
 }
+
+/* =====================================================
+   🌙 DARK MODE — AUTH PAGE (LOGIN / CADASTRO / RESET)
+   ===================================================== */
+
+/* 🌑 FUNDO PRINCIPAL E CONTAINER */
+[data-theme^='dark'] .auth-container {
+  background-color: #0b0f19 !important;
+}
+
+@media (max-width: 900px) {
+  [data-theme^='dark'] .auth-container {
+    background-color: #0b0f19 !important;
+  }
+}
+
+/* 💳 CARD DO FORMULÁRIO */
+[data-theme^='dark'] .auth-box {
+  background: #18181b !important;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5) !important;
+  border: 1px solid #3f3f46 !important;
+}
+
+@media (max-width: 900px) {
+  [data-theme^='dark'] .auth-box {
+    background: #18181b !important;
+    border: 1px solid #3f3f46 !important;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4) !important;
+  }
+}
+
+/* 🔤 TEXTOS DO CARD */
+[data-theme^='dark'] .auth-logo-text {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .auth-box h2 {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .auth-box p {
+  color: #a1a1aa !important;
+}
+
+/* 🖼️ LOGO — REMOVER MIX-BLEND-MODE QUE APAGA A IMAGEM EM DARK MODE */
+[data-theme^='dark'] .auth-logo-img {
+  mix-blend-mode: normal !important;
+  filter: brightness(1.1) !important;
+}
+
+/* 🔴 MENSAGEM DE ERRO */
+[data-theme^='dark'] .auth-erro {
+  background-color: #450a0a !important;
+  color: #fca5a5 !important;
+  border-color: #991b1b !important;
+}
+
+/* 📝 LABELS DOS INPUTS */
+[data-theme^='dark'] .input-group label {
+  color: #a1a1aa !important;
+}
+
+/* 📥 CAMPOS DE INPUT */
+[data-theme^='dark'] .input-group input {
+  background-color: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .input-group input::placeholder {
+  color: #71717a !important;
+}
+
+[data-theme^='dark'] .input-group input:focus {
+  background-color: #27272a !important;
+  border-color: var(--cor-destaque, #c5a059) !important;
+  box-shadow: 0 0 0 4px rgba(197, 160, 89, 0.15) !important;
+}
+
+/* 👁️ BOTÃO OLHINHO */
+[data-theme^='dark'] .btn-olhinho {
+  color: #71717a !important;
+}
+
+[data-theme^='dark'] .btn-olhinho:hover {
+  color: #f4f4f5 !important;
+}
+
+/* 🔘 BOTÃO PRINCIPAL (ENTRAR) */
+[data-theme^='dark'] .btn-auth {
+  background: linear-gradient(135deg, var(--cor-destaque, #c5a059) 0%, #a07c3a 100%) !important;
+  border-color: rgba(197, 160, 89, 0.3) !important;
+  box-shadow: 0 4px 15px rgba(197, 160, 89, 0.25) !important;
+}
+
+[data-theme^='dark'] .btn-auth:hover:not(:disabled) {
+  background: linear-gradient(135deg, #d4a94a 0%, #b08844 100%) !important;
+  box-shadow: 0 8px 20px rgba(197, 160, 89, 0.35) !important;
+}
+
+[data-theme^='dark'] .btn-auth:disabled {
+  background: #27272a !important;
+  color: #52525b !important;
+}
+
+/* ➖ DIVISOR */
+[data-theme^='dark'] .auth-divider {
+  color: #52525b !important;
+}
+
+[data-theme^='dark'] .auth-divider::before,
+[data-theme^='dark'] .auth-divider::after {
+  border-color: #3f3f46 !important;
+}
+
+/* 🅶 BOTÃO GOOGLE */
+[data-theme^='dark'] .btn-google {
+  background-color: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .btn-google:hover:not(:disabled) {
+  background-color: #3f3f46 !important;
+  border-color: #52525b !important;
+}
+
+/* 🔗 LINK DE RODAPÉ */
+[data-theme^='dark'] .auth-link {
+  color: #71717a !important;
+}
+
+[data-theme^='dark'] .auth-link a {
+  color: var(--cor-destaque, #c5a059) !important;
+}
+
+[data-theme^='dark'] .auth-link a:hover {
+  color: #fde68a !important;
+}
+
+/* 🔲 SELETOR TIPO PESSOA (CADASTRO) */
+[data-theme^='dark'] .tipo-pessoa-btn {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .tipo-pessoa-btn:hover {
+  background: #3f3f46 !important;
+  border-color: #52525b !important;
+}
+
+[data-theme^='dark'] .tipo-pessoa-btn.ativo {
+  background: rgba(197, 160, 89, 0.12) !important;
+  border-color: var(--cor-destaque, #c5a059) !important;
+  color: var(--cor-destaque, #c5a059) !important;
+}
+
+/* 🔏 CRITÉRIOS DE SENHA (CADASTRO) */
+[data-theme^='dark'] .crit-ok {
+  background-color: #052e16 !important;
+  color: #86efac !important;
+  border-color: #166534 !important;
+}
+
+[data-theme^='dark'] .crit-falha {
+  background-color: #27272a !important;
+  color: #71717a !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme^='dark'] .crit-titulo-obrigatorio {
+  color: #fca5a5 !important;
+}
+
+[data-theme^='dark'] .label-sub {
+  color: #71717a !important;
+}

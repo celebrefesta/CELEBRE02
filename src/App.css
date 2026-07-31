@@ -1137,8 +1137,8 @@ main,
   .page-layout {
     margin-left: 0 !important;
     width: 100% !important;
-    padding: 15px !important;
-    padding-top: 80px !important; /* 🔥 IMPEDE O CONTEÚDO DE SUMIR ATRÁS DO BOTÃO HAMBÚRGUER */
+    padding: 6px !important;
+    padding-top: 75px !important; /* 🔥 IMPEDE O CONTEÚDO DE SUMIR ATRÁS DO BOTÃO HAMBÚRGUER */
   }
 
   .dashboard-header {

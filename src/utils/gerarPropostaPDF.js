@@ -1,5 +1,6 @@
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import logoCelebrePadrao from '../assets/LOGO_CELEBRE.png';
 
 /**
  * 📄 GERADOR DE PROPOSTA / ORÇAMENTO EM PDF LUXO
@@ -24,22 +25,32 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   const borderColor = [226, 232, 240];  // #e2e8f0
 
   const numPedido = pedido.numeroPedido ? `#${pedido.numeroPedido}` : (pedido.id ? `#${pedido.id.substring(0, 6).toUpperCase()}` : '#S/N');
-  const nomeEmpresa = empresa?.nomeFantasia || empresa?.razaoSocial || 'CELEBRE FESTAS & EVENTOS';
+  const nomeEmpresa = empresa?.nomeEmpresa || empresa?.nomeFantasia || empresa?.razaoSocial || 'CELEBRE FESTAS & EVENTOS';
   const cnpjEmpresa = empresa?.cnpj ? `CNPJ: ${empresa.cnpj}` : '';
   const telEmpresa = empresa?.telefone || empresa?.celular || empresa?.whatsapp || '';
-  const emailEmpresa = empresa?.email || '';
-  const enderecoEmpresa = empresa?.endereco ? `${empresa.endereco}, ${empresa.cidade || ''}` : '';
+  const emailEmpresa = empresa?.emailEmpresa || empresa?.email || '';
 
   const nomeCliente = clienteObj?.nome || clienteObj?.nomeFantasia || clienteObj?.razaoSocial || pedido.clienteNome || pedido.nomeCliente || 'Cliente Celebre';
   const telCliente = clienteObj?.celular || clienteObj?.telefone || pedido.clienteCelular || pedido.celular || '';
-  const docCliente = clienteObj?.cpf || clienteObj?.cnpj || '';
+  const docCliente = clienteObj?.cpfCnpj || clienteObj?.cpf || clienteObj?.cnpj || '';
   const emailCliente = clienteObj?.email || '';
 
-  const dataRetirada = pedido.dataRetirada ? new Date(pedido.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'A combinar';
-  const dataDevolucao = pedido.dataDevolucao ? new Date(pedido.dataDevolucao + 'T12:00:00').toLocaleDateString('pt-BR') : 'A combinar';
+  const dataRetirada = pedido.dataRetirada ? new Date(pedido.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : (pedido.datas?.retirada ? new Date(pedido.datas.retirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'A combinar');
+  const dataDevolucao = pedido.dataDevolucao ? new Date(pedido.dataDevolucao + 'T12:00:00').toLocaleDateString('pt-BR') : (pedido.datas?.devolucao ? new Date(pedido.datas.devolucao + 'T12:00:00').toLocaleDateString('pt-BR') : 'A combinar');
   const tipoServico = String(pedido.tipoServico || 'PEGUE E MONTE').toUpperCase();
   const temaFesta = pedido.temaFesta || pedido.tema || 'Festa Celebre';
   const status = (pedido.status || 'orcamento').toUpperCase();
+
+  // 🏷️ TÍTULO DO DOCUMENTO / ARQUIVO: "PROPOSTA ORÇAMENTO - [NOME DO CLIENTE]"
+  const nomeClienteFormatado = nomeCliente.replace(/[/\\?%*:|"<>]/g, '').trim();
+  const nomeDocumentoFormatado = `PROPOSTA ORÇAMENTO - ${nomeClienteFormatado.toUpperCase()}`;
+
+  doc.setProperties({
+    title: nomeDocumentoFormatado,
+    subject: 'Proposta Comercial / Orçamento de Locação',
+    author: nomeEmpresa,
+    creator: 'Celebre Sistema de Gestão'
+  });
 
   // 1. TOP HEADER BANNER (Marinho Noturno com acento Dourado)
   doc.setFillColor(...primaryColor);
@@ -48,24 +59,40 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.setFillColor(...goldColor);
   doc.rect(0, 28, 210, 2, 'F');
 
+  // 🖼️ INSERÇÃO DA LOGO DA EMPRESA (CONFIGURAÇÕES - EMPRESA) OU FALLBACK
+  const logoEmpresaSrc = empresa?.logotipo || empresa?.logoUrl || empresa?.logo || logoCelebrePadrao;
+  let textStartX = 14;
+
+  if (logoEmpresaSrc && typeof logoEmpresaSrc === 'string' && logoEmpresaSrc.length > 20) {
+    try {
+      const isJpeg = logoEmpresaSrc.includes('image/jpeg') || logoEmpresaSrc.includes('image/jpg');
+      const format = isJpeg ? 'JPEG' : 'PNG';
+      // Desenha a logo no canto esquerdo dentro do banner marinho
+      doc.addImage(logoEmpresaSrc, format, 12, 3, 22, 22);
+      textStartX = 38;
+    } catch (e) {
+      console.error("Erro ao inserir logotipo da empresa no PDF:", e);
+    }
+  }
+
   // Nome da Empresa
   doc.setTextColor(255, 255, 255);
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(16);
-  doc.text(nomeEmpresa.toUpperCase(), 14, 14);
+  doc.setFontSize(14);
+  doc.text(nomeEmpresa.toUpperCase(), textStartX, 13);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8);
   const infoEmpresaLinha = [cnpjEmpresa, telEmpresa, emailEmpresa].filter(Boolean).join(' | ');
-  doc.text(infoEmpresaLinha, 14, 20);
+  doc.text(infoEmpresaLinha, textStartX, 19);
 
   // Título da Proposta no Canto Direito do Banner
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
+  doc.setFontSize(12);
   doc.setTextColor(...goldColor);
   doc.text('PROPOSTA COMERCIAL', 196, 13, { align: 'right' });
 
-  doc.setFontSize(10);
+  doc.setFontSize(9.5);
   doc.setTextColor(255, 255, 255);
   doc.text(`PEDIDO ${numPedido}`, 196, 19, { align: 'right' });
 
@@ -86,7 +113,7 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
 
   y += 15;
 
-  // 3. BLISTERS DE INFORMAÇÕES DO CLIENTE E EVENTO (2 Colunas)
+  // 3. BLISTERS DE INFORMAÇÕES DO CLIENTE E EVENTO (2 Colunas - Sem Emojis para evitar glitches)
   const colW = 88;
   
   // Coluna 1: Dados do Cliente
@@ -98,7 +125,7 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
-  doc.text('👤 DADOS DO CLIENTE', 18, y + 5);
+  doc.text('DADOS DO CLIENTE', 18, y + 5);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
@@ -118,17 +145,17 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8);
   doc.setTextColor(255, 255, 255);
-  doc.text('📅 DETALHES DO EVENTO & SERVIÇO', xCol2 + 4, y + 5);
+  doc.text('DETALHES DO EVENTO & SERVICO', xCol2 + 4, y + 5);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(8.5);
   doc.setTextColor(...darkGray);
   doc.text(`Modalidade: ${tipoServico}`, xCol2 + 4, y + 13);
   doc.text(`Data Retirada/Evento: ${dataRetirada}`, xCol2 + 4, y + 18);
-  doc.text(`Data Devolução: ${dataDevolucao}`, xCol2 + 4, y + 23);
+  doc.text(`Data Devolucao: ${dataDevolucao}`, xCol2 + 4, y + 23);
   
-  const tipoLog = (pedido.logistica?.tipo === 'entrega' || pedido.logistica?.frete) ? 'Com Frete (Entrega)' : 'Retirada no Balcão';
-  doc.text(`Logística: ${tipoLog}`, xCol2 + 4, y + 28);
+  const tipoLog = (pedido.logistica?.tipo === 'entrega' || pedido.logistica?.frete) ? 'Com Frete (Entrega)' : 'Retirada no Balcao';
+  doc.text(`Logistica: ${tipoLog}`, xCol2 + 4, y + 28);
 
   y += 38;
 
@@ -156,7 +183,7 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
 
   autoTable(doc, {
     startY: y,
-    head: [['#', 'PEÇA / ITEM DA LOCAÇÃO', 'QTD', 'UNITÁRIO', 'TOTAL']],
+    head: [['#', 'PECA / ITEM DA LOCACAO', 'QTD', 'UNITARIO', 'TOTAL']],
     body: tableBody,
     theme: 'grid',
     headStyles: {
@@ -211,7 +238,7 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.setFontSize(8);
   doc.setTextColor(...darkGray);
 
-  doc.text('Subtotal Peças:', finX + 6, y + 14);
+  doc.text('Subtotal Pecas:', finX + 6, y + 14);
   doc.text(`R$ ${subtotalVal.toFixed(2)}`, finX + finW - 6, y + 14, { align: 'right' });
 
   doc.text('Taxa de Frete:', finX + 6, y + 19);
@@ -236,7 +263,7 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
   doc.setTextColor(...darkGray);
-  doc.text(`Sinal / Já Pago: R$ ${pagoVal.toFixed(2)}`, finX + 6, y + 39);
+  doc.text(`Sinal / Ja Pago: R$ ${pagoVal.toFixed(2)}`, finX + 6, y + 39);
   doc.setFont('helvetica', 'bold');
   doc.text(`Saldo: R$ ${saldoVal.toFixed(2)}`, finX + finW - 6, y + 39, { align: 'right' });
 
@@ -248,7 +275,7 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(8.5);
   doc.setTextColor(...primaryColor);
-  doc.text('💳 CONDIÇÕES & PAGAMENTO', 18, y + 7);
+  doc.text('CONDICOES & PAGAMENTO', 18, y + 7);
 
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.8);
@@ -256,10 +283,10 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
 
   const chavePix = empresa?.chavePix || 'Solicite por WhatsApp';
   doc.text(`• Chave PIX: ${chavePix}`, 18, y + 14);
-  doc.text('• Validade desta proposta: 5 dias úteis', 18, y + 20);
+  doc.text('• Validade desta proposta: 5 dias uteis', 18, y + 20);
   doc.text('• Reserva garantida mediante sinal (50%)', 18, y + 26);
-  doc.text('• Peças sujeitas à disponibilidade de estoque', 18, y + 32);
-  doc.text('• Devolução no prazo sob pena de diária extra', 18, y + 38);
+  doc.text('• Pecas sujeitas a disponibilidade de estoque', 18, y + 32);
+  doc.text('• Devolucao no prazo sob pena de diaria extra', 18, y + 38);
 
   y += 50;
 
@@ -270,15 +297,22 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.setFont('helvetica', 'normal');
   doc.setFontSize(7.5);
   doc.setTextColor(148, 163, 184);
-  doc.text(' Celebre Festas & Eventos - Sistema de Gestão Empresarial', 14, 285);
-  doc.text(`Página 1 de 1 - Emissão: ${new Date().toLocaleDateString('pt-BR')}`, 196, 285, { align: 'right' });
+  doc.text(` ${nomeEmpresa} - Sistema de Gestao Empresarial`, 14, 285);
+  doc.text(`Pagina 1 de 1 - Emissao: ${new Date().toLocaleDateString('pt-BR')}`, 196, 285, { align: 'right' });
 
-  // Ação final: Download ou Preview
+  // Ação final: Download ou Preview com título "PROPOSTA ORÇAMENTO - [NOME DO CLIENTE]"
   if (acao === 'download') {
-    doc.save(`Proposta_Celebre_${numPedido.replace('#', '')}.pdf`);
+    doc.save(`${nomeDocumentoFormatado}.pdf`);
   } else {
     const pdfBlob = doc.output('blob');
     const pdfUrl = URL.createObjectURL(pdfBlob);
-    window.open(pdfUrl, '_blank');
+    const pdfWindow = window.open(pdfUrl, '_blank');
+    if (pdfWindow) {
+      try {
+        pdfWindow.document.title = nomeDocumentoFormatado;
+      } catch (err) {
+        console.log("Título da aba ajustado:", err);
+      }
+    }
   }
 };

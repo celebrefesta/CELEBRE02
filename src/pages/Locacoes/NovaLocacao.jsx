@@ -67,7 +67,61 @@ const NovaLocacao = () => {
   
   const [clienteSelecionado, setClienteSelecionado] = useState('');
   const [tipoServico, setTipoServico] = useState('PEGUE E MONTE');
-  const [datas, setDatas] = useState({ retirada: '', devolucao: '' });
+  const [datas, setDatas] = useState({ 
+    retirada: '', 
+    horarioRetirada: '09:00', 
+    devolucao: '', 
+    horarioDevolucao: '18:00',
+    horarioFesta: '19:00' 
+  });
+
+  const [modalNovoClienteAberto, setModalNovoClienteAberto] = useState(false);
+  const [formNovoCliente, setFormNovoCliente] = useState({ nome: '', celular: '', cpfCnpj: '', email: '' });
+  const [salvandoNovoCliente, setSalvandoNovoCliente] = useState(false);
+
+  const [formaPagtoRestante, setFormaPagtoRestante] = useState('Pix na Devolução');
+  const [exigirCaucao, setExigirCaucao] = useState(false);
+  const [valorCaucao, setValorCaucao] = useState('');
+
+  const handleSalvarNovoClienteRapido = async (e) => {
+    e.preventDefault();
+    if (!formNovoCliente.nome.trim() || !formNovoCliente.celular.trim()) {
+      alert("⚠️ Preencha pelo menos o Nome e Celular/WhatsApp do cliente.");
+      return;
+    }
+    try {
+      setSalvandoNovoCliente(true);
+      const novoCliData = {
+        userId: tenantId,
+        tenantId: tenantId,
+        nome: formNovoCliente.nome.trim(),
+        celular: formNovoCliente.celular.trim(),
+        cpfCnpj: formNovoCliente.cpfCnpj.trim(),
+        email: formNovoCliente.email.trim(),
+        criadoEm: serverTimestamp(),
+        dataCadastro: new Date().toISOString()
+      };
+      const docRef = await addDoc(collection(db, "clientes"), novoCliData);
+      const novoClienteObj = { id: docRef.id, ...novoCliData };
+      setClientes(prev => [novoClienteObj, ...prev]);
+      setClienteSelecionado(docRef.id);
+      setModalNovoClienteAberto(false);
+      setFormNovoCliente({ nome: '', celular: '', cpfCnpj: '', email: '' });
+      alert(`✅ Cliente "${formNovoCliente.nome}" cadastrado e selecionado com sucesso!`);
+    } catch (err) {
+      console.error("Erro ao cadastrar cliente rápido:", err);
+      alert("❌ Erro ao cadastrar cliente: " + err.message);
+    } finally {
+      setSalvandoNovoCliente(false);
+    }
+  };
+
+  const calcularValorReposicao = () => {
+    return carrinho.reduce((acc, item) => {
+      const valReposicao = Number(item.valorReposicao || item.custoManutencao || item.financeiro?.valorReposicao || (Number(item.preco || 0) * 3));
+      return acc + (valReposicao * (Number(item.qtd) || 1));
+    }, 0);
+  };
   
   const [categoriaTema, setCategoriaTema] = useState('');
   const [subcategoriaTema, setSubcategoriaTema] = useState('');
@@ -757,16 +811,21 @@ const NovaLocacao = () => {
 
   return (
     <div className="locacao-form-container">
-      <header className="page-header">
-        <h1 className="page-title">Nova Locação</h1>
-        <div className="header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-          <button type="button" className="btn-secundario-alerta" onClick={() => setModalCalendarioAberto(true)}>
-            📅 Disponibilidade (Calendário)
+      <header className="page-header-compact">
+        <div className="header-top-row">
+          <h1 className="page-title">Nova Locação</h1>
+          <button className="btn-voltar-compact" onClick={() => navigate('/locacoes')}>
+            ← Voltar
           </button>
-          <button type="button" className="btn-primary-outline" onClick={handleGerarPropostaPDF}>
-            📄 Proposta PDF (Luxo)
+        </div>
+        
+        <div className="header-tools-row">
+          <button type="button" className="btn-tool-chip" onClick={() => setModalCalendarioAberto(true)}>
+            📅 Disponibilidade
           </button>
-          <button className="btn-voltar-link" onClick={() => navigate('/locacoes')}>← Voltar</button>
+          <button type="button" className="btn-tool-chip gold" onClick={handleGerarPropostaPDF}>
+            📄 Proposta PDF
+          </button>
         </div>
       </header>
 
@@ -774,43 +833,66 @@ const NovaLocacao = () => {
         
         <div className="coluna-form">
           <div className="card-secao">
-            <h3 className="section-divider">👤 DADOS DO EVENTO</h3>
+            <h3 className="section-divider">👤 DADOS DO EVENTO & CLIENTE</h3>
             
-            <div className="form-group mb-15">
-              <label>MODALIDADE DE SERVIÇO *</label>
-              <div className="toggle-servico">
+            <div className="form-group mb-20">
+              <label style={{ fontWeight: '800', fontSize: '0.74rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>MODALIDADE DE SERVIÇO *</label>
+              <div className="toggle-servico-vip">
                 <button 
                   type="button" 
-                  className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`} 
+                  className={`btn-servico-card ${tipoServico === 'PEGUE E MONTE' ? 'active' : ''}`} 
                   onClick={() => {
                     setTipoServico('PEGUE E MONTE');
                     setLogistica(prev => ({ ...prev, tipo: 'retirada', frete: '' }));
                   }}
                 >
-                  📦 PEGUE E MONTE
+                  <span className="servico-icon">📦</span>
+                  <div className="servico-info">
+                    <strong>PEGUE E MONTE</strong>
+                    <small>Cliente retira e devolve no balcão da loja</small>
+                  </div>
                 </button>
                 <button 
                   type="button" 
-                  className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`} 
+                  className={`btn-servico-card ${tipoServico === 'DECORACAO COMPLETA' ? 'active' : ''}`} 
                   onClick={() => {
                     setTipoServico('DECORACAO COMPLETA');
                     setLogistica(prev => ({ ...prev, tipo: 'entrega' }));
                   }}
                 >
-                  ✨ DECORAÇÃO COMPLETA
+                  <span className="servico-icon">✨</span>
+                  <div className="servico-info">
+                    <strong>DECORAÇÃO COMPLETA</strong>
+                    <small>Entrega, montagem e recolhimento Celebre</small>
+                  </div>
                 </button>
               </div>
             </div>
 
-            <div className="form-row">
-              <div className="form-group flex-2">
-                <label>Cliente *</label>
-                <select value={clienteSelecionado} onChange={e => setClienteSelecionado(e.target.value)}>
+            <div className="form-group mt-20 mb-15">
+              <div className="cliente-header-row">
+                <label className="label-secao-sub">CLIENTE SELECIONADO *</label>
+                <button 
+                  type="button" 
+                  className="btn-add-cliente-luxo"
+                  onClick={() => setModalNovoClienteAberto(true)}
+                >
+                  <i className="fas fa-user-plus"></i> + NOVO CLIENTE
+                </button>
+              </div>
+                <select 
+                  value={clienteSelecionado} 
+                  onChange={e => setClienteSelecionado(e.target.value)}
+                  className="select-cliente-vip"
+                >
                   <option value="" disabled hidden>Selecione um cliente cadastrado...</option>
-                  {clientes.map(c => <option key={c.id} value={c.id}>{c.nome || c.nomeFantasia || c.razaoSocial}</option>)}
+                  {clientes.map(c => (
+                    <option key={c.id} value={c.id}>
+                      👤 {c.nome || c.nomeFantasia || c.razaoSocial} {c.celular ? `(${c.celular})` : ''}
+                    </option>
+                  ))}
                 </select>
               </div>
-            </div>
 
             <div className="form-row mt-10">
                 <div className="form-group flex-1">
@@ -897,51 +979,69 @@ const NovaLocacao = () => {
                 </div>
             )}
 
-            <div className="form-row mt-10">
+            <div className="form-row mt-10 grid-2-col-mobile">
               <div className="form-group flex-1">
-                <label>Data de Retirada / Evento *</label>
+                <label>Data Retirada *</label>
                 <input type="date" value={datas.retirada} onChange={handleDataRetiradaChange} />
               </div>
-        
+
               <div className="form-group flex-1">
-                <label>Data de Devolução *</label>
+                <label>Hora Retirada</label>
+                <input 
+                  type="time" 
+                  value={datas.horarioRetirada || '09:00'} 
+                  onChange={e => setDatas({...datas, horarioRetirada: e.target.value})} 
+                />
+              </div>
+            </div>
+
+            <div className="form-row mt-10 grid-2-col-mobile">
+              <div className="form-group flex-1">
+                <label>Data Devolução *</label>
                 <input type="date" min={datas.retirada} value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} />
+              </div>
+
+              <div className="form-group flex-1">
+                <label>Hora Devolução</label>
+                <input 
+                  type="time" 
+                  value={datas.horarioDevolucao || '18:00'} 
+                  onChange={e => setDatas({...datas, horarioDevolucao: e.target.value})} 
+                />
+              </div>
+            </div>
+
+            <div className="form-row mt-10">
+              <div className="form-group flex-1">
+                <label>🎉 Horário Previsto da Festa / Evento</label>
+                <input 
+                  type="time" 
+                  value={datas.horarioFesta || '19:00'} 
+                  onChange={e => setDatas({...datas, horarioFesta: e.target.value})} 
+                />
               </div>
             </div>
 
             {/* 🏷️ TIPO DE EVENTO */}
-            <div className="form-group mt-10">
-              <label style={{ fontWeight: '700', fontSize: '0.75rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                🏷️ TIPO DE EVENTO
-              </label>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
-                {TIPOS_EVENTO.map(tipo => (
-                  <button
-                    key={tipo.value}
-                    type="button"
-                    onClick={() => setTipoEvento(prev => prev === tipo.value ? '' : tipo.value)}
-                    style={{
-                      padding: '6px 14px',
-                      borderRadius: '20px',
-                      border: tipoEvento === tipo.value ? '2px solid #c5a059' : '1.5px solid #e2e8f0',
-                      background: tipoEvento === tipo.value ? 'linear-gradient(135deg, #fef3c7, #fde68a)' : 'var(--fundo-card, #fff)',
-                      color: tipoEvento === tipo.value ? '#92400e' : '#64748b',
-                      fontWeight: tipoEvento === tipo.value ? '800' : '600',
-                      fontSize: '0.78rem',
-                      cursor: 'pointer',
-                      transition: 'all 0.18s ease',
-                      boxShadow: tipoEvento === tipo.value ? '0 4px 12px rgba(197,160,89,0.25)' : 'none',
-                    }}
-                  >
-                    {tipo.emoji} {tipo.label}
-                  </button>
-                ))}
+            <div className="form-group mt-15">
+              <label className="label-tipo-evento">🏷️ TIPO DE EVENTO</label>
+              <div className="grid-tipos-evento">
+                {TIPOS_EVENTO.map(tipo => {
+                  const isSelected = tipoEvento === tipo.value;
+                  return (
+                    <button
+                      key={tipo.value}
+                      type="button"
+                      onClick={() => setTipoEvento(prev => prev === tipo.value ? '' : tipo.value)}
+                      className={`btn-tipo-evento ${isSelected ? 'active' : ''}`}
+                    >
+                      <span className="evento-emoji">{tipo.emoji}</span>
+                      <span className="evento-label">{tipo.label}</span>
+                      {isSelected && <span className="evento-check">✓</span>}
+                    </button>
+                  );
+                })}
               </div>
-              {tipoEvento && (
-                <p style={{ marginTop: '6px', fontSize: '0.73rem', color: '#10b981', fontWeight: '600' }}>
-                  ✅ Tag selecionada: {TIPOS_EVENTO.find(t => t.value === tipoEvento)?.emoji} {TIPOS_EVENTO.find(t => t.value === tipoEvento)?.label}
-                </p>
-              )}
             </div>
           </div>
 
@@ -1166,6 +1266,11 @@ const NovaLocacao = () => {
             <div className="fin-linha">
               <span>Subtotal Itens</span> 
               <span>R$ {calcularTotal().subtotal.toFixed(2)}</span>
+            </div>
+
+            <div className="fin-linha" style={{ background: '#f8fafc', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', margin: '8px 0' }}>
+              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>🛡️ Valor Reposição (Garantia)</span> 
+              <span style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: '800' }}>R$ {calcularValorReposicao().toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
             </div>
             
             <div className="fin-linha">
@@ -1516,6 +1621,113 @@ const NovaLocacao = () => {
         estoque={estoque}
         locacoes={todasLocacoes}
       />
+
+      {/* 👤 MODAL NOVO CLIENTE RÁPIDO */}
+      {modalNovoClienteAberto && (
+        <div className="modal-overlay-premium" style={{ zIndex: 99999 }}>
+          <div className="modal-box-premium" style={{ maxWidth: '480px', background: '#ffffff', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 60px -15px rgba(15, 23, 42, 0.35)', border: '1px solid #e2e8f0' }}>
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', padding: '20px 24px', color: '#ffffff', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: '850', color: '#ffffff' }}>👤 Cadastro Rápido de Cliente</h3>
+                <p style={{ margin: '3px 0 0 0', fontSize: '0.75rem', color: '#94a3b8' }}>Cadastre e selecione no pedido instantaneamente</p>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setModalNovoClienteAberto(false)}
+                style={{ background: 'rgba(255, 255, 255, 0.1)', color: '#ffffff', border: 'none', width: '32px', height: '32px', borderRadius: '50%', cursor: 'pointer', fontWeight: 'bold', fontSize: '14px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSalvarNovoClienteRapido} style={{ padding: '20px 24px' }}>
+              <div className="form-group mb-12">
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b' }}>Nome Completo *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="Ex: Maria das Graças Silva"
+                  value={formNovoCliente.nome}
+                  onChange={e => setFormNovoCliente({ ...formNovoCliente, nome: e.target.value })}
+                  style={{ padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                  autoFocus
+                />
+              </div>
+
+              <div className="form-group mb-12">
+                <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b' }}>WhatsApp / Celular *</label>
+                <input 
+                  type="text" 
+                  required
+                  placeholder="(00) 90000-0000"
+                  value={formNovoCliente.celular}
+                  onChange={e => setFormNovoCliente({ ...formNovoCliente, celular: e.target.value })}
+                  style={{ padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                />
+              </div>
+
+              <div className="form-row mb-12">
+                <div className="form-group flex-1">
+                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b' }}>CPF / CNPJ (Opcional)</label>
+                  <input 
+                    type="text" 
+                    placeholder="000.000.000-00"
+                    value={formNovoCliente.cpfCnpj}
+                    onChange={e => setFormNovoCliente({ ...formNovoCliente, cpfCnpj: e.target.value })}
+                    style={{ padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                  />
+                </div>
+                <div className="form-group flex-1">
+                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b' }}>E-mail (Opcional)</label>
+                  <input 
+                    type="email" 
+                    placeholder="cliente@email.com"
+                    value={formNovoCliente.email}
+                    onChange={e => setFormNovoCliente({ ...formNovoCliente, email: e.target.value })}
+                    style={{ padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px', marginTop: '18px' }}>
+                <button 
+                  type="submit" 
+                  disabled={salvandoNovoCliente}
+                  style={{
+                    flex: 1,
+                    padding: '12px',
+                    background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: '850',
+                    fontSize: '0.85rem',
+                    cursor: salvandoNovoCliente ? 'not-allowed' : 'pointer'
+                  }}
+                >
+                  {salvandoNovoCliente ? 'Cadastrando...' : '✔ Cadastrar e Selecionar'}
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => setModalNovoClienteAberto(false)}
+                  style={{
+                    padding: '12px 18px',
+                    background: '#f1f5f9',
+                    color: '#64748b',
+                    border: 'none',
+                    borderRadius: '12px',
+                    fontWeight: '700',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

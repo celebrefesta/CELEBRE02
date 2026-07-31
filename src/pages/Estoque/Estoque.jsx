@@ -665,7 +665,8 @@ const Estoque = () => {
   const localizacoesUnicas = Array.from(new Set(itens.map(i => i.localizacao).filter(Boolean))).sort();
 
   const totalItens = itens.length;
-  const valorAcervo = itens.reduce((acc, i) => acc + ((i.financeiro?.valorReposicao || i.financeiro?.valorCompra || 0) * i.quantidade), 0);
+  const valorAcervo = itens.reduce((acc, i) => acc + (Number(i.financeiro?.valorCompra || i.valorCompra || i.financeiro?.valorReposicao || 0) * Number(i.quantidade || 1)), 0);
+  const valorReposicaoTotal = itens.reduce((acc, i) => acc + (Number(i.valorReposicao || i.financeiro?.valorReposicao || (Number(i.financeiro?.valorAluguel || i.preco || 0) * 3)) * Number(i.quantidade || 1)), 0);
   const emManutencaoTotal = itens.reduce((acc, i) => acc + (i.qtdManutencao !== undefined ? i.qtdManutencao : (i.status === 'manutencao' ? i.quantidade : 0)), 0);
   const visiveis = itens.filter(i => i.configuracao?.visivelCatalogo !== false).length;
   const percentualVisivel = totalItens > 0 ? Math.round((visiveis / totalItens) * 100) : 0;
@@ -920,8 +921,19 @@ const Estoque = () => {
           </div>
           <div className="stat-content">
             <span className="stat-title">VALOR DO ACERVO</span>
-            <strong className="stat-number">R$ {valorAcervo.toLocaleString('pt-BR')}</strong>
+            <strong className="stat-number">R$ {valorAcervo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
             <small style={{color: '#b45309', fontSize: '0.75rem', fontWeight: '600'}}>Patrimônio investido</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro">
+          <div className="stat-icon-wrapper icon-blue" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+            🛡️
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">VALOR REPOSIÇÃO</span>
+            <strong className="stat-number">R$ {valorReposicaoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <small style={{color: '#1d4ed8', fontSize: '0.75rem', fontWeight: '600'}}>Garantia total acervo</small>
           </div>
         </div>
 
@@ -1142,7 +1154,7 @@ const Estoque = () => {
                               ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '0.95rem', whiteSpace: 'nowrap', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '0.95rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
                                   {item.nome}
                                   {ehKitPai && <span style={{background: '#0f172a', color: '#fde68a', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #c5a059'}}>📦 CONJUNTO / KIT</span>}
                                   {ehSubPeca && <span style={{background: '#fef3c7', color: '#b48a3c', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #fde68a'}}>🧩 PEÇA DO KIT</span>}

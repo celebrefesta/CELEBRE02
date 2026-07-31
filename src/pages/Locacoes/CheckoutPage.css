@@ -159,7 +159,9 @@
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* 📱 RESPONSIVIDADE MOBILE CHECKOUT (< 900px) */
@@ -168,4 +170,312 @@
     padding: 8px !important;
     max-width: 100% !important;
   }
+
+  .checkout-header-nav {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .header-badge-modo.volta {
+    text-align: center;
+  }
+
+  .obs-grid-row {
+    grid-template-columns: 1fr;
+  }
+
+  .checkout-bottom-sections-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* 📐 LAYOUT GRID DE OBSERVAÇÕES E RESPONSÁVEL */
+.obs-grid-row {
+  display: grid;
+  grid-template-columns: 1fr 2fr;
+  gap: 16px;
+  align-items: flex-start;
+}
+
+.obs-col-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.obs-col-field label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--texto-secundario, #475569);
+}
+
+.obs-col-field.flex-2 {
+  flex: 2;
+}
+
+.input-std-text,
+.input-std-select,
+.textarea-std {
+  padding: 8px 12px;
+  border-radius: 8px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  font-size: 0.84rem;
+  font-family: inherit;
+  outline: none;
+  background: var(--branco, #ffffff);
+  color: var(--texto-principal, #0f172a);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* GRID INFERIOR DE ASSINATURA + FOTOS */
+.checkout-bottom-sections-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 140px;
+}
+
+.obs-panel-card {
+  margin-bottom: 20px;
+}
+
+/* ASSINATURA */
+.sig-wrapper-std {
+  background: var(--branco, #ffffff);
+  border: 1.5px solid var(--dourado, #c5a059);
+  border-radius: 12px;
+  height: 150px;
+  position: relative;
+  touch-action: none !important;
+}
+
+.sig-canvas-element {
+  width: 100% !important;
+  height: 100% !important;
+  cursor: crosshair;
+  touch-action: none !important;
+}
+
+.sig-hint-txt {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  display: block;
+  margin-top: 6px;
+}
+
+.sig-preview-box {
+  background: #f0fdf4;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #bbf7d0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.sig-preview-box img {
+  height: 50px;
+  max-width: 220px;
+  object-fit: contain;
+}
+
+.sig-ok-badge {
+  font-size: 0.75rem;
+  font-weight: 800;
+  color: #15803d;
+}
+
+.btn-limpar-sig {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+/* CLASSE CSS PARA SUBSTITUIR INLINE style={{ marginTop: 12px }} */
+.form-group-margin-top {
+  margin-top: 12px;
+}
+
+/* MSG BIPAGEM CHECKOUT */
+.msg-bip-toast {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  margin-top: 6px;
+}
+
+.msg-bip-toast.sucesso {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.msg-bip-toast.erro {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+/* CÂMERA SCANNER CHECKOUT */
+.camera-scanner-wrapper {
+  background: #0f172a;
+  padding: 14px;
+  border-radius: 12px;
+  color: #ffffff;
+  text-align: center;
+}
+
+.camera-box-viewport {
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #000000;
+}
+
+/* =====================================================
+   🌙 DARK MODE — CHECKOUT PAGE ELEMENTOS EXCLUSIVOS
+   ===================================================== */
+
+/* 🧭 PÁGINA E FUNDO GERAL */
+[data-theme^='dark'] .checkout-page-container {
+  background: var(--bg-main, #121212) !important;
+  color: var(--texto-principal, #f4f4f5) !important;
+}
+
+/* 🔙 NAVEGAÇÃO DE TOPO */
+[data-theme^='dark'] .checkout-header-nav {
+  color: var(--texto-principal, #f4f4f5) !important;
+}
+
+[data-theme^='dark'] .btn-voltar-checkout {
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .btn-voltar-checkout:hover {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .header-badge-modo.volta {
+  background: #052e16 !important;
+  color: #86efac !important;
+  border-color: #166534 !important;
+}
+
+/* ⚠️ ALERTA DE AVARIAS E FALTAS */
+[data-theme^='dark'] .checkout-alert-box {
+  background: #450a0a !important;
+  border-color: #991b1b !important;
+}
+
+[data-theme^='dark'] .alert-header {
+  color: #fca5a5 !important;
+}
+
+[data-theme^='dark'] .alert-badge.avaria {
+  background: #292524 !important;
+  color: #fde68a !important;
+  border-color: #78350f !important;
+}
+
+[data-theme^='dark'] .alert-badge.falta {
+  background: #450a0a !important;
+  color: #fca5a5 !important;
+  border-color: #991b1b !important;
+}
+
+/* 📊 BANNER DE PROGRESSO VERDE */
+[data-theme^='dark'] .checkout-resumo-banner-vip {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme^='dark'] .prog-bar-track {
+  background: #3f3f46 !important;
+}
+
+/* 📝 OBSERVAÇÕES E RESPONSÁVEL */
+[data-theme^='dark'] .obs-panel-card,
+[data-theme^='dark'] .fotos-panel-card,
+[data-theme^='dark'] .sig-panel-card {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme^='dark'] .obs-col-field label {
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .input-std-text,
+[data-theme^='dark'] .input-std-select,
+[data-theme^='dark'] .textarea-std {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+/* ✍️ ASSINATURA DIGITAL */
+[data-theme^='dark'] .sig-wrapper-std {
+  background: #18181b !important;
+  border-color: var(--cor-destaque, #c5a059) !important;
+}
+
+[data-theme^='dark'] .sig-canvas-element {
+  background: #18181b !important;
+}
+
+[data-theme^='dark'] .sig-hint-txt {
+  color: #71717a !important;
+}
+
+[data-theme^='dark'] .sig-preview-box {
+  background: #052e16 !important;
+  border-color: #166534 !important;
+}
+
+[data-theme^='dark'] .sig-ok-badge {
+  color: #86efac !important;
+}
+
+[data-theme^='dark'] .btn-limpar-sig {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #d4d4d8 !important;
+}
+
+/* 🔔 TOAST DE BIPAGEM */
+[data-theme^='dark'] .msg-bip-toast.sucesso {
+  background: #052e16 !important;
+  color: #86efac !important;
+}
+
+[data-theme^='dark'] .msg-bip-toast.erro {
+  background: #450a0a !important;
+  color: #fca5a5 !important;
+}
+
+/* 📷 CÂMERA SCANNER */
+[data-theme^='dark'] .camera-scanner-wrapper {
+  background: #0b0f19 !important;
+}
+
+/* ⏳ LOADING SCREEN */
+[data-theme^='dark'] .checkout-loading-screen {
+  background: var(--bg-main, #121212) !important;
+  color: #a1a1aa !important;
+}
+
+/* 📌 RODAPÉ FIXO CHECKOUT */
+[data-theme^='dark'] .checkout-footer-fixed {
+  background: #0b0f19 !important;
+  border-color: var(--cor-destaque, #c5a059) !important;
 }

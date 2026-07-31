@@ -34,7 +34,7 @@ const CheckoutPage = () => {
   const [mensagemBip, setMensagemBip] = useState(null);
   const [cameraAberta, setCameraAberta] = useState(false);
   const [modalExpandirAberto, setModalExpandirAberto] = useState(false);
-  
+
   // ❓ MODAL DE CONFIRMAÇÃO DE ITEM (COM FOTO)
   const [itemParaConfirmar, setItemParaConfirmar] = useState(null);
 
@@ -144,7 +144,7 @@ const CheckoutPage = () => {
     const codLimpo = codigoLido.trim().toLowerCase();
     if (!codLimpo) return;
 
-    const index = itensState.findIndex(it => 
+    const index = itensState.findIndex(it =>
       (it.codigo && String(it.codigo).trim().toLowerCase() === codLimpo) ||
       (it.codigoBarras && String(it.codigoBarras).trim().toLowerCase() === codLimpo) ||
       (it.nome && it.nome.trim().toLowerCase().includes(codLimpo))
@@ -203,7 +203,7 @@ const CheckoutPage = () => {
           processarCodigoBipado(decodedText);
           pararScannerCamera();
         },
-        () => {}
+        () => { }
       );
     } catch (err) {
       console.error("Erro ao iniciar câmera:", err);
@@ -231,7 +231,7 @@ const CheckoutPage = () => {
       const novos = [...prev];
       const item = novos[index];
       let novaQtd = Number(item.qtdConferida || 0) + delta;
-      
+
       if (novaQtd < 0) novaQtd = 0;
       if (novaQtd > item.quantidade) novaQtd = item.quantidade;
 
@@ -342,23 +342,24 @@ const CheckoutPage = () => {
 
   // 🖨️ GERAR COMPROVANTE DE DEVOLUÇÃO EM PDF
   const handleGerarPDF = () => {
-    capturarAssinatura();
-    const payloadLocacao = {
-      ...locacao,
-      itens: itensState.map(it => ({
-        ...it,
-        qtdRetornada: it.qtdConferida,
-        statusRetorno: it.statusRetorno
-      })),
-      observacoesRetorno: observacoes,
-      responsavelRetorno: responsavel,
-      assinaturaRetornoUrl: assinaturaSalvaUrl,
-      fotosRetorno: fotosVistoria,
-      empresaLogoUrl: dadosEmpresa?.logotipo || dadosEmpresa?.logoUrl || null,
-      empresaNome: dadosEmpresa?.nomeFantasia || dadosEmpresa?.razaoSocial || 'Celebre Eventos'
-    };
+    let assUrl = assinaturaSalvaUrl;
+    if (!assUrl && sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
+      try {
+        assUrl = sigCanvasRef.current.getCanvas().toDataURL('image/png');
+      } catch (e) { }
+    }
 
-    gerarComprovanteCheckinPDF(payloadLocacao, 'VOLTA');
+    gerarComprovanteCheckinPDF(
+      locacao,
+      'VOLTA',
+      itensState,
+      {
+        responsavel,
+        observacoes,
+        assinaturaUrl: assUrl
+      },
+      dadosEmpresa
+    );
   };
 
   // 💾 SALVAR DEVOLUÇÃO (CHECK-OUT) NO FIRESTORE
@@ -371,7 +372,7 @@ const CheckoutPage = () => {
       if (!assUrl && sigCanvasRef.current && !sigCanvasRef.current.isEmpty()) {
         try {
           assUrl = sigCanvasRef.current.getCanvas().toDataURL('image/png');
-        } catch (e) {}
+        } catch (e) { }
       }
 
       const itensAtualizados = itensState.map(it => ({
@@ -380,6 +381,30 @@ const CheckoutPage = () => {
         statusRetorno: it.statusRetorno || 'ok',
         obsRetorno: it.obsRetorno || ''
       }));
+
+      // 🛠️ ENVIAR PEÇAS AVARIADAS PARA MANUTENÇÃO NO ESTOQUE
+      const itensAvaria = itensAtualizados.filter(i => i.statusRetorno === 'avaria');
+      for (const itemAv of itensAvaria) {
+        if (itemAv.enviarManutencao && (itemAv.id || itemAv.pecaId)) {
+          const pecaId = itemAv.pecaId || itemAv.id;
+          try {
+            const pecaRef = doc(db, 'estoque', pecaId);
+            const pecaSnap = await getDoc(pecaRef);
+            if (pecaSnap.exists()) {
+              const pecaData = pecaSnap.data();
+              const qtdMaintAtual = Number(pecaData.qtdManutencao || 0);
+              await updateDoc(pecaRef, {
+                qtdManutencao: qtdMaintAtual + Number(itemAv.quantidade || 1),
+                statusManutencao: 'em_manutencao',
+                motivoManutencao: itemAv.obsRetorno || `Avaria na devolução #${locacao?.numeroPedido || id}`,
+                custoManutencao: Number(itemAv.custoAvaria || 0)
+              });
+            }
+          } catch (eErr) {
+            console.error('Erro ao registrar manutenção:', eErr);
+          }
+        }
+      }
 
       const tudoConferidoOk = itensAtualizados.every(i => i.qtdRetornada >= i.quantidade && i.statusRetorno === 'ok');
       const novoStatus = tudoConferidoOk ? 'Finalizado' : 'Conferido com Avarias/Faltas';
@@ -398,8 +423,8 @@ const CheckoutPage = () => {
       alert(`✅ Devolução (Check-out) do Pedido #${locacao?.numeroPedido || ''} salva com sucesso!`);
       navigate('/locacoes');
     } catch (err) {
-      console.error("Erro ao salvar checkout:", err);
-      alert("Ocorreu um erro ao salvar o checkout. Tente novamente.");
+      console.error('Erro ao salvar checkout:', err);
+      alert('Ocorreu um erro ao salvar o checkout. Tente novamente.');
     } finally {
       setSalvando(false);
     }
@@ -419,7 +444,7 @@ const CheckoutPage = () => {
 
   return (
     <div className="checkout-page-container">
-      
+
       {/* 🧭 NAVEGAÇÃO & TÍTULO */}
       <div className="checkout-header-nav">
         <Link to="/locacoes" className="btn-voltar-checkout">
@@ -500,24 +525,24 @@ const CheckoutPage = () => {
       <div className="checkout-toolbar-std">
         <div className="toolbar-search-row">
           <div className="search-box-group">
-            <input 
+            <input
               ref={inputBuscaRef}
-              type="text" 
+              type="text"
               placeholder="🔍 Bipar ou digitar código/SKU da peça..."
               value={buscaCodigo}
               onChange={(e) => setBuscaCodigo(e.target.value)}
               onKeyDown={handleKeyDownBusca}
               className="input-search-std"
             />
-            <button 
-              type="button" 
+            <button
+              type="button"
               className="btn-bipar-std"
               onClick={() => processarCodigoBipado(buscaCodigo)}
             >
               ⚡ Bipar
             </button>
-            <button 
-              type="button" 
+            <button
+              type="button"
               className={`btn-camera-std ${cameraAberta ? 'active' : ''}`}
               onClick={toggleCameraScanner}
             >
@@ -542,25 +567,25 @@ const CheckoutPage = () => {
         {/* FILTROS DE ABA */}
         <div className="toolbar-bottom-filters">
           <div className="tabs-bar-std">
-            <button 
+            <button
               className={`tab-btn-std ${filtroTab === 'TODOS' ? 'active' : ''}`}
               onClick={() => setFiltroTab('TODOS')}
             >
               Todos ({itensState.length})
             </button>
-            <button 
+            <button
               className={`tab-btn-std ${filtroTab === 'PENDENTES' ? 'active' : ''}`}
               onClick={() => setFiltroTab('PENDENTES')}
             >
               Pendentes ({itensState.filter(i => i.qtdConferida < i.quantidade).length})
             </button>
-            <button 
+            <button
               className={`tab-btn-std ${filtroTab === 'CONFERIDOS' ? 'active' : ''}`}
               onClick={() => setFiltroTab('CONFERIDOS')}
             >
               Devolvidos ({itensState.filter(i => i.qtdConferida >= i.quantidade).length})
             </button>
-            <button 
+            <button
               className={`tab-btn-std ${filtroTab === 'AVARIAS' ? 'active' : ''}`}
               onClick={() => setFiltroTab('AVARIAS')}
             >
@@ -570,8 +595,8 @@ const CheckoutPage = () => {
 
           <div className="cat-filter-group">
             <span>Categoria:</span>
-            <select 
-              value={categoriaFiltro} 
+            <select
+              value={categoriaFiltro}
               onChange={(e) => setCategoriaFiltro(e.target.value)}
               className="select-cat-std"
             >
@@ -587,17 +612,17 @@ const CheckoutPage = () => {
       <div className="panel-box-std">
         <div className="panel-header-flex">
           <div className="title-with-checkbox">
-            <input 
-              type="checkbox" 
-              checked={itensState.length > 0 && itensState.every(i => i.qtdConferida >= i.quantidade)} 
+            <input
+              type="checkbox"
+              checked={itensState.length > 0 && itensState.every(i => i.qtdConferida >= i.quantidade)}
               onChange={toggleSelecionarTodos}
               title="Marcar/Desmarcar Todos os Itens como Devolvidos"
               className="check-all-input"
             />
             <h3>📦 Peças da Devolução <span className="lbl-txt-desk">({itensExibidos.length} de {itensState.length} exibidos)</span><span className="lbl-txt-mob">({itensExibidos.length}/{itensState.length})</span></h3>
           </div>
-          <button 
-            type="button" 
+          <button
+            type="button"
             className="btn-expandir-std"
             onClick={() => setModalExpandirAberto(true)}
             title="Abrir modal em tela cheia para conferência ampla"
@@ -618,15 +643,14 @@ const CheckoutPage = () => {
               const isParcial = item.qtdConferida > 0 && item.qtdConferida < item.quantidade;
 
               return (
-                <div 
-                  key={originalIndex} 
-                  className={`item-card-std ${
-                    item.statusRetorno === 'ok' ? 'status-total-ok' : item.statusRetorno === 'avaria' ? 'status-avaria' : 'status-falta'
-                  } ${isTotal ? 'card-selected' : ''}`}
+                <div
+                  key={originalIndex}
+                  className={`item-card-std ${item.statusRetorno === 'ok' ? 'status-total-ok' : item.statusRetorno === 'avaria' ? 'status-avaria' : 'status-falta'
+                    } ${isTotal ? 'card-selected' : ''}`}
                 >
                   <div className="item-row-std">
-                    <input 
-                      type="checkbox" 
+                    <input
+                      type="checkbox"
                       checked={isTotal}
                       onChange={() => toggleSelecaoItem(originalIndex)}
                       className="item-select-checkbox"
@@ -653,8 +677,8 @@ const CheckoutPage = () => {
                       <span className="lbl-step">Retornado:</span>
                       <div className="stepper-ctrl">
                         <button type="button" onClick={() => alterarQtdConferida(originalIndex, -1)}>-</button>
-                        <input 
-                          type="number" 
+                        <input
+                          type="number"
                           value={item.qtdConferida}
                           onChange={(e) => setQtdConferidaDireta(originalIndex, e.target.value)}
                         />
@@ -666,22 +690,22 @@ const CheckoutPage = () => {
 
                     {/* SELEÇÃO DE ESTADO DE RETORNO DO ITEM */}
                     <div className="retorno-btns-std">
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className={`btn-ret-std ok ${item.statusRetorno === 'ok' ? 'active' : ''}`}
                         onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'ok')}
                       >
                         🟢 OK (Inteiro)
                       </button>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className={`btn-ret-std avaria ${item.statusRetorno === 'avaria' ? 'active' : ''}`}
                         onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'avaria')}
                       >
                         🛠️ Avaria / Dano
                       </button>
-                      <button 
-                        type="button" 
+                      <button
+                        type="button"
                         className={`btn-ret-std faltou ${item.statusRetorno === 'faltou' ? 'active' : ''}`}
                         onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'faltou')}
                       >
@@ -698,7 +722,7 @@ const CheckoutPage = () => {
 
       {/* ✍️ ASSINATURA E 📷 FOTOS DA VISTORIA DE RETORNO */}
       <div className="checkout-bottom-sections-grid">
-        
+
         {/* FOTOS DA VISTORIA DE RETORNO */}
         <div className="panel-box-std fotos-panel-card">
           <div className="fotos-header-block">
@@ -708,13 +732,13 @@ const CheckoutPage = () => {
             </div>
             <label className="btn-upload-celebre-vip">
               <span>📷</span> <strong>+ Adicionar Fotos</strong>
-              <input 
-                type="file" 
-                accept="image/*" 
+              <input
+                type="file"
+                accept="image/*"
                 capture="environment"
-                multiple 
-                onChange={handleUploadFotos} 
-                style={{ display: 'none' }} 
+                multiple
+                onChange={handleUploadFotos}
+                style={{ display: 'none' }}
               />
             </label>
           </div>
@@ -730,7 +754,7 @@ const CheckoutPage = () => {
           ) : (
             <div className="empty-fotos-box">
               <span className="cam-icon-big">📸</span>
-              <p>Nenhuma foto da vistoria de retorno anexada.<br/>Clique em <strong>"+ Adicionar Fotos"</strong> para registrar o estado dos itens recebidos.</p>
+              <p>Nenhuma foto da vistoria de retorno anexada.<br />Clique em <strong>"+ Adicionar Fotos"</strong> para registrar o estado dos itens recebidos.</p>
             </div>
           )}
         </div>
@@ -748,7 +772,7 @@ const CheckoutPage = () => {
                 <span className="sig-ok-badge">✓ Assinatura Registrada</span>
               </div>
             ) : (
-              <SignatureCanvas 
+              <SignatureCanvas
                 ref={sigCanvasRef}
                 penColor="#0f172a"
                 canvasProps={{ className: 'sig-canvas-element' }}
@@ -767,8 +791,8 @@ const CheckoutPage = () => {
           <div className="obs-col-field">
             <label>👤 Responsável pelo Recebimento no Galpão:</label>
             {listaColaboradores.length > 0 ? (
-              <select 
-                value={responsavel} 
+              <select
+                value={responsavel}
                 onChange={(e) => setResponsavel(e.target.value)}
                 className="input-std-select"
               >
@@ -778,10 +802,10 @@ const CheckoutPage = () => {
                 ))}
               </select>
             ) : (
-              <input 
-                type="text" 
-                placeholder="Nome do conferente no galpão" 
-                value={responsavel} 
+              <input
+                type="text"
+                placeholder="Nome do conferente no galpão"
+                value={responsavel}
                 onChange={(e) => setResponsavel(e.target.value)}
                 className="input-std-text"
               />
@@ -790,7 +814,7 @@ const CheckoutPage = () => {
 
           <div className="obs-col-field flex-2">
             <label>📝 Observações da Devolução (Vistoria de Avarias / Limpeza):</label>
-            <textarea 
+            <textarea
               rows={2}
               placeholder="Digite apontamentos de vistoria na devolução (ex: 1 vaso trincado, peças molhadas...)"
               value={observacoes}
@@ -822,15 +846,14 @@ const CheckoutPage = () => {
                   const isTotal = item.qtdConferida >= item.quantidade;
 
                   return (
-                    <div 
-                      key={originalIndex} 
-                      className={`item-card-std ${
-                        item.statusRetorno === 'ok' ? 'status-total-ok' : item.statusRetorno === 'avaria' ? 'status-avaria' : 'status-falta'
-                      } ${isTotal ? 'card-selected' : ''}`}
+                    <div
+                      key={originalIndex}
+                      className={`item-card-std ${item.statusRetorno === 'ok' ? 'status-total-ok' : item.statusRetorno === 'avaria' ? 'status-avaria' : 'status-falta'
+                        } ${isTotal ? 'card-selected' : ''}`}
                     >
                       <div className="item-row-std">
-                        <input 
-                          type="checkbox" 
+                        <input
+                          type="checkbox"
                           checked={isTotal}
                           onChange={() => toggleSelecaoItem(originalIndex)}
                           className="item-select-checkbox"
@@ -856,8 +879,8 @@ const CheckoutPage = () => {
                           <span className="lbl-step">Retornado:</span>
                           <div className="stepper-ctrl">
                             <button type="button" onClick={() => alterarQtdConferida(originalIndex, -1)}>-</button>
-                            <input 
-                              type="number" 
+                            <input
+                              type="number"
                               value={item.qtdConferida}
                               onChange={(e) => setQtdConferidaDireta(originalIndex, e.target.value)}
                             />
@@ -868,22 +891,22 @@ const CheckoutPage = () => {
                         </div>
 
                         <div className="retorno-btns-std">
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             className={`btn-ret-std ok ${item.statusRetorno === 'ok' ? 'active' : ''}`}
                             onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'ok')}
                           >
                             🟢 OK
                           </button>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             className={`btn-ret-std avaria ${item.statusRetorno === 'avaria' ? 'active' : ''}`}
                             onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'avaria')}
                           >
                             🛠️ Avaria
                           </button>
-                          <button 
-                            type="button" 
+                          <button
+                            type="button"
                             className={`btn-ret-std faltou ${item.statusRetorno === 'faltou' ? 'active' : ''}`}
                             onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'faltou')}
                           >

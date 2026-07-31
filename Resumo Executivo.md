@@ -163,6 +163,21 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ## 📅 7. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 31/07/2026 — 14h30 (BRT)
+
+**Funcionalidades entregues:**
+- ✅ **Auditoria de `style={{}}` inline — CheckinPage.jsx** — Removido inline style `{ touchAction: 'none', width: '100%', height: '100%' }` do `<SignatureCanvas>` (coberto pelo CSS `.sig-canvas-std`); removido `style={{ marginTop: '12px' }}` e substituído pela classe `.form-group-margin-top`
+- ✅ **Auditoria de `style={{}}` inline — CheckoutPage.jsx** — Confirmado que os únicos inline styles restantes (`style={{ display:'none' }}` e `style={{ width: progressoPct }}`) são corretos e necessários
+- ✅ **Dark mode CheckoutPage — Cobertura completa** — Adicionados overrides para todos os elementos exclusivos da página que não eram cobertos pelo CheckinPage.css: `.checkout-page-container`, `.btn-voltar-checkout`, `.header-badge-modo.volta`, `.checkout-alert-box`, `.alert-badge`, `.checkout-resumo-banner-vip`, `.obs-col-field`, `.input-std-text/select/textarea`, `.sig-wrapper-std`, `.sig-canvas-element`, `.sig-hint-txt`, `.sig-preview-box`, `.msg-bip-toast`, `.camera-scanner-wrapper`, `.checkout-loading-screen`, `.checkout-footer-fixed`
+- ✅ **PDF de Check-out corrigido** — `handleGerarPDF()` no CheckoutPage agora chama `gerarComprovanteCheckinPDF(locacao, 'VOLTA', itensState, dadosAdicionais, dadosEmpresa)` com a assinatura e responsável corretamente passados como `dadosAdicionais` (correto como no CheckinPage)
+- ✅ **Salvar conferência no Firestore (CheckoutPage)** — `handleSalvarCheckout()` agora contém a lógica de envio de peças avariadas para manutenção no estoque (incrementa `qtdManutencao`, seta `statusManutencao: 'em_manutencao'`), espelhando o CheckinPage
+- ✅ **Build verificado** — `npm run build` com **0 erros** após todas as mudanças
+
+**Pendente para próxima sessão:**
+- 🟢 PDF de Check-in — revisar e melhorar layout (tabela de itens, fotos incorporadas no PDF, avarias em destaque vermelho)
+- 🟢 PDF de Check-out — idem, garantir que avarias e faltas fiquem destacadas na tabela
+- 🟡 Testar fluxo completo de Check-out com avaria → verificar se o item foi para Manutenção no Estoque
+
 ### 🗓️ Sessão: 30/07/2026 — 14h00 às 18h04 (BRT)
 
 **Funcionalidades entregues:**
