@@ -163,6 +163,28 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ## 📅 7. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 01/08/2026 — 12h26 às 15h05 (BRT)
+
+**Funcionalidades entregues:**
+- ✅ **Repaginação Visual & Funcional do Módulo de Estoque e Acervo (`Estoque.jsx` / `Estoque.css`)**:
+  - **Dashboard de KPIs em Fila Única (5 Colunas)**: 5 cards alinhados no desktop (`repeat(5, 1fr)`): *Total de Itens*, *Valor do Acervo (R$)*, *Valor Reposição (R$)*, *Em Manutenção* e *Visível no Catálogo (100%)*, com dimensões e proporções 100% simétricas.
+  - **Cards Luxury com Galeria & Zoom**: Exibição em grade com hover 3D suave, badges de status (*Disponível*, *Alugado*, *Em Reparo*, *S/ Estoque*), diferenciação visual (*Kit*, *Peça do Kit*, *Decoração*) e botão de lupa `🔍` para ampliação em alta resolução.
+  - **Barra Flutuante de Seleção em Lote**: Aparição com animação ao marcar itens, exclusão em massa e desmarcação em 1 clique.
+  - **Dark Mode Completo no Estoque & Cadastro**: Implementados blocos de regras CSS `[data-theme='dark']` abrangendo cards, formulários, modais de manutenção, seletor de pedidos e leitor QR Code em `Estoque.css` e `CadastroEstoque.css`.
+- ✅ **Correção Definitiva de Responsividade e Vazamento Mobile (DevTools 900px Fix)**:
+  - **Eliminação do Vazamento de 900px**: Identificada causa raiz no inspector DevTools (subtítulo de localização sem quebra de palavra forçando 900px). Aplicadas regras de `word-break: break-all`, `overflow-wrap: anywhere` e `min-width: 0` nos containers.
+  - **Fix do Seletor `≡ Lista ⊞ Cards`**: Travada estrutura horizontal (`white-space: nowrap`), impedindo que os botões de alternância se empilhassem em duas linhas.
+  - **Alinhamento dos Valores na Tabela Mobile**: Corrigidos flexbox de `Categoria:`, `Valor Locação:`, `Estoque Disp.:` e `Status:`, retornando todos os valores para a área visível do card mobile.
+- ✅ **Correção de Linter CSS**:
+  - Adicionada propriedade padrão `line-clamp: 2;` no `Estoque.css` ao lado de `-webkit-line-clamp: 2;`, eliminando alertas da IDE.
+- ✅ **Build de Produção Verificado**:
+  - `npx vite build` executado com **0 erros** (`built in 12.44s`).
+
+**Pendente para próxima sessão (Próximo Dia):**
+- 🟢 **PDF de Check-in e Check-out**: Revisar e aprimorar layout visual dos comprovantes em PDF (tabela formatada, destaque em vermelho para peças avariadas e fotos embutidas).
+- 🟡 **Testar fluxo completo de devolução com avaria**: Realizar teste de ponta a ponta registrando uma devolução com avaria no `CheckoutPage` e confirmando o envio automático da peça para a lista de Manutenção do Estoque.
+- 🟢 **Melhorias adicionais na Landing Page / Catálogo Público**: Ajustar vitrine comercial para novos clientes.
+
 ### 🗓️ Sessão: 31/07/2026 — 14h30 (BRT)
 
 **Funcionalidades entregues:**
@@ -173,31 +195,9 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 - ✅ **Salvar conferência no Firestore (CheckoutPage)** — `handleSalvarCheckout()` agora contém a lógica de envio de peças avariadas para manutenção no estoque (incrementa `qtdManutencao`, seta `statusManutencao: 'em_manutencao'`), espelhando o CheckinPage
 - ✅ **Build verificado** — `npm run build` com **0 erros** após todas as mudanças
 
-**Pendente para próxima sessão:**
-- 🟢 PDF de Check-in — revisar e melhorar layout (tabela de itens, fotos incorporadas no PDF, avarias em destaque vermelho)
-- 🟢 PDF de Check-out — idem, garantir que avarias e faltas fiquem destacadas na tabela
-- 🟡 Testar fluxo completo de Check-out com avaria → verificar se o item foi para Manutenção no Estoque
-
-### 🗓️ Sessão: 30/07/2026 — 14h00 às 18h04 (BRT)
-
-**Funcionalidades entregues:**
-- ✅ **CheckinPage** — lista de peças expandida, cards alinhados, mobile 100% corrigido
-- ✅ **Modal de conferência** — altura dinâmica (auto → 90vh) conforme quantidade de peças
-- ✅ **CheckoutPage** (NOVA) — página dedicada de devolução/vistoria em `/checkout/:id`
-  - Classificação por item: 🟢 OK · 🛠️ Avaria · ❌ Faltou
-  - Banner de progresso, alerta de avarias, fotos e assinatura de devolução
-- ✅ **Header do Check-in** — removido botão de "Mudar para Devolução" e WhatsApp
-- ✅ **Sistema de temas** — todos os botões primários usam `var(--cor-destaque)` dinamicamente (Dourado / Azul / Roxo / Verde respondem em tempo real)
-- ✅ **Dark mode** — overrides abrangentes: pills, filtros, modais, cards de itens, toasts, assinatura, avarias e mais ~30 grupos de elementos
-
-**Pendente para próxima sessão:**
-- 🔴 Auditoria de `style={{}}` inline no `CheckinPage.jsx` e `CheckoutPage.jsx` (texto apagado em dark mode vem de estilos inline que CSS não consegue sobrescrever)
-- 🟡 CheckoutPage — verificar dark mode nos elementos próprios da página de devolução
-- 🟢 PDF de Check-in e Check-out (lógica de geração)
-- 🟢 Salvar conferência no Firestore
-
 ---
 
-> **⏱️ Última atualização:** 30/07/2026 às 18:04 (BRT)  
+> **⏱️ Última atualização:** 01/08/2026 às 15:05 (BRT)  
 > **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02
+
 

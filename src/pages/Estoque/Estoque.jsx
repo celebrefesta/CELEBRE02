@@ -1057,6 +1057,7 @@ const Estoque = () => {
                     {item.foto
                       ? <img src={item.foto} alt={item.nome} style={{ objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} />
                       : <div className="estoque-card-no-photo">📷</div>}
+                    {item.foto && <div className="photo-zoom-hint" title="Clique para ampliar foto">🔍</div>}
                     <span className="badge estoque-card-status" style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}` }}>{labelPill}</span>
                   </div>
 
@@ -1147,27 +1148,27 @@ const Estoque = () => {
                         <input type="checkbox" checked={selecionado} onChange={() => toggleSelecao(item.id)} onClick={e => e.stopPropagation()} />
                       </td>
                       <td>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                        <div className="pro-product-cell-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, maxWidth: '100%' }}>
                           <div style={{ width: '44px', height: '44px', backgroundColor: '#f8fafc', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0 }}>
                               {item.foto ? (
                                 <img src={item.foto} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} onClick={(e) => { e.stopPropagation(); setImagemAmpliada(item.foto); }} title="Ampliar"/>
                               ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
                           </div>
-                          <div style={{ display: 'flex', flexDirection: 'column' }}>
-                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '0.95rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px' }}>
+                          <div className="pro-product-info-col" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
+                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '0.95rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                                   {item.nome}
                                   {ehKitPai && <span style={{background: '#0f172a', color: '#fde68a', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #c5a059'}}>📦 CONJUNTO / KIT</span>}
                                   {ehSubPeca && <span style={{background: '#fef3c7', color: '#b48a3c', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #fde68a'}}>🧩 PEÇA DO KIT</span>}
                                   {isDeco && <span style={{background: '#b45309', color: '#fff', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px'}}>✨ DECORAÇÃO</span>}
                               </strong>
-                              <span style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px' }}>
+                              <span className="pro-product-subtitle" style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px', wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>
                                   CÓD: {item.codigo || 'S/N'} 
                                   {item.localizacao ? ` • 📍 ${item.localizacao}` : ''}
                               </span>
                           </div>
                         </div>
                       </td>
-                      <td style={{ color: '#475569', fontSize: '0.85rem' }}>{item.categoria || '-'}</td>
+                      <td style={{ color: '#475569', fontSize: '0.85rem' }}><span className="cat-text-val">{item.categoria || '-'}</span></td>
                       <td><strong style={{ color: '#0f172a', fontSize: '0.95rem' }}>R$ {valorAluguelFormatado}</strong></td>
                       <td style={{ textAlign: 'center' }}>
                         <div style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'center' }}>
