@@ -2,7 +2,7 @@
 
 > **Sistema SaaS de Gestão Empresarial Multi-Tenant para Empresas de Aluguel, Locação e Decoração de Festas e Eventos**  
 > **Tecnologias**: React 19 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: Julho / 2026  
+> **Data de Referência**: Agosto / 2026  
 
 ---
 
@@ -163,6 +163,30 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ## 📅 7. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 03/08/2026 — 11h34 às 11h49 (BRT)
+
+**Funcionalidades entregues:**
+- ✅ **PDF de Vistoria Premium v3 (`gerarComprovanteCheckinPDF.js`)** — Reformulação completa:
+  - **Tabela zebrificada**: Linhas alternando branco/cinza para melhor leitura visual.
+  - **Destaque de Avarias em Vermelho**: Linhas avariadas com `fillColor` vermelho suave, texto vermelho escuro e borda lateral 1.5mm. Faltas em laranja suave.
+  - **Coluna `Status` com badge colorido**: ✅ OK / 🛠️ AVARIA / ❌ FALTOU em negrito.
+  - **Página de Sumário de Irregularidades** (apenas VOLTA): Contadores visuais, tabela de avarias com motivo e custo estimado, tabela de faltas e total de custo de reparos.
+  - **Página de Fotos de Vistoria**: Grade 2×3 (máx 6 fotos embutidas em Base64), legenda numerada, aviso se houver mais de 6 fotos.
+  - **Paginação no rodapé**: `Pág. X de Y` no canto superior direito de cada página.
+  - **Badge IDA/VOLTA**: Verde (saída) / laranja (devolução) no quadro de informações.
+- ✅ **Bug Crítico Corrigido — Avarias → Manutenção (`CheckoutPage.jsx`)**:
+  - **Causa raiz**: `if (itemAv.enviarManutencao && ...)` nunca era verdadeiro (campo nunca atribuído).
+  - **Correção**: Condição removida. Toda peça `statusRetorno === 'avaria'` com ID válido é automaticamente encaminhada ao Firestore com `qtdManutencao`, `statusManutencao`, `motivoManutencao` e `dataEntradaManutencao`.
+  - **Campos inline de avaria**: Ao marcar Avaria, o card expande (animação `slideDownFade`) com campo de descrição do dano e custo estimado de reparo.
+  - **Mensagem de confirmação**: `alert` informa quantas peças foram para manutenção.
+  - **Fotos passadas ao PDF**: `fotosVistoria` incluído nos `dadosAdicionais` do gerador.
+- ✅ **CSS `CheckoutPage.css`**: Novos estilos `.avaria-detail-box`, `.avaria-label`, `.avaria-input-text/custo`, `.avaria-manut-info` com dark mode completo.
+- ✅ **Build de Produção Verificado**:
+  - `npm run build` executado com **0 erros** (`built in 14.07s`, 1140 módulos).
+
+**Pendente para próxima sessão:**
+- 🟢 **Landing Page / Catálogo Público**: Melhorias na vitrine comercial para novos clientes.
+
 ### 🗓️ Sessão: 01/08/2026 — 12h26 às 15h05 (BRT)
 
 **Funcionalidades entregues:**
@@ -180,11 +204,6 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 - ✅ **Build de Produção Verificado**:
   - `npx vite build` executado com **0 erros** (`built in 12.44s`).
 
-**Pendente para próxima sessão (Próximo Dia):**
-- 🟢 **PDF de Check-in e Check-out**: Revisar e aprimorar layout visual dos comprovantes em PDF (tabela formatada, destaque em vermelho para peças avariadas e fotos embutidas).
-- 🟡 **Testar fluxo completo de devolução com avaria**: Realizar teste de ponta a ponta registrando uma devolução com avaria no `CheckoutPage` e confirmando o envio automático da peça para a lista de Manutenção do Estoque.
-- 🟢 **Melhorias adicionais na Landing Page / Catálogo Público**: Ajustar vitrine comercial para novos clientes.
-
 ### 🗓️ Sessão: 31/07/2026 — 14h30 (BRT)
 
 **Funcionalidades entregues:**
@@ -195,9 +214,44 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 - ✅ **Salvar conferência no Firestore (CheckoutPage)** — `handleSalvarCheckout()` agora contém a lógica de envio de peças avariadas para manutenção no estoque (incrementa `qtdManutencao`, seta `statusManutencao: 'em_manutencao'`), espelhando o CheckinPage
 - ✅ **Build verificado** — `npm run build` com **0 erros** após todas as mudanças
 
+### 🗓️ Sessão: 03/08/2026 — 16h18 às 18h42 (BRT)
+
+**Funcionalidades e Refatorações entregues:**
+- ✅ **Redesign Completo UI/UX da Página de Devolução (`CheckoutPage.jsx` / `CheckoutPage.css`)**:
+  - **Eliminação Total de Vazamentos e Estouros de Tela**: Aplicado sistema de design com prefixo único `co-*`, resolvendo conflitos de CSS com a página de check-in.
+  - **Banner de Resumo KPI em 2 Colunas Perfeitas**: Corrigida a contenção de texto com `min-width: 0`, `overflow: hidden` e `text-overflow: ellipsis`, permitindo que clientes com nomes extensos não quebrem o grid.
+  - **Cards de Itens Reestruturados**: Hierarquia limpa dividida em topo (imagem 44x44, tags de `Cód`, `Categoria` e `Localização` em linha horizontal contínua), stepper compacto e botões de status em 3 colunas simétricas (`🟢 OK`, `🛠️ Avaria`, `❌ Faltou`).
+  - **Limpeza Visual do Painel Mestre**: Botão `⤢ Expandir` reposicionado ao lado do seletor de Categoria, count badge `(1/1)` sem cortes, e fim do "card sobre card" na busca.
+- ✅ **⚡ Ação Rápida "Devolver Tudo Inteiro (1-Click)"**:
+  - Botão no painel de ferramentas que marca todas as peças do pedido como devolvidas em perfeito estado instantaneamente.
+- ✅ **💰 Cálculo Automático de Taxa de Ressarcimento (Avarias & Faltas)**:
+  - Painel executivo que soma em tempo real os custos de reparos/avarias e reposição de itens faltantes, exibindo a cobrança total estimada.
+- ✅ **💬 Disparo Automático de Comprovante via WhatsApp**:
+  - Integração com WhatsApp Web/App que gera e envia mensagem formatada com o resumo da vistoria de devolução em 1 clique.
+- ✅ **📜 Histórico Comparativo de Vistorias (Saída vs Volta)**:
+  - Painel expansível que compara lado a lado os dados e fotos da entrega (Check-in/Ida) com a devolução (Check-out/Volta).
+- ✅ **🛡️ Regra Inteligente de Retenção de Fotos (Lifecycle Policy)**:
+  - Devoluções sem irregularidades: Fotos temporárias com expiração automática em 15 dias pós-devolução (`expirarFotosEm`).
+  - Devoluções com Avaria/Falta: Fotos retidas permanentemente no sistema (`fotosManterPermanente: true`).
+- ✅ **🏰 Estações Finais Reordenadas & Rodapé Full-Width**:
+  - Ordem das estações atualizada (1. Responsável & Obs, 2. Fotos da Vistoria, 3. Assinatura do Cliente por último).
+  - Botão `🛬 Finalizar Devolução` configurado em **100% de largura total** no rodapé fixo.
+- ✅ **Build de Produção Verificado**:
+  - `npm run build` executado e aprovado com **0 erros** (`built in 13.88s ~ 16.13s`).
+
 ---
 
-> **⏱️ Última atualização:** 01/08/2026 às 15:05 (BRT)  
-> **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02
+## 🔮 8. PRÓXIMOS PASSOS A SEGUIR
 
+1. **📱 Validação em Dispositivos Móveis Reais**:
+   - Testar o fluxo de conferência de devolução em smartphones no galpão para validar a facilidade de clique e captura de fotos pela câmera do celular.
+2. **🧹 Módulo de Limpeza Automática de Mídia (Cron / Function)**:
+   - Executar a rotina de limpeza para remover Base64 das fotos cuja data `expirarFotosEm` seja anterior a hoje e `!fotosManterPermanente`.
+3. **💬 Modelos de Notificação Financeira**:
+   - Integrar o valor do Painel de Ressarcimento diretamente como lançamento de receita/cobrança no Módulo Financeiro.
+
+---
+
+> **⏱️ Última atualização:** 03/08/2026 às 18:42 (BRT)  
+> **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02
 

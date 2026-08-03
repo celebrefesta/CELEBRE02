@@ -68,25 +68,36 @@ const CheckoutPage = () => {
     carregarEmpresa();
   }, [tenantId]);
 
-  // 👥 CARREGAR COLABORADORES
+  // 👥 CARREGAR COLABORADORES (EXATAMENTE IGUAL AO CHECKINPAGE DE IDA)
   useEffect(() => {
     const carregarColaboradores = async () => {
+      if (!tenantId) return;
       try {
-        if (!tenantId) return;
-        const qColab = query(collection(db, 'usuarios'), where('tenantId', '==', tenantId));
-        const snapColab = await getDocs(qColab);
-        const colabs = [];
-        snapColab.forEach(d => {
-          const data = d.data();
-          if (data.nome) colabs.push(data.nome);
+        const qEquipe = query(collection(db, "equipe"), where("empresaId", "==", tenantId));
+        const snapEquipe = await getDocs(qEquipe).catch(() => ({ docs: [] }));
+        const equipeDocs = snapEquipe.docs ? snapEquipe.docs.map(d => d.data()) : [];
+
+        const nomesSet = new Set();
+        const nomeAtual = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || 'Proprietário / Admin';
+        if (nomeAtual) nomesSet.add(nomeAtual);
+
+        equipeDocs.forEach(u => {
+          const n = u.nome || u.nomeCompleto || u.displayName || u.email;
+          if (n) nomesSet.add(n);
         });
-        setListaColaboradores(colabs);
+
+        const listaFinal = Array.from(nomesSet).filter(Boolean);
+        setListaColaboradores(listaFinal);
+        setResponsavel(prev => prev || nomeAtual);
+
       } catch (err) {
-        console.error("Erro ao carregar colaboradores:", err);
+        console.error("Erro ao carregar colaboradores no checkout:", err);
+        const nomeFallback = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || 'Proprietário / Admin';
+        setListaColaboradores([nomeFallback]);
       }
     };
     carregarColaboradores();
-  }, [tenantId]);
+  }, [tenantId, usuarioLogado]);
 
   // 📄 CARREGAR DADOS DA LOCAÇÃO DE VOLTA (CHECKOUT)
   useEffect(() => {
@@ -340,6 +351,69 @@ const CheckoutPage = () => {
     return true;
   });
 
+  // 📜 COMPARATIVO DE VISTORIAS
+  const [mostrarComparativo, setMostrarComparativo] = useState(false);
+
+  // ⚡ AÇÃO RÁPIDA "DEVOLVER TUDO INTEIRO (1-CLICK)"
+  const handleDevolverTudoInteiro = () => {
+    setItensState(prev => prev.map(item => ({
+      ...item,
+      qtdConferida: Number(item.quantidade || 1),
+      statusRetorno: 'ok',
+      obsRetorno: '',
+      custoAvaria: 0
+    })));
+    setMensagemBip({ tipo: 'sucesso', texto: '⚡ Todas as peças foram marcadas como devolvidas em perfeito estado!' });
+    setTimeout(() => setMensagemBip(null), 4000);
+  };
+
+  // 💰 CÁLCULO AUTOMÁTICO DE TAXA DE RESSARCIMENTO (AVARIAS E FALTAS)
+  const custoTotalAvarias = itensState.reduce((acc, item) => {
+    if (item.statusRetorno === 'avaria') {
+      return acc + Number(item.custoAvaria || item.valorAvaria || item.precoAvaria || 0);
+    }
+    return acc;
+  }, 0);
+
+  const custoTotalFaltas = itensState.reduce((acc, item) => {
+    const qtdFalta = Math.max(0, Number(item.quantidade || 1) - Number(item.qtdConferida || 0));
+    if (item.statusRetorno === 'faltou' || (item.statusRetorno !== 'ok' && qtdFalta > 0)) {
+      const valorUnit = Number(item.precoUnitario || item.valorReposicao || item.precoSubstituicao || item.valorUnitario || 0);
+      return acc + (qtdFalta * valorUnit);
+    }
+    return acc;
+  }, 0);
+
+  const totalRessarcimento = custoTotalAvarias + custoTotalFaltas;
+
+  // 💬 DISPARO AUTOMÁTICO DO COMPROVANTE VIA WHATSAPP
+  const handleEnviarWhatsApp = () => {
+    const telefoneRaw = locacao?.clienteTelefone || locacao?.telefoneCliente || locacao?.telefone || locacao?.clienteData?.telefone || '';
+    const numTelefone = telefoneRaw.replace(/\D/g, '');
+    const dddNum = numTelefone ? (numTelefone.length === 10 || numTelefone.length === 11 ? `55${numTelefone}` : numTelefone) : '';
+
+    const statusMsg = (itensComAvaria.length === 0 && itensFaltantes.length === 0 && totalRessarcimento === 0)
+      ? '🟢 *Vistoria OK:* Todas as peças retornaram em perfeito estado sem avarias ou faltas!'
+      : `⚠️ *Apontamentos na Vistoria:*\n` +
+        (itensComAvaria.length > 0 ? `• ${itensComAvaria.length} item(ns) com Avaria (R$ ${custoTotalAvarias.toFixed(2)})\n` : '') +
+        (itensFaltantes.length > 0 ? `• ${itensFaltantes.length} item(ns) com Falta/Extravio (R$ ${custoTotalFaltas.toFixed(2)})\n` : '') +
+        `💰 *Total de Ressarcimento:* R$ ${totalRessarcimento.toFixed(2)}`;
+
+    const texto = encodeURIComponent(
+      `*CELEBRE LOCAÇÕES — Comprovante de Vistoria (Devolução)* 🛬\n\n` +
+      `📋 *Pedido:* #${numeroPedido}\n` +
+      `👤 *Cliente:* ${clienteNome}\n` +
+      `📅 *Data Vistoria:* ${new Date().toLocaleDateString('pt-BR')}\n` +
+      `📦 *Devolução:* ${totalConferido} de ${totalContratado} peças (${progressoPct}%)\n\n` +
+      `${statusMsg}\n\n` +
+      `Obrigado pela preferência!\n` +
+      `*Celebre Eventos & Locações* ✨`
+    );
+
+    const url = dddNum ? `https://api.whatsapp.com/send?phone=${dddNum}&text=${texto}` : `https://api.whatsapp.com/send?text=${texto}`;
+    window.open(url, '_blank');
+  };
+
   // 🖨️ GERAR COMPROVANTE DE DEVOLUÇÃO EM PDF
   const handleGerarPDF = () => {
     let assUrl = assinaturaSalvaUrl;
@@ -356,7 +430,8 @@ const CheckoutPage = () => {
       {
         responsavel,
         observacoes,
-        assinaturaUrl: assUrl
+        assinaturaUrl: assUrl,
+        fotosVistoria  // ✅ Fotos de vistoria embutidas no PDF
       },
       dadosEmpresa
     );
@@ -383,31 +458,45 @@ const CheckoutPage = () => {
       }));
 
       // 🛠️ ENVIAR PEÇAS AVARIADAS PARA MANUTENÇÃO NO ESTOQUE
+      // ✅ CORRIGIDO: removida condição `enviarManutencao` (nunca era true).
+      //    Agora toda peça com statusRetorno === 'avaria' que tiver ID de estoque
+      //    é automaticamente encaminhada para manutenção ao salvar o check-out.
       const itensAvaria = itensAtualizados.filter(i => i.statusRetorno === 'avaria');
+      let qtdEnviadasManutencao = 0;
       for (const itemAv of itensAvaria) {
-        if (itemAv.enviarManutencao && (itemAv.id || itemAv.pecaId)) {
-          const pecaId = itemAv.pecaId || itemAv.id;
-          try {
-            const pecaRef = doc(db, 'estoque', pecaId);
-            const pecaSnap = await getDoc(pecaRef);
-            if (pecaSnap.exists()) {
-              const pecaData = pecaSnap.data();
-              const qtdMaintAtual = Number(pecaData.qtdManutencao || 0);
-              await updateDoc(pecaRef, {
-                qtdManutencao: qtdMaintAtual + Number(itemAv.quantidade || 1),
-                statusManutencao: 'em_manutencao',
-                motivoManutencao: itemAv.obsRetorno || `Avaria na devolução #${locacao?.numeroPedido || id}`,
-                custoManutencao: Number(itemAv.custoAvaria || 0)
-              });
-            }
-          } catch (eErr) {
-            console.error('Erro ao registrar manutenção:', eErr);
+        const pecaId = itemAv.pecaId || itemAv.id;
+        if (!pecaId) continue; // sem ID de estoque, pula
+        try {
+          const pecaRef = doc(db, 'estoque', pecaId);
+          const pecaSnap = await getDoc(pecaRef);
+          if (pecaSnap.exists()) {
+            const pecaData = pecaSnap.data();
+            const qtdMaintAtual = Number(pecaData.qtdManutencao || 0);
+            await updateDoc(pecaRef, {
+              qtdManutencao: qtdMaintAtual + Number(itemAv.quantidade || 1),
+              statusManutencao: 'em_manutencao',
+              motivoManutencao: itemAv.obsRetorno || itemAv.motivoAvaria || `Avaria na devolução #${locacao?.numeroPedido || id}`,
+              custoManutencao: Number(itemAv.custoAvaria || 0),
+              dataEntradaManutencao: new Date().toISOString()
+            });
+            qtdEnviadasManutencao++;
           }
+        } catch (eErr) {
+          console.error('Erro ao registrar manutenção:', eErr);
         }
       }
 
       const tudoConferidoOk = itensAtualizados.every(i => i.qtdRetornada >= i.quantidade && i.statusRetorno === 'ok');
       const novoStatus = tudoConferidoOk ? 'Finalizado' : 'Conferido com Avarias/Faltas';
+
+      // 📅 REGRA INTELIGENTE DE RETENÇÃO DE FOTOS DE VISTORIA:
+      // Se houver avarias ou faltas, as fotos ficam salvas PERMANENTEMENTE.
+      // Se a devolução for 100% OK, as fotos expiram em 15 dias após a devolução.
+      const temIrregularidade = !tudoConferidoOk || itensAvaria.length > 0 || itensFaltantes.length > 0;
+      const dataCheckoutObj = new Date();
+      const dataExpiracaoFotos = temIrregularidade
+        ? null
+        : new Date(dataCheckoutObj.getTime() + 15 * 24 * 60 * 60 * 1000).toISOString();
 
       const locRef = doc(db, 'locacoes', id);
       await updateDoc(locRef, {
@@ -417,10 +506,15 @@ const CheckoutPage = () => {
         assinaturaRetornoUrl: assUrl || null,
         fotosRetorno: fotosVistoria,
         status: novoStatus,
-        dataCheckout: new Date().toISOString()
+        dataCheckout: dataCheckoutObj.toISOString(),
+        fotosManterPermanente: temIrregularidade,
+        expirarFotosEm: dataExpiracaoFotos
       });
 
-      alert(`✅ Devolução (Check-out) do Pedido #${locacao?.numeroPedido || ''} salva com sucesso!`);
+      const msgManutencao = qtdEnviadasManutencao > 0
+        ? `\n🛠️ ${qtdEnviadasManutencao} peça(s) com avaria enviada(s) automaticamente para Manutenção no Estoque.`
+        : '';
+      alert(`✅ Devolução (Check-out) do Pedido #${locacao?.numeroPedido || ''} salva com sucesso!${msgManutencao}`);
       navigate('/locacoes');
     } catch (err) {
       console.error('Erro ao salvar checkout:', err);
@@ -442,108 +536,172 @@ const CheckoutPage = () => {
   const numeroPedido = locacao?.numeroPedido || locacao?.id?.slice(0, 6) || id.slice(0, 6);
   const clienteNome = locacao?.clienteNome || locacao?.nomeCliente || 'Cliente Celebre';
 
+  const getStatusIcon = (status) => {
+    if (status === 'ok') return '✅';
+    if (status === 'avaria') return '⚠️';
+    if (status === 'faltou') return '❌';
+    return '⏳';
+  };
+
   return (
     <div className="checkout-page-container">
 
-      {/* 🧭 NAVEGAÇÃO & TÍTULO */}
-      <div className="checkout-header-nav">
-        <Link to="/locacoes" className="btn-voltar-checkout">
+      {/* ─── CABEÇALHO ─── */}
+      <div className="co-page-header">
+        <Link to="/locacoes" className="co-back-link">
           ← Voltar para Locações
         </Link>
-        <div className="header-badge-modo volta">
-          🛬 CONFERÊNCIA DE VOLTA (DEVOLUÇÃO AO ACERVO)
+        <div className="co-header-main">
+          <div className="co-header-icon">🛬</div>
+          <div className="co-header-text">
+            <h1>Conferência & Devolução de Acervo</h1>
+            <p>Vistoria de retorno e registro de avarias — <strong>Pedido #{numeroPedido}</strong></p>
+          </div>
         </div>
       </div>
 
-      {/* 📊 BANNER EXECUTIVO DO PEDIDO */}
-      <div className="checkout-resumo-banner-vip">
-        <div className="resumo-pills-row">
-          <div className="resumo-pill-card">
-            <span className="pill-icon">📋</span>
-            <div className="pill-text">
-              <span className="pill-label">PEDIDO</span>
-              <strong className="pill-value">#{numeroPedido}</strong>
+      {/* ─── BANNER RESUMO DO PEDIDO ─── */}
+      <div className="co-resumo-card">
+        <div className="co-resumo-kpi-grid">
+          <div className="co-kpi-item">
+            <div className="co-kpi-icon">📋</div>
+            <div className="co-kpi-text">
+              <span className="co-kpi-label">Pedido</span>
+              <span className="co-kpi-value">#{numeroPedido}</span>
             </div>
           </div>
 
-          <div className="resumo-pill-card gold-border">
-            <span className="pill-icon">📦</span>
-            <div className="pill-text">
-              <span className="pill-label">MODALIDADE</span>
-              <strong className="pill-value">{locacao?.modalidade || 'Locação de Peças'}</strong>
+          <div className="co-kpi-item">
+            <div className="co-kpi-icon">📅</div>
+            <div className="co-kpi-text">
+              <span className="co-kpi-label">Data Devolução</span>
+              <span className="co-kpi-value">
+                {locacao?.dataDevolucao
+                  ? new Date(locacao.dataDevolucao).toLocaleDateString('pt-BR')
+                  : 'Hoje'}
+              </span>
             </div>
           </div>
 
-          <div className="resumo-pill-card card-cliente">
-            <span className="pill-icon">👤</span>
-            <div className="pill-text">
-              <span className="pill-label">CLIENTE</span>
-              <strong className="pill-value">{clienteNome}</strong>
+          <div className="co-kpi-item">
+            <div className="co-kpi-icon">👤</div>
+            <div className="co-kpi-text">
+              <span className="co-kpi-label">Cliente</span>
+              <span className="co-kpi-value">{clienteNome}</span>
             </div>
           </div>
 
-          <div className="resumo-pill-card">
-            <span className="pill-icon">📅</span>
-            <div className="pill-text">
-              <span className="pill-label">DEVOLUÇÃO</span>
-              <strong className="pill-value">{locacao?.dataDevolucao ? new Date(locacao.dataDevolucao).toLocaleDateString('pt-BR') : 'Hoje'}</strong>
+          <div className="co-kpi-item gold">
+            <div className="co-kpi-icon">📦</div>
+            <div className="co-kpi-text">
+              <span className="co-kpi-label">Modalidade</span>
+              <span className="co-kpi-value">{locacao?.modalidade || 'Locação de Peças'}</span>
             </div>
           </div>
         </div>
 
-        {/* BARRINHA DE PROGRESSO */}
-        <div className="resumo-progress-card-vip">
-          <div className="prog-top-row">
+        {/* PROGRESSO */}
+        <div className="co-progress-block">
+          <div className="co-progress-top">
             <span>Progresso da Devolução</span>
             <strong>{progressoPct}%</strong>
           </div>
-          <div className="prog-bar-track">
-            <div className="prog-bar-fill green" style={{ width: `${progressoPct}%` }}></div>
+          <div className="co-progress-bar">
+            <div className="co-progress-fill" style={{ width: `${progressoPct}%` }} />
           </div>
-          <span className="prog-sub-txt">{totalConferido} de {totalContratado} peças devolvidas</span>
+          <span className="co-progress-sub">{totalConferido} de {totalContratado} peças devolvidas</span>
         </div>
       </div>
 
-      {/* ⚠️ ALERTA RESUMO DE AVARIAS / FALTAS (SE HOUVER) */}
+      {/* ─── ALERTA DE AVARIAS / FALTAS ─── */}
       {(itensComAvaria.length > 0 || itensFaltantes.length > 0) && (
-        <div className="checkout-alert-box">
-          <div className="alert-header">
-            <span>⚠️ AENÇÃO: REGISTRO DE IRREGULARIDADES NA DEVOLUÇÃO</span>
-          </div>
-          <div className="alert-body">
-            {itensComAvaria.length > 0 && (
-              <span className="alert-badge avaria">🛠️ {itensComAvaria.length} item(ns) com Avaria / Dano</span>
-            )}
-            {itensFaltantes.length > 0 && (
-              <span className="alert-badge falta">❌ {itensFaltantes.length} item(ns) com Faltas ou Extravio</span>
-            )}
+        <div className="co-alert-strip">
+          <div className="co-alert-icon">⚠️</div>
+          <div className="co-alert-text">
+            <span className="co-alert-title">ATENÇÃO — Irregularidades registradas nesta devolução</span>
+            <div className="co-alert-badges">
+              {itensComAvaria.length > 0 && (
+                <span className="co-badge avaria">🛠️ {itensComAvaria.length} item(ns) com Avaria</span>
+              )}
+              {itensFaltantes.length > 0 && (
+                <span className="co-badge falta">❌ {itensFaltantes.length} item(ns) Faltantes</span>
+              )}
+            </div>
           </div>
         </div>
       )}
 
-      {/* 🔍 BARRA DE BIPAGEM E FILTROS */}
-      <div className="checkout-toolbar-std">
-        <div className="toolbar-search-row">
-          <div className="search-box-group">
+      {/* ─── 💰 RESUMO FINANCEIRO DE RESSARCIMENTO (AVARIAS E FALTAS) ─── */}
+      {(totalRessarcimento > 0 || itensComAvaria.length > 0 || itensFaltantes.length > 0) && (
+        <div className="co-finance-card">
+          <div className="co-finance-head">
+            <div className="co-finance-title">
+              <span className="co-finance-icon">💰</span>
+              <div>
+                <h4>Cálculo Automático de Ressarcimento</h4>
+                <p>Cobrança estimada de peças avariadas ou faltantes</p>
+              </div>
+            </div>
+            <div className="co-finance-total-badge">
+              <small>TOTAL A COBRAR:</small>
+              <strong>R$ {totalRessarcimento.toFixed(2)}</strong>
+            </div>
+          </div>
+          <div className="co-finance-breakdown">
+            <div className="co-fin-item avaria">
+              <span>🛠️ Taxa de Avarias / Reparos:</span>
+              <strong>R$ {custoTotalAvarias.toFixed(2)}</strong>
+            </div>
+            <div className="co-fin-item falta">
+              <span>❌ Taxa de Reposição (Faltas):</span>
+              <strong>R$ {custoTotalFaltas.toFixed(2)}</strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── PAINEL MESTRE DE CONFERÊNCIA ─── */}
+      <div className="co-master-panel">
+
+        {/* HEADER DO PAINEL */}
+        <div className="co-panel-header">
+          <div className="co-panel-title-row">
             <input
-              ref={inputBuscaRef}
-              type="text"
-              placeholder="🔍 Bipar ou digitar código/SKU da peça..."
-              value={buscaCodigo}
-              onChange={(e) => setBuscaCodigo(e.target.value)}
-              onKeyDown={handleKeyDownBusca}
-              className="input-search-std"
+              type="checkbox"
+              className="co-check-all"
+              checked={itensState.length > 0 && itensState.every(i => i.qtdConferida >= i.quantidade)}
+              onChange={toggleSelecionarTodos}
+              title="Marcar/Desmarcar todos como devolvidos"
             />
+            <h3 className="co-panel-title">
+              📦 Peças da Devolução
+              <span className="co-count-badge">{itensExibidos.length} / {itensState.length}</span>
+            </h3>
+          </div>
+        </div>
+
+        {/* BARRA DE BUSCA */}
+        <div className="co-search-bar">
+          <input
+            ref={inputBuscaRef}
+            type="text"
+            className="co-search-input"
+            placeholder="🔍 Digite ou bipe o código SKU / barras da peça..."
+            value={buscaCodigo}
+            onChange={(e) => setBuscaCodigo(e.target.value)}
+            onKeyDown={handleKeyDownBusca}
+          />
+          <div className="co-search-btns">
             <button
               type="button"
-              className="btn-bipar-std"
+              className="co-btn-scan primary"
               onClick={() => processarCodigoBipado(buscaCodigo)}
             >
-              ⚡ Bipar
+              🔍 Buscar Código
             </button>
             <button
               type="button"
-              className={`btn-camera-std ${cameraAberta ? 'active' : ''}`}
+              className={`co-btn-scan dark ${cameraAberta ? 'active' : ''}`}
               onClick={toggleCameraScanner}
             >
               📷 {cameraAberta ? 'Fechar Câmera' : 'Ler QR Code'}
@@ -551,167 +709,204 @@ const CheckoutPage = () => {
           </div>
         </div>
 
+        {/* TOAST DO BIP */}
         {mensagemBip && (
-          <div className={`msg-bip-toast ${mensagemBip.tipo}`}>
+          <div className={`co-bip-toast ${mensagemBip.tipo}`}>
             {mensagemBip.texto}
           </div>
         )}
 
+        {/* CÂMERA */}
         {cameraAberta && (
-          <div className="camera-scanner-wrapper">
-            <div id="reader-camera-checkout-std" className="camera-box-viewport"></div>
-            <small>Posicione o QR Code da peça em frente à câmera</small>
+          <div className="co-camera-wrapper">
+            <div id="reader-camera-checkout-std" className="co-camera-box" />
+            <small className="co-camera-hint">Posicione o QR Code da peça em frente à câmera</small>
           </div>
         )}
 
-        {/* FILTROS DE ABA */}
-        <div className="toolbar-bottom-filters">
-          <div className="tabs-bar-std">
-            <button
-              className={`tab-btn-std ${filtroTab === 'TODOS' ? 'active' : ''}`}
-              onClick={() => setFiltroTab('TODOS')}
-            >
+        {/* FILTROS: TABS + CATEGORIA & AÇÕES RÁPIDAS */}
+        <div className="co-filters-row">
+          <div className="co-tabs">
+            <button className={`co-tab ${filtroTab === 'TODOS' ? 'active' : ''}`} onClick={() => setFiltroTab('TODOS')}>
               Todos ({itensState.length})
             </button>
-            <button
-              className={`tab-btn-std ${filtroTab === 'PENDENTES' ? 'active' : ''}`}
-              onClick={() => setFiltroTab('PENDENTES')}
-            >
+            <button className={`co-tab ${filtroTab === 'PENDENTES' ? 'active' : ''}`} onClick={() => setFiltroTab('PENDENTES')}>
               Pendentes ({itensState.filter(i => i.qtdConferida < i.quantidade).length})
             </button>
-            <button
-              className={`tab-btn-std ${filtroTab === 'CONFERIDOS' ? 'active' : ''}`}
-              onClick={() => setFiltroTab('CONFERIDOS')}
-            >
+            <button className={`co-tab ${filtroTab === 'CONFERIDOS' ? 'active' : ''}`} onClick={() => setFiltroTab('CONFERIDOS')}>
               Devolvidos ({itensState.filter(i => i.qtdConferida >= i.quantidade).length})
             </button>
-            <button
-              className={`tab-btn-std ${filtroTab === 'AVARIAS' ? 'active' : ''}`}
-              onClick={() => setFiltroTab('AVARIAS')}
-            >
+            <button className={`co-tab ${filtroTab === 'AVARIAS' ? 'active' : ''}`} onClick={() => setFiltroTab('AVARIAS')}>
               🛠️ Avarias ({itensComAvaria.length})
             </button>
           </div>
 
-          <div className="cat-filter-group">
-            <span>Categoria:</span>
-            <select
-              value={categoriaFiltro}
-              onChange={(e) => setCategoriaFiltro(e.target.value)}
-              className="select-cat-std"
-            >
-              {categoriasDisponiveis.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+          <div className="co-cat-row">
+            <div className="co-cat-left">
+              <label>Categoria:</label>
+              <select
+                className="co-cat-select"
+                value={categoriaFiltro}
+                onChange={(e) => setCategoriaFiltro(e.target.value)}
+              >
+                {categoriasDisponiveis.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="co-panel-actions-quick">
+              <button
+                type="button"
+                className="co-btn-quick-all"
+                onClick={handleDevolverTudoInteiro}
+                title="Marcar todas as peças como devolvidas sem avarias de uma só vez"
+              >
+                ⚡ Devolver Tudo (1-Click)
+              </button>
+              <button
+                type="button"
+                className="co-btn-compare-vistorias"
+                onClick={() => setMostrarComparativo(!mostrarComparativo)}
+              >
+                📜 {mostrarComparativo ? 'Ocultar Comparativo' : 'Comparar Vistorias'}
+              </button>
+              <button
+                type="button"
+                className="co-btn-expand"
+                onClick={() => setModalExpandirAberto(true)}
+              >
+                ⤢ Expandir
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* 📦 LISTA PRINCIPAL DE PEÇAS DE VOLTA */}
-      <div className="panel-box-std">
-        <div className="panel-header-flex">
-          <div className="title-with-checkbox">
-            <input
-              type="checkbox"
-              checked={itensState.length > 0 && itensState.every(i => i.qtdConferida >= i.quantidade)}
-              onChange={toggleSelecionarTodos}
-              title="Marcar/Desmarcar Todos os Itens como Devolvidos"
-              className="check-all-input"
-            />
-            <h3>📦 Peças da Devolução <span className="lbl-txt-desk">({itensExibidos.length} de {itensState.length} exibidos)</span><span className="lbl-txt-mob">({itensExibidos.length}/{itensState.length})</span></h3>
-          </div>
-          <button
-            type="button"
-            className="btn-expandir-std"
-            onClick={() => setModalExpandirAberto(true)}
-            title="Abrir modal em tela cheia para conferência ampla"
-          >
-            ⤢ <span className="lbl-txt-desk">Expandir Lista (Tela Cheia)</span><span className="lbl-txt-mob">Expandir</span>
-          </button>
-        </div>
-
-        <div className="items-list-std scrollable">
+        {/* LISTA DE ITENS */}
+        <div className="co-items-list">
           {itensExibidos.length === 0 ? (
-            <div className="empty-state-std">
-              <span>✨ Nenhum item nesta aba de filtro.</span>
+            <div className="co-empty-state">
+              <span>✨</span>
+              <span>Nenhum item nesta aba de filtro.</span>
             </div>
           ) : (
-            itensExibidos.map((item, indexExibido) => {
+            itensExibidos.map((item) => {
               const originalIndex = itensState.findIndex(i => i === item);
               const isTotal = item.qtdConferida >= item.quantidade;
-              const isParcial = item.qtdConferida > 0 && item.qtdConferida < item.quantidade;
+              const statusClass = item.statusRetorno === 'ok' ? 'ok'
+                : item.statusRetorno === 'avaria' ? 'avaria' : 'falta';
 
               return (
-                <div
-                  key={originalIndex}
-                  className={`item-card-std ${item.statusRetorno === 'ok' ? 'status-total-ok' : item.statusRetorno === 'avaria' ? 'status-avaria' : 'status-falta'
-                    } ${isTotal ? 'card-selected' : ''}`}
-                >
-                  <div className="item-row-std">
+                <div key={originalIndex} className={`co-item-card ${statusClass}`}>
+
+                  {/* TOPO DO CARD */}
+                  <div className="co-item-top">
                     <input
                       type="checkbox"
+                      className="co-item-cb"
                       checked={isTotal}
                       onChange={() => toggleSelecaoItem(originalIndex)}
-                      className="item-select-checkbox"
                     />
 
-                    <div className="item-thumb-std">
-                      {item.imagem || item.foto ? (
-                        <img src={item.imagem || item.foto} alt={item.nome} />
-                      ) : (
-                        <span>📦</span>
-                      )}
+                    <div className="co-item-thumb">
+                      {item.imagem || item.foto
+                        ? <img src={item.imagem || item.foto} alt={item.nome} />
+                        : '📦'
+                      }
                     </div>
 
-                    <div className="item-info-std">
-                      <h4>{item.nome}</h4>
-                      <div className="item-tags-row">
-                        <span className="tag-std">Cód: <strong>{item.codigo || 'S/C'}</strong></span>
-                        {item.categoria && <span className="tag-std cat">{item.categoria}</span>}
-                        <span className="tag-std loc">📍 {item.localizacao || 'Prateleira A-01'}</span>
+                    <div className="co-item-info">
+                      <p className="co-item-name">{item.nome}</p>
+                      <div className="co-item-tags">
+                        <span className="co-tag code">Cód: {item.codigo || 'S/C'}</span>
+                        {item.categoria && <span className="co-tag cat">{item.categoria}</span>}
+                        <span className="co-tag loc">📍 {item.localizacao || 'A-01'}</span>
                       </div>
                     </div>
 
-                    <div className="stepper-box-std">
-                      <span className="lbl-step">Retornado:</span>
-                      <div className="stepper-ctrl">
-                        <button type="button" onClick={() => alterarQtdConferida(originalIndex, -1)}>-</button>
+                    <div className={`co-item-status-badge ${statusClass}`}>
+                      {getStatusIcon(item.statusRetorno)}
+                    </div>
+                  </div>
+
+                  {/* CONTROLES */}
+                  <div className="co-item-controls">
+
+                    {/* STEPPER DE QUANTIDADE */}
+                    <div className="co-stepper">
+                      <span className="co-stepper-label">Retornado:</span>
+                      <div className="co-stepper-ctrl">
+                        <button type="button" className="co-step-btn" onClick={() => alterarQtdConferida(originalIndex, -1)}>−</button>
                         <input
                           type="number"
+                          className="co-step-input"
                           value={item.qtdConferida}
                           onChange={(e) => setQtdConferidaDireta(originalIndex, e.target.value)}
                         />
-                        <button type="button" onClick={() => alterarQtdConferida(originalIndex, 1)}>+</button>
-                        <button type="button" className="btn-max-std" onClick={() => alterarQtdConferida(originalIndex, item.quantidade)}>Max</button>
+                        <button type="button" className="co-step-btn" onClick={() => alterarQtdConferida(originalIndex, 1)}>+</button>
+                        <button type="button" className="co-step-max" onClick={() => alterarQtdConferida(originalIndex, item.quantidade)}>Max</button>
                       </div>
-                      <small>de {item.quantidade} un</small>
+                      <span className="co-stepper-total">de {item.quantidade} un</span>
                     </div>
 
-                    {/* SELEÇÃO DE ESTADO DE RETORNO DO ITEM */}
-                    <div className="retorno-btns-std">
+                    {/* BOTÕES DE STATUS */}
+                    <div className="co-retorno-btns">
                       <button
                         type="button"
-                        className={`btn-ret-std ok ${item.statusRetorno === 'ok' ? 'active' : ''}`}
+                        className={`co-ret-btn ok ${item.statusRetorno === 'ok' ? 'active' : ''}`}
                         onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'ok')}
                       >
-                        🟢 OK (Inteiro)
+                        🟢 OK
                       </button>
                       <button
                         type="button"
-                        className={`btn-ret-std avaria ${item.statusRetorno === 'avaria' ? 'active' : ''}`}
+                        className={`co-ret-btn avaria ${item.statusRetorno === 'avaria' ? 'active' : ''}`}
                         onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'avaria')}
                       >
-                        🛠️ Avaria / Dano
+                        🛠️ Avaria
                       </button>
                       <button
                         type="button"
-                        className={`btn-ret-std faltou ${item.statusRetorno === 'faltou' ? 'active' : ''}`}
+                        className={`co-ret-btn faltou ${item.statusRetorno === 'faltou' ? 'active' : ''}`}
                         onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'faltou')}
                       >
-                        ❌ Faltou / Extravio
+                        ❌ Faltou
                       </button>
                     </div>
+
+                    {/* DETALHE DE AVARIA */}
+                    {item.statusRetorno === 'avaria' && (
+                      <div className="co-avaria-detail">
+                        <div className="co-avaria-row">
+                          <div className="co-avaria-field">
+                            <label>📝 Descrição do Dano:</label>
+                            <input
+                              type="text"
+                              className="co-avaria-input"
+                              placeholder="Ex: Vaso trincado na base, tinta descascada..."
+                              value={item.obsRetorno || ''}
+                              onChange={(e) => setCampoItemRetorno(originalIndex, 'obsRetorno', e.target.value)}
+                            />
+                          </div>
+                          <div className="co-avaria-field">
+                            <label>💰 Custo Estimado (R$):</label>
+                            <input
+                              type="number"
+                              className="co-avaria-custo"
+                              placeholder="0,00"
+                              min="0"
+                              step="0.01"
+                              value={item.custoAvaria || ''}
+                              onChange={(e) => setCampoItemRetorno(originalIndex, 'custoAvaria', e.target.value)}
+                            />
+                          </div>
+                        </div>
+                        <p className="co-avaria-note">
+                          🛠️ Esta peça será enviada <strong>automaticamente</strong> para Manutenção no Estoque ao salvar.
+                        </p>
+                      </div>
+                    )}
+
                   </div>
                 </div>
               );
@@ -720,209 +915,210 @@ const CheckoutPage = () => {
         </div>
       </div>
 
-      {/* ✍️ ASSINATURA E 📷 FOTOS DA VISTORIA DE RETORNO */}
-      <div className="checkout-bottom-sections-grid">
+      {/* ─── ESTAÇÕES FINAIS: RESPONSÁVEL · FOTOS · ASSINATURA (POR ÚLTIMO) ─── */}
+      <div className="co-stations-grid">
 
-        {/* FOTOS DA VISTORIA DE RETORNO */}
-        <div className="panel-box-std fotos-panel-card">
-          <div className="fotos-header-block">
-            <div className="fotos-title-text">
-              <h3>📷 Fotos da Vistoria de Retorno</h3>
-              <small className="sub-txt-info">📁 Fotos registradas na devolução e anexadas ao PDF.</small>
+        {/* COLUNA 1: RESPONSÁVEL & OBS */}
+        <div className="co-station">
+          <div className="co-station-head">
+            <div className="co-station-title">
+              <div className="co-station-icon slate">👤</div>
+              <div className="co-station-head-text">
+                <h3>Responsável & Observações</h3>
+                <small>Vistoria e conferência do galpão</small>
+              </div>
             </div>
-            <label className="btn-upload-celebre-vip">
-              <span>📷</span> <strong>+ Adicionar Fotos</strong>
-              <input
-                type="file"
-                accept="image/*"
-                capture="environment"
-                multiple
-                onChange={handleUploadFotos}
-                style={{ display: 'none' }}
-              />
-            </label>
           </div>
+
+          <div className="co-obs-fields">
+            <div className="co-field-group">
+              <label>👤 Conferente no Galpão:</label>
+              {listaColaboradores.length > 0 ? (
+                <select
+                  className="co-select"
+                  value={responsavel}
+                  onChange={(e) => setResponsavel(e.target.value)}
+                >
+                  <option value="">Selecione o responsável...</option>
+                  {listaColaboradores.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  className="co-input-text"
+                  placeholder="Nome do conferente no galpão"
+                  value={responsavel}
+                  onChange={(e) => setResponsavel(e.target.value)}
+                />
+              )}
+            </div>
+
+            <div className="co-field-group">
+              <label>📝 Observações da Vistoria:</label>
+              <textarea
+                rows={3}
+                className="co-textarea"
+                placeholder="Apontamentos da devolução (ex: 1 vaso trincado, peças molhadas...)"
+                value={observacoes}
+                onChange={(e) => setObservacoes(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* COLUNA 2: FOTOS DA VISTORIA */}
+        <div className="co-station">
+          <div className="co-station-head">
+            <div className="co-station-title">
+              <div className="co-station-icon blue">📷</div>
+              <div className="co-station-head-text">
+                <h3>Fotos da Vistoria</h3>
+                <small>
+                  {itensComAvaria.length > 0 || itensFaltantes.length > 0
+                    ? '🛡️ Salvas permanentemente (Com Avarias/Faltas)'
+                    : '⏱️ Armazenadas por 15 dias pós-devolução'}
+                </small>
+              </div>
+            </div>
+          </div>
+
           {fotosVistoria.length > 0 ? (
-            <div className="fotos-grid-large">
-              {fotosVistoria.map((ft, fIdx) => (
-                <div key={fIdx} className="foto-item-large">
-                  <img src={ft} alt={`Vistoria Retorno ${fIdx}`} />
-                  <button type="button" className="btn-del-foto-large" onClick={() => removerFotoVistoria(fIdx)}>✕</button>
-                </div>
-              ))}
-            </div>
+            <>
+              <div className="co-fotos-grid">
+                {fotosVistoria.map((ft, fIdx) => (
+                  <div key={fIdx} className="co-foto-item">
+                    <img src={ft} alt={`Vistoria ${fIdx}`} />
+                    <button type="button" className="co-foto-del" onClick={() => removerFotoVistoria(fIdx)}>✕</button>
+                  </div>
+                ))}
+              </div>
+              <label className="co-btn-add-more">
+                📷 + Adicionar Mais
+                <input type="file" accept="image/*" capture="environment" multiple onChange={handleUploadFotos} style={{ display: 'none' }} />
+              </label>
+            </>
           ) : (
-            <div className="empty-fotos-box">
-              <span className="cam-icon-big">📸</span>
-              <p>Nenhuma foto da vistoria de retorno anexada.<br />Clique em <strong>"+ Adicionar Fotos"</strong> para registrar o estado dos itens recebidos.</p>
-            </div>
+            <label>
+              <div className="co-fotos-empty">
+                <span className="co-fotos-empty-icon">📸</span>
+                <p>Nenhuma foto da vistoria anexada.</p>
+                <span className="co-btn-upload">📷 + Adicionar Fotos</span>
+              </div>
+              <input type="file" accept="image/*" capture="environment" multiple onChange={handleUploadFotos} style={{ display: 'none' }} />
+            </label>
           )}
         </div>
 
-        {/* ASSINATURA DIGITAL DO CLIENTE / CONFERENTE */}
-        <div className="panel-box-std sig-panel-card">
-          <div className="panel-header-flex">
-            <h3>✍️ Assinatura do Cliente / Conferente</h3>
-            <button type="button" className="btn-limpar-sig" onClick={limparAssinatura}>Limpar</button>
-          </div>
-          <div className="sig-wrapper-std">
-            {assinaturaSalvaUrl ? (
-              <div className="sig-preview-box">
-                <img src={assinaturaSalvaUrl} alt="Assinatura Salva" />
-                <span className="sig-ok-badge">✓ Assinatura Registrada</span>
+        {/* COLUNA 3: ASSINATURA DO CLIENTE (POR ÚLTIMO) */}
+        <div className="co-station">
+          <div className="co-station-head">
+            <div className="co-station-title">
+              <div className="co-station-icon green">✍️</div>
+              <div className="co-station-head-text">
+                <h3>Assinatura do Cliente</h3>
+                <small>Confirma a vistoria de retorno</small>
               </div>
+            </div>
+            <button type="button" className="co-btn-clear-sig" onClick={limparAssinatura}>Limpar</button>
+          </div>
+
+          <div className="co-sig-box">
+            {assinaturaSalvaUrl ? (
+              <img src={assinaturaSalvaUrl} alt="Assinatura Registrada" className="co-sig-preview" />
             ) : (
               <SignatureCanvas
                 ref={sigCanvasRef}
                 penColor="#0f172a"
-                canvasProps={{ className: 'sig-canvas-element' }}
+                canvasProps={{ className: 'co-sig-canvas' }}
                 onEnd={capturarAssinatura}
               />
             )}
           </div>
-          <small className="sig-hint-txt">Assine no quadro acima para confirmar a devolução do acervo.</small>
+
+          {assinaturaSalvaUrl ? (
+            <div className="co-sig-success">✓ Assinatura Registrada com Sucesso</div>
+          ) : (
+            <p className="co-sig-hint">Assine no quadro acima para confirmar a vistoria.</p>
+          )}
         </div>
 
       </div>
 
-      {/* 📝 OBSERVAÇÕES E RESPONSÁVEL DO GALPÃO */}
-      <div className="panel-box-std obs-panel-card">
-        <div className="obs-grid-row">
-          <div className="obs-col-field">
-            <label>👤 Responsável pelo Recebimento no Galpão:</label>
-            {listaColaboradores.length > 0 ? (
-              <select
-                value={responsavel}
-                onChange={(e) => setResponsavel(e.target.value)}
-                className="input-std-select"
-              >
-                <option value="">Selecione o responsável...</option>
-                {listaColaboradores.map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-            ) : (
-              <input
-                type="text"
-                placeholder="Nome do conferente no galpão"
-                value={responsavel}
-                onChange={(e) => setResponsavel(e.target.value)}
-                className="input-std-text"
-              />
-            )}
-          </div>
-
-          <div className="obs-col-field flex-2">
-            <label>📝 Observações da Devolução (Vistoria de Avarias / Limpeza):</label>
-            <textarea
-              rows={2}
-              placeholder="Digite apontamentos de vistoria na devolução (ex: 1 vaso trincado, peças molhadas...)"
-              value={observacoes}
-              onChange={(e) => setObservacoes(e.target.value)}
-              className="textarea-std"
-            />
-          </div>
-        </div>
-      </div>
-
-      {/* 🔍 MODAL EXPANDIDO DE TELA CHEIA PARA CONFERÊNCIA DE MUITAS PEÇAS */}
+      {/* ─── MODAL EXPANDIDO ─── */}
       {modalExpandirAberto && (
-        <div className="modal-checkin-overlay">
-          <div className="modal-expandir-box animate-pop">
-            <div className="modal-expandir-header">
-              <div className="exp-title-row">
-                <span className="exp-icon">📦</span>
-                <div className="exp-title-text">
-                  <h2>Conferência Ampla de Devolução — #{numeroPedido}</h2>
-                  <p>Cliente: <strong>{clienteNome}</strong></p>
-                </div>
+        <div className="co-modal-overlay">
+          <div className="co-modal-box">
+            <div className="co-modal-header">
+              <div>
+                <h2>📦 Conferência Ampla — Pedido #{numeroPedido}</h2>
+                <p>Cliente: <strong>{clienteNome}</strong></p>
               </div>
-              <button type="button" className="btn-close-exp-modal" onClick={() => setModalExpandirAberto(false)}>✕ Fechar</button>
+              <button type="button" className="co-modal-close" onClick={() => setModalExpandirAberto(false)}>✕ Fechar</button>
             </div>
 
-            <div className="modal-expandir-body">
-              <div className="items-list-std modal-list">
-                {itensState.map((item, originalIndex) => {
-                  const isTotal = item.qtdConferida >= item.quantidade;
+            <div className="co-modal-body">
+              {itensState.map((item, originalIndex) => {
+                const isTotal = item.qtdConferida >= item.quantidade;
+                const statusClass = item.statusRetorno === 'ok' ? 'ok'
+                  : item.statusRetorno === 'avaria' ? 'avaria' : 'falta';
 
-                  return (
-                    <div
-                      key={originalIndex}
-                      className={`item-card-std ${item.statusRetorno === 'ok' ? 'status-total-ok' : item.statusRetorno === 'avaria' ? 'status-avaria' : 'status-falta'
-                        } ${isTotal ? 'card-selected' : ''}`}
-                    >
-                      <div className="item-row-std">
-                        <input
-                          type="checkbox"
-                          checked={isTotal}
-                          onChange={() => toggleSelecaoItem(originalIndex)}
-                          className="item-select-checkbox"
-                        />
-                        <div className="item-thumb-std">
-                          {item.imagem || item.foto ? (
-                            <img src={item.imagem || item.foto} alt={item.nome} />
-                          ) : (
-                            <span>📦</span>
-                          )}
-                        </div>
-
-                        <div className="item-info-std">
-                          <h4>{item.nome}</h4>
-                          <div className="item-tags-row">
-                            <span className="tag-std">Cód: <strong>{item.codigo || 'S/C'}</strong></span>
-                            {item.categoria && <span className="tag-std cat">{item.categoria}</span>}
-                            <span className="tag-std loc">📍 {item.localizacao || 'Prateleira A-01'}</span>
-                          </div>
-                        </div>
-
-                        <div className="stepper-box-std">
-                          <span className="lbl-step">Retornado:</span>
-                          <div className="stepper-ctrl">
-                            <button type="button" onClick={() => alterarQtdConferida(originalIndex, -1)}>-</button>
-                            <input
-                              type="number"
-                              value={item.qtdConferida}
-                              onChange={(e) => setQtdConferidaDireta(originalIndex, e.target.value)}
-                            />
-                            <button type="button" onClick={() => alterarQtdConferida(originalIndex, 1)}>+</button>
-                            <button type="button" className="btn-max-std" onClick={() => alterarQtdConferida(originalIndex, item.quantidade)}>Max</button>
-                          </div>
-                          <small>de {item.quantidade} un</small>
-                        </div>
-
-                        <div className="retorno-btns-std">
-                          <button
-                            type="button"
-                            className={`btn-ret-std ok ${item.statusRetorno === 'ok' ? 'active' : ''}`}
-                            onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'ok')}
-                          >
-                            🟢 OK
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn-ret-std avaria ${item.statusRetorno === 'avaria' ? 'active' : ''}`}
-                            onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'avaria')}
-                          >
-                            🛠️ Avaria
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn-ret-std faltou ${item.statusRetorno === 'faltou' ? 'active' : ''}`}
-                            onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'faltou')}
-                          >
-                            ❌ Faltou
-                          </button>
+                return (
+                  <div key={originalIndex} className={`co-item-card ${statusClass}`}>
+                    <div className="co-item-top">
+                      <input
+                        type="checkbox"
+                        className="co-item-cb"
+                        checked={isTotal}
+                        onChange={() => toggleSelecaoItem(originalIndex)}
+                      />
+                      <div className="co-item-thumb">
+                        {item.imagem || item.foto ? <img src={item.imagem || item.foto} alt={item.nome} /> : '📦'}
+                      </div>
+                      <div className="co-item-info">
+                        <p className="co-item-name">{item.nome}</p>
+                        <div className="co-item-tags">
+                          <span className="co-tag code">Cód: {item.codigo || 'S/C'}</span>
+                          {item.categoria && <span className="co-tag cat">{item.categoria}</span>}
                         </div>
                       </div>
+                      <div className={`co-item-status-badge ${statusClass}`}>
+                        {getStatusIcon(item.statusRetorno)}
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    <div className="co-item-controls">
+                      <div className="co-stepper">
+                        <span className="co-stepper-label">Retornado:</span>
+                        <div className="co-stepper-ctrl">
+                          <button type="button" className="co-step-btn" onClick={() => alterarQtdConferida(originalIndex, -1)}>−</button>
+                          <input type="number" className="co-step-input" value={item.qtdConferida}
+                            onChange={(e) => setQtdConferidaDireta(originalIndex, e.target.value)} />
+                          <button type="button" className="co-step-btn" onClick={() => alterarQtdConferida(originalIndex, 1)}>+</button>
+                          <button type="button" className="co-step-max" onClick={() => alterarQtdConferida(originalIndex, item.quantidade)}>Max</button>
+                        </div>
+                        <span className="co-stepper-total">de {item.quantidade} un</span>
+                      </div>
+                      <div className="co-retorno-btns">
+                        <button type="button" className={`co-ret-btn ok ${item.statusRetorno === 'ok' ? 'active' : ''}`}
+                          onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'ok')}>🟢 OK</button>
+                        <button type="button" className={`co-ret-btn avaria ${item.statusRetorno === 'avaria' ? 'active' : ''}`}
+                          onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'avaria')}>🛠️ Avaria</button>
+                        <button type="button" className={`co-ret-btn faltou ${item.statusRetorno === 'faltou' ? 'active' : ''}`}
+                          onClick={() => setCampoItemRetorno(originalIndex, 'statusRetorno', 'faltou')}>❌ Faltou</button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
 
-            <div className="modal-expandir-footer">
-              <span className="exp-footer-prog-txt">Progresso: <strong>{totalConferido}/{totalContratado} ({progressoPct}%)</strong></span>
-              <button type="button" className="btn-concluir-exp-modal" onClick={() => setModalExpandirAberto(false)}>
+            <div className="co-modal-footer">
+              <span className="co-modal-prog">
+                Progresso: <strong>{totalConferido} / {totalContratado} ({progressoPct}%)</strong>
+              </span>
+              <button type="button" className="co-btn-concluir" onClick={() => setModalExpandirAberto(false)}>
                 ✅ Concluir Vistoria
               </button>
             </div>
@@ -930,18 +1126,86 @@ const CheckoutPage = () => {
         </div>
       )}
 
-      {/* 📌 BARRA INFERIOR FIXA DE AÇÃO */}
-      <div className="checkout-footer-fixed">
-        <div className="footer-content-inner">
-          <div className="footer-txt-info">
-            <span>Devolução (Check-out): <strong>{totalConferido} de {totalContratado} peças ({progressoPct}%)</strong></span>
+      {/* ─── 📜 PAINEL COMPARATIVO DE VISTORIAS (SAÍDA VS VOLTA) ─── */}
+      {mostrarComparativo && (
+        <div className="co-comparativo-card animate-pop">
+          <div className="co-comp-header">
+            <h3>📜 Comparativo de Vistorias (Saída Ida vs Retorno Volta)</h3>
+            <button type="button" className="co-comp-close" onClick={() => setMostrarComparativo(false)}>✕ Fechar</button>
           </div>
-          <div className="footer-actions-row">
-            <button type="button" className="btn-secondary-celebre" onClick={handleGerarPDF}>
-              🖨️ PDF Comprovante
-            </button>
-            <button type="button" className="btn-primary-celebre green-gradient" onClick={handleSalvarCheckout} disabled={salvando}>
-              {salvando ? '💾 SALVANDO...' : '🛬 FINALIZAR CHECK-OUT (DEVOLUÇÃO)'}
+          <div className="co-comp-grid">
+            {/* COLUNA SAÍDA */}
+            <div className="co-comp-col ida">
+              <div className="co-comp-col-head">
+                <span className="co-comp-badge ida">🛫 VISTORIA DE SAÍDA (IDA)</span>
+                <p><strong>Data:</strong> {locacao?.dataCheckin ? new Date(locacao.dataCheckin).toLocaleDateString('pt-BR') : 'Data de Saída'}</p>
+                <p><strong>Responsável:</strong> {locacao?.responsavelCheckin || 'Não informado'}</p>
+                <p><strong>Obs Saída:</strong> {locacao?.observacoesCheckin || 'Sem observações na entrega'}</p>
+              </div>
+              <div className="co-comp-fotos">
+                <span>📷 Fotos de Saída:</span>
+                {locacao?.fotosCheckin && locacao.fotosCheckin.length > 0 ? (
+                  <div className="co-fotos-grid-mini">
+                    {locacao.fotosCheckin.map((f, i) => (
+                      <img key={i} src={f} alt={`Saída ${i}`} />
+                    ))}
+                  </div>
+                ) : (
+                  <small>Nenhuma foto anexada na saída.</small>
+                )}
+              </div>
+            </div>
+
+            {/* COLUNA RETORNO */}
+            <div className="co-comp-col volta">
+              <div className="co-comp-col-head">
+                <span className="co-comp-badge volta">🛬 VISTORIA DE RETORNO (VOLTA)</span>
+                <p><strong>Data:</strong> Hoje ({new Date().toLocaleDateString('pt-BR')})</p>
+                <p><strong>Responsável:</strong> {responsavel || 'Em andamento'}</p>
+                <p><strong>Obs Volta:</strong> {observacoes || 'Sem observações na devolução'}</p>
+              </div>
+              <div className="co-comp-fotos">
+                <span>📷 Fotos de Retorno:</span>
+                {fotosVistoria.length > 0 ? (
+                  <div className="co-fotos-grid-mini">
+                    {fotosVistoria.map((f, i) => (
+                      <img key={i} src={f} alt={`Retorno ${i}`} />
+                    ))}
+                  </div>
+                ) : (
+                  <small>Nenhuma foto anexada no retorno ainda.</small>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── RODAPÉ FIXO ─── */}
+      <div className="co-footer">
+        <div className="co-footer-inner">
+          <div className="co-footer-info">
+            <span>Devolução: <strong>{totalConferido} de {totalContratado} peças ({progressoPct}%)</strong></span>
+            <div className="co-footer-progress-mini">
+              <div className="co-footer-progress-fill" style={{ width: `${progressoPct}%` }} />
+            </div>
+          </div>
+          <div className="co-footer-actions-container">
+            <div className="co-footer-sec-btns">
+              <button type="button" className="co-btn-wsp" onClick={handleEnviarWhatsApp} title="Enviar comprovante via WhatsApp">
+                💬 WhatsApp
+              </button>
+              <button type="button" className="co-btn-pdf" onClick={handleGerarPDF}>
+                🖨️ PDF Comprovante
+              </button>
+            </div>
+            <button
+              type="button"
+              className="co-btn-finalizar-full"
+              onClick={handleSalvarCheckout}
+              disabled={salvando}
+            >
+              {salvando ? '💾 Salvando Vistoria...' : '🛬 Finalizar Devolução'}
             </button>
           </div>
         </div>
@@ -950,5 +1214,6 @@ const CheckoutPage = () => {
     </div>
   );
 };
+
 
 export default CheckoutPage;
