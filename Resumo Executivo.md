@@ -252,6 +252,48 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ---
 
-> **⏱️ Última atualização:** 03/08/2026 às 18:42 (BRT)  
+### 🗓️ Sessão: 05/08/2026 — 18h30 às 20h38 (BRT)
+
+**Funcionalidades e Refatorações entregues:**
+- ✅ **Padronização Global do Design System de Cards de Métricas Pastéis (`App.css`)**:
+  - Implementado sistema de cards minimalistas com gradientes pastéis suaves (*Lavanda/Roxo, Dourado/Âmbar, Azul Céu, Rosa, Verde Esmeralda*) e adaptatividade perfeita a temas Claro e Escuro.
+  - Padronização aplicada em todos os módulos principais do sistema (**Estoque**, **Dashboard**, **Clientes**, **Compras**, **Locações**).
+- ✅ **Alinhamento do KPI em Fila Única no Desktop (`flex-wrap: nowrap`)**:
+  - Configurado flexbox responsivo com `flex: 1 1 0px` no desktop (`@media (min-width: 901px)`), garantindo que todos os cards de estatísticas (4, 5 ou 6 cards) fiquem travados em **1 única linha horizontal** sem quebra de linha.
+- ✅ **Blindagem Responsiva & Eliminação de Vazamentos Laterais (`Estoque.css` & `Estoque.jsx`)**:
+  - **Causa Raiz de 900px Isolada**: Localizado vazamento causado por seletor global un-scoped `table { min-width: 900px }` no `Fornecedores.css`, que afetava tabelas de outras telas. O seletor foi devidamente restrito a `.table-card table`, e a tabela de estoque recebeu travas `min-width: 0 !important`.
+  - **Breakpoint Mobile Ampliado (`960px`)**: Transição para cards mobile em telas de até 960px, cobrindo tablets, notebooks e simulação de DevTools.
+  - **Reorganização de Filtros Mobile**:
+    - *Linha 1*: Busca por nome/código (100% de largura).
+    - *Linha 2*: Botão `⬇️ A - Z` e Seletor de Data `dd/mm/aaaa` lado a lado.
+    - *Linha 3*: Galpão e Status.
+    - *Linha 4*: Categoria em 100% de largura no final, garantindo espaço para nomes longos sem cortes.
+  - **Resgate e Separação Visual das TAGs de Itens**:
+    - Restauradas e isoladas as TAGs de `📦 KIT`, `🧩 PEÇA` e `✨ DECO` do título do produto, posicionando-as em linha própria entre o nome e o código sem sobreposição.
+  - **Redesign dos Botões de Ação na Visão em Cards Mobile (`.estoque-card-actions`)**:
+    - Os 5 botões de ação (`🛒`, `🛠️`, `✏️`, `📋`, `🗑️`) agora utilizam `flex: 1 1 0px`, dividindo igualmente 20% da largura útil de cada card sem estourar as margens.
+
+### 🗓️ Sessão: 08/08/2026 — 18h00 às 19h35 (BRT)
+
+**Funcionalidades e Refatorações entregues:**
+- ✅ **🎨 Padronização Visual & Redesign do Cadastro de Acervo (`CadastroEstoque.jsx` & `CadastroEstoque.css`)**:
+  - Removidos banners escuros topo dos cards (`#0f172a`), substituídos por `.ce-card-header-clean` e pílulas douradas `.ce-badge-gold` em conformidade com o Celebre Luxury Design System.
+  - Ajuste de tipografia suave: `letter-spacing: 0.2px` / `0.3px` positivo e `word-spacing: 0.05rem` para evitar letras espremidas ou palavras grudadas.
+  - Alinhamento simétrico de inputs: Trava de `26px` de altura nos rótulos de `NOME DO PRODUTO` e `SKU` para alinhamento pixel-perfect das caixas na mesma linha horizontal.
+- ✅ **⚡ Gerador de SKU Automático & Correção de Erro de Execução**:
+  - Resolvido o erro de referência (`ReferenceError: atualizarSKU is not defined`) que travava a geração ao alternar entre Peça Avulsa, Kit e Decoração.
+  - Sequenciador automático robusto: `DEC-001`, `DEC-002`... para Decoração Completa, `KIT-001`, `KIT-002`... para Kits (gerando `KIT-001-P1`, `KIT-001-P2` nas sub-peças) e `PEC-001` / iniciais para peças avulsas.
+- ✅ **✨ Refatoração Operacional da Decoração Completa & Pegue e Monte**:
+  - **Foto Principal Única no Catálogo**: O Card 1 define a foto oficial do cenário por completo, sendo a única exibida na capa do produto no catálogo público (`Catalago.jsx`).
+  - **Vitrine de Peças Inclusas com Fotos**: Exibição elegante com fotos em miniatura, valores avulsos e seletores de quantidade para as peças que compõem o cenário (capas, cilindros, mesas, vasos).
+  - **Regras Comerciais das Modalidades**:
+    - **`📦 Pegue e Monte`**: O cliente pode retirar na loja ou optar por solicitar o serviço de frete/montagem da Celebre (somando a taxa ao pedido no carrinho/PDV).
+    - **`✨ Decoração`**: Cenários montados exclusivos da loja, blindados para nunca virarem Pegue e Monte.
+- ✅ **Build de Produção Verificado**:
+  - `npm run build` executado e aprovado com **0 erros** (`built in 14.41s`).
+
+---
+
+> **⏱️ Última atualização:** 08/08/2026 às 19:35 (BRT)  
 > **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02
 

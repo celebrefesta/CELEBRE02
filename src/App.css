@@ -1272,3 +1272,213 @@ main,
 .btn-exportar i {
   color: #ffffff !important;
 }
+
+/* ==========================================================================
+   ✨ SISTEMA GLOBAL DE CARDS DE MÉTRICAS MINIMALISTAS E PASTÉIS (CELEBRE DNA)
+   ========================================================================== */
+
+/* 🚀 GARANTE QUE TODOS OS CARDS FIQUEM EM UMA ÚNICA LINHA NO DESKTOP */
+@media (min-width: 901px) {
+  .clientes-stats-grid,
+  .stats-wide-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro,
+  .stats-wide-row .stat-card-pro {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .clientes-stats-grid,
+  .stats-wide-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro,
+  .stats-wide-row .stat-card-pro {
+    flex: initial !important;
+    width: 100% !important;
+    grid-column: auto !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro:nth-child(5):last-child,
+  .stats-wide-row .stat-card-pro:nth-child(5):last-child {
+    grid-column: span 2 !important;
+  }
+}
+
+.stat-card-pro {
+  padding: 14px 16px !important;
+  border-radius: 18px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.02) !important;
+}
+
+.stat-card-pro:hover {
+  transform: translateY(-3px) !important;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06) !important;
+}
+
+/* CARDS COLORIDOS SUAVES (PASTÉIS LIGHT MODE) */
+.stat-card-pro.card-purple,
+.stat-card-pro.border-purple {
+  background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%) !important;
+  border: 1px solid #ddd6fe !important;
+}
+.stat-card-pro.card-purple .stat-title, .stat-card-pro.border-purple .stat-title { color: #6b21a8 !important; }
+.stat-card-pro.card-purple .stat-number, .stat-card-pro.card-purple .stat-value, .stat-card-pro.border-purple .stat-number, .stat-card-pro.border-purple .stat-value { color: #4c1d95 !important; }
+.stat-card-pro.card-purple .stat-desc, .stat-card-pro.card-purple .stat-sub, .stat-card-pro.border-purple .stat-desc, .stat-card-pro.border-purple .stat-sub { color: #7e22ce !important; }
+.stat-card-pro.card-purple .stat-icon-wrapper, .stat-card-pro.border-purple .stat-icon-wrapper { background: #7c3aed !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(124, 58, 237, 0.25) !important; }
+
+.stat-card-pro.card-amber,
+.stat-card-pro.border-amber,
+.stat-card-pro.border-gold {
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%) !important;
+  border: 1px solid #fde68a !important;
+}
+.stat-card-pro.card-amber .stat-title, .stat-card-pro.border-amber .stat-title, .stat-card-pro.border-gold .stat-title { color: #92400e !important; }
+.stat-card-pro.card-amber .stat-number, .stat-card-pro.card-amber .stat-value, .stat-card-pro.border-amber .stat-number, .stat-card-pro.border-amber .stat-value, .stat-card-pro.border-gold .stat-number, .stat-card-pro.border-gold .stat-value { color: #78350f !important; }
+.stat-card-pro.card-amber .stat-desc, .stat-card-pro.card-amber .stat-sub, .stat-card-pro.border-amber .stat-desc, .stat-card-pro.border-amber .stat-sub, .stat-card-pro.border-gold .stat-desc, .stat-card-pro.border-gold .stat-sub { color: #b45309 !important; }
+.stat-card-pro.card-amber .stat-icon-wrapper, .stat-card-pro.border-amber .stat-icon-wrapper, .stat-card-pro.border-gold .stat-icon-wrapper { background: #d97706 !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(217, 119, 6, 0.25) !important; }
+
+.stat-card-pro.card-blue,
+.stat-card-pro.border-blue {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+  border: 1px solid #bfdbfe !important;
+}
+.stat-card-pro.card-blue .stat-title, .stat-card-pro.border-blue .stat-title { color: #1e40af !important; }
+.stat-card-pro.card-blue .stat-number, .stat-card-pro.card-blue .stat-value, .stat-card-pro.border-blue .stat-number, .stat-card-pro.border-blue .stat-value { color: #1e3a8a !important; }
+.stat-card-pro.card-blue .stat-desc, .stat-card-pro.card-blue .stat-sub, .stat-card-pro.border-blue .stat-desc, .stat-card-pro.border-blue .stat-sub { color: #1d4ed8 !important; }
+.stat-card-pro.card-blue .stat-icon-wrapper, .stat-card-pro.border-blue .stat-icon-wrapper { background: #2563eb !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important; }
+
+.stat-card-pro.card-red,
+.stat-card-pro.border-red {
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%) !important;
+  border: 1px solid #fecdd3 !important;
+}
+.stat-card-pro.card-red .stat-title, .stat-card-pro.border-red .stat-title { color: #9f1239 !important; }
+.stat-card-pro.card-red .stat-number, .stat-card-pro.card-red .stat-value, .stat-card-pro.border-red .stat-number, .stat-card-pro.border-red .stat-value { color: #881337 !important; }
+.stat-card-pro.card-red .stat-desc, .stat-card-pro.card-red .stat-sub, .stat-card-pro.border-red .stat-desc, .stat-card-pro.border-red .stat-sub { color: #be123c !important; }
+.stat-card-pro.card-red .stat-icon-wrapper, .stat-card-pro.border-red .stat-icon-wrapper { background: #e11d48 !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(225, 29, 72, 0.25) !important; }
+
+.stat-card-pro.card-green,
+.stat-card-pro.border-green {
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%) !important;
+  border: 1px solid #bbf7d0 !important;
+}
+.stat-card-pro.card-green .stat-title, .stat-card-pro.border-green .stat-title { color: #166534 !important; }
+.stat-card-pro.card-green .stat-number, .stat-card-pro.card-green .stat-value, .stat-card-pro.border-green .stat-number, .stat-card-pro.border-green .stat-value { color: #14532d !important; }
+.stat-card-pro.card-green .stat-desc, .stat-card-pro.card-green .stat-sub, .stat-card-pro.border-green .stat-desc, .stat-card-pro.border-green .stat-sub { color: #15803d !important; }
+.stat-card-pro.card-green .stat-icon-wrapper, .stat-card-pro.border-green .stat-icon-wrapper { background: #16a34a !important; color: #ffffff !important; box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25) !important; }
+
+.stat-icon-wrapper {
+  width: 40px !important;
+  height: 40px !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 17px !important;
+  flex-shrink: 0 !important;
+}
+
+.stat-content {
+  display: flex !important;
+  flex-direction: column !important;
+  min-width: 0 !important;
+  overflow: hidden !important;
+}
+
+.stat-title {
+  font-size: 0.66rem !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.stat-number, .stat-value {
+  font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+  font-size: 1.3rem !important;
+  font-weight: 850 !important;
+  margin: 1px 0 !important;
+  white-space: nowrap !important;
+}
+
+.stat-desc, .stat-sub {
+  font-size: 0.72rem !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* 🌙 DARK MODE PASTEL GLOW SUPREME */
+[data-theme^='dark'] .stat-card-pro.card-purple,
+[data-theme^='dark'] .stat-card-pro.border-purple {
+  background: rgba(124, 58, 237, 0.12) !important;
+  border: 1px solid rgba(167, 139, 250, 0.25) !important;
+}
+[data-theme^='dark'] .stat-card-pro.card-purple .stat-title, [data-theme^='dark'] .stat-card-pro.border-purple .stat-title { color: #c4b5fd !important; }
+[data-theme^='dark'] .stat-card-pro.card-purple .stat-number, [data-theme^='dark'] .stat-card-pro.card-purple .stat-value, [data-theme^='dark'] .stat-card-pro.border-purple .stat-number, [data-theme^='dark'] .stat-card-pro.border-purple .stat-value { color: #f3e8ff !important; }
+[data-theme^='dark'] .stat-card-pro.card-purple .stat-desc, [data-theme^='dark'] .stat-card-pro.card-purple .stat-sub, [data-theme^='dark'] .stat-card-pro.border-purple .stat-desc, [data-theme^='dark'] .stat-card-pro.border-purple .stat-sub { color: #ddd6fe !important; }
+
+[data-theme^='dark'] .stat-card-pro.card-amber,
+[data-theme^='dark'] .stat-card-pro.border-amber,
+[data-theme^='dark'] .stat-card-pro.border-gold {
+  background: rgba(217, 119, 6, 0.12) !important;
+  border: 1px solid rgba(251, 191, 36, 0.25) !important;
+}
+[data-theme^='dark'] .stat-card-pro.card-amber .stat-title, [data-theme^='dark'] .stat-card-pro.border-amber .stat-title, [data-theme^='dark'] .stat-card-pro.border-gold .stat-title { color: #fde68a !important; }
+[data-theme^='dark'] .stat-card-pro.card-amber .stat-number, [data-theme^='dark'] .stat-card-pro.card-amber .stat-value, [data-theme^='dark'] .stat-card-pro.border-amber .stat-number, [data-theme^='dark'] .stat-card-pro.border-amber .stat-value, [data-theme^='dark'] .stat-card-pro.border-gold .stat-number, [data-theme^='dark'] .stat-card-pro.border-gold .stat-value { color: #fef3c7 !important; }
+[data-theme^='dark'] .stat-card-pro.card-amber .stat-desc, [data-theme^='dark'] .stat-card-pro.card-amber .stat-sub, [data-theme^='dark'] .stat-card-pro.border-amber .stat-desc, [data-theme^='dark'] .stat-card-pro.border-amber .stat-sub, [data-theme^='dark'] .stat-card-pro.border-gold .stat-desc, [data-theme^='dark'] .stat-card-pro.border-gold .stat-sub { color: #fef08a !important; }
+
+[data-theme^='dark'] .stat-card-pro.card-blue,
+[data-theme^='dark'] .stat-card-pro.border-blue {
+  background: rgba(37, 99, 235, 0.12) !important;
+  border: 1px solid rgba(96, 165, 250, 0.25) !important;
+}
+[data-theme^='dark'] .stat-card-pro.card-blue .stat-title, [data-theme^='dark'] .stat-card-pro.border-blue .stat-title { color: #93c5fd !important; }
+[data-theme^='dark'] .stat-card-pro.card-blue .stat-number, [data-theme^='dark'] .stat-card-pro.card-blue .stat-value, [data-theme^='dark'] .stat-card-pro.border-blue .stat-number, [data-theme^='dark'] .stat-card-pro.border-blue .stat-value { color: #eff6ff !important; }
+[data-theme^='dark'] .stat-card-pro.card-blue .stat-desc, [data-theme^='dark'] .stat-card-pro.card-blue .stat-sub, [data-theme^='dark'] .stat-card-pro.border-blue .stat-desc, [data-theme^='dark'] .stat-card-pro.border-blue .stat-sub { color: #bfdbfe !important; }
+
+[data-theme^='dark'] .stat-card-pro.card-red,
+[data-theme^='dark'] .stat-card-pro.border-red {
+  background: rgba(225, 29, 72, 0.12) !important;
+  border: 1px solid rgba(251, 113, 133, 0.25) !important;
+}
+[data-theme^='dark'] .stat-card-pro.card-red .stat-title, [data-theme^='dark'] .stat-card-pro.border-red .stat-title { color: #fca5a5 !important; }
+[data-theme^='dark'] .stat-card-pro.card-red .stat-number, [data-theme^='dark'] .stat-card-pro.card-red .stat-value, [data-theme^='dark'] .stat-card-pro.border-red .stat-number, [data-theme^='dark'] .stat-card-pro.border-red .stat-value { color: #fff1f2 !important; }
+[data-theme^='dark'] .stat-card-pro.card-red .stat-desc, [data-theme^='dark'] .stat-card-pro.card-red .stat-sub, [data-theme^='dark'] .stat-card-pro.border-red .stat-desc, [data-theme^='dark'] .stat-card-pro.border-red .stat-sub { color: #fecdd3 !important; }
+
+[data-theme^='dark'] .stat-card-pro.card-green,
+[data-theme^='dark'] .stat-card-pro.border-green {
+  background: rgba(22, 163, 74, 0.12) !important;
+  border: 1px solid rgba(74, 222, 128, 0.25) !important;
+}
+[data-theme^='dark'] .stat-card-pro.card-green .stat-title, [data-theme^='dark'] .stat-card-pro.border-green .stat-title { color: #86efac !important; }
+[data-theme^='dark'] .stat-card-pro.card-green .stat-number, [data-theme^='dark'] .stat-card-pro.card-green .stat-value, [data-theme^='dark'] .stat-card-pro.border-green .stat-number, [data-theme^='dark'] .stat-card-pro.border-green .stat-value { color: #f0fdf4 !important; }
+[data-theme^='dark'] .stat-card-pro.card-green .stat-desc, [data-theme^='dark'] .stat-card-pro.card-green .stat-sub, [data-theme^='dark'] .stat-card-pro.border-green .stat-desc, [data-theme^='dark'] .stat-card-pro.border-green .stat-sub { color: #bbf7d0 !important; }

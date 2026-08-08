@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, updateDoc, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { executarLimpezaMidiasExpiradas } from '../../utils/limpezaMidiaService';
 import './AuditoriaEstoque.css';
 
 const AuditoriaEstoque = () => {
@@ -103,6 +104,29 @@ const AuditoriaEstoque = () => {
     }
   };
 
+  const [limpandoMidia, setLimpandoMidia] = useState(false);
+
+  const handleExecutarLimpezaMidia = async () => {
+    try {
+      setLimpandoMidia(true);
+      const res = await executarLimpezaMidiasExpiradas(db, tenantId);
+      if (res.sucesso) {
+        if (res.totalProcessados === 0) {
+          alert("✨ Nenhuma mídia de vistoria expirada para remover no momento.");
+        } else {
+          alert(`🧹 Limpeza concluída com sucesso!\n• ${res.totalProcessados} locação(ões) limpa(s)\n• ${res.totalFotosLimpas} foto(s) expirada(s) removida(s) do banco.`);
+        }
+      } else {
+        alert(`⚠️ Erro ao executar limpeza: ${res.erro}`);
+      }
+    } catch (err) {
+      console.error("Erro na limpeza manual de mídia:", err);
+      alert("Ocorreu um erro ao processar a limpeza de mídias.");
+    } finally {
+      setLimpandoMidia(false);
+    }
+  };
+
   const abrirZapCobranca = (pedido) => {
     const nomeCliente = pedido.clienteNome || pedido.cliente?.nome || 'Cliente';
     const fone = (pedido.clienteCelular || pedido.cliente?.celular || pedido.celular || '').replace(/\D/g, '');
@@ -200,9 +224,20 @@ const AuditoriaEstoque = () => {
               className={`chip-filter chip-orange ${filtroCategoria === 'avaria' ? 'active' : ''}`}
               onClick={() => setFiltroCategoria('avaria')}
             >
-              ⚠️ Avarias/Faltas ({qtdAvarias})
+              ⚠️ Avarias ({qtdAvarias})
             </button>
           )}
+
+          <button 
+            type="button"
+            className="chip-filter chip-blue"
+            style={{ marginLeft: 'auto', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', borderColor: 'rgba(59, 130, 246, 0.3)' }}
+            onClick={handleExecutarLimpezaMidia}
+            disabled={limpandoMidia}
+            title="Remove fotos de vistorias sem avarias que completaram 15 dias para liberar armazenamento"
+          >
+            {limpandoMidia ? '⏳ Limpando Mídias...' : '🧹 Limpar Mídias Expiradas'}
+          </button>
         </div>
 
         {/* CORPO DA MODAL */}

@@ -777,12 +777,12 @@ const Clientes = () => {
         </div>
 
         <div className="stat-card-pro border-amber" onClick={() => setFiltroStatus('pendentes')} style={{ cursor: 'pointer' }}>
-          <div className="stat-icon-wrapper icon-amber" style={{ background: '#fff7ed', color: '#d97706' }}>
+          <div className="stat-icon-wrapper icon-amber">
             <i className="fas fa-user-clock"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">Aguardando Aprovação</span>
-            <strong className="stat-value" style={{ color: '#d97706' }}>{numPendentesAprovacao}</strong>
+            <strong className="stat-value">{numPendentesAprovacao}</strong>
             <span className="stat-sub">Pendentes de análise</span>
           </div>
         </div>

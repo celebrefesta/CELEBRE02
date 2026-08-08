@@ -768,8 +768,8 @@ const Dashboard = () => {
           </div>
           <div className="stat-content">
             <span className="stat-title">Locações Ativas</span>
-            <strong className="stat-value" style={{ color: '#2563eb' }}>{estatisticas.ativas}</strong>
-            <span className="stat-sub" style={{ color: '#2563eb', fontWeight: 700 }}>⚡ Em andamento</span>
+            <strong className="stat-value">{estatisticas.ativas}</strong>
+            <span className="stat-sub">⚡ Em andamento</span>
           </div>
         </div>
 
@@ -779,8 +779,8 @@ const Dashboard = () => {
           </div>
           <div className="stat-content">
             <span className="stat-title">Próximos Eventos</span>
-            <strong className="stat-value" style={{ color: '#16a34a' }}>{estatisticas.eventos}</strong>
-            <span className="stat-sub" style={{ color: '#16a34a', fontWeight: 700 }}>📅 Próximos 7 dias</span>
+            <strong className="stat-value">{estatisticas.eventos}</strong>
+            <span className="stat-sub">📅 Próximos 7 dias</span>
           </div>
         </div>
 
@@ -790,8 +790,8 @@ const Dashboard = () => {
           </div>
           <div className="stat-content">
             <span className="stat-title">Ticket Médio</span>
-            <strong className="stat-value" style={{ color: '#7e22ce' }}>R$ {estatisticas.ticketMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <span className="stat-sub" style={{ color: '#7e22ce', fontWeight: 700 }}>▲ Média p/ pedido</span>
+            <strong className="stat-value">R$ {estatisticas.ticketMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <span className="stat-sub">▲ Média p/ pedido</span>
           </div>
         </div>
 
@@ -801,8 +801,8 @@ const Dashboard = () => {
           </div>
           <div className="stat-content">
             <span className="stat-title">Em Orçamento</span>
-            <strong className="stat-value" style={{ color: '#d97706' }}>R$ {(estatisticas.emOrcamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <span className="stat-sub" style={{ color: '#d97706', fontWeight: 700 }}>📋 Pipeline aberto</span>
+            <strong className="stat-value">R$ {(estatisticas.emOrcamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <span className="stat-sub">📋 Pipeline aberto</span>
           </div>
         </div>
 
@@ -812,8 +812,8 @@ const Dashboard = () => {
           </div>
           <div className="stat-content">
             <span className="stat-title">A Receber Total</span>
-            <strong className="stat-value" style={{ color: '#dc2626' }}>R$ {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <span className="stat-sub" style={{ color: estatisticas.aReceber > 0 ? '#dc2626' : '#16a34a', fontWeight: 700 }}>
+            <strong className="stat-value">R$ {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <span className="stat-sub">
               {estatisticas.aReceber > 0 ? '⚠️ Saldo pendente' : '🟢 100% adimplente'}
             </span>
           </div>

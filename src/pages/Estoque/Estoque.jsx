@@ -225,82 +225,7 @@ const Estoque = () => {
     }
   };
 
-  const corrigirNomesDuplicados = async () => {
-      if (!usuarioLogado) return;
-      setLimandoNomes(true);
-      try {
-          // 🎯 BUSCA NA EMPRESA
-          const q = query(collection(db, "estoque"), where("userId", "==", tenantId));
-          const snap = await getDocs(q);
-          const batch = writeBatch(db);
-          let alterados = 0;
 
-          snap.forEach(docSnap => {
-              const item = docSnap.data();
-              let nomeAtual = item.nome || '';
-              let nomeNovo = nomeAtual;
-
-              const ehKit = item.especificacoes?.isKitPai || item.especificacoes?.isKit || (item.especificacoes?.pecasKit && item.especificacoes?.pecasKit.length > 0);
-              const ehFilha = item.especificacoes?.isSubPeca || (item.codigo && /-P\d+$/.test(item.codigo) && !ehKit);
-
-              if (ehKit) {
-                  if (!nomeAtual.toUpperCase().includes('KIT')) {
-                      nomeNovo = `KIT ${nomeAtual}`;
-                  }
-              } else if (ehFilha) {
-                  let pai = nomeAtual;
-                  if (nomeAtual.includes(' - ')) pai = nomeAtual.split(' - ')[0].trim();
-                  if (pai.toUpperCase().startsWith('KIT ')) pai = pai.substring(4).trim();
-                  
-                  const tam = item.especificacoes?.tamanho || '';
-                  const cor = item.especificacoes?.cor || '';
-                  
-                  let sufixos = [];
-                  if (tam) sufixos.push(tam.trim());
-                  if (cor) sufixos.push(cor.trim());
-
-                  if (sufixos.length > 0) {
-                      nomeNovo = `${pai} - ${sufixos.join(' ')}`;
-                  } else {
-                      let filhaLimpa = '';
-                      if (nomeAtual.includes(' - ')) {
-                          let filha = nomeAtual.split(' - ').slice(1).join(' - ').trim();
-                          let regexPai = new RegExp(pai, "ig");
-                          filhaLimpa = filha.replace(regexPai, "").replace(/^[- ]+/g, "").replace(/cilindro/ig, "").replace(/painel/ig, "").trim();
-                      }
-
-                      if (!filhaLimpa || /^P\d+$/i.test(filhaLimpa)) {
-                          nomeNovo = `${pai} - ⚠️ Sem Medida (Edite)`;
-                      } else {
-                          nomeNovo = `${pai} - ${filhaLimpa}`;
-                      }
-                  }
-              }
-
-              if (nomeNovo && nomeNovo !== nomeAtual) {
-                  batch.update(docSnap.ref, { 
-                      nome: nomeNovo,
-                      ...(ehFilha ? { "especificacoes.isSubPeca": true } : {}) 
-                  });
-                  alterados++;
-              }
-          });
-
-          if (alterados > 0) {
-              await batch.commit();
-              await registrarLog("AJUSTE EM LOTE NO ESTOQUE", `Executou a limpeza e padronização automática de nomes de ${alterados} kits e peças.`);
-              alert(`✅ Mágica Feita! O robô arrumou os nomes de ${alterados} peças e kits! Verifique as que ficaram com o aviso "Sem Medida".`);
-              carregarDados();
-          } else {
-              alert("✨ Tudo já está perfeitamente organizado!");
-          }
-      } catch(e) {
-          console.error("Erro ao limpar nomes:", e);
-          alert("Erro ao executar a limpeza.");
-      } finally {
-          setLimandoNomes(false);
-      }
-  };
 
   const irParaCadastro = (item = null) => {
     if (!item && itens.length >= limiteEstoque) {
@@ -847,7 +772,7 @@ const Estoque = () => {
           </div>
           <div className="welcome-text">
             <h1>Gestão de Acervo e Estoque</h1>
-            <p>Controle logístico, financeiro e catálogo online. <strong style={{color: totalItens >= limiteEstoque ? '#ef4444' : '#15803d'}}>(Limite: {totalItens.toLocaleString('pt-BR')} / {limiteEstoque.toLocaleString('pt-BR')})</strong></p>
+            <p>Controle logístico, financeiro e catálogo online. <strong style={{color: totalItens >= limiteEstoque ? '#ef4444' : '#15803d', whiteSpace: 'nowrap', display: 'inline-block'}}>(Limite: {totalItens.toLocaleString('pt-BR')} / {limiteEstoque.toLocaleString('pt-BR')})</strong></p>
           </div>
         </div>
         <div className="header-actions">
@@ -868,17 +793,6 @@ const Estoque = () => {
               ⊞ Cards
             </button>
           </div>
-          <button 
-            className="btn-secondary-celebre" 
-            onClick={corrigirNomesDuplicados} 
-            disabled={limpandoNomes}
-            title="Adiciona 'KIT' nos pacotes e puxa as características das filhas"
-          >
-            {limpandoNomes ? '⏳ Ajustando...' : '🧹 Ajustar Nomes'}
-          </button>
-          <button className="btn-secondary-celebre" onClick={iniciarScannerEstoque} title="Escanear com Câmera (QR Code ou Código de Barras)">
-            📷 Escanear Acervo
-          </button>
           <button className="btn-secondary-celebre" onClick={imprimirListaFiltrada}>
             🖨️ Imprimir Lista
           </button>
@@ -904,58 +818,58 @@ const Estoque = () => {
 
       {/* CARDS DE DASHBOARD 4 COLUNAS IDÊNTICOS AO GESTÃO DE CLIENTES */}
       <div className="clientes-stats-grid">
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-purple">
           <div className="stat-icon-wrapper icon-purple">
             📦
           </div>
           <div className="stat-content">
             <span className="stat-title">TOTAL DE ITENS</span>
             <strong className="stat-number">{totalItens}</strong>
-            <small style={{color: '#7e22ce', fontSize: '0.75rem', fontWeight: '600'}}>Cadastrados no acervo</small>
+            <small className="stat-desc">Cadastrados no acervo</small>
           </div>
         </div>
 
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-amber">
           <div className="stat-icon-wrapper icon-amber">
             📊
           </div>
           <div className="stat-content">
             <span className="stat-title">VALOR DO ACERVO</span>
             <strong className="stat-number">R$ {valorAcervo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small style={{color: '#b45309', fontSize: '0.75rem', fontWeight: '600'}}>Patrimônio investido</small>
+            <small className="stat-desc">Patrimônio investido</small>
           </div>
         </div>
 
-        <div className="stat-card-pro">
-          <div className="stat-icon-wrapper icon-blue" style={{ background: '#dbeafe', color: '#1d4ed8' }}>
+        <div className="stat-card-pro card-blue">
+          <div className="stat-icon-wrapper icon-blue">
             🛡️
           </div>
           <div className="stat-content">
             <span className="stat-title">VALOR REPOSIÇÃO</span>
             <strong className="stat-number">R$ {valorReposicaoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small style={{color: '#1d4ed8', fontSize: '0.75rem', fontWeight: '600'}}>Garantia total acervo</small>
+            <small className="stat-desc">Garantia total acervo</small>
           </div>
         </div>
 
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-red">
           <div className="stat-icon-wrapper icon-red">
             🛠️
           </div>
           <div className="stat-content">
             <span className="stat-title">EM MANUTENÇÃO</span>
             <strong className="stat-number">{emManutencaoTotal}</strong>
-            <small style={{color: '#b91c1c', fontSize: '0.75rem', fontWeight: 'bold'}}>Necessitam reparos</small>
+            <small className="stat-desc">Necessitam reparos</small>
           </div>
         </div>
 
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-green">
           <div className="stat-icon-wrapper icon-green">
             👁️
           </div>
           <div className="stat-content">
             <span className="stat-title">VISÍVEL CATÁLOGO</span>
             <strong className="stat-number">{percentualVisivel}%</strong>
-            <small style={{color: '#15803d', fontSize: '0.75rem', fontWeight: '600'}}>Disponível no catálogo</small>
+            <small className="stat-desc">Disponível no catálogo</small>
           </div>
         </div>
       </div>
@@ -972,13 +886,12 @@ const Estoque = () => {
               {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
           </button>
 
-          <div className="filter-select-container">
-            <select className="filter-select" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
-              <option value="">📂 Categoria: Todas</option>
-              {categoriasUnicas.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
+          <div className="filter-select-container filter-date-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <input type="date" className="filter-select" value={dataFiltro} onChange={e => {
+                setDataFiltro(e.target.value);
+                if (!e.target.value && statusFiltro === 'indisponivel') setStatusFiltro('');
+            }} />
+            {dataFiltro && <button className="btn-limpar-data" onClick={limparFiltroData} title="Limpar Data">✕</button>}
           </div>
 
           <div className="filter-select-container">
@@ -999,12 +912,13 @@ const Estoque = () => {
             </select>
           </div>
 
-          <div className="filter-select-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input type="date" className="filter-select" value={dataFiltro} onChange={e => {
-                setDataFiltro(e.target.value);
-                if (!e.target.value && statusFiltro === 'indisponivel') setStatusFiltro('');
-            }} />
-            {dataFiltro && <button className="btn-limpar-data" onClick={limparFiltroData} title="Limpar Data">✕</button>}
+          <div className="filter-select-container filter-categoria-full">
+            <select className="filter-select" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
+              <option value="">📂 Categoria: Todas</option>
+              {categoriasUnicas.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
           </div>
         </div>
 
@@ -1154,17 +1068,28 @@ const Estoque = () => {
                                 <img src={item.foto} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} onClick={(e) => { e.stopPropagation(); setImagemAmpliada(item.foto); }} title="Ampliar"/>
                               ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
                           </div>
-                          <div className="pro-product-info-col" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, maxWidth: '100%', overflow: 'hidden' }}>
-                              <strong style={{ color: item.nome.includes('⚠️') ? '#ef4444' : '#0f172a', fontSize: '0.95rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '6px', wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                          <div className="pro-product-info-col" style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
+                              {/* 1. NOME DO ITEM */}
+                              <strong className="pro-product-title-text" style={{ display: 'block', color: item.nome.includes('⚠️') ? '#ef4444' : 'var(--texto-principal, #0f172a)', fontSize: '0.93rem', fontWeight: '700', lineHeight: '1.25' }}>
                                   {item.nome}
-                                  {ehKitPai && <span style={{background: '#0f172a', color: '#fde68a', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #c5a059'}}>📦 CONJUNTO / KIT</span>}
-                                  {ehSubPeca && <span style={{background: '#fef3c7', color: '#b48a3c', fontSize: '9px', padding: '3px 8px', borderRadius: '6px', fontWeight: '800', border: '1px solid #fde68a'}}>🧩 PEÇA DO KIT</span>}
-                                  {isDeco && <span style={{background: '#b45309', color: '#fff', fontSize: '9px', padding: '3px 6px', borderRadius: '4px', letterSpacing: '0.5px'}}>✨ DECORAÇÃO</span>}
                               </strong>
-                              <span className="pro-product-subtitle" style={{ fontSize: '0.75rem', color: '#94a3b8', marginTop: '2px', wordBreak: 'break-word', overflowWrap: 'anywhere', whiteSpace: 'normal' }}>
-                                  CÓD: {item.codigo || 'S/N'} 
-                                  {item.localizacao ? ` • 📍 ${item.localizacao}` : ''}
-                              </span>
+
+                              {/* 2. CÓDIGO + SE É KIT OU AVULSO */}
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap', marginTop: '1px' }}>
+                                  <span style={{ fontSize: '0.78rem', color: 'var(--texto-secundario, #64748b)', fontWeight: '600' }}>
+                                      CÓD: {item.codigo || 'S/N'}
+                                  </span>
+                                  {ehKitPai && <span style={{background: '#0f172a', color: '#fde68a', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', border: '1px solid #c5a059', display: 'inline-block'}}>📦 KIT</span>}
+                                  {ehSubPeca && <span style={{background: '#fef3c7', color: '#b48a3c', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', border: '1px solid #fde68a', display: 'inline-block'}}>🧩 PEÇA</span>}
+                                  {isDeco && <span style={{background: '#b45309', color: '#fff', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', letterSpacing: '0.5px', display: 'inline-block'}}>✨ DECO</span>}
+                              </div>
+
+                              {/* 3. LOCALIZAÇÃO (SE HOUVER) */}
+                              {item.localizacao && (
+                                  <span style={{ fontSize: '0.75rem', color: '#64748b', display: 'block', marginTop: '1px' }}>
+                                      📍 {item.localizacao}
+                                  </span>
+                              )}
                           </div>
                         </div>
                       </td>

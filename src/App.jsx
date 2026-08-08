@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'r
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
 import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'; 
 import { db } from './firebaseConfig'; 
+import { verificarELimparMidiasBackground } from './utils/limpezaMidiaService'; 
 
 // --- MENU & TOPBAR ---
 import Navbar from './components/Navbar';
@@ -362,6 +363,9 @@ const AppContent = () => {
           localStorage.setItem('tenantId', tenantId);
           localStorage.setItem('funcName', nomeExibido);
           localStorage.setItem('userRole', role);
+
+          // 🧹 Limpeza silenciosa de mídias de vistoria expiradas em segundo plano (1x por dia)
+          verificarELimparMidiasBackground(db, tenantId);
         } catch (error) {
           console.error("Erro ao verificar integridade da conta:", error);
         }

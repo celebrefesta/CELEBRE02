@@ -7,6 +7,7 @@ import { db } from '../../firebaseConfig';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { gerarComprovanteCheckinPDF } from '../../utils/gerarComprovanteCheckinPDF';
+import { compilarEComprimirFoto } from '../../utils/limpezaMidiaService';
 
 const CheckoutPage = () => {
   const { id } = useParams();
@@ -312,18 +313,24 @@ const CheckoutPage = () => {
     }
   };
 
-  // 📷 UPLOAD DE FOTOS DA VISTORIA DE RETORNO
-  const handleUploadFotos = (e) => {
+  // 📷 UPLOAD DE FOTOS DA VISTORIA DE RETORNO COM COMPRESSÃO AUTOMÁTICA
+  const handleUploadFotos = async (e) => {
     const files = Array.from(e.target.files);
     if (!files.length) return;
 
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setFotosVistoria(prev => [...prev, reader.result]);
-      };
-      reader.readAsDataURL(file);
-    });
+    for (const file of files) {
+      try {
+        const fotoComprimida = await compilarEComprimirFoto(file, 1200, 1200, 0.72);
+        setFotosVistoria(prev => [...prev, fotoComprimida]);
+      } catch (err) {
+        console.error("Erro ao comprimir foto da devolução:", err);
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          setFotosVistoria(prev => [...prev, reader.result]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const removerFotoVistoria = (index) => {

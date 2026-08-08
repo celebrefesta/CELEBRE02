@@ -7,6 +7,7 @@ import { db } from '../../firebaseConfig';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { gerarComprovanteCheckinPDF } from '../../utils/gerarComprovanteCheckinPDF';
+import { compilarEComprimirFoto } from '../../utils/limpezaMidiaService';
 
 const CheckinPage = () => {
   const { id, modo: modoParam } = useParams();
@@ -337,16 +338,24 @@ const CheckinPage = () => {
     }));
   };
 
-  // 📷 FOTOS DA VISTORIA
-  const handleUploadFotos = (e) => {
+  // 📷 FOTOS DA VISTORIA COM COMPRESSÃO AUTOMÁTICA EM TEMPO REAL
+  const handleUploadFotos = async (e) => {
     const files = Array.from(e.target.files);
-    files.forEach(file => {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setFotosVistoria(prev => [...prev, event.target.result]);
-      };
-      reader.readAsDataURL(file);
-    });
+    if (!files.length) return;
+
+    for (const file of files) {
+      try {
+        const fotoComprimida = await compilarEComprimirFoto(file, 1200, 1200, 0.72);
+        setFotosVistoria(prev => [...prev, fotoComprimida]);
+      } catch (err) {
+        console.error("Erro ao comprimir imagem:", err);
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setFotosVistoria(prev => [...prev, event.target.result]);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
   };
 
   const removerFotoVistoria = (index) => {
@@ -910,10 +919,20 @@ const CheckinPage = () => {
               ))}
             </div>
           ) : (
-            <div className="empty-fotos-box">
-              <span className="cam-icon-big">📸</span>
-              <p>Nenhuma foto da vistoria anexada até o momento.<br/>Clique em <strong>"+ Fotos"</strong> para enviar fotos do estado das peças.</p>
-            </div>
+            <label className="empty-fotos-label-clickable" style={{ cursor: 'pointer', display: 'block' }}>
+              <div className="empty-fotos-box">
+                <span className="cam-icon-big">📸</span>
+                <p>Nenhuma foto da vistoria anexada até o momento.<br/>Toque aqui para <strong>abrir a câmera</strong> e registrar a vistoria.</p>
+              </div>
+              <input 
+                type="file" 
+                accept="image/*" 
+                capture="environment"
+                multiple 
+                onChange={handleUploadFotos} 
+                style={{ display: 'none' }} 
+              />
+            </label>
           )}
         </div>
 

@@ -225,47 +225,47 @@ const Compras = () => {
 
       {/* CARDS DE DASHBOARD 4 COLUNAS IDÊNTICOS AO GESTÃO DE CLIENTES */}
       <div className="clientes-stats-grid">
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-purple">
           <div className="stat-icon-wrapper icon-purple">
             🛒
           </div>
           <div className="stat-content">
             <span className="stat-title">TOTAL NA LISTA</span>
             <strong className="stat-number">{itens.length}</strong>
-            <small style={{color: '#7e22ce', fontSize: '0.75rem', fontWeight: '600'}}>Itens cadastrados</small>
+            <small className="stat-desc">Itens cadastrados</small>
           </div>
         </div>
 
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-amber">
           <div className="stat-icon-wrapper icon-amber">
             📂
           </div>
           <div className="stat-content">
             <span className="stat-title">ORÇAMENTO PENDENTE</span>
             <strong className="stat-number">R$ {totais.pendente.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small style={{color: '#b45309', fontSize: '0.75rem', fontWeight: '600'}}>Estimado p/ compras</small>
+            <small className="stat-desc">Estimado p/ compras</small>
           </div>
         </div>
 
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-red">
           <div className="stat-icon-wrapper icon-red">
             🚨
           </div>
           <div className="stat-content">
             <span className="stat-title">ITENS EM ALERTA</span>
             <strong className="stat-number">{totais.urgente}</strong>
-            <small style={{color: '#b91c1c', fontSize: '0.75rem', fontWeight: 'bold'}}>Perto do prazo limite</small>
+            <small className="stat-desc">Perto do prazo limite</small>
           </div>
         </div>
 
-        <div className="stat-card-pro">
+        <div className="stat-card-pro card-green">
           <div className="stat-icon-wrapper icon-green">
             ✅
           </div>
           <div className="stat-content">
             <span className="stat-title">REALIZADO (MÊS)</span>
             <strong className="stat-number">R$ {totais.realizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small style={{color: '#15803d', fontSize: '0.75rem', fontWeight: '600'}}>Investimento aprovado</small>
+            <small className="stat-desc">Investimento aprovado</small>
           </div>
         </div>
       </div>
