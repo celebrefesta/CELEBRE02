@@ -40,6 +40,9 @@ const EditarLocacao = () => {
   const [modalCalendarioAberto, setModalCalendarioAberto] = useState(false);
   const [busca, setBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('Todos');
+  const [filtroTipo, setFiltroTipo] = useState('todos'); // 'todos' | 'decoracao' | 'avulso'
+  const [apenasDisponiveis, setApenasDisponiveis] = useState(false);
+  const [ordemClassificacao, setOrdemClassificacao] = useState('relevancia');
 
   const handleGerarPropostaPDF = () => {
     const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado)) || {};
@@ -289,19 +292,45 @@ const EditarLocacao = () => {
 
               if (['confirmado', 'preparacao', 'entregue', 'aprovado', 'em andamento'].includes(status)) {
                   if (isOverlapping(datas.retirada, datas.devolucao, loc.dataRetirada, loc.dataDevolucao)) {
-                      const itemNoPedido = loc.itens?.find(i => 
-                        i.id === pecaId || 
-                        (i.codigo && peca.codigo && i.codigo === peca.codigo) ||
-                        (i.nome && peca.nome && i.nome.trim().toLowerCase() === peca.nome.trim().toLowerCase())
-                      );
-                      if (itemNoPedido) {
-                          const qtdAlugada = parseInt(itemNoPedido.qtd) || parseInt(itemNoPedido.quantidade) || 1;
-                          if (loc.dataDevolucao === datas.retirada) {
-                              qtdRetornaNoDia += qtdAlugada;
-                          } else {
-                              qtdReservadaForte += qtdAlugada;
+                      const itensPedido = loc.itens || loc.carrinho || [];
+                      itensPedido.forEach(i => {
+                          const iQtd = parseInt(i.qtd) || parseInt(i.quantidade) || 1;
+                          
+                          // A) É a própria peça alugada diretamente
+                          const eMesmaPeca = (
+                            (i.id && String(i.id) === String(pecaId)) || 
+                            (i.codigo && peca.codigo && i.codigo === peca.codigo) ||
+                            (i.nome && peca.nome && i.nome.trim().toLowerCase() === peca.nome.trim().toLowerCase())
+                          );
+
+                          if (eMesmaPeca) {
+                              if (loc.dataDevolucao === datas.retirada) {
+                                  qtdRetornaNoDia += iQtd;
+                              } else {
+                                  qtdReservadaForte += iQtd;
+                              }
                           }
-                      }
+
+                          // B) É uma Decoração/Kit que contém esta peça em sua composição
+                          const pecasCompostas = i.itensDecoracao || i.itensDoKit || i.pecasKit || i.especificacoes?.itensDecoracao || i.especificacoes?.itensDoKit || i.especificacoes?.pecasKit || [];
+                          pecasCompostas.forEach(p => {
+                              const eItemDoKit = (
+                                (p.id && String(p.id) === String(pecaId)) ||
+                                (p.codigo && peca.codigo && p.codigo === peca.codigo) ||
+                                (p.nome && peca.nome && p.nome.trim().toLowerCase() === peca.nome.trim().toLowerCase())
+                              );
+
+                              if (eItemDoKit) {
+                                  const pQtdUnitaria = parseInt(p.qtd) || parseInt(p.quantidade) || 1;
+                                  const pQtdTotal = pQtdUnitaria * iQtd;
+                                  if (loc.dataDevolucao === datas.retirada) {
+                                      qtdRetornaNoDia += pQtdTotal;
+                                  } else {
+                                      qtdReservadaForte += pQtdTotal;
+                                  }
+                              }
+                          });
+                      });
                   }
               }
           });
@@ -316,6 +345,8 @@ const EditarLocacao = () => {
     if (isFinalizado) return; 
     const disp = getDisponibilidade(item.id);
     const precoItem = Number(item.financeiro?.valorAluguel || item.preco || 0);
+    const isDeco = item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa' || item.tipoCadastro === 'decoracao';
+    const pecasCompostas = item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || item.itensDecoracao || item.itensDoKit || item.especificacoes?.pecasKit || [];
     const existe = carrinho.find(i => i.id === item.id);
 
     if (existe) {
@@ -337,7 +368,21 @@ const EditarLocacao = () => {
            const querMesmo = window.confirm("⚠️ ATENÇÃO: CONFLITO DE AGENDA (Bate e Volta)!\n\nA peça será DEVOLVIDA por outro cliente exatamente na data deste novo evento.\n\nDeseja adicionar mesmo assim?");
            if(!querMesmo) return;
       }
-      setCarrinho([...carrinho, { ...item, qtd: 1, preco: precoItem, isBateVolta: disp.retornaNoDia > 0, jaAvisouBateVolta: disp.retornaNoDia > 0, checkedSeparacao: false, checkedDevolucao: false, avaria: false, faltou: false }]);
+      setCarrinho([...carrinho, { 
+        ...item, 
+        isDecoracao: isDeco,
+        itensDecoracao: pecasCompostas,
+        itensDoKit: pecasCompostas,
+        qtd: 1, 
+        preco: precoItem, 
+        foto: item.foto || item.fotos?.[0] || '',
+        isBateVolta: disp.retornaNoDia > 0, 
+        jaAvisouBateVolta: disp.retornaNoDia > 0, 
+        checkedSeparacao: false, 
+        checkedDevolucao: false, 
+        avaria: false, 
+        faltou: false 
+      }]);
     }
   };
 
@@ -1094,11 +1139,39 @@ const EditarLocacao = () => {
                             {item.foto ? <img src={item.foto} alt="Peça"/> : <div className="img-placeholder">📷</div>}
                           </td>
                           <td className="carrinho-info">
-                            <strong>
-                              {item.nome}
-                              {item.isBateVolta && <span style={{color: '#f59e0b', fontSize: '10px', marginLeft: '6px', background: '#fef3c7', padding: '2px 4px', borderRadius: '4px'}}>⚠️ Bate e Volta (Retorna no Dia)</span>}
-                            </strong>
-                            <span>R$ {precoExibicao.toFixed(2)} un</span>
+                            {(() => {
+                              const isDeco = item.isDecoracao || item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa' || item.tipoCadastro === 'decoracao';
+                              const pecasCompostas = item.itensDecoracao || item.itensDoKit || item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || [];
+                              
+                              return (
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                  {isDeco && (
+                                    <span style={{ background: '#0f172a', color: '#fde68a', border: '1px solid #c5a059', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: '800', width: 'fit-content', marginBottom: '2px' }}>
+                                      ✨ DECORAÇÃO COMPLETA
+                                    </span>
+                                  )}
+                                  <strong>
+                                    {item.nome}
+                                    {item.isBateVolta && <span style={{color: '#f59e0b', fontSize: '10px', marginLeft: '6px', background: '#fef3c7', padding: '2px 4px', borderRadius: '4px'}}>⚠️ Bate e Volta</span>}
+                                  </strong>
+                                  <span>R$ {precoExibicao.toFixed(2)} un</span>
+
+                                  {/* 🧩 COMPOSIÇÃO DA DECORAÇÃO */}
+                                  {isDeco && pecasCompostas.length > 0 && (
+                                    <div style={{ marginTop: '6px', borderLeft: '2.5px solid #c5a059', paddingLeft: '8px', display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                                      <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#b45309' }}>
+                                        🧩 Peças que compõem este tema ({pecasCompostas.reduce((acc, p) => acc + (Number(p.qtd) || 1), 0) * (Number(item.qtd) || 1)} itens):
+                                      </span>
+                                      {pecasCompostas.map((p, idx) => (
+                                        <span key={idx} style={{ fontSize: '0.74rem', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                          • <strong>{(Number(p.qtd) || 1) * (Number(item.qtd) || 1)}x</strong> {p.nome}
+                                        </span>
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })()}
                           </td>
                           <td className="text-center">
                             {isFinalizado ? (
@@ -1458,54 +1531,223 @@ const EditarLocacao = () => {
               <button className="btn-fechar" onClick={() => setModalAberto(false)}>X</button>
             </div>
             
-            <div className="catalogo-filtros">
-               <input type="text" className="search-input-clean" style={{border: '1px solid var(--borda)', padding: '10px', borderRadius: '8px'}} placeholder="🔎 Buscar peça..." value={busca} onChange={e => setBusca(e.target.value)} />
-              <div className="chips-categorias">
-                {categoriasUnicasEstoque.map(cat => (
-                  <button key={cat} type="button" className={`chip-cat ${filtroCategoria === cat ? 'active' : ''}`} onClick={() => setFiltroCategoria(cat)}>
-                    {cat}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {(() => {
+              const totalDecoracoes = estoque.filter(i => i.especificacoes?.isDecoracao || i.categoria === 'Decoração Completa' || i.tipoCadastro === 'decoracao').length;
+              const totalAvulsos = estoque.length - totalDecoracoes;
 
-            <div className="catalogo-grid">
-              {itensFiltrados.map(item => {
+              const getIconeCategoria = (nomeCat) => {
+                const n = (nomeCat || '').toLowerCase();
+                if (n === 'todos') return '📦';
+                if (n.includes('decora') || n.includes('kit') || n.includes('tema')) return '✨';
+                if (n.includes('vaso') || n.includes('planta') || n.includes('flor')) return '🪴';
+                if (n.includes('prato') || n.includes('louça') || n.includes('utensíl') || n.includes('talher')) return '🎂';
+                if (n.includes('móvel') || n.includes('movel') || n.includes('mesa') || n.includes('cadeira') || n.includes('painel')) return '🪑';
+                if (n.includes('luz') || n.includes('ilumina') || n.includes('letreiro') || n.includes('neon')) return '💡';
+                if (n.includes('suporte') || n.includes('bandeja') || n.includes('boleira')) return '🧁';
+                if (n.includes('pelúcia') || n.includes('pelucia') || n.includes('boneco') || n.includes('display')) return '🧸';
+                return '🏷️';
+              };
+
+              const categoriasNominais = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
+              const categoriasComContagem = categoriasNominais.map(cat => {
+                const qtd = cat === 'Todos' 
+                  ? estoque.length 
+                  : estoque.filter(i => i.categoria === cat).length;
+                return { nome: cat, qtd, icone: getIconeCategoria(cat) };
+              });
+
+              const itensFiltradosCalculados = estoque
+                .filter(item => {
+                  const isDeco = item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa' || item.tipoCadastro === 'decoracao';
+
+                  // 1. Filtro por Tipo (Todos, Decorações, Avulsos)
+                  if (filtroTipo === 'decoracao' && !isDeco) return false;
+                  if (filtroTipo === 'avulso' && isDeco) return false;
+
+                  // 2. Filtro por Categoria
+                  if (filtroCategoria !== 'Todos' && item.categoria !== filtroCategoria) return false;
+
+                  // 3. Filtro de Apenas Disponíveis na Data do Evento
                   const disp = getDisponibilidade(item.id);
-                  const estaEsgotado = disp.livresMaximos <= 0;
-                  const ehBateVolta = disp.livresReais <= 0 && disp.retornaNoDia > 0;
+                  if (apenasDisponiveis && disp.livresMaximos <= 0) return false;
 
-                  return (
-                    <div key={item.id} className="peca-card" onClick={() => { if(!estaEsgotado) addCarrinho(item); }} style={{opacity: estaEsgotado ? 0.5 : 1, cursor: estaEsgotado ? 'not-allowed' : 'pointer'}}>
-                      <div className="peca-img" style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                          {item.foto ? (
-                              <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-                          ) : (
-                              <span style={{ fontSize: '32px' }}>📷</span>
-                          )}
-                          
-                          {disp.emManutencao ? (
-                              <span style={{ ...badgeEsgotado, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>🛠️ MANUTENÇÃO</span>
-                          ) : estaEsgotado ? (
-                              <span style={badgeEsgotado}>ALUGADO</span>
-                          ) : ehBateVolta ? (
-                              <span style={badgeBateVolta}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
-                          ) : (
-                              <span style={badgeLivres}>Livres: {disp.livresReais}</span>
-                          )}
+                  // 4. Busca por Texto Inteligente
+                  if (busca.trim()) {
+                    const termo = busca.toLowerCase().trim();
+                    const nomeMatch = (item.nome || '').toLowerCase().includes(termo);
+                    const codigoMatch = (item.codigo || '').toLowerCase().includes(termo);
+                    const catMatch = (item.categoria || '').toLowerCase().includes(termo);
+                    const pecasCompostas = item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || item.itensDecoracao || item.itensDoKit || [];
+                    const composicaoMatch = pecasCompostas.some(p => (p.nome || '').toLowerCase().includes(termo));
 
-                          {!estaEsgotado && <button className="btn-add-peca" type="button">+</button>}
-                      </div>
-                      <div className="peca-info">
-                         <strong>{item.nome}</strong>
-                        <span>{item.categoria}</span>
-                        <b className="txt-sucesso">R$ {item.financeiro?.valorAluguel || item.preco || 0}</b>
-                      </div>
+                    if (!nomeMatch && !codigoMatch && !catMatch && !composicaoMatch) return false;
+                  }
+
+                  return true;
+                });
+
+              return (
+                <>
+                  {/* BARRA DE BUSCA E FILTROS ULTRA-CLEAN EM UMA ÚNICA LINHA */}
+                  <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '16px', display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+                    
+                    {/* INPUT DE BUSCA */}
+                    <div style={{ position: 'relative', flex: '1 1 240px', minWidth: '200px' }}>
+                      <span style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', fontSize: '14px', color: '#94a3b8' }}>🔎</span>
+                      <input 
+                        type="text" 
+                        placeholder="Buscar peça por nome, código ou tema..." 
+                        value={busca} 
+                        onChange={e => setBusca(e.target.value)} 
+                        style={{ width: '100%', padding: '8px 30px 8px 36px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.85rem', outline: 'none', background: '#ffffff', color: '#0f172a', fontWeight: '500' }}
+                      />
+                      {busca && (
+                        <button 
+                          type="button" 
+                          onClick={() => setBusca('')}
+                          style={{ position: 'absolute', right: '8px', top: '50%', transform: 'translateY(-50%)', background: '#e2e8f0', border: 'none', color: '#64748b', borderRadius: '50%', width: '20px', height: '20px', fontSize: '11px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
-                  );
-                })}
-              {itensFiltrados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada.</p>}
-            </div>
+
+                    {/* SELECT DE TIPO (TODOS, DECORAÇÕES, AVULSO) */}
+                    <select 
+                      value={filtroTipo} 
+                      onChange={e => setFiltroTipo(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.82rem', fontWeight: '600', color: '#334155', background: '#ffffff', cursor: 'pointer' }}
+                    >
+                      <option value="todos">📦 Todos os Tipos ({estoque.length})</option>
+                      <option value="decoracao">✨ Decorações Completas ({totalDecoracoes})</option>
+                      <option value="avulso">🧩 Peças Avulsas ({totalAvulsos})</option>
+                    </select>
+
+                    {/* SELECT DE CATEGORIA */}
+                    <select 
+                      value={filtroCategoria} 
+                      onChange={e => setFiltroCategoria(e.target.value)}
+                      style={{ padding: '8px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.82rem', fontWeight: '600', color: '#334155', background: '#ffffff', cursor: 'pointer' }}
+                    >
+                      <option value="Todos">📁 Todas Categorias</option>
+                      {categoriasNominais.filter(c => c !== 'Todos').map(cat => (
+                        <option key={cat} value={cat}>
+                          {cat} ({estoque.filter(i => i.categoria === cat).length})
+                        </option>
+                      ))}
+                    </select>
+
+                    {/* BOTÃO TOGGLE PILL - APENAS LIVRES */}
+                    <button
+                      type="button"
+                      onClick={() => setApenasDisponiveis(prev => !prev)}
+                      style={{
+                        padding: '8px 12px',
+                        borderRadius: '8px',
+                        border: apenasDisponiveis ? '1px solid #16a34a' : '1px solid #cbd5e1',
+                        background: apenasDisponiveis ? '#dcfce7' : '#ffffff',
+                        color: apenasDisponiveis ? '#15803d' : '#64748b',
+                        fontSize: '0.8rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px',
+                        whiteSpace: 'nowrap',
+                        transition: '0.2s'
+                      }}
+                    >
+                      <span>{apenasDisponiveis ? '✅' : '⚡'}</span>
+                      <span>Apenas Livres</span>
+                    </button>
+
+                    {/* BOTÃO LIMPAR SE HOUVER FILTRO ATIVO */}
+                    {(busca || filtroCategoria !== 'Todos' || filtroTipo !== 'todos' || apenasDisponiveis) && (
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setBusca('');
+                          setFiltroCategoria('Todos');
+                          setFiltroTipo('todos');
+                          setApenasDisponiveis(false);
+                        }}
+                        style={{ padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', color: '#dc2626', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                      >
+                        🧹 Limpar
+                      </button>
+                    )}
+                  </div>
+
+                  {/* GRID DE CARDS DAS PEÇAS */}
+                  <div className="catalogo-grid">
+                    {itensFiltradosCalculados.map(item => {
+                        const disp = getDisponibilidade(item.id);
+                        const estaEsgotado = disp.livresMaximos <= 0;
+                        const ehBateVolta = disp.livresReais <= 0 && disp.retornaNoDia > 0;
+                        const isDeco = item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa' || item.tipoCadastro === 'decoracao';
+                        const pecasCompostas = item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || item.itensDecoracao || item.itensDoKit || item.especificacoes?.pecasKit || [];
+
+                        return (
+                          <div 
+                            key={item.id} 
+                            className="peca-card" 
+                            onClick={() => { if(!estaEsgotado) addCarrinho(item); }} 
+                            style={{
+                              opacity: estaEsgotado ? 0.5 : 1, 
+                              cursor: estaEsgotado ? 'not-allowed' : 'pointer',
+                              border: isDeco ? '1.5px solid #c5a059' : undefined,
+                              boxShadow: isDeco ? '0 4px 14px rgba(197, 160, 89, 0.2)' : undefined
+                            }}
+                          >
+                            <div className="peca-img" style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                {item.foto ? (
+                                    <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
+                                ) : (
+                                    <span style={{ fontSize: '32px' }}>📷</span>
+                                )}
+                                
+                                {isDeco && (
+                                  <span style={{ background: '#0f172a', color: '#fde68a', border: '1px solid #c5a059', padding: '3px 8px', borderRadius: '6px', fontSize: '9px', fontWeight: '800', position: 'absolute', top: '8px', right: '8px', zIndex: 2 }}>
+                                    ✨ DECORAÇÃO
+                                  </span>
+                                )}
+
+                                {disp.emManutencao ? (
+                                    <span style={{ ...badgeEsgotado, background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>🛠️ MANUTENÇÃO</span>
+                                ) : estaEsgotado ? (
+                                    <span style={badgeEsgotado}>ALUGADO</span>
+                                ) : ehBateVolta ? (
+                                    <span style={badgeBateVolta}>⚠️ VOLTA NO DIA ({disp.livresMaximos})</span>
+                                ) : (
+                                    <span style={badgeLivres}>Livres: {disp.livresReais}</span>
+                                )}
+
+                                {!estaEsgotado && <button className="btn-add-peca" type="button">+</button>}
+                            </div>
+
+                            <div className="peca-info" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                              <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>{item.nome}</strong>
+                              <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{item.categoria}</span>
+
+                              {isDeco && pecasCompostas.length > 0 && (
+                                <div style={{ fontSize: '0.72rem', color: '#475569', marginTop: '4px', background: '#f8fafc', padding: '6px 8px', borderRadius: '6px', border: '1px dashed #cbd5e1' }}>
+                                  <strong style={{ color: '#b45309', display: 'block', marginBottom: '2px', fontSize: '0.7rem' }}>🧩 Composição do Pacote:</strong>
+                                  <div style={{ lineHeight: '1.3', color: '#334155' }}>
+                                    {pecasCompostas.map(p => `${p.qtd || 1}x ${p.nome}`).join(' • ')}
+                                  </div>
+                                </div>
+                              )}
+
+                              <b className="txt-sucesso" style={{ marginTop: '4px' }}>R$ {item.financeiro?.valorAluguel || item.preco || 0}</b>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    {itensFiltradosCalculados.length === 0 && <p className="text-center w-100 mt-15" style={{color: 'var(--texto-secundario)'}}>Nenhuma peça encontrada para os filtros selecionados.</p>}
+                  </div>
+                </>
+              );
+            })()}
           </div>
         </div>
       )}

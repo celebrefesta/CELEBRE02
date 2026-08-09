@@ -1,4 +1,5 @@
 import React, { useState, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './ModalCalendarioDisponibilidade.css';
 
 const MESES = [
@@ -7,14 +8,17 @@ const MESES = [
 ];
 
 const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoes = [], onSelectPeca }) => {
+  const navigate = useNavigate();
   const [dataAtual, setDataAtual] = useState(new Date());
   const [busca, setBusca] = useState('');
   const [categoria, setCategoria] = useState('Todas');
   const [itemSelecionadoId, setItemSelecionadoId] = useState('todos'); // 'todos' ou ID do item específico
-  const [modoVisao, setModoVisao] = useState('grid'); // 'grid' (Calendário Tradicional 7 dias) ou 'tabela' (Matriz)
+  const [modoVisao, setModoVisao] = useState('tabela'); // Default 'tabela' (Matriz de Estoque com linha por peça e dias 1-31)
   const [diaDetalhes, setDiaDetalhes] = useState(null); // Para modal/drawer de detalhes do dia
   const [fotoAmpliada, setFotoAmpliada] = useState(null); // Lightbox de fotos ampliadas
   const [apenasAlugados, setApenasAlugados] = useState(false); // Evidenciar dias com aluguel / esmaecer dias livres
+  const [apenasManutencao, setApenasManutencao] = useState(false); // Filtrar somente peças em reforma
+  const [pecaParaSubstituir, setPecaParaSubstituir] = useState(null); // Modal de sugestão de substitutos
 
   const ano = dataAtual.getFullYear();
   const mesIndex = dataAtual.getMonth(); // 0-11
@@ -197,21 +201,45 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
             dataDevolucao: loc.dataDevolucao
           });
 
-          // Registrar por item
+          // Registrar por item (avulso + composição de decorações)
           itens.forEach(item => {
-            const itemId = item.id || item.nome;
             const qtd = Math.max(1, Number(item.qtd || item.quantidade || 1));
 
-            if (!mapa[itemId]) mapa[itemId] = {};
-            if (!mapa[itemId][dataStr]) {
-              mapa[itemId][dataStr] = { alugados: 0, reservas: [] };
-            }
-            mapa[itemId][dataStr].alugados += qtd;
-            mapa[itemId][dataStr].reservas.push({
-              locacaoId: loc.id,
-              numPedido,
-              clienteNome,
-              qtd
+            const registrarUso = (targetKey, qtdUso, nomePeca) => {
+              if (!targetKey) return;
+
+              // Encontrar ID oficial no estoque se existir
+              const pecaOficial = listaPecasEfetiva.find(e => 
+                String(e.id) === String(targetKey) || 
+                (e.codigo && item.codigo && e.codigo === item.codigo) ||
+                (e.nome && (e.nome || '').toLowerCase().trim() === String(nomePeca || targetKey).toLowerCase().trim())
+              );
+
+              const officialId = pecaOficial ? pecaOficial.id : targetKey;
+
+              if (!mapa[officialId]) mapa[officialId] = {};
+              if (!mapa[officialId][dataStr]) {
+                mapa[officialId][dataStr] = { alugados: 0, reservas: [] };
+              }
+              mapa[officialId][dataStr].alugados += qtdUso;
+              mapa[officialId][dataStr].reservas.push({
+                locacaoId: loc.id,
+                numPedido,
+                clienteNome,
+                qtd: qtdUso,
+                viaDecoracao: item.nome !== nomePeca ? item.nome : undefined
+              });
+            };
+
+            // 1. Registrar o próprio item (seja avulso ou a decoração)
+            registrarUso(item.id || item.nome, qtd, item.nome);
+
+            // 2. Se for Decoração / Kit, registrar cada peça da sua composição multiplicada pela quantidade do kit
+            const pecasCompostas = item.itensDecoracao || item.itensDoKit || item.pecasKit || item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || item.especificacoes?.pecasKit || [];
+            pecasCompostas.forEach(p => {
+              const pQtdUnitaria = Math.max(1, Number(p.qtd || p.quantidade || 1));
+              const pQtdTotal = pQtdUnitaria * qtd;
+              registrarUso(p.id || p.nome, pQtdTotal, p.nome);
             });
           });
         }
@@ -221,14 +249,21 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
     return { porItem: mapa, porDiaGeral: mapaDiaGeral };
   }, [locacoes, diasDoMes]);
 
-  // Filtro de peças do estoque por busca e categoria
+  // Filtro de peças do estoque por busca, categoria, peça específica selecionada e apenasManutencao
   const estoqueFiltrado = useMemo(() => {
     return listaPecasEfetiva.filter(item => {
       const bateNome = (item.nome || '').toLowerCase().includes(busca.toLowerCase());
       const bateCat = categoria === 'Todas' || (item.categoria || 'Geral') === categoria;
-      return bateNome && bateCat;
+      const batePecaEspecifica = itemSelecionadoId === 'todos' || String(item.id) === String(itemSelecionadoId);
+      
+      if (apenasManutencao) {
+        const emMaint = item.qtdManutencao !== undefined ? Number(item.qtdManutencao) : (item.status === 'manutencao' ? Number(item.quantidade || 1) : 0);
+        if (emMaint <= 0) return false;
+      }
+
+      return bateNome && bateCat && batePecaEspecifica;
     });
-  }, [listaPecasEfetiva, busca, categoria]);
+  }, [listaPecasEfetiva, busca, categoria, itemSelecionadoId, apenasManutencao]);
 
   // CÁLCULO DE KPIS E ALERTAS DE GIRO RÁPIDO DO MÊS SELECIONADO
   const kpisMes = useMemo(() => {
@@ -315,13 +350,13 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
         {/* CABEÇALHO DOURADO LUXO */}
         <header className="calendario-header">
           <div>
-            <h3>📅 Agenda e Calendário de Disponibilidade</h3>
-            <p>Consulte em tempo real as ocupações do acervo e agendamentos</p>
+            <h3>📊 Matriz de Disponibilidade do Acervo</h3>
+            <p>Consulte em tempo real o estoque disponível e reservas peça por peça dia a dia</p>
           </div>
           <button className="btn-fechar-cal" onClick={onClose} title="Fechar">✕</button>
         </header>
 
-        {/* BARRA DE NAVEGAÇÃO E SELEÇÃO DE VISÃO */}
+        {/* BARRA DE NAVEGAÇÃO E LEGENDAS */}
         <div className="calendario-controles">
           <div className="seletor-mes-ano">
             <button className="btn-nav-mes" onClick={() => navegarMes(-1)}>◀</button>
@@ -329,28 +364,53 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
             <button className="btn-nav-mes" onClick={() => navegarMes(1)}>▶</button>
           </div>
 
-          <div className="modo-visao-toggle">
-            <button 
-              className={`btn-toggle-modo ${modoVisao === 'grid' ? 'ativo' : ''}`}
-              onClick={() => setModoVisao('grid')}
-            >
-              📅 Calendário Mensal
-            </button>
-            <button 
-              className={`btn-toggle-modo ${modoVisao === 'tabela' ? 'ativo' : ''}`}
-              onClick={() => setModoVisao('tabela')}
-            >
-              📊 Tabela de Estoque
-            </button>
-          </div>
-
           <div className="legendas-status">
             <button 
+              type="button"
               className={`btn-toggle-apenas-alugados ${apenasAlugados ? 'ativo' : ''}`}
               onClick={() => setApenasAlugados(prev => !prev)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: apenasAlugados ? '1.5px solid #c5a059' : '1px solid #cbd5e1',
+                background: apenasAlugados ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' : '#ffffff',
+                color: apenasAlugados ? '#fde68a' : '#475569',
+                fontSize: '0.78rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: apenasAlugados ? '0 3px 10px rgba(15, 23, 42, 0.25)' : 'none',
+                transition: '0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
               title="Ocultar/Esmaecer dias sem agendamentos para focar apenas nas datas ocupadas"
             >
               {apenasAlugados ? '✨ Destacando Apenas Ocupados' : '👁️ Evidenciar Dias Alugados'}
+            </button>
+
+            <button 
+              type="button"
+              className={`btn-toggle-apenas-manutencao ${apenasManutencao ? 'ativo' : ''}`}
+              onClick={() => setApenasManutencao(prev => !prev)}
+              style={{
+                padding: '6px 14px',
+                borderRadius: '20px',
+                border: apenasManutencao ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                background: apenasManutencao ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : '#ffffff',
+                color: apenasManutencao ? '#ffffff' : '#991b1b',
+                fontSize: '0.78rem',
+                fontWeight: '800',
+                cursor: 'pointer',
+                boxShadow: apenasManutencao ? '0 3px 10px rgba(127, 29, 29, 0.25)' : 'none',
+                transition: '0.2s',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px'
+              }}
+              title="Filtrar matriz para exibir somente peças atualmente em manutenção/reforma"
+            >
+              {apenasManutencao ? '🛠️ Exibindo Apenas Em Manutenção' : '🛠️ Filtrar Peças em Reforma'}
             </button>
 
             <div className="legenda-item">
@@ -405,13 +465,13 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
           )}
         </div>
 
-        {/* BARRA DE PESQUISA, CATEGORIA E SELEÇÃO DE ITEM */}
-        <div className="filtros-estoque-cal">
+        {/* BARRA DE PESQUISA E CATEGORIA */}
+        <div className="filtros-estoque-cal" style={{ gridTemplateColumns: '1fr auto' }}>
           <div className="box-busca-cal">
             <input
               type="text"
               className="search-input-cal"
-              placeholder="🔍 Procurar peça, cliente ou pedido..."
+              placeholder="🔍 Procurar peça por nome, código ou categoria..."
               value={busca}
               onChange={e => setBusca(e.target.value)}
             />
@@ -429,255 +489,295 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
               <option key={cat} value={cat}>{cat === 'Todas' ? 'Todas as Categorias' : cat}</option>
             ))}
           </select>
-
-          <select
-            className="select-cat-cal select-status-cal"
-            value={itemSelecionadoId}
-            onChange={e => setItemSelecionadoId(e.target.value)}
-          >
-            <option value="todos">✨ Visão Geral de Todos os Pedidos</option>
-            <optgroup label="Filtrar por Peça Especifica">
-              {estoqueFiltrado.map(i => (
-                <option key={i.id} value={i.id}>📦 {i.nome} ({i.quantidade || 1} un)</option>
-              ))}
-            </optgroup>
-          </select>
         </div>
 
-        {/* ÁREA DE CONTEÚDO PRINCIPAL */}
-        <div className="tabela-disponibilidade-scroll">
-
-          {/* VISÃO 1: CALENDÁRIO MENSAL TRADICIONAL (GRID 7 DIAS) */}
-          {modoVisao === 'grid' && (
-            <div className="container-grid-mensal">
-              {/* CABEÇALHO DIAS DA SEMANA */}
-              <div className="header-dias-semana">
-                <div>DOM</div>
-                <div>SEG</div>
-                <div>TER</div>
-                <div>QUA</div>
-                <div>QUI</div>
-                <div>SEX</div>
-                <div>SÁB</div>
-              </div>
-
-              {/* GRADE DE 7 COLUNAS */}
-              <div className="grid-calendario-7col">
-                {grid7Dias.map(cel => {
-                  if (cel.tipo === 'vazio') {
-                    return <div key={cel.key} className="cell-dia-vazio"></div>;
-                  }
-
-                  const isHoje = cel.dataStr === hojeISO;
-                  const todosEventosDoDia = mapaOcupacao.porDiaGeral[cel.dataStr] || [];
-                  const termoBusca = busca.trim().toLowerCase();
-
-                  // Filtrar eventos do dia pelo texto de busca (nome da peça, cliente ou numero do pedido)
-                  const eventosDoDia = todosEventosDoDia.filter(ev => {
-                    if (!termoBusca) return true;
-                    const bateCliente = (ev.clienteNome || '').toLowerCase().includes(termoBusca);
-                    const batePedido = (ev.numPedido || '').toLowerCase().includes(termoBusca);
-                    const bateItens = (ev.itens || []).some(it => (it.nome || it.titulo || '').toLowerCase().includes(termoBusca));
-                    return bateCliente || batePedido || bateItens;
-                  });
-
-                  const temEventos = eventosDoDia.length > 0;
-
-                  const itemEspecifico = listaPecasEfetiva.find(i => String(i.id) === String(itemSelecionadoId));
-                  const ocupacaoItem = itemEspecifico ? (mapaOcupacao.porItem[itemEspecifico.id]?.[cel.dataStr] || { alugados: 0, reservas: [] }) : null;
-                  const qtdTotalItem = itemEspecifico ? Math.max(1, Number(itemEspecifico.quantidade || 1)) : 1;
-                  const emManutencaoItem = itemEspecifico ? obterManutencaoNoDia(itemEspecifico, cel.dataStr) : 0;
-                  const dispRealItem = Math.max(0, qtdTotalItem - emManutencaoItem);
-                  const livresItem = itemEspecifico ? Math.max(0, dispRealItem - ocupacaoItem.alugados) : 0;
-
-                  // Verificar se deve ficar esmaecido/transparente
-                  const deveEsmaecer = (apenasAlugados || termoBusca !== '') && !temEventos && (!itemEspecifico || ocupacaoItem.alugados === 0);
-
-                  return (
-                    <div 
-                      key={cel.key} 
-                      className={`card-dia-mensal ${isHoje ? 'dia-hoje' : ''} ${temEventos ? 'dia-com-evento' : ''} ${deveEsmaecer ? 'dia-transparente' : 'dia-destacado'}`}
-                      onClick={() => setDiaDetalhes({ dia: cel.dia, dataStr: cel.dataStr, eventos: eventosDoDia, ocupacaoItem, itemEspecifico })}
-                    >
-                      <div className="header-card-dia">
-                        <span className={`numero-dia ${isHoje ? 'badge-hoje' : ''}`}>{cel.dia}</span>
-                        {isHoje && <span className="lbl-hoje">HOJE</span>}
-                        
-                        {/* BADGE DISCRETA DE MANUTENÇÃO NO TOPO DO DIA */}
-                        {!itemEspecifico && (() => {
-                          const itensEmMaint = listaPecasEfetiva.filter(i => obterManutencaoNoDia(i, cel.dataStr) > 0);
-                          if (itensEmMaint.length > 0) {
-                            return (
-                              <span 
-                                title={`Peça(s) em reparo nesta data: ${itensEmMaint.map(i => i.nome).join(', ')}`} 
-                                style={{ fontSize: '10px', background: '#fee2e2', color: '#b91c1c', padding: '1px 5px', borderRadius: '4px', border: '1px solid #fca5a5', fontWeight: '800', marginLeft: 'auto' }}
-                              >
-                                🛠️ {itensEmMaint.length}
-                              </span>
-                            );
-                          }
-                          return null;
-                        })()}
-                      </div>
-
-                      {/* EXIBIÇÃO QUANDO UMA PEÇA ESPECÍFICA ESTÁ SELECIONADA */}
-                      {itemEspecifico ? (
-                        <div className="info-peca-dia">
-                          {emManutencaoItem >= qtdTotalItem ? (
-                            <span className="tag-status-grid tag-esgotado" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca' }}>
-                              🛠️ Reparo (0 un)
-                            </span>
-                          ) : ocupacaoItem.alugados === 0 && emManutencaoItem === 0 ? (
-                            <span className="tag-status-grid tag-livre">🟢 {livresItem} un livre</span>
-                          ) : livresItem > 0 ? (
-                            <span className="tag-status-grid tag-parcial">
-                              🟡 {livresItem} liv {emManutencaoItem > 0 ? `(🛠️${emManutencaoItem})` : ''}
-                            </span>
-                          ) : (
-                            <span className="tag-status-grid tag-esgotado">
-                              🔴 Esgotado {emManutencaoItem > 0 ? `(🛠️${emManutencaoItem} man)` : `(${qtdTotalItem} un)`}
-                            </span>
-                          )}
-
-                          {ocupacaoItem.reservas.length > 0 && (
-                            <div className="lista-reservas-min">
-                              {ocupacaoItem.reservas.map((res, rIdx) => (
-                                <div key={rIdx} className="pill-reserva-min" title={`Pedido #${res.numPedido} - ${res.clienteNome}`}>
-                                  📌 #{res.numPedido || 'PED'} ({res.qtd}un)
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      ) : (
-                        /* VISÃO DE EVENTOS DO DIA (Geral) */
-                        <div className="lista-eventos-dia">
-                          {eventosDoDia.slice(0, 2).map((ev, eIdx) => (
-                            <div key={eIdx} className={`pill-evento-grid ${ev.tipoServico?.includes('DECORA') ? 'pill-decora' : 'pill-loc'}`}>
-                              <span className="dot-evento"></span>
-                              <span className="txt-evento">{ev.clienteNome?.split(' ')[0] || ev.numPedido}</span>
-                            </div>
-                          ))}
-
-                          {eventosDoDia.length > 2 && (
-                            <div className="pill-mais-eventos">
-                              + {eventosDoDia.length - 2} agendamentos
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
+        {/* ÁREA DE CONTEÚDO PRINCIPAL: TIMELINE LINHA DO TEMPO (GANTT) DE DISPONIBILIDADE */}
+        <div className="tabela-disponibilidade-scroll" style={{ padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+          {estoqueFiltrado.length === 0 ? (
+            <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
+              <div style={{ fontSize: '36px', marginBottom: '8px' }}>🕵️‍♀️</div>
+              <strong>Nenhum item encontrado no acervo com esses filtros!</strong>
             </div>
-          )}
+          ) : (
+            estoqueFiltrado.map(item => {
+              const qtdTotal = Math.max(1, Number(item.quantidade || 1));
+              const mapaItem = mapaOcupacao.porItem[item.id] || {};
+              const isDeco = (item.categoria || '').toLowerCase().includes('decora') || item.itensDecoracao || item.pecasKit || item.itensDoKit;
 
-          {/* VISÃO 2: TABELA DE MATRIZ DE PEÇAS */}
-          {modoVisao === 'tabela' && (
-            estoqueFiltrado.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                <div style={{ fontSize: '36px', marginBottom: '8px' }}>🕵️‍♀️</div>
-                <strong>Nenhum item encontrado no acervo com esses filtros!</strong>
-              </div>
-            ) : (
-              <table className="tabela-matriz-estoque">
-                <thead>
-                  <tr>
-                    <th className="th-peca-col">PEÇA / PRODUTO (TOTAL)</th>
-                    {diasDoMes.map(({ dia, dataStr }) => {
-                      const isHoje = dataStr === hojeISO;
-                      return (
-                        <th key={dia} className={isHoje ? 'th-hoje' : ''}>
-                          <div className="dia-num">{dia}</div>
-                          <div className="dia-sigla">{new Date(dataStr + 'T12:00:00').toLocaleDateString('pt-BR', { weekday: 'narrow' }).toUpperCase()}</div>
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {estoqueFiltrado.map(item => {
-                    const qtdTotal = Math.max(1, Number(item.quantidade || 1));
-                    const mapaItem = mapaOcupacao.porItem[item.id] || {};
-                    const temManutencaoCadastrada = (item.qtdManutencao !== undefined && item.qtdManutencao > 0) || item.status === 'manutencao';
+              // Coletar todas as reservas e dias com ocupação no mês para esta peça
+              let totalDiasAlugadosNoMes = 0;
+              const reservasNoMesMap = new Map();
 
-                    return (
-                      <tr key={item.id} style={{ backgroundColor: temManutencaoCadastrada ? '#fff1f2' : undefined }}>
-                        <td className="td-peca">
-                          <div className="cell-info-peca">
-                            {item.foto ? (
-                              <img src={item.foto} alt={item.nome} className="thumb-peca-cal" />
-                            ) : (
-                              <div className="thumb-peca-cal" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '16px' }}>📷</div>
-                            )}
-                            <div>
-                              <div className="nome-peca-cal" style={{ color: temManutencaoCadastrada ? '#b91c1c' : '#0f172a', fontWeight: '800' }}>
-                                {item.nome}
-                                {temManutencaoCadastrada && (
-                                  <span style={{ marginLeft: '6px', fontSize: '10px', background: '#fee2e2', color: '#b91c1c', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fca5a5', fontWeight: '800' }}>
-                                    🛠️ MANUTENÇÃO
-                                  </span>
-                                )}
-                              </div>
-                              <div className="qtd-total-cal">
-                                Estoque Total: <b>{qtdTotal} un</b>
-                                {item.dataPrevisaoRetorno && (
-                                  <span style={{ color: '#0284c7', fontWeight: 'bold' }}> (Pronta em {formatarDataBR(item.dataPrevisaoRetorno)})</span>
-                                )}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
+              diasDoMes.forEach(({ dataStr }) => {
+                const ocup = mapaItem[dataStr];
+                if (ocup && ocup.alugados > 0) {
+                  totalDiasAlugadosNoMes++;
+                  (ocup.reservas || []).forEach(res => {
+                    if (!reservasNoMesMap.has(res.locacaoId)) {
+                      reservasNoMesMap.set(res.locacaoId, res);
+                    }
+                  });
+                }
+              });
 
-                        {diasDoMes.map(({ dia, dataStr }) => {
+              const reservasNoMes = Array.from(reservasNoMesMap.values());
+
+              return (
+                <div key={item.id} className="card-timeline-item" style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '16px 20px', boxShadow: '0 2px 8px rgba(15, 23, 42, 0.03)', transition: '0.2s' }}>
+                  
+                  {/* CABEÇALHO DA PEÇA */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div 
+                        style={{ width: '46px', height: '46px', borderRadius: '12px', overflow: 'hidden', background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, border: '1px solid #cbd5e1', cursor: item.foto ? 'pointer' : 'default' }}
+                        onClick={() => item.foto && setFotoAmpliada(item.foto)}
+                      >
+                        {item.foto ? <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: '20px' }}>📷</span>}
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: '800', fontSize: '0.98rem', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <span>{item.nome}</span>
+                          {isDeco && (
+                            <span style={{ background: '#0f172a', color: '#fde68a', border: '1px solid #c5a059', padding: '2px 7px', borderRadius: '6px', fontSize: '10px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                              ✨ DECORAÇÃO COMPLETA
+                            </span>
+                          )}
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '2px' }}>
+                          Categoria: <b style={{ color: '#334155' }}>{item.categoria || 'Geral'}</b> | Estoque Total Físico: <b style={{ color: '#0f172a' }}>{qtdTotal} un</b>
+                          {item.dataPrevisaoRetorno && (
+                            <span style={{ color: '#0284c7', fontWeight: 'bold' }}> (🛠️ Retorno em {formatarDataBR(item.dataPrevisaoRetorno)})</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* STATUS DE OCUPAÇÃO NO MÊS */}
+                    <div style={{ textAlign: 'right' }}>
+                      <span style={{ 
+                        fontSize: '0.76rem', 
+                        fontWeight: '800', 
+                        color: totalDiasAlugadosNoMes > 0 ? '#b45309' : '#15803d', 
+                        background: totalDiasAlugadosNoMes > 0 ? '#fef3c7' : '#dcfce7', 
+                        padding: '4px 12px', 
+                        borderRadius: '20px', 
+                        border: totalDiasAlugadosNoMes > 0 ? '1px solid #fde68a' : '1px solid #86efac',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '6px'
+                      }}>
+                        {totalDiasAlugadosNoMes > 0 ? `⚡ ${totalDiasAlugadosNoMes} dia(s) com reservas` : `🟢 100% Livre em ${MESES[mesIndex]}`}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* BARRA LINHA DO TEMPO DIVIDIDA EM 2 LINHAS (QUINZENAS) */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    
+                    {/* 1ª QUINZENA (DIAS 1 A 15) */}
+                    <div>
+                      <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🗓️ 1ª Quinzena (1 a 15 de {MESES[mesIndex]})</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${diasDoMes.slice(0, 15).length}, 1fr)`, gap: '3px', background: '#f8fafc', padding: '5px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        {diasDoMes.slice(0, 15).map(({ dia, dataStr }) => {
+                          const isHoje = dataStr === hojeISO;
                           const emManutencao = obterManutencaoNoDia(item, dataStr);
                           const dispReal = Math.max(0, qtdTotal - emManutencao);
                           const alugados = mapaItem[dataStr]?.alugados || 0;
                           const livres = Math.max(0, dispReal - alugados);
+                          const reservas = mapaItem[dataStr]?.reservas || [];
+
+                          let bgCell = '#ffffff';
+                          let borderCell = '1px solid #e2e8f0';
+                          let colorText = '#475569';
+                          let badgeIcon = `${livres}`;
 
                           if (emManutencao >= qtdTotal) {
-                            return (
-                              <td key={dia}>
-                                <span className="badge-dia-esgotado" style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca', fontWeight: '800' }} title={`Item em Manutenção até ${formatarDataBR(item.dataPrevisaoRetorno) || 'retorno'}`}>
-                                  🛠️ Reparo
-                                </span>
-                              </td>
-                            );
-                          } else if (alugados === 0 && emManutencao === 0) {
-                            return (
-                              <td key={dia}>
-                                <span className="badge-dia-livre" title={`${livres} de ${qtdTotal} unidades livres`}>
-                                  {livres} un
-                                </span>
-                              </td>
-                            );
-                          } else if (livres > 0) {
-                            return (
-                              <td key={dia}>
-                                <span className="badge-dia-parcial" style={{ background: emManutencao > 0 ? '#fffbeb' : undefined, borderColor: emManutencao > 0 ? '#fde68a' : undefined }} title={`${alugados} alugadas, ${emManutencao} em manutenção, ${livres} livres`}>
-                                  {livres} liv.
-                                </span>
-                              </td>
-                            );
+                            bgCell = '#fef2f2';
+                            borderCell = '1px solid #fca5a5';
+                            colorText = '#dc2626';
+                            badgeIcon = '🛠️';
+                          } else if (alugados > 0 && livres === 0) {
+                            bgCell = '#fef2f2';
+                            borderCell = '1px solid #fecaca';
+                            colorText = '#b91c1c';
+                            badgeIcon = '🔴 0';
+                          } else if (alugados > 0) {
+                            bgCell = '#fef3c7';
+                            borderCell = '1.5px solid #f59e0b';
+                            colorText = '#b45309';
+                            badgeIcon = `🟡 ${livres}`;
                           } else {
-                            return (
-                              <td key={dia}>
-                                <span className="badge-dia-esgotado" style={{ background: '#fef2f2', color: '#b91c1c', border: '1px solid #fecaca' }} title={`0 livres (${alugados} alugadas, ${emManutencao} em manutenção)`}>
-                                  {emManutencao > 0 ? '🛠️ 0' : '🚫 0'}
-                                </span>
-                              </td>
-                            );
+                            bgCell = '#f0fdf4';
+                            borderCell = '1px solid #bbf7d0';
+                            colorText = '#16a34a';
+                            badgeIcon = `🟢 ${livres}`;
                           }
-                        })}
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            )
-          )}
 
+                          return (
+                            <div 
+                              key={dia}
+                              onClick={() => setDiaDetalhes({ dia, dataStr, eventos: mapaOcupacao.porDiaGeral[dataStr] || [], ocupacaoItem: mapaItem[dataStr] || { alugados: 0, reservas: [] }, itemEspecifico: item })}
+                              style={{
+                                height: '44px',
+                                background: bgCell,
+                                border: borderCell,
+                                borderRadius: '6px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                opacity: apenasAlugados && alugados === 0 && emManutencao === 0 ? 0.25 : 1,
+                                transition: 'all 0.2s ease',
+                                boxShadow: alugados > 0 ? '0 2px 6px rgba(245, 158, 11, 0.2)' : 'none'
+                              }}
+                              title={`Dia ${dia} (${dataStr}) - ${livres} un livres de ${qtdTotal} ${reservas.length > 0 ? `| ${reservas.map(r => `#${r.numPedido} - ${r.clienteNome}`).join(', ')}` : ''}`}
+                            >
+                              <span style={{ fontSize: '10px', fontWeight: '800', color: isHoje ? '#2563eb' : '#94a3b8' }}>
+                                {dia}{isHoje ? '•' : ''}
+                              </span>
+                              <span style={{ fontSize: '10px', fontWeight: '800', color: colorText, marginTop: '1px' }}>
+                                {badgeIcon}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* 2ª QUINZENA (DIAS 16 AO FIM DO MÊS) */}
+                    <div>
+                      <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>🗓️ 2ª Quinzena (16 a {diasDoMes.length} de {MESES[mesIndex]})</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${diasDoMes.slice(15).length}, 1fr)`, gap: '3px', background: '#f8fafc', padding: '5px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                        {diasDoMes.slice(15).map(({ dia, dataStr }) => {
+                          const isHoje = dataStr === hojeISO;
+                          const emManutencao = obterManutencaoNoDia(item, dataStr);
+                          const dispReal = Math.max(0, qtdTotal - emManutencao);
+                          const alugados = mapaItem[dataStr]?.alugados || 0;
+                          const livres = Math.max(0, dispReal - alugados);
+                          const reservas = mapaItem[dataStr]?.reservas || [];
+
+                          let bgCell = '#ffffff';
+                          let borderCell = '1px solid #e2e8f0';
+                          let colorText = '#475569';
+                          let badgeIcon = `${livres}`;
+
+                          if (emManutencao >= qtdTotal) {
+                            bgCell = '#fef2f2';
+                            borderCell = '1px solid #fca5a5';
+                            colorText = '#dc2626';
+                            badgeIcon = '🛠️';
+                          } else if (alugados > 0 && livres === 0) {
+                            bgCell = '#fef2f2';
+                            borderCell = '1px solid #fecaca';
+                            colorText = '#b91c1c';
+                            badgeIcon = '🔴 0';
+                          } else if (alugados > 0) {
+                            bgCell = '#fef3c7';
+                            borderCell = '1.5px solid #f59e0b';
+                            colorText = '#b45309';
+                            badgeIcon = `🟡 ${livres}`;
+                          } else {
+                            bgCell = '#f0fdf4';
+                            borderCell = '1px solid #bbf7d0';
+                            colorText = '#16a34a';
+                            badgeIcon = `🟢 ${livres}`;
+                          }
+
+                          return (
+                            <div 
+                              key={dia}
+                              onClick={() => setDiaDetalhes({ dia, dataStr, eventos: mapaOcupacao.porDiaGeral[dataStr] || [], ocupacaoItem: mapaItem[dataStr] || { alugados: 0, reservas: [] }, itemEspecifico: item })}
+                              style={{
+                                height: '44px',
+                                background: bgCell,
+                                border: borderCell,
+                                borderRadius: '6px',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                cursor: 'pointer',
+                                opacity: apenasAlugados && alugados === 0 && emManutencao === 0 ? 0.25 : 1,
+                                transition: 'all 0.2s ease',
+                                boxShadow: alugados > 0 ? '0 2px 6px rgba(245, 158, 11, 0.2)' : 'none'
+                              }}
+                              title={`Dia ${dia} (${dataStr}) - ${livres} un livres de ${qtdTotal} ${reservas.length > 0 ? `| ${reservas.map(r => `#${r.numPedido} - ${r.clienteNome}`).join(', ')}` : ''}`}
+                            >
+                              <span style={{ fontSize: '10px', fontWeight: '800', color: isHoje ? '#2563eb' : '#94a3b8' }}>
+                                {dia}{isHoje ? '•' : ''}
+                              </span>
+                              <span style={{ fontSize: '10px', fontWeight: '800', color: colorText, marginTop: '1px' }}>
+                                {badgeIcon}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                  </div>
+
+                  {/* SEÇÃO DE RESERVAS DO MÊS COM FILTRO / DROPDOWN COMPACTO POR CLIENTE */}
+                  {reservasNoMes.length > 0 && (
+                    <div style={{ marginTop: '10px', display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#475569', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        📌 RESERVAS ({reservasNoMes.length}):
+                      </span>
+
+                      <select
+                        style={{
+                          padding: '5px 12px',
+                          borderRadius: '10px',
+                          border: '1px solid #cbd5e1',
+                          background: '#0f172a',
+                          color: '#fde68a',
+                          fontSize: '0.78rem',
+                          fontWeight: '700',
+                          cursor: 'pointer',
+                          maxWidth: '100%',
+                          boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)'
+                        }}
+                        defaultValue=""
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val) {
+                            const resEncontrada = reservasNoMes.find(r => String(r.locacaoId) === String(val));
+                            if (resEncontrada) {
+                              const diaEncontrado = diasDoMes.find(({ dataStr }) => {
+                                const ocup = mapaItem[dataStr];
+                                return ocup && (ocup.reservas || []).some(r => String(r.locacaoId) === String(val));
+                              });
+
+                              setDiaDetalhes({ 
+                                dia: diaEncontrado ? diaEncontrado.dia : 1, 
+                                dataStr: diaEncontrado ? diaEncontrado.dataStr : hojeISO, 
+                                eventos: mapaOcupacao.porDiaGeral[diaEncontrado ? diaEncontrado.dataStr : hojeISO] || [], 
+                                ocupacaoItem: mapaItem[diaEncontrado ? diaEncontrado.dataStr : hojeISO] || { alugados: 0, reservas: [] }, 
+                                itemEspecifico: item 
+                              });
+                            }
+                          }
+                        }}
+                      >
+                        <option value="">✨ Ver clientes e pedidos ({reservasNoMes.length})</option>
+                        {reservasNoMes.map((res, rIdx) => (
+                          <option key={rIdx} value={res.locacaoId}>
+                            👤 #{res.numPedido || 'PED'} - {res.clienteNome} ({res.qtd} un) {res.viaDecoracao ? `[Kit: ${res.viaDecoracao}]` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
+                </div>
+              );
+            })
+          )}
         </div>
 
         {/* MODAL DE DETALHES DO DIA SELECIONADO COM FOTOS DE PRÉVIA */}
@@ -712,13 +812,42 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
                           
                           {/* CABEÇALHO DO PEDIDO */}
                           <div className="submodal-reserva-top">
-                            <div>
-                              <span className="submodal-pedido-tag">{ev.numPedido || 'PEDIDO'}</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <span className="submodal-pedido-tag">#{ev.numPedido || 'PEDIDO'}</span>
                               <span className="submodal-cliente-nome">{ev.clienteNome}</span>
                             </div>
-                            <span className={`pill-servico-sub ${ev.tipoServico?.includes('DECORA') ? 'pill-decora' : 'pill-loc'}`}>
-                              {ev.tipoServico || 'LOCAÇÃO'}
-                            </span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                              <span className={`pill-servico-sub ${ev.tipoServico?.includes('DECORA') ? 'pill-decora' : 'pill-loc'}`}>
+                                {ev.tipoServico || 'LOCAÇÃO'}
+                              </span>
+                              {ev.locacaoId && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onClose();
+                                    setDiaDetalhes(null);
+                                    navigate(`/locacoes/editar/${ev.locacaoId}`);
+                                  }}
+                                  style={{
+                                    background: '#0f172a',
+                                    color: '#fde68a',
+                                    border: '1px solid #334155',
+                                    padding: '4px 10px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.72rem',
+                                    fontWeight: '800',
+                                    cursor: 'pointer',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    boxShadow: '0 2px 6px rgba(15, 23, 42, 0.2)'
+                                  }}
+                                  title="Abrir página de edição do pedido"
+                                >
+                                  🔗 Abrir Pedido ➔
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           {/* STATUS E DATAS DE RETIRADA / DEVOLUÇÃO */}
@@ -862,13 +991,20 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
 
                                 {/* ALERTA DE CONFLITO OPERACIONAL: REPARO X FESTA */}
                                 {evConflito && (
-                                  <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '8px 12px', color: '#b91c1c', fontSize: '0.76rem' }}>
+                                  <div style={{ background: '#fee2e2', border: '1px solid #fca5a5', borderRadius: '8px', padding: '10px 12px', color: '#b91c1c', fontSize: '0.76rem' }}>
                                     <div style={{ fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
                                       🚨 ALERTA DE CONFLITO OPERACIONAL: MANUTENÇÃO X FESTA!
                                     </div>
                                     <div style={{ marginTop: '2px', lineHeight: '1.3' }}>
                                       Esta peça está reservada no pedido <b>#{evConflito.numPedido} ({evConflito.clienteNome})</b> para esta mesma data! Conclua o reparo no acervo antes da entrega ou substitua a peça no pedido!
                                     </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => setPecaParaSubstituir({ item: itMaint, dataStr: diaDetalhes.dataStr, numPedido: evConflito.numPedido, clienteNome: evConflito.clienteNome })}
+                                      style={{ marginTop: '8px', background: '#991b1b', color: '#ffffff', border: 'none', padding: '5px 12px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 2px 6px rgba(153, 27, 27, 0.3)' }}
+                                    >
+                                      🔄 Sugerir Peça Substituta Livre
+                                    </button>
                                   </div>
                                 )}
                               </div>
@@ -891,6 +1027,27 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
                     </p>
                   </div>
                 )}
+              </div>
+
+              {/* RODAPÉ DO SUBMODAL */}
+              <div className="submodal-footer" style={{ padding: '14px 22px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', textAlign: 'right' }}>
+                <button
+                  type="button"
+                  onClick={() => setDiaDetalhes(null)}
+                  style={{
+                    padding: '8px 20px',
+                    borderRadius: '20px',
+                    border: '1px solid #cbd5e1',
+                    background: '#0f172a',
+                    color: '#ffffff',
+                    fontSize: '0.82rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    boxShadow: '0 2px 8px rgba(15, 23, 42, 0.2)'
+                  }}
+                >
+                  ✕ Fechar Detalhes
+                </button>
               </div>
             </div>
           </div>
@@ -915,6 +1072,108 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
               >
                 ✕
               </button>
+            </div>
+          </div>
+        )}
+
+        {/* MODAL DE SUGESTÃO DE PEÇA SUBSTITUTA LIVRE */}
+        {pecaParaSubstituir && (
+          <div className="submodal-overlay" style={{ zIndex: 180000 }} onClick={() => setPecaParaSubstituir(null)}>
+            <div className="submodal-card" style={{ maxWidth: '580px' }} onClick={e => e.stopPropagation()}>
+              <div className="submodal-header" style={{ background: 'linear-gradient(135deg, #1e1b4b 0%, #312e81 100%)', borderBottom: '2px solid #818cf8' }}>
+                <div>
+                  <h4>🔄 Sugestão de Peças Substitutas</h4>
+                  <p style={{ margin: 0, fontSize: '0.75rem', color: '#c7d2fe' }}>
+                    Opções disponíveis da categoria <b>{pecaParaSubstituir.item.categoria || 'Geral'}</b> para o dia {formatarDataBR(pecaParaSubstituir.dataStr)}
+                  </p>
+                </div>
+                <button className="btn-fechar-sub" onClick={() => setPecaParaSubstituir(null)}>✕</button>
+              </div>
+
+              <div className="submodal-body">
+                <div style={{ background: '#e0e7ff', border: '1px solid #c7d2fe', padding: '10px 14px', borderRadius: '10px', fontSize: '0.8rem', color: '#3730a3', marginBottom: '14px', fontWeight: '700' }}>
+                  Substituindo a peça em reparo: <b>{pecaParaSubstituir.item.nome}</b> {pecaParaSubstituir.numPedido ? `no Pedido #${pecaParaSubstituir.numPedido} (${pecaParaSubstituir.clienteNome})` : ''}
+                </div>
+
+                {(() => {
+                  const catTarget = pecaParaSubstituir.item.categoria || 'Geral';
+                  const dataTarget = pecaParaSubstituir.dataStr;
+
+                  const substitutosLivres = listaPecasEfetiva.filter(p => {
+                    if (String(p.id) === String(pecaParaSubstituir.item.id)) return false;
+                    const catP = p.categoria || 'Geral';
+                    if (catP !== catTarget && catTarget !== 'Todas') return false;
+
+                    const emMaint = obterManutencaoNoDia(p, dataTarget);
+                    const qtdTotal = Math.max(1, Number(p.quantidade || 1));
+                    const dispReal = Math.max(0, qtdTotal - emMaint);
+                    const alugados = mapaOcupacao.porItem[p.id]?.[dataTarget]?.alugados || 0;
+                    const livres = Math.max(0, dispReal - alugados);
+
+                    return livres > 0;
+                  });
+
+                  if (substitutosLivres.length === 0) {
+                    return (
+                      <div style={{ textAlign: 'center', padding: '30px', color: '#64748b' }}>
+                        <div style={{ fontSize: '32px' }}>⚠️</div>
+                        <strong>Nenhuma outra peça desta mesma categoria possui unidades livres nesta data!</strong>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {substitutosLivres.map((sub, sIdx) => {
+                        const emMaint = obterManutencaoNoDia(sub, dataTarget);
+                        const qtdTotal = Math.max(1, Number(sub.quantidade || 1));
+                        const dispReal = Math.max(0, qtdTotal - emMaint);
+                        const alugados = mapaOcupacao.porItem[sub.id]?.[dataTarget]?.alugados || 0;
+                        const livres = Math.max(0, dispReal - alugados);
+                        const fotoSub = sub.foto || sub.imagem;
+
+                        return (
+                          <div key={sIdx} style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', boxShadow: '0 2px 6px rgba(0,0,0,0.04)' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                              <div style={{ width: '44px', height: '44px', borderRadius: '8px', overflow: 'hidden', background: '#f8fafc', border: '1px solid #e2e8f0', flexShrink: 0 }}>
+                                {fotoSub ? <img src={fotoSub} alt={sub.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', color: '#94a3b8' }}>📷</span>}
+                              </div>
+                              <div>
+                                <strong style={{ color: '#0f172a', fontSize: '0.92rem', display: 'block' }}>{sub.nome}</strong>
+                                <span style={{ fontSize: '0.76rem', color: '#64748b' }}>CÓD: {sub.codigo || 'S/N'} | Categoria: {sub.categoria || 'Geral'}</span>
+                              </div>
+                            </div>
+
+                            <div style={{ textAlign: 'right' }}>
+                              <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', padding: '3px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-block', marginBottom: '4px' }}>
+                                🟢 {livres} un livre(s)
+                              </span>
+                              <br />
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(sub.nome);
+                                  alert(`✅ Nome da peça substituta "${sub.nome}" copiado! Agora basta editar o pedido e substituir.`);
+                                  setPecaParaSubstituir(null);
+                                }}
+                                style={{ background: '#4338ca', color: '#ffffff', border: 'none', padding: '5px 10px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
+                              >
+                                📋 Copiar Nome Substituta
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <div className="submodal-footer" style={{ padding: '12px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', textAlign: 'right' }}>
+                <button type="button" onClick={() => setPecaParaSubstituir(null)} style={{ padding: '6px 16px', borderRadius: '16px', border: '1px solid #cbd5e1', background: '#334155', color: '#fff', fontSize: '0.8rem', fontWeight: '800', cursor: 'pointer' }}>
+                  ✕ Fechar Sugestões
+                </button>
+              </div>
             </div>
           </div>
         )}

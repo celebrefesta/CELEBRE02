@@ -71,20 +71,27 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
   - Organização por categorias, valor de locação, valor de reposição e estado de conservação (Excelente, Bom, Avariado).
 - **Cálculo de Disponibilidade Inteligente**:
   - Algoritmo que cruza o período desejado com as locações confirmadas, desconsiderando pedidos cancelados ou orçamentos expirados para evitar reservas duplicadas.
-- **Módulo Avançado de Manutenção & Reparabilidade**:
-  - **Validação de Conflito Manutenção x Locação**: Impede o envio de peças alugadas para manutenção sem prazo hábil de retorno. Quando um item entra em reparo hoje, o sistema calcula a data limite de prontidão (1 dia antes da saída para a festa) e bloqueia prazos que comprometam o pedido do cliente.
-  - **Baixa Rápida de Conserto**: Botão integrado `✅ Reparo Concluído (Liberar)` no rodapé do controle de manutenção para retornar peças instantaneamente ao estoque disponível.
-  - **Painel & Calendário de Avarias (`ModalCalendarioDisponibilidade.jsx`)**: Indicador `🛠️ N` na grade de dias, detalhamento de peças sob reparo (fotos, motivo, custo e prontidão) e alertas visuais de conflito operacional.
+- **Módulo Avançado de Manutenção & Rastreabilidade de Kit/Decoração**:
+  - **Validação de Conflito Manutenção x Locação**: Rastreia se peças avulsas ou **peças embutidas em receitas de Kits e Decorações Completas** possuem reservas ativas no período do conserto.
+  - **Bloqueio e Ajuste Automático de Segurança**: Alerta o usuário se a manutenção deixar o estoque livre zerado para o cliente, oferecendo limitar o reparo à quantidade livre segura.
+  - **Ação em Lote de Manutenção**: Botão `✅ Concluir Reparo dos Selecionados` na barra de seleção em massa do estoque para dar baixa e liberar múltiplas peças reformadas de uma só vez.
+  - **Insígnia de Conflito em Tempo Real**: Tarja vermelha na tabela de acervo identificando o pedido e cliente afetados pelo atraso do reparo.
 
 ---
 
-### 📑 4.5. Locações, Orçamentos e Pedidos (`/src/pages/Locacoes/`)
+### 📑 4.5. Locações, Orçamentos e Matriz de Disponibilidade (`/src/pages/Locacoes/`)
 - **Nova Locação / Editar (`NovaLocacao.jsx`, `EditarLocacao.jsx`)**:
   - **Modalidade Pegue e Monte**: Seleção rápida que ajusta regras operacionais e desabilita campos de frete/entregas.
   - **Desconto Flexível**: Alternância entre valor em Reais (**`R$`**) e Porcentagem (**`%`**).
   - **Catálogo Modal Luxury**: Modal visual estilo e-commerce para seleção e adição de peças ao pedido com 1 clique.
-  - **Botão "🛒 Faltou algo? (Comprar)"**: Atalho para registro imediato de nova compra de itens faltantes.
-  - **Sinal e Condições de Pagamento**: Opções rápidas de sinal (50% / 100%), cálculo de saldo restante e geração de recibos.
+- **Matriz de Disponibilidade & Timeline Gantt (`ModalCalendarioDisponibilidade.jsx`)**:
+  - **Visão Quinzena de 2 Linhas no Mobile**: Organização do mês em 1ª Quinzena (1-15) e 2ª Quinzena (16-fim), dobrando a largura e clareza visual dos dias em telas pequenas.
+  - **Seletor Compacto de Reservas (`📌 RESERVAS (X)`)**: Dropdown que agrupa clientes e pedidos do mês sob o card da peça sem poluir a interface.
+  - **Navegação Direta 1-Click**: Botão `🔗 Abrir Pedido ➔` no submodal para saltar direto para a edição da locação sem buscas manuais.
+  - **Filtro de Peças em Reforma**: Atalho `🛠️ Filtrar Peças em Reforma` para isolar itens sob reparo.
+  - **Sugestão de Substitutos**: Botão `🔄 Sugerir Peça Substituta Livre` que encontra itens disponíveis da mesma categoria na data do conflito.
+- **Alertas Operacionais Inteligentes na Tabela de Locações (`Locacoes.jsx`)**:
+  - Sobrescreve o status de separação por **Vermelho Alerta de Emergência**: `🚨 REPARO PENDENTE! (NomePeça até DD/MM)` caso haja item em reparo sem prontidão a tempo.
 
 ---
 
@@ -104,9 +111,12 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ---
 
-### 🛒 4.8. Compras & Fornecedores (`/src/pages/Compras/`, `/Fornecedores/`)
+### 🛒 4.8. Compras, Aquisições & Fornecedores (`/src/pages/Compras/`, `/Fornecedores/`)
 - **Gestão de Fornecedores (`Fornecedores.jsx`)**: Cadastro de parceiros, fabricantes e contatos.
-- **Ordens de Compra (`Compras.jsx`, `NovaCompra.jsx`)**: Registro de aquisição de novas peças para reposição ou expansão do acervo, integrando os custos diretamente ao financeiro.
+- **Ordens de Compra (`Compras.jsx`, `NovaCompra.jsx`)**:
+  - **Ordenação Inteligente**: Reordena automaticamente os itens com status `No Acervo` / `Chegou` / `Concluído` para o **rodapé da tabela**, mantendo os itens pendentes e a caminho em destaque no topo.
+  - **Estilo Transparente / Esmaecido**: Aplica opacidade de 45% (`opacity: 0.45`), texto riscado (`line-through`) e fundo discreto nos itens já finalizados.
+  - **Cards KPI & Abas Enterprise Luxury**: Cards de estatísticas e abas estilizadas com gradientes pastéis, contornos dourados e sombras 3D elevadas.
 
 ---
 
@@ -148,134 +158,44 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 1. **Foco Total no Segmento de Festas**: Atende especificamente os modelos *Pegue e Monte* e *Eventos Completos*, resolvendo dores reais de estoque fracionado e disponibilidade por data.
 2. **Autonomia de Recebimento**: Os valores das locações caem diretamente na conta bancária do cliente via integração própria do Mercado Pago ou Pix direto.
 3. **Agilidade no Fechamento**: Catálogo digital visual, orçamento instantâneo, envio por WhatsApp em 1 clique e assinatura digital de contratos aceleram o ciclo de vendas.
-4. **Segurança Operacional**: Prevenção de duplicidade de aluguel no acervo e controle rigoroso de acessos de funcionários.
+4. **Segurança Operacional**: Prevenção de duplicidade de aluguel no acervo, controle rigoroso de acessos de funcionários e rastreamento automático de itens em manutenção.
 
 ---
 
 ## 🚀 6. STATUS ATUAL E ESTABILIDADE
 
-- **Compilação / Build**: Verificado e aprovado via `npm run build` com **0 erros**.
+- **Compilação / Build**: Verificado e aprovado via `npm run build` com **0 erros** (`✓ built in 12.57s - 13.68s`).
 - **Pronto para Escala**: Estrutura modular preparada para receber novos tenants e suportar a operação diária com estabilidade e elegância visual.
-- **Próximos Passos**: Acessar a aba **Configurações -> Empresa** para inserir o seu `mpAccessToken` do Mercado Pago ou sua Chave PIX oficial.
-- **Testes**: Realizar testes de ponta a ponta na criação de orçamentos e locações na rotina diária da Celebre Decorações.
 
 ---
 
 ## 📅 7. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
-### 🗓️ Sessão: 03/08/2026 — 11h34 às 11h49 (BRT)
+### 🗓️ Sessão: 09/08/2026 — 17h30 às 20h18 (BRT)
 
-**Funcionalidades entregues:**
-- ✅ **PDF de Vistoria Premium v3 (`gerarComprovanteCheckinPDF.js`)** — Reformulação completa:
-  - **Tabela zebrificada**: Linhas alternando branco/cinza para melhor leitura visual.
-  - **Destaque de Avarias em Vermelho**: Linhas avariadas com `fillColor` vermelho suave, texto vermelho escuro e borda lateral 1.5mm. Faltas em laranja suave.
-  - **Coluna `Status` com badge colorido**: ✅ OK / 🛠️ AVARIA / ❌ FALTOU em negrito.
-  - **Página de Sumário de Irregularidades** (apenas VOLTA): Contadores visuais, tabela de avarias com motivo e custo estimado, tabela de faltas e total de custo de reparos.
-  - **Página de Fotos de Vistoria**: Grade 2×3 (máx 6 fotos embutidas em Base64), legenda numerada, aviso se houver mais de 6 fotos.
-  - **Paginação no rodapé**: `Pág. X de Y` no canto superior direito de cada página.
-  - **Badge IDA/VOLTA**: Verde (saída) / laranja (devolução) no quadro de informações.
-- ✅ **Bug Crítico Corrigido — Avarias → Manutenção (`CheckoutPage.jsx`)**:
-  - **Causa raiz**: `if (itemAv.enviarManutencao && ...)` nunca era verdadeiro (campo nunca atribuído).
-  - **Correção**: Condição removida. Toda peça `statusRetorno === 'avaria'` com ID válido é automaticamente encaminhada ao Firestore com `qtdManutencao`, `statusManutencao`, `motivoManutencao` e `dataEntradaManutencao`.
-  - **Campos inline de avaria**: Ao marcar Avaria, o card expande (animação `slideDownFade`) com campo de descrição do dano e custo estimado de reparo.
-  - **Mensagem de confirmação**: `alert` informa quantas peças foram para manutenção.
-  - **Fotos passadas ao PDF**: `fotosVistoria` incluído nos `dadosAdicionais` do gerador.
-- ✅ **CSS `CheckoutPage.css`**: Novos estilos `.avaria-detail-box`, `.avaria-label`, `.avaria-input-text/custo`, `.avaria-manut-info` com dark mode completo.
-- ✅ **Build de Produção Verificado**:
-  - `npm run build` executado com **0 erros** (`built in 14.07s`, 1140 módulos).
-
-**Pendente para próxima sessão:**
-- 🟢 **Landing Page / Catálogo Público**: Melhorias na vitrine comercial para novos clientes.
-
-### 🗓️ Sessão: 01/08/2026 — 12h26 às 15h05 (BRT)
-
-**Funcionalidades entregues:**
-- ✅ **Repaginação Visual & Funcional do Módulo de Estoque e Acervo (`Estoque.jsx` / `Estoque.css`)**:
-  - **Dashboard de KPIs em Fila Única (5 Colunas)**: 5 cards alinhados no desktop (`repeat(5, 1fr)`): *Total de Itens*, *Valor do Acervo (R$)*, *Valor Reposição (R$)*, *Em Manutenção* e *Visível no Catálogo (100%)*, com dimensões e proporções 100% simétricas.
-  - **Cards Luxury com Galeria & Zoom**: Exibição em grade com hover 3D suave, badges de status (*Disponível*, *Alugado*, *Em Reparo*, *S/ Estoque*), diferenciação visual (*Kit*, *Peça do Kit*, *Decoração*) e botão de lupa `🔍` para ampliação em alta resolução.
-  - **Barra Flutuante de Seleção em Lote**: Aparição com animação ao marcar itens, exclusão em massa e desmarcação em 1 clique.
-  - **Dark Mode Completo no Estoque & Cadastro**: Implementados blocos de regras CSS `[data-theme='dark']` abrangendo cards, formulários, modais de manutenção, seletor de pedidos e leitor QR Code em `Estoque.css` e `CadastroEstoque.css`.
-- ✅ **Correção Definitiva de Responsividade e Vazamento Mobile (DevTools 900px Fix)**:
-  - **Eliminação do Vazamento de 900px**: Identificada causa raiz no inspector DevTools (subtítulo de localização sem quebra de palavra forçando 900px). Aplicadas regras de `word-break: break-all`, `overflow-wrap: anywhere` e `min-width: 0` nos containers.
-  - **Fix do Seletor `≡ Lista ⊞ Cards`**: Travada estrutura horizontal (`white-space: nowrap`), impedindo que os botões de alternância se empilhassem em duas linhas.
-  - **Alinhamento dos Valores na Tabela Mobile**: Corrigidos flexbox de `Categoria:`, `Valor Locação:`, `Estoque Disp.:` e `Status:`, retornando todos os valores para a área visível do card mobile.
-- ✅ **Correção de Linter CSS**:
-  - Adicionada propriedade padrão `line-clamp: 2;` no `Estoque.css` ao lado de `-webkit-line-clamp: 2;`, eliminando alertas da IDE.
-- ✅ **Build de Produção Verificado**:
-  - `npx vite build` executado com **0 erros** (`built in 12.44s`).
-
-### 🗓️ Sessão: 31/07/2026 — 14h30 (BRT)
-
-**Funcionalidades entregues:**
-- ✅ **Auditoria de `style={{}}` inline — CheckinPage.jsx** — Removido inline style `{ touchAction: 'none', width: '100%', height: '100%' }` do `<SignatureCanvas>` (coberto pelo CSS `.sig-canvas-std`); removido `style={{ marginTop: '12px' }}` e substituído pela classe `.form-group-margin-top`
-- ✅ **Auditoria de `style={{}}` inline — CheckoutPage.jsx** — Confirmado que os únicos inline styles restantes (`style={{ display:'none' }}` e `style={{ width: progressoPct }}`) são corretos e necessários
-- ✅ **Dark mode CheckoutPage — Cobertura completa** — Adicionados overrides para todos os elementos exclusivos da página que não eram cobertos pelo CheckinPage.css: `.checkout-page-container`, `.btn-voltar-checkout`, `.header-badge-modo.volta`, `.checkout-alert-box`, `.alert-badge`, `.checkout-resumo-banner-vip`, `.obs-col-field`, `.input-std-text/select/textarea`, `.sig-wrapper-std`, `.sig-canvas-element`, `.sig-hint-txt`, `.sig-preview-box`, `.msg-bip-toast`, `.camera-scanner-wrapper`, `.checkout-loading-screen`, `.checkout-footer-fixed`
-- ✅ **PDF de Check-out corrigido** — `handleGerarPDF()` no CheckoutPage agora chama `gerarComprovanteCheckinPDF(locacao, 'VOLTA', itensState, dadosAdicionais, dadosEmpresa)` com a assinatura e responsável corretamente passados como `dadosAdicionais` (correto como no CheckinPage)
-- ✅ **Salvar conferência no Firestore (CheckoutPage)** — `handleSalvarCheckout()` agora contém a lógica de envio de peças avariadas para manutenção no estoque (incrementa `qtdManutencao`, seta `statusManutencao: 'em_manutencao'`), espelhando o CheckinPage
-- ✅ **Build verificado** — `npm run build` com **0 erros** após todas as mudanças
-
-### 🗓️ Sessão: 03/08/2026 — 16h18 às 18h42 (BRT)
-
-**Funcionalidades e Refatorações entregues:**
-- ✅ **Redesign Completo UI/UX da Página de Devolução (`CheckoutPage.jsx` / `CheckoutPage.css`)**:
-  - **Eliminação Total de Vazamentos e Estouros de Tela**: Aplicado sistema de design com prefixo único `co-*`, resolvendo conflitos de CSS com a página de check-in.
-  - **Banner de Resumo KPI em 2 Colunas Perfeitas**: Corrigida a contenção de texto com `min-width: 0`, `overflow: hidden` e `text-overflow: ellipsis`, permitindo que clientes com nomes extensos não quebrem o grid.
-  - **Cards de Itens Reestruturados**: Hierarquia limpa dividida em topo (imagem 44x44, tags de `Cód`, `Categoria` e `Localização` em linha horizontal contínua), stepper compacto e botões de status em 3 colunas simétricas (`🟢 OK`, `🛠️ Avaria`, `❌ Faltou`).
-  - **Limpeza Visual do Painel Mestre**: Botão `⤢ Expandir` reposicionado ao lado do seletor de Categoria, count badge `(1/1)` sem cortes, e fim do "card sobre card" na busca.
-- ✅ **⚡ Ação Rápida "Devolver Tudo Inteiro (1-Click)"**:
-  - Botão no painel de ferramentas que marca todas as peças do pedido como devolvidas em perfeito estado instantaneamente.
-- ✅ **💰 Cálculo Automático de Taxa de Ressarcimento (Avarias & Faltas)**:
-  - Painel executivo que soma em tempo real os custos de reparos/avarias e reposição de itens faltantes, exibindo a cobrança total estimada.
-- ✅ **💬 Disparo Automático de Comprovante via WhatsApp**:
-  - Integração com WhatsApp Web/App que gera e envia mensagem formatada com o resumo da vistoria de devolução em 1 clique.
-- ✅ **📜 Histórico Comparativo de Vistorias (Saída vs Volta)**:
-  - Painel expansível que compara lado a lado os dados e fotos da entrega (Check-in/Ida) com a devolução (Check-out/Volta).
-- ✅ **🛡️ Regra Inteligente de Retenção de Fotos (Lifecycle Policy)**:
-  - Devoluções sem irregularidades: Fotos temporárias com expiração automática em 15 dias pós-devolução (`expirarFotosEm`).
-  - Devoluções com Avaria/Falta: Fotos retidas permanentemente no sistema (`fotosManterPermanente: true`).
-- ✅ **🏰 Estações Finais Reordenadas & Rodapé Full-Width**:
-  - Ordem das estações atualizada (1. Responsável & Obs, 2. Fotos da Vistoria, 3. Assinatura do Cliente por último).
-  - Botão `🛬 Finalizar Devolução` configurado em **100% de largura total** no rodapé fixo.
-- ✅ **Build de Produção Verificado**:
-  - `npm run build` executado e aprovado com **0 erros** (`built in 13.88s ~ 16.13s`).
-
----
-
-## 🔮 8. PRÓXIMOS PASSOS A SEGUIR
-
-1. **📱 Validação em Dispositivos Móveis Reais**:
-   - Testar o fluxo de conferência de devolução em smartphones no galpão para validar a facilidade de clique e captura de fotos pela câmera do celular.
-2. **🧹 Módulo de Limpeza Automática de Mídia (Cron / Function)**:
-   - Executar a rotina de limpeza para remover Base64 das fotos cuja data `expirarFotosEm` seja anterior a hoje e `!fotosManterPermanente`.
-3. **💬 Modelos de Notificação Financeira**:
-   - Integrar o valor do Painel de Ressarcimento diretamente como lançamento de receita/cobrança no Módulo Financeiro.
-
----
-
-### 🗓️ Sessão: 05/08/2026 — 18h30 às 20h38 (BRT)
-
-**Funcionalidades e Refatorações entregues:**
-- ✅ **Padronização Global do Design System de Cards de Métricas Pastéis (`App.css`)**:
-  - Implementado sistema de cards minimalistas com gradientes pastéis suaves (*Lavanda/Roxo, Dourado/Âmbar, Azul Céu, Rosa, Verde Esmeralda*) e adaptatividade perfeita a temas Claro e Escuro.
-  - Padronização aplicada em todos os módulos principais do sistema (**Estoque**, **Dashboard**, **Clientes**, **Compras**, **Locações**).
-- ✅ **Alinhamento do KPI em Fila Única no Desktop (`flex-wrap: nowrap`)**:
-  - Configurado flexbox responsivo com `flex: 1 1 0px` no desktop (`@media (min-width: 901px)`), garantindo que todos os cards de estatísticas (4, 5 ou 6 cards) fiquem travados em **1 única linha horizontal** sem quebra de linha.
-- ✅ **Blindagem Responsiva & Eliminação de Vazamentos Laterais (`Estoque.css` & `Estoque.jsx`)**:
-  - **Causa Raiz de 900px Isolada**: Localizado vazamento causado por seletor global un-scoped `table { min-width: 900px }` no `Fornecedores.css`, que afetava tabelas de outras telas. O seletor foi devidamente restrito a `.table-card table`, e a tabela de estoque recebeu travas `min-width: 0 !important`.
-  - **Breakpoint Mobile Ampliado (`960px`)**: Transição para cards mobile em telas de até 960px, cobrindo tablets, notebooks e simulação de DevTools.
-  - **Reorganização de Filtros Mobile**:
-    - *Linha 1*: Busca por nome/código (100% de largura).
-    - *Linha 2*: Botão `⬇️ A - Z` e Seletor de Data `dd/mm/aaaa` lado a lado.
-    - *Linha 3*: Galpão e Status.
-    - *Linha 4*: Categoria em 100% de largura no final, garantindo espaço para nomes longos sem cortes.
-  - **Resgate e Separação Visual das TAGs de Itens**:
-    - Restauradas e isoladas as TAGs de `📦 KIT`, `🧩 PEÇA` e `✨ DECO` do título do produto, posicionando-as em linha própria entre o nome e o código sem sobreposição.
-  - **Redesign dos Botões de Ação na Visão em Cards Mobile (`.estoque-card-actions`)**:
-    - Os 5 botões de ação (`🛒`, `🛠️`, `✏️`, `📋`, `🗑️`) agora utilizam `flex: 1 1 0px`, dividindo igualmente 20% da largura útil de cada card sem estourar as margens.
+**Funcionalidades & Refatorações Entregues:**
+- ✅ **Timeline Gantt Responsiva & 2 Quinzena no Mobile (`ModalCalendarioDisponibilidade.jsx`)**:
+  - Cards de peças com divisão de dias em **1ª Quinzena (1 a 15)** e **2ª Quinzena (16 a 31)**. Dobrou o tamanho útil de toque e leitura no celular.
+  - Dropdown compacto **`📌 RESERVAS (X)`** substituindo pílulas extensas, evitando sobrecarga visual do card.
+- ✅ **Rastreabilidade de Composição de Kits/Decorações em Manutenção (`Estoque.jsx`)**:
+  - `verificarConflitoManutencaoLocacao` atualizada para verificar peças embutidas em receitas de Kits e Decorações.
+  - Validação inteligente com bloqueio de excessos e opção de ajuste automático para a quantidade livre segura.
+  - Insígnia vermelha de conflito no acervo: `🚨 CONFLITO DE LOCAÇÃO: Pedido #2026-004 (Kaua Vitoriano)`.
+- ✅ **Alertas de Emergência na Tabela de Locações (`Locacoes.jsx`)**:
+  - Sobrescrita de status para `🚨 REPARO PENDENTE! (Display bale até 11/08)` quando houver item em manutenção sem prontidão a tempo.
+- ✅ **Interatividade & Sugestão de Substitutos**:
+  - Botão `🔗 Abrir Pedido ➔` no submodal para navegação 1-click até a locação.
+  - Atalho `🛠️ Filtrar Peças em Reforma` no topo do calendário.
+  - Modal `🔄 Sugerir Peça Substituta Livre` listando itens da mesma categoria no dia do conflito.
+  - Botão `✅ Concluir Reparo dos Selecionados` na barra de lote do estoque.
+- ✅ **Redesign & Ordenação no Módulo de Compras (`Compras.jsx` / `Compras.css`)**:
+  - Reordenação de itens `No Acervo` para o **rodapé da tabela** com **opacidade de 45%** e texto riscado.
+  - Cards KPI e Abas estilizados com gradientes pastéis, contornos dourados e sombras 3D elevadas.
+- ✅ **Build de Produção Verificado**: `npm run build` executado e aprovado com **0 erros** (`built in 12.57s - 13.68s`).
 
 ### 🗓️ Sessão: 08/08/2026 — 18h00 às 19h35 (BRT)
 
-**Funcionalidades e Refatorações entregues:**
+**Funcionalidades entregues:**
 - ✅ **🎨 Padronização Visual & Redesign do Cadastro de Acervo (`CadastroEstoque.jsx` & `CadastroEstoque.css`)**:
   - Removidos banners escuros topo dos cards (`#0f172a`), substituídos por `.ce-card-header-clean` e pílulas douradas `.ce-badge-gold` em conformidade com o Celebre Luxury Design System.
   - Ajuste de tipografia suave: `letter-spacing: 0.2px` / `0.3px` positivo e `word-spacing: 0.05rem` para evitar letras espremidas ou palavras grudadas.
@@ -294,6 +214,16 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ---
 
-> **⏱️ Última atualização:** 08/08/2026 às 19:35 (BRT)  
-> **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02
+## 🔮 8. PRÓXIMOS PASSOS A SEGUIR
 
+1. **📱 Validação em Campo no Depósito / Galpão**:
+   - Testar o alerta `🚨 REPARO PENDENTE!` na rotina real de separação de pedidos da equipe de depósito.
+2. **💵 Lançamento Automático de Taxa de Ressarcimento no Financeiro**:
+   - Conectar o total de reparos/faltas apurado na vistoria de devolução (`CheckoutPage.jsx`) com a emissão automática de cobrança/receita no Módulo Financeiro.
+3. **📄 Exportação PDF do Mapa de Separação do Calendário**:
+   - Adicionar botão para geração de relatório impresso em PDF do mapa de separação mensal/semanal de peças por data.
+
+---
+
+> **⏱️ Última atualização:** 09/08/2026 às 17:18 (BRT)  
+> **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02

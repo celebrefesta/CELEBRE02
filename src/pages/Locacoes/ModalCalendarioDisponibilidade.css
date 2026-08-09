@@ -672,93 +672,141 @@
 
 .submodal-card {
   background: #ffffff !important;
-  border-radius: 20px !important;
+  border-radius: 24px !important;
   width: 100% !important;
-  max-width: 520px !important;
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3) !important;
+  max-width: 640px !important;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.4) !important;
   overflow: hidden !important;
+  border: 1px solid rgba(197, 160, 89, 0.35) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  max-height: 85vh !important;
 }
 
 .submodal-header {
-  background: #0f172a !important;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
   color: #ffffff !important;
-  padding: 16px 20px !important;
+  padding: 18px 24px !important;
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
+  border-bottom: 2px solid #c5a059 !important;
 }
 
 .submodal-header h4 {
   margin: 0 !important;
-  font-size: 1.1rem !important;
-  font-weight: 800 !important;
+  font-size: 1.15rem !important;
+  font-weight: 850 !important;
   color: #ffffff !important;
 }
 
 .btn-fechar-sub {
-  background: transparent !important;
-  border: none !important;
+  background: rgba(255, 255, 255, 0.1) !important;
   color: #ffffff !important;
-  font-size: 18px !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  width: 34px !important;
+  height: 34px !important;
+  border-radius: 50% !important;
+  font-weight: 900 !important;
+  font-size: 16px !important;
   cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.btn-fechar-sub:hover {
+  background: #ef4444 !important;
+  border-color: #ef4444 !important;
 }
 
 .submodal-body {
-  padding: 20px !important;
-  max-height: 70vh !important;
+  padding: 22px !important;
   overflow-y: auto !important;
+  flex: 1 !important;
 }
 
 .submodal-item-reserva {
-  background: #f8fafc !important;
-  border-left: 4px solid #c5a059 !important;
-  padding: 14px 16px !important;
-  border-radius: 14px !important;
-  margin-bottom: 14px !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-left: 5px solid #c5a059 !important;
+  padding: 18px !important;
+  border-radius: 18px !important;
+  margin-bottom: 16px !important;
+  box-shadow: 0 4px 18px rgba(15, 23, 42, 0.05) !important;
+  transition: all 0.2s ease !important;
+}
+
+.submodal-item-reserva:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08) !important;
+  border-color: #cbd5e1 !important;
+  border-left-color: #c5a059 !important;
 }
 
 .submodal-reserva-top {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  margin-bottom: 6px !important;
+  margin-bottom: 12px !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
 }
 
 .submodal-pedido-tag {
   background: #0f172a !important;
-  color: #ffffff !important;
-  font-size: 0.7rem !important;
+  color: #fde68a !important;
+  font-size: 0.74rem !important;
   font-weight: 900 !important;
-  padding: 2px 8px !important;
-  border-radius: 6px !important;
-  margin-right: 8px !important;
+  padding: 4px 10px !important;
+  border-radius: 8px !important;
+  margin-right: 10px !important;
+  letter-spacing: 0.5px !important;
+  border: 1px solid #334155 !important;
 }
 
 .submodal-cliente-nome {
-  font-size: 0.95rem !important;
+  font-size: 1.05rem !important;
   font-weight: 850 !important;
   color: #0f172a !important;
 }
 
 .pill-servico-sub {
-  font-size: 0.7rem !important;
-  font-weight: 800 !important;
-  padding: 4px 10px !important;
-  border-radius: 8px !important;
+  font-size: 0.72rem !important;
+  font-weight: 850 !important;
+  padding: 5px 12px !important;
+  border-radius: 20px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+.pill-decora {
+  background: linear-gradient(135deg, #7c3aed 0%, #4c1d95 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(124, 58, 237, 0.3) !important;
+  border: 1px solid #8b5cf6 !important;
+}
+
+.pill-loc {
+  background: linear-gradient(135deg, #0284c7 0%, #0369a1 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 3px 10px rgba(2, 132, 199, 0.3) !important;
+  border: 1px solid #38bdf8 !important;
 }
 
 .submodal-datas-bar {
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  font-size: 0.78rem !important;
-  color: #64748b !important;
-  background: #ffffff !important;
-  padding: 6px 10px !important;
-  border-radius: 8px !important;
-  margin-bottom: 10px !important;
+  font-size: 0.8rem !important;
+  color: #475569 !important;
+  background: #f8fafc !important;
+  padding: 8px 14px !important;
+  border-radius: 10px !important;
+  margin-bottom: 14px !important;
   border: 1px solid #e2e8f0 !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
 }
 
 .submodal-periodo-lbl {

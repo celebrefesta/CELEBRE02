@@ -629,8 +629,28 @@ const CadastroEstoque = () => {
       if (jaExiste) {
           setItensDoKit(itensDoKit.map(i => i.id === peca.id ? {...i, qtd: i.qtd + 1} : i));
       } else {
-          setItensDoKit([...itensDoKit, { id: peca.id, nome: peca.nome, precoOriginal: Number(peca.financeiro?.valorAluguel || 0), foto: peca.foto || peca.fotos?.[0] || '', qtd: 1 }]);
+          setItensDoKit([...itensDoKit, { 
+              id: peca.id, 
+              nome: peca.nome, 
+              precoOriginal: Number(peca.financeiro?.valorAluguel || peca.valorAluguel || 0), 
+              foto: peca.foto || peca.fotos?.[0] || '', 
+              qtd: 1 
+          }]);
       }
+  };
+
+  const decrementarPecaNoKit = (pecaId) => {
+      const item = itensDoKit.find(i => i.id === pecaId);
+      if (!item) return;
+      if (item.qtd <= 1) {
+          setItensDoKit(itensDoKit.filter(i => i.id !== pecaId));
+      } else {
+          setItensDoKit(itensDoKit.map(i => i.id === pecaId ? {...i, qtd: i.qtd - 1} : i));
+      }
+  };
+
+  const removerPecaDoKit = (pecaId) => {
+      setItensDoKit(itensDoKit.filter(i => i.id !== pecaId));
   };
 
   const calcularTotalSomaAvulsaKit = () => {
@@ -661,7 +681,6 @@ const CadastroEstoque = () => {
       if (!usuarioLogado) return;
       setSalvandoLocalizacoes(true);
       try {
-          // 🎯 SALVA CONFIGURAÇÕES (PRATELEIRAS) DA EMPRESA EM 'configuracoes_empresa'
           const refEmpresa = doc(db, "configuracoes_empresa", tenantId);
           await setDoc(refEmpresa, { localizacoes: localizacoesEditaveis }, { merge: true });
 
@@ -677,9 +696,14 @@ const CadastroEstoque = () => {
 
   const categoriasCatalogoUnicas = ['Todos', ...new Set(itensExistentes.map(item => item.categoria).filter(Boolean))];
   const itensCatalogoFiltrados = itensExistentes.filter(item => {
-      return !item.especificacoes?.isDecoracao && !item.especificacoes?.isKitPai && 
-             (item.nome || '').toLowerCase().includes(buscaCatalogo.toLowerCase()) && 
-             (filtroCategoriaCatalogo === 'Todos' || item.categoria === filtroCategoriaCatalogo);
+      if (itemEditando && item.id === itemEditando.id) return false;
+      const naoEHDecoracao = !item.especificacoes?.isDecoracao;
+      const busca = buscaCatalogo.toLowerCase().trim();
+      const bateNomeOuCodigo = (item.nome || '').toLowerCase().includes(busca) || 
+                               (item.codigo || '').toLowerCase().includes(busca);
+      const bateCategoria = (filtroCategoriaCatalogo === 'Todos' || item.categoria === filtroCategoriaCatalogo);
+
+      return naoEHDecoracao && bateNomeOuCodigo && bateCategoria;
   });
 
   const salvarItem = async (e) => {
@@ -752,6 +776,7 @@ const CadastroEstoque = () => {
             tipoPacote: isDecoracao ? tipoPacote : '', 
             isKitPai: isKitNovo, 
             itensDecoracao: isDecoracao ? itensDoKit : [],
+            itensDoKit: isDecoracao ? itensDoKit : [],
             pecasKit: isKitNovo ? pecasKitNovas : []
         },
         configuracao: { 
@@ -988,56 +1013,6 @@ const CadastroEstoque = () => {
               </div>
             </div>
 
-            {tipoCadastro === 'decoracao' && (
-              <div style={{ marginTop: '16px', padding: '18px 20px', background: 'var(--fundo-cinza, #f8fafc)', borderRadius: '16px', border: '1.5px solid #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '15px' }}>
-                <div>
-                  <strong style={{ color: 'var(--texto-principal, #0f172a)', display: 'block', fontSize: '0.9rem', fontWeight: '800' }}>
-                    Qual é a modalidade deste pacote? *
-                  </strong>
-                  <span style={{ color: 'var(--texto-secundario, #64748b)', fontSize: '0.78rem' }}>
-                    Define o selo do catálogo. Pacotes Pegue e Monte podem receber taxa de montagem se o cliente solicitar.
-                  </span>
-                </div>
-                <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setTipoPacote('PEGUE E MONTE')}
-                    style={{ 
-                      padding: '10px 18px', 
-                      borderRadius: '12px', 
-                      fontWeight: '800', 
-                      fontSize: '0.82rem',
-                      cursor: 'pointer', 
-                      transition: '0.2s', 
-                      border: tipoPacote === 'PEGUE E MONTE' ? '2px solid #c5a059' : '1.5px solid var(--borda, #cbd5e1)', 
-                      background: tipoPacote === 'PEGUE E MONTE' ? 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)' : 'var(--fundo-card, #fff)', 
-                      color: tipoPacote === 'PEGUE E MONTE' ? '#fff' : 'var(--texto-principal)',
-                      boxShadow: tipoPacote === 'PEGUE E MONTE' ? '0 4px 12px rgba(197, 160, 89, 0.3)' : 'none'
-                    }}
-                  >
-                    📦 Pegue e Monte
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setTipoPacote('DECORAÇÃO')}
-                    style={{ 
-                      padding: '10px 18px', 
-                      borderRadius: '12px', 
-                      fontWeight: '800', 
-                      fontSize: '0.82rem',
-                      cursor: 'pointer', 
-                      transition: '0.2s', 
-                      border: tipoPacote === 'DECORAÇÃO' ? '2px solid #0f172a' : '1.5px solid var(--borda, #cbd5e1)', 
-                      background: tipoPacote === 'DECORAÇÃO' ? '#0f172a' : 'var(--fundo-card, #fff)', 
-                      color: tipoPacote === 'DECORAÇÃO' ? '#fff' : 'var(--texto-principal)',
-                      boxShadow: tipoPacote === 'DECORAÇÃO' ? '0 4px 12px rgba(15, 23, 42, 0.25)' : 'none'
-                    }}
-                  >
-                    ✨ Decoração
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
           <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
@@ -1699,76 +1674,288 @@ const CadastroEstoque = () => {
       </div>
 
       {modalCatalogoAberto && (
-        <div className="modal-overlay-premium" style={{ zIndex: 99999 }}>
-          <div className="modal-box-premium catalogo-modal" style={{ maxWidth: '1200px', width: '95%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden', backgroundColor: 'var(--branco)' }}>
+        <div className="modal-overlay-premium" style={{ zIndex: 99999, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)' }}>
+          <div className="catalogo-modal-container" style={{ maxWidth: '1100px', width: '92%', height: '86vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden', backgroundColor: '#ffffff', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
             
-            <div className="modal-header" style={{ padding: '20px 30px', borderBottom: '1px solid var(--borda)', background: 'var(--branco)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '18px', color: 'var(--texto-principal)', fontWeight: '800' }}>
-                  📦 Acervo Físico <span style={{color: 'var(--texto-secundario)', fontSize: '14px', fontWeight: '500'}}>(Escolha as peças do pacote)</span>
-                </h3>
-              </div>
+            {/* LUXURY HEADER ISOLATED */}
+            <div style={{ padding: '18px 28px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderBottom: '2px solid #c5a059', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <button type="button" onClick={() => setModalNovaPecaAberto(true)} style={{ background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '10px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)' }}>
-                  ➕ Cadastrar Nova Peça no Acervo
+                <span style={{ fontSize: '26px' }}>📦</span>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#ffffff', fontWeight: '800', lineHeight: '1.2' }}>
+                    Acervo Físico
+                  </h3>
+                  <span style={{ color: '#c5a059', fontSize: '0.82rem', fontWeight: '600', display: 'block', marginTop: '2px' }}>
+                    Escolha as peças que compõem este pacote de decoração
+                  </span>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                {itensDoKit.length > 0 && (
+                  <div style={{ background: 'rgba(197, 160, 89, 0.2)', border: '1px solid #c5a059', padding: '6px 14px', borderRadius: '20px', color: '#fef08a', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🛒</span> {itensDoKit.reduce((acc, i) => acc + i.qtd, 0)} item(ns) selecionado(s)
+                  </div>
+                )}
+                <button 
+                  type="button" 
+                  onClick={() => setModalNovaPecaAberto(true)} 
+                  style={{ background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(197, 160, 89, 0.35)', transition: 'all 0.2s' }}
+                >
+                  ➕ Cadastrar Nova Peça
                 </button>
-                <button className="btn-fechar" onClick={() => setModalCatalogoAberto(false)}>X</button>
+                <button 
+                  type="button" 
+                  onClick={() => setModalCatalogoAberto(false)} 
+                  style={{ background: 'rgba(255,255,255,0.15)', color: '#ffffff', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontWeight: 'bold', fontSize: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }}
+                >
+                  ✕
+                </button>
               </div>
             </div>
             
-            <div className="catalogo-filtros" style={{ padding: '15px 30px', background: 'var(--fundo-cinza)', borderBottom: '1px solid var(--borda)', flexShrink: 0 }}>
-              <input type="text" className="search-input-clean" style={{ border: '1px solid var(--borda)', backgroundColor: 'var(--branco)', color: 'var(--texto-principal)', padding: '14px 18px', borderRadius: '8px', width: '100%', maxWidth: '500px', fontSize: '15px', outline: 'none' }} placeholder="🔎 Buscar peça no acervo..." value={buscaCatalogo} onChange={e => setBuscaCatalogo(e.target.value)} />
-              <div className="chips-categorias" style={{ marginTop: '15px', gap: '8px' }}>
-                {categoriasCatalogoUnicas.map(cat => (
-                  <button key={cat} type="button" className={`chip-cat ${filtroCategoriaCatalogo === cat ? 'active' : ''}`} onClick={() => setFiltroCategoriaCatalogo(cat)}>
-                    {cat}
-                  </button>
-                ))}
+            {/* SEARCH & FILTERS BAR */}
+            <div style={{ padding: '16px 28px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              <div style={{ display: 'flex', gap: '16px', alignItems: 'center', flexWrap: 'wrap' }}>
+                <div style={{ position: 'relative', flex: 1, minWidth: '280px', maxWidth: '480px' }}>
+                  <span style={{ position: 'absolute', left: '16px', top: '50%', transform: 'translateY(-50%)', fontSize: '16px', pointerEvents: 'none', zIndex: 5 }}>🔍</span>
+                  <input 
+                    type="text" 
+                    style={{ border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', paddingLeft: '46px', paddingRight: buscaCatalogo ? '36px' : '16px', paddingTop: '10px', paddingBottom: '10px', borderRadius: '12px', width: '100%', fontSize: '0.88rem', fontWeight: '600', outline: 'none', boxShadow: '0 2px 4px rgba(0,0,0,0.02)', boxSizing: 'border-box' }} 
+                    placeholder="Buscar por nome, categoria ou código..." 
+                    value={buscaCatalogo} 
+                    onChange={e => setBuscaCatalogo(e.target.value)} 
+                  />
+                  {buscaCatalogo && (
+                    <button 
+                      type="button" 
+                      onClick={() => setBuscaCatalogo('')} 
+                      style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', border: 'none', background: 'none', color: '#94a3b8', cursor: 'pointer', fontSize: '14px', fontWeight: 'bold', zIndex: 6 }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div style={{ color: '#64748b', fontSize: '0.82rem', fontWeight: '700' }}>
+                  Exibindo <strong style={{ color: '#0f172a' }}>{itensCatalogoFiltrados.length}</strong> {itensCatalogoFiltrados.length === 1 ? 'peça' : 'peças'}
+                </div>
+              </div>
+
+              {/* CATEGORY CHIPS */}
+              <div style={{ display: 'flex', gap: '8px', overflowX: 'auto', paddingBottom: '4px' }}>
+                {categoriasCatalogoUnicas.map(cat => {
+                  const isActive = filtroCategoriaCatalogo === cat;
+                  return (
+                    <button 
+                      key={cat} 
+                      type="button" 
+                      onClick={() => setFiltroCategoriaCatalogo(cat)}
+                      style={{
+                        padding: '7px 16px',
+                        borderRadius: '20px',
+                        fontSize: '0.8rem',
+                        fontWeight: '700',
+                        cursor: 'pointer',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s ease',
+                        border: isActive ? '1px solid #c5a059' : '1.5px solid #cbd5e1',
+                        background: isActive ? 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)' : '#ffffff',
+                        color: isActive ? '#ffffff' : '#475569',
+                        boxShadow: isActive ? '0 4px 10px rgba(197, 160, 89, 0.25)' : 'none'
+                      }}
+                    >
+                      {cat}
+                    </button>
+                  );
+                })}
               </div>
             </div>
 
-            <div className="catalogo-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '15px', overflowY: 'auto', padding: '20px 30px', background: 'var(--fundo-cinza)', flexGrow: 1 }}>
-              {itensCatalogoFiltrados.map(item => {
-                const qtdFisica = parseInt(item.quantidade || 0) || parseInt(item.estoque || 0) || 0;
-                const qtdManutencao = parseInt(item.manutencao || 0) || parseInt(item.emManutencao || 0) || parseInt(item.qtdManutencao || 0) || parseInt(item.avariadas || 0) || parseInt(item.defeito || 0) || parseInt(item.quebradas || 0) || 0;
-                const totalFisicoReal = Math.max(0, qtdFisica - qtdManutencao);
+            {/* CATALOG GRID */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: '18px', overflowY: 'auto', padding: '20px 28px', background: '#f1f5f9', flexGrow: 1, alignContent: 'start' }}>
+              {itensCatalogoFiltrados.length === 0 ? (
+                <div style={{ gridColumn: '1 / -1', padding: '50px 20px', textAlign: 'center', background: '#ffffff', borderRadius: '16px', border: '1.5px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '12px' }}>
+                  <span style={{ fontSize: '44px' }}>📦</span>
+                  <h4 style={{ margin: 0, color: '#0f172a', fontWeight: '800', fontSize: '1.05rem' }}>Nenhuma peça encontrada</h4>
+                  <p style={{ margin: 0, color: '#64748b', fontSize: '0.85rem', maxWidth: '380px' }}>Tente alterar a busca ou o filtro de categoria selecionado.</p>
+                  <button type="button" onClick={() => setModalNovaPecaAberto(true)} style={{ marginTop: '6px', background: '#0f172a', color: '#fff', border: 'none', padding: '10px 20px', borderRadius: '10px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer' }}>
+                    + Cadastrar Nova Peça
+                  </button>
+                </div>
+              ) : (
+                itensCatalogoFiltrados.map(item => {
+                  const qtdFisicaTotal = parseInt(item.quantidade || 0) || parseInt(item.estoque || 0) || 1;
+                  const pecaNoKit = itensDoKit.find(i => i.id === item.id);
+                  const qtdNoKit = pecaNoKit ? pecaNoKit.qtd : 0;
+                  const foiAdicionado = qtdNoKit > 0;
+                  const excedeEstoque = foiAdicionado && qtdNoKit > qtdFisicaTotal;
+                  const faltamPecas = qtdNoKit - qtdFisicaTotal;
+                  const valorAluguelItem = Number(item.financeiro?.valorAluguel || item.valorAluguel || item.precoOriginal || 0);
 
-                const pecaNoKit = itensDoKit.find(i => i.id === item.id);
-                const qtdNoKit = pecaNoKit ? pecaNoKit.qtd : 0;
-                const foiAdicionado = qtdNoKit > 0;
+                  return (
+                    <div 
+                      key={item.id} 
+                      style={{ 
+                        background: '#ffffff', 
+                        border: foiAdicionado ? (excedeEstoque ? '2.5px solid #f59e0b' : '2.5px solid #c5a059') : '1.5px solid #e2e8f0', 
+                        borderRadius: '16px', 
+                        overflow: 'hidden', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        boxShadow: foiAdicionado ? '0 8px 20px -4px rgba(197, 160, 89, 0.25)' : '0 4px 6px -1px rgba(0, 0, 0, 0.04)', 
+                        transition: 'all 0.2s ease', 
+                        position: 'relative' 
+                      }} 
+                    >
+                      {/* INCLUDED RIBBON BADGE */}
+                      {foiAdicionado && (
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, background: excedeEstoque ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                          <span>{excedeEstoque ? '⚠️' : '✓'}</span> Incluso: {qtdNoKit}x
+                        </div>
+                      )}
 
-                return (
-                  <div key={item.id} onClick={() => adicionarPecaAoKit(item)} style={{ background: 'var(--branco)', border: foiAdicionado ? '2px solid var(--dourado)' : '1px solid var(--borda)', borderRadius: '10px', overflow: 'hidden', display: 'flex', flexDirection: 'column', height: '280px', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', transition: 'transform 0.2s, box-shadow 0.2s', position: 'relative' }} onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 8px 15px rgba(0,0,0,0.1)'; }} onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.05)'; }}>
-                    
-                    <div style={{ height: '140px', width: '100%', flexShrink: 0, backgroundColor: 'var(--fundo-cinza)', borderBottom: '1px solid var(--borda)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                        {item.foto ? <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/> : <span style={{fontSize:'35px'}}>📷</span>}
-                    </div>
-                    
-                    <div style={{ padding: '15px', display: 'flex', flexDirection: 'column', flexGrow: 1, justifyContent: 'space-between' }}>
+                      {/* IMAGE CONTAINER */}
+                      <div 
+                        onClick={() => adicionarPecaAoKit(item)}
+                        style={{ height: '145px', width: '100%', flexShrink: 0, backgroundColor: '#f8fafc', borderBottom: '1px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', position: 'relative', overflow: 'hidden' }}
+                      >
+                        {item.foto ? (
+                          <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }}/>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px', color: '#94a3b8' }}>
+                            <span style={{ fontSize: '36px' }}>📷</span>
+                            <span style={{ fontSize: '10px', fontWeight: '700' }}>Sem Foto</span>
+                          </div>
+                        )}
+                        
+                        {/* CATEGORY BADGE ON IMAGE */}
+                        <div style={{ position: 'absolute', bottom: '8px', left: '8px', zIndex: 2, background: 'rgba(15, 23, 42, 0.85)', color: '#ffffff', fontSize: '9px', fontWeight: '800', padding: '4px 8px', borderRadius: '6px', textTransform: 'uppercase', letterSpacing: '0.5px', boxShadow: '0 2px 6px rgba(0,0,0,0.3)' }}>
+                          {item.categoria || 'Geral'}
+                        </div>
+                      </div>
+                      
+                      {/* CARD CONTENT */}
+                      <div style={{ padding: '16px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                         <div>
-                            <strong style={{ fontSize: '14px', color: 'var(--texto-principal)', marginBottom: '2px', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{item.nome}</strong>
-                            <span style={{ fontSize: '10px', color: '#64748b', textTransform: 'uppercase', fontWeight: '800' }}>{item.categoria}</span>
+                          <strong style={{ fontSize: '0.95rem', color: '#0f172a', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', fontWeight: '800', margin: 0 }}>
+                            {item.nome}
+                          </strong>
+                          {item.codigo && (
+                            <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '600', display: 'block', marginTop: '2px' }}>
+                              CÓD: {item.codigo}
+                            </span>
+                          )}
                         </div>
                         
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '10px' }}>
-                            <div style={{ background: '#f1f5f9', borderRadius: '6px', padding: '4px 8px', border: '1px solid #e2e8f0' }}>
-                                <span style={{ fontSize: '9px', color: '#475569', fontWeight: 'bold', display: 'block' }}>LIVRES</span>
-                                <strong style={{ fontSize: '13px', color: '#0f172a' }}>{totalFisicoReal}</strong>
+                        {/* BOTTOM ROW: PRICE AND ACTION */}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
+                          <div style={{ fontSize: '0.88rem', color: '#c5a059', fontWeight: '800' }}>
+                            {valorAluguelItem > 0 ? `R$ ${valorAluguelItem.toFixed(2).replace('.', ',')}` : 'Sob consulta'}
+                          </div>
+
+                          {/* ACTION CONTROLS - PERMITE COMPOR PACOTE LIVREMENTE */}
+                          {!foiAdicionado ? (
+                            <button 
+                              type="button" 
+                              onClick={() => adicionarPecaAoKit(item)} 
+                              style={{ 
+                                background: '#0f172a', 
+                                color: '#ffffff', 
+                                border: 'none', 
+                                padding: '8px 16px', 
+                                borderRadius: '10px', 
+                                fontWeight: '800', 
+                                fontSize: '0.8rem', 
+                                cursor: 'pointer', 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '4px',
+                                boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
+                                transition: 'all 0.2s'
+                              }}
+                            >
+                              <span>+</span> Incluir
+                            </button>
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', border: '1.5px solid #c5a059', borderRadius: '10px', padding: '2px 4px' }}>
+                              <button 
+                                type="button" 
+                                onClick={(e) => { e.stopPropagation(); decrementarPecaNoKit(item.id); }} 
+                                style={{ width: '28px', height: '28px', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: '6px', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                              >
+                                -
+                              </button>
+                              <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#0f172a', minWidth: '20px', textAlign: 'center' }}>
+                                {qtdNoKit}
+                              </span>
+                              <button 
+                                type="button" 
+                                onClick={(e) => { e.stopPropagation(); adicionarPecaAoKit(item); }} 
+                                style={{ 
+                                  width: '28px', 
+                                  height: '28px', 
+                                  background: '#0f172a', 
+                                  color: '#ffffff', 
+                                  border: 'none', 
+                                  borderRadius: '6px', 
+                                  fontWeight: 'bold', 
+                                  fontSize: '14px', 
+                                  cursor: 'pointer', 
+                                  display: 'flex', 
+                                  alignItems: 'center', 
+                                  justifyContent: 'center'
+                                }}
+                              >
+                                +
+                              </button>
                             </div>
-                            <div style={{display: 'flex', alignItems: 'center', gap: '5px'}}>
-                                <button style={{ width: '32px', height: '32px', background: '#0f172a', color: 'white', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '18px', border: 'none', cursor: 'pointer' }}>
-                                  +
-                                </button>
-                                {foiAdicionado && (
-                                  <span style={{background: '#dcfce7', color: '#166534', fontSize: '11px', fontWeight: 'bold', padding: '4px 8px', borderRadius: '6px', position: 'absolute', top: '10px', right: '10px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'}}>Incluso: {qtdNoKit}</span>
-                                )}
-                            </div>
+                          )}
                         </div>
+
+                        {/* WARNING BADGE IF INCLUDED QUANTITY EXCEEDS INVENTORY STOCK */}
+                        {excedeEstoque && (
+                          <div style={{ marginTop: '2px', background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '6px 10px', borderRadius: '8px', fontSize: '0.74rem', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+                            <span>⚠️ Acervo atual: {qtdFisicaTotal} un</span>
+                            <span style={{ background: '#fef3c7', color: '#92400e', padding: '2px 6px', borderRadius: '6px', fontSize: '0.7rem' }}>Falta comprar +{faltamPecas}</span>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              )}
             </div>
+
+            {/* STICKY FOOTER SUMMARY */}
+            <div style={{ padding: '16px 28px', background: '#ffffff', borderTop: '2px solid #e2e8f0', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '14px' }}>
+              <div>
+                <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', display: 'block' }}>
+                  PEÇAS SELECIONADAS:
+                </span>
+                <strong style={{ fontSize: '1rem', color: '#0f172a', fontWeight: '800' }}>
+                  {itensDoKit.length} {itensDoKit.length === 1 ? 'modelo selecionado' : 'modelos selecionados'} ({itensDoKit.reduce((acc, i) => acc + i.qtd, 0)} itens no total)
+                </strong>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
+                <div style={{ textAlign: 'right' }}>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', display: 'block' }}>Soma das peças avulsas:</span>
+                  <strong style={{ fontSize: '1.1rem', color: '#c5a059', fontWeight: '800' }}>
+                    R$ {calcularTotalSomaAvulsaKit().toFixed(2).replace('.', ',')}
+                  </strong>
+                </div>
+
+                <button 
+                  type="button" 
+                  onClick={() => setModalCatalogoAberto(false)} 
+                  style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#ffffff', border: '1px solid #c5a059', padding: '12px 24px', borderRadius: '12px', fontWeight: '800', fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.25)', transition: 'all 0.2s' }}
+                >
+                  ✓ Concluir Seleção
+                </button>
+              </div>
+            </div>
+
           </div>
         </div>
       )}

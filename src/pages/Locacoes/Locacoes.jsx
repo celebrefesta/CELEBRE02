@@ -834,6 +834,43 @@ const Locacoes = () => {
                         alertaOperacional = "⏳ Cobrar Devolução!";
                         corAlerta = "#ef4444"; 
                     }
+
+                    // 🛠️ ALERTA CRÍTICO: VERIFICAR SE O PEDIDO CONTÉM PEÇAS EM REPARO/MANUTENÇÃO NO PERÍODO DA FESTA
+                    const pecasEmManutencaoNoPedido = [];
+                    (item.itens || item.carrinho || []).forEach(it => {
+                      const pecaEstoque = (estoque || []).find(p => String(p.id) === String(it.id) || (p.codigo && p.codigo === it.codigo) || (p.nome && it.nome && p.nome.trim().toLowerCase() === it.nome.trim().toLowerCase()));
+                      if (pecaEstoque) {
+                        const emMaint = pecaEstoque.qtdManutencao !== undefined ? Number(pecaEstoque.qtdManutencao) : (pecaEstoque.status === 'manutencao' ? Number(pecaEstoque.quantidade || 1) : 0);
+                        if (emMaint > 0) {
+                          const dataProntidao = pecaEstoque.dataPrevisaoRetorno;
+                          if (!dataProntidao || dataProntidao >= item.dataRetirada) {
+                            pecasEmManutencaoNoPedido.push({ nome: pecaEstoque.nome, dataProntidao });
+                          }
+                        }
+                      }
+
+                      const pecasCompostas = it.itensDecoracao || it.itensDoKit || it.pecasKit || it.especificacoes?.itensDecoracao || it.especificacoes?.itensDoKit || it.especificacoes?.pecasKit || [];
+                      pecasCompostas.forEach(p => {
+                        const pecaCompEstoque = (estoque || []).find(pe => String(pe.id) === String(p.id) || (pe.codigo && pe.codigo === p.codigo) || (pe.nome && p.nome && pe.nome.trim().toLowerCase() === p.nome.trim().toLowerCase()));
+                        if (pecaCompEstoque) {
+                          const emMaint = pecaCompEstoque.qtdManutencao !== undefined ? Number(pecaCompEstoque.qtdManutencao) : (pecaCompEstoque.status === 'manutencao' ? Number(pecaCompEstoque.quantidade || 1) : 0);
+                          if (emMaint > 0) {
+                            const dataProntidao = pecaCompEstoque.dataPrevisaoRetorno;
+                            if (!dataProntidao || dataProntidao >= item.dataRetirada) {
+                              if (!pecasEmManutencaoNoPedido.some(pm => pm.nome === pecaCompEstoque.nome)) {
+                                pecasEmManutencaoNoPedido.push({ nome: pecaCompEstoque.nome, dataProntidao });
+                              }
+                            }
+                          }
+                        }
+                      });
+                    });
+
+                    if (pecasEmManutencaoNoPedido.length > 0) {
+                      const p1 = pecasEmManutencaoNoPedido[0];
+                      alertaOperacional = `🚨 REPARO PENDENTE! (${p1.nome}${p1.dataProntidao ? ` até ${p1.dataProntidao.split('-').reverse().join('/')}` : ' sem data'})`;
+                      corAlerta = "#dc2626";
+                    }
                 }
 
                 return (

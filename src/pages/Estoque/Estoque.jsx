@@ -343,22 +343,42 @@ const Estoque = () => {
       if (!loc.dataRetirada || !loc.dataDevolucao) return;
       if (loc.dataDevolucao < hojeStr) return;
 
-      const itemNoPedido = (loc.itens || loc.carrinho || []).find(i => 
-        String(i.id) === String(item.id) ||
-        (i.codigo && item.codigo && i.codigo === item.codigo) ||
-        (i.nome && item.nome && i.nome.trim().toLowerCase() === item.nome.trim().toLowerCase())
-      );
+      let qtdAlugadaTotalNoPedido = 0;
+      let nomeItemOuKit = '';
 
-      if (itemNoPedido) {
-        const qtdAlugada = parseInt(itemNoPedido.qtd || itemNoPedido.quantidade || 1);
+      (loc.itens || loc.carrinho || []).forEach(i => {
+        const iQtd = Math.max(1, Number(i.qtd || i.quantidade || 1));
+        const bateItemDireto = String(i.id) === String(item.id) || 
+          (i.codigo && item.codigo && i.codigo === item.codigo) || 
+          (i.nome && item.nome && i.nome.trim().toLowerCase() === item.nome.trim().toLowerCase());
+
+        if (bateItemDireto) {
+          qtdAlugadaTotalNoPedido += iQtd;
+        }
+
+        // Checar composição de kits/decorações
+        const pecasCompostas = i.itensDecoracao || i.itensDoKit || i.pecasKit || i.especificacoes?.itensDecoracao || i.especificacoes?.itensDoKit || i.especificacoes?.pecasKit || [];
+        pecasCompostas.forEach(p => {
+          const pBate = String(p.id) === String(item.id) || 
+            (p.codigo && item.codigo && p.codigo === item.codigo) || 
+            (p.nome && item.nome && p.nome.trim().toLowerCase() === item.nome.trim().toLowerCase());
+          if (pBate) {
+            const pQtdUnit = Math.max(1, Number(p.qtd || p.quantidade || 1));
+            qtdAlugadaTotalNoPedido += pQtdUnit * iQtd;
+            nomeItemOuKit = i.nome || i.titulo || 'Decoração/Kit';
+          }
+        });
+      });
+
+      if (qtdAlugadaTotalNoPedido > 0) {
         const qtdFisica = Math.max(1, Number(item.quantidade || 1));
         const estoqueRestanteSemMaint = qtdFisica - valorQtdMaint;
 
-        if (qtdAlugada > estoqueRestanteSemMaint) {
-          // A peça entra em reparo HOJE. Ela DEVE ficar pronta no máximo até 1 dia ANTES da retirada da locação
+        if (qtdAlugadaTotalNoPedido > estoqueRestanteSemMaint) {
           const dataLimiteProntidao = somarDiasISO(loc.dataRetirada, -1);
+          const qtdMaxManutencaoSegura = Math.max(0, qtdFisica - qtdAlugadaTotalNoPedido);
 
-          // Se a prontidão não foi informada OU se a prontidão for DEPOIS da data limite (invadindo o período do pedido)
+          // Se a prontidão não foi informada OU for posterior à saída da peça
           if (!dataPrevisao || dataPrevisao > dataLimiteProntidao) {
             conflitos.push({
               numPedido: loc.numeroPedido || loc.id?.substring(0,6).toUpperCase(),
@@ -366,7 +386,9 @@ const Estoque = () => {
               dataRetirada: loc.dataRetirada,
               dataDevolucao: loc.dataDevolucao,
               dataLimiteProntidao,
-              qtdAlugada
+              qtdAlugada: qtdAlugadaTotalNoPedido,
+              qtdMaxManutencaoSegura,
+              nomeItemOuKit
             });
           }
         }
@@ -390,13 +412,20 @@ const Estoque = () => {
       if (conflitos && conflitos.length > 0) {
         const p = conflitos[0];
         const dataLimiteBR = formatarDataBR(p.dataLimiteProntidao);
-        alert(
-          `🚫 MANUTENÇÃO BLOQUEADA - CONFLITO COM LOCAÇÃO!\n\n` +
-          `A peça "${itemParaManutencao.nome}" possui locação confirmada para o Pedido #${p.numPedido} (${p.clienteNome}) no período de ${formatarDataBR(p.dataRetirada)} a ${formatarDataBR(p.dataDevolucao)}.\n\n` +
-          `⚠️ Como a manutenção inicia hoje, a peça DEVE ficar pronta no máximo até dia ${dataLimiteBR} (1 dia antes da saída) para atender o cliente!\n\n` +
-          `👉 Defina a Previsão de Prontidão para até ${dataLimiteBR}.`
+        const aceitaAjustar = window.confirm(
+          `🚨 ATENÇÃO: CONFLITO DE MANUTENÇÃO X LOCAÇÃO AGENDADA!\n\n` +
+          `A peça "${itemParaManutencao.nome}" tem ${p.qtdAlugada} unidade(s) alugada(s) no Pedido #${p.numPedido} (${p.clienteNome}${p.nomeItemOuKit ? ` via ${p.nomeItemOuKit}` : ''}) para ${formatarDataBR(p.dataRetirada)} a ${formatarDataBR(p.dataDevolucao)}.\n\n` +
+          `Se você enviar ${valorQtd} un para reparo, o estoque livre ficará em apenas ${Math.max(0, itemParaManutencao.quantidade - valorQtd)} un, GERANDO FALTA DE PEÇA PARA O CLIENTE!\n\n` +
+          `👉 Clique em "OK" para limitar a manutenção à quantidade livre segura (${p.qtdMaxManutencaoSegura} un).\n` +
+          `👉 Ou clique em "Cancelar" para definir uma Data de Prontidão anterior a ${dataLimiteBR}.`
         );
-        return;
+
+        if (aceitaAjustar) {
+          setQtdMaint(String(p.qtdMaxManutencaoSegura));
+          return;
+        } else {
+          return;
+        }
       }
     }
 
@@ -492,6 +521,65 @@ const Estoque = () => {
     }
   };
 
+  const concluirManutencaoDireta = async (item) => {
+    if (!item) return;
+    const confirm = window.confirm(`🎉 Confirmar conclusão do reparo da peça "${item.nome}"?\n\nTodas as unidades em manutenção serão liberadas para o estoque livre!`);
+    if (!confirm) return;
+
+    try {
+      await updateDoc(doc(db, "estoque", item.id), {
+        qtdManutencao: 0,
+        motivoManutencao: '',
+        custoManutencao: 0,
+        dataPrevisaoRetorno: '',
+        status: 'ok',
+        atualizadoEm: new Date().toISOString()
+      });
+
+      await registrarLog("REPARO CONCLUÍDO", `Concluiu o reparo de "${item.nome}" e devolveu as unidades ao estoque disponível.`);
+      alert(`✅ Reparo Concluído com Sucesso!\n\nA peça "${item.nome}" foi totalmente liberada para aluguel no seu estoque!`);
+      carregarDados();
+    } catch (e) {
+      console.error("Erro ao concluir reparo direto:", e);
+      alert("Erro ao atualizar o reparo no estoque.");
+    }
+  };
+
+  const concluirManutencaoEmMassa = async () => {
+    if (itensSelecionados.size === 0) return;
+    const selecionadosArray = Array.from(itensSelecionados);
+    const itensParaLiberar = itens.filter(i => selecionadosArray.includes(i.id) && (Number(i.qtdManutencao || 0) > 0 || i.status === 'manutencao'));
+
+    if (itensParaLiberar.length === 0) {
+      alert("Nenhum dos itens selecionados possui unidades em manutenção/reparo no momento.");
+      return;
+    }
+
+    if (!window.confirm(`🎉 Confirmar a conclusão do reparo de ${itensParaLiberar.length} peça(s) selecionada(s)?\n\nAs unidades serão totalmente devolvidas ao estoque livre!`)) {
+      return;
+    }
+
+    try {
+      for (const item of itensParaLiberar) {
+        await updateDoc(doc(db, "estoque", item.id), {
+          qtdManutencao: 0,
+          status: 'ok',
+          motivoManutencao: '',
+          dataPrevisaoRetorno: '',
+          atualizadoEm: new Date().toISOString()
+        });
+      }
+
+      await registrarLog("MANUTENÇÃO EM MASSA", `Concluiu a manutenção em lote de ${itensParaLiberar.length} peça(s) e devolveu as unidades ao acervo.`);
+      alert(`✅ Reparos Concluídos!\n\n${itensParaLiberar.length} peça(s) foram devolvidas ao estoque livre!`);
+      setItensSelecionados(new Set());
+      carregarDados();
+    } catch (error) {
+      console.error("Erro ao concluir manutenção em massa:", error);
+      alert("Erro ao concluir manutenção das peças selecionadas.");
+    }
+  };
+
   const salvarItemNoPedido = async () => {
       if (!pedidoSelecionadoId) return alert("Por favor, selecione um pedido na lista!");
       setAdicionandoAoPedido(true);
@@ -580,7 +668,7 @@ const Estoque = () => {
       const disponivelTotal = Math.max(0, qtdBase - emMaint - alugadosNaData);
 
       return { 
-          qtdBase, disponivelTotal, alugados: alugadosNaData, emManutencao: emMaint, tudoQuebrado, estaTotalmenteAlugado, isDeco
+          qtdBase, disponivelTotal, alugados: alugadosNaData, emMaint, emManutencao: emMaint, tudoQuebrado, estaTotalmenteAlugado, isDeco
       };
   };
 
@@ -851,14 +939,19 @@ const Estoque = () => {
           </div>
         </div>
 
-        <div className="stat-card-pro card-red">
+        <div 
+          className={`stat-card-pro card-red ${statusFiltro === 'manutencao' ? 'ativo' : ''}`}
+          onClick={() => setStatusFiltro(prev => prev === 'manutencao' ? '' : 'manutencao')}
+          style={{ cursor: 'pointer', border: statusFiltro === 'manutencao' ? '2px solid #ef4444' : undefined }}
+          title="Clique para filtrar apenas as peças em manutenção/reparo"
+        >
           <div className="stat-icon-wrapper icon-red">
             🛠️
           </div>
           <div className="stat-content">
             <span className="stat-title">EM MANUTENÇÃO</span>
             <strong className="stat-number">{emManutencaoTotal}</strong>
-            <small className="stat-desc">Necessitam reparos</small>
+            <small className="stat-desc">{statusFiltro === 'manutencao' ? '🎯 Filtrando reparos' : 'Necessitam reparos'}</small>
           </div>
         </div>
 
@@ -866,13 +959,47 @@ const Estoque = () => {
           <div className="stat-icon-wrapper icon-green">
             👁️
           </div>
-          <div className="stat-content">
+        <div className="stat-content">
             <span className="stat-title">VISÍVEL CATÁLOGO</span>
             <strong className="stat-number">{percentualVisivel}%</strong>
             <small className="stat-desc">Disponível no catálogo</small>
           </div>
         </div>
       </div>
+
+      {/* ── BANNER DE ALERTA DE PREVISÃO DE PRONTIDÃO ── */}
+      {(() => {
+        const hojeISO = new Date().toISOString().split('T')[0];
+        const itensComPrevisaoAlerta = itens.filter(i => {
+          const emMaint = i.qtdManutencao !== undefined ? Number(i.qtdManutencao) : (i.status === 'manutencao' ? Number(i.quantidade || 1) : 0);
+          return emMaint > 0 && i.dataPrevisaoRetorno && i.dataPrevisaoRetorno <= hojeISO;
+        });
+
+        if (itensComPrevisaoAlerta.length === 0) return null;
+
+        return (
+          <div style={{ background: 'linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%)', border: '1.5px solid #fca5a5', padding: '14px 20px', borderRadius: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.12)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <span style={{ fontSize: '26px' }}>🔔</span>
+              <div>
+                <strong style={{ color: '#991b1b', fontSize: '0.95rem', display: 'block', fontWeight: '800' }}>
+                  {itensComPrevisaoAlerta.length} peça(s) com data de prontidão de reparo {itensComPrevisaoAlerta.some(i => i.dataPrevisaoRetorno < hojeISO) ? 'VENCIDA' : 'para HOJE'}!
+                </strong>
+                <span style={{ color: '#7f1d1d', fontSize: '0.82rem', fontWeight: '600' }}>
+                  Verifique se o reparo foi concluído para liberar as unidades de volta ao estoque disponível.
+                </span>
+              </div>
+            </div>
+            <button 
+              type="button"
+              onClick={() => setStatusFiltro('manutencao')} 
+              style={{ background: '#dc2626', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: '10px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 3px 10px rgba(220, 38, 38, 0.3)' }}
+            >
+              🛠️ Ver Peças em Manutenção
+            </button>
+          </div>
+        );
+      })()}
 
       {/* CONTAINER TABELA E FILTROS IDÊNTICOS AO GESTÃO DE CLIENTES */}
       <div className="table-card-container">
@@ -938,6 +1065,24 @@ const Estoque = () => {
               <span><strong>{itensSelecionados.size}</strong> {itensSelecionados.size === 1 ? 'item selecionado' : 'itens selecionados'}</span>
             </div>
             <div className="bulk-buttons">
+              <button 
+                className="bulk-btn-success" 
+                onClick={concluirManutencaoEmMassa}
+                style={{
+                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  padding: '8px 14px',
+                  borderRadius: '10px',
+                  fontWeight: '800',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
+                  marginRight: '8px'
+                }}
+              >
+                ✅ Concluir Reparo dos Selecionados
+              </button>
               <button className="bulk-btn-danger" onClick={excluirEmMassa}>🗑️ Excluir Selecionados</button>
               <button className="bulk-btn-cancel" onClick={() => setItensSelecionados(new Set())}>✕ Cancelar Seleção</button>
             </div>
@@ -1043,7 +1188,7 @@ const Estoque = () => {
               </thead>
               <tbody>
                 {itensFiltrados.map(item => {
-                  const { qtdBase, disponivelTotal, estaTotalmenteAlugado, tudoQuebrado, isDeco } = calcularDisponibilidadeNaData(item);
+                  const { qtdBase, disponivelTotal, emMaint, estaTotalmenteAlugado, tudoQuebrado, isDeco } = calcularDisponibilidadeNaData(item);
                   let labelPill = 'DISPONÍVEL';
                   let bgPill = '#f0fdf4'; let colorPill = '#166534'; let borderPill = '#bbf7d0';
                   if (estaTotalmenteAlugado) { labelPill = 'ALUGADO'; bgPill = '#fef2f2'; colorPill = '#b91c1c'; borderPill = '#fecaca'; }
@@ -1090,6 +1235,98 @@ const Estoque = () => {
                                       📍 {item.localizacao}
                                   </span>
                               )}
+
+                              {/* 4. ALERTA E AÇÕES DE PRONTIDÃO DE REPARO */}
+                              {emMaint > 0 && (() => {
+                                const prevData = item.dataPrevisaoRetorno || '';
+                                const hojeLocal = new Date().toISOString().split('T')[0];
+                                const eProntidaoVencida = prevData && prevData < hojeLocal;
+                                const eProntidaoHoje = prevData && prevData === hojeLocal;
+                                const diffDias = prevData && prevData > hojeLocal 
+                                  ? Math.ceil((new Date(prevData + 'T00:00:00') - new Date(hojeLocal + 'T00:00:00')) / (1000 * 3600 * 24))
+                                  : 999;
+                                const eProntidaoProxima = diffDias >= 1 && diffDias <= 3;
+
+                                return (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '3px' }}>
+                                    <span style={{ 
+                                      background: (eProntidaoVencida || eProntidaoHoje) ? '#fef2f2' : eProntidaoProxima ? '#fffbeb' : '#f8fafc', 
+                                      color: (eProntidaoVencida || eProntidaoHoje) ? '#991b1b' : eProntidaoProxima ? '#b45309' : '#475569', 
+                                      border: (eProntidaoVencida || eProntidaoHoje) ? '1px solid #fecaca' : eProntidaoProxima ? '1px solid #fde68a' : '1px solid #e2e8f0', 
+                                      fontSize: '0.73rem', 
+                                      padding: '3px 8px', 
+                                      borderRadius: '6px', 
+                                      fontWeight: '800', 
+                                      display: 'inline-flex', 
+                                      alignItems: 'center', 
+                                      gap: '4px', 
+                                      width: 'fit-content' 
+                                    }}>
+                                      {eProntidaoVencida 
+                                        ? `⏰ REPARO VENCIDO (Prevista: ${formatarDataBR(prevData)})` 
+                                        : eProntidaoHoje 
+                                        ? `🔔 PRONTIDÃO HOJE (${formatarDataBR(prevData)})` 
+                                        : eProntidaoProxima 
+                                        ? `⚠️ Reparo Urgente (${diffDias === 1 ? 'Amanhã' : `em ${diffDias} dias`} - ${formatarDataBR(prevData)})` 
+                                        : `🛠️ ${emMaint} un em manutenção${prevData ? ` (Prev: ${formatarDataBR(prevData)})` : ''}`}
+                                    </span>
+
+                                    {(eProntidaoVencida || eProntidaoHoje || eProntidaoProxima) && (
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); concluirManutencaoDireta(item); }}
+                                        style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', width: 'fit-content', boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)' }}
+                                        title="Reparo concluído? Clique para disponibilizar todas as unidades no acervo livre!"
+                                      >
+                                        ✅ Concluir Reparo (Liberar Estoque)
+                                      </button>
+                                    )}
+
+                                    {/* 🚨 INSÍGNIA DE CONFLITO OPERACIONAL COM PEDIDOS ATIVOS */}
+                                    {(() => {
+                                       const conflitosAtivos = (locacoes || []).filter(loc => {
+                                         if (loc.arquivado || loc.archived) return false;
+                                         const st = (loc.status || '').toLowerCase();
+                                         if (['cancelado', 'arquivado', 'finalizado', 'orcamento', 'orçamento'].includes(st)) return false;
+                                         if (!loc.dataRetirada || !loc.dataDevolucao) return false;
+                                         const temNoPedido = (loc.itens || loc.carrinho || []).some(it => {
+                                           const bateDireto = String(it.id) === String(item.id) || (it.codigo && item.codigo && it.codigo === item.codigo) || (it.nome && item.nome && it.nome.trim().toLowerCase() === item.nome.trim().toLowerCase());
+                                           if (bateDireto) return true;
+                                           const comps = it.itensDecoracao || it.itensDoKit || it.pecasKit || it.especificacoes?.itensDecoracao || it.especificacoes?.itensDoKit || it.especificacoes?.pecasKit || [];
+                                           return comps.some(p => String(p.id) === String(item.id) || (p.codigo && item.codigo && p.codigo === item.codigo) || (p.nome && item.nome && p.nome.trim().toLowerCase() === item.nome.trim().toLowerCase()));
+                                         });
+                                         if (!temNoPedido) return false;
+                                         const prevRet = item.dataPrevisaoRetorno;
+                                         if (!prevRet) return true;
+                                         return prevRet >= loc.dataRetirada;
+                                       });
+
+                                       if (conflitosAtivos.length === 0) return null;
+                                       const conf1 = conflitosAtivos[0];
+                                       const numPedConf = conf1.numeroPedido || conf1.id?.substring(0,6).toUpperCase();
+
+                                       return (
+                                         <span style={{ 
+                                           background: '#fee2e2', 
+                                           color: '#b91c1c', 
+                                           border: '1.5px solid #ef4444', 
+                                           fontSize: '0.73rem', 
+                                           padding: '4px 8px', 
+                                           borderRadius: '6px', 
+                                           fontWeight: '900', 
+                                           display: 'inline-flex', 
+                                           alignItems: 'center', 
+                                           gap: '4px',
+                                           marginTop: '2px',
+                                           boxShadow: '0 2px 6px rgba(239, 68, 68, 0.2)'
+                                         }}>
+                                           🚨 CONFLITO DE LOCAÇÃO: Pedido #{numPedConf} ({conf1.clienteNome} - {conf1.dataRetirada.split('-').reverse().join('/')})
+                                         </span>
+                                       );
+                                     })()}
+                                  </div>
+                                );
+                              })()}
                           </div>
                         </div>
                       </td>
@@ -1100,6 +1337,11 @@ const Estoque = () => {
                             <strong style={{ fontSize: '0.95rem', color: (estaTotalmenteAlugado || tudoQuebrado || (qtdBase===0 && !isDeco)) ? '#94a3b8' : '#334155' }}>
                                 {disponivelTotal} <span style={{fontSize: '0.75rem', fontWeight: 'normal'}}>{isDeco ? 'kit' : 'un'}</span>
                             </strong>
+                            {emMaint > 0 && !tudoQuebrado && (
+                              <span style={{ fontSize: '9px', color: '#b45309', background: '#fffbeb', border: '1px solid #fde68a', padding: '2px 6px', borderRadius: '4px', marginTop: '3px', fontWeight: '800' }}>
+                                🛠️ {emMaint} em reparo
+                              </span>
+                            )}
                             {estoqueBaixo && <span style={{fontSize: '9px', color: '#ea580c', background: '#ffedd5', padding: '2px 6px', borderRadius: '4px', marginTop: '4px'}}>Baixo</span>}
                         </div>
                       </td>
