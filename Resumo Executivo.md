@@ -171,6 +171,19 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ## 📅 7. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 10/08/2026 — 10h30 às 10h37 (BRT)
+
+**Funcionalidades & Refatorações Entregues:**
+- ✅ **💵 Lançamento Automático de Ressarcimento no Módulo Financeiro (`CheckoutPage.jsx`)**:
+  - Integração da devolução com `financeiro_lancamentos` e `logs_atividades`.
+  - Quando a devolução registra `totalRessarcimento > 0`, é criado automaticamente um lançamento pendente com categoria `Ressarcimento / Avarias`, forma de pagamento `A Cobrar`, vinculado ao número do pedido e cliente.
+  - Gravação dos totais de avaria e faltas no documento Firestore da locação.
+- ✅ **📄 Exportação PDF do Mapa de Separação em Formato Paisagem (`gerarMapaSeparacaoPDF.js` & `ModalCalendarioDisponibilidade.jsx`)**:
+  - Criado o gerador de PDF profissional Landscape A4 com o Celebre Luxury Design System.
+  - Botão **`📄 Exportar Mapa de Separação (PDF)`** no cabeçalho da Matriz de Disponibilidade.
+  - Inclui cabeçalho com marca d'água, dados institucionais, KPIs de festas/ocupação e tabela zebrificada com detalhamento de reservas por data, pedido e cliente.
+- ✅ **Build de Produção Verificado**: `npm run build` executado e aprovado com **0 erros** (`built in 16.91s`).
+
 ### 🗓️ Sessão: 09/08/2026 — 17h30 às 20h18 (BRT)
 
 **Funcionalidades & Refatorações Entregues:**
@@ -217,13 +230,13 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 ## 🔮 8. PRÓXIMOS PASSOS A SEGUIR
 
 1. **📱 Validação em Campo no Depósito / Galpão**:
-   - Testar o alerta `🚨 REPARO PENDENTE!` na rotina real de separação de pedidos da equipe de depósito.
-2. **💵 Lançamento Automático de Taxa de Ressarcimento no Financeiro**:
-   - Conectar o total de reparos/faltas apurado na vistoria de devolução (`CheckoutPage.jsx`) com a emissão automática de cobrança/receita no Módulo Financeiro.
-3. **📄 Exportação PDF do Mapa de Separação do Calendário**:
-   - Adicionar botão para geração de relatório impresso em PDF do mapa de separação mensal/semanal de peças por data.
+   - Testar a nova exportação do PDF do Mapa de Separação na rotina real de separação de pedidos da equipe de galpão.
+2. **🧹 Módulo de Limpeza Automática de Mídia (Cron / Function)**:
+   - Executar a rotina de limpeza para remover fotos temporárias cuja data `expirarFotosEm` seja anterior a hoje e `!fotosManterPermanente`.
+3. **💬 Notificação Financeira Integrada**:
+   - Adicionar atalho 1-click no Módulo Financeiro para envio de cobrança via WhatsApp de lançamentos pendentes de ressarcimento.
 
 ---
 
-> **⏱️ Última atualização:** 09/08/2026 às 17:18 (BRT)  
+> **⏱️ Última atualização:** 10/08/2026 às 10:37 (BRT)  
 > **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02

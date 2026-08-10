@@ -4,7 +4,7 @@ import './CheckoutPage.css';
 import SignatureCanvas from 'react-signature-canvas';
 import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebaseConfig';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { gerarComprovanteCheckinPDF } from '../../utils/gerarComprovanteCheckinPDF';
 import { compilarEComprimirFoto } from '../../utils/limpezaMidiaService';
@@ -515,13 +515,62 @@ const CheckoutPage = () => {
         status: novoStatus,
         dataCheckout: dataCheckoutObj.toISOString(),
         fotosManterPermanente: temIrregularidade,
-        expirarFotosEm: dataExpiracaoFotos
+        expirarFotosEm: dataExpiracaoFotos,
+        taxaRessarcimento: Number(totalRessarcimento),
+        custoAvarias: Number(custoTotalAvarias),
+        custoFaltas: Number(custoTotalFaltas)
       });
+
+      // 💵 LANÇAMENTO AUTOMÁTICO DE RESSARCIMENTO NO MÓDULO FINANCEIRO
+      let msgLancamentoFinanceiro = '';
+      if (totalRessarcimento > 0) {
+        try {
+          const numPedStr = locacao?.numeroPedido || id.substring(0, 6).toUpperCase();
+          const clienteStr = locacao?.clienteNome || locacao?.nomeCliente || 'Cliente';
+
+          await addDoc(collection(db, "financeiro_lancamentos"), {
+            userId: tenantId,
+            empresaId: tenantId,
+            tipo: 'entrada',
+            categoria: 'Ressarcimento / Avarias',
+            descricao: `Taxa de Ressarcimento (Avarias/Faltas) — Pedido #${numPedStr} (${clienteStr})`,
+            valor: Number(totalRessarcimento),
+            data: dataCheckoutObj.toISOString().split('T')[0],
+            formaPagto: 'A Cobrar',
+            status: 'pendente',
+            locacaoId: id,
+            numeroPedido: numPedStr,
+            clienteNome: clienteStr,
+            origem: 'Vistoria Checkout',
+            custoAvarias: Number(custoTotalAvarias),
+            custoFaltas: Number(custoTotalFaltas),
+            createdAt: serverTimestamp()
+          });
+
+          // 🛡️ AUDITORIA DE LANÇAMENTO FINANCEIRO
+          const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
+          await addDoc(collection(db, "logs_atividades"), {
+            empresaId: tenantId,
+            userId: tenantId,
+            funcionarioId: usuarioLogado?.uid,
+            nomeFuncionario: nomeEquipa,
+            usuarioEmail: usuarioLogado?.email || "Desconhecido",
+            acao: "RESSARCIMENTO FINANCEIRO GERADO",
+            detalhes: `Gerou cobrança pendente de R$ ${totalRessarcimento.toFixed(2)} referente a avarias/faltas no Pedido #${numPedStr} (${clienteStr}).`,
+            dataHora: new Date().toISOString(),
+            criadoEm: serverTimestamp()
+          });
+
+          msgLancamentoFinanceiro = `\n💵 Cobrança pendente de R$ ${totalRessarcimento.toFixed(2)} lançada automaticamente no Módulo Financeiro.`;
+        } catch (finErr) {
+          console.error('Erro ao gerar lançamento financeiro de ressarcimento:', finErr);
+        }
+      }
 
       const msgManutencao = qtdEnviadasManutencao > 0
         ? `\n🛠️ ${qtdEnviadasManutencao} peça(s) com avaria enviada(s) automaticamente para Manutenção no Estoque.`
         : '';
-      alert(`✅ Devolução (Check-out) do Pedido #${locacao?.numeroPedido || ''} salva com sucesso!${msgManutencao}`);
+      alert(`✅ Devolução (Check-out) do Pedido #${locacao?.numeroPedido || ''} salva com sucesso!${msgManutencao}${msgLancamentoFinanceiro}`);
       navigate('/locacoes');
     } catch (err) {
       console.error('Erro ao salvar checkout:', err);

@@ -1,6 +1,10 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './ModalCalendarioDisponibilidade.css';
+import { db } from '../../firebaseConfig';
+import { doc, getDoc } from 'firebase/firestore';
+import { getAuth } from 'firebase/auth';
+import { gerarMapaSeparacaoPDF } from '../../utils/gerarMapaSeparacaoPDF';
 
 const MESES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -9,6 +13,11 @@ const MESES = [
 
 const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoes = [], onSelectPeca }) => {
   const navigate = useNavigate();
+  const auth = getAuth();
+  const usuarioLogado = auth.currentUser;
+  const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+  const [dadosEmpresa, setDadosEmpresa] = useState(null);
+
   const [dataAtual, setDataAtual] = useState(new Date());
   const [busca, setBusca] = useState('');
   const [categoria, setCategoria] = useState('Todas');
@@ -19,6 +28,28 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
   const [apenasAlugados, setApenasAlugados] = useState(false); // Evidenciar dias com aluguel / esmaecer dias livres
   const [apenasManutencao, setApenasManutencao] = useState(false); // Filtrar somente peças em reforma
   const [pecaParaSubstituir, setPecaParaSubstituir] = useState(null); // Modal de sugestão de substitutos
+
+  useEffect(() => {
+    const carregarEmpresa = async () => {
+      if (!tenantId) return;
+      try {
+        const empRef = doc(db, "configuracoes_empresa", tenantId);
+        const empSnap = await getDoc(empRef);
+        if (empSnap.exists()) {
+          setDadosEmpresa(empSnap.data());
+        } else {
+          const fallbackRef = doc(db, "configuracoes", tenantId);
+          const fallbackSnap = await getDoc(fallbackRef);
+          if (fallbackSnap.exists()) setDadosEmpresa(fallbackSnap.data());
+        }
+      } catch (err) {
+        console.error("Erro ao carregar dados da empresa no Calendário:", err);
+      }
+    };
+    if (isOpen) {
+      carregarEmpresa();
+    }
+  }, [tenantId, isOpen]);
 
   const ano = dataAtual.getFullYear();
   const mesIndex = dataAtual.getMonth(); // 0-11
@@ -339,6 +370,17 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
     setDataAtual(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
   };
 
+  const handleExportarPDF = () => {
+    gerarMapaSeparacaoPDF(
+      MESES[mesIndex],
+      ano,
+      estoqueFiltrado,
+      mapaOcupacao,
+      kpisMes,
+      dadosEmpresa
+    );
+  };
+
   const hojeISO = new Date().toISOString().split('T')[0];
 
   if (!isOpen) return null;
@@ -353,7 +395,32 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
             <h3>📊 Matriz de Disponibilidade do Acervo</h3>
             <p>Consulte em tempo real o estoque disponível e reservas peça por peça dia a dia</p>
           </div>
-          <button className="btn-fechar-cal" onClick={onClose} title="Fechar">✕</button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+            <button
+              type="button"
+              className="btn-exportar-pdf-cal"
+              onClick={handleExportarPDF}
+              style={{
+                padding: '8px 16px',
+                borderRadius: '8px',
+                border: '1px solid #c5a059',
+                background: 'linear-gradient(135deg, #c5a059 0%, #a37f3e 100%)',
+                color: '#ffffff',
+                fontWeight: '800',
+                fontSize: '0.82rem',
+                cursor: 'pointer',
+                boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)',
+                display: 'inline-flex',
+                alignItems: 'center',
+                gap: '6px',
+                transition: '0.2s'
+              }}
+              title="Gerar e baixar o relatório impresso do Mapa de Separação em PDF"
+            >
+              📄 Exportar Mapa de Separação (PDF)
+            </button>
+            <button className="btn-fechar-cal" onClick={onClose} title="Fechar">✕</button>
+          </div>
         </header>
 
         {/* BARRA DE NAVEGAÇÃO E LEGENDAS */}
