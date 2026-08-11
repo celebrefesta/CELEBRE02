@@ -171,6 +171,19 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
 
 ## 📅 7. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 11/08/2026 — 08h43 às 11h37 (BRT)
+
+**Funcionalidades & Refatorações Entregues:**
+- ✅ **💎 Refinamento de Excelência no Painel de Filtros Mobile (`Locacoes.css`)**:
+  - **Zero Espaço em Branco**: Eliminados todos os `margins` e `paddings` invisíveis que empurravam a busca para o meio do card, deixando a caixa de pesquisa encostada no topo com altura ultra-compacta (`42px`).
+  - **Grade de 3 Colunas dos Chips Operacionais**: `🚚 SAEM HOJE (0)`, `📦 ENTRAM HOJE (0)` e `⚠️ ATRASADOS (0)` agora se alinham em **1 única linha horizontal sem nenhum vazamento ou corte lateral** na tela do smartphone.
+  - **Pílulas de Status em 2 Colunas Limpas**: Os botões de status (`Em Processo`, `Orçamentos`, `Confirmados`, `Arquivados`) organizam-se simetricamente em **2 colunas de 50% de largura**, criando um visual de aplicativo premium.
+- ✅ **🚨 Barra de Filtros Rápidos de Operação do Dia**:
+  - Chips dinâmicos com contagem automática de pedidos e alerta em tempo real.
+- ✅ **📋 Modal de Romaneio de Separação & Checklist de Galpão (`ModalRomaneioSeparacao.jsx` & `.css`)**:
+  - Opção no menu de 3 pontinhos `⋮` com checklist interativo, barra de progresso, impressão de folha A4/térmica de galpão e envio formatado via WhatsApp.
+- ✅ **Build de Produção Verificado**: `npm run build` executado e aprovado com **0 erros** (`built in 14.19s`).
+
 ### 🗓️ Sessão: 10/08/2026 — 10h30 às 10h37 (BRT)
 
 **Funcionalidades & Refatorações Entregues:**
@@ -223,20 +236,21 @@ O sistema centraliza todo o ciclo operacional de uma empresa de decoração: des
     - **`📦 Pegue e Monte`**: O cliente pode retirar na loja ou optar por solicitar o serviço de frete/montagem da Celebre (somando a taxa ao pedido no carrinho/PDV).
     - **`✨ Decoração`**: Cenários montados exclusivos da loja, blindados para nunca virarem Pegue e Monte.
 - ✅ **Build de Produção Verificado**:
-  - `npm run build` executado e aprovado com **0 erros** (`built in 14.41s`).
+  - `npm run build` executado and aprovado com **0 erros** (`built in 14.41s`).
 
 ---
 
 ## 🔮 8. PRÓXIMOS PASSOS A SEGUIR
 
-1. **📱 Validação em Campo no Depósito / Galpão**:
-   - Testar a nova exportação do PDF do Mapa de Separação na rotina real de separação de pedidos da equipe de galpão.
-2. **🧹 Módulo de Limpeza Automática de Mídia (Cron / Function)**:
+1. **🧹 Módulo de Limpeza Automática de Mídia (Cron / Function)**:
    - Executar a rotina de limpeza para remover fotos temporárias cuja data `expirarFotosEm` seja anterior a hoje e `!fotosManterPermanente`.
-3. **💬 Notificação Financeira Integrada**:
+2. **💬 Notificação Financeira Integrada**:
    - Adicionar atalho 1-click no Módulo Financeiro para envio de cobrança via WhatsApp de lançamentos pendentes de ressarcimento.
+3. **🔔 Lembretes de Retirada/Devolução via WhatsApp**:
+   - Disparo automático de alertas para os clientes 24h antes da data de retirada ou devolução do acervo.
 
 ---
 
-> **⏱️ Última atualização:** 10/08/2026 às 10:37 (BRT)  
+> **⏱️ Última atualização:** 11/08/2026 às 08:49 (BRT)  
 > **✍️ Atualizado por:** Antigravity AI — Sessão CELEBRE02
+

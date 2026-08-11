@@ -334,13 +334,60 @@
   box-shadow: 0 0 0 3.5px rgba(197, 160, 89, 0.16); 
 }
 
-/* --- TOGGLE DE MODALIDADE DE SERVIÇO (CARD LUXO) --- */
+/* --- TOGGLE DE MODALIDADE DE SERVIÇO (PADRÃO E CARD LUXO) --- */
+.toggle-servico,
 .toggle-servico-vip {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
   width: 100%;
   margin-top: 6px;
+  box-sizing: border-box;
+}
+
+.btn-toggle {
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  background: var(--fundo-cinza, #f8fafc);
+  color: var(--texto-secundario, #64748b);
+  font-weight: 800;
+  font-size: 0.84rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  white-space: nowrap;
+}
+
+.btn-toggle:hover {
+  border-color: #c5a059;
+  color: #0f172a;
+}
+
+.btn-toggle.active-pegue {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border-color: #f59e0b !important;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.2) !important;
+}
+
+.btn-toggle.active-deco {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  color: #ffffff !important;
+  border-color: #c5a059 !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25) !important;
+}
+
+.checkin-btn-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .btn-servico-card {
@@ -1701,6 +1748,137 @@
     font-size: 14px !important;
   }
 
+  .page-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .page-header > div:first-child {
+    justify-content: space-between !important;
+    width: 100% !important;
+  }
+
+  .header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .header-actions button,
+  .header-actions .btn-voltar-link,
+  .header-actions .btn-secundario-alerta,
+  .header-actions .btn-primary-outline {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    font-size: 0.74rem !important;
+    font-weight: 800 !important;
+    padding: 9px 6px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .header-actions button:last-child,
+  .header-actions .btn-voltar-link {
+    grid-column: span 2 !important;
+  }
+
+  .toggle-servico,
+  .toggle-servico-vip {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-bottom: 14px !important;
+  }
+
+  .btn-toggle {
+    padding: 10px 4px !important;
+    font-size: 0.73rem !important;
+    font-weight: 900 !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+  }
+
+  .checkin-btn-group {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    margin-top: 8px !important;
+  }
+
+  .checkin-btn-group button {
+    width: 100% !important;
+    padding: 9px 4px !important;
+    font-size: 0.74rem !important;
+    font-weight: 850 !important;
+    border-radius: 10px !important;
+    justify-content: center !important;
+    text-align: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .form-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin-bottom: 14px !important;
+    margin-top: 6px !important;
+  }
+
+  .form-group {
+    margin-bottom: 12px !important;
+  }
+
+  .form-group label,
+  .form-row label {
+    font-size: 0.70rem !important;
+    font-weight: 800 !important;
+    color: var(--texto-secundario, #64748b) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.4px !important;
+    margin-bottom: 5px !important;
+    margin-top: 4px !important;
+    display: block !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .form-group input,
+  .form-group select,
+  .form-row input,
+  .form-row select {
+    height: 42px !important;
+    padding: 0 8px !important;
+    font-size: 0.80rem !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .form-row .flex-1 {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .form-row .flex-2 {
+    grid-column: span 2 !important;
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
   .layout-duas-colunas {
     flex-direction: column !important;
     gap: 14px !important;
@@ -1710,4 +1888,73 @@
     width: 100% !important;
     position: static !important;
   }
+}
+
+/* ==========================================================================
+   🌙 ADAPTAÇÃO TOTAL PARA APAARÊNCIA E MODO ESCURO (DARK MODE / GRAFITE)
+   ========================================================================== */
+[data-theme^='dark'] .card-secao,
+[data-theme^='dark'] .card-financeiro-sticky,
+[data-theme^='dark'] .carrinho-item-card,
+[data-theme^='dark'] .carrinho-vazio,
+[data-theme^='dark'] .texto-aviso-logistica {
+  background: var(--branco, #111827) !important;
+  background-color: var(--branco, #111827) !important;
+  border-color: var(--borda, #374151) !important;
+  color: var(--texto-principal, #f9fafb) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme^='dark'] .section-divider {
+  color: var(--texto-principal, #f9fafb) !important;
+  border-bottom-color: var(--borda, #374151) !important;
+}
+
+[data-theme^='dark'] .form-group label,
+[data-theme^='dark'] .fin-linha,
+[data-theme^='dark'] .servico-info small {
+  color: var(--texto-secundario, #cbd5e1) !important;
+}
+
+[data-theme^='dark'] .card-financeiro-sticky h3,
+[data-theme^='dark'] .card-financeiro-sticky label,
+[data-theme^='dark'] .card-financeiro-sticky span,
+[data-theme^='dark'] .card-financeiro-sticky strong,
+[data-theme^='dark'] .card-financeiro-sticky small {
+  color: var(--texto-principal, #f9fafb) !important;
+}
+
+[data-theme^='dark'] .form-group input,
+[data-theme^='dark'] .form-group select,
+[data-theme^='dark'] .form-group textarea,
+[data-theme^='dark'] .desconto-linha input {
+  background-color: var(--fundo-cinza, #1f2937) !important;
+  color: var(--texto-principal, #f9fafb) !important;
+  border-color: var(--borda, #374151) !important;
+}
+
+[data-theme^='dark'] .form-group input:focus,
+[data-theme^='dark'] .form-group select:focus,
+[data-theme^='dark'] .form-group textarea:focus {
+  background-color: var(--fundo-cinza, #1f2937) !important;
+  border-color: #c5a059 !important;
+}
+
+[data-theme^='dark'] .btn-servico-card,
+[data-theme^='dark'] .btn-toggle,
+[data-theme^='dark'] .btn-tipo-evento {
+  background: var(--fundo-cinza, #1f2937) !important;
+  border-color: var(--borda, #374151) !important;
+  color: var(--texto-principal, #f9fafb) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card strong {
+  color: var(--texto-principal, #f9fafb) !important;
+}
+
+[data-theme^='dark'] .btn-voltar-compact,
+[data-theme^='dark'] .btn-tool-chip {
+  background: var(--fundo-cinza, #1f2937) !important;
+  border-color: var(--borda, #374151) !important;
+  color: var(--texto-principal, #f9fafb) !important;
 }

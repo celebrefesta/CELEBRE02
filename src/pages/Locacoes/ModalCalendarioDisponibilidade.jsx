@@ -370,14 +370,51 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
     setDataAtual(prev => new Date(prev.getFullYear(), prev.getMonth() + delta, 1));
   };
 
-  const handleExportarPDF = () => {
+  const handleExportarPDFComFiltro = (tipo = 'mes') => {
+    const hoje = new Date();
+    const hojeIsoStr = hoje.toISOString().split('T')[0];
+    let tituloPeriodo = `Mês de ${MESES[mesIndex]}`;
+    let dataInicio = null;
+    let dataFim = null;
+    let apenasComReserva = false;
+
+    if (tipo === '3dias') {
+      const dFim = new Date(hoje);
+      dFim.setDate(hoje.getDate() + 3);
+      dataInicio = hojeIsoStr;
+      dataFim = dFim.toISOString().split('T')[0];
+      tituloPeriodo = `Próximos 3 Dias (${formatarDataBR(dataInicio)} a ${formatarDataBR(dataFim)})`;
+      apenasComReserva = true;
+    } else if (tipo === 'fimdesemana') {
+      const diaSemana = hoje.getDay(); // 0 Dom, 1 Seg, ..., 5 Sex, 6 Sáb
+      const distSexta = (5 - diaSemana + 7) % 7;
+      const dSexta = new Date(hoje);
+      dSexta.setDate(hoje.getDate() + distSexta);
+      const dDom = new Date(dSexta);
+      dDom.setDate(dSexta.getDate() + 2);
+      dataInicio = dSexta.toISOString().split('T')[0];
+      dataFim = dDom.toISOString().split('T')[0];
+      tituloPeriodo = `Final de Semana (${formatarDataBR(dataInicio)} a ${formatarDataBR(dataFim)})`;
+      apenasComReserva = true;
+    } else if (tipo === 'apenas_reservados') {
+      tituloPeriodo = `Somente Peças c/ Reserva (${MESES[mesIndex]})`;
+      apenasComReserva = true;
+    }
+
     gerarMapaSeparacaoPDF(
       MESES[mesIndex],
       ano,
       estoqueFiltrado,
       mapaOcupacao,
       kpisMes,
-      dadosEmpresa
+      dadosEmpresa,
+      {
+        tituloPeriodo,
+        dataInicio,
+        dataFim,
+        apenasComReserva,
+        incluirCheckbox: true
+      }
     );
   };
 
@@ -391,17 +428,22 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
         
         {/* CABEÇALHO DOURADO LUXO */}
         <header className="calendario-header">
-          <div>
+          <div className="calendario-header-titles">
             <h3>📊 Matriz de Disponibilidade do Acervo</h3>
             <p>Consulte em tempo real o estoque disponível e reservas peça por peça dia a dia</p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <button
-              type="button"
+          <div className="calendario-header-actions">
+            <select
               className="btn-exportar-pdf-cal"
-              onClick={handleExportarPDF}
+              onChange={(e) => {
+                if (e.target.value) {
+                  handleExportarPDFComFiltro(e.target.value);
+                  e.target.value = '';
+                }
+              }}
+              defaultValue=""
               style={{
-                padding: '8px 16px',
+                padding: '8px 14px',
                 borderRadius: '8px',
                 border: '1px solid #c5a059',
                 background: 'linear-gradient(135deg, #c5a059 0%, #a37f3e 100%)',
@@ -410,124 +452,54 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
                 fontSize: '0.82rem',
                 cursor: 'pointer',
                 boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px',
-                transition: '0.2s'
+                outline: 'none'
               }}
-              title="Gerar e baixar o relatório impresso do Mapa de Separação em PDF"
+              title="Exportar Mapa de Separação em PDF com filtro de período e caixas de seleção [  ]"
             >
-              📄 Exportar Mapa de Separação (PDF)
-            </button>
+              <option value="" disabled hidden>📄 Exportar Mapa PDF ▾</option>
+              <option value="mes" style={{ background: '#0f172a', color: '#ffffff' }}>🗓️ Mês Inteiro (com Checkbox [  ])</option>
+              <option value="3dias" style={{ background: '#0f172a', color: '#ffffff' }}>⚡ Expedição Imediata (Próximos 3 Dias)</option>
+              <option value="fimdesemana" style={{ background: '#0f172a', color: '#ffffff' }}>🎈 Final de Semana (Sexta a Domingo)</option>
+              <option value="apenas_reservados" style={{ background: '#0f172a', color: '#ffffff' }}>📦 Somente Peças com Reserva</option>
+            </select>
+
             <button className="btn-fechar-cal" onClick={onClose} title="Fechar">✕</button>
           </div>
         </header>
 
-        {/* BARRA DE NAVEGAÇÃO E LEGENDAS */}
-        <div className="calendario-controles">
-          <div className="seletor-mes-ano">
-            <button className="btn-nav-mes" onClick={() => navegarMes(-1)}>◀</button>
-            <span className="titulo-mes-atual">{MESES[mesIndex]} {ano}</span>
-            <button className="btn-nav-mes" onClick={() => navegarMes(1)}>▶</button>
-          </div>
-
-          <div className="legendas-status">
-            <button 
-              type="button"
-              className={`btn-toggle-apenas-alugados ${apenasAlugados ? 'ativo' : ''}`}
-              onClick={() => setApenasAlugados(prev => !prev)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '20px',
-                border: apenasAlugados ? '1.5px solid #c5a059' : '1px solid #cbd5e1',
-                background: apenasAlugados ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' : '#ffffff',
-                color: apenasAlugados ? '#fde68a' : '#475569',
-                fontSize: '0.78rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                boxShadow: apenasAlugados ? '0 3px 10px rgba(15, 23, 42, 0.25)' : 'none',
-                transition: '0.2s',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              title="Ocultar/Esmaecer dias sem agendamentos para focar apenas nas datas ocupadas"
-            >
-              {apenasAlugados ? '✨ Destacando Apenas Ocupados' : '👁️ Evidenciar Dias Alugados'}
-            </button>
-
-            <button 
-              type="button"
-              className={`btn-toggle-apenas-manutencao ${apenasManutencao ? 'ativo' : ''}`}
-              onClick={() => setApenasManutencao(prev => !prev)}
-              style={{
-                padding: '6px 14px',
-                borderRadius: '20px',
-                border: apenasManutencao ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
-                background: apenasManutencao ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : '#ffffff',
-                color: apenasManutencao ? '#ffffff' : '#991b1b',
-                fontSize: '0.78rem',
-                fontWeight: '800',
-                cursor: 'pointer',
-                boxShadow: apenasManutencao ? '0 3px 10px rgba(127, 29, 29, 0.25)' : 'none',
-                transition: '0.2s',
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
-              title="Filtrar matriz para exibir somente peças atualmente em manutenção/reforma"
-            >
-              {apenasManutencao ? '🛠️ Exibindo Apenas Em Manutenção' : '🛠️ Filtrar Peças em Reforma'}
-            </button>
-
-            <div className="legenda-item">
-              <span className="dot-legenda dot-livre"></span>
-              <span>Livre</span>
-            </div>
-            <div className="legenda-item">
-              <span className="dot-legenda dot-parcial"></span>
-              <span>Parcial</span>
-            </div>
-            <div className="legenda-item">
-              <span className="dot-legenda dot-esgotado"></span>
-              <span>Esgotado</span>
-            </div>
-          </div>
-        </div>
-
         {/* 📊 PAINEL DE KPIS DO MÊS E GIRO RÁPIDO */}
         <div className="bar-kpi-mes">
           <div className="card-kpi-item">
-            <span className="icon-kpi">🎉</span>
-            <div>
-              <div className="valor-kpi">{kpisMes.totalFestas} Festas</div>
-              <div className="rotulo-kpi">Agendadas em {MESES[mesIndex]}</div>
+            <div className="card-kpi-header">
+              <span className="icon-kpi">🎉</span>
+              <span className="valor-kpi">{kpisMes.totalFestas} Festas</span>
             </div>
+            <div className="rotulo-kpi">Agendadas em {MESES[mesIndex]}</div>
           </div>
 
           <div className="card-kpi-item">
-            <span className="icon-kpi">📦</span>
-            <div>
-              <div className="valor-kpi">{kpisMes.totalPecasAlugadas} Peças</div>
-              <div className="rotulo-kpi">Reservadas no acervo</div>
+            <div className="card-kpi-header">
+              <span className="icon-kpi">📦</span>
+              <span className="valor-kpi">{kpisMes.totalPecasAlugadas} Peças</span>
             </div>
+            <div className="rotulo-kpi">Reservadas no acervo</div>
           </div>
 
           <div className="card-kpi-item">
-            <span className="icon-kpi">📈</span>
-            <div>
-              <div className="valor-kpi">{kpisMes.taxaOcupacao}% Ocupação</div>
-              <div className="rotulo-kpi">{kpisMes.diasComEventoCount} de {kpisMes.totalDiasNoMes} dias ocupados</div>
+            <div className="card-kpi-header">
+              <span className="icon-kpi">📈</span>
+              <span className="valor-kpi">{kpisMes.taxaOcupacao}% Ocupação</span>
             </div>
+            <div className="rotulo-kpi">{kpisMes.diasComEventoCount} de {kpisMes.totalDiasNoMes} dias</div>
           </div>
 
           {kpisMes.alertasGiroRapido.length > 0 && (
             <div className="card-kpi-item kpi-alerta-giro" title="Aviso: Peças devolvidas e re-alugadas em menos de 24h!">
-              <span className="icon-kpi">⚡</span>
-              <div>
-                <div className="valor-kpi" style={{ color: '#b45309' }}>{kpisMes.alertasGiroRapido.length} Giro(s) Rápido(s)</div>
-                <div className="rotulo-kpi">Higienização Expressa (&lt;24h)</div>
+              <div className="card-kpi-header">
+                <span className="icon-kpi">⚡</span>
+                <span className="valor-kpi" style={{ color: '#b45309' }}>{kpisMes.alertasGiroRapido.length} Giro(s) Rápido(s)</span>
               </div>
+              <div className="rotulo-kpi">Higienização Expressa (&lt;24h)</div>
             </div>
           )}
         </div>
@@ -556,6 +528,82 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
               <option key={cat} value={cat}>{cat === 'Todas' ? 'Todas as Categorias' : cat}</option>
             ))}
           </select>
+        </div>
+
+        {/* BARRA DE NAVEGAÇÃO E LEGENDAS (PROXIMO DA TABELA) */}
+        <div className="calendario-controles">
+          <div className="seletor-mes-ano">
+            <button className="btn-nav-mes" onClick={() => navegarMes(-1)}>◀</button>
+            <span className="titulo-mes-atual">{MESES[mesIndex]} {ano}</span>
+            <button className="btn-nav-mes" onClick={() => navegarMes(1)}>▶</button>
+          </div>
+
+          <div className="legendas-status">
+            <div className="legendas-toggles">
+              <button 
+                type="button"
+                className={`btn-toggle-apenas-alugados ${apenasAlugados ? 'ativo' : ''}`}
+                onClick={() => setApenasAlugados(prev => !prev)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: apenasAlugados ? '1.5px solid #c5a059' : '1px solid #cbd5e1',
+                  background: apenasAlugados ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)' : '#ffffff',
+                  color: apenasAlugados ? '#fde68a' : '#475569',
+                  fontSize: '0.78rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: apenasAlugados ? '0 3px 10px rgba(15, 23, 42, 0.25)' : 'none',
+                  transition: '0.2s',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                title="Ocultar/Esmaecer dias sem agendamentos para focar apenas nas datas ocupadas"
+              >
+                {apenasAlugados ? '✨ Destacando Ocupados' : '👁️ Evidenciar Alugados'}
+              </button>
+
+              <button 
+                type="button"
+                className={`btn-toggle-apenas-manutencao ${apenasManutencao ? 'ativo' : ''}`}
+                onClick={() => setApenasManutencao(prev => !prev)}
+                style={{
+                  padding: '6px 14px',
+                  borderRadius: '20px',
+                  border: apenasManutencao ? '1.5px solid #ef4444' : '1px solid #cbd5e1',
+                  background: apenasManutencao ? 'linear-gradient(135deg, #7f1d1d 0%, #991b1b 100%)' : '#ffffff',
+                  color: apenasManutencao ? '#ffffff' : '#991b1b',
+                  fontSize: '0.78rem',
+                  fontWeight: '800',
+                  cursor: 'pointer',
+                  boxShadow: apenasManutencao ? '0 3px 10px rgba(127, 29, 29, 0.25)' : 'none',
+                  transition: '0.2s',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px'
+                }}
+                title="Filtrar matriz para exibir somente peças atualmente em manutenção/reforma"
+              >
+                {apenasManutencao ? '🛠️ Em Manutenção' : '🛠️ Peças em Reforma'}
+              </button>
+            </div>
+
+            <div className="legendas-dots-group">
+              <div className="legenda-item">
+                <span className="dot-legenda dot-livre"></span>
+                <span>Livre</span>
+              </div>
+              <div className="legenda-item">
+                <span className="dot-legenda dot-parcial"></span>
+                <span>Parcial</span>
+              </div>
+              <div className="legenda-item">
+                <span className="dot-legenda dot-esgotado"></span>
+                <span>Esgotado</span>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* ÁREA DE CONTEÚDO PRINCIPAL: TIMELINE LINHA DO TEMPO (GANTT) DE DISPONIBILIDADE */}
@@ -639,14 +687,14 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
                   </div>
 
                   {/* BARRA LINHA DO TEMPO DIVIDIDA EM 2 LINHAS (QUINZENAS) */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     
                     {/* 1ª QUINZENA (DIAS 1 A 15) */}
                     <div>
-                      <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div className="quinzena-header-lbl">
                         <span>🗓️ 1ª Quinzena (1 a 15 de {MESES[mesIndex]})</span>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${diasDoMes.slice(0, 15).length}, 1fr)`, gap: '3px', background: '#f8fafc', padding: '5px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div className="quinzena-grid-container">
                         {diasDoMes.slice(0, 15).map(({ dia, dataStr }) => {
                           const isHoje = dataStr === hojeISO;
                           const emManutencao = obterManutencaoNoDia(item, dataStr);
@@ -685,27 +733,20 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
                           return (
                             <div 
                               key={dia}
+                              className="cell-dia-quinzena"
                               onClick={() => setDiaDetalhes({ dia, dataStr, eventos: mapaOcupacao.porDiaGeral[dataStr] || [], ocupacaoItem: mapaItem[dataStr] || { alugados: 0, reservas: [] }, itemEspecifico: item })}
                               style={{
-                                height: '44px',
                                 background: bgCell,
                                 border: borderCell,
-                                borderRadius: '6px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
                                 opacity: apenasAlugados && alugados === 0 && emManutencao === 0 ? 0.25 : 1,
-                                transition: 'all 0.2s ease',
                                 boxShadow: alugados > 0 ? '0 2px 6px rgba(245, 158, 11, 0.2)' : 'none'
                               }}
                               title={`Dia ${dia} (${dataStr}) - ${livres} un livres de ${qtdTotal} ${reservas.length > 0 ? `| ${reservas.map(r => `#${r.numPedido} - ${r.clienteNome}`).join(', ')}` : ''}`}
                             >
-                              <span style={{ fontSize: '10px', fontWeight: '800', color: isHoje ? '#2563eb' : '#94a3b8' }}>
+                              <span className="num-dia-quinzena" style={{ color: isHoje ? '#2563eb' : '#94a3b8' }}>
                                 {dia}{isHoje ? '•' : ''}
                               </span>
-                              <span style={{ fontSize: '10px', fontWeight: '800', color: colorText, marginTop: '1px' }}>
+                              <span className="badge-status-quinzena" style={{ color: colorText }}>
                                 {badgeIcon}
                               </span>
                             </div>
@@ -716,10 +757,10 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
 
                     {/* 2ª QUINZENA (DIAS 16 AO FIM DO MÊS) */}
                     <div>
-                      <div style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      <div className="quinzena-header-lbl">
                         <span>🗓️ 2ª Quinzena (16 a {diasDoMes.length} de {MESES[mesIndex]})</span>
                       </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${diasDoMes.slice(15).length}, 1fr)`, gap: '3px', background: '#f8fafc', padding: '5px', borderRadius: '10px', border: '1px solid #e2e8f0' }}>
+                      <div className="quinzena-grid-container">
                         {diasDoMes.slice(15).map(({ dia, dataStr }) => {
                           const isHoje = dataStr === hojeISO;
                           const emManutencao = obterManutencaoNoDia(item, dataStr);
@@ -758,27 +799,20 @@ const ModalCalendarioDisponibilidade = ({ isOpen, onClose, estoque = [], locacoe
                           return (
                             <div 
                               key={dia}
+                              className="cell-dia-quinzena"
                               onClick={() => setDiaDetalhes({ dia, dataStr, eventos: mapaOcupacao.porDiaGeral[dataStr] || [], ocupacaoItem: mapaItem[dataStr] || { alugados: 0, reservas: [] }, itemEspecifico: item })}
                               style={{
-                                height: '44px',
                                 background: bgCell,
                                 border: borderCell,
-                                borderRadius: '6px',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
                                 opacity: apenasAlugados && alugados === 0 && emManutencao === 0 ? 0.25 : 1,
-                                transition: 'all 0.2s ease',
                                 boxShadow: alugados > 0 ? '0 2px 6px rgba(245, 158, 11, 0.2)' : 'none'
                               }}
                               title={`Dia ${dia} (${dataStr}) - ${livres} un livres de ${qtdTotal} ${reservas.length > 0 ? `| ${reservas.map(r => `#${r.numPedido} - ${r.clienteNome}`).join(', ')}` : ''}`}
                             >
-                              <span style={{ fontSize: '10px', fontWeight: '800', color: isHoje ? '#2563eb' : '#94a3b8' }}>
+                              <span className="num-dia-quinzena" style={{ color: isHoje ? '#2563eb' : '#94a3b8' }}>
                                 {dia}{isHoje ? '•' : ''}
                               </span>
-                              <span style={{ fontSize: '10px', fontWeight: '800', color: colorText, marginTop: '1px' }}>
+                              <span className="badge-status-quinzena" style={{ color: colorText }}>
                                 {badgeIcon}
                               </span>
                             </div>

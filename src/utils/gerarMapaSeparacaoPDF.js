@@ -12,8 +12,17 @@ export const gerarMapaSeparacaoPDF = (
   estoqueFiltrado = [],
   mapaOcupacao = { porItem: {}, porDiaGeral: {} },
   kpisMes = { totalFestas: 0, totalPecasAlugadas: 0, taxaOcupacao: 0 },
-  dadosEmpresa = {}
+  dadosEmpresa = {},
+  opcoesFiltro = {}
 ) => {
+  const {
+    tituloPeriodo = 'Mês Inteiro',
+    dataInicio = null, // ex: '2026-08-11'
+    dataFim = null,    // ex: '2026-08-14'
+    apenasComReserva = false,
+    incluirCheckbox = true
+  } = opcoesFiltro;
+
   const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
 
   const nomeEmpresa = dadosEmpresa?.nomeEmpresa || dadosEmpresa?.nomeFantasia || dadosEmpresa?.nome || 'CELEBRE FESTAS & DECORAÇÕES';
@@ -51,13 +60,13 @@ export const gerarMapaSeparacaoPDF = (
     // Título e Subtítulo
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(16);
+    doc.setFontSize(15);
     doc.text(`MAPA DE SEPARAÇÃO & DISPONIBILIDADE DO ACERVO`, 14, 14);
 
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
+    doc.setFontSize(9.5);
     doc.setTextColor(253, 230, 138); // Amarelo suave
-    doc.text(`Mês de Referência: ${mesNome.toUpperCase()} / ${ano} — ${nomeEmpresa}`, 14, 21);
+    doc.text(`Período: ${tituloPeriodo.toUpperCase()} (${mesNome.toUpperCase()} / ${ano}) — ${nomeEmpresa}`, 14, 21);
 
     doc.setFontSize(8.5);
     doc.setTextColor(203, 213, 225);
@@ -78,11 +87,11 @@ export const gerarMapaSeparacaoPDF = (
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     doc.setTextColor(corCinzaTexto[0], corCinzaTexto[1], corCinzaTexto[2]);
-    doc.text(`${nomeEmpresa} • Sistema Celebre (Gestão de Acervo & Separação)`, 14, 205);
+    doc.text(`${nomeEmpresa} • Sistema Celebre (Gestão de Acervo & Separação de Galpão)`, 14, 205);
     doc.text(`Página ${paginaAtual} de ${totalPaginas}`, 297 - 14, 205, { align: 'right' });
   };
 
-  // ── CARD DE KPIS DO MÊS ──
+  // ── CARD DE KPIS DO MÊS / PERÍODO ──
   doc.setFillColor(241, 245, 249);
   doc.roundedRect(14, 33, 269, 14, 2, 2, 'F');
 
@@ -105,19 +114,30 @@ export const gerarMapaSeparacaoPDF = (
   doc.text(`${kpisMes.taxaOcupacao || 0}% dos dias ocupados`, 238, 42);
 
   // ── PREPARAÇÃO DOS DADOS DA TABELA ──
-  const tableHead = [['CÓDIGO', 'PEÇA / ITEM DO ACERVO', 'CATEGORIA', 'QTD TOTAL', 'RESERVAS & CRONOGRAMA DE SAÍDA NO MÊS']];
+  const tableHead = incluirCheckbox
+    ? [['[  ] OK', 'CÓDIGO', 'PEÇA / ITEM DO ACERVO', 'CATEGORIA', 'QTD TOTAL', 'RESERVAS & CRONOGRAMA DE SAÍDA']]
+    : [['CÓDIGO', 'PEÇA / ITEM DO ACERVO', 'CATEGORIA', 'QTD TOTAL', 'RESERVAS & CRONOGRAMA DE SAÍDA']];
 
-  const tableBody = estoqueFiltrado.map((item) => {
+  const tableBody = [];
+
+  estoqueFiltrado.forEach((item) => {
     const cod = item.codigo || item.sku || `ID-${String(item.id).substring(0, 5)}`;
     const nome = item.nome || 'Sem Nome';
     const cat = item.categoria || 'Geral';
     const qtdTotal = Number(item.quantidade || 1);
 
-    // Formatar agenda de reservas no mês para este item
+    // Formatar agenda de reservas no mês/período para este item
     const ocupacaoItem = mapaOcupacao.porItem[item.id] || mapaOcupacao.porItem[item.nome] || {};
-    const datasComReserva = Object.keys(ocupacaoItem).sort();
+    let datasComReserva = Object.keys(ocupacaoItem).sort();
 
-    let detalhamentoAgenda = '🟢 Livre em todo o mês';
+    // Filtrar por dataInicio e dataFim se fornecido
+    if (dataInicio && dataFim) {
+      datasComReserva = datasComReserva.filter(d => d >= dataInicio && d <= dataFim);
+    } else if (dataInicio) {
+      datasComReserva = datasComReserva.filter(d => d >= dataInicio);
+    }
+
+    let detalhamentoAgenda = '🟢 Livre no período';
 
     if (datasComReserva.length > 0) {
       const linhasDet = [];
@@ -139,8 +159,34 @@ export const gerarMapaSeparacaoPDF = (
       }
     }
 
-    return [cod, nome, cat, `${qtdTotal} un.`, detalhamentoAgenda];
+    // Se a opção for exibir apenas itens com reserva e não houver reservas no período, ignora a peça
+    if (apenasComReserva && datasComReserva.length === 0) {
+      return;
+    }
+
+    const linha = incluirCheckbox
+      ? ['[   ]', cod, nome, cat, `${qtdTotal} un.`, detalhamentoAgenda]
+      : [cod, nome, cat, `${qtdTotal} un.`, detalhamentoAgenda];
+
+    tableBody.push(linha);
   });
+
+  const columnStyles = incluirCheckbox
+    ? {
+        0: { cellWidth: 18, halign: 'center', fontStyle: 'bold', textColor: [100, 116, 139] },
+        1: { cellWidth: 24, fontStyle: 'bold', textColor: corAzulEscuro },
+        2: { cellWidth: 60, fontStyle: 'bold' },
+        3: { cellWidth: 32 },
+        4: { cellWidth: 20, halign: 'center' },
+        5: { cellWidth: 115, textColor: [30, 41, 59] }
+      }
+    : {
+        0: { cellWidth: 26, fontStyle: 'bold', textColor: corAzulEscuro },
+        1: { cellWidth: 65, fontStyle: 'bold' },
+        2: { cellWidth: 35 },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 121, textColor: [30, 41, 59] }
+      };
 
   // ── RENDERIZAÇÃO DA TABELA COM AUTO-TABLE ──
   autoTable(doc, {
@@ -162,13 +208,7 @@ export const gerarMapaSeparacaoPDF = (
       fontSize: 9,
       halign: 'left'
     },
-    columnStyles: {
-      0: { cellWidth: 26, fontStyle: 'bold', textColor: corAzulEscuro },
-      1: { cellWidth: 65, fontStyle: 'bold' },
-      2: { cellWidth: 35 },
-      3: { cellWidth: 22, halign: 'center' },
-      4: { cellWidth: 121, textColor: [30, 41, 59] }
-    },
+    columnStyles: columnStyles,
     alternateRowStyles: {
       fillColor: corZebra
     },
@@ -180,6 +220,8 @@ export const gerarMapaSeparacaoPDF = (
   });
 
   // ── DOWNLOAD DO ARQUIVO PDF ──
-  const nomeArquivo = `Mapa_Separacao_Acervo_${mesNome}_${ano}.pdf`;
+  const nomeSufixo = tituloPeriodo.replace(/[^a-zA-Z0-9]/g, '_');
+  const nomeArquivo = `Mapa_Separacao_Acervo_${nomeSufixo}_${mesNome}_${ano}.pdf`;
   doc.save(nomeArquivo);
 };
+

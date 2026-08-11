@@ -151,6 +151,8 @@
 [data-theme^='dark'] .modal-box,
 [data-theme^='dark'] .simulador-frete-box,
 [data-theme^='dark'] .auditoria-estoque-card,
+[data-theme^='dark'] .card-secao,
+[data-theme^='dark'] .card-financeiro-sticky,
 [data-theme^='dark'] .dash-status-card {
   background: var(--branco) !important;
   background-color: var(--branco) !important;
@@ -1482,3 +1484,24 @@ main,
 [data-theme^='dark'] .stat-card-pro.card-green .stat-title, [data-theme^='dark'] .stat-card-pro.border-green .stat-title { color: #86efac !important; }
 [data-theme^='dark'] .stat-card-pro.card-green .stat-number, [data-theme^='dark'] .stat-card-pro.card-green .stat-value, [data-theme^='dark'] .stat-card-pro.border-green .stat-number, [data-theme^='dark'] .stat-card-pro.border-green .stat-value { color: #f0fdf4 !important; }
 [data-theme^='dark'] .stat-card-pro.card-green .stat-desc, [data-theme^='dark'] .stat-card-pro.card-green .stat-sub, [data-theme^='dark'] .stat-card-pro.border-green .stat-desc, [data-theme^='dark'] .stat-card-pro.border-green .stat-sub { color: #bbf7d0 !important; }
+
+/* ==========================================================================
+   🔒 REGRA GLOBAL DE BLINDAGEM DE LAYOUT: CARDS DE KPI SEMPRE EM 2 COLUNAS NO MOBILE
+   ========================================================================== */
+@media (max-width: 900px) {
+  .clientes-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .clientes-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+    width: 100% !important;
+  }
+}

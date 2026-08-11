@@ -5,6 +5,7 @@ import { collection, getDocs, doc, updateDoc, getDoc, query, where, addDoc, serv
 import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import ModalCheckinLocacao from '../Locacoes/ModalCheckinLocacao';
+import { gerarEtiquetasCaixotePDF } from '../../utils/gerarEtiquetasCaixotePDF';
 
 const Logistica = () => {
   const navigate = useNavigate();
@@ -255,6 +256,7 @@ const Logistica = () => {
                 onAbrirChecklist={() => setChecklistModalId(loc.id)} 
                 onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
                 isModoLista={vistaAtual === 'lista'} 
+                parametros={parametros}
               />
             ))}
           </div>
@@ -275,6 +277,7 @@ const Logistica = () => {
                 onAbrirChecklist={() => setChecklistModalId(loc.id)} 
                 onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
                 isModoLista={vistaAtual === 'lista'} 
+                parametros={parametros}
               />
             ))}
           </div>
@@ -297,6 +300,7 @@ const Logistica = () => {
                 onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
                 onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                 isModoLista={vistaAtual === 'lista'} 
+                parametros={parametros}
               />
             ))}
           </div>
@@ -319,6 +323,7 @@ const Logistica = () => {
                 onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
                 onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                 isModoLista={vistaAtual === 'lista'} 
+                parametros={parametros}
               />
             ))}
           </div>
@@ -340,6 +345,7 @@ const Logistica = () => {
                 onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
                 onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                 isModoLista={vistaAtual === 'lista'} 
+                parametros={parametros}
               />
             ))}
             {colunas.finalizado.length > 15 && <p className="limite-aviso">+ {colunas.finalizado.length - 15} arquivados...</p>}
@@ -385,7 +391,7 @@ const Logistica = () => {
 // ==========================================
 // SUB-COMPONENTE: CARTÃO KANBAN
 // ==========================================
-const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFinal, onAbrirChecklist, onAbrirRelatorio, isModoLista }) => {
+const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFinal, onAbrirChecklist, onAbrirRelatorio, isModoLista, parametros }) => {
   const isEntrega = loc.logistica?.tipo === 'entrega';
   const dataBr = loc.dataRetirada ? loc.dataRetirada.split('-').reverse().join('/') : '--/--/----';
 
@@ -495,6 +501,15 @@ const CartaoKanban = ({ loc, navigate, onAvancar, onVoltar, btnTxt, btnCor, isFi
             </button>
           )}
         </div>
+
+        <button 
+          className="k-btn-view" 
+          onClick={() => gerarEtiquetasCaixotePDF(loc, parametros)} 
+          style={{ width: '100%', marginTop: '6px', backgroundColor: '#fefce8', color: '#b45309', borderColor: '#fde68a', fontWeight: 'bold' }}
+          title="Gerar e baixar a etiqueta de caixote em PDF com QR Code para bipagem no galpão"
+        >
+          🏷️ Etiqueta Caixote (PDF)
+        </button>
 
         {(temAvaria || temFalta) && (
           <button 

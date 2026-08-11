@@ -867,7 +867,7 @@ const EditarLocacao = () => {
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
           <button type="button" className="btn-secundario-alerta" onClick={() => setModalCalendarioAberto(true)}>
-            📅 Disponibilidade (Calendário)
+            📅 Disponibilidade
           </button>
           <button type="button" className="btn-primary-outline" onClick={handleGerarPropostaPDF}>
             📄 Proposta PDF (Luxo)
@@ -1058,14 +1058,23 @@ const EditarLocacao = () => {
                   const taMarcadoOk = item.checkedDevolucao && !item.avaria && !item.faltou;
 
                   return (
-                  <div key={item.id} style={{display: 'flex', flexWrap: 'wrap', gap: '10px', justifyContent: 'space-between', alignItems: 'center', padding: '12px 15px', background: temProblema ? '#fef2f2' : '#f8fafc', border: `1px solid ${temProblema ? '#fca5a5' : '#e2e8f0'}`, borderRadius: '10px'}}>
+                  <div key={item.id} className="checkin-item-card" style={{display: 'flex', flexWrap: 'wrap', gap: '12px', justifyContent: 'space-between', alignItems: 'center', padding: '12px 14px', background: temProblema ? '#fef2f2' : '#f8fafc', border: `1px solid ${temProblema ? '#fca5a5' : '#e2e8f0'}`, borderRadius: '12px'}}>
                     
-                    <div style={{flex: '1 1 200px'}}>
-                      <strong style={{color: '#0f172a', fontSize: '14px', display: 'block'}}>{item.nome}</strong>
-                      <span style={{fontSize: '11px', color: '#64748b', fontWeight: 'bold'}}>QUANTIDADE: {item.qtd} un.</span>
+                    <div style={{display: 'flex', alignItems: 'center', gap: '12px', flex: '1 1 200px'}}>
+                      <div className="checkin-img-box" style={{width: '48px', height: '48px', borderRadius: '10px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
+                        {item.foto ? (
+                          <img src={item.foto} alt={item.nome} style={{width: '100%', height: '100%', objectFit: 'cover'}} />
+                        ) : (
+                          <span style={{fontSize: '20px'}}>📷</span>
+                        )}
+                      </div>
+                      <div>
+                        <strong style={{color: '#0f172a', fontSize: '13px', display: 'block', lineHeight: '1.2'}}>{item.nome}</strong>
+                        <span style={{fontSize: '11px', color: '#64748b', fontWeight: 'bold'}}>QUANTIDADE: {item.qtd} un.</span>
+                      </div>
                     </div>
 
-                    <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap'}}>
+                    <div className="checkin-btn-group">
                       <button 
                          type="button" onClick={() => marcarIda(item.id)} disabled={isFinalizado} 
                          style={{padding: '8px 12px', borderRadius: '8px', fontSize: '11px', fontWeight: 'bold', border: '1px solid', cursor: isFinalizado ? 'not-allowed' : 'pointer', backgroundColor: item.checkedSeparacao ? '#dcfce7' : '#fff', color: item.checkedSeparacao ? '#166534' : '#64748b', borderColor: item.checkedSeparacao ? '#86efac' : '#cbd5e1', transition: '0.2s'}}>
