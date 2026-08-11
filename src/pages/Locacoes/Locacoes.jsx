@@ -746,7 +746,7 @@ const Locacoes = () => {
               onClick={() => setFiltroOperacao(filtroOperacao === 'saem_hoje' ? 'todos' : 'saem_hoje')}
               title="Filtrar pedidos com saída/retirada para hoje"
             >
-              🚚 SAEM HOJE <span className="chip-badge gold">{saemHojeCount}</span>
+              🚚 SAEM <span className="chip-badge gold">{saemHojeCount}</span>
             </button>
 
             <button 
@@ -755,7 +755,7 @@ const Locacoes = () => {
               onClick={() => setFiltroOperacao(filtroOperacao === 'entram_hoje' ? 'todos' : 'entram_hoje')}
               title="Filtrar pedidos com devolução para hoje"
             >
-              📦 ENTRAM HOJE <span className="chip-badge emerald">{entramHojeCount}</span>
+              📦 ENTRAM <span className="chip-badge emerald">{entramHojeCount}</span>
             </button>
 
             <button 
