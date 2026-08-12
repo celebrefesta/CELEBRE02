@@ -20,6 +20,11 @@ const Compras = () => {
   const [ordemAlfabetica, setOrdemAlfabetica] = useState('Data'); 
   const [loading, setLoading] = useState(true);
 
+  // ⚡ ESTADOS PARA SELEÇÃO EM MASSA & EXPORTAÇÃO (WHATSAPP / PRINT)
+  const [itensSelecionados, setItensSelecionados] = useState([]);
+  const [modalExportarAberto, setModalExportarAberto] = useState(false);
+  const [filtroCategoria, setFiltroCategoria] = useState('todos');
+
   // 🎯 ABA ATIVA: 'lista' (Minha Lista) | 'decoracoes' (Peças Faltantes em Decorações)
   const [abaAtiva, setAbaAtiva] = useState('lista');
   const [faltantesDecoracao, setFaltantesDecoracao] = useState([]);
@@ -390,11 +395,225 @@ const Compras = () => {
     return st === 'chegou' || st === 'no_acervo' || st === 'concluido' || st === 'concluído' || item.estoqueSomado === true;
   };
 
+  const toggleSelecionarItem = (id) => {
+    setItensSelecionados(prev => 
+      prev.includes(id) ? prev.filter(itemId => itemId !== id) : [...prev, id]
+    );
+  };
+
+  const toggleSelecionarTodos = () => {
+    if (itensSelecionados.length === itensFiltrados.length && itensFiltrados.length > 0) {
+      setItensSelecionados([]);
+    } else {
+      setItensSelecionados(itensFiltrados.map(i => i.id));
+    }
+  };
+
+  const alterarStatusEmMassa = async (novoStatus) => {
+    if (itensSelecionados.length === 0) return;
+    const acaoNome = novoStatus === 'chegou' ? 'No Acervo' : novoStatus === 'comprado' ? 'A Caminho' : 'Pendente';
+    if (!window.confirm(`Deseja alterar o status de ${itensSelecionados.length} item(ns) para "${acaoNome}"?`)) return;
+
+    try {
+      for (const itemId of itensSelecionados) {
+        const itemObj = itens.find(i => i.id === itemId);
+        if (itemObj) {
+          await handleStatusChange(itemObj, novoStatus);
+        }
+      }
+      await registrarLog("AÇÃO EM MASSA COMPRAS", `Alterou status de ${itensSelecionados.length} compras para: ${acaoNome}.`);
+      setItensSelecionados([]);
+    } catch (e) {
+      console.error("Erro ao alterar em massa:", e);
+      alert("Erro ao realizar a operação em massa.");
+    }
+  };
+
+  const excluirEmMassa = async () => {
+    if (itensSelecionados.length === 0) return;
+    if (!window.confirm(`⚠️ Tem certeza que deseja EXCLUIR permanentemente ${itensSelecionados.length} item(ns) da lista de compras?`)) return;
+
+    try {
+      for (const itemId of itensSelecionados) {
+        const itemObj = itens.find(i => i.id === itemId);
+        await deleteDoc(doc(db, "lista_compras", itemId));
+        if (itemObj) {
+          await registrarLog("EXCLUSÃO EM MASSA COMPRAS", `Excluiu o item "${itemObj.nome}" da lista.`);
+        }
+      }
+      setItensSelecionados([]);
+      alert("Itens excluídos com sucesso!");
+    } catch (e) {
+      console.error("Erro ao excluir em massa:", e);
+      alert("Erro ao excluir itens selecionados.");
+    }
+  };
+
+  const enviarListaWhatsApp = (apenasCidade = false, apenasSelecionados = false) => {
+    let listaParaEnviar = itensFiltrados;
+
+    if (apenasSelecionados) {
+      listaParaEnviar = itens.filter(i => itensSelecionados.includes(i.id));
+    } else if (apenasCidade) {
+      listaParaEnviar = itens.filter(i => (i.tipoEntrega === '1' || Number(i.diasFrete) === 1) && i.status === 'pendente');
+    }
+
+    if (listaParaEnviar.length === 0) {
+      alert(apenasCidade ? "Nenhum item pendente marcado para compra presencial NA CIDADE no momento." : "Nenhum item selecionado ou encontrado para envio.");
+      return;
+    }
+
+    const hojeFormatado = new Date().toLocaleDateString('pt-BR');
+    const titulo = apenasCidade ? "🛍️ *LISTA DE COMPRAS NA CIDADE — CELEBRE*" : "🛒 *LISTA DE COMPRAS & AQUISIÇÕES — CELEBRE*";
+
+    let textoMsg = `${titulo}\n📅 *Data:* ${hojeFormatado}\n\n`;
+    let totalInvestimento = 0;
+    let totalUnidades = 0;
+
+    listaParaEnviar.forEach((item, index) => {
+      const qtd = Number(item.quantidade) || 1;
+      const valUnit = Number(item.valorEstimado) || 0;
+      const sub = qtd * valUnit;
+      totalInvestimento += sub;
+      totalUnidades += qtd;
+
+      const isPresencial = item.tipoEntrega === '1' || Number(item.diasFrete) === 1;
+
+      textoMsg += `*${index + 1}. ${item.nome}* (${qtd}x)\n`;
+      if (item.fornecedor) {
+        textoMsg += `   📍 *Fornecedor:* ${item.fornecedor}${item.fornecedorTelefone ? ` (Tel: ${item.fornecedorTelefone})` : ''}\n`;
+      }
+      if (item.vinculo) {
+        textoMsg += `   🔗 *Vínculo:* ${item.vinculo}\n`;
+      }
+      if (isPresencial) {
+        textoMsg += `   ⚡ *Compra Local / Na Cidade*\n`;
+      }
+      if (valUnit > 0) {
+        textoMsg += `   💰 *Ref:* R$ ${valUnit.toFixed(2).replace('.', ',')} un (Total: R$ ${sub.toFixed(2).replace('.', ',')})\n`;
+      }
+      if (item.obs) {
+        textoMsg += `   📝 *Obs:* ${item.obs}\n`;
+      }
+      textoMsg += `\n`;
+    });
+
+    textoMsg += `──────────────────────\n`;
+    textoMsg += `📊 *Total de Itens:* ${totalUnidades} unidades (${listaParaEnviar.length} produtos)\n`;
+    textoMsg += `💰 *Orçamento Estimado:* R$ ${totalInvestimento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+
+    const encodedText = encodeURIComponent(textoMsg);
+    window.open(`https://api.whatsapp.com/send?text=${encodedText}`, '_blank');
+    setModalExportarAberto(false);
+  };
+
+  const abrirWhatsAppFornecedor = (telefone, nomeItem, qtd) => {
+    let numLimpo = (telefone || '').replace(/\D/g, '');
+    if (!numLimpo) return alert("Telefone do fornecedor não cadastrado.");
+    if (!numLimpo.startsWith('55') && numLimpo.length <= 11) {
+      numLimpo = '55' + numLimpo;
+    }
+    const msg = encodeURIComponent(`Olá! Gostaria de consultar a disponibilidade do item *${nomeItem}* (Quantidade: ${qtd || 1} un) para nosso acervo Celebre.`);
+    window.open(`https://api.whatsapp.com/send?phone=${numLimpo}&text=${msg}`, '_blank');
+  };
+
+  const imprimirListaPDF = (apenasCidade = false) => {
+    let listaImprimir = itensFiltrados;
+    if (apenasCidade) {
+      listaImprimir = itens.filter(i => (i.tipoEntrega === '1' || Number(i.diasFrete) === 1) && i.status === 'pendente');
+    }
+
+    if (listaImprimir.length === 0) {
+      alert("Nenhum item disponível para impressão.");
+      return;
+    }
+
+    const janela = window.open('', '_blank');
+    const hoje = new Date().toLocaleDateString('pt-BR');
+    const totalCalc = listaImprimir.reduce((acc, i) => acc + ((Number(i.quantidade)||1) * (Number(i.valorEstimado)||0)), 0);
+
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Lista de Compras — Celebre</title>
+        <style>
+          body { font-family: Arial, sans-serif; padding: 20px; color: #0f172a; }
+          .header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #c5a059; padding-bottom: 10px; }
+          .header h2 { margin: 0; color: #0f172a; }
+          .header p { margin: 4px 0 0 0; color: #64748b; font-size: 14px; }
+          table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+          th, td { border: 1px solid #cbd5e1; padding: 8px 12px; font-size: 13px; text-align: left; }
+          th { background: #f8fafc; font-weight: bold; }
+          .total-box { margin-top: 20px; text-align: right; font-size: 16px; font-weight: bold; }
+          .check-box { width: 18px; height: 18px; border: 1.5px solid #0f172a; display: inline-block; border-radius: 4px; }
+          @media print { button { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h2>👑 CELEBRE — LISTA DE COMPRAS ${apenasCidade ? 'NA CIDADE' : ''}</h2>
+          <p>Impresso em: ${hoje} • Total de Itens: ${listaImprimir.length}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th style="width: 30px; text-align:center;">[ ]</th>
+              <th>ITEM</th>
+              <th>QTD</th>
+              <th>VÍNCULO / CONTEXTO</th>
+              <th>FORNECEDOR</th>
+              <th>VALOR UNIT.</th>
+              <th>TOTAL</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${listaImprimir.map(i => `
+              <tr>
+                <td style="text-align:center;"><div class="check-box"></div></td>
+                <td><b>${i.nome || ''}</b> ${i.obs ? `<br><small style="color:#64748b;">Obs: ${i.obs}</small>` : ''}</td>
+                <td style="text-align:center;"><b>${i.quantidade || 1}x</b></td>
+                <td>${i.vinculo || 'Estoque Geral'}</td>
+                <td>${i.fornecedor || '—'} ${i.fornecedorTelefone ? `<br><small>${i.fornecedorTelefone}</small>` : ''}</td>
+                <td>R$ ${(Number(i.valorEstimado)||0).toFixed(2).replace('.',',')}</td>
+                <td><b>R$ ${((Number(i.quantidade)||1)*(Number(i.valorEstimado)||0)).toFixed(2).replace('.',',')}</b></td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <div class="total-box">
+          TOTAL ESTIMADO: R$ ${totalCalc.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+        </div>
+        <script>
+          window.onload = function() { window.print(); }
+        </script>
+      </body>
+      </html>
+    `;
+    janela.document.write(htmlContent);
+    janela.document.close();
+    setModalExportarAberto(false);
+  };
+
   let itensFiltrados = itens.filter(item => {
     const termo = busca.toLowerCase();
-    const matchBusca = (item.nome || '').toLowerCase().includes(termo) || (item.vinculo || '').toLowerCase().includes(termo);
+    const matchBusca = (item.nome || '').toLowerCase().includes(termo) || 
+                       (item.vinculo || '').toLowerCase().includes(termo) || 
+                       (item.fornecedor || '').toLowerCase().includes(termo);
     const matchStatus = filtroStatus === "todos" ? true : item.status === filtroStatus;
-    return matchBusca && matchStatus;
+
+    let matchCat = true;
+    if (filtroCategoria === 'cidade') {
+      matchCat = item.tipoEntrega === '1' || Number(item.diasFrete) === 1;
+    } else if (filtroCategoria === 'pedido') {
+      matchCat = item.vinculoTipo === 'pedido';
+    } else if (filtroCategoria === 'acervo') {
+      matchCat = item.categoria === 'acervo' || item.vinculoTipo === 'geral';
+    } else if (filtroCategoria === 'material') {
+      matchCat = item.categoria === 'material';
+    }
+
+    return matchBusca && matchStatus && matchCat;
   });
 
   itensFiltrados.sort((a, b) => {
@@ -436,7 +655,25 @@ const Compras = () => {
             <p>Gerencie aquisições vinculadas aos pedidos, fornecedores, e peças faltantes em decorações.</p>
           </div>
         </div>
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button 
+            type="button" 
+            className="btn-secondary-celebre" 
+            onClick={() => setModalExportarAberto(true)}
+            style={{ background: '#25d366', color: '#ffffff', border: 'none', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            title="Enviar lista formatada para o WhatsApp"
+          >
+            📲 Exportar / WhatsApp
+          </button>
+          <button 
+            type="button" 
+            className="btn-secondary-celebre" 
+            onClick={() => imprimirListaPDF(false)}
+            style={{ background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '6px' }}
+            title="Imprimir ou salvar em PDF"
+          >
+            📄 Imprimir (PDF)
+          </button>
           <button className="btn-primary-celebre" onClick={() => navigate("/compras/nova")}>
             + ADICIONAR ITEM
           </button>
@@ -563,15 +800,61 @@ const Compras = () => {
       {/* SEBA 1: TABELA MINHA LISTA DE COMPRAS */}
       {abaAtiva === 'lista' ? (
         <div className="table-card-container">
+          
+          {/* BARRA DE AÇÕES EM MASSA QUANDO HÁ ITENS SELECIONADOS */}
+          {itensSelecionados.length > 0 && (
+            <div style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#ffffff', padding: '14px 20px', borderRadius: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', border: '1.5px solid #c5a059', boxShadow: '0 8px 24px rgba(15, 23, 42, 0.25)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ background: '#c5a059', color: '#ffffff', borderRadius: '12px', padding: '4px 12px', fontWeight: '900', fontSize: '0.85rem' }}>
+                  {itensSelecionados.length} selecionado(s)
+                </span>
+                <span style={{ fontSize: '0.85rem', color: '#cbd5e1', fontWeight: '600' }}>
+                  Total: R$ {itens.filter(i => itensSelecionados.includes(i.id)).reduce((acc, i) => acc + ((Number(i.quantidade)||1)*(Number(i.valorEstimado)||0)), 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </span>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <button type="button" onClick={() => alterarStatusEmMassa('chegou')} style={{ background: '#10b981', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>
+                  📦 Marcar No Acervo
+                </button>
+                <button type="button" onClick={() => alterarStatusEmMassa('comprado')} style={{ background: '#3b82f6', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>
+                  🚚 Marcar A Caminho
+                </button>
+                <button type="button" onClick={() => alterarStatusEmMassa('pendente')} style={{ background: '#f59e0b', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>
+                  ⏳ Marcar Pendente
+                </button>
+                <button type="button" onClick={() => enviarListaWhatsApp(false, true)} style={{ background: '#25d366', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>
+                  📲 Enviar no Whats
+                </button>
+                <button type="button" onClick={excluirEmMassa} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '7px 14px', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}>
+                  🗑️ Excluir
+                </button>
+                <button type="button" onClick={() => setItensSelecionados([])} style={{ background: 'transparent', color: '#94a3b8', border: '1px solid #475569', padding: '7px 12px', borderRadius: '10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}>
+                  ✕ Limpar
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="table-filter-bar">
             <div className="search-input-wrapper">
               <span className="search-icon">🔍</span>
-              <input type="text" placeholder="Buscar por item ou pedido..." value={busca} onChange={e => setBusca(e.target.value)} />
+              <input type="text" placeholder="Buscar por item, pedido ou fornecedor..." value={busca} onChange={e => setBusca(e.target.value)} />
             </div>
 
             <button className="btn-secondary-celebre" onClick={alternarOrdem} title="Mudar Ordem">
                 {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : ordemAlfabetica === 'Z-A' ? '⬆️ Z - A' : '📅 Recentes'}
             </button>
+
+            <div className="filter-select-container">
+              <select className="filter-select" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} style={{ fontWeight: '700' }}>
+                <option value="todos">📦 Tipo: Todos</option>
+                <option value="cidade">⚡ Na Cidade (Presencial)</option>
+                <option value="pedido">🔗 Vinculadas a Pedidos</option>
+                <option value="acervo">🏢 Reposição de Acervo</option>
+                <option value="material">🛠️ Material de Consumo</option>
+              </select>
+            </div>
             
             <div className="filter-select-container">
               <select className="filter-select" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
@@ -587,6 +870,15 @@ const Compras = () => {
             <table className="pro-table">
               <thead>
                 <tr>
+                  <th style={{ width: '40px', textAlign: 'center' }}>
+                    <input 
+                      type="checkbox" 
+                      checked={itensFiltrados.length > 0 && itensSelecionados.length === itensFiltrados.length} 
+                      onChange={toggleSelecionarTodos} 
+                      title="Selecionar Todos"
+                      style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                    />
+                  </th>
                   <th>ITEM & VÍNCULO</th>
                   <th>QTD.</th>
                   <th>VALOR TOTAL</th>
@@ -703,10 +995,18 @@ const Compras = () => {
                         className={ehConcluido ? 'linha-comprado' : ''}
                         style={{
                           opacity: ehConcluido ? 0.45 : 1,
-                          background: ehConcluido ? 'rgba(248, 250, 252, 0.75)' : undefined,
+                          background: itensSelecionados.includes(item.id) ? '#fef3c7' : ehConcluido ? 'rgba(248, 250, 252, 0.75)' : undefined,
                           transition: 'all 0.2s ease'
                         }}
                       >
+                        <td style={{ textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+                          <input 
+                            type="checkbox" 
+                            checked={itensSelecionados.includes(item.id)} 
+                            onChange={() => toggleSelecionarItem(item.id)} 
+                            style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                          />
+                        </td>
                         <td>
                           <span className="nome-produto" style={{ textDecoration: ehConcluido ? 'line-through' : 'none', color: ehConcluido ? '#64748b' : undefined }}>
                             {item.nome} {item.formato === 'kit' && <span className="tag-kit-gold">(KIT)</span>}
@@ -714,6 +1014,21 @@ const Compras = () => {
                           <div className="vinculo-tag" style={{ marginTop: '4px', opacity: ehConcluido ? 0.7 : 1 }}>
                             {isPedido ? '🔗' : '📦'} {item.vinculo || "Estoque Geral"}
                           </div>
+                          {item.fornecedor && (
+                            <div style={{ fontSize: '11px', color: '#b48a3c', fontWeight: '800', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                              <span>📍 Fornecedor: {item.fornecedor}</span>
+                              {item.fornecedorTelefone && (
+                                <button 
+                                  type="button" 
+                                  onClick={() => abrirWhatsAppFornecedor(item.fornecedorTelefone, item.nome, item.quantidade)} 
+                                  style={{ background: '#25d366', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '2px 8px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 5px rgba(37, 211, 102, 0.25)' }} 
+                                  title="Abrir conversa no WhatsApp com o fornecedor"
+                                >
+                                  💬 Whats
+                                </button>
+                              )}
+                            </div>
+                          )}
                         </td>
                         
                         <td data-label="Quantidade">
@@ -953,6 +1268,80 @@ const Compras = () => {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EXPORTAR LISTA DE COMPRAS (WHATSAPP / IMPRESSÃO) */}
+      {modalExportarAberto && (
+        <div className="modal-overlay-premium" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          <div className="modal-box-pedido animate-pop" style={{ maxWidth: '480px', padding: '24px', borderRadius: '20px', background: '#ffffff', boxShadow: '0 12px 36px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.1rem', color: '#0f172a' }}>📲 Exportar Lista de Compras</h3>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.8rem', color: '#64748b' }}>Selecione o formato para enviar pelo WhatsApp ou imprimir:</p>
+              </div>
+              <button type="button" onClick={() => setModalExportarAberto(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '50%', width: '32px', height: '32px', cursor: 'pointer', fontWeight: 'bold', color: '#64748b' }}>✕</button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <button 
+                type="button" 
+                onClick={() => enviarListaWhatsApp(true, false)}
+                style={{ background: 'linear-gradient(135deg, #25d366 0%, #128c7e 100%)', color: '#ffffff', border: 'none', padding: '14px 18px', borderRadius: '14px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)' }}
+              >
+                <div>
+                  <div style={{ fontWeight: '900' }}>⚡ Somente Compras NA CIDADE (Presenciais)</div>
+                  <span style={{ fontSize: '0.75rem', opacity: 0.9, fontWeight: '500' }}>Enviar WhatsApp formatado com os itens de compra local na rua</span>
+                </div>
+                <span style={{ fontSize: '18px' }}>➔</span>
+              </button>
+
+              <button 
+                type="button" 
+                onClick={() => enviarListaWhatsApp(false, false)}
+                style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '14px 18px', borderRadius: '14px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+              >
+                <div>
+                  <div style={{ fontWeight: '900' }}>📋 Toda a Lista Filtrada ({itensFiltrados.length} itens)</div>
+                  <span style={{ fontSize: '0.75rem', color: '#94a3b8', fontWeight: '500' }}>Enviar a visualização atual da tabela no WhatsApp</span>
+                </div>
+                <span style={{ fontSize: '18px' }}>➔</span>
+              </button>
+
+              {itensSelecionados.length > 0 && (
+                <button 
+                  type="button" 
+                  onClick={() => enviarListaWhatsApp(false, true)}
+                  style={{ background: '#c5a059', color: '#ffffff', border: 'none', padding: '14px 18px', borderRadius: '14px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                >
+                  <div>
+                    <div style={{ fontWeight: '900' }}>✅ Somente os {itensSelecionados.length} Itens Selecionados</div>
+                    <span style={{ fontSize: '0.75rem', opacity: 0.9, fontWeight: '500' }}>Enviar apenas as marcadas na caixa de seleção</span>
+                  </div>
+                  <span style={{ fontSize: '18px' }}>➔</span>
+                </button>
+              )}
+
+              <hr style={{ margin: '8px 0', border: 'none', borderTop: '1px dashed #cbd5e1' }} />
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => imprimirListaPDF(true)}
+                  style={{ flex: 1, background: '#f8fafc', color: '#0f172a', border: '1.5px solid #cbd5e1', padding: '10px', borderRadius: '12px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  📄 Imprimir "Na Cidade"
+                </button>
+                <button 
+                  type="button" 
+                  onClick={() => imprimirListaPDF(false)}
+                  style={{ flex: 1, background: '#f8fafc', color: '#0f172a', border: '1.5px solid #cbd5e1', padding: '10px', borderRadius: '12px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  🖨️ Imprimir Tudo
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

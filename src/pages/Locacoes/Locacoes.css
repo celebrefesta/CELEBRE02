@@ -121,15 +121,24 @@
   filter: brightness(1.08) !important;
 }
 
-/* --- CARDS DE DASHBOARD (KPIs 4 COLUNAS COM ALTURA IDÊNTICA E PADRONIZADA) --- */
-.clientes-stats-grid {
-  display: grid !important;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  align-items: stretch !important;
-  margin-bottom: 24px;
-  width: 100%;
-  box-sizing: border-box;
+/* 🔒 TRAVA DE SEGURANÇA: CARDS DE DASHBOARD EM 1 SÓ LINHA NO DESKTOP */
+@media (min-width: 901px) {
+  .clientes-stats-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 16px !important;
+    align-items: stretch !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
 }
 
 .stat-card-pro {

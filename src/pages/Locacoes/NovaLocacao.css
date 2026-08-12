@@ -1784,8 +1784,8 @@
     text-overflow: ellipsis !important;
   }
 
-  .header-actions button:last-child,
-  .header-actions .btn-voltar-link {
+  .nova-locacao-container .header-actions button:last-child,
+  .nova-locacao-container .header-actions .btn-voltar-link {
     grid-column: span 2 !important;
   }
 

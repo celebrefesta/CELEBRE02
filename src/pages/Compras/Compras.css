@@ -124,13 +124,23 @@
   color: #c5a059;
 }
 
-/* --- CARDS DE DASHBOARD 4 COLUNAS (ENTERPRISE LUXURY) --- */
-.clientes-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 18px;
-  margin-bottom: 26px;
-  width: 100%;
+/* 🔒 TRAVA DE SEGURANÇA: CARDS DE DASHBOARD EM 1 SÓ LINHA NO DESKTOP */
+@media (min-width: 901px) {
+  .clientes-stats-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 18px !important;
+    margin-bottom: 26px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
 }
 
 .stat-card-pro {

@@ -124,14 +124,23 @@
   color: #c5a059;
 }
 
-/* --- CARDS DE DASHBOARD 5 COLUNAS (PASTÉIS MINIMALISTAS) --- */
-.clientes-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 12px;
-  margin-bottom: 24px;
-  width: 100%;
-  box-sizing: border-box;
+/* 🔒 TRAVA DE SEGURANÇA: CARDS DE DASHBOARD EM 1 SÓ LINHA NO DESKTOP */
+@media (min-width: 901px) {
+  .clientes-stats-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
 }
 
 .stat-card-pro {
@@ -1083,7 +1092,7 @@
    📱 RESPONSIVIDADE MOBILE REFINADA (ESTOQUE & ACERVO)
    ========================================================================== */
 
-@media (max-width: 960px) {
+@media (max-width: 900px) {
   .estoque-premium,
   .clientes-container {
     padding: 10px 8px !important;
@@ -1127,6 +1136,7 @@
     gap: 8px !important;
     width: 100% !important;
     align-items: center !important;
+    box-sizing: border-box !important;
   }
 
   /* 🚫 TRAVA DE SELEÇÃO: Garante que Lista e Cards fiquem centralizados acima das 2 colunas */
@@ -1154,11 +1164,13 @@
     white-space: nowrap !important;
   }
 
-  .header-actions button:not(.view-toggle-btn) {
+  .header-actions .btn-secondary-celebre,
+  .header-actions button:not(.view-toggle-btn):not(.btn-primary-celebre) {
+    grid-column: 1 / 2 !important;
     width: 100% !important;
     height: 42px !important;
     justify-content: center !important;
-    padding: 8px 10px !important;
+    padding: 0 8px !important;
     font-size: 0.8rem !important;
     font-weight: 700 !important;
     border-radius: 12px !important;
@@ -1166,16 +1178,23 @@
     overflow: hidden !important;
     text-overflow: ellipsis !important;
     box-sizing: border-box !important;
+    margin: 0 !important;
   }
 
-  .btn-primary-celebre {
-    grid-column: auto !important;
+  .header-actions .btn-primary-celebre {
+    grid-column: 2 / 3 !important;
     width: 100% !important;
     height: 42px !important;
     justify-content: center !important;
-    padding: 8px 10px !important;
+    padding: 0 8px !important;
     font-size: 0.8rem !important;
-    margin-top: 0 !important;
+    font-weight: 700 !important;
+    border-radius: 12px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
   }
 
   /* 📊 Grid de Estatísticas: 2 Colunas em mobile com 5º card em destaque */
@@ -1348,10 +1367,11 @@
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
-    height: 32px !important;
-    min-height: 32px !important;
-    font-size: 0.78rem !important;
-    border-radius: 8px !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    font-size: 0.75rem !important;
+    border-radius: 6px !important;
     padding: 0 !important;
   }
 
@@ -1532,9 +1552,48 @@
   .table-actions-container {
     display: flex !important;
     gap: 6px !important;
-    justify-content: flex-end !important;
+    justify-content: space-between !important;
     width: 100% !important;
-    flex-wrap: wrap !important;
+    box-sizing: border-box !important;
+  }
+
+  .table-actions-container .action-btn {
+    flex: 1 1 0 !important;
+    height: 34px !important;
+    min-width: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    font-size: 0.85rem !important;
+    border-radius: 8px !important;
+    box-sizing: border-box !important;
+  }
+
+  .estoque-card-actions {
+    display: flex !important;
+    gap: 3px !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin-top: 6px !important;
+  }
+
+  .estoque-card-actions .action-btn {
+    flex: 1 1 0px !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 28px !important;
+    min-height: 28px !important;
+    max-height: 28px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: 0 !important;
+    font-size: 0.75rem !important;
+    border-radius: 6px !important;
+    box-sizing: border-box !important;
   }
 }
 

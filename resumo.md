@@ -65,8 +65,8 @@ O sistema opera sobre um ecossistema NoSQL organizado nas seguintes coleções p
 2. `clientes`: Registro de clientes com nome, CPF/CNPJ, WhatsApp, e-mail, endereço completo com CEP e notas de relacionamento.
 3. `estoque`: Catálogo do acervo. Guarda SKU, nome, categoria, quantidade total, quantidade disponível, valor de locação, valor de reposição, dimensões, cor, estado e galeria de fotos.
 4. `financeiro`: Registros de entradas (locações, vendas) e saídas (aluguel do galpão, pessoal, manutenção, compras), data de vencimento, data de pagamento, categoria e anexo.
-5. `compras`: Aquisições de peças de acervo e insumos (balões, fitas, embalagens) com vinculação a fornecedores.
-6. `fornecedores`: Parceiros comerciais, artesãos, marceneiros e freteiros.
+5. `compras`: Aquisições de peças de acervo e insumos (balões, fitas, embalagens) com vinculação a fornecedores e rastreio de prazos de entrega.
+6. `fornecedores`: Parceiros comerciais, e-commerces (Mercado Livre, Shopee), artesãos, marceneiros e freteiros.
 7. `contratos`: Minutas de contratos e instâncias de contratos assinados digitalmente.
 8. `equipe`: Cadastro de colaboradores da empresa, seus cargos e mapa de permissões granulares por módulo.
 9. `configuracoes`: Parâmetros da empresa (logo, chave PIX, endereço, margem de bloqueio de estoque).
@@ -97,223 +97,146 @@ O layout é composto por três estruturas globais:
 
 ### 4.1 Dashboard Principal (`/dashboard`)
 Página central de inteligência e controle de fluxo do negócio.
-
-- **KPIs do Topo**:
-  - *Faturamento do Mês*: Soma das receitas confirmadas no período.
-  - *Total a Receber*: Saldo pendente em aberto de contratos em andamento.
-  - *Pedidos no Mês*: Quantidade total de locações criadas.
-  - *Taxa de Conversão*: Percentual de orçamentos convertidos em contratos fechados.
-- **Gráficos Analíticos**:
-  - *Evolução do Faturamento*: Gráfico de Área comparativo mensal.
-  - *Status dos Pedidos*: Gráfico Donut (Em Processo, Confirmados, Orçamentos, Concluídos).
-  - *Tipos de Serviço*: Comparativo gráfico entre Pegue e Monte e Decoração Completa.
-- **Componente de Auditoria (`AuditoriaEstoque.jsx`)**:
-  - Painel secundário que identifica itens com alta taxa de quebra, peças sem giro e necessidade de reposição de acervo.
+- **Cards KPI**: Total de locações ativas, faturamento do mês, devoluções pendentes e itens em manutenção.
+- **Próximos Eventos & Saídas**: Lista cronológica de retiradas e entregas programadas.
+- **Gráficos de Desempenho**: Faturamento por período e itens mais locados do acervo.
 
 ---
 
 ### 4.2 Gestão de Locações (`/locacoes`)
-O coração operacional do sistema Celebre.
-
-#### A. Painel Principal de Locações (`Locacoes.jsx`)
-- **KPIs Operacionais**:
-  - *Locações Ativas*, *Orçamentos Futuros*, *Total a Receber*, *Confirmados/Contratados*.
-- **⚡ Chips Rápidos de Operação do Dia**:
-  - 🚚 **`SAEM HOJE`**: Filtra em 1 clique pedidos com saída/retirada agendada para o dia atual.
-  - 📦 **`ENTRAM HOJE`**: Filtra pedidos com devolução prevista para hoje.
-  - ⚠️ **`ATRASADOS`**: Alerta vermelho de devoluções vencidas não realizadas.
-- **Pílulas de Status**:
-  - *Em Processo*, *Orçamentos*, *Confirmados*, *Arquivados*, *Lixeira / Perdidos*.
-- **Sub-filtros**:
-  - Seletor de Data Específica do Evento, Período (Hoje, Fim de Semana, Este Mês), Tipo de Serviço (Pegue e Monte vs. Decoração) e Ordenação (Mais Recente, Valor).
-- **Tabela de Locações**:
-  - Exibe ID do Pedido, Nome do Cliente, Data do Evento, Tipo de Serviço, Valor Total, Saldo Pendente e Badge de Status.
-  - **Ações Contextuais**: *Ver Detalhes*, *Editar*, *Romaneio*, *Checkout (Entrega)*, *Checkin (Devolução)*, *WhatsApp* e *Excluir*.
-
-#### B. Nova Locação (`/locacoes/nova` - `NovaLocacao.jsx`)
-- Workflow em 4 etapas:
-  1. **Dados do Cliente & Evento**: Seleção de cliente cadastrado ou gatilho de Auto-Cadastro, definição de data/hora de retirada, data do evento e data/hora de devolução.
-  2. **Seleção de Acervo & Checagem de Disponibilidade**: Seleção de peças com verificador automático de saldo de estoque para as datas escolhidas (impede reserva duplicada).
-  3. **Precificação e Condições**: Definição de frete, aplicação de desconto, valor de caução, valor de sinal e parcelamento.
-  4. **Emissão da Proposta**: Geração de proposta comercial em PDF ou formato otimizado para WhatsApp.
-
-#### C. Editar Locação (`/locacoes/editar/:id` - `EditarLocacao.jsx`)
-- Permite alterar itens locados, ajustar datas, registrar recebimentos parciais e atualizar o status do pedido.
-
-#### D. Matriz de Disponibilidade (`ModalCalendarioDisponibilidade.jsx`)
-- Grade visual em formato de calendário que exibe dia a dia a ocupação e reservas de cada item do acervo.
-
-#### E. Romaneio de Separação de Galpão (`ModalRomaneioSeparacao.jsx`)
-- Gerador de lista de conferência para a equipe de galpão e montagem:
-  - Suporte a Impressão Térmica 80mm e Impressão A4.
-  - Envio do romaneio formatado no WhatsApp com checkboxes `✅` e `⏳`.
-  - Assinaturas de conferência de saída.
-
-#### F. Processos de Checkout e Checkin (`CheckoutPage.jsx` & `CheckinPage.jsx` / `ModalCheckinLocacao.jsx`)
-- **Checkout (Saída)**: Registro da saída do produto com fotos e termo de entrega.
-- **Check-in (Devolução)**: Conferência no retorno das peças. Registro de itens avariados ou faltantes, cálculo automático de cobrança por avaria baseado no valor de reposição e liberação do saldo de caução.
+- **Lista de Locações (`Locacoes.jsx`)**:
+  - Tabela responsiva com busca por cliente, número de contrato, intervalo de datas e status.
+  - Filtro por abas de status: *Orçamentos*, *Confirmados*, *Em Separação*, *Entregues*, *Concluídos*, *Cancelados*.
+  - Ações em massa e atalhos de alteração de status.
+- **Nova Locação / Edição (`NovaLocacao.jsx`)**:
+  - Simulador de disponibilidade em tempo real por intervalo de datas.
+  - Seleção visual de acervos com leitor de SKU e filtros de categoria.
+  - Cálculo automático de frete, desconto, valor de sinal e caução.
+- **Visualizador de Contrato (`VisualizarLocacao.jsx`)**:
+  - Emissão de contrato com minuta dinâmica, espelho do pedido e botão para envio via WhatsApp ou PDF.
+- **Romaneio & Expedição (`RomaneioModal.jsx`)**:
+  - Lista de separação de peças para equipe de galpão com caixas de checagem.
 
 ---
 
 ### 4.3 Gestão de Clientes (`/clientes`)
-
 - **Painel de Clientes (`Clientes.jsx`)**:
-  - Cards com Total de Clientes, Novos no Mês, Clientes VIP e Taxa de Adimplência.
-  - Tabela completa com pesquisa em tempo real por Nome, CPF/CNPJ, WhatsApp ou Cidade.
-- **Cadastro de Cliente (`CadastroCliente.jsx`)**:
-  - Formulário completo com consulta de CEP automática, redes sociais, preferências de festas e notas internas.
-- **Histórico do Cliente (`HistoricoCliente.jsx`)**:
-  - Ficha individual mostrando todo o histórico de aluguéis do cliente, valor total transacionado e nível de fidelidade.
-- **Auto-Cadastro Público (`AutoCadastro.jsx`)**:
-  - Link externo que pode ser enviado pelo WhatsApp para o cliente preencher seus próprios dados cadastrais.
+  - Lista completa de clientes cadastrados com estatísticas de locação.
+- **Novo Cliente / Edição (`NovoCliente.jsx`)**:
+  - Formulário completo com consulta de CEP automática, CPF/CNPJ, WhatsApp formatado e campo de observações comportamentais.
 
 ---
 
 ### 4.4 Estoque e Acervo (`/estoque`)
-
-- **Painel de Estoque (`Estoque.jsx`)**:
-  - KPIs: Total de Itens, Valor Total do Acervo (R$), Peças em Manutenção e Total de Categorias.
-  - Alternância de Visualização: **Grade Visual com Fotos das Peças** vs. **Tabela Detalhada**.
-  - Filtros por Categorias (Móveis, Painéis, Louças, Suportes, Iluminação, etc.) e Status (Disponível, Em Manutenção, Avariado).
-- **Cadastro & Edição de Estoque (`CadastroEstoque.jsx`)**:
-  - Upload de galeria de fotos do produto.
-  - Dados: Código SKU/Interno, Nome, Categoria, Quantidade Total no Galpão.
-  - Precificação: Valor de Locação (R$) e Valor de Reposição/Quebra (R$).
-  - Especificações: Dimensões (AxLxP), Cor, Material, Peso e Cuidados Especiais.
+- **Catálogo de Estoque (`Estoque.jsx`)**:
+  - Visualização em Grid de Cards ou Tabela com foto, SKU, categoria, peças totais, disponíveis e quebradas.
+  - Filtro por disponibilidade em data específica.
+- **Cadastro de Item (`CadastroEstoque.jsx`)**:
+  - Upload de fotos para o Firebase Storage.
+  - Cadastro de SKU, dimensões, cor, valor de locação e valor de reposição (para cobrança de avarias).
+  - Definição de formato: *Peça Avulsa* vs *Kit / Conjunto*.
 
 ---
 
 ### 4.5 Financeiro & Fluxo de Caixa (`/financeiro`)
-
-- **Painel Financeiro (`Financeiro.jsx`)**:
-  - KPIs: Saldo Atual em Caixa, Receitas do Mês, Despesas do Mês e Lucro Líquido.
-  - Gráficos de Fluxo de Caixa (Entradas vs. Saídas).
-  - Tabela de Lançamentos com busca e filtros por status (Pago, Pendente, Atrasado), categoria e centro de custo.
-  - Liquidação de lançamentos em 1 clique.
-- **Novo Lançamento (`NovoLancamento.jsx` / `Novolancamento.css`)**:
-  - Registro de receitas operacionais ou despesas (aluguel, energia, pessoal, frete) com anexo de comprovantes.
+- **Fluxo Financeiro (`Financeiro.jsx`)**:
+  - Lançamentos de receitas e despesas por categoria.
+  - DRE Operacional, controle de formas de pagamento (PIX, Cartão, Dinheiro).
+  - Controle de Cauções retidas e devolvidas aos clientes.
 
 ---
 
 ### 4.6 Compras e Reposições (`/compras`)
-
 - **Gestão de Compras (`Compras.jsx`)**:
   - Registro de compras de reposição de acervo avariado, investimento em novos temas e aquisição de descartáveis/insumos.
-- **Nova Compra (`NovaCompra.jsx`)**:
-  - Lançamento de nota/pedido de compra vinculado ao fornecedor, forma de pagamento e impacto automático no caixa financeiro.
+  - Exportação e envio de lista de compras para WhatsApp ou PDF.
+  - Filtros avançados por canal (*Online* vs *Presencial*), fornecedor e status.
+- **Nova Compra com Redesign SaaS Premium (`NovaCompra.jsx`)**:
+  - **Dark Hero Header**: Identidade visual escura com gradiente dourado (`#0f172a` a `#1e293b`).
+  - **Stepper Workflow**: 3 passos lógicos (*1. Para quem?*, *2. O que será comprado?*, *3. Onde e como comprar?*).
+  - **Layout Reordenado**: Pergunta *"Para quem é esta compra?"* no início, permitindo alternar entre *Reposição de Acervo* (Estoque Geral) e *Pedido Específico* (Vínculo dinâmico com evento do cliente e validação automática de prazo de entrega).
+  - **Campos Financeiros Lado a Lado (2 Colunas)**: `Custo Unitário (R$)` e `Aluguel (R$)` organizados em 2 colunas horizontais limpas (`.nc-grid-2`).
+  - **Modal de Fornecedores Cadastrados & Atalhos Rápidos**: Botão *"🔍 Buscar Cadastrado"* abre modal com pesquisa inteligente e seção de atalhos rápidos para plataformas (*Mercado Livre*, *Shopee*, *Festas e Chocolate*, *Armarinho Fernando*).
+  - **Layout Responsivo Blindado**: Classe `.nc-grid-logistica` ajusta a seção de frete e condição para 1 coluna no celular, evitando overflow horizontal e mantendo os campos financeiros em 2 colunas em qualquer dispositivo.
 
 ---
 
 ### 4.7 Fornecedores (`/fornecedores`)
-
 - **Painel de Fornecedores (`Fornecedores.jsx`)**:
-  - Cadastro de parceiros, marceneiros, pintores, freteiros, fornecedores de louças e balões.
+  - Cadastro de parceiros, e-commerces, marceneiros, pintores, freteiros e lojas de insumos.
 - **Novo Fornecedor (`NovoFornecedor.jsx`)**:
-  - Formulário com razão social, contato do vendedor, condições de pagamento e especialidade.
+  - Formulário com razão social, contato do vendedor, WhatsApp, chave PIX e categoria de fornecimento.
 
 ---
 
 ### 4.8 Agenda de Eventos (`/agenda`)
-
 - **Calendário da Decora (`Agenda.jsx`)**:
   - Calendário interativo com modos Mês, Semana e Dia.
   - Marcadores coloridos diferenciando:
     - 🚚 *Data de Retirada/Entrega*
     - 🎉 *Data da Festa/Evento*
     - 📦 *Data de Devolução/Recolhe*
-  - Filtro rápido por tipo de serviço (Pegue e Monte vs. Decoração).
 
 ---
 
 ### 4.9 Logística & Carregamento (`/logistica`)
-
 - **Painel Logístico (`Logistica.jsx`)**:
   - Organização diária das rotas de entrega e recolhimento.
-  - Divisão entre *Entregas da Equipe* vs. *Retiradas de Clientes no Galpão*.
-  - Atribuição de motorista e veículos para cada rota.
+  - Atribuição de motorista e veículos.
   - Emissão da Lista de Carregamento do Caminhão.
 
 ---
 
 ### 4.10 Contratos Digitais & Assinatura (`/contratos`)
-
 - **Gerenciador de Contratos (`Contratos.jsx`)**:
-  - Painel de contratos gerados, assinados e pendentes de assinatura.
-- **Modelos de Contrato (`ModelosContrato.jsx`)**:
-  - Criador e editor de minutas padrão com substituição dinâmica de tags:
-    - `{NOME_CLIENTE}`, `{CPF_CLIENTE}`, `{VALOR_TOTAL}`, `{DATA_EVENTO}`, `{LISTA_ITENS}`, `{VALOR_CAUCAO}`.
+  - Painel de contratos gerados, assinados e pendentes.
 - **Assinatura Digital (`AssinaturaContrato.jsx`)**:
-  - Interface touch/mouse para o cliente assinar o contrato digitalmente via celular ou tablet.
-- **Visualizador (`VisualizarContrato.jsx`)**:
-  - Exibição e exportação do documento final assinado em PDF.
+  - Interface para o cliente assinar o contrato digitalmente pelo celular.
 
 ---
 
 ### 4.11 Moodboard & Projetos Visuais (`/moodboard`)
-
-- **Mural Criativo de Projetos (`Moodboard.jsx`)**:
-  - Tela interativa estilo "canvas" para decoradoras combinarem peças do acervo, móveis, arranjos e balões.
-  - Definição da paleta de cores do evento.
-  - Exportação da prancha visual do projeto para envio junto com a proposta comercial.
+- **Mural Criativo (`Moodboard.jsx`)**:
+  - Tela interativa estilo "canvas" para combinar peças do acervo, móveis e arranjos visuais antes do evento.
 
 ---
 
 ### 4.12 Catálogo Virtual & Vitrine (`/catalogo`)
-
-- **Vitrine Virtual (`Catalago.jsx` & `catalogoDeTemas.js`)**:
-  - Galeria de acervos e temas prontos organizada para clientes navegarem.
-  - Botão de "Adicionar ao Orçamento" que gera o carrinho e direciona a solicitação para o WhatsApp da empresa.
+- **Vitrine Virtual (`Catalago.jsx`)**:
+  - Galeria de acervos e temas prontos organizada para enviar a clientes via WhatsApp.
 
 ---
 
 ### 4.13 Relatórios & Inteligência de Negócio (`/relatorios`)
-
 Dividido em 4 abas analíticas avançadas:
-
-1. **Aba Pedidos (`PedidosTab.jsx`)**: Taxa de conversão de orçamentos, ticket médio por contrato e volume por período.
-2. **Aba Estoque (`EstoqueTab.jsx`)**: Curva ABC de peças mais rentáveis, índice de peças ociosas sem locação e histórico de quebras.
-3. **Aba Financeiro (`FinanceiroTab.jsx`)**: DRE simplificado, demonstrativo de entradas por meio de pagamento (PIX, Cartão, Dinheiro) e controle de inadimplência.
-4. **Aba Clientes (`ClientesTab.jsx`)**: Ranking dos maiores clientes, taxa de recompra e origem dos contatos (Instagram, Google, Indicação).
+1. **Pedidos (`PedidosTab.jsx`)**: Taxa de conversão e ticket médio.
+2. **Estoque (`EstoqueTab.jsx`)**: Curva ABC e peças ociosas.
+3. **Financeiro (`FinanceiroTab.jsx`)**: DRE e inadimplência.
+4. **Clientes (`ClientesTab.jsx`)**: Recompra e ranking de clientes.
 
 ---
 
 ### 4.14 Configurações do Sistema (`/configuracoes`)
-
-- **Aba Empresa (`AbaEmpresa.jsx`)**: Razão social, CNPJ, WhatsApp comercial, Upload do Logo, Chave PIX padrão e endereço do galpão.
-- **Aba Meu Perfil (`AbaMeuPerfil.jsx`)**: Dados do usuário, e-mail e redefinição de senha.
-- **Aba Catálogo & Estoque (`AbaCatalogoEstoque.jsx`)**: Personalização de categorias e definição de dias de margem para bloqueio de acervo.
-- **Aba Aparência (`AbaAparencia.jsx`)**: Ajustes de tema e identidade visual da plataforma.
-- **Aba Equipe & Segurança (`AbaSeguranca.jsx`)**: Cadastro de colaboradores e gestão de permissões granulares por módulo.
-- **Aba Assinatura & Uso (`AbaAssinaturaUso.jsx`)**: Informações sobre o plano ativo do Celebre.
-- **Aba Backup (`AbaBackup.jsx`)**: Exportação e cópia de segurança dos dados da conta.
+- Gestão de dados da empresa, chave PIX, logomarca, permissões de equipe, margem de bloqueio de estoque e cópia de segurança (Backup).
 
 ---
 
 ### 4.15 Central de Notificações (`/notificacoes`)
-
-- **Notificações (`Notificacoes.jsx`)**: Central de alertas do sistema sobre devoluções atrasadas, cobranças pendentes e lembretes de estoque.
+- Alertas em tempo real sobre devoluções pendentes, cobranças e tarefas logísticas do dia.
 
 ---
 
 ### 4.16 Equipe & Controle ASO (`/Usuarios`)
-
-- **Gestão de Usuários (`Usuarios.jsx`)**: Gerenciamento de acessos da equipe de galpão e atendimento.
-- **Monitoramento de Ações (`Monitoramento.jsx`)**: Log de auditoria de alterações realizadas por colaboradores no sistema.
-- **Gestão ASO (`GestaoASO.jsx`)**: Controle de atestados e exames ocupacionais da equipe.
+- Gerenciamento de acessos da equipe de galpão e atendimento, logs de auditoria e controle de ASO.
 
 ---
 
 ### 4.17 Planos, Assinaturas & Painel Admin (`/planos` / `/admin`)
-
-- **Planos & Upgrades (`Planos.jsx` & `PaginaUpgrade.jsx`)**: Apresentação dos planos SaaS do Celebre (Básico, Pro, Enterprise).
-- **Admin Planos (`AdminPlanos.jsx`)**: Gestão de planos e benefícios.
-- **Controle Geral Super Admin (`ControleGeral.jsx`)**: Painel do administrador do sistema para gestão de tenants e assinaturas ativas.
+- Painel de planos SaaS do Celebre e controle geral de tenants para o Super Admin.
 
 ---
 
 ## 5. WORKFLOWS OPERACIONAIS INTEGRADOS
-
-O fluxo padrão de atendimento no Celebre obedece ao seguinte ciclo:
 
 ```mermaid
 graph TD
@@ -325,7 +248,7 @@ graph TD
     F --> G[Geração do Romaneio de Separação de Galpão]
     G --> H[Checkout / Registro de Saída das Peças]
     H --> I[Realização do Evento]
-    I --> J[Checkin / Confeferência de Retorno das Peças]
+    I --> J[Checkin / Conferência de Retorno das Peças]
     J -->|Sem Avarias| K[Devolução de Caução & Finalização]
     J -->|Com Avarias| L[Lançamento de Taxa de Reposição & Fechamento]
 ```
@@ -334,12 +257,14 @@ graph TD
 
 ## 6. REGRAMENTO DE BLINDAGEM DE LAYOUT & UI/UX
 
-1. **Regra de Ouro dos Cards KPI no Celular**:
-   - A classe `.clientes-stats-grid` em todas as páginas (`Locacoes`, `Clientes`, `Estoque`, `Compras`) mantém obrigatoriamente **2 colunas simétricas no mobile (`repeat(2, 1fr) !important`)**, prevenindo quebras em 1 coluna.
-2. **Harmonia de Espaçamento e Respiro**:
-   - Containers e botões utilizam paddings e gaps proporcionais para garantir clareza visual sem poluição de tela.
-3. **Identidade Visual Celebre**:
-   - Paleta de cores baseada em Dourado Premium (`#c5a059`), Cinza Slate (`#0f172a`), com acentos de status em Esmeralda, Âmbar e Rosa.
+1. **Regra de Ouro dos Cards KPI no Desktop (`> 900px`)**:
+   - A classe `.clientes-stats-grid` em todas as páginas (`Locacoes`, `Clientes`, `Estoque`, `Compras`) mantém obrigatoriamente **1 única linha horizontal (`flex-wrap: nowrap !important; display: flex !important;`)**.
+2. **Regra de Ouro dos Cards KPI no Celular (`<= 900px`)**:
+   - A classe `.clientes-stats-grid` mantém obrigatoriamente **2 colunas simétricas (`grid-template-columns: repeat(2, 1fr) !important;`)**.
+3. **Prevenção de Horizontal Overflow**:
+   - Todos os inputs, selects, textareas e grids contêm `min-width: 0`, `max-width: 100%` e `box-sizing: border-box` ativados para garantir navegabilidade mobile sem vazamentos laterais.
+4. **Identidade Visual Celebre**:
+   - Paleta de cores baseada em Dourado Premium (`#c5a059`), Dark Hero Slate (`#0f172a`), com destaques visuais em Verde Esmeralda, Azul Royal e Âmbar.
 
 ---
 

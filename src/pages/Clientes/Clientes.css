@@ -198,13 +198,23 @@
   border-color: #cbd5e1;
 }
 
-/* --- CARDS DE DASHBOARD (KPIs 4 COLUNAS NA MESMA LINHA) --- */
-.clientes-stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
-  margin-bottom: 24px;
-  width: 100%;
+/* 🔒 TRAVA DE SEGURANÇA: CARDS DE DASHBOARD EM 1 SÓ LINHA NO DESKTOP */
+@media (min-width: 901px) {
+  .clientes-stats-grid {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 16px !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
 }
 
 .stat-card-pro {

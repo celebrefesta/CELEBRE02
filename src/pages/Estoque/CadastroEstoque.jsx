@@ -8,6 +8,56 @@ import { getAuth } from 'firebase/auth';
 
 import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 
+const OPCOES_TAMANHO_PREDEFINIDAS = [
+  'Único',
+  'P (Pequeno)',
+  'M (Médio)',
+  'G (Grande)',
+  'GG (Extra Grande)',
+  '10 cm',
+  '15 cm',
+  '20 cm',
+  '25 cm',
+  '30 cm',
+  '35 cm',
+  '40 cm',
+  '50 cm',
+  '60 cm',
+  '80 cm',
+  '1 Metro',
+  '1.5 Metros',
+  '2 Metros'
+];
+
+const OPCOES_COR_PREDEFINIDAS = [
+  'Dourado / Ouro',
+  'Rosa Gold',
+  'Prata / Inox',
+  'Branco',
+  'Preto',
+  'Rústico / Madeira',
+  'Transparente / Acrílico',
+  'Azul Bebê',
+  'Azul Marinho',
+  'Azul Royal',
+  'Rosa Bebê',
+  'Rosa Chiclete',
+  'Rosê / Rose',
+  'Vermelho',
+  'Verde Menta',
+  'Verde Botânico',
+  'Verde Oliva',
+  'Amarelo',
+  'Laranja / Terracota',
+  'Lilás / Lavanda',
+  'Roxo / Violeta',
+  'Palha / Nude / Bege',
+  'Marrom / Café',
+  'Colorido / Multicolor'
+];
+
+const OPCOES_MEDIDAS_CM = Array.from({ length: 251 }, (_, i) => i);
+
 const CadastroEstoque = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -179,11 +229,17 @@ const CadastroEstoque = () => {
   
   const [tamanho, setTamanho] = useState('');
   const [cor, setCor] = useState('');
+  const [modoTamanhoCustom, setModoTamanhoCustom] = useState(false);
+  const [modoCorCustom, setModoCorCustom] = useState(false);
   const [unidadeMedida, setUnidadeMedida] = useState('Unidade');
   const [largura, setLargura] = useState('');
   const [altura, setAltura] = useState('');
   const [diametro, setDiametro] = useState('');
   const [comprimento, setComprimento] = useState('');
+  
+  const [modoLarguraCustom, setModoLarguraCustom] = useState(false);
+  const [modoAlturaCustom, setModoAlturaCustom] = useState(false);
+  const [modoDiametroCustom, setModoDiametroCustom] = useState(false);
   
   const [tipoDisponibilidade, setTipoDisponibilidade] = useState('Aluguel');
   const [visivelCatalogo, setVisivelCatalogo] = useState(true);
@@ -958,9 +1014,6 @@ const CadastroEstoque = () => {
           <Link to="/estoque" className="btn-secondary-celebre">
             ⬅️ VOLTAR AO ESTOQUE
           </Link>
-          <button type="button" onClick={salvarItem} className="btn-primary-celebre" disabled={salvando}>
-            {salvando ? '💾 SALVANDO...' : '💾 SALVAR ACERVO'}
-          </button>
         </div>
       </div>
 
@@ -983,10 +1036,13 @@ const CadastroEstoque = () => {
                 onClick={() => handleTipoCadastroChange('avulsa')} 
                 className={`ce-tipo-card ${tipoCadastro === 'avulsa' ? 'active' : ''}`}
               >
-                <span style={{ fontSize: '28px' }}>{tipoCadastro === 'avulsa' ? '🧩' : '⬜'}</span>
-                <div>
-                  <strong style={{ fontSize: '15px', display: 'block' }}>PEÇA AVULSA / UNIDADE</strong>
-                  <span style={{ fontSize: '12px' }}>Item único (ex: 1 Bandeja, 1 Painel)</span>
+                <div className="ce-tipo-icon-wrapper">🧩</div>
+                <div className="ce-tipo-info">
+                  <div className="ce-tipo-title-row">
+                    <strong>PEÇA AVULSA / UNIDADE</strong>
+                    {tipoCadastro === 'avulsa' && <span className="ce-tipo-active-pill">✔ ATIVO</span>}
+                  </div>
+                  <small>Item único (ex: 1 Bandeja, 1 Painel)</small>
                 </div>
               </div>
 
@@ -994,10 +1050,13 @@ const CadastroEstoque = () => {
                 onClick={() => handleTipoCadastroChange('kit')} 
                 className={`ce-tipo-card ${tipoCadastro === 'kit' ? 'active' : ''}`}
               >
-                <span style={{ fontSize: '28px' }}>{tipoCadastro === 'kit' ? '📦' : '⬜'}</span>
-                <div>
-                  <strong style={{ fontSize: '15px', display: 'block' }}>KIT / CONJUNTO</strong>
-                  <span style={{ fontSize: '12px' }}>Gera peças separadas (ex: Trio Cilindro)</span>
+                <div className="ce-tipo-icon-wrapper">📦</div>
+                <div className="ce-tipo-info">
+                  <div className="ce-tipo-title-row">
+                    <strong>KIT / CONJUNTO</strong>
+                    {tipoCadastro === 'kit' && <span className="ce-tipo-active-pill">✔ ATIVO</span>}
+                  </div>
+                  <small>Gera peças separadas (ex: Trio Cilindro)</small>
                 </div>
               </div>
 
@@ -1005,10 +1064,13 @@ const CadastroEstoque = () => {
                 onClick={() => handleTipoCadastroChange('decoracao')} 
                 className={`ce-tipo-card ${tipoCadastro === 'decoracao' ? 'active' : ''}`}
               >
-                <span style={{ fontSize: '28px' }}>{tipoCadastro === 'decoracao' ? '✨' : '⬜'}</span>
-                <div>
-                  <strong style={{ fontSize: '15px', display: 'block' }}>DECORAÇÃO COMPLETA</strong>
-                  <span style={{ fontSize: '12px' }}>Junta peças prontas que já existem.</span>
+                <div className="ce-tipo-icon-wrapper">✨</div>
+                <div className="ce-tipo-info">
+                  <div className="ce-tipo-title-row">
+                    <strong>DECORAÇÃO COMPLETA</strong>
+                    {tipoCadastro === 'decoracao' && <span className="ce-tipo-active-pill">✔ ATIVO</span>}
+                  </div>
+                  <small>Junta peças prontas que já existem.</small>
                 </div>
               </div>
             </div>
@@ -1143,29 +1205,206 @@ const CadastroEstoque = () => {
                     </span>
                   </div>
                   
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                  <div className="dimensoes-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                    {/* SELEÇÃO DE TAMANHO / REF. */}
                     <div className="ce-input-group">
-                      <label className="ce-input-label">TAMANHO / REF.</label>
-                      <input className="ce-input-field" value={tamanho} onChange={e => setTamanho(e.target.value.toUpperCase())} placeholder="Ex: P / M / G / 20CM" style={{ fontWeight: '700', textTransform: 'uppercase' }} />
+                      <label htmlFor="ce-tamanho" className="ce-input-label">TAMANHO / REF.</label>
+                      <select 
+                        id="ce-tamanho"
+                        name="tamanho"
+                        className="ce-input-field" 
+                        value={modoTamanhoCustom ? 'OUTRO_TAMANHO' : (OPCOES_TAMANHO_PREDEFINIDAS.includes(tamanho) ? tamanho : (tamanho ? 'OUTRO_TAMANHO' : ''))} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'OUTRO_TAMANHO') {
+                            setModoTamanhoCustom(true);
+                          } else {
+                            setModoTamanhoCustom(false);
+                            setTamanho(val);
+                          }
+                        }}
+                        style={{ fontWeight: '700' }}
+                      >
+                        <option value="">Selecione o Tamanho...</option>
+                        {OPCOES_TAMANHO_PREDEFINIDAS.map(tam => (
+                          <option key={tam} value={tam}>{tam}</option>
+                        ))}
+                        <option value="OUTRO_TAMANHO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Tamanho / Medida...</option>
+                      </select>
+                      {(modoTamanhoCustom || (tamanho && !OPCOES_TAMANHO_PREDEFINIDAS.includes(tamanho))) && (
+                        <input 
+                          id="ce-tamanho-custom"
+                          name="tamanhoCustom"
+                          className="ce-input-field" 
+                          style={{ marginTop: '6px', fontWeight: '700', textTransform: 'uppercase' }} 
+                          value={tamanho} 
+                          onChange={e => setTamanho(e.target.value.toUpperCase())} 
+                          placeholder="Digite a referência / tamanho..." 
+                          autoFocus
+                        />
+                      )}
                     </div>
+
+                    {/* SELEÇÃO DE COR PREDOMINANTE */}
                     <div className="ce-input-group">
-                      <label className="ce-input-label">COR PREDOMINANTE</label>
-                      <input className="ce-input-field" value={cor} onChange={handleTextChange(setCor)} placeholder="Ex: Rosa Gold" />
+                      <label htmlFor="ce-cor" className="ce-input-label">COR PREDOMINANTE</label>
+                      <select 
+                        id="ce-cor"
+                        name="cor"
+                        className="ce-input-field" 
+                        value={modoCorCustom ? 'OUTRA_COR' : (OPCOES_COR_PREDEFINIDAS.includes(cor) ? cor : (cor ? 'OUTRA_COR' : ''))} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'OUTRA_COR') {
+                            setModoCorCustom(true);
+                          } else {
+                            setModoCorCustom(false);
+                            setCor(val);
+                          }
+                        }}
+                        style={{ fontWeight: '600' }}
+                      >
+                        <option value="">Selecione a Cor...</option>
+                        {OPCOES_COR_PREDEFINIDAS.map(c => (
+                          <option key={c} value={c}>{c}</option>
+                        ))}
+                        <option value="OUTRA_COR" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outra Cor...</option>
+                      </select>
+                      {(modoCorCustom || (cor && !OPCOES_COR_PREDEFINIDAS.includes(cor))) && (
+                        <input 
+                          id="ce-cor-custom"
+                          name="corCustom"
+                          className="ce-input-field" 
+                          style={{ marginTop: '6px', fontWeight: '600' }} 
+                          value={cor} 
+                          onChange={handleTextChange(setCor)} 
+                          placeholder="Digite a cor personalizada..." 
+                          autoFocus
+                        />
+                      )}
                     </div>
                   </div>
 
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  {/* CAMPO DE SELEÇÃO POR ROLETE DE MEDIDAS (L x A x D) */}
+                  <div className="medidas-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                    {/* CAMPO LARGURA (cm) */}
                     <div className="ce-input-group">
-                      <label className="ce-input-label">LARG (cm)</label>
-                      <input className="ce-input-field" type="number" value={largura} onChange={e => setLargura(e.target.value)} placeholder="0" style={{ textAlign: 'center', fontWeight: '600' }} />
+                      <label htmlFor="ce-largura" className="ce-input-label">LARG (cm)</label>
+                      <select 
+                        id="ce-largura"
+                        name="largura"
+                        className="ce-input-field" 
+                        value={modoLarguraCustom ? 'OUTRO' : (largura !== '' ? largura : '0')} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'OUTRO') {
+                            setModoLarguraCustom(true);
+                          } else {
+                            setModoLarguraCustom(false);
+                            setLargura(val);
+                          }
+                        }}
+                        style={{ fontWeight: '600' }}
+                      >
+                        <option value="0">0 cm</option>
+                        {OPCOES_MEDIDAS_CM.filter(n => n > 0).map(n => (
+                          <option key={`larg-${n}`} value={n}>{n} cm</option>
+                        ))}
+                        <option value="OUTRO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Valor...</option>
+                      </select>
+                      {(modoLarguraCustom || (largura && !OPCOES_MEDIDAS_CM.includes(Number(largura)))) && (
+                        <input 
+                          id="ce-largura-custom"
+                          name="larguraCustom"
+                          className="ce-input-field" 
+                          type="number" 
+                          style={{ marginTop: '4px', textAlign: 'center', fontWeight: '700' }} 
+                          value={largura} 
+                          onChange={e => setLargura(e.target.value)} 
+                          placeholder="0" 
+                          autoFocus
+                        />
+                      )}
                     </div>
+
+                    {/* CAMPO ALTURA (cm) */}
                     <div className="ce-input-group">
-                      <label className="ce-input-label">ALT (cm)</label>
-                      <input className="ce-input-field" type="number" value={altura} onChange={e => setAltura(e.target.value)} placeholder="0" style={{ textAlign: 'center', fontWeight: '600' }} />
+                      <label htmlFor="ce-altura" className="ce-input-label">ALT (cm)</label>
+                      <select 
+                        id="ce-altura"
+                        name="altura"
+                        className="ce-input-field" 
+                        value={modoAlturaCustom ? 'OUTRO' : (altura !== '' ? altura : '0')} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'OUTRO') {
+                            setModoAlturaCustom(true);
+                          } else {
+                            setModoAlturaCustom(false);
+                            setAltura(val);
+                          }
+                        }}
+                        style={{ fontWeight: '600' }}
+                      >
+                        <option value="0">0 cm</option>
+                        {OPCOES_MEDIDAS_CM.filter(n => n > 0).map(n => (
+                          <option key={`alt-${n}`} value={n}>{n} cm</option>
+                        ))}
+                        <option value="OUTRO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Valor...</option>
+                      </select>
+                      {(modoAlturaCustom || (altura && !OPCOES_MEDIDAS_CM.includes(Number(altura)))) && (
+                        <input 
+                          id="ce-altura-custom"
+                          name="alturaCustom"
+                          className="ce-input-field" 
+                          type="number" 
+                          style={{ marginTop: '4px', textAlign: 'center', fontWeight: '700' }} 
+                          value={altura} 
+                          onChange={e => setAltura(e.target.value)} 
+                          placeholder="0" 
+                          autoFocus
+                        />
+                      )}
                     </div>
+
+                    {/* CAMPO DIÂMETRO (cm) */}
                     <div className="ce-input-group">
-                      <label className="ce-input-label">DIÂM (cm)</label>
-                      <input className="ce-input-field" type="number" value={diametro} onChange={e => setDiametro(e.target.value)} placeholder="0" style={{ textAlign: 'center', fontWeight: '600' }} />
+                      <label htmlFor="ce-diametro" className="ce-input-label">DIÂM (cm)</label>
+                      <select 
+                        id="ce-diametro"
+                        name="diametro"
+                        className="ce-input-field" 
+                        value={modoDiametroCustom ? 'OUTRO' : (diametro !== '' ? diametro : '0')} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'OUTRO') {
+                            setModoDiametroCustom(true);
+                          } else {
+                            setModoDiametroCustom(false);
+                            setDiametro(val);
+                          }
+                        }}
+                        style={{ fontWeight: '600' }}
+                      >
+                        <option value="0">0 cm</option>
+                        {OPCOES_MEDIDAS_CM.filter(n => n > 0).map(n => (
+                          <option key={`diam-${n}`} value={n}>{n} cm</option>
+                        ))}
+                        <option value="OUTRO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Valor...</option>
+                      </select>
+                      {(modoDiametroCustom || (diametro && !OPCOES_MEDIDAS_CM.includes(Number(diametro)))) && (
+                        <input 
+                          id="ce-diametro-custom"
+                          name="diametroCustom"
+                          className="ce-input-field" 
+                          type="number" 
+                          style={{ marginTop: '4px', textAlign: 'center', fontWeight: '700' }} 
+                          value={diametro} 
+                          onChange={e => setDiametro(e.target.value)} 
+                          placeholder="0" 
+                          autoFocus
+                        />
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1188,9 +1427,9 @@ const CadastroEstoque = () => {
                 <div className="form-grid-4" style={{ alignItems: 'flex-start' }}>
                   <div className="form-group span-3">
                     <div style={{ display: 'flex', alignItems: 'center', height: '26px', marginBottom: '6px' }}>
-                      <label className="ce-input-label" style={{ margin: 0 }}>NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label>
+                      <label htmlFor="ce-nome" className="ce-input-label" style={{ margin: 0 }}>NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label>
                     </div>
-                    <input className="ce-input-field" value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} />
+                    <input id="ce-nome" name="nome" className="ce-input-field" value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} />
                     {nome.trim().length >= 3 && itensExistentes.some(i => i.id !== itemEditando?.id && i.nome?.trim().toLowerCase() === nome.trim().toLowerCase()) && (
                       <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '800', marginTop: '4px', display: 'block' }}>
                         💡 Atenção: Você já possui um item com o nome "{nome.trim()}" cadastrado no acervo.
@@ -1200,7 +1439,7 @@ const CadastroEstoque = () => {
                   
                   <div className="form-group span-1">
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '26px', marginBottom: '6px' }}>
-                      <label className="ce-input-label" style={{ margin: 0 }}>SKU / CÓDIGO *</label>
+                      <label htmlFor="ce-codigo" className="ce-input-label" style={{ margin: 0 }}>SKU / CÓDIGO *</label>
                       <div style={{ display: 'flex', gap: '4px' }}>
                         <button 
                           type="button" 
@@ -1221,6 +1460,8 @@ const CadastroEstoque = () => {
                       </div>
                     </div>
                     <input 
+                      id="ce-codigo"
+                      name="codigo"
                       className="ce-input-field"
                       value={codigo} 
                       onChange={(e) => setCodigo(e.target.value.toUpperCase())}
@@ -1239,8 +1480,10 @@ const CadastroEstoque = () => {
                   </div>
 
                   <div className="form-group span-4" style={{ marginTop: '12px' }}>
-                    <label className="ce-input-label">🏷️ TAGS / PALAVRAS-CHAVE DE BUSCA (SEPARADAS POR VÍRGULA)</label>
+                    <label htmlFor="ce-tags" className="ce-input-label">🏷️ TAGS / PALAVRAS-CHAVE DE BUSCA (SEPARADAS POR VÍRGULA)</label>
                     <input 
+                      id="ce-tags"
+                      name="tags"
                       className="ce-input-field" 
                       value={tagsInput} 
                       onChange={e => setTagsInput(e.target.value)} 
@@ -1264,21 +1507,22 @@ const CadastroEstoque = () => {
                 </div>
               )}
 
-              {/* CARD 3: VITRINE DO CATÁLOGO & GALPÃO */}
-              <div className="ce-card-container">
-                <div className="ce-card-header-clean">
-                  <div className="ce-card-header-title">
-                    <span>🌐 3. CATEGORIZAÇÃO NA VITRINE ONLINE</span>
+              {/* CARD 3: LOCALIZAÇÃO FÍSICA NO GALPÃO & ESTOQUE */}
+              {tipoCadastro !== 'decoracao' && (
+                <div className="ce-card-container">
+                  <div className="ce-card-header-clean">
+                    <div className="ce-card-header-title">
+                      <span>📦 3. LOCALIZAÇÃO FÍSICA NO GALPÃO & ESTOQUE</span>
+                    </div>
+                    <span className="ce-badge-gold">
+                      Prateleiras & Qtd
+                    </span>
                   </div>
-                  <span className="ce-badge-gold">
-                    Filtros do Site *
-                  </span>
-                </div>
 
-                {tipoCadastro !== 'decoracao' && (
-                  <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: '1.5px solid var(--borda, #e2e8f0)' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
-                      <label className="ce-input-label">📦 LOCALIZAÇÃO NO GALPÃO *</label>
+                  {/* Localização no Galpão */}
+                  <div style={{ marginBottom: '16px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
+                      <label htmlFor="ce-localizacao" className="ce-input-label">ENDEREÇO NO GALPÃO (PRATELEIRA / CORREDOR) *</label>
                       <button 
                         type="button" 
                         onClick={abrirModalLocalizacao} 
@@ -1288,21 +1532,55 @@ const CadastroEstoque = () => {
                       </button>
                     </div>
                     <select 
+                      id="ce-localizacao"
+                      name="localizacao"
                       className="ce-input-field"
                       value={localizacao} 
                       onChange={e => setLocalizacao(e.target.value)}
                     >
-                      <option value="">Selecione a Prateleira / Local...</option>
+                      <option value="">Selecione a Prateleira / Local no Galpão...</option>
                       {listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}
                     </select>
                   </div>
-                )}
+
+                  {/* Grid Quantidade & Estoque Mínimo */}
+                  <div className="estoque-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                    <div className="ce-input-group">
+                      <label htmlFor="ce-quantidade" className="ce-input-label">QUANTIDADE DISPONÍVEL</label>
+                      {tipoCadastro === 'kit' ? (
+                        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', fontSize: '0.85rem', color: '#b48a3c', fontWeight: '800', border: '1.5px solid var(--borda, #e2e8f0)' }}>
+                          ⚡ Calculada das Peças
+                        </div>
+                      ) : (
+                        <input id="ce-quantidade" name="quantidade" className="ce-input-field" type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} min="1" style={{ fontWeight: '800', textAlign: 'center' }}/>
+                      )}
+                    </div>
+                    <div className="ce-input-group">
+                      <label htmlFor="ce-estoque-minimo" className="ce-input-label">ESTOQUE MÍNIMO DE SEGURANÇA</label>
+                      <input id="ce-estoque-minimo" name="estoqueMinimo" className="ce-input-field" type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'} style={{ fontWeight: '700', textAlign: 'center' }} />
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* CARD 4: CATEGORIZAÇÃO NA VITRINE ONLINE */}
+              <div className="ce-card-container">
+                <div className="ce-card-header-clean">
+                  <div className="ce-card-header-title">
+                    <span>🌐 4. CATEGORIZAÇÃO NA VITRINE ONLINE</span>
+                  </div>
+                  <span className="ce-badge-gold">
+                    Filtros do Site *
+                  </span>
+                </div>
 
                 <div className="vitrine-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
                   {tipoCadastro === 'decoracao' && (
                     <div className="ce-input-group" style={{ gridColumn: 'span 2' }}>
-                      <label className="ce-input-label">📌 FORMATO / MODALIDADE DE EXIBIÇÃO NO SITE *</label>
+                      <label htmlFor="ce-tipo-pacote" className="ce-input-label">📌 FORMATO / MODALIDADE DE EXIBIÇÃO NO SITE *</label>
                       <select 
+                        id="ce-tipo-pacote"
+                        name="tipoPacote"
                         className="ce-input-field"
                         value={tipoPacote}
                         onChange={e => setTipoPacote(e.target.value)}
@@ -1314,8 +1592,10 @@ const CadastroEstoque = () => {
                     </div>
                   )}
                   <div className="ce-input-group">
-                    <label className="ce-input-label">CATEGORIA NA VITRINE *</label>
+                    <label htmlFor="ce-categoria-tema" className="ce-input-label">CATEGORIA NA VITRINE *</label>
                     <select 
+                      id="ce-categoria-tema"
+                      name="categoriaTema"
                       className="ce-input-field"
                       value={categoriaTema} 
                       onChange={e => {
@@ -1340,8 +1620,10 @@ const CadastroEstoque = () => {
                   </div>
                   
                   <div className="ce-input-group">
-                    <label className="ce-input-label">SUBCATEGORIA (Público/Tipo) *</label>
+                    <label htmlFor="ce-subcategoria-tema" className="ce-input-label">SUBCATEGORIA (Público/Tipo) *</label>
                     <select 
+                      id="ce-subcategoria-tema"
+                      name="subcategoriaTema"
                       className="ce-input-field"
                       value={subcategoriaTema} 
                       onChange={e => {
@@ -1360,8 +1642,10 @@ const CadastroEstoque = () => {
                   </div>
 
                   <div className="ce-input-group">
-                    <label className="ce-input-label">FILTRO DE GRUPO *</label>
+                    <label htmlFor="ce-grupo-tema" className="ce-input-label">FILTRO DE GRUPO *</label>
                     <select 
+                      id="ce-grupo-tema"
+                      name="grupoTema"
                       className="ce-input-field"
                       value={grupoTemaSelecionado} 
                       onChange={e => {
@@ -1377,8 +1661,10 @@ const CadastroEstoque = () => {
                   </div>
 
                   <div className="ce-input-group">
-                    <label className="ce-input-label">FILTRO ESPECÍFICO *</label>
+                    <label htmlFor="ce-tema-selecionado" className="ce-input-label">FILTRO ESPECÍFICO *</label>
                     <select 
+                      id="ce-tema-selecionado"
+                      name="temaSelecionado"
                       className="ce-input-field"
                       value={temaSelecionado} 
                       onChange={e => setTemaSelecionado(e.target.value)} 
@@ -1396,8 +1682,10 @@ const CadastroEstoque = () => {
 
                 {temaSelecionado === 'OUTRO_TEMA' && (
                   <div className="ce-input-group" style={{ marginTop: '16px' }}>
-                    <label className="ce-input-label">NOME DO TEMA PERSONALIZADO *</label>
+                    <label htmlFor="ce-tema-personalizado" className="ce-input-label">NOME DO TEMA PERSONALIZADO *</label>
                     <input 
+                      id="ce-tema-personalizado"
+                      name="temaPersonalizado"
                       className="ce-input-field"
                       type="text" 
                       placeholder="Ex: Safari Baby..." 
@@ -1530,27 +1818,29 @@ const CadastroEstoque = () => {
                 </div>
               )}
 
-              {/* CARD 4: FINANCEIRO & ESTOQUE */}
+              {/* CARD 5: PREÇOS & FINANCEIRO */}
               <div className="ce-card-container">
                 <div className="ce-card-header-clean">
                   <div className="ce-card-header-title">
-                    <span>💰 4. FINANCEIRO & QUANTIDADE EM ESTOQUE</span>
+                    <span>💰 5. PREÇOS & FINANCEIRO</span>
                   </div>
                   <span className="ce-badge-gold">
                     Valores em R$
                   </span>
                 </div>
-                
+
                 {/* Grid Valores */}
                 <div className="financeiro-grid-responsive" style={{ display: 'grid', gridTemplateColumns: tipoCadastro === 'decoracao' ? '1fr' : '2fr 1fr 1fr', gap: '16px', marginBottom: tipoCadastro === 'decoracao' ? '12px' : '20px' }}>
                   <div style={{ background: 'var(--fundo-cinza, #fffdfa)', border: '2px solid #c5a059', borderRadius: '14px', padding: '16px 20px', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.15)' }}>
-                    <label className="ce-input-label" style={{ color: 'var(--texto-principal)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <label htmlFor="ce-valor-aluguel" className="ce-input-label" style={{ color: 'var(--texto-principal)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <span>{tipoCadastro === 'decoracao' ? 'VALOR DO ALUGUEL DESTE PACOTE (R$) *' : 'PREÇO DO ALUGUEL (R$) *'}</span>
                       <span style={{ fontSize: '11px', color: '#b48a3c', background: '#fef3c7', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
                         {tipoCadastro === 'decoracao' ? '✨ Decoração' : '⭐ Principal'}
                       </span>
                     </label>
                     <input 
+                      id="ce-valor-aluguel"
+                      name="valorAluguel"
                       type="text" 
                       value={valorAluguel} 
                       onChange={e => setValorAluguel(e.target.value)} 
@@ -1565,12 +1855,12 @@ const CadastroEstoque = () => {
                   {tipoCadastro !== 'decoracao' && (
                     <>
                       <div className="ce-input-group">
-                        <label className="ce-input-label">VALOR COMPRA (R$)</label>
-                        <input className="ce-input-field" type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00" style={{ fontWeight: '700' }} />
+                        <label htmlFor="ce-valor-compra" className="ce-input-label">VALOR COMPRA (R$)</label>
+                        <input id="ce-valor-compra" name="valorCompra" className="ce-input-field" type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00" style={{ fontWeight: '700' }} />
                       </div>
                       <div className="ce-input-group">
-                        <label className="ce-input-label">REPOSIÇÃO (R$)</label>
-                        <input className="ce-input-field" type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00" style={{ fontWeight: '700' }} />
+                        <label htmlFor="ce-valor-reposicao" className="ce-input-label">REPOSIÇÃO (R$)</label>
+                        <input id="ce-valor-reposicao" name="valorReposicao" className="ce-input-field" type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00" style={{ fontWeight: '700' }} />
                       </div>
                     </>
                   )}
@@ -1633,26 +1923,6 @@ const CadastroEstoque = () => {
                     </div>
                     <div style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#b48a3c', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800' }}>
                       💡 Pacote de Decoração
-                    </div>
-                  </div>
-                )}
-
-                {/* Grid Quantidade & Estoque Mínimo */}
-                {tipoCadastro !== 'decoracao' && (
-                  <div className="estoque-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div className="ce-input-group">
-                      <label className="ce-input-label">QUANTIDADE DISPONÍVEL</label>
-                      {tipoCadastro === 'kit' ? (
-                        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', fontSize: '0.85rem', color: '#b48a3c', fontWeight: '800', border: '1.5px solid var(--borda, #e2e8f0)' }}>
-                          ⚡ Calculada das Peças
-                        </div>
-                      ) : (
-                        <input className="ce-input-field" type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} min="1" style={{ fontWeight: '800', textAlign: 'center' }}/>
-                      )}
-                    </div>
-                    <div className="ce-input-group">
-                      <label className="ce-input-label">ESTOQUE MÍNIMO DE SEGURANÇA</label>
-                      <input className="ce-input-field" type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'} style={{ fontWeight: '700', textAlign: 'center' }} />
                     </div>
                   </div>
                 )}

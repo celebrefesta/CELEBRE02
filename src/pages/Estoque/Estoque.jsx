@@ -978,24 +978,43 @@ const Estoque = () => {
         if (itensComPrevisaoAlerta.length === 0) return null;
 
         return (
-          <div style={{ background: 'linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%)', border: '1.5px solid #fca5a5', padding: '14px 20px', borderRadius: '16px', marginBottom: '20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px', boxShadow: '0 4px 14px rgba(239, 68, 68, 0.12)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '26px' }}>🔔</span>
-              <div>
-                <strong style={{ color: '#991b1b', fontSize: '0.95rem', display: 'block', fontWeight: '800' }}>
-                  {itensComPrevisaoAlerta.length} peça(s) com data de prontidão de reparo {itensComPrevisaoAlerta.some(i => i.dataPrevisaoRetorno < hojeISO) ? 'VENCIDA' : 'para HOJE'}!
-                </strong>
-                <span style={{ color: '#7f1d1d', fontSize: '0.82rem', fontWeight: '600' }}>
-                  Verifique se o reparo foi concluído para liberar as unidades de volta ao estoque disponível.
-                </span>
-              </div>
+          <div style={{ 
+            background: 'linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%)', 
+            border: '1.5px solid #fca5a5', 
+            padding: '8px 14px', 
+            borderRadius: '12px', 
+            marginBottom: '12px', 
+            display: 'flex', 
+            alignItems: 'center', 
+            justifyContent: 'space-between', 
+            gap: '10px', 
+            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.1)' 
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '0', flex: 1 }}>
+              <span style={{ fontSize: '18px', flexShrink: 0 }}>🔔</span>
+              <strong style={{ color: '#991b1b', fontSize: '0.8rem', fontWeight: '800', lineHeight: '1.2' }}>
+                {itensComPrevisaoAlerta.length} peça(s) com prontidão de reparo {itensComPrevisaoAlerta.some(i => i.dataPrevisaoRetorno < hojeISO) ? 'VENCIDA' : 'para HOJE'}!
+              </strong>
             </div>
             <button 
               type="button"
-              onClick={() => setStatusFiltro('manutencao')} 
-              style={{ background: '#dc2626', color: '#ffffff', border: 'none', padding: '9px 18px', borderRadius: '10px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 3px 10px rgba(220, 38, 38, 0.3)' }}
+              onClick={() => setStatusFiltro(prev => prev === 'manutencao' ? '' : 'manutencao')} 
+              style={{ 
+                background: statusFiltro === 'manutencao' ? '#475569' : '#dc2626', 
+                color: '#ffffff', 
+                border: 'none', 
+                padding: '6px 12px', 
+                borderRadius: '8px', 
+                fontWeight: '800', 
+                fontSize: '0.75rem', 
+                cursor: 'pointer', 
+                boxShadow: statusFiltro === 'manutencao' ? '0 2px 6px rgba(71, 85, 105, 0.2)' : '0 2px 6px rgba(220, 38, 38, 0.25)',
+                transition: 'all 0.2s ease',
+                whiteSpace: 'nowrap',
+                flexShrink: 0
+              }}
             >
-              🛠️ Ver Peças em Manutenção
+              {statusFiltro === 'manutencao' ? '👁️ Desver' : '🛠️ Ver Peças'}
             </button>
           </div>
         );
@@ -1250,37 +1269,60 @@ const Estoque = () => {
                                 return (
                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '3px' }}>
                                     <span style={{ 
-                                      background: (eProntidaoVencida || eProntidaoHoje) ? '#fef2f2' : eProntidaoProxima ? '#fffbeb' : '#f8fafc', 
-                                      color: (eProntidaoVencida || eProntidaoHoje) ? '#991b1b' : eProntidaoProxima ? '#b45309' : '#475569', 
-                                      border: (eProntidaoVencida || eProntidaoHoje) ? '1px solid #fecaca' : eProntidaoProxima ? '1px solid #fde68a' : '1px solid #e2e8f0', 
-                                      fontSize: '0.73rem', 
-                                      padding: '3px 8px', 
-                                      borderRadius: '6px', 
-                                      fontWeight: '800', 
-                                      display: 'inline-flex', 
-                                      alignItems: 'center', 
-                                      gap: '4px', 
-                                      width: 'fit-content' 
-                                    }}>
-                                      {eProntidaoVencida 
-                                        ? `⏰ REPARO VENCIDO (Prevista: ${formatarDataBR(prevData)})` 
-                                        : eProntidaoHoje 
-                                        ? `🔔 PRONTIDÃO HOJE (${formatarDataBR(prevData)})` 
-                                        : eProntidaoProxima 
-                                        ? `⚠️ Reparo Urgente (${diffDias === 1 ? 'Amanhã' : `em ${diffDias} dias`} - ${formatarDataBR(prevData)})` 
-                                        : `🛠️ ${emMaint} un em manutenção${prevData ? ` (Prev: ${formatarDataBR(prevData)})` : ''}`}
-                                    </span>
+                                       background: (eProntidaoVencida || eProntidaoHoje) ? '#fef2f2' : eProntidaoProxima ? '#fffbeb' : '#f8fafc', 
+                                       color: (eProntidaoVencida || eProntidaoHoje) ? '#991b1b' : eProntidaoProxima ? '#b45309' : '#475569', 
+                                       border: (eProntidaoVencida || eProntidaoHoje) ? '1px solid #fecaca' : eProntidaoProxima ? '1px solid #fde68a' : '1px solid #e2e8f0', 
+                                       fontSize: '0.73rem', 
+                                       padding: '4px 8px', 
+                                       borderRadius: '6px', 
+                                       fontWeight: '800', 
+                                       display: 'inline-flex', 
+                                       alignItems: 'center', 
+                                       gap: '4px', 
+                                       maxWidth: '100%',
+                                       whiteSpace: 'normal',
+                                       wordBreak: 'break-word',
+                                       lineHeight: '1.35',
+                                       boxSizing: 'border-box'
+                                     }}>
+                                       {eProntidaoVencida 
+                                         ? `⏰ REPARO VENCIDO (Prevista: ${formatarDataBR(prevData)})` 
+                                         : eProntidaoHoje 
+                                         ? `🔔 PRONTIDÃO HOJE (${formatarDataBR(prevData)})` 
+                                         : eProntidaoProxima 
+                                         ? `⚠️ Reparo Urgente (${diffDias === 1 ? 'Amanhã' : `em ${diffDias} dias`} - ${formatarDataBR(prevData)})` 
+                                         : `🛠️ ${emMaint} un em manutenção${prevData ? ` (Prev: ${formatarDataBR(prevData)})` : ''}`}
+                                     </span>
 
-                                    {(eProntidaoVencida || eProntidaoHoje || eProntidaoProxima) && (
-                                      <button
-                                        type="button"
-                                        onClick={(e) => { e.stopPropagation(); concluirManutencaoDireta(item); }}
-                                        style={{ background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', color: '#ffffff', border: 'none', padding: '4px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px', width: 'fit-content', boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)' }}
-                                        title="Reparo concluído? Clique para disponibilizar todas as unidades no acervo livre!"
-                                      >
-                                        ✅ Concluir Reparo (Liberar Estoque)
-                                      </button>
-                                    )}
+                                     {(eProntidaoVencida || eProntidaoHoje || eProntidaoProxima) && (
+                                       <button
+                                         type="button"
+                                         onClick={(e) => { e.stopPropagation(); concluirManutencaoDireta(item); }}
+                                         style={{ 
+                                           background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)', 
+                                           color: '#ffffff', 
+                                           border: 'none', 
+                                           padding: '5px 10px', 
+                                           borderRadius: '6px', 
+                                           fontSize: '0.74rem', 
+                                           fontWeight: '800', 
+                                           cursor: 'pointer', 
+                                           display: 'inline-flex', 
+                                           alignItems: 'center', 
+                                           justifyContent: 'center',
+                                           gap: '4px', 
+                                           maxWidth: '100%',
+                                           whiteSpace: 'normal',
+                                           wordBreak: 'break-word',
+                                           lineHeight: '1.3',
+                                           boxSizing: 'border-box',
+                                           boxShadow: '0 2px 6px rgba(22, 163, 74, 0.3)' 
+                                         }}
+                                         title="Reparo concluído? Clique para disponibilizar todas as unidades no acervo livre!"
+                                       >
+                                         ✅ Concluir Reparo (Liberar Estoque)
+                                       </button>
+                                     )}
 
                                     {/* 🚨 INSÍGNIA DE CONFLITO OPERACIONAL COM PEDIDOS ATIVOS */}
                                     {(() => {
@@ -1318,6 +1360,11 @@ const Estoque = () => {
                                            alignItems: 'center', 
                                            gap: '4px',
                                            marginTop: '2px',
+                                           maxWidth: '100%',
+                                           whiteSpace: 'normal',
+                                           wordBreak: 'break-word',
+                                           lineHeight: '1.35',
+                                           boxSizing: 'border-box',
                                            boxShadow: '0 2px 6px rgba(239, 68, 68, 0.2)'
                                          }}>
                                            🚨 CONFLITO DE LOCAÇÃO: Pedido #{numPedConf} ({conf1.clienteNome} - {conf1.dataRetirada.split('-').reverse().join('/')})
