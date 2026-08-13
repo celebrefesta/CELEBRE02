@@ -44,6 +44,7 @@ const Compras = lazy(() => import('./pages/Compras/Compras'));
 const NovaCompra = lazy(() => import('./pages/Compras/NovaCompra'));
 const Financeiro = lazy(() => import('./pages/Financeiro/Financeiro'));
 const NovoLancamento = lazy(() => import('./pages/Financeiro/NovoLancamento'));
+const ContasFixas = lazy(() => import('./pages/Financeiro/ContasFixas'));
 
 // --- OPERACIONAL ---
 const Agenda = lazy(() => import('./pages/Agenda/Agenda'));
@@ -486,6 +487,7 @@ const AppContent = () => {
             {/* 💰 FINANCEIRO */}
             <Route path="/financeiro" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><Financeiro /></TravaSeguranca></RotaPrivada>} />
             <Route path="/financeiro/novo" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><NovoLancamento /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/financeiro/contas-fixas" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><ContasFixas /></TravaSeguranca></RotaPrivada>} />
             
             {/* 🚚 LOGÍSTICA E AGENDA */}
             <Route path="/agenda" element={<RotaPrivada><TravaSeguranca modulo="Agenda" recursoExigido="Agenda"><Agenda /></TravaSeguranca></RotaPrivada>} />

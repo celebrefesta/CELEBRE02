@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, query, where, doc, getDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import AuditoriaEstoque from './AuditoriaEstoque';
 import {
@@ -110,6 +110,14 @@ const Dashboard = () => {
   const [modalAniversariantesAberto, setModalAniversariantesAberto] = useState(false);
   const [filtroPeriodo, setFiltroPeriodo] = useState('mes_atual');
   const [loading, setLoading] = useState(true);
+
+  // 🎯 META DE FATURAMENTO MENSAL NO DASHBOARD
+  const [metaMensal, setMetaMensal] = useState(() => {
+    const saved = localStorage.getItem(`meta_fin_${tenantIdLocal}`);
+    return saved ? Number(saved) : 15000;
+  });
+  const [modalMetaAberto, setModalMetaAberto] = useState(false);
+  const [novaMetaInput, setNovaMetaInput] = useState('');
 
   const [diasTeste, setDiasTeste] = useState(1);
   const [statusConta, setStatusConta] = useState('ativo'); 
@@ -685,6 +693,21 @@ const Dashboard = () => {
         } catch (errAniv) {
           console.warn("Aviso ao carregar aniversariantes:", errAniv);
         }
+
+        // 🎯 CARREGA META FINANCEIRA
+        try {
+          const qConfig = query(collection(db, "financeiro_config"), where("userId", "==", idDaEmpresaCorreta));
+          const snapConfig = await getDocs(qConfig);
+          if (!snapConfig.empty) {
+            const dConf = snapConfig.docs[0].data();
+            if (dConf.metaMensal) {
+              setMetaMensal(Number(dConf.metaMensal));
+              localStorage.setItem(`meta_fin_${idDaEmpresaCorreta}`, String(dConf.metaMensal));
+            }
+          }
+        } catch (errConf) {
+          console.warn("Aviso ao carregar meta financeira no dashboard:", errConf);
+        }
         
       } catch (e) { 
           console.error("Erro dashboard:", e);
@@ -696,6 +719,39 @@ const Dashboard = () => {
     
     carregarDados();
   }, [usuarioLogado?.uid, filtroPeriodo]);
+
+  // 🎯 SALVAR META FINANCEIRA DIRETO NO DASHBOARD
+  const handleSalvarMeta = async (e) => {
+    e.preventDefault();
+    const val = Number(String(novaMetaInput).replace(',', '.'));
+    if (!val || val <= 0) {
+      alert("Por favor, digite um valor válido para a meta.");
+      return;
+    }
+    try {
+      setMetaMensal(val);
+      localStorage.setItem(`meta_fin_${tenantIdLocal}`, String(val));
+      
+      const qConfig = query(collection(db, "financeiro_config"), where("userId", "==", tenantIdLocal));
+      const snap = await getDocs(qConfig);
+      if (!snap.empty) {
+        await updateDoc(doc(db, "financeiro_config", snap.docs[0].id), {
+          metaMensal: val,
+          atualizadoEm: serverTimestamp()
+        });
+      } else {
+        await addDoc(collection(db, "financeiro_config"), {
+          userId: tenantIdLocal,
+          metaMensal: val,
+          criadoEm: serverTimestamp()
+        });
+      }
+      setModalMetaAberto(false);
+    } catch (err) {
+      console.error("Erro ao salvar meta:", err);
+      alert("Erro ao salvar meta financeira.");
+    }
+  };
 
 
   if (loading) return <div className="loading-v3">Atualizando central de comando VIP...</div>;
@@ -842,6 +898,54 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* 🎯 TERMÔMETRO DE META FINANCEIRA MENSAL NO DASHBOARD */}
+      {(() => {
+        const metaAlvo = metaMensal > 0 ? metaMensal : 15000;
+        const fatMes = totalFatPeriodo || 0;
+        const pctMeta = Math.min(100, Math.round((fatMes / metaAlvo) * 100));
+        const faltaMeta = Math.max(0, metaAlvo - fatMes);
+        const metaBatida = fatMes >= metaAlvo;
+
+        return (
+          <div className="dash-meta-card fade-in">
+            <div className="dash-meta-header">
+              <div className="dash-meta-title-box">
+                <span className="dash-meta-icon">🎯</span>
+                <div>
+                  <h4 className="dash-meta-title">Meta de Faturamento Mensal</h4>
+                  <p className="dash-meta-sub">
+                    {metaBatida 
+                      ? '🏆 Parabéns! Meta de faturamento alcançada!' 
+                      : `Faturamento atual: R$ ${fatMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • Faltam R$ ${faltaMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                  </p>
+                </div>
+              </div>
+
+              <div className="dash-meta-actions">
+                <span className={`dash-meta-badge ${metaBatida ? 'batida' : ''}`}>
+                  {pctMeta}% Atingido
+                </span>
+                <button 
+                  type="button" 
+                  className="btn-ajustar-meta-dash"
+                  onClick={() => { setNovaMetaInput(String(metaAlvo)); setModalMetaAberto(true); }}
+                  title="Alterar valor da meta mensal"
+                >
+                  ⚙️ Meta: R$ {metaAlvo.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                </button>
+              </div>
+            </div>
+
+            <div className="dash-meta-bar-track">
+              <div 
+                className={`dash-meta-bar-fill ${metaBatida ? 'gold-fill' : ''}`}
+                style={{ width: `${pctMeta}%` }}
+              ></div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* GRID PRINCIPAL: 2 COLUNAS */}
       <div className="dash-main-grid-wide">
@@ -1261,6 +1365,67 @@ const Dashboard = () => {
           </div>
         </div>
       )}
+
+      {/* 🎯 MODAL DE AJUSTE DA META NO DASHBOARD */}
+      {modalMetaAberto && (
+        <div className="modal-overlay-celebre fade-in" onClick={() => setModalMetaAberto(false)}>
+          <div className="modal-card-celebre" style={{ maxWidth: '420px', padding: '22px' }} onClick={e => e.stopPropagation()}>
+            <div className="modal-header-celebre" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ fontSize: '20px' }}>🎯</span>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: '850', color: '#0f172a' }}>
+                  Meta de Faturamento Mensal
+                </h3>
+              </div>
+              <button 
+                type="button" 
+                onClick={() => setModalMetaAberto(false)}
+                style={{ background: 'none', border: 'none', fontSize: '1.2rem', cursor: 'pointer', color: '#64748b' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSalvarMeta}>
+              <div style={{ marginBottom: '16px' }}>
+                <label style={{ display: 'block', fontSize: '0.74rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '6px' }}>
+                  Valor da Meta Mensal (R$)
+                </label>
+                <input 
+                  type="number" 
+                  step="50"
+                  min="100"
+                  required
+                  placeholder="Ex: 15000" 
+                  value={novaMetaInput} 
+                  onChange={e => setNovaMetaInput(e.target.value)}
+                  style={{ width: '100%', height: '42px', padding: '8px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '1rem', fontWeight: '800', boxSizing: 'border-box' }}
+                />
+                <small style={{ display: 'block', fontSize: '0.70rem', color: '#64748b', marginTop: '4px' }}>
+                  Defina a meta de faturamento mensal para acompanhar o termômetro executivo da sua empresa.
+                </small>
+              </div>
+
+              <div style={{ display: 'flex', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setModalMetaAberto(false)}
+                  style={{ flex: 1, padding: '10px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  style={{ flex: 1, padding: '10px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)' }}
+                >
+                  💾 Salvar Meta
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

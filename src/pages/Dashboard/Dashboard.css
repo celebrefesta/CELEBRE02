@@ -1662,4 +1662,119 @@
 
 [data-theme^='dark'] .ranking-compact-name { color: #f4f4f5 !important; }
 
+/* =========================================
+   🎯 TERMÔMETRO DE META NO DASHBOARD
+========================================= */
+.dash-meta-card {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 16px;
+  padding: 14px 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.02);
+}
+
+.dash-meta-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.dash-meta-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-meta-icon {
+  font-size: 20px;
+}
+
+.dash-meta-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+}
+
+.dash-meta-sub {
+  margin: 2px 0 0 0;
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 600;
+}
+
+.dash-meta-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dash-meta-badge {
+  font-size: 0.72rem;
+  font-weight: 850;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: #f1f5f9;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.dash-meta-badge.batida {
+  background: #dcfce7;
+  color: #166534;
+  border-color: #86efac;
+}
+
+.btn-ajustar-meta-dash {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #cbd5e1);
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--texto-principal, #475569);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-ajustar-meta-dash:hover {
+  border-color: #c5a059;
+  color: #0f172a;
+}
+
+.dash-meta-bar-track {
+  width: 100%;
+  height: 8px;
+  background: var(--fundo-hover, #f1f5f9);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.dash-meta-bar-fill {
+  height: 100%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #c5a059 0%, #eab308 100%);
+  transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dash-meta-bar-fill.gold-fill {
+  background: linear-gradient(90deg, #10b981 0%, #059669 100%);
+}
+
+@media (max-width: 768px) {
+  .dash-meta-card {
+    padding: 10px 12px;
+    border-radius: 14px;
+    margin-bottom: 12px;
+  }
+  .dash-meta-title { font-size: 0.78rem; }
+  .dash-meta-sub { font-size: 0.65rem; }
+  .dash-meta-badge { font-size: 0.65rem; padding: 2px 7px; }
+  .btn-ajustar-meta-dash { font-size: 0.65rem; padding: 3px 8px; }
+}
+
 

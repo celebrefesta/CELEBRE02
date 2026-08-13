@@ -1,0 +1,344 @@
+@import './Financeiro.css';
+
+/* ================================================================
+   🏢 GESTÃO DE CONTAS FIXAS & DESPESAS RECORRENTES (PADRÃO CELEBRE)
+   ================================================================ */
+
+/* CARD AZUL SUAVE PARA INFRA & DESPESAS */
+.stat-card-pro.card-blue,
+.stat-card-pro.border-blue {
+  background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%) !important;
+  border: 1px solid #bfdbfe !important;
+}
+.stat-card-pro.card-blue .stat-title { color: #1e40af !important; }
+.stat-card-pro.card-blue .stat-number { color: #1e3a8a !important; }
+.stat-card-pro.card-blue .stat-desc { color: #2563eb !important; }
+.stat-card-pro.card-blue .stat-icon-wrapper { 
+  background: #2563eb !important; 
+  color: #ffffff !important; 
+  box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important; 
+}
+
+/* BOTÃO DE LANÇAMENTO INLINE NA BARRA DE FILTROS */
+.btn-lancar-inline {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0 14px;
+  height: 30px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+  box-shadow: 0 3px 10px rgba(197, 160, 89, 0.28);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-lancar-inline:hover:not(:disabled) {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+.btn-lancar-inline:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* ================================================================
+   📝 FORMULÁRIO DE CADASTRO / EDIÇÃO EXPANSÍVEL
+   ================================================================ */
+.cf-form-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 18px 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.cf-form-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.cf-form-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+}
+
+.cf-form-title {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 850;
+  color: #0f172a;
+  letter-spacing: -0.2px;
+}
+
+.btn-cancel-edit {
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  color: #64748b;
+  font-size: 0.70rem;
+  font-weight: 750;
+  padding: 5px 12px;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-cancel-edit:hover {
+  background: #fee2e2;
+  color: #b91c1c;
+  border-color: #fca5a5;
+}
+
+.cf-form-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cf-form-row {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cf-form-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cf-label {
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cf-input {
+  height: 38px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 500;
+  outline: none;
+  box-sizing: border-box;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.cf-input:focus {
+  border-color: #c5a059;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.12);
+}
+
+.cf-form-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 4px;
+}
+
+.btn-salvar-conta-pro {
+  height: 38px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  border: none;
+  padding: 0 24px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+.btn-salvar-conta-pro:hover {
+  filter: brightness(1.15);
+  transform: translateY(-1px);
+}
+
+/* ================================================================
+   📋 TABELA EXECUTIVA & BADGES
+   ================================================================ */
+.cf-dia-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: #334155;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #e2e8f0;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.cf-row-sub {
+  font-size: 0.68rem;
+  color: #94a3b8;
+  display: block;
+  margin-top: 2px;
+}
+
+.cf-cat-badge {
+  font-size: 0.68rem;
+  font-weight: 750;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid;
+  display: inline-block;
+  white-space: nowrap;
+}
+
+.cf-actions-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.btn-cf-action {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 0.70rem;
+  font-weight: 750;
+  cursor: pointer;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-cf-action.lancar {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+}
+
+.btn-cf-action.lancar:hover {
+  background: #1e293b;
+  transform: translateY(-1px);
+}
+
+.btn-cf-action.editar:hover {
+  background: #f1f5f9;
+  border-color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.btn-cf-action.excluir:hover {
+  background: #fee2e2;
+  border-color: #fca5a5;
+  color: #b91c1c;
+  transform: translateY(-1px);
+}
+
+/* ================================================================
+   📱 CARDS MOBILE (<= 768px)
+   ================================================================ */
+.cf-cards-mobile {
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cf-mobile-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.02);
+}
+
+.cf-mcard-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.cf-mcard-main-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cf-mcard-title {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.cf-mcard-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.cf-mcard-obs {
+  font-size: 0.68rem;
+  color: #64748b;
+  background: #f8fafc;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid #f1f5f9;
+}
+
+.cf-mcard-actions {
+  display: flex;
+  gap: 6px;
+  border-top: 1px dashed #e2e8f0;
+  padding-top: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-cf-action.full {
+  flex: 1 1 100%;
+}
+
+@media (max-width: 768px) {
+  .btn-lancar-inline {
+    width: 100% !important;
+    justify-content: center !important;
+    margin-top: 4px !important;
+  }
+
+  .cf-table-desktop,
+  .fin-desktop-table-view {
+    display: none !important;
+  }
+
+  .cf-cards-mobile {
+    display: flex !important;
+  }
+}

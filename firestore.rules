@@ -147,6 +147,13 @@ service cloud.firestore {
     }
 
     // ---------------------------------------------------------------
+    // financeiro_recorrentes/{docId}
+    // ---------------------------------------------------------------
+    match /financeiro_recorrentes/{docId} {
+      allow read, write: if logado();
+    }
+
+    // ---------------------------------------------------------------
     // lista_compras/{docId}
     // ---------------------------------------------------------------
     match /lista_compras/{docId} {

@@ -1,4 +1,4 @@
-# 👑 SISTEMA CELEBRE — MANUAL TÉCNICO & RESUMO DETALHADO DO SISTEMA
+# 👑 SISTEMA CELEBRE — MANUAL TÉCNICO & RESUMO EXECUTIVO DO SISTEMA
 
 > **Celebre - Sistema Especializado em Gestão de Festas, Eventos e Locação de Acervo**  
 > *Documento técnico e operacional definitivo cobrindo 100% dos módulos, páginas, abas, fluxos e componentes do sistema.*
@@ -30,6 +30,7 @@
    - [4.17 Planos, Assinaturas & Painel Admin (`/planos` / `/admin`)](#417-planos-assinaturas--painel-admin-planos--admin)
 5. [Workflows Operacionais Integrados](#5-workflows-operacionais-integrados)
 6. [Regramento de Blindagem de Layout & UI/UX](#6-regramento-de-blindagem-de-layout--uiux)
+7. [Resumo Executivo de Atualizações & Modernizações Recentes](#7-resumo-executivo-de-atualizações--modernizações-recentes)
 
 ---
 
@@ -64,13 +65,14 @@ O sistema opera sobre um ecossistema NoSQL organizado nas seguintes coleções p
 1. `locacoes`: Armazena dados de contratos, orçamentos, cliente associado, intervalo de datas (retirada, evento, devolução), tipo de serviço (Pegue e Monte vs. Decoração), lista de itens locados, valores (frete, desconto, sinal, caução, total), status e controle de devolução/avarias.
 2. `clientes`: Registro de clientes com nome, CPF/CNPJ, WhatsApp, e-mail, endereço completo com CEP e notas de relacionamento.
 3. `estoque`: Catálogo do acervo. Guarda SKU, nome, categoria, quantidade total, quantidade disponível, valor de locação, valor de reposição, dimensões, cor, estado e galeria de fotos.
-4. `financeiro`: Registros de entradas (locações, vendas) e saídas (aluguel do galpão, pessoal, manutenção, compras), data de vencimento, data de pagamento, categoria e anexo.
-5. `compras`: Aquisições de peças de acervo e insumos (balões, fitas, embalagens) com vinculação a fornecedores e rastreio de prazos de entrega.
-6. `fornecedores`: Parceiros comerciais, e-commerces (Mercado Livre, Shopee), artesãos, marceneiros e freteiros.
-7. `contratos`: Minutas de contratos e instâncias de contratos assinados digitalmente.
-8. `equipe`: Cadastro de colaboradores da empresa, seus cargos e mapa de permissões granulares por módulo.
-9. `configuracoes`: Parâmetros da empresa (logo, chave PIX, endereço, margem de bloqueio de estoque).
-10. `notificacoes`: Alertas do sistema referentes a atrasos e tarefas do dia.
+4. `financeiro`: Registros de entradas (locações, vendas) e saídas (aluguel do galpão, pessoal, manutenção, compras), data de vencimento, data de pagamento, categoria, forma de pagamento e anexo.
+5. `financeiro_recorrentes`: Cadastro de despesas fixas e salários mensais recorrentes (descrição, categoria, valor estimado, dia de vencimento, forma de pagamento, observações).
+6. `compras`: Aquisições de peças de acervo e insumos (balões, fitas, embalagens) com vinculação a fornecedores e rastreio de prazos de entrega.
+7. `fornecedores`: Parceiros comerciais, e-commerces (Mercado Livre, Shopee), artesãos, marceneiros e freteiros.
+8. `contratos`: Minutas de contratos e instâncias de contratos assinados digitalmente.
+9. `equipe`: Cadastro de colaboradores da empresa, seus cargos e mapa de permissões granulares por módulo.
+10. `configuracoes`: Parâmetros da empresa (logo, chave PIX, endereço, margem de bloqueio de estoque).
+11. `notificacoes`: Alertas do sistema referentes a atrasos e tarefas do dia.
 
 ---
 
@@ -139,10 +141,21 @@ Página central de inteligência e controle de fluxo do negócio.
 ---
 
 ### 4.5 Financeiro & Fluxo de Caixa (`/financeiro`)
-- **Fluxo Financeiro (`Financeiro.jsx`)**:
-  - Lançamentos de receitas e despesas por categoria.
-  - DRE Operacional, controle de formas de pagamento (PIX, Cartão, Dinheiro).
-  - Controle de Cauções retidas e devolvidas aos clientes.
+Página unificada com arquitetura de 3 abas sem descontinuidade visual ou quebra de layout:
+- **Aba 1: 📊 Fluxo de Caixa (`lancamentos`)**:
+  - 4 Cards KPI protegidos (Faturamento Bruto, Total Saídas, Saldo Operacional, Saldo Líquido com Estimativa de Fechamento).
+  - Barra de formas de pagamento em chips com ícones (`⚡ Pix`, `💳 Cartão`, `💵 Dinheiro`, `📄 Boleto`).
+  - Tabela dinâmica de lançamentos com status de quitação, visualização de anexos e filtros por período e categoria.
+  - Widget de Distribuição por Categoria com gráfico de rosca Donut + barras de progresso visual.
+  - Exportação de dados em CSV / Excel (`📥 Exportar (.CSV)`).
+- **Aba 2: 📎 Comprovantes (`comprovantes`)**:
+  - Central de auditoria com galeria de comprovantes de pagamento e recebimento anexados.
+  - Modal de ampliação em alta definição via React Portal (`document.body`) com suporte a imagens e visualizador de PDF, download e impressão.
+- **Aba 3: 🏢 Contas Fixas & Despesas Recorrentes (`contas-fixas`)**:
+  - Gestão de folha salarial e despesas estruturais (Aluguel, Energia, Internet, Pró-labore, Diárias).
+  - 4 Cards KPI dedicados: *Custo Fixo Total Estimado*, *Equipe & Pessoal*, *Infra & Despesas Fixas* e *Status em Mês Vigente*.
+  - **Modal Celebre VIP de Cadastro/Edição**: Renderizado no `document.body` via React Portal com `backdrop-filter: blur(14px)`, layout 2x2 otimizado, máscara monetária em tempo real e foco inteligente.
+  - **Lançamento Automático em 1 Clique**: Botão `⚡ Lançar no Caixa` que cria a despesa no fluxo de caixa e atualiza o status de lançamento no mês alvo.
 
 ---
 
@@ -150,14 +163,12 @@ Página central de inteligência e controle de fluxo do negócio.
 - **Gestão de Compras (`Compras.jsx`)**:
   - Registro de compras de reposição de acervo avariado, investimento em novos temas e aquisição de descartáveis/insumos.
   - Exportação e envio de lista de compras para WhatsApp ou PDF.
-  - Filtros avançados por canal (*Online* vs *Presencial*), fornecedor e status.
 - **Nova Compra com Redesign SaaS Premium (`NovaCompra.jsx`)**:
-  - **Dark Hero Header**: Identidade visual escura com gradiente dourado (`#0f172a` a `#1e293b`).
-  - **Stepper Workflow**: 3 passos lógicos (*1. Para quem?*, *2. O que será comprado?*, *3. Onde e como comprar?*).
-  - **Layout Reordenado**: Pergunta *"Para quem é esta compra?"* no início, permitindo alternar entre *Reposição de Acervo* (Estoque Geral) e *Pedido Específico* (Vínculo dinâmico com evento do cliente e validação automática de prazo de entrega).
-  - **Campos Financeiros Lado a Lado (2 Colunas)**: `Custo Unitário (R$)` e `Aluguel (R$)` organizados em 2 colunas horizontais limpas (`.nc-grid-2`).
-  - **Modal de Fornecedores Cadastrados & Atalhos Rápidos**: Botão *"🔍 Buscar Cadastrado"* abre modal com pesquisa inteligente e seção de atalhos rápidos para plataformas (*Mercado Livre*, *Shopee*, *Festas e Chocolate*, *Armarinho Fernando*).
-  - **Layout Responsivo Blindado**: Classe `.nc-grid-logistica` ajusta a seção de frete e condição para 1 coluna no celular, evitando overflow horizontal e mantendo os campos financeiros em 2 colunas em qualquer dispositivo.
+  - Dark Hero Header com gradiente dourado (`#0f172a` a `#1e293b`).
+  - Stepper Workflow em 3 passos lógicos.
+  - Segmentação inteligente (*Reposição de Acervo* vs *Pedido Específico vinculado a evento*).
+  - Campos financeiros lado a lado em 2 colunas (`.nc-grid-2`).
+  - Modal de busca inteligente de fornecedores com atalhos para marketplaces (*Mercado Livre*, *Shopee*).
 
 ---
 
@@ -209,10 +220,10 @@ Página central de inteligência e controle de fluxo do negócio.
 
 ### 4.13 Relatórios & Inteligência de Negócio (`/relatorios`)
 Dividido em 4 abas analíticas avançadas:
-1. **Pedidos (`PedidosTab.jsx`)**: Taxa de conversão e ticket médio.
-2. **Estoque (`EstoqueTab.jsx`)**: Curva ABC e peças ociosas.
-3. **Financeiro (`FinanceiroTab.jsx`)**: DRE e inadimplência.
-4. **Clientes (`ClientesTab.jsx`)**: Recompra e ranking de clientes.
+1. **Pedidos (`PedidosTab.jsx`)**: Taxa de conversão, ticket médio e volume contratado.
+2. **Estoque (`EstoqueTab.jsx`)**: Curva ABC, valoração de acervo físico e peças ociosas.
+3. **Financeiro (`FinanceiroTab.jsx`)**: DRE Gerencial, Livro Caixa auditado e indicadores de margem.
+4. **Clientes (`ClientesTab.jsx`)**: Recompra, LTV e ranking de cidades com mais festas.
 
 ---
 
@@ -255,38 +266,44 @@ graph TD
 
 ---
 
-## 7. RESUMO EXECUTIVO DE ATUALIZAÇÕES & MODERNIZAÇÕES RECENTES
+## 6. REGRAMENTO DE BLINDAGEM DE LAYOUT & UI/UX
 
-### 7.1. Página de Financeiro (`Financeiro.jsx` & `Financeiro.css`)
-- **Remoção do Container Azul Pesado**: Eliminado o antigo container escuro redundante que repetia métricas numéricas.
-- **Card KPI 4 Enriquecido**: Subtexto dinâmico adicionado no card `SALDO LÍQUIDO REAL` (`Est. Fim Mês: R$ ...`).
-- **Novo Widget de Distribuição por Categoria**: Rosca Donut + Barras de Progresso de Categoria substituindo texto bruto sem formatação.
-- **Exportador Excel / CSV**: Botão **`📥 Exportar (.CSV)`** para download dos dados financeiros direto para planilhas.
+### 🔒 Regra de Ouro 1: Layout dos Cards KPI no Desktop (1 Única Linha)
+- A classe `.clientes-stats-grid` em **TODAS** as páginas (`Locacoes`, `Clientes`, `Estoque`, `Compras`, `Financeiro`) **DEVE PERMANECER OBRIGATORIAMENTE EM 1 SÓ LINHA HORIZONTAL (`flex-wrap: nowrap !important; display: flex !important;`)** no desktop (`> 900px`).
+- **NUNCA** permitir que os cards dobrem para 2 linhas no desktop. Todos os cards ajustam-se proporcionalmente lado a lado.
 
-### 7.2. Central de Relatórios Estratégicos & DRE (`Relatorios.jsx` & Sub-abas)
-- **Header Executivo**: Badge dourado `📊 CENTRAL DE INTELIGÊNCIA & DRE` com pílulas de navegação responsivas.
-- **Aba 💰 Financeiro & DRE**:
-  - DRE com Livro Caixa em tempo real, 4 Cards KPI protegidos pelas Regras de Ouro.
-  - Card de Insight de Saúde Financeira dinâmico com cálculo de margem real e alertas inteligentes (`🟢 SAUDÁVEL`, `🟡 MARGEM COMPRIMIDA`, `🚨 DÉFICIT OPERACIONAL`).
-  - Barra de Balanço Proporcional de Entradas vs Saídas ultra-compacta com histórico de chips mensais.
-  - Exportação de DRE em PDF assinado com logotipo, CNPJ e data/hora auditada.
-- **Aba 👥 Clientes & CRM**:
-  - Indicadores de LTV, Ticket Médio, Taxa de Fidelidade e Clientes Recorrentes.
-  - Painel de Insight com destaque para o cliente de maior LTV e cidade líder em eventos.
-  - Ranking compacto dos Top 3 Clientes VIP e Cidades com mais festas.
-- **Aba 📦 Estoque & ROI**:
-  - Valoração de acervo físico total, cálculo de variedades de tipos e peças em manutenção.
-  - Insight de disponibilidade física e saúde do acervo.
-  - Composição por categorias e temas campeões em locação.
-- **Aba 📑 Pedidos & Vendas**:
-  - Mapeamento de volume contratado, taxa de conversão comercial de orçamentos e festas futuras no radar.
-  - Filtros por modalidade (Decoração Completa vs Pegue e Monte) e exportação comercial de pedidos em PDF.
+### 🔒 Regra de Ouro 2: Layout dos Cards KPI no Celular (2 Colunas)
+- A classe `.clientes-stats-grid` em **TODAS** as páginas **DEVE PERMANECER OBRIGATORIAMENTE EM 2 COLUNAS** no celular/telas menores (`<= 900px`).
+- A regra global em `src/App.css` e nas páginas específicas utiliza `grid-template-columns: repeat(2, 1fr) !important;`.
 
-### 7.3. Auditoria de Segurança e Desempenho
-- **Blindagem de Grids KPI**: Garantia rigorosa das Regras de Ouro 1 (1 linha no Desktop) e 2 (2 colunas no Celular).
-- **Sem Overflow nem Poluição Visual**: Otimização vertical de cards para evitar rolagem excessiva e manter todas as informações visíveis na tela.
+### 🔒 Regra de Ouro 3: Preservação de CSS e Estilos Visuais
+- Arquivos de estilização CSS (`Locacoes.css`, `Clientes.css`, `Estoque.css`, `Compras.css`, `ModalCalendarioDisponibilidade.css`) estão **BLINDADOS**.
+- Não alterar classes globais de grid sem verificar o impacto em todas as telas da aplicação.
 
 ---
 
-*Manual técnico e Resumo Executivo gerados e atualizados para o repositório Celebre.*
+## 7. RESUMO EXECUTIVO DE ATUALIZAÇÕES & MODERNIZAÇÕES RECENTES
 
+### 7.1. Página de Financeiro (`Financeiro.jsx` & `Financeiro.css`)
+- **Arquitetura Unificada de 3 Abas**: `Fluxo de Caixa`, `Comprovantes` e `Contas Fixas` residem na mesma página, compartilhando cabeçalho, cards KPI e filtros, eliminando qualquer salto ou desalinhamento entre telas.
+- **Remoção de Duplicidades**: Botão redundante no topo removido; navegação centralizada nas abas principais.
+- **Card KPI 4 Enriquecido**: Subtexto dinâmico no card `SALDO LÍQUIDO REAL` (`Est. Fim Mês: R$ ...`).
+- **Novo Widget de Distribuição por Categoria**: Rosca Donut + Barras de Progresso de Categoria com tooltips ricos.
+- **Exportador Excel / CSV**: Botão **`📥 Exportar (.CSV)`** para download dos lançamentos.
+
+### 7.2. Módulo de Contas Fixas & Despesas Recorrentes
+- **4 Cards KPI Dedicados**: Métricas automáticas para *Custo Fixo Total*, *Folha de Pagamento*, *Infraestrutura* e *Lançamentos do Mês*.
+- **Lançamento Automático em 1 Clique**: Lança o salário ou custo fixo no fluxo de caixa real do mês instantaneamente.
+- **Modal VIP de Cadastro e Edição**:
+  - Renderizado diretamente no `document.body` via React Portal.
+  - Fundo escurecido e desfocado em 100% da tela (`backdrop-filter: blur(14px) saturate(180%)`).
+  - Layout harmonioso em grid 2x2 com ícones visuais, máscara de moeda em tempo real e validações completas.
+
+### 7.3. Central de Relatórios Estratégicos & DRE (`Relatorios.jsx` & Sub-abas)
+- **Header Executivo**: Badge dourado `📊 CENTRAL DE INTELIGÊNCIA & DRE` com pílulas de navegação responsivas.
+- **DRE com Livro Caixa**: 4 Cards KPI protegidos, cálculo dinâmico de margem operacional e alertas inteligentes (`🟢 SAUDÁVEL`, `🟡 MARGEM COMPRIMIDA`, `🚨 DÉFICIT OPERACIONAL`).
+- **Exportação em PDF**: Emissão de DRE e Pedidos com layout profissional, logo e dados auditados.
+
+---
+
+*Manual técnico e Resumo Executivo atualizados com sucesso para o Sistema Celebre.*
