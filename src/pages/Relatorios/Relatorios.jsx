@@ -53,40 +53,46 @@ const Relatorios = () => {
   }, [activeTab, usuarioLogado, navigate, tenantId]);
 
   return (
-    <div className="dashboard-container">
+    <div className="dashboard-container relatorios-main-wrapper">
       
-      {/* CABEÇALHO OTIMIZADO: Título e Abas na mesma linha */}
+      {/* CABEÇALHO EXECUTIVO REPAGINADO */}
       <div className="dashboard-header relatorios-header-ajuste">
         <div className="header-text">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '4px' }}>
+            <span className="relatorios-badge-head">📊 CENTRAL DE INTELIGÊNCIA &amp; DRE</span>
+          </div>
           <h1>RELATÓRIOS ESTRATÉGICOS</h1>
-          <p>Acompanhe a saúde financeira e o desempenho do seu acervo.</p>
+          <p>Análise detalhada de DRE financeiro, carteira de clientes, valoração de acervo e desempenho de vendas.</p>
         </div>
 
         <div className="tabs-relatorios-compacto">
-         
           <button 
+            type="button"
             className={activeTab === 'financeiro' ? 'active' : ''} 
             onClick={() => setActiveTab('financeiro')}
           >
-            💰 Financeiro
+            💰 Financeiro &amp; DRE
           </button>
           <button 
+            type="button"
             className={activeTab === 'clientes' ? 'active' : ''} 
             onClick={() => setActiveTab('clientes')}
           >
-            👥 Clientes
+            👥 Clientes &amp; CRM
           </button>
           <button 
+            type="button"
             className={activeTab === 'estoque' ? 'active' : ''} 
             onClick={() => setActiveTab('estoque')}
           >
-            📦 Estoque
+            📦 Estoque &amp; ROI
           </button>
           <button 
+            type="button"
             className={activeTab === 'pedidos' ? 'active' : ''} 
             onClick={() => setActiveTab('pedidos')}
           >
-            📑 Pedidos
+            📑 Pedidos &amp; Vendas
           </button>
         </div>
       </div>

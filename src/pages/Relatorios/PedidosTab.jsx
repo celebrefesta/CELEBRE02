@@ -7,7 +7,6 @@ import autoTable from 'jspdf-autotable';
 import './PedidosTab.css';
 
 const PedidosTab = () => {
-  // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
@@ -19,9 +18,7 @@ const PedidosTab = () => {
     futuros: 0 
   });
   const [statusContagem, setStatusContagem] = useState([]);
-  const [proximosEventos, setProximosEventos] = useState([]);
   const [pedidosLista, setPedidosLista] = useState([]);
-  
   const [filtroAtual, setFiltroAtual] = useState('TODOS');
   const [taxaConversao, setTaxaConversao] = useState(0);
 
@@ -30,7 +27,6 @@ const PedidosTab = () => {
     logotipo: ''
   });
 
-  // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DE EXPORTAÇÃO VINCULADO À EMPRESA)
   const registrarLog = async (acao, detalhes) => {
     if (!usuarioLogado) return;
     try {
@@ -56,7 +52,6 @@ const PedidosTab = () => {
 
     const buscarDadosPedidosEConfigs = async () => {
       try {
-        // 🔥 BLINDAGEM MULTI-EMPRESA: Puxa APENAS as locações da conta da empresa
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
 
         const [snapLocacoes, snapConfig] = await Promise.all([
@@ -93,7 +88,6 @@ const PedidosTab = () => {
           contagemStatus[statusLimpo] = (contagemStatus[statusLimpo] || 0) + 1;
 
           let dataFesta = null;
-  
           if (loc.dataRetirada) {
             dataFesta = new Date(loc.dataRetirada.includes('T') ? loc.dataRetirada : `${loc.dataRetirada}T12:00:00`);
           } else if (loc.criadoEm?.toDate) {
@@ -132,18 +126,12 @@ const PedidosTab = () => {
 
         pedidosFormatados.sort((a, b) => (b.dataObj || 0) - (a.dataObj || 0));
         
-        const futuros = pedidosFormatados
-          .filter(p => p.dataObj && p.dataObj >= hoje && !p.status.includes('CANCELADO'))
-          .sort((a, b) => a.dataObj - b.dataObj)
-          .slice(0, 5);
-          
         const statusArray = Object.entries(contagemStatus).sort((a, b) => b[1] - a[1]);
         const totalOportunidades = qtdFechados + qtdOrcamentos;
-        const taxa = totalOportunidades > 0 ? (qtdFechados / totalOportunidades) * 100 : 0;
+        const taxa = totalOportunidades > 0 ? Math.round((qtdFechados / totalOportunidades) * 100) : 0;
         
         setMetricas({ total: locacoes.length, faturamento: faturamentoTotal, futuros: eventosFuturosCount });
         setStatusContagem(statusArray);
-        setProximosEventos(futuros);
         setPedidosLista(pedidosFormatados);
         setTaxaConversao(taxa);
         
@@ -156,14 +144,6 @@ const PedidosTab = () => {
 
     buscarDadosPedidosEConfigs();
   }, [usuarioLogado, tenantId]);
-
-  const getStatusClass = (status) => {
-    if (status.includes('ORÇAMENTO') || status.includes('ORCAMENTO') || status.includes('PENDENTE')) return 'status-orcamento';
-    if (status.includes('AGENDADO') || status.includes('CONFIRMADO')) return 'status-agendado';
-    if (status.includes('ANDAMENTO') || status.includes('RETIRADO') || status.includes('FESTA')) return 'status-andamento';
-    if (status.includes('CANCELADO')) return 'status-cancelado';
-    return 'status-concluido';
-  };
 
   const pedidosFiltrados = pedidosLista.filter(p => {
     if (filtroAtual === 'TODOS') return true;
@@ -179,202 +159,223 @@ const PedidosTab = () => {
     try {
       const doc = new jsPDF();
       let startY = 25;
-      const dataHoje = new Date().toLocaleDateString('pt-BR');
 
       if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
         try {
           doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
         } catch(e) {}
-        doc.setFontSize(20);
+        doc.setFontSize(18);
         doc.setTextColor(15, 23, 42);
         doc.text(dadosEmpresa.nomeEmpresa, 48, 22);
-        doc.setFontSize(11);
-        doc.setTextColor(100);
-        doc.text(`Relatório de Pedidos | Gerado em: ${dataHoje} | Total: ${pedidosFiltrados.length}`, 48, 30);
-        startY = 45;
+        doc.setFontSize(10);
+        doc.setTextColor(100, 116, 139);
+        doc.text("Relatório Comercial de Pedidos e Locações", 48, 30);
+        startY = 48;
       } else {
         doc.setFontSize(18);
         doc.setTextColor(15, 23, 42);
-        doc.text(`Relatório de Pedidos - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
-        doc.setFontSize(11);
-        doc.text(`Gerado em: ${dataHoje} | Total Filtrado: ${pedidosFiltrados.length}`, 14, 30);
-        startY = 38;
+        doc.text(`Relatório de Pedidos - ${dadosEmpresa.nomeEmpresa}`, 14, 20);
+        startY = 35;
       }
 
+      doc.setFontSize(10);
+      doc.setTextColor(100);
+      doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')}`, 160, startY - 5);
+
+      const tableColumn = ["Pedido #", "Cliente", "Data Festa", "Modalidade", "Valor (R$)", "Status"];
+      const tableRows = pedidosFiltrados.map(p => [
+        `#${p.numero}`,
+        p.cliente,
+        p.dataStr,
+        p.tipoServico,
+        `R$ ${p.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,
+        p.status
+      ]);
+
       autoTable(doc, {
-        head: [["Nº Pedido", "Cliente", "Tipo", "Data da Festa", "Valor (R$)", "Status"]],
-        body: pedidosFiltrados.map(p => [
-          `#${p.numero}`, 
-          p.cliente, 
-          p.tipoServico,
-          p.dataStr, 
-          `R$ ${p.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,
-          p.status
-        ]),
+        head: [tableColumn],
+        body: tableRows,
         startY: startY,
         theme: 'striped',
         headStyles: { fillColor: [15, 23, 42] }
       });
-      
-      doc.save(`Pedidos_${dadosEmpresa.nomeEmpresa.replace(/\s+/g, '_')}.pdf`);
-      
-      // 🔥 Aciona o espião de exportação
-      await registrarLog("EXPORTAÇÃO DE RELATÓRIO", `Fez o download do relatório em PDF da aba de Pedidos.`);
-    } catch (e) { alert("Erro ao gerar PDF"); }
+
+      doc.save(`Relatorio_Pedidos_${new Date().toISOString().split('T')[0]}.pdf`);
+      await registrarLog("EXPORTAÇÃO DE RELATÓRIO DE PEDIDOS", "Baixou o relatório comercial de pedidos em PDF.");
+    } catch (error) {
+      console.error(error);
+      alert("Erro ao exportar PDF.");
+    }
   };
 
-  if (loading) return <div className="loading-v3">Carregando inteligência de contratos...</div>;
+  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 'bold'}}>Processando histórico de pedidos...</div>;
+
+  const qtdPegueMonte = pedidosLista.filter(p => p.tipoServico.includes('PEGUE')).length;
+  const qtdDecoracao = pedidosLista.length - qtdPegueMonte;
 
   return (
     <div className="fade-in">
-      <div className="kpi-grid">
-        <div className="kpi-card card-destaque">
-          <span>VOLUME DE VENDAS</span>
-          <h2>{metricas.total}</h2>
-          <small>Contratos gerados</small>
+      
+      {/* 💡 PAINEL DE INSIGHTS INTELIGENTES PEDIDOS */}
+      <div style={{ background: '#ffffff', color: '#0f172a', border: '1.5px solid #e2e8f0', borderLeft: '5px solid #8b5cf6', padding: '14px 18px', borderRadius: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+          <span style={{ fontSize: '1.3rem' }}>🎯</span>
+          <div>
+            <strong style={{ fontSize: '0.82rem', color: '#0f172a', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DESEMPENHO COMERCIAL &amp; CONVERSÃO DE VENDAS</strong>
+            <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
+              Sua taxa de fechamento é de <strong style={{ color: '#10b981' }}>{taxaConversao}%</strong>. Existem <strong style={{ color: '#3b82f6' }}>{metricas.futuros} eventos agendados</strong> no calendário futuro.
+            </p>
+          </div>
         </div>
-        <div className="kpi-card card-verde">
-          <span>RECEITA PROJETADA</span>
-          <h2>R$ {metricas.faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</h2>
-  
-          <small>Soma de todos os contratos</small>
+        <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: '#f8fafc', color: '#8b5cf6', border: '1px solid #cbd5e1' }}>
+          Conversão: {taxaConversao}%
+        </span>
+      </div>
+
+      {/* 4 CARDS KPI BLINDADOS (GOLDEN RULE 1 & 2) */}
+      <div className="clientes-stats-grid">
+        <div className="stat-card-pro card-green">
+          <div className="stat-icon-wrapper icon-green">📑</div>
+          <div className="stat-content">
+            <span className="stat-title">TOTAL DE PEDIDOS</span>
+            <strong className="stat-number">{metricas.total}</strong>
+            <small className="stat-desc">Contratos no histórico</small>
+          </div>
         </div>
-        <div className="kpi-card card-alerta">
-          <span>PRÓXIMOS EVENTOS</span>
-          <h2>{metricas.futuros}</h2>
-          <small>Festas aguardando montagem</small>
+
+        <div className="stat-card-pro card-amber">
+          <div className="stat-icon-wrapper icon-amber">💰</div>
+          <div className="stat-content">
+            <span className="stat-title">FATURAMENTO CONTRATADO</span>
+            <strong className="stat-number">R$ {metricas.faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <small className="stat-desc">Valor total de contratos</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro card-purple">
+          <div className="stat-icon-wrapper icon-purple">🎯</div>
+          <div className="stat-content">
+            <span className="stat-title">TAXA DE CONVERSÃO</span>
+            <strong className="stat-number">{taxaConversao}%</strong>
+            <small className="stat-desc">Orçamentos fechados</small>
+          </div>
+        </div>
+
+        <div className="stat-card-pro card-red">
+          <div className="stat-icon-wrapper icon-red">📅</div>
+          <div className="stat-content">
+            <span className="stat-title">EVENTOS FUTUROS</span>
+            <strong className="stat-number">{metricas.futuros}</strong>
+            <small className="stat-desc">Próximas festas no radar</small>
+          </div>
         </div>
       </div>
 
-      <div className="clientes-layout-split mt-20">
-        <div className="col-esquerda">
-      
-          <div className="main-card-premium" style={{ marginBottom: '20px' }}>
-            <div className="card-header-flex">
-              <h3>🗓️ Agenda da Semana</h3>
-            </div>
-            <p style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '15px', marginTop: '-10px'}}>
-              Seus próximos eventos agendados.
-            </p>
-            <div className="agenda-lista">
-              {proximosEventos.map((ev, i) => (
-                <div key={i} className="agenda-item">
-                  <div className="agenda-data">
-                    <strong>{ev.dataObj ? ev.dataObj.getDate() : '-'}</strong>
-         
-                    <span>{ev.dataObj ? ev.dataObj.toLocaleString('pt-BR', { month: 'short' }).toUpperCase() : '-'}</span>
-                  </div>
-                  <div className="agenda-info">
-                    <div className="agenda-cliente">{ev.cliente}</div>
-                    <div className="agenda-detalhe">
-  
-                      <span style={{color: ev.tipoServico.includes('PEGUE') ? 'var(--dourado)' : 'var(--texto-principal)', fontWeight: '800'}}>
-                        {ev.tipoServico.includes('PEGUE') ? '📦 Pegue e Monte' : '✨ Decoração'}
-                      </span> • Pedido #{ev.numero}
-               
-                    </div>
-                  </div>
-                  <div className={`agenda-status ${getStatusClass(ev.status)}`}>
-                    {ev.status}
-                  </div>
-                </div>
-   
-              ))}
-              {proximosEventos.length === 0 && (
-                <div className="agenda-vazia">Nenhum evento futuro agendado.</div>
-              )}
-            </div>
-          </div>
-
-          <div className="main-card-premium">
-    
-            <div className="card-header-flex">
-              <h3>📊 Funil de Pedidos</h3>
-            </div>
-            <p style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '15px', marginTop: '-10px'}}>
-              Distribuição dos contratos por etapa.
-            </p>
-            <div className="ranking-visual-container">
-              {statusContagem.map(([status, total], i) => {
-                const porcentagem = metricas.total > 0 ? (total / metricas.total) * 100 : 0;
-                return (
-                  <div key={i} className="rank-item-v4">
-   
-                    <div className="rank-info-v4">
-                      <strong>{status}</strong>
-                      <span style={{ color: 'var(--texto-principal)' }}>{total} ({porcentagem.toFixed(0)}%)</span>
-                    </div>
-             
-                    <div className="rank-bar-bg-v4" style={{ height: '6px' }}>
-                      <div className="rank-bar-fill-v4" style={{ width: `${porcentagem}%`, background: 'linear-gradient(90deg, var(--texto-secundario), var(--texto-principal))' }}></div>
-                    </div>
-                  </div>
-                );
-   
-              })}
-            </div>
-            
-            <div className="box-conversao mt-20">
-              <div className="conversao-info">
-                <span className="conversao-label">Taxa de Conversão</span>
-                <span className="conversao-desc">Orçamentos que viram festa</span>
-              </div>
-              <div className="conversao-valor">{taxaConversao.toFixed(0)}%</div>
-            </div>
+      {/* 📊 WIDGET COMPACTO DE STATUS E MODALIDADE */}
+      <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '16px 20px', margin: '16px 0', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: '850' }}>📊 Funil de Status &amp; Modalidade de Serviço</h3>
+            <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', color: '#64748b' }}>Volume por status de contrato e tipo de montagem</p>
           </div>
         </div>
 
-        <div className="main-card-premium col-tabela">
-          <div className="card-header-flex">
-            <h3>📝 Histórico de Contratos</h3>
-  
-            <button className="btn-export-pdf-clientes" onClick={exportarPDFPedidos}>📄 Baixar Relatório</button>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+          {/* STATUS */}
+          <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📑 Status dos Contratos</span>
+            <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              {statusContagem.map(([st, count], idx) => (
+                <span key={idx} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                  {st}: <strong>{count} pedidos</strong>
+                </span>
+              ))}
+            </div>
           </div>
-          
-          <div className="filtros-tabela-container">
-            <button className={`btn-filtro ${filtroAtual === 'TODOS' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('TODOS')}>Todos</button>
-            <button className={`btn-filtro ${filtroAtual === 'FECHADOS' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('FECHADOS')}>Festas Fechadas</button>
-            <button className={`btn-filtro ${filtroAtual === 'ORÇAMENTOS' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('ORÇAMENTOS')}>Orçamentos</button>
-            <button className={`btn-filtro ${filtroAtual === 'PEGUE_MONTE' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('PEGUE_MONTE')}>Pegue e Monte</button>
-            <button className={`btn-filtro ${filtroAtual === 'DECORACAO' ? 'ativo' : ''}`} onClick={() => setFiltroAtual('DECORACAO')}>Decoração</button>
+
+          {/* MODALIDADES */}
+          <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+            <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🎈 Modalidade da Festa</span>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <span style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6' }}>
+                ✨ Decoração Completa: <strong>{qtdDecoracao}</strong>
+              </span>
+              <span style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#10b981' }}>
+                🎈 Pegue e Monte: <strong>{qtdPegueMonte}</strong>
+              </span>
+            </div>
           </div>
-          
-          <div style={{ paddingRight: '5px' }}>
-            <table className="table-pedidos-v4">
-              <thead>
-                <tr><th width="20%">Nº PEDIDO</th><th width="40%">CLIENTE / DATA</th><th width="20%" className="direita">VALOR TOTAL</th><th width="20%" className="centro">STATUS</th></tr>
-        
-              </thead>
-              <tbody>
-                {pedidosFiltrados.map((pedido, i) => (
-                  <tr key={i} className="fade-in">
-                    <td style={{fontWeight: '800', color: 'var(--texto-secundario)'}}>#{pedido.numero}</td>
-                 
-                    <td>
-                      <div className="td-name" style={{color: 'var(--texto-principal)', fontWeight: '700'}}>{pedido.cliente}</div>
-                      <div style={{fontSize: '11px', color: 'var(--texto-secundario)', marginBottom: '4px'}}>{pedido.dataStr}</div>
-                      <span className={`badge-tipo-servico ${pedido.tipoServico.includes('PEGUE') ? 'tipo-pm' : 'tipo-dec'}`}>
-                        {pedido.tipoServico.includes('PEGUE') ? '📦 PEGUE E MONTE' : '✨ DECORAÇÃO'}
-                      </span>
+        </div>
+      </div>
+
+      {/* TABELA DE PEDIDOS */}
+      <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '18px 22px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>📋 Histórico de Pedidos &amp; Locações</h3>
+            <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Listagem de contratos com filtros rápidos.</p>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+            <select 
+              value={filtroAtual} 
+              onChange={e => setFiltroAtual(e.target.value)}
+              style={{ padding: '8px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 800, color: '#0f172a', background: '#f8fafc', outline: 'none' }}
+            >
+              <option value="TODOS">Todos os Registros</option>
+              <option value="FECHADOS">🟢 Confirmados / Fechados</option>
+              <option value="ORÇAMENTOS">🟡 Orçamentos</option>
+              <option value="PEGUE_MONTE">🎈 Pegue e Monte</option>
+              <option value="DECORACAO">✨ Decoração Completa</option>
+              <option value="CANCELADOS">🔴 Cancelados</option>
+            </select>
+
+            <button type="button" className="btn-export-pdf" onClick={exportarPDFPedidos}>
+              📄 Baixar Pedidos (PDF)
+            </button>
+          </div>
+        </div>
+
+        <div className="table-container" style={{ marginTop: '15px' }}>
+          <table className="custom-table table-pro">
+            <thead>
+              <tr>
+                <th>PEDIDO #</th>
+                <th>CLIENTE</th>
+                <th style={{textAlign: 'center'}}>DATA FESTA</th>
+                <th style={{textAlign: 'center'}}>MODALIDADE</th>
+                <th style={{textAlign: 'right'}}>VALOR TOTAL</th>
+                <th style={{textAlign: 'center'}}>STATUS</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pedidosFiltrados.length === 0 ? (
+                <tr>
+                  <td colSpan="6" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhum pedido encontrado.</td>
+                </tr>
+              ) : (
+                pedidosFiltrados.map((p, idx) => (
+                  <tr key={idx}>
+                    <td><strong style={{color: '#0f172a'}}>#{p.numero}</strong></td>
+                    <td style={{color: '#334155', fontWeight: 600}}>{p.cliente}</td>
+                    <td style={{textAlign: 'center', color: '#64748b'}}>{p.dataStr}</td>
+                    <td style={{textAlign: 'center'}}><span className="badge-categoria">{p.tipoServico}</span></td>
+                    <td style={{textAlign: 'right', fontWeight: '850', color: '#10b981'}}>
+                      R$ {p.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                     </td>
-                    <td className="direita bold text-verde">
-                      R$ {pedido.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-    
-                    </td>
-                    <td className="centro">
-                      <span className={`badge-status-pedido ${getStatusClass(pedido.status)}`}>
-                        {pedido.status}
-               
+                    <td style={{textAlign: 'center'}}>
+                      <span className={`badge-dre ${p.status.includes('CANCELADO') ? 'despesa' : 'receita'}`}>
+                        {p.status}
                       </span>
                     </td>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-   
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
       </div>
+
     </div>
   );
 };

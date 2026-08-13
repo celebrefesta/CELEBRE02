@@ -19,57 +19,68 @@
 /* =========================================
    2. HEADER E ABAS (PÁGINA PRINCIPAL)
 ========================================= */
+.relatorios-badge-head {
+  display: inline-block;
+  background: #f1f5f9;
+  color: #475569;
+  font-size: 0.7rem;
+  font-weight: 850;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  letter-spacing: 0.5px;
+}
+
 .dashboard-header.relatorios-header-ajuste {
   background: white; 
-  padding: 25px 30px;
-  border-radius: 16px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); 
+  padding: 24px 30px;
+  border-radius: 20px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04); 
   border: 1px solid #e2e8f0;
   display: flex;
   justify-content: space-between;
   align-items: center; 
-  margin-bottom: 30px;
+  margin-bottom: 24px;
   flex-wrap: wrap; 
   gap: 20px;
 }
 
-.header-text h1 { margin: 0; font-size: 24px; font-weight: 800; color: #0f172a; text-transform: uppercase; letter-spacing: -0.5px;}
-.header-text p { margin: 8px 0 0 0; color: #64748b; font-size: 14px; line-height: 1.4;}
+.header-text h1 { margin: 0; font-size: 22px; font-weight: 850; color: #0f172a; text-transform: uppercase; letter-spacing: -0.5px;}
+.header-text p { margin: 6px 0 0 0; color: #64748b; font-size: 13.5px; line-height: 1.4;}
 
 .tabs-relatorios-compacto {
   display: flex;
-  background-color: transparent;
-  padding: 0;
-  gap: 12px;
-  border: none;
+  background-color: #f8fafc;
+  padding: 4px;
+  border-radius: 14px;
+  gap: 6px;
+  border: 1px solid #e2e8f0;
   max-width: 100%; 
+  flex-wrap: wrap;
 }
 
 .tabs-relatorios-compacto button {
-  width: 100%;
-  justify-content: center; 
-  padding: 14px 20px; 
-  border: 1px solid #e2e8f0; 
-  background: white; 
-  font-weight: 700;
+  padding: 10px 16px; 
+  border: 1px solid transparent; 
+  background: transparent; 
+  font-weight: 800;
   color: #64748b;
-  border-radius: 12px; 
+  border-radius: 10px; 
   cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 13px;
+  transition: all 0.2s ease;
+  font-size: 12.5px;
   display: flex;
   align-items: center;
-  gap: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+  gap: 6px;
   white-space: nowrap; 
 }
 
-.tabs-relatorios-compacto button:hover { border-color: #cbd5e1; transform: translateY(-1px);}
+.tabs-relatorios-compacto button:hover { color: #0f172a; background: #ffffff; }
 .tabs-relatorios-compacto button.active {
-  background: var(--dourado) !important; 
-  color: white !important; 
-  border-color: var(--dourado) !important;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  background: #0f172a !important; 
+  color: #ffffff !important; 
+  border-color: #0f172a !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
 }
 
 .relatorio-content { margin-top: 10px; width: 100%; }

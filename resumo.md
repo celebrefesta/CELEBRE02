@@ -255,17 +255,38 @@ graph TD
 
 ---
 
-## 6. REGRAMENTO DE BLINDAGEM DE LAYOUT & UI/UX
+## 7. RESUMO EXECUTIVO DE ATUALIZAÇÕES & MODERNIZAÇÕES RECENTES
 
-1. **Regra de Ouro dos Cards KPI no Desktop (`> 900px`)**:
-   - A classe `.clientes-stats-grid` em todas as páginas (`Locacoes`, `Clientes`, `Estoque`, `Compras`) mantém obrigatoriamente **1 única linha horizontal (`flex-wrap: nowrap !important; display: flex !important;`)**.
-2. **Regra de Ouro dos Cards KPI no Celular (`<= 900px`)**:
-   - A classe `.clientes-stats-grid` mantém obrigatoriamente **2 colunas simétricas (`grid-template-columns: repeat(2, 1fr) !important;`)**.
-3. **Prevenção de Horizontal Overflow**:
-   - Todos os inputs, selects, textareas e grids contêm `min-width: 0`, `max-width: 100%` e `box-sizing: border-box` ativados para garantir navegabilidade mobile sem vazamentos laterais.
-4. **Identidade Visual Celebre**:
-   - Paleta de cores baseada em Dourado Premium (`#c5a059`), Dark Hero Slate (`#0f172a`), com destaques visuais em Verde Esmeralda, Azul Royal e Âmbar.
+### 7.1. Página de Financeiro (`Financeiro.jsx` & `Financeiro.css`)
+- **Remoção do Container Azul Pesado**: Eliminado o antigo container escuro redundante que repetia métricas numéricas.
+- **Card KPI 4 Enriquecido**: Subtexto dinâmico adicionado no card `SALDO LÍQUIDO REAL` (`Est. Fim Mês: R$ ...`).
+- **Novo Widget de Distribuição por Categoria**: Rosca Donut + Barras de Progresso de Categoria substituindo texto bruto sem formatação.
+- **Exportador Excel / CSV**: Botão **`📥 Exportar (.CSV)`** para download dos dados financeiros direto para planilhas.
+
+### 7.2. Central de Relatórios Estratégicos & DRE (`Relatorios.jsx` & Sub-abas)
+- **Header Executivo**: Badge dourado `📊 CENTRAL DE INTELIGÊNCIA & DRE` com pílulas de navegação responsivas.
+- **Aba 💰 Financeiro & DRE**:
+  - DRE com Livro Caixa em tempo real, 4 Cards KPI protegidos pelas Regras de Ouro.
+  - Card de Insight de Saúde Financeira dinâmico com cálculo de margem real e alertas inteligentes (`🟢 SAUDÁVEL`, `🟡 MARGEM COMPRIMIDA`, `🚨 DÉFICIT OPERACIONAL`).
+  - Barra de Balanço Proporcional de Entradas vs Saídas ultra-compacta com histórico de chips mensais.
+  - Exportação de DRE em PDF assinado com logotipo, CNPJ e data/hora auditada.
+- **Aba 👥 Clientes & CRM**:
+  - Indicadores de LTV, Ticket Médio, Taxa de Fidelidade e Clientes Recorrentes.
+  - Painel de Insight com destaque para o cliente de maior LTV e cidade líder em eventos.
+  - Ranking compacto dos Top 3 Clientes VIP e Cidades com mais festas.
+- **Aba 📦 Estoque & ROI**:
+  - Valoração de acervo físico total, cálculo de variedades de tipos e peças em manutenção.
+  - Insight de disponibilidade física e saúde do acervo.
+  - Composição por categorias e temas campeões em locação.
+- **Aba 📑 Pedidos & Vendas**:
+  - Mapeamento de volume contratado, taxa de conversão comercial de orçamentos e festas futuras no radar.
+  - Filtros por modalidade (Decoração Completa vs Pegue e Monte) e exportação comercial de pedidos em PDF.
+
+### 7.3. Auditoria de Segurança e Desempenho
+- **Blindagem de Grids KPI**: Garantia rigorosa das Regras de Ouro 1 (1 linha no Desktop) e 2 (2 colunas no Celular).
+- **Sem Overflow nem Poluição Visual**: Otimização vertical de cards para evitar rolagem excessiva e manter todas as informações visíveis na tela.
 
 ---
 
-*Manual técnico gerado e atualizado para o repositório Celebre.*
+*Manual técnico e Resumo Executivo gerados e atualizados para o repositório Celebre.*
+

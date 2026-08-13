@@ -569,15 +569,712 @@
   transform: translateY(-1px) !important;
 }
 
-/* RESPONSIVIDADE EM MÓBILE (PRO-TABLE CARD PATTERN) */
-@media (max-width: 900px) {
+/* LINK DO FORNECEDOR E BADGES */
+.fornecedor-link {
+  color: #1d4ed8 !important;
+  background: #eff6ff !important;
+  border: 1px solid #bfdbfe !important;
+  padding: 3px 10px !important;
+  border-radius: 12px !important;
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  text-decoration: none !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+  max-width: 240px !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  box-shadow: 0 1px 3px rgba(37, 99, 235, 0.1) !important;
+  transition: all 0.2s ease !important;
+}
+
+.fornecedor-link:hover {
+  background: #dbeafe !important;
+  color: #1e40af !important;
+  border-color: #93c5fd !important;
+  transform: translateY(-1px) !important;
+}
+
+.fornecedor-texto-badge {
+  font-size: 0.75rem;
+  color: #b48a3c;
+  font-weight: 800;
+  max-width: 260px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+/* BOTÕES DO CABEÇALHO HERO */
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.btn-export-whats {
+  background: #25d366 !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 18px !important;
+  border-radius: 24px !important;
+  font-size: 0.78rem !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.25) !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+}
+
+.btn-export-whats:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(37, 211, 102, 0.35) !important;
+}
+
+.btn-print-pdf {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 10px 18px !important;
+  border-radius: 24px !important;
+  font-size: 0.78rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+}
+
+.btn-print-pdf:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* BARRA DE TABS DE SELEÇÃO */
+.compras-tabs-bar {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 22px;
+  flex-wrap: wrap;
+}
+
+.tab-btn-celebre {
+  background: #ffffff;
+  color: #475569;
+  border: 1.5px solid #cbd5e1;
+  padding: 10px 20px;
+  border-radius: 20px;
+  font-weight: 800;
+  font-size: 0.84rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.tab-btn-celebre:hover {
+  border-color: #c5a059;
+  color: #0f172a;
+}
+
+.tab-btn-celebre.active {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  border-color: #c5a059;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+}
+
+.tab-badge {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-radius: 12px;
+  padding: 2px 8px;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.tab-btn-celebre.active .tab-badge {
+  background: #c5a059;
+  color: #ffffff;
+}
+
+.tab-badge.warning {
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+}
+
+/* ================================================================
+   📱 RESPONSIVIDADE COMPLETA — REGRAS DE OURO CELEBRE
+   ================================================================ */
+
+/* 🔒 DESKTOP: Cards KPI em 1 linha obrigatória */
+@media (min-width: 901px) {
   .clientes-stats-grid {
-    grid-template-columns: repeat(2, 1fr) !important;
+    display: flex !important;
+    flex-wrap: nowrap !important;
   }
 }
 
-@media (max-width: 600px) {
+/* 📱 TABLET (≤900px): KPIs em 2 colunas */
+@media (max-width: 900px) {
   .clientes-stats-grid {
+    display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+    margin-bottom: 20px !important;
   }
+
+  .stat-card-pro {
+    padding: 14px 16px !important;
+    gap: 12px !important;
+    border-radius: 16px !important;
+  }
+
+  .stat-icon-wrapper {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 18px !important;
+    border-radius: 12px !important;
+  }
+
+  .stat-number { font-size: 1.2rem !important; }
+  .stat-title  { font-size: 0.63rem !important; }
+  .stat-desc   { font-size: 0.68rem !important; }
+}
+
+/* 📱 MOBILE (≤768px): Layout completo mobile */
+@media (max-width: 768px) {
+
+  /* --- CONTAINER GERAL --- */
+  .clientes-container,
+  .compras-container {
+    padding: 16px 12px !important;
+  }
+
+  /* --- HERO CABEÇALHO --- */
+  .clientes-hero-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+    margin-bottom: 18px !important;
+  }
+
+  .header-title-row {
+    gap: 12px !important;
+  }
+
+  .header-icon-badge {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 18px !important;
+    border-radius: 14px !important;
+  }
+
+  .welcome-text h1 {
+    font-size: 1.3rem !important;
+    letter-spacing: -0.4px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .welcome-text p {
+    font-size: 0.8rem !important;
+    line-height: 1.4 !important;
+  }
+
+  /* --- BOTÕES DO CABEÇALHO --- */
+  .header-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+
+  .btn-export-whats,
+  .btn-print-pdf {
+    width: 100% !important;
+    padding: 9px 14px !important;
+    font-size: 0.75rem !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
+  }
+
+  .btn-primary-celebre {
+    grid-column: span 2 !important;
+    width: 100% !important;
+    padding: 10px 14px !important;
+    font-size: 0.78rem !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
+    letter-spacing: 0.5px !important;
+  }
+
+  /* --- TABS DE NAVEGAÇÃO --- */
+  .compras-tabs-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+
+  .tab-btn-celebre {
+    flex: 1 1 0px !important;
+    padding: 9px 12px !important;
+    font-size: 0.78rem !important;
+    border-radius: 14px !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+  }
+
+  .tab-badge {
+    padding: 1px 6px !important;
+    font-size: 0.7rem !important;
+  }
+
+  /* --- CONTAINER DA TABELA --- */
+  .table-card-container {
+    padding: 14px 12px !important;
+    border-radius: 16px !important;
+  }
+
+  /* --- FILTROS --- */
+  .table-filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .search-input-wrapper {
+    flex: none !important;
+    width: 100% !important;
+  }
+
+  .search-input-wrapper input {
+    height: 40px !important;
+    font-size: 0.84rem !important;
+  }
+
+  .filter-select-container {
+    flex: none !important;
+    width: 100% !important;
+  }
+
+  .filter-select {
+    height: 40px !important;
+    font-size: 0.8rem !important;
+  }
+
+  .btn-secondary-celebre {
+    width: 100% !important;
+    flex: none !important;
+    justify-content: center !important;
+    height: 40px !important;
+  }
+
+  /* ================================================================
+     📦 CARDS DE ITENS — DESIGN ELEGANTE COM RESPIRAÇÃO VISUAL
+     ================================================================ */
+
+  .table-responsive-wrapper {
+    overflow-x: visible !important;
+  }
+
+  .pro-table {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .pro-table thead {
+    display: none !important;
+  }
+
+  .pro-table tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  /* CARD ITEM */
+  .pro-table tbody tr {
+    display: block !important;
+    background: #ffffff !important;
+    border: 1px solid #e8edf3 !important;
+    border-radius: 18px !important;
+    padding: 0 !important;
+    box-shadow: 0 2px 12px rgba(15, 23, 42, 0.06) !important;
+    overflow: hidden !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    transition: box-shadow 0.2s ease !important;
+  }
+
+  .pro-table tbody tr:hover {
+    box-shadow: 0 4px 20px rgba(15, 23, 42, 0.1) !important;
+  }
+
+  /* Oculta todas as células por padrão e reexibe como blocos */
+  .pro-table tbody tr td {
+    display: none !important;
+  }
+
+  /* --- CABEÇALHO DO CARD: Nome + Vínculo --- */
+  .pro-table tbody tr td.td-item-info {
+    display: block !important;
+    padding: 14px 14px 12px 14px !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .pro-table tbody tr td.td-item-info .nome-produto {
+    font-size: 0.97rem !important;
+    font-weight: 800 !important;
+    line-height: 1.3 !important;
+    color: #0f172a !important;
+    margin-bottom: 6px !important;
+    display: flex !important;
+    align-items: center !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .pro-table tbody tr td.td-item-info .vinculo-tag {
+    display: inline-block !important;
+    font-size: 0.72rem !important;
+    padding: 3px 10px !important;
+    max-width: 100% !important;
+    margin-top: 2px !important;
+  }
+
+  /* --- CORPO DO CARD: QTD + VALOR + STATUS em uma linha --- */
+  .pro-table tbody tr td.td-checkbox {
+    display: none !important; /* Checkbox oculto no mobile por ora, sem perda de funcionalidade */
+  }
+
+  .pro-table tbody tr td.td-qtd,
+  .pro-table tbody tr td.td-valor,
+  .pro-table tbody tr td.td-status {
+    display: inline-flex !important;
+  }
+
+  /* Linha central de dados: usamos um wrapper via CSS pseudo-element trick com table display */
+  /* Reorganizamos mostrando QTD + VALOR + STATUS lado a lado em uma div flex */
+  .pro-table tbody tr td.td-qtd {
+    vertical-align: middle !important;
+  }
+
+  /* Mostramos a linha de dados (qtd, valor, status) como uma seção contínua */
+  /* Usamos display block nas três e as colocamos em pseudo-linha via CSS */
+  .pro-table tbody tr td.td-qtd,
+  .pro-table tbody tr td.td-valor,
+  .pro-table tbody tr td.td-status {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    vertical-align: middle !important;
+  }
+
+  /* Wrapper da linha de dados centrais */
+  /* Não temos um div wrapper, então simulamos com o primeiro td */
+  .pro-table tbody tr td.td-qtd {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    padding: 10px 14px !important;
+    gap: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+  }
+
+  /* Esconde valor e status pois vai aparecer dentro do td-qtd region  */
+  .pro-table tbody tr td.td-valor,
+  .pro-table tbody tr td.td-status {
+    display: none !important;
+  }
+
+  /* td-qtd vai mostrar o conteúdo e usar ::after para criar a linha de dados */
+  /* Mas não temos acesso ao conteúdo via CSS. Então melhor abordagem: */
+  /* Fazer td-qtd, td-valor e td-status aparecerem como célula inline em uma linha artificial */
+  /* Criamos uma linha via display: contents no tr e reordenamos */
+
+  /* ABORDAGEM FINAL: 3 seções claras */
+  /* 1. td-item-info: cabeçalho com nome */
+  /* 2. td-qtd + td-valor + td-status: linha de dados (hack via position) */
+  /* 3. td-logistica: badge de logística */
+  /* 4. td-acoes: botões de ação */
+
+  .pro-table tbody tr td.td-qtd {
+    display: block !important;
+    padding: 10px 14px 0 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  /* Linha de meta dados (qtd / valor / status / logística) */
+  .pro-table tbody tr td.td-valor {
+    display: block !important;
+    padding: 0 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border: none !important;
+    background: transparent !important;
+  }
+
+  .pro-table tbody tr td.td-status {
+    display: block !important;
+    padding: 0 14px 10px 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    background: transparent !important;
+  }
+
+  .pro-table tbody tr td.td-logistica {
+    display: block !important;
+    padding: 10px 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-bottom: 1px solid #f1f5f9 !important;
+    background: transparent !important;
+  }
+
+  /* Rótulos data-label exibidos à esquerda com valor à direita */
+  .pro-table tbody tr td[data-label] {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+  }
+
+  .pro-table tbody tr td[data-label]::before {
+    content: attr(data-label) !important;
+    font-size: 0.68rem !important;
+    font-weight: 800 !important;
+    color: #94a3b8 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.6px !important;
+    flex-shrink: 0 !important;
+    margin-right: 12px !important;
+  }
+
+  .pro-table tbody tr td.td-item-info::before,
+  .pro-table tbody tr td.td-acoes::before,
+  .pro-table tbody tr td.td-checkbox::before {
+    content: none !important;
+  }
+
+  /* Ajuste de fonte dos valores dentro dos campos */
+  .pro-table tbody tr td.td-qtd strong {
+    font-size: 0.92rem !important;
+    font-weight: 800 !important;
+    color: #0f172a !important;
+  }
+
+  .pro-table tbody tr td.td-valor .preco-real {
+    font-size: 0.95rem !important;
+    font-weight: 850 !important;
+    color: #0f172a !important;
+  }
+
+  .pro-table tbody tr td.td-valor small {
+    font-size: 0.7rem !important;
+    color: #94a3b8 !important;
+    margin-left: 4px !important;
+  }
+
+  .pro-table tbody tr td.td-status .badge {
+    font-size: 0.72rem !important;
+    padding: 4px 12px !important;
+  }
+
+  .pro-table tbody tr td.td-logistica .logistica-inner-box {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+  }
+
+  .pro-table tbody tr td.td-logistica .prazo-badge {
+    font-size: 0.72rem !important;
+    padding: 4px 10px !important;
+  }
+
+  .pro-table tbody tr td.td-logistica .alerta-logistica {
+    font-size: 0.7rem !important;
+    padding: 4px 10px !important;
+  }
+
+  /* --- RODAPÉ DO CARD: Botões de ação --- */
+  .pro-table tbody tr td.td-acoes {
+    display: flex !important;
+    padding: 10px 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: #f8fafc !important;
+    border-top: none !important;
+    border-radius: 0 0 18px 18px !important;
+  }
+
+  .table-actions-container {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    gap: 8px !important;
+  }
+
+  .table-actions-container .btn-acao-status,
+  .table-actions-container .btn-cadastrar-acervo {
+    flex: 1 !important;
+    height: 36px !important;
+    font-size: 0.75rem !important;
+    border-radius: 10px !important;
+    justify-content: center !important;
+    padding: 0 10px !important;
+  }
+
+  .action-btn {
+    width: 36px !important;
+    height: 36px !important;
+    min-width: 36px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+} /* fim @media 768px */
+
+/* ================================================================
+   ✨ NOVAS FUNCIONALIDADES: VÍNCULO, VALOR PAGO E COMPRAS RECORRENTES
+   ================================================================ */
+
+/* BANNER DE AÇÃO EM LOTE POR VÍNCULO */
+.banner-vinculo-lote {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  padding: 12px 18px;
+  border-radius: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  border: 1.5px solid #c5a059;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.2);
+}
+
+.banner-vinculo-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+}
+
+.banner-vinculo-info .badge-contagem {
+  background: #c5a059;
+  color: #ffffff;
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 900;
+}
+
+.banner-vinculo-acoes {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-lote-vinculo {
+  padding: 6px 12px;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 0.75rem;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn-lote-vinculo.comprar { background: #3b82f6; color: #ffffff; }
+.btn-lote-vinculo.chegou { background: #10b981; color: #ffffff; }
+.btn-lote-vinculo.limpar { background: transparent; color: #94a3b8; border: 1px solid #475569; }
+
+/* BADGES DE VALOR PAGO / ECONOMIA REAL */
+.valor-pago-badge-box {
+  margin-top: 4px;
+}
+
+.badge-valor-pago {
+  display: inline-block;
+  padding: 2px 7px;
+  border-radius: 8px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.badge-valor-pago:hover {
+  transform: scale(1.04);
+}
+
+.badge-valor-pago.economia { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.badge-valor-pago.excedente { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+.badge-valor-pago.igual { background: #f1f5f9; color: #475569; border: 1px solid #cbd5e1; }
+
+/* BOTÃO RECOMPRAR (COMPRA RECORRENTE) */
+.action-btn.recomprar:hover {
+  border-color: #3b82f6 !important;
+  background-color: #eff6ff !important;
+  color: #1d4ed8 !important;
+  transform: translateY(-1px) !important;
+}
+
+/* MODAL OVERLAY CELEBRE */
+.modal-overlay-celebre {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  padding: 16px;
+}
+
+.modal-card-celebre {
+  background: #ffffff;
+  border-radius: 20px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.3);
+  width: 100%;
 }

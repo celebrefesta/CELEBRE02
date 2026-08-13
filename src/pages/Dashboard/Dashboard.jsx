@@ -103,6 +103,7 @@ const Dashboard = () => {
   const [statusChart, setStatusChart] = useState({ orcamento: 0, confirmado: 0, preparacao: 0, entregue: 0, finalizado: 0, total: 0 });
   const [valoresPorStatus, setValoresPorStatus] = useState({ orcamento: 0, confirmado: 0 });
   const [topPecas, setTopPecas] = useState([]);
+  const [categoriaBreakdown, setCategoriaBreakdown] = useState({ locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0 });
   const [cobrancasAtrasadas, setCobrancasAtrasadas] = useState([]);
   const [aniversariantesDoMes, setAniversariantesDoMes] = useState([]);
   const [aniversariantesProximos, setAniversariantesProximos] = useState([]);
@@ -568,6 +569,41 @@ const Dashboard = () => {
             .sort((a, b) => (b.criadoEm?.seconds || 0) - (a.criadoEm?.seconds || 0))
             .slice(0, 5);
             
+        // CÁLCULO DE CATEGORIA BREAKDOWN DE ENTRADAS E SAÍDAS PARA O BI NO DASHBOARD
+        let catBreak = { locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0 };
+        
+        confirmadasNoPeriodo.forEach(l => {
+          catBreak.locacao += Number(l.valorTotal || l.total || 0);
+        });
+
+        comprasDocs.forEach(c => {
+          const statusLimpo = c.status ? String(c.status).toLowerCase().trim() : '';
+          if (statusLimpo !== 'cancelado') {
+            const qtd = Number(c.quantidade) || 1;
+            const valorUnit = Number(c.valorEstimado) || Number(c.valorTotal) || Number(c.valor) || 0;
+            const total = Number(c.valorTotal) || (qtd * valorUnit);
+            catBreak.estoque += total;
+          }
+        });
+
+        lancDocs.forEach(l => {
+          const val = Number(l.valor || 0);
+          const catLower = (l.categoria || '').toLowerCase();
+          if (catLower.includes('manutenç') || catLower.includes('reparo')) {
+            catBreak.manutencao += val;
+          } else if (catLower.includes('fixa') || catLower.includes('aluguel') || catLower.includes('luz')) {
+            catBreak.fixo += val;
+          } else if (catLower.includes('equipe') || catLower.includes('salário')) {
+            catBreak.equipe += val;
+          } else if (catLower.includes('estoque') || catLower.includes('acervo')) {
+            catBreak.estoque += val;
+          } else if (catLower.includes('locaç') || catLower.includes('evento')) {
+            catBreak.locacao += val;
+          }
+        });
+
+        setCategoriaBreakdown(catBreak);
+
         setEstatisticas({
             acervo: estSnap.size,
             ativas: confirmadasNoPeriodo.filter(l => l.status === 'confirmado' || l.status === 'preparacao').length,
@@ -710,21 +746,22 @@ const Dashboard = () => {
     <div className="dash-wide-container fade-in">
       {!isSuperAdmin && !assinaturaAtiva && statusConta === 'ativo' && diasTeste <= 7 && (
         <div className="dash-trial-banner">
-          ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito do Celebre. Aproveite!
+          ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito. Aproveite!
         </div>
       )}
 
       <AuditoriaEstoque />
 
+      {/* HEADER COMPACTO */}
       <header className="dash-wide-header">
         <div className="header-titles">
           <h1>Olá, {nomeUsuario}! 👋</h1>
-          <p>Central de Comando & Inteligência de Acervo Celebre.</p>
+          <p>Central de Comando &amp; Inteligência Celebre.</p>
         </div>
-        
+
         <div className="dash-actions-container-mobile">
-          <select 
-            value={filtroPeriodo} 
+          <select
+            value={filtroPeriodo}
             onChange={(e) => setFiltroPeriodo(e.target.value)}
             className="select-periodo-dash"
           >
@@ -749,130 +786,115 @@ const Dashboard = () => {
         </div>
       </header>
 
-
+      {/* 6 KPI CARDS COMPACTOS */}
       <div className="stats-wide-row">
         <div className="stat-card-pro border-gold">
-          <div className="stat-icon-wrapper icon-gold">
-            <i className="fas fa-boxes"></i>
-          </div>
+          <div className="stat-icon-wrapper icon-gold"><i className="fas fa-boxes"></i></div>
           <div className="stat-content">
             <span className="stat-title">Acervo Total</span>
             <strong className="stat-value">{estatisticas.acervo}</strong>
-            <span className="stat-sub">📦 Peças cadastradas</span>
+            <span className="stat-sub">📦 Peças</span>
           </div>
         </div>
 
         <div className="stat-card-pro border-blue">
-          <div className="stat-icon-wrapper icon-blue">
-            <i className="fas fa-shopping-bag"></i>
-          </div>
+          <div className="stat-icon-wrapper icon-blue"><i className="fas fa-shopping-bag"></i></div>
           <div className="stat-content">
             <span className="stat-title">Locações Ativas</span>
             <strong className="stat-value">{estatisticas.ativas}</strong>
-            <span className="stat-sub">⚡ Em andamento</span>
+            <span className="stat-sub">⚡ Andamento</span>
           </div>
         </div>
 
         <div className="stat-card-pro border-green">
-          <div className="stat-icon-wrapper icon-green">
-            <i className="fas fa-calendar-check"></i>
-          </div>
+          <div className="stat-icon-wrapper icon-green"><i className="fas fa-calendar-check"></i></div>
           <div className="stat-content">
             <span className="stat-title">Próximos Eventos</span>
             <strong className="stat-value">{estatisticas.eventos}</strong>
-            <span className="stat-sub">📅 Próximos 7 dias</span>
+            <span className="stat-sub">📅 7 dias</span>
           </div>
         </div>
 
         <div className="stat-card-pro border-purple">
-          <div className="stat-icon-wrapper icon-purple">
-            <i className="fas fa-chart-line"></i>
-          </div>
+          <div className="stat-icon-wrapper icon-purple"><i className="fas fa-chart-line"></i></div>
           <div className="stat-content">
             <span className="stat-title">Ticket Médio</span>
             <strong className="stat-value">R$ {estatisticas.ticketMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <span className="stat-sub">▲ Média p/ pedido</span>
+            <span className="stat-sub">▲ Por pedido</span>
           </div>
         </div>
 
         <div className="stat-card-pro border-amber">
-          <div className="stat-icon-wrapper icon-amber">
-            <i className="fas fa-file-invoice-dollar"></i>
-          </div>
+          <div className="stat-icon-wrapper icon-amber"><i className="fas fa-file-invoice-dollar"></i></div>
           <div className="stat-content">
             <span className="stat-title">Em Orçamento</span>
             <strong className="stat-value">R$ {(estatisticas.emOrcamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <span className="stat-sub">📋 Pipeline aberto</span>
+            <span className="stat-sub">📋 Pipeline</span>
           </div>
         </div>
 
         <div className="stat-card-pro border-red">
-          <div className="stat-icon-wrapper icon-red">
-            <i className="fas fa-exclamation-circle"></i>
-          </div>
+          <div className="stat-icon-wrapper icon-red"><i className="fas fa-exclamation-circle"></i></div>
           <div className="stat-content">
-            <span className="stat-title">A Receber Total</span>
+            <span className="stat-title">A Receber</span>
             <strong className="stat-value">R$ {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <span className="stat-sub">
-              {estatisticas.aReceber > 0 ? '⚠️ Saldo pendente' : '🟢 100% adimplente'}
-            </span>
+            <span className="stat-sub">{estatisticas.aReceber > 0 ? '⚠️ Pendente' : '🟢 Adimplente'}</span>
           </div>
         </div>
       </div>
 
+      {/* GRID PRINCIPAL: 2 COLUNAS */}
       <div className="dash-main-grid-wide">
+
+        {/* ══════════ COLUNA ESQUERDA (40%) ══════════ */}
         <div className="dash-column">
-          <section className="dash-card-wide chart-card">
+
+          {/* 📊 GRÁFICO FATURAMENTO VS GASTOS */}
+          <section className="dash-card-wide chart-card" style={{ flex: '1.5' }}>
             <div className="dash-section-header">
               <div>
                 <h3 style={{ margin: 0 }}>📊 Faturamento vs Gastos</h3>
-                <p className="card-subtitle" style={{ margin: '2px 0 0 0' }}>
-                  Comparativo de Receita (Azul) e Saídas/Despesas (Vermelho)
-                </p>
+                <p className="card-subtitle" style={{ margin: '1px 0 0 0' }}>Receita (azul) × Despesas (vermelho)</p>
               </div>
-              <span className="birthday-count-pill" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a' }}>
+              <span className="birthday-count-pill" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a', display: 'flex', gap: '6px', alignItems: 'center' }}>
                 <span style={{ color: '#2563eb', fontWeight: 800 }}>R$ {totalFatPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                {' | '}
-                <span style={{ color: '#ef4444', fontWeight: 800 }}>Gastos: R$ {totalGastosPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <span style={{ color: '#cbd5e1' }}>|</span>
+                <span style={{ color: '#ef4444', fontWeight: 800 }}>R$ {totalGastosPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </span>
             </div>
 
-            <div style={{ width: '100%', height: '210px', minHeight: '210px', marginTop: '10px' }}>
-              <ResponsiveContainer width="100%" height={210} initialDimension={{ width: 320, height: 210 }}>
-                <BarChart data={dataFaturamentoBar} margin={{ top: 10, right: 10, left: -15, bottom: 0 }}>
+            <div style={{ width: '100%', flex: 1, minHeight: '160px', display: 'flex', flexDirection: 'column' }}>
+              <ResponsiveContainer width="100%" height="99%" minWidth={0} minHeight={160} initialDimension={{ width: 320, height: 180 }}>
+                <BarChart data={dataFaturamentoBar} margin={{ top: 12, right: 8, left: -16, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--borda, #e2e8f0)" />
-                  <XAxis dataKey="semana" tick={{ fontSize: 11, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 10, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`} />
+                  <XAxis dataKey="semana" tick={{ fontSize: 9, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} />
+                  <YAxis tick={{ fontSize: 9, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`} />
                   <Tooltip content={<CustomTooltipFat />} />
-                  <Bar dataKey="faturamento" name="Faturamento (Receita)" fill="#2563eb" radius={[4, 4, 0, 0]} barSize={14} />
-                  <Bar dataKey="gastos" name="Gastos (Despesas)" fill="#ef4444" radius={[4, 4, 0, 0]} barSize={14} />
+                  <Bar dataKey="faturamento" name="Faturamento" fill="#2563eb" radius={[3, 3, 0, 0]} barSize={12} />
+                  <Bar dataKey="gastos" name="Gastos" fill="#ef4444" radius={[3, 3, 0, 0]} barSize={12} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
           </section>
 
-          <section className="dash-card-wide flex-grow dash-card-column">
+          {/* 🎯 CONVERSÃO & STATUS */}
+          <section className="dash-card-wide dash-card-column" style={{ flex: '1' }}>
             <div className="dash-section-header">
-              <h3>🎯 Conversão & Status</h3>
+              <h3>🎯 Conversão &amp; Status</h3>
               <span className="dash-count-pill">
-                {statusChart.total} {filtroPeriodo === 'hoje' ? 'PEDIDOS HOJE' : 'PEDIDOS NO PERÍODO'}
+                {statusChart.total} {filtroPeriodo === 'hoje' ? 'HOJE' : 'NO PERÍODO'}
               </span>
             </div>
 
             <div className="status-donut-container-horizontal">
-              {/* ESQUERDA: GRÁFICO DONUT */}
               <div className="status-donut-left">
-                <div style={{ width: '90px', height: '90px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ResponsiveContainer width="100%" height={90} initialDimension={{ width: 90, height: 90 }}>
+                <div style={{ width: '75px', height: '75px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ResponsiveContainer width="100%" height={75}>
                     <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                       <Pie
                         data={dataStatusDonut.length > 0 ? dataStatusDonut : [{ name: 'Sem Pedidos', value: 1, color: '#e2e8f0' }]}
-                        innerRadius={24}
-                        outerRadius={38}
-                        cx="50%"
-                        cy="50%"
-                        paddingAngle={dataStatusDonut.length > 1 ? 3 : 0}
-                        dataKey="value"
+                        innerRadius={20} outerRadius={32} cx="50%" cy="50%"
+                        paddingAngle={dataStatusDonut.length > 1 ? 3 : 0} dataKey="value"
                       >
                         {(dataStatusDonut.length > 0 ? dataStatusDonut : [{ color: '#e2e8f0' }]).map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
@@ -881,20 +903,17 @@ const Dashboard = () => {
                       <Tooltip content={<CustomTooltipDonut />} />
                     </PieChart>
                   </ResponsiveContainer>
-                  
                   <div style={{ position: 'absolute', textAlign: 'center', pointerEvents: 'none' }}>
-                    <strong style={{ fontSize: '0.9rem', color: 'var(--texto-principal, #0f172a)', fontWeight: 900, display: 'block', lineHeight: 1 }}>
+                    <strong style={{ fontSize: '0.75rem', color: 'var(--texto-principal, #0f172a)', fontWeight: 900, display: 'block', lineHeight: 1 }}>
                       {statusChart.total > 0 ? `${pctConfirmados}%` : '0%'}
                     </strong>
-                    <span style={{ fontSize: '0.48rem', color: 'var(--texto-secundario, #64748b)', fontWeight: 700, textTransform: 'uppercase' }}>
-                      {statusChart.total > 0 ? 'Fechados' : 'Sem Pedidos'}
+                    <span style={{ fontSize: '0.42rem', color: 'var(--texto-secundario, #64748b)', fontWeight: 700, textTransform: 'uppercase' }}>
+                      {statusChart.total > 0 ? 'Fechados' : 'Sem'}
                     </span>
                   </div>
                 </div>
               </div>
 
-
-              {/* DIREITA: DETALHES DE STATUS */}
               <div className="status-info-right">
                 <div className="status-list-grid">
                   <div className="status-item-row"><span className="dot" style={{ background: '#10b981' }}></span> <span>Confirmados</span> <strong>{statusChart.confirmado}</strong></div>
@@ -902,56 +921,22 @@ const Dashboard = () => {
                   <div className="status-item-row"><span className="dot" style={{ background: '#f59e0b' }}></span> <span>Orçamentos</span> <strong>{statusChart.orcamento}</strong></div>
                   <div className="status-item-row"><span className="dot" style={{ background: '#ec4899' }}></span> <span>Entregues</span> <strong>{statusChart.entregue}</strong></div>
                   <div className="status-item-row"><span className="dot" style={{ background: '#3b82f6' }}></span> <span>Finalizados</span> <strong>{statusChart.finalizado}</strong></div>
-                  {statusChart.arquivado > 0 && <div className="status-item-row"><span className="dot" style={{ background: '#64748b' }}></span> <span>Arquivados</span> <strong>{statusChart.arquivado}</strong></div>}
-                  {statusChart.lixeira > 0 && <div className="status-item-row"><span className="dot" style={{ background: '#ef4444' }}></span> <span>Lixeira / Perdidos</span> <strong>{statusChart.lixeira}</strong></div>}
                 </div>
               </div>
             </div>
           </section>
 
-        </div>
-
-        <div className="dash-column">
-          <section className="dash-card-wide flex-grow">
-            <div className="dash-section-header">
-              <h3>📋 Tabela de Pedidos Recentes</h3>
-              <button onClick={() => navigate('/locacoes')} className="btn-ver-todos-anivs">
-                Ver Todas ({todasLocacoes.length})
-              </button>
-            </div>
-            <p className="card-subtitle">Últimas movimentações de locação.</p>
-
-            <div className="activity-feed">
-              {atividades.length > 0 ? (
-                atividades.map((a, i) => (
-                  <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${a.id}`)}>
-                    <div className="feed-icon blue-icon">🛍️</div>
-                    <div className="feed-info">
-                      <p>{a.txt}</p>
-                      <span className="feed-sub">
-                        Status: <strong style={{ color: '#10b981' }}>{a.status.toUpperCase()}</strong>
-                      </span>
-                    </div>
-                    {a.valor && <span className="feed-valor">{a.valor}</span>}
-                  </div>
-                ))
-              ) : (
-                <p className="empty-feed">🛍️ Nenhuma locação realizada recentemente.</p>
-              )}
-            </div>
-          </section>
-
-          <section className="dash-card-wide flex-grow">
+          {/* 📝 ORÇAMENTOS PENDENTES */}
+          <section className="dash-card-wide" style={{ flex: '1' }}>
             <h3>📝 Orçamentos Pendentes</h3>
-            <p className="card-subtitle">Negócios abertos aguardando fechamento.</p>
             <div className="activity-feed">
               {orcamentosPendentes.length > 0 ? (
-                orcamentosPendentes.map((orc, i) => (
+                orcamentosPendentes.slice(0, 4).map((orc, i) => (
                   <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${orc.id}`)}>
                     <div className="feed-icon warning-icon">🔔</div>
                     <div className="feed-info">
                       <p>{orc.clienteNome || 'Sem Nome'}</p>
-                      <span className="feed-sub">Festa: {orc.dataRetirada ? orc.dataRetirada.split('-').reverse().join('/') : '?'}</span>
+                      <span className="feed-sub">{orc.dataRetirada ? orc.dataRetirada.split('-').reverse().join('/') : '?'}</span>
                     </div>
                     <span className="feed-valor" style={{ color: '#d97706' }}>
                       R$ {Number(orc.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
@@ -963,177 +948,235 @@ const Dashboard = () => {
               )}
             </div>
           </section>
+
         </div>
 
+        {/* ══════════ COLUNA DIREITA (60%) ══════════ */}
         <div className="dash-column">
-          <section className="dash-card-wide flex-grow">
-            <h3>🚨 Radar de Cobrança</h3>
-            <p className="card-subtitle">Devoluções passadas com saldo em aberto.</p>
-            <div className="activity-feed">
-              {cobrancasAtrasadas.length > 0 ? (
-                cobrancasAtrasadas.map((cob, i) => {
-                  const fone = cob.fone ? cob.fone.replace(/\D/g, '') : '';
-                  const msg = encodeURIComponent(`Olá ${cob.cliente}! Tudo bem? Verificamos pendência de R$ ${cob.valor.toFixed(2)} referente à locação do evento dia ${cob.data}. Podemos enviar a chave PIX?`);
-                  const zap = `https://wa.me/55${fone}?text=${msg}`;
 
-                  return (
-                    <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${cob.id}`)}>
-                      <div className="feed-icon danger-icon">⚠️</div>
-                      <div className="feed-info">
-                        <p>{cob.cliente}</p>
-                        <span className="feed-sub">Evento: {cob.data}</span>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '4px' }}>
-                        <span className="feed-valor feed-valor--danger">R$ {cob.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-                        {cob.fone && (
-                          <a 
-                            href={zap} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="btn-dispatch-zap" 
-                            onClick={e => e.stopPropagation()}
-                            style={{ padding: '2px 8px', fontSize: '0.68rem' }}
-                          >
-                            <i className="fab fa-whatsapp"></i> Cobrar
-                          </a>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="empty-feed empty-feed--success">✅ Nenhum atraso financeiro detectado.</p>
-              )}
-            </div>
-          </section>
+          {/* SUB-GRID 2x2 (cima: pedidos + radar / baixo: aniversários + ranking) */}
+          <div className="dash-right-subgrid" style={{ flex: '2' }}>
 
-          <section className="dash-card-wide flex-grow crm-birthday-card-dash">
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <h3 style={{ margin: 0 }}>🎂 Próximos Aniversários</h3>
-                <span className="birthday-count-pill">
-                  {aniversariantesProximos.length} {aniversariantesProximos.length === 1 ? 'PRÓXIMO' : 'PRÓXIMOS'}
-                </span>
-                <button 
-                  type="button" 
-                  onClick={() => setModalAniversariantesAberto(true)}
-                  className="btn-ver-todos-anivs"
-                  style={{ padding: '2px 10px', fontSize: '0.7rem' }}
-                >
-                  <i className="fas fa-eye"></i> Ver Todos ({aniversariantesDoMes.length})
+            {/* 📋 PEDIDOS RECENTES */}
+            <section className="dash-card-wide">
+              <div className="dash-section-header">
+                <h3 style={{ margin: 0 }}>📋 Pedidos Recentes</h3>
+                <button onClick={() => navigate('/locacoes')} className="btn-ver-todos-anivs">
+                  Todos ({todasLocacoes.length})
                 </button>
               </div>
-              <p className="card-subtitle" style={{ margin: 0 }}>
-                Aniversários nos próximos dias. Envie um cupom especial!
-              </p>
-            </div>
+              <div className="activity-feed">
+                {atividades.length > 0 ? (
+                  atividades.slice(0, 5).map((a, i) => (
+                    <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${a.id}`)}>
+                      <div className="feed-icon blue-icon">🛍️</div>
+                      <div className="feed-info">
+                        <p>{a.txt}</p>
+                        <span className="feed-sub" style={{ color: '#10b981', fontWeight: 700 }}>{a.status.toUpperCase()}</span>
+                      </div>
+                      {a.valor && <span className="feed-valor">{a.valor}</span>}
+                    </div>
+                  ))
+                ) : (
+                  <p className="empty-feed">🛍️ Nenhuma locação recente.</p>
+                )}
+              </div>
+            </section>
 
-
-
-            <div className="activity-feed">
-              {aniversariantesProximos.length > 0 ? (
-                aniversariantesProximos.slice(0, 5).map((c) => {
-                  const hoje = new Date();
-                  const diaHoje = hoje.getDate();
-                  const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.dataAniversario || c.aniversario || '';
-                  const partesDia = String(dataVal).includes('-') 
-                    ? parseInt(String(dataVal).split('T')[0].split('-')[2], 10)
-                    : String(dataVal).includes('/') 
-                      ? parseInt(String(dataVal).split('/')[0], 10) 
-                      : -1;
-                  const ehHoje = partesDia === diaHoje;
-                  const ehAmanha = partesDia === diaHoje + 1;
-
-                  const nomeFormat = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente';
-                  const fone = c.celular ? c.celular.replace(/\D/g, '') : '';
-                  const msgTexto = encodeURIComponent(`Olá ${nomeFormat}! 🎉 A equipe Celebre deseja um Feliz Aniversário! Como presente especial, preparamos 10% OFF na sua próxima locação. Vamos comemorar? 🎂🎈`);
-                  const zapLink = `https://wa.me/55${fone}?text=${msgTexto}`;
-                  const mailLink = `mailto:${c.email}?subject=Parabéns do Celebre! 🎂🎈&body=${msgTexto}`;
-
-                  return (
-                    <div key={c.id} className="feed-row-birthday">
-                      <div className="birthday-client-info">
-                        <div className="birthday-avatar">{nomeFormat.charAt(0)}</div>
-                        <div>
-                          <strong>{nomeFormat}</strong>
-                          <span className="birthday-date-sub">
-                            {ehHoje 
-                              ? <span style={{ background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', fontSize: '0.68rem' }}>🎂 HOJE!</span>
-                              : ehAmanha 
-                                ? <span style={{ background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontWeight: '700', padding: '2px 8px', borderRadius: '8px', fontSize: '0.68rem' }}>⏰ Amanhã</span>
-                                : <span style={{ background: '#f8fafc', color: '#475569', border: '1px solid #e2e8f0', fontWeight: '600', padding: '2px 8px', borderRadius: '8px', fontSize: '0.68rem' }}>📅 Em 2 dias</span>
-                            }
-                            {' '}<span style={{ opacity: 0.8 }}>• {dataVal}</span>
-                          </span>
+            {/* 🚨 RADAR DE COBRANÇA */}
+            <section className="dash-card-wide">
+              <h3>🚨 Radar de Cobrança</h3>
+              <div className="activity-feed">
+                {cobrancasAtrasadas.length > 0 ? (
+                  cobrancasAtrasadas.slice(0, 5).map((cob, i) => {
+                    const fone = cob.fone ? cob.fone.replace(/\D/g, '') : '';
+                    const msg = encodeURIComponent(`Olá ${cob.cliente}! Verificamos pendência de R$ ${cob.valor.toFixed(2)} referente ao evento dia ${cob.data}. Podemos enviar a chave PIX?`);
+                    const zap = `https://wa.me/55${fone}?text=${msg}`;
+                    return (
+                      <div key={i} className="feed-row-moderno" onClick={() => navigate(`/locacoes/editar/${cob.id}`)}>
+                        <div className="feed-icon danger-icon">⚠️</div>
+                        <div className="feed-info">
+                          <p>{cob.cliente}</p>
+                          <span className="feed-sub">{cob.data}</span>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '2px' }}>
+                          <span className="feed-valor feed-valor--danger">R$ {cob.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
+                          {cob.fone && (
+                            <a href={zap} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap" onClick={e => e.stopPropagation()} style={{ padding: '1px 6px', fontSize: '0.62rem' }}>
+                              <i className="fab fa-whatsapp"></i>
+                            </a>
+                          )}
                         </div>
                       </div>
+                    );
+                  })
+                ) : (
+                  <p className="empty-feed empty-feed--success">✅ Sem atrasos.</p>
+                )}
+              </div>
+            </section>
 
-                      <div className="birthday-dispatch-actions">
+            {/* 🎂 ANIVERSÁRIOS */}
+            <section className="dash-card-wide crm-birthday-card-dash">
+              <div className="dash-section-header">
+                <h3 style={{ margin: 0 }}>🎂 Aniversários</h3>
+                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                  <span className="birthday-count-pill">{aniversariantesProximos.length} PRÓX.</span>
+                  <button type="button" onClick={() => setModalAniversariantesAberto(true)} className="btn-ver-todos-anivs" style={{ padding: '2px 8px', fontSize: '0.65rem' }}>
+                    <i className="fas fa-eye"></i> {aniversariantesDoMes.length}
+                  </button>
+                </div>
+              </div>
+              <div className="birthday-grid-compact">
+                {aniversariantesProximos.length > 0 ? (
+                  aniversariantesProximos.slice(0, 5).map((c) => {
+                    const hoje = new Date();
+                    const diaHoje = hoje.getDate();
+                    const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.dataAniversario || c.aniversario || '';
+                    const partesDia = String(dataVal).includes('-')
+                      ? parseInt(String(dataVal).split('T')[0].split('-')[2], 10)
+                      : String(dataVal).includes('/')
+                        ? parseInt(String(dataVal).split('/')[0], 10)
+                        : -1;
+                    const ehHoje = partesDia === diaHoje;
+                    const ehAmanha = partesDia === diaHoje + 1;
+                    const nomeFormat = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente';
+                    const fone = c.celular ? c.celular.replace(/\D/g, '') : '';
+                    const msgTexto = encodeURIComponent(`Olá ${nomeFormat}! 🎉 Feliz Aniversário da equipe Celebre! 🎂🎈`);
+                    const zapLink = `https://wa.me/55${fone}?text=${msgTexto}`;
+                    return (
+                      <div key={c.id} className="birthday-row-compact">
+                        <div className="birthday-avatar-mini">{nomeFormat.charAt(0)}</div>
+                        <span className="birthday-name-mini">{nomeFormat}</span>
+                        {ehHoje
+                          ? <span className="birthday-tag-mini" style={{ background: '#fef3c7', color: '#b45309' }}>🎂 HOJE</span>
+                          : ehAmanha
+                            ? <span className="birthday-tag-mini" style={{ background: '#eff6ff', color: '#1d4ed8' }}>⏰ Amanhã</span>
+                            : <span className="birthday-tag-mini" style={{ background: '#f1f5f9', color: '#475569' }}>📅 Em 2d</span>
+                        }
                         {c.celular && (
-                          <a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap" title="Enviar WhatsApp">
-                            <i className="fab fa-whatsapp"></i> Whats
-                          </a>
-                        )}
-                        {c.email && (
-                          <a href={mailLink} className="btn-dispatch-email" title="Enviar E-mail">
-                            <i className="far fa-envelope"></i> E-mail
+                          <a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap" style={{ padding: '2px 6px', fontSize: '0.6rem' }}>
+                            <i className="fab fa-whatsapp"></i>
                           </a>
                         )}
                       </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="empty-feed">✨ Nenhum aniversário nos próximos 2 dias.</p>
-              )}
-            </div>
-          </section>
+                    );
+                  })
+                ) : (
+                  <p className="empty-feed">✨ Nenhum aniversário próximo.</p>
+                )}
+              </div>
+            </section>
 
-          <section className="dash-card-wide flex-grow">
+            {/* 🏆 RANKING TOP 3 (PÓDIO GRÁFICO 3D ESCALONADO) */}
+            <section className="dash-card-wide">
+              <div className="dash-section-header">
+                <h3 style={{ margin: 0 }}>🏆 Top Peças</h3>
+                <button onClick={() => navigate('/estoque')} className="btn-ver-todos-anivs">Acervo</button>
+              </div>
+              {topPecas.length > 0 ? (
+                <div className="podium-ranking-container">
+                  {/* 2º LUGAR (ESQUERDA - PRATA) */}
+                  <div className={`podium-step podium-silver ${topPecas[1] ? '' : 'podium-empty'}`}>
+                    <div className="podium-badge">🥈 2º</div>
+                    <div className="podium-block">
+                      <span className="podium-item-name" title={topPecas[1]?.nome || ''}>{topPecas[1]?.nome || '—'}</span>
+                      {topPecas[1] && <span className="podium-item-count">{topPecas[1].qtd} loc.</span>}
+                    </div>
+                  </div>
+
+                  {/* 1º LUGAR (CENTRO - OURO MAIS ALTO) */}
+                  <div className={`podium-step podium-gold ${topPecas[0] ? '' : 'podium-empty'}`}>
+                    <div className="podium-badge">🥇 1º</div>
+                    <div className="podium-block">
+                      <span className="podium-item-name" title={topPecas[0]?.nome || ''}>{topPecas[0]?.nome || '—'}</span>
+                      {topPecas[0] && <span className="podium-item-count">{topPecas[0].qtd} loc.</span>}
+                    </div>
+                  </div>
+
+                  {/* 3º LUGAR (DIREITA - BRONZE MAIS BAIXO) */}
+                  <div className={`podium-step podium-bronze ${topPecas[2] ? '' : 'podium-empty'}`}>
+                    <div className="podium-badge">🥉 3º</div>
+                    <div className="podium-block">
+                      <span className="podium-item-name" title={topPecas[2]?.nome || ''}>{topPecas[2]?.nome || '—'}</span>
+                      {topPecas[2] && <span className="podium-item-count">{topPecas[2].qtd} loc.</span>}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <p className="empty-feed">📊 Dados insuficientes.</p>
+              )}
+            </section>
+
+          </div>
+
+          {/* 📊 BI CATEGORIAS ULTRA COMPACTO (BARRA EMPILHADA + CHIPS INLINE) */}
+          <section className="dash-card-wide" style={{ flex: '1' }}>
             <div className="dash-section-header">
-              <h3 style={{ margin: 0 }}>🏆 Ranking de Peças (Top 3)</h3>
-              <button onClick={() => navigate('/estoque')} className="btn-ver-todos-anivs">
-                Acervo
+              <div>
+                <h3 style={{ margin: 0 }}>📊 BI Financeiro por Categoria</h3>
+                <p className="card-subtitle" style={{ margin: '1px 0 0 0' }}>Distribuição percentual do fluxo no período</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/financeiro')}
+                style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '4px 12px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+              >
+                Financeiro ➔
               </button>
             </div>
+            {(() => {
+              const totalGeral = (categoriaBreakdown.locacao || 0) + (categoriaBreakdown.estoque || 0) + (categoriaBreakdown.manutencao || 0) + (categoriaBreakdown.fixo || 0) + (categoriaBreakdown.equipe || 0);
+              const itensBreakdown = [
+                { id: 'locacao', icon: '🎉', label: 'Locações', valor: categoriaBreakdown.locacao || 0, cor: '#10b981' },
+                { id: 'estoque', icon: '📦', label: 'Acervo', valor: categoriaBreakdown.estoque || 0, cor: '#3b82f6' },
+                { id: 'manutencao', icon: '🛠️', label: 'Manutenção', valor: categoriaBreakdown.manutencao || 0, cor: '#f59e0b' },
+                { id: 'fixo', icon: '🏢', label: 'Fixos', valor: categoriaBreakdown.fixo || 0, cor: '#64748b' },
+                { id: 'equipe', icon: '👥', label: 'Equipe', valor: categoriaBreakdown.equipe || 0, cor: '#8b5cf6' },
+              ];
+              return (
+                <div className="bi-stacked-bar-wrapper">
+                  {/* BARRA EMPILHADA DE DISTRIBUIÇÃO */}
+                  <div className="bi-stacked-bar">
+                    {itensBreakdown.map(item => {
+                      const pct = totalGeral > 0 ? Math.round((item.valor / totalGeral) * 100) : 0;
+                      if (pct <= 0) return null;
+                      return (
+                        <div
+                          key={item.id}
+                          className="bi-stacked-segment"
+                          style={{ width: `${pct}%`, background: item.cor }}
+                          title={`${item.label}: R$ ${item.valor.toLocaleString('pt-BR')} (${pct}%)`}
+                        />
+                      );
+                    })}
+                  </div>
 
-            {topPecas.length > 0 ? (
-              <div className="podium-ranking-container">
-                {/* 2º LUGAR (ESQUERDA - PRATA) */}
-                <div className={`podium-step podium-silver ${topPecas[1] ? '' : 'podium-empty'}`}>
-                  <div className="podium-badge">🥈 2º</div>
-                  <div className="podium-block">
-                    <span className="podium-item-name" title={topPecas[1]?.nome || ''}>{topPecas[1]?.nome || '—'}</span>
-                    {topPecas[1] && <span className="podium-item-count">{topPecas[1].qtd} locação{topPecas[1].qtd > 1 ? 'ões' : ''}</span>}
+                  {/* CHIPS INLINE ULTRA COMPACTOS */}
+                  <div className="bi-chips-grid">
+                    {itensBreakdown.map(item => {
+                      const pct = totalGeral > 0 ? Math.round((item.valor / totalGeral) * 100) : 0;
+                      return (
+                        <div key={item.id} className="bi-chip-card">
+                          <span className="bi-chip-dot" style={{ background: item.cor }}></span>
+                          <span className="bi-chip-label">{item.icon} {item.label}</span>
+                          <span className="bi-chip-val">
+                            R$ {item.valor >= 1000 ? (item.valor / 1000).toFixed(1) + 'k' : item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                            <span className="bi-chip-pct">({pct}%)</span>
+                          </span>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
-
-                {/* 1º LUGAR (CENTRO - OURO) */}
-                <div className={`podium-step podium-gold ${topPecas[0] ? '' : 'podium-empty'}`}>
-                  <div className="podium-badge">🥇 1º</div>
-                  <div className="podium-block">
-                    <span className="podium-item-name" title={topPecas[0]?.nome || ''}>{topPecas[0]?.nome || '—'}</span>
-                    {topPecas[0] && <span className="podium-item-count">{topPecas[0].qtd} locação{topPecas[0].qtd > 1 ? 'ões' : ''}</span>}
-                  </div>
-                </div>
-
-                {/* 3º LUGAR (DIREITA - BRONZE) */}
-                <div className={`podium-step podium-bronze ${topPecas[2] ? '' : 'podium-empty'}`}>
-                  <div className="podium-badge">🥉 3º</div>
-                  <div className="podium-block">
-                    <span className="podium-item-name" title={topPecas[2]?.nome || ''}>{topPecas[2]?.nome || '—'}</span>
-                    {topPecas[2] && <span className="podium-item-count">{topPecas[2].qtd} locação{topPecas[2].qtd > 1 ? 'ões' : ''}</span>}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <p className="empty-feed">📊 Dados insuficientes de ranking.</p>
-            )}
+              );
+            })()}
           </section>
 
         </div>
       </div>
 
+      {/* MODAL ANIVERSARIANTES */}
       {modalAniversariantesAberto && (
         <div className="modal-overlay-celebre fade-in" onClick={() => setModalAniversariantesAberto(false)}>
           <div className="modal-container-celebre modal-aniversariantes-lg" onClick={e => e.stopPropagation()}>
@@ -1142,7 +1185,7 @@ const Dashboard = () => {
                 <span style={{ fontSize: '28px' }}>🎂</span>
                 <div>
                   <h2 style={{ margin: 0, fontSize: '1.2rem', color: '#ffffff', fontWeight: '850' }}>Aniversariantes de {new Date().toLocaleString('pt-BR', { month: 'long' }).replace(/^./, s => s.toUpperCase())} ({aniversariantesDoMes.length})</h2>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#cbd5e1' }}>Central CRM de Retenção & Disparo de Cupons — Todos os clientes do mês</p>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#cbd5e1' }}>Central CRM de Retenção &amp; Disparo de Cupons</p>
                 </div>
               </div>
               <button type="button" className="btn-close-modal" onClick={() => setModalAniversariantesAberto(false)}>✕</button>
@@ -1155,7 +1198,7 @@ const Dashboard = () => {
                   <p style={{ fontWeight: '700' }}>Nenhum cliente faz aniversário este mês.</p>
                 </div>
               ) : (
-                <div className="anivs-grid-modal" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {aniversariantesDoMes.map(c => {
                     const diaHojeModal = new Date().getDate();
                     const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.dataAniversario || c.aniversario || '';
@@ -1170,19 +1213,10 @@ const Dashboard = () => {
 
                     let badgeLabel = '';
                     let badgeStyle = {};
-                    if (ehPassado) {
-                      badgeLabel = 'Já passou';
-                      badgeStyle = { background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' };
-                    } else if (ehHojeM) {
-                      badgeLabel = '🎂 HOJE!';
-                      badgeStyle = { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: '900' };
-                    } else if (ehAmanhaM) {
-                      badgeLabel = '⏰ Amanhã';
-                      badgeStyle = { background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' };
-                    } else {
-                      badgeLabel = `Dia ${diaAniv}`;
-                      badgeStyle = { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' };
-                    }
+                    if (ehPassado) { badgeLabel = 'Já passou'; badgeStyle = { background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' }; }
+                    else if (ehHojeM) { badgeLabel = '🎂 HOJE!'; badgeStyle = { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: '900' }; }
+                    else if (ehAmanhaM) { badgeLabel = '⏰ Amanhã'; badgeStyle = { background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }; }
+                    else { badgeLabel = `Dia ${diaAniv}`; badgeStyle = { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }; }
 
                     const nomeFormat = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente';
                     const fone = c.celular ? c.celular.replace(/\D/g, '') : '';
@@ -1193,40 +1227,20 @@ const Dashboard = () => {
                     return (
                       <div key={c.id} className="feed-row-birthday" style={{ opacity: ehPassado ? 0.65 : 1 }}>
                         <div className="birthday-client-info">
-                          <div className="birthday-avatar" style={{ background: ehPassado ? '#94a3b8' : undefined }}>
-                            {nomeFormat.charAt(0)}
-                          </div>
+                          <div className="birthday-avatar" style={{ background: ehPassado ? '#94a3b8' : undefined }}>{nomeFormat.charAt(0)}</div>
                           <div>
                             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                               <strong>{nomeFormat}</strong>
                               <span style={{ fontSize: '0.68rem', fontWeight: '800', padding: '2px 8px', borderRadius: '8px', ...badgeStyle }}>{badgeLabel}</span>
                             </div>
-                            <span className="birthday-date-sub">
-                              📅 {dataVal}{c.celular ? ` • 📱 ${c.celular}` : ''}{c.email ? ` • ✉️ ${c.email}` : ''}
-                            </span>
+                            <span className="birthday-date-sub">📅 {dataVal}{c.celular ? ` • 📱 ${c.celular}` : ''}{c.email ? ` • ✉️ ${c.email}` : ''}</span>
                           </div>
                         </div>
-
                         <div className="birthday-dispatch-actions">
-                          {c.celular && (
-                            <a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap">
-                              <i className="fab fa-whatsapp"></i> WhatsApp
-                            </a>
-                          )}
-                          {c.email && (
-                            <a href={mailLink} className="btn-dispatch-email">
-                              <i className="far fa-envelope"></i> E-mail
-                            </a>
-                          )}
+                          {c.celular && (<a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap"><i className="fab fa-whatsapp"></i> WhatsApp</a>)}
+                          {c.email && (<a href={mailLink} className="btn-dispatch-email"><i className="far fa-envelope"></i> E-mail</a>)}
                           {c.celular && c.email && (
-                            <button 
-                              type="button" 
-                              onClick={() => {
-                                window.open(zapLink, '_blank');
-                                window.location.href = mailLink;
-                              }}
-                              className="btn-dispatch-both" 
-                            >
+                            <button type="button" onClick={() => { window.open(zapLink, '_blank'); window.location.href = mailLink; }} className="btn-dispatch-both">
                               <i className="fas fa-paper-plane"></i> Ambos
                             </button>
                           )}
@@ -1239,17 +1253,10 @@ const Dashboard = () => {
             </div>
 
             <div className="modal-footer-celebre" style={{ padding: '16px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--borda, #e2e8f0)', background: 'var(--fundo-card, #f8fafc)' }}>
-              <button 
-                type="button" 
-                onClick={() => { setModalAniversariantesAberto(false); navigate('/clientes'); }}
-                className="btn-secondary-celebre"
-                style={{ fontSize: '0.78rem' }}
-              >
-                <i className="fas fa-users"></i> Ir para Gestão de Clientes
+              <button type="button" onClick={() => { setModalAniversariantesAberto(false); navigate('/clientes'); }} className="btn-secondary-celebre" style={{ fontSize: '0.78rem' }}>
+                <i className="fas fa-users"></i> Ir para Clientes
               </button>
-              <button type="button" className="btn-primary-celebre" onClick={() => setModalAniversariantesAberto(false)}>
-                Fechar
-              </button>
+              <button type="button" className="btn-primary-celebre" onClick={() => setModalAniversariantesAberto(false)}>Fechar</button>
             </div>
           </div>
         </div>
@@ -1259,3 +1266,4 @@ const Dashboard = () => {
 };
 
 export default Dashboard;
+

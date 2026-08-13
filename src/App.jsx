@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
 import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'; 
@@ -10,67 +10,68 @@ import Navbar from './components/Navbar';
 import Topbar from './components/Topbar'; 
 import './App.css';
 
-// --- AUTENTICAÇÃO E VITRINE ---
-import LandingPage from './pages/LandingPage/LandingPage'; 
-import Login from './pages/Auth/Login';
-import Cadastro from './pages/Auth/Cadastro';
-import RedefinirSenha from './pages/Auth/RedefinirSenha';
-import ConfirmarEmail from './pages/Auth/ConfirmarEmail';
-import Checkout from './pages/Checkout/Checkout'; 
 import RotaPrivada from './components/RotaPrivada'; 
 import RotaAdmin from './components/RotaAdmin'; 
 
-// --- PÁGINAS ---
-import Dashboard from './pages/Dashboard/Dashboard';
-import Clientes from './pages/Clientes/Clientes';
-import CadastroCliente from './pages/Clientes/CadastroCliente'; 
-import AutoCadastro from './pages/Clientes/AutoCadastro'; 
+// --- AUTENTICAÇÃO E VITRINE (Code-Splitting via React.lazy) ---
+const LandingPage = lazy(() => import('./pages/LandingPage/LandingPage')); 
+const Login = lazy(() => import('./pages/Auth/Login'));
+const Cadastro = lazy(() => import('./pages/Auth/Cadastro'));
+const RedefinirSenha = lazy(() => import('./pages/Auth/RedefinirSenha'));
+const ConfirmarEmail = lazy(() => import('./pages/Auth/ConfirmarEmail'));
+const Checkout = lazy(() => import('./pages/Checkout/Checkout')); 
 
-import Estoque from './pages/Estoque/Estoque';
-import CadastroEstoque from './pages/Estoque/CadastroEstoque';
+// --- PÁGINAS ---
+const Dashboard = lazy(() => import('./pages/Dashboard/Dashboard'));
+const Clientes = lazy(() => import('./pages/Clientes/Clientes'));
+const CadastroCliente = lazy(() => import('./pages/Clientes/CadastroCliente')); 
+const AutoCadastro = lazy(() => import('./pages/Clientes/AutoCadastro')); 
+
+const Estoque = lazy(() => import('./pages/Estoque/Estoque'));
+const CadastroEstoque = lazy(() => import('./pages/Estoque/CadastroEstoque'));
 
 // --- LOCAÇÕES ---
-import Locacoes from './pages/Locacoes/Locacoes';
-import NovaLocacao from './pages/Locacoes/NovaLocacao';
-import EditarLocacao from './pages/Locacoes/EditarLocacao';
-import CheckinPage from './pages/Locacoes/CheckinPage';
-import CheckoutPage from './pages/Locacoes/CheckoutPage';
+const Locacoes = lazy(() => import('./pages/Locacoes/Locacoes'));
+const NovaLocacao = lazy(() => import('./pages/Locacoes/NovaLocacao'));
+const EditarLocacao = lazy(() => import('./pages/Locacoes/EditarLocacao'));
+const CheckinPage = lazy(() => import('./pages/Locacoes/CheckinPage'));
+const CheckoutPage = lazy(() => import('./pages/Locacoes/CheckoutPage'));
 
 // --- FINANCEIRO & COMPRAS ---
-import Fornecedores from './pages/Fornecedores/Fornecedores';
-import NovoFornecedor from './pages/Fornecedores/NovoFornecedor';
-import Compras from './pages/Compras/Compras';
-import NovaCompra from './pages/Compras/NovaCompra';
-import Financeiro from './pages/Financeiro/Financeiro';
-import NovoLancamento from './pages/Financeiro/NovoLancamento';
+const Fornecedores = lazy(() => import('./pages/Fornecedores/Fornecedores'));
+const NovoFornecedor = lazy(() => import('./pages/Fornecedores/NovoFornecedor'));
+const Compras = lazy(() => import('./pages/Compras/Compras'));
+const NovaCompra = lazy(() => import('./pages/Compras/NovaCompra'));
+const Financeiro = lazy(() => import('./pages/Financeiro/Financeiro'));
+const NovoLancamento = lazy(() => import('./pages/Financeiro/NovoLancamento'));
 
 // --- OPERACIONAL ---
-import Agenda from './pages/Agenda/Agenda';
-import Logistica from './pages/Logistica/Logistica';
-import Contratos from './pages/Contratos/Contratos';
-import NovoContrato from "./pages/Contratos/NovoContrato";
-import EditarContrato from "./pages/Contratos/EditarContrato";
-import AssinaturaContrato from "./pages/Contratos/AssinaturaContrato";
-import ModelosContrato from "./pages/Contratos/ModelosContrato";
-import VisualizarContrato from "./pages/Contratos/VisualizarContrato";
+const Agenda = lazy(() => import('./pages/Agenda/Agenda'));
+const Logistica = lazy(() => import('./pages/Logistica/Logistica'));
+const Contratos = lazy(() => import('./pages/Contratos/Contratos'));
+const NovoContrato = lazy(() => import('./pages/Contratos/NovoContrato'));
+const EditarContrato = lazy(() => import('./pages/Contratos/EditarContrato'));
+const AssinaturaContrato = lazy(() => import('./pages/Contratos/AssinaturaContrato'));
+const ModelosContrato = lazy(() => import('./pages/Contratos/ModelosContrato'));
+const VisualizarContrato = lazy(() => import('./pages/Contratos/VisualizarContrato'));
 
 // --- GESTÃO ---
-import Relatorios from './pages/Relatorios/Relatorios';
-import Configuracoes from './pages/Configuracoes/Configuracoes';
-import Perfil from './pages/Perfil/Perfil';
-import Moodboard from './pages/Moodboard/Moodboard';
-import Catalogo from './pages/Catalago/Catalago'; 
-import Notificacoes from './pages/Notificacoes/Notificacoes';
+const Relatorios = lazy(() => import('./pages/Relatorios/Relatorios'));
+const Configuracoes = lazy(() => import('./pages/Configuracoes/Configuracoes'));
+const Perfil = lazy(() => import('./pages/Perfil/Perfil'));
+const Moodboard = lazy(() => import('./pages/Moodboard/Moodboard'));
+const Catalogo = lazy(() => import('./pages/Catalago/Catalago')); 
+const Notificacoes = lazy(() => import('./pages/Notificacoes/Notificacoes'));
 
-import Usuarios from './Usuarios/Usuarios'; 
-import Monitoramento from './Usuarios/Monitoramento'; 
-import GestaoASO from './Usuarios/GestaoASO'; 
+const Usuarios = lazy(() => import('./Usuarios/Usuarios')); 
+const Monitoramento = lazy(() => import('./Usuarios/Monitoramento')); 
+const GestaoASO = lazy(() => import('./Usuarios/GestaoASO')); 
 
 // --- PLANOS & ASSINATURA ---
-import Planos from './pages/Planos/Planos';
-import AdminPlanos from './pages/Planos/AdminPlanos';
-import PaginaUpgrade from './pages/Planos/PaginaUpgrade';
-import ControleGeral from './pages/Admin/ControleGeral';
+const Planos = lazy(() => import('./pages/Planos/Planos'));
+const AdminPlanos = lazy(() => import('./pages/Planos/AdminPlanos'));
+const PaginaUpgrade = lazy(() => import('./pages/Planos/PaginaUpgrade'));
+const ControleGeral = lazy(() => import('./pages/Admin/ControleGeral'));
 
 const parseFirestoreDate = (dateVal) => {
   if (!dateVal) return null;
@@ -430,78 +431,85 @@ const AppContent = () => {
       <main className="main-content">
         {showNavbar && <Topbar />}
 
-        <Routes>
-          <Route path="/" element={<LandingPage />} />
+        <Suspense fallback={
+          <div style={{ height: '60vh', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c5a059', fontWeight: '500' }}>
+            <i className="fas fa-spinner fa-spin fa-2x" style={{ marginRight: '12px' }}></i>
+            <span>Carregando módulo...</span>
+          </div>
+        }>
+          <Routes>
+            <Route path="/" element={<LandingPage />} />
 
-          <Route path="/login" element={<Login />} />
-          <Route path="/cadastro" element={<Cadastro />} />
-          <Route path="/redefinir-senha" element={<RedefinirSenha />} />
-          <Route path="/confirmar-email" element={<ConfirmarEmail />} />
-          <Route path="/checkout" element={<Checkout />} /> 
-          
-          <Route path="/autocadastro/:idEmpresa" element={<AutoCadastro />} /> 
-          <Route path="/catalogo/:idEmpresa" element={<Catalogo />} />
-          <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
-          <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
+            <Route path="/login" element={<Login />} />
+            <Route path="/cadastro" element={<Cadastro />} />
+            <Route path="/redefinir-senha" element={<RedefinirSenha />} />
+            <Route path="/confirmar-email" element={<ConfirmarEmail />} />
+            <Route path="/checkout" element={<Checkout />} /> 
+            
+            <Route path="/autocadastro/:idEmpresa" element={<AutoCadastro />} /> 
+            <Route path="/catalogo/:idEmpresa" element={<Catalogo />} />
+            <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
+            <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
 
-          {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Base) */}
-          <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
-          <Route path="/planos" element={<RotaPrivada><Planos /></RotaPrivada>} />
-          <Route path="/upgrade" element={<RotaPrivada><PaginaUpgrade /></RotaPrivada>} />
-          
-          {/* ⚙️ ROTA ADMIN EXCLUSIVA */}
-          <Route path="/admin-planos" element={<RotaAdmin><AdminPlanos /></RotaAdmin>} />
-          <Route path="/gestao-usuarios" element={<RotaAdmin><ControleGeral /></RotaAdmin>} />
-          
-          {/* 👥 CLIENTES */}
-          <Route path="/clientes" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><Clientes /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/cadastro-cliente" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><CadastroCliente /></TravaSeguranca></RotaPrivada>} />
-          
-          {/* 📦 ESTOQUE */}
-          <Route path="/estoque" element={<RotaPrivada><TravaSeguranca modulo="Estoque" recursoExigido="Estoque"><Estoque /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/cadastro-estoque" element={<RotaPrivada><TravaSeguranca modulo="Estoque" recursoExigido="Estoque"><CadastroEstoque /></TravaSeguranca></RotaPrivada>} />
-          
-          {/* 📅 LOCAÇÕES */}
-          <Route path="/locacoes" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><Locacoes /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/locacoes/nova" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><NovaLocacao /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/locacoes/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><EditarLocacao /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/checkin/:id/:modo?" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckinPage /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/checkout/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckoutPage /></TravaSeguranca></RotaPrivada>} />
-          
-          {/* 🤝 FORNECEDORES E COMPRAS */}
-          <Route path="/fornecedores" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Fornecedores /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/fornecedores/novo" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovoFornecedor /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/fornecedores/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovoFornecedor /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/compras" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Compras /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/compras/nova" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovaCompra /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/compras/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovaCompra /></TravaSeguranca></RotaPrivada>} />
-          
-          {/* 💰 FINANCEIRO */}
-          <Route path="/financeiro" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><Financeiro /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/financeiro/novo" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><NovoLancamento /></TravaSeguranca></RotaPrivada>} />
-          
-          {/* 🚚 LOGÍSTICA E AGENDA */}
-          <Route path="/agenda" element={<RotaPrivada><TravaSeguranca modulo="Agenda" recursoExigido="Agenda"><Agenda /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/logistica" element={<RotaPrivada><TravaSeguranca modulo="Logistica" recursoExigido="Logística"><Logistica /></TravaSeguranca></RotaPrivada>} />
-          
-          {/* 📝 CONTRATOS */}
-          <Route path="/contratos" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><Contratos /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/novo-contrato" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><NovoContrato /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/modelos-contrato" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><ModelosContrato /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/editar-contrato/:id" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><EditarContrato /></TravaSeguranca></RotaPrivada>} />
-          
-          {/* 📊 GESTÃO */}
-          <Route path="/relatorios" element={<RotaPrivada><TravaSeguranca modulo="Relatorios" recursoExigido="Relatórios"><Relatorios /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/moodboard" element={<RotaPrivada><TravaSeguranca modulo="Moodboard" recursoExigido="Moodboard"><Moodboard /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/configuracoes" element={<RotaPrivada><TravaSeguranca modulo="Equipe"><Configuracoes /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/perfil" element={<RotaPrivada><Perfil /></RotaPrivada>} />
-          <Route path="/notificacoes" element={<RotaPrivada><Notificacoes /></RotaPrivada>} /> 
-          
-          {/* 👥 GESTÃO DE EQUIPE E RH */}
-          <Route path="/usuarios" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><Usuarios /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/monitoramento" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><Monitoramento /></TravaSeguranca></RotaPrivada>} />
-          <Route path="/asos" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><GestaoASO /></TravaSeguranca></RotaPrivada>} />
-        </Routes>
+            {/* 🔐 ROTAS PRIVADAS DO SISTEMA (Base) */}
+            <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
+            <Route path="/planos" element={<RotaPrivada><Planos /></RotaPrivada>} />
+            <Route path="/upgrade" element={<RotaPrivada><PaginaUpgrade /></RotaPrivada>} />
+            
+            {/* ⚙️ ROTA ADMIN EXCLUSIVA */}
+            <Route path="/admin-planos" element={<RotaAdmin><AdminPlanos /></RotaAdmin>} />
+            <Route path="/gestao-usuarios" element={<RotaAdmin><ControleGeral /></RotaAdmin>} />
+            
+            {/* 👥 CLIENTES */}
+            <Route path="/clientes" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><Clientes /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/cadastro-cliente" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><CadastroCliente /></TravaSeguranca></RotaPrivada>} />
+            
+            {/* 📦 ESTOQUE */}
+            <Route path="/estoque" element={<RotaPrivada><TravaSeguranca modulo="Estoque" recursoExigido="Estoque"><Estoque /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/cadastro-estoque" element={<RotaPrivada><TravaSeguranca modulo="Estoque" recursoExigido="Estoque"><CadastroEstoque /></TravaSeguranca></RotaPrivada>} />
+            
+            {/* 📅 LOCAÇÕES */}
+            <Route path="/locacoes" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><Locacoes /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/locacoes/nova" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><NovaLocacao /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/locacoes/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><EditarLocacao /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/checkin/:id/:modo?" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckinPage /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/checkout/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckoutPage /></TravaSeguranca></RotaPrivada>} />
+            
+            {/* 🤝 FORNECEDORES E COMPRAS */}
+            <Route path="/fornecedores" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Fornecedores /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/fornecedores/novo" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovoFornecedor /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/fornecedores/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovoFornecedor /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/compras" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Compras /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/compras/nova" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovaCompra /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/compras/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><NovaCompra /></TravaSeguranca></RotaPrivada>} />
+            
+            {/* 💰 FINANCEIRO */}
+            <Route path="/financeiro" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><Financeiro /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/financeiro/novo" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><NovoLancamento /></TravaSeguranca></RotaPrivada>} />
+            
+            {/* 🚚 LOGÍSTICA E AGENDA */}
+            <Route path="/agenda" element={<RotaPrivada><TravaSeguranca modulo="Agenda" recursoExigido="Agenda"><Agenda /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/logistica" element={<RotaPrivada><TravaSeguranca modulo="Logistica" recursoExigido="Logística"><Logistica /></TravaSeguranca></RotaPrivada>} />
+            
+            {/* 📝 CONTRATOS */}
+            <Route path="/contratos" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><Contratos /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/novo-contrato" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><NovoContrato /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/modelos-contrato" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><ModelosContrato /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/editar-contrato/:id" element={<RotaPrivada><TravaSeguranca modulo="Contratos" recursoExigido="Contratos"><EditarContrato /></TravaSeguranca></RotaPrivada>} />
+            
+            {/* 📊 GESTÃO */}
+            <Route path="/relatorios" element={<RotaPrivada><TravaSeguranca modulo="Relatorios" recursoExigido="Relatórios"><Relatorios /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/moodboard" element={<RotaPrivada><TravaSeguranca modulo="Moodboard" recursoExigido="Moodboard"><Moodboard /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/configuracoes" element={<RotaPrivada><TravaSeguranca modulo="Equipe"><Configuracoes /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/perfil" element={<RotaPrivada><Perfil /></RotaPrivada>} />
+            <Route path="/notificacoes" element={<RotaPrivada><Notificacoes /></RotaPrivada>} /> 
+            
+            {/* 👥 GESTÃO DE EQUIPE E RH */}
+            <Route path="/usuarios" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><Usuarios /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/monitoramento" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><Monitoramento /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/asos" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><GestaoASO /></TravaSeguranca></RotaPrivada>} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   );
