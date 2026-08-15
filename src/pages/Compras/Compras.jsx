@@ -438,8 +438,37 @@ const Compras = () => {
         const itemRef = doc(db, "lista_compras", item.id);
         await updateDoc(itemRef, updatePayload);
         
-        await registrarLog("COMPRA EFETUADA", `Marcou o item "${item.nome}" como Comprado (A Caminho).`);
-        alert(`🛒 Maravilha! A compra foi registrada. O sistema vai rastrear a entrega a partir de hoje.`);
+        // 💰 INTEGRAÇÃO FINANCEIRA: Lançar Saída no Financeiro
+        const valorFinalCompra = Number(item.valorPago || item.valorEstimado || 0);
+        if (valorFinalCompra > 0) {
+          try {
+            await addDoc(collection(db, "financeiro_lancamentos"), {
+              userId: tenantId,
+              empresaId: tenantId,
+              tipo: "saida",
+              categoria: item.categoria === 'decoracao' ? 'Insumos e Embalagens' : 'Aquisição de Acervo',
+              centroCusto: "Aquisição Acervo",
+              descricao: `🛒 Compra: ${item.nome || 'Item'}${item.fornecedor ? ` (${item.fornecedor})` : ''}`,
+              valor: valorFinalCompra,
+              valorTotal: valorFinalCompra,
+              data: new Date().toISOString().split('T')[0],
+              status: "pago",
+              formaPagamento: item.formaPagto || "Pix",
+              formaPagto: item.formaPagto || "Pix",
+              fornecedorNome: item.fornecedor || "",
+              fornecedorTelefone: item.fornecedorTelefone || "",
+              compraId: item.id,
+              origem: "modulo_compras",
+              observacoes: `Compra registrada via módulo de Compras (Qtd: ${item.quantidade || 1}).`,
+              criadoEm: serverTimestamp()
+            });
+          } catch (finErr) {
+            console.error("Erro ao gerar lançamento financeiro da compra:", finErr);
+          }
+        }
+
+        await registrarLog("COMPRA EFETUADA", `Marcou o item "${item.nome}" como Comprado e gerou saída financeira no caixa.`);
+        alert(`🛒 Maravilha! A compra foi registrada e a despesa de R$ ${valorFinalCompra.toFixed(2)} foi lançada no Financeiro.`);
       }
 
     } catch (error) {

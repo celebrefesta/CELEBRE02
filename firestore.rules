@@ -6,23 +6,6 @@ rules_version = '2';
 //  1) só usuários logados acessam dados
 //  2) cada empresa (tenant) só enxerga os próprios dados
 //  3) o e-mail de super admin continua tendo acesso total
-//
-// ⚠️ PRÉ-REQUISITO PARA ESSAS REGRAS FUNCIONAREM:
-// Os documentos da coleção "equipe" precisam ter o ID do documento
-// IGUAL ao UID do usuário no Firebase Auth (hoje, pelo código do
-// Dashboard, a busca é feita por "where email == ..."; regras de
-// segurança não conseguem fazer esse tipo de busca por campo dentro
-// de uma verificação de outra coleção, só por ID direto).
-//
-// Ou seja: ao criar um novo funcionário, em vez de:
-//   addDoc(collection(db, "equipe"), { email, empresaId, ... })
-// usar:
-//   setDoc(doc(db, "equipe", uidDoNovoFuncionario), { email, empresaId, ... })
-//
-// Documentos de "equipe" já existentes com ID automático continuam
-// funcionando para leitura via query por e-mail (regra de "list"
-// abaixo cobre isso), mas não seriam reconhecidos nas checagens de
-// tenant em "estoque"/"locacoes" até serem migrados para esse padrão.
 // =====================================================================
 
 service cloud.firestore {
@@ -32,14 +15,10 @@ service cloud.firestore {
       return request.auth != null;
     }
 
-    // Mesmo e-mail hardcoded do front, mas verificado aqui no servidor
-    // via token de autenticação (não pode ser falsificado pelo cliente).
     function isSuperAdmin() {
       return logado() && request.auth.token.email == 'celebrefesta25@gmail.com';
     }
 
-    // O usuário é dono da empresa (o próprio tenant) OU é um funcionário
-    // com perfil em usuarios ou vinculado na coleção equipe (doc ID = uid).
     function souDonoOuFuncionario(tenantId) {
       return logado() && (
         request.auth.uid == tenantId ||
@@ -54,26 +33,19 @@ service cloud.firestore {
       );
     }
 
-    // ---------------------------------------------------------------
-    // usuarios/{tenantId}  → dados da empresa/assinatura
-    // ---------------------------------------------------------------
+    // usuarios/{tenantId}
     match /usuarios/{tenantId} {
       allow read: if isSuperAdmin() || (logado() && request.auth.uid == tenantId) || souDonoOuFuncionario(tenantId);
-      // Só o dono (ou super admin) altera dados da própria empresa/assinatura
       allow write: if isSuperAdmin() || (logado() && request.auth.uid == tenantId);
     }
 
-    // ---------------------------------------------------------------
-    // equipe/{uid}  → vínculo funcionário -> empresa
-    // ---------------------------------------------------------------
+    // equipe/{uid}
     match /equipe/{uid} {
-      // Cobre tanto o get direto quanto a query "where email == ..." do Dashboard
       allow read: if isSuperAdmin()
                   || (logado() && resource.data.email == request.auth.token.email)
                   || (logado() && resource.data.empresaId == request.auth.uid)
                   || souDonoOuFuncionario(resource.data.empresaId);
 
-      // O próprio funcionário pode registrar/atualizar seu vínculo, além do dono.
       allow create: if isSuperAdmin() 
                     || (logado() && request.auth.uid == request.resource.data.empresaId)
                     || (logado() && request.auth.uid == uid);
@@ -82,35 +54,27 @@ service cloud.firestore {
                             || (logado() && request.auth.uid == uid);
     }
 
-    // ---------------------------------------------------------------
-    // estoque/{docId}  → peças/itens do acervo (campo userId = tenantId)
-    // ---------------------------------------------------------------
+    // estoque/{docId}
     match /estoque/{docId} {
       allow read: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
       allow create: if souDonoOuFuncionario(request.resource.data.userId) || isSuperAdmin();
       allow update, delete: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
     }
 
-    // ---------------------------------------------------------------
-    // locacoes/{docId}  → orçamentos/locações (campo userId = tenantId)
-    // ---------------------------------------------------------------
+    // locacoes/{docId}
     match /locacoes/{docId} {
       allow read: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
       allow create: if souDonoOuFuncionario(request.resource.data.userId) || isSuperAdmin() || request.resource.data.origem == 'catalogo_publico';
       allow update, delete: if souDonoOuFuncionario(resource.data.userId) || isSuperAdmin();
     }
 
-    // ---------------------------------------------------------------
-    // configuracoes_empresa/{tenantId}  → configurações da empresa
-    // ---------------------------------------------------------------
+    // configuracoes_empresa/{tenantId}
     match /configuracoes_empresa/{tenantId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(tenantId);
       allow write: if isSuperAdmin() || (logado() && request.auth.uid == tenantId);
     }
 
-    // ---------------------------------------------------------------
-    // logs_atividades/{docId}  → auditoria de ações
-    // ---------------------------------------------------------------
+    // logs_atividades/{docId}
     match /logs_atividades/{docId} {
       allow create: if logado();
       allow read: if isSuperAdmin() 
@@ -120,94 +84,87 @@ service cloud.firestore {
                   || souDonoOuFuncionario(resource.data.userId);
     }
 
-    // ---------------------------------------------------------------
-    // planos/{docId}  → detalhes dos planos de assinatura
-    // ---------------------------------------------------------------
+    // planos/{docId}
     match /planos/{docId} {
       allow read: if true;
       allow write: if isSuperAdmin();
     }
 
-    // ---------------------------------------------------------------
-    // clientes/{docId}  → cadastro de clientes
-    // ---------------------------------------------------------------
+    // clientes/{docId}
     match /clientes/{docId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
       allow create: if isSuperAdmin() || (logado() && request.resource.data.userId == request.auth.uid) || request.resource.data.origem == 'Auto-Cadastro (Site)';
       allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
     }
 
-    // ---------------------------------------------------------------
+    // fornecedores/{docId}
+    match /fornecedores/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // compras/{docId}
+    match /compras/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
     // financeiro_lancamentos/{docId}
-    // ---------------------------------------------------------------
     match /financeiro_lancamentos/{docId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
       allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
       allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
     }
 
-    // ---------------------------------------------------------------
     // financeiro_recorrentes/{docId}
-    // ---------------------------------------------------------------
     match /financeiro_recorrentes/{docId} {
       allow read, write: if logado();
     }
 
-    // ---------------------------------------------------------------
     // lista_compras/{docId}
-    // ---------------------------------------------------------------
     match /lista_compras/{docId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
       allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
       allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
     }
 
-    // ---------------------------------------------------------------
     // clinicas_aso/{docId}
-    // ---------------------------------------------------------------
     match /clinicas_aso/{docId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
       allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.empresaId);
       allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
     }
 
-    // ---------------------------------------------------------------
     // projetos_moodboard/{docId}
-    // ---------------------------------------------------------------
     match /projetos_moodboard/{docId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
       allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
-      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
     }
 
-    // ---------------------------------------------------------------
     // usuarios_equipe/{docId}
-    // ---------------------------------------------------------------
     match /usuarios_equipe/{docId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
       allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.empresaId);
-      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.empresaId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.empresaId);
     }
 
-    // ---------------------------------------------------------------
-    // registros_documentos/{docId} → controle de duplicidade de CPF/CNPJ
-    // ---------------------------------------------------------------
+    // registros_documentos/{docId}
     match /registros_documentos/{docId} {
       allow get: if true;
       allow create: if true;
       allow list, update, delete: if false;
     }
 
-    // ---------------------------------------------------------------
-    // mail/{docId} → fila de e-mails (Firebase Trigger Email Extension)
-    // ---------------------------------------------------------------
+    // mail/{docId}
     match /mail/{docId} {
       allow create: if logado();
       allow read, update, delete: if false;
     }
 
-    // Qualquer coleção não listada explicitamente acima fica bloqueada
-    // por padrão — mais seguro do que esquecer de proteger algo novo.
+    // Bloqueio padrão para qualquer outra coleção
     match /{document=**} {
       allow read, write: if false;
     }

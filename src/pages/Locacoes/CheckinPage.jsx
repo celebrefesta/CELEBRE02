@@ -4,7 +4,7 @@ import './CheckinPage.css';
 import SignatureCanvas from 'react-signature-canvas';
 import { Html5Qrcode } from 'html5-qrcode';
 import { db } from '../../firebaseConfig';
-import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, query, where, getDocs, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { gerarComprovanteCheckinPDF } from '../../utils/gerarComprovanteCheckinPDF';
 import { compilarEComprimirFoto } from '../../utils/limpezaMidiaService';
@@ -503,6 +503,36 @@ const CheckinPage = () => {
           }
         }
 
+        // 💰 INTEGRAÇÃO FINANCEIRA: Lançar cobrança de taxa de avaria para o cliente no Financeiro
+        const totalCustoAvarias = itensAvaria.reduce((acc, i) => acc + Number(i.custoAvaria || 0), 0);
+        if (totalCustoAvarias > 0) {
+          try {
+            await addDoc(collection(db, "financeiro_lancamentos"), {
+              userId: tenantId,
+              empresaId: tenantId,
+              tipo: "entrada",
+              categoria: "Manutenção e Reparos",
+              centroCusto: "Taxas e Reparações",
+              descricao: `🛠️ Taxa de Avaria / Reparo: Pedido #${locacao.numeroPedido || id.slice(0,6)} - ${clienteNome}`,
+              valor: totalCustoAvarias,
+              valorTotal: totalCustoAvarias,
+              data: new Date().toISOString().split('T')[0],
+              status: "pendente",
+              formaPagamento: "Pix",
+              formaPagto: "Pix",
+              locacaoId: locacao.id || id,
+              locacaoNumero: locacao.numeroPedido || id.slice(0,6),
+              clienteId: locacao.clienteId || "",
+              clienteNome: clienteNome,
+              origem: "checkin_avaria_devolucao",
+              observacoes: `Cobrança de avaria gerada na vistoria de devolução (${itensAvaria.length} peça(s) avariada(s)).`,
+              criadoEm: serverTimestamp()
+            });
+          } catch (finErr) {
+            console.error("Erro ao gerar lançamento financeiro de avaria:", finErr);
+          }
+        }
+
         await updateDoc(locRef, {
           itens: itensState,
           obsRetorno: observacoes,
@@ -514,7 +544,7 @@ const CheckinPage = () => {
           status: 'finalizado'
         });
 
-        alert(`✅ Check-in de Retorno (VOLTA) finalizado com sucesso!`);
+        alert(`✅ Check-in de Retorno (VOLTA) finalizado com sucesso!${totalCustoAvarias > 0 ? `\n💰 Uma cobrança de R$ ${totalCustoAvarias.toFixed(2)} por avaria foi lançada no Financeiro.` : ''}`);
       }
 
       navigate('/locacoes');

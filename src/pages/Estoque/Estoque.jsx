@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import './Estoque.css';
 import { Html5Qrcode } from 'html5-qrcode';
@@ -40,6 +41,15 @@ const Estoque = () => {
   const [custoManutencao, setCustoManutencao] = useState('');
   const [dataInicioManutencao, setDataInicioManutencao] = useState(new Date().toISOString().split('T')[0]);
   const [dataPrevisaoRetorno, setDataPrevisaoRetorno] = useState('');
+  const [lancarDespesaFinanceiro, setLancarDespesaFinanceiro] = useState(true);
+
+  // 📊 MODAL DE ROI & RENTABILIDADE
+  const [modalRoiItem, setModalRoiItem] = useState(null);
+
+  // 🛒 MODAL DE REPOSIÇÃO / PEDIDO DE COMPRA
+  const [modalReposicaoItem, setModalReposicaoItem] = useState(null);
+  const [qtdReposicao, setQtdReposicao] = useState(1);
+  const [toastMsg, setToastMsg] = useState('');
 
   const [modalAddPedidoAberto, setModalAddPedidoAberto] = useState(false);
   const [itemParaPedido, setItemParaPedido] = useState(null);
@@ -317,6 +327,96 @@ const Estoque = () => {
     if (!dataIso) return '';
     const [a, m, d] = dataIso.split('-');
     return `${d}/${m}/${a}`;
+  };
+
+  // 📈 CÁLCULO DE MÉTRICAS DE RETORNO (ROI & GIRO) DA PEÇA
+  const calcularMetricasItem = (peca) => {
+    if (!peca) return { vezesAlugada: 0, totalFaturado: 0, custoAquisicao: 0, custoManutencao: 0, lucroLiquido: 0, roiPercentual: 0, historicoPedidos: [] };
+
+    let vezesAlugada = 0;
+    let totalFaturado = 0;
+    const historicoPedidos = [];
+
+    (locacoes || []).forEach(loc => {
+      const statusLoc = String(loc.status || '').toLowerCase();
+      if (statusLoc.includes('cancelado') || loc.isOrcamentoVencido) return;
+
+      const itensPedido = loc.itens || loc.carrinho || loc.pecas || [];
+      const itemEncontrado = itensPedido.find(it => 
+        (it.id && String(it.id) === String(peca.id)) || 
+        (it.codigo && peca.codigo && it.codigo === peca.codigo) || 
+        (it.nome && peca.nome && it.nome.trim().toLowerCase() === peca.nome.trim().toLowerCase())
+      );
+
+      if (itemEncontrado) {
+        const qtdNoPedido = Number(itemEncontrado.quantidade || itemEncontrado.qtd || 1);
+        vezesAlugada += qtdNoPedido;
+        const precoUnitario = Number(itemEncontrado.preco || itemEncontrado.valor || peca.preco || peca.financeiro?.valorAluguel || 0);
+        const subTotalItem = precoUnitario * qtdNoPedido;
+        totalFaturado += subTotalItem;
+        historicoPedidos.push({
+          id: loc.id,
+          numeroPedido: loc.numeroPedido || loc.numero || (loc.id ? loc.id.slice(0, 6).toUpperCase() : '-'),
+          clienteNome: loc.clienteNome || loc.nomeCliente || 'Cliente',
+          dataRetirada: loc.dataRetirada || loc.dataEvento,
+          qtd: qtdNoPedido,
+          valorGerado: subTotalItem,
+          status: loc.status
+        });
+      }
+    });
+
+    const custoAquisicao = Number(peca.precoAquisicao || peca.valorCompra || peca.custoCompra || peca.custo || peca.financeiro?.custoCompra || 0);
+    const custoManutencao = Number(peca.custoManutencao || peca.totalManutencao || 0);
+    const custoTotal = custoAquisicao + custoManutencao;
+    const lucroLiquido = totalFaturado - custoTotal;
+    
+    const roiPercentual = custoTotal > 0 
+      ? ((totalFaturado - custoTotal) / custoTotal) * 100 
+      : (totalFaturado > 0 ? 100 : 0);
+
+    return {
+      vezesAlugada,
+      totalFaturado,
+      custoAquisicao,
+      custoManutencao,
+      custoTotal,
+      lucroLiquido,
+      roiPercentual,
+      historicoPedidos
+    };
+  };
+
+  // 🛒 PEDIR REPOSIÇÃO DIRETA PARA O MÓDULO DE COMPRAS
+  const pedirReposicaoCompra = async (item, qtd = 1) => {
+    if (!item) return;
+    try {
+      await addDoc(collection(db, "lista_compras"), {
+        userId: tenantId,
+        empresaId: tenantId,
+        nome: item.nome,
+        item: item.nome,
+        categoria: item.categoria || 'Acervo / Reposição',
+        quantidade: Number(qtd) || 1,
+        valorEstimado: Number(item.precoAquisicao || item.valorCompra || item.custoCompra || item.financeiro?.custoCompra || 0),
+        status: 'pendente',
+        prioridade: 'alta',
+        foto: item.foto || '',
+        origem: 'reposicao_estoque',
+        estoqueId: item.id,
+        codigoPeca: item.codigo || '',
+        observacoes: `Reposição solicitada diretamente do Estoque (Cód: ${item.codigo || 'S/N'}).`,
+        criadoEm: serverTimestamp()
+      });
+
+      await registrarLog("REPOSIÇÃO DE ACERVO", `Enviou pedido de reposição da peça "${item.nome}" (${qtd} un) para a Lista de Compras.`);
+      setModalReposicaoItem(null);
+      setToastMsg(`🛒 Pedido de compra de "${item.nome}" (${qtd} un) enviado com sucesso!`);
+      setTimeout(() => setToastMsg(''), 4000);
+    } catch (err) {
+      console.error("Erro ao pedir reposição:", err);
+      alert("Erro ao enviar pedido de reposição.");
+    }
   };
 
   const somarDiasISO = (dataIso, dias) => {
@@ -1397,7 +1497,9 @@ const Estoque = () => {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="table-actions-container">
-                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido">🛒</button>
+                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setModalRoiItem(item); }} title="Ver ROI e Giro da Peça" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534' }}>📊</button>
+                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setModalReposicaoItem(item); setQtdReposicao(1); }} title="Pedir Reposição / Compra" style={{ background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }}>🛒</button>
+                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido">➕</button>
                             <button className="action-btn" onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); }} title="Manutenção / Reparo" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#b45309' }}>🛠️</button>
                             <button className="action-btn edit" onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} title="Editar">✏️</button>
                             <button className="action-btn duplicate" onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} title="Duplicar Item">📋</button>
@@ -1505,7 +1607,7 @@ const Estoque = () => {
         </div>
       )}
 
-      {modalManutencao && (
+      {modalManutencao && ReactDOM.createPortal(
         <div className="modal-overlay-blur" onClick={() => setModalManutencao(false)}>
           <div className="modal-maintenance-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px', borderRadius: '20px', overflow: 'hidden' }}>
             
@@ -1619,6 +1721,56 @@ const Estoque = () => {
                 </div>
               </div>
 
+              {/* 💰 VÍNCULO COM O FINANCEIRO */}
+              <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '12px 14px' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: '800', color: '#166534', margin: 0 }}>
+                  <input 
+                    type="checkbox" 
+                    checked={lancarDespesaFinanceiro} 
+                    onChange={e => setLancarDespesaFinanceiro(e.target.checked)}
+                    style={{ width: '16px', height: '16px', accentColor: '#16a34a' }}
+                  />
+                  💰 Registrar despesa de R$ {custoManutencao || '0,00'} no Financeiro automaticamente
+                </label>
+
+                {parseValorCusto(custoManutencao) > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModalManutencao(false);
+                      navigate('/novo-lancamento', {
+                        state: {
+                          tipo: 'saida',
+                          categoria: 'Manutenção e Reparos',
+                          pecaId: itemParaManutencao.id,
+                          pecaNome: itemParaManutencao.nome,
+                          valor: parseValorCusto(custoManutencao),
+                          descricao: `Manutenção de Peça: ${itemParaManutencao.nome}${motivoManutencao ? ' - ' + motivoManutencao : ''}`
+                        }
+                      });
+                    }}
+                    style={{
+                      marginTop: '8px',
+                      width: '100%',
+                      padding: '8px 12px',
+                      background: '#ffffff',
+                      border: '1px solid #86efac',
+                      color: '#15803d',
+                      borderRadius: '8px',
+                      fontSize: '0.75rem',
+                      fontWeight: '800',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px'
+                    }}
+                  >
+                    🔗 Abrir no Novo Lançamento Financeiro Completo
+                  </button>
+                )}
+              </div>
+
             </div>
 
             {/* RODAPÉ DO MODAL */}
@@ -1652,6 +1804,264 @@ const Estoque = () => {
             </div>
 
           </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 📊 MODAL DE ROI & RENTABILIDADE DA PEÇA */}
+      {modalRoiItem && ReactDOM.createPortal(
+        (() => {
+          const m = calcularMetricasItem(modalRoiItem);
+          const precoAluguel = Number(modalRoiItem.financeiro?.valorAluguel || modalRoiItem.preco || 0);
+
+          return (
+            <div className="modal-overlay-blur" onClick={() => setModalRoiItem(null)}>
+              <div className="modal-maintenance-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '620px', borderRadius: '20px', overflow: 'hidden' }}>
+                
+                {/* CABEÇALHO */}
+                <div style={{ background: '#0f172a', color: '#fff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fde68a', fontWeight: '800' }}>📊 Raio-X de Rentabilidade & ROI da Peça</h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#cbd5e1' }}>
+                      Performance de locação, faturamento gerado e retorno sobre o investimento
+                    </p>
+                  </div>
+                  <button onClick={() => setModalRoiItem(null)} style={{ color: '#fff', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+                </div>
+
+                <div style={{ padding: '20px 24px', maxHeight: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                  
+                  {/* FOTO E IDENTIFICAÇÃO */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#f8fafc', padding: '14px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
+                      {modalRoiItem.foto ? (
+                        <img src={modalRoiItem.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>📷</div>
+                      )}
+                    </div>
+                    <div style={{ flex: 1 }}>
+                      <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: '800' }}>{modalRoiItem.nome}</h4>
+                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
+                        CÓD: <b>{modalRoiItem.codigo || 'S/N'}</b> · Categoria: <b>{modalRoiItem.categoria || 'Geral'}</b> · Aluguel: <b>R$ {precoAluguel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CARDS DE MÉTRICAS */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                    
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '12px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase' }}>🔄 Giro de Locações</span>
+                      <div style={{ fontSize: '1.25rem', fontWeight: '850', color: '#1d4ed8', marginTop: '2px' }}>
+                        {m.vezesAlugada}x
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: '#3b82f6' }}>unidades alugadas</span>
+                    </div>
+
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '12px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>💰 Faturamento Total</span>
+                      <div style={{ fontSize: '1.25rem', fontWeight: '850', color: '#15803d', marginTop: '2px' }}>
+                        R$ {m.totalFaturado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: '#22c55e' }}>receita bruta gerada</span>
+                    </div>
+
+                    <div style={{ background: m.roiPercentual >= 0 ? '#fefce8' : '#fef2f2', border: m.roiPercentual >= 0 ? '1px solid #fef08a' : '1px solid #fecaca', borderRadius: '12px', padding: '12px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: m.roiPercentual >= 0 ? '#854d0e' : '#991b1b', textTransform: 'uppercase' }}>🏆 ROI da Peça</span>
+                      <div style={{ fontSize: '1.25rem', fontWeight: '850', color: m.roiPercentual >= 0 ? '#ca8a04' : '#b91c1c', marginTop: '2px' }}>
+                        {m.roiPercentual > 0 ? '+' : ''}{m.roiPercentual.toFixed(0)}%
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: m.roiPercentual >= 0 ? '#a16207' : '#ef4444' }}>retorno sobre custo</span>
+                    </div>
+
+                  </div>
+
+                  {/* SEGUNDA LINHA DE CUSTOS & LUCRO LÍQUIDO */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#64748b' }}>🏷️ Custo Aquisição:</span>
+                      <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem' }}>R$ {m.custoAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#64748b' }}>🛠️ Gastos Reparos:</span>
+                      <div style={{ fontWeight: '800', color: '#b45309', fontSize: '0.95rem' }}>R$ {m.custoManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#64748b' }}>📈 Lucro Líquido:</span>
+                      <div style={{ fontWeight: '850', color: m.lucroLiquido >= 0 ? '#16a34a' : '#ef4444', fontSize: '0.95rem' }}>
+                        R$ {m.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* HISTÓRICO DE PEDIDOS COM A PEÇA */}
+                  <div>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#334155', fontWeight: '800', textTransform: 'uppercase' }}>
+                      📋 Histórico de Locações desta Peça ({m.historicoPedidos.length})
+                    </h5>
+
+                    {m.historicoPedidos.length === 0 ? (
+                      <div style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: '10px', color: '#64748b', fontSize: '0.82rem' }}>
+                        Nenhuma locação finalizada encontrada para esta peça até o momento.
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
+                        {m.historicoPedidos.map((ped, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.78rem' }}>
+                            <div>
+                              <strong>Pedido #{ped.numeroPedido}</strong> · <span>👤 {ped.clienteNome}</span>
+                              <div style={{ color: '#64748b', fontSize: '0.7rem' }}>Data: {ped.dataRetirada ? ped.dataRetirada.split('-').reverse().join('/') : '-'} ({ped.qtd} un)</div>
+                            </div>
+                            <strong style={{ color: '#16a34a' }}>+ R$ {ped.valorGerado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* RODAPÉ COM AÇÕES RÁPIDAS */}
+                <div style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
+                  <button 
+                    onClick={() => { setModalRoiItem(null); setModalReposicaoItem(modalRoiItem); setQtdReposicao(1); }}
+                    style={{ flex: 1, padding: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    🛒 Pedir Reposição
+                  </button>
+
+                  <button 
+                    onClick={() => { const it = modalRoiItem; setModalRoiItem(null); abrirModalManutencao(it); }}
+                    style={{ flex: 1, padding: '10px', background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    🛠️ Registrar Reparo
+                  </button>
+
+                  <button 
+                    onClick={() => setModalRoiItem(null)}
+                    style={{ padding: '10px 16px', background: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          );
+        })(),
+        document.body
+      )}
+
+      {/* 🛒 MODAL DE PEDIDO DE REPOSIÇÃO / COMPRAS */}
+      {modalReposicaoItem && ReactDOM.createPortal(
+        <div className="modal-overlay-blur" onClick={() => setModalReposicaoItem(null)}>
+          <div className="modal-maintenance-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px', borderRadius: '20px', overflow: 'hidden' }}>
+            
+            <div style={{ background: '#0f172a', color: '#fff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fde68a', fontWeight: '800' }}>🛒 Solicitar Reposição / Compra</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#cbd5e1' }}>
+                  Envie a peça diretamente para a Lista de Compras do sistema
+                </p>
+              </div>
+              <button onClick={() => setModalReposicaoItem(null)} style={{ color: '#fff', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+            </div>
+
+            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
+                  {modalReposicaoItem.foto ? (
+                    <img src={modalReposicaoItem.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📷</div>
+                  )}
+                </div>
+                <div>
+                  <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{modalReposicaoItem.nome}</strong>
+                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
+                    CÓD: <b>{modalReposicaoItem.codigo || 'S/N'}</b> · Estoque Atual: <b>{modalReposicaoItem.quantidade || 0} un</b>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px' }}>
+                  QUANTIDADE A COMPRAR / REPOR:
+                </label>
+                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                  <input 
+                    type="number" 
+                    min="1" 
+                    value={qtdReposicao} 
+                    onChange={e => setQtdReposicao(Math.max(1, parseInt(e.target.value) || 1))}
+                    style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '1rem', fontWeight: 'bold' }}
+                  />
+                  {[1, 2, 5, 10].map(q => (
+                    <button 
+                      key={q}
+                      type="button"
+                      onClick={() => setQtdReposicao(q)}
+                      style={{ padding: '10px 12px', background: qtdReposicao === q ? '#3b82f6' : '#f1f5f9', color: qtdReposicao === q ? '#fff' : '#475569', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.78rem', cursor: 'pointer' }}
+                    >
+                      {q} un
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', fontSize: '0.75rem', color: '#475569' }}>
+                💡 <b>Dica:</b> Ao confirmar, a solicitação entrará na aba <b>"Lista de Compras"</b> com prioridade ALTA para cotação de preços com fornecedores!
+              </div>
+
+            </div>
+
+            <div style={{ padding: '16px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
+              <button 
+                type="button" 
+                onClick={() => setModalReposicaoItem(null)}
+                style={{ padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: 'bold', cursor: 'pointer', background: '#ffffff', color: '#475569' }}
+              >
+                Cancelar
+              </button>
+
+              <button 
+                type="button" 
+                onClick={() => pedirReposicaoCompra(modalReposicaoItem, qtdReposicao)}
+                style={{ flex: 1, padding: '12px 14px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(59,130,246,0.25)' }}
+              >
+                🛒 Confirmar Envio para Compras ({qtdReposicao} un)
+              </button>
+            </div>
+
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* TOAST DE FEEDBACK */}
+      {toastMsg && (
+        <div style={{
+          position: 'fixed',
+          bottom: '24px',
+          right: '24px',
+          background: '#0f172a',
+          color: '#ffffff',
+          padding: '12px 20px',
+          borderRadius: '12px',
+          boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+          zIndex: 999999,
+          fontSize: '0.85rem',
+          fontWeight: '800',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          animation: 'fadeIn 0.2s ease-in-out'
+        }}>
+          {toastMsg}
         </div>
       )}
 

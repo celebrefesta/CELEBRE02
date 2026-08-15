@@ -190,11 +190,34 @@ Página unificada com arquitetura de 3 abas sem descontinuidade visual ou quebra
 
 ---
 
-### 4.9 Logística & Carregamento (`/logistica`)
-- **Painel Logístico (`Logistica.jsx`)**:
-  - Organização diária das rotas de entrega e recolhimento.
-  - Atribuição de motorista e veículos.
-  - Emissão da Lista de Carregamento do Caminhão.
+### 4.9 Logística, Roteiro de Galpão & Vistoria de Campo (`/logistica`)
+- **Esteira Kanban de Galpão em 4 Etapas (`Logistica.jsx`, `Logistica.css`)**:
+  - `1. A Separar`: Pedidos confirmados e aprovados aguardando início da separação de galpão.
+  - `2. Em Separação`: Separação ativa no acervo com checklist de itens, leitor de código de barras e controle de caixas.
+  - `3. Na Rua / Evento`: Pedidos em trânsito, montados no buffet/residência ou em realização do evento.
+  - `4. Devolvidos`: Retorno do material ao galpão para vistoria de devolução, baixa de estoque e lançamento de avarias.
+- **Sistema de Vistoria de Devolução & Saída (`ModalCheckinLocacao.jsx`, `ModalCheckinLocacao.css`)**:
+  - Modal flutuante luxury com 2 colunas no Desktop (980px) e card flutuante responsivo no celular (`border-radius: 16px`).
+  - Steppers fracionados de conferência `[-] 0 [+] [Max]` para cada peça e botões de status (`🟢 OK`, `🛠️ Avaria`, `❌ Falta`).
+  - Câmera ao vivo para bipagem de QR Code e Código de Barras dos caixotes/peças.
+  - Máscara monetária BRL automática em tempo real para registro de custos de reposição/avaria.
+  - Lançamento financeiro automático da cobrança de avarias direto no Fluxo de Caixa.
+  - Anexo de fotos de vistoria e Canvas de Assinatura Digital Touch (`touch-action: none`) sem rolagem da tela.
+- **Gestão de Transporte, Motorista & Embalagens Retornáveis (`ModalDesignarMotorista.jsx`)**:
+  - Atribuição rápida de motorista/equipe e veículo designado.
+  - Controle e contagem de embalagens retornáveis de galpão (Caixas Plásticas, Sacolas e Capas de Painel).
+  - Campo de instruções de rota para motorista com impressão direta na Folha de Campo.
+- **Ecossistema de Documentos & Relatórios em PDF da Logística**:
+  - `gerarRomaneioPDF.js`: Romaneio de Carga & Rota do Motorista com lista de entregas, coletas e saldo a receber.
+  - `gerarFolhaSeparacaoGalpaoPDF.js`: Mapa Geral de Separação de Peças consolidado por período.
+  - `gerarComprovanteCheckinPDF.js`: Comprovante oficial de vistoria e conferência de devolução/saída com dados do responsável e assinatura.
+  - `gerarEtiquetasCaixotePDF.js`: Etiquetas de expedição para colar nos caixotes antes da saída do galpão.
+- **Ações Inteligentes e Contextuais por Etapa**:
+  - `Na Rua`: Exibe atalhos de `📍 Rota GPS` e `✍️ Assinar Entrega`.
+  - `Expedição / Saída`: Exibe `🏷️ Etiqueta PDF` e `🚚 Transporte & Carga`.
+  - `Devolvidos`: Exibe `📄 Vistoria PDF` e remove atalhos de GPS/etiquetas desnecessários.
+- **Destravamento e Regularização em Lote de Pedidos Atrasados**:
+  - Botão `⚡ Destravar Atrasados` para mover em 1-clique pedidos retroativos para a etapa de Devolvidos.
 
 ---
 
@@ -299,10 +322,16 @@ graph TD
   - Fundo escurecido e desfocado em 100% da tela (`backdrop-filter: blur(14px) saturate(180%)`).
   - Layout harmonioso em grid 2x2 com ícones visuais, máscara de moeda em tempo real e validações completas.
 
-### 7.3. Central de Relatórios Estratégicos & DRE (`Relatorios.jsx` & Sub-abas)
-- **Header Executivo**: Badge dourado `📊 CENTRAL DE INTELIGÊNCIA & DRE` com pílulas de navegação responsivas.
-- **DRE com Livro Caixa**: 4 Cards KPI protegidos, cálculo dinâmico de margem operacional e alertas inteligentes (`🟢 SAUDÁVEL`, `🟡 MARGEM COMPRIMIDA`, `🚨 DÉFICIT OPERACIONAL`).
-- **Exportação em PDF**: Emissão de DRE e Pedidos com layout profissional, logo e dados auditados.
+### 7.4. Módulo de Logística, Galpão & Vistorias de Campo (`Logistica.jsx`, `ModalCheckinLocacao.jsx`, `ModalDesignarMotorista.jsx`)
+- **Esteira Kanban de 4 Etapas Operacionais**: Transição fluida entre `1. A Separar`, `2. Em Separação`, `3. Na Rua / Evento` e `4. Devolvidos`.
+- **Validação Completa de Frete**: Função inteligente `verificarSeEhEntrega(loc)` para classificar perfeitamente pedidos de Entrega vs Retirada no Balcão.
+- **Ecossistema de PDFs de Galpão**:
+  - `📦 Mapa de Separação (PDF)` para a equipe de galpão.
+  - `📋 Romaneio da Rota (PDF)` para o motorista.
+  - `📄 Vistoria de Devolução (PDF)` sem caracteres corrompidos.
+  - `🏷️ Etiquetas de Expedição (PDF)` para caixotes.
+- **Modal de Vistoria de Devolução Touch Luxury**: Bipagem de QR/Barcode ao vivo, steppers fracionados `[-] 0 [+] [Max]`, status de avaria/falta, máscara monetária em tempo real (`R$ 25,00`), lançamento no Caixa e Canvas de Assinatura Digital responsivo com bordas arredondadas e margens flutuantes.
+- **Gestão de Transporte & Embalagens**: Atribuição de motorista, veículo e contagem de embalagens retornáveis de galpão (Caixas Plásticas, Sacolas, Capas de Painel).
 
 ---
 

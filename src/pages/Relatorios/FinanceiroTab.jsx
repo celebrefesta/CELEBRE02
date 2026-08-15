@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
@@ -6,21 +6,36 @@ import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './FinanceiroTab.css';
 
-const FinanceiroTab = () => {
+const NOMES_MESES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+];
+
+const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
+  const dataHoje = new Date();
+  const mesAtualNum = String(dataHoje.getMonth() + 1).padStart(2, '0');
+  const anoAtualNum = String(dataHoje.getFullYear());
+
   const [loading, setLoading] = useState(true);
-  const [metricas, setMetricas] = useState({ receitas: 0, despesas: 0, lucro: 0, margem: 0 });
-  const [transacoes, setTransacoes] = useState([]);
-  const [filtroTipo, setFiltroTipo] = useState('todos');
-  
+  const [filtroMes, setFiltroMes] = useState(mesAtualNum);
+  const [filtroAno, setFiltroAno] = useState(anoAtualNum);
+  const [filtroTipo, setFiltroTipo] = useState('todos'); // 'todos' | 'receita' | 'despesa'
+  const [visaoRelatorio, setVisaoRelatorio] = useState('dre'); // 'dre' | 'extrato' | 'formas' | 'temas'
+
+  const [todasLocacoes, setTodasLocacoes] = useState([]);
+  const [todasCompras, setTodasCompras] = useState([]);
+  const [todosLancamentos, setTodosLancamentos] = useState([]);
+
   const [dadosEmpresa, setDadosEmpresa] = useState({
-    nomeEmpresa: 'Ágape Decorações',
+    nomeEmpresa: 'Celebre Festas',
     logotipo: '',
     cnpj: '',
-    endereco: ''
+    endereco: '',
+    chavePix: ''
   });
 
   const registrarLog = async (acao, detalhes) => {
@@ -46,470 +61,767 @@ const FinanceiroTab = () => {
   useEffect(() => {
     if (!usuarioLogado) return; 
 
-    const buscarDadosFinanceirosEConfigs = async () => {
+    const buscarDados = async () => {
       try {
         const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
         const qCompras = query(collection(db, "lista_compras"), where("userId", "==", tenantId));
         const qLancamentos = query(collection(db, "financeiro_lancamentos"), where("userId", "==", tenantId));
+        const docConfigRef = doc(db, "configuracoes_empresa", tenantId);
 
         const [snapLocacoes, snapCompras, snapLancamentos, snapConfig] = await Promise.all([
           getDocs(qLocacoes),
           getDocs(qCompras),
           getDocs(qLancamentos).catch(() => ({ docs: [] })),
-          getDoc(doc(db, "sistema", "parametros")).catch(() => ({ exists: () => false }))
+          getDoc(docConfigRef).catch(() => ({ exists: () => false }))
         ]);
 
-        if (snapConfig.exists()) {
+        if (snapConfig.exists && snapConfig.exists()) {
           const cfg = snapConfig.data();
           setDadosEmpresa({
-            nomeEmpresa: cfg.nomeEmpresa || 'Ágape Decorações',
-            logotipo: cfg.logotipo || '',
+            nomeEmpresa: cfg.nomeFantasia || cfg.razaoSocial || cfg.nome || 'Celebre Festas',
+            logotipo: cfg.logo || cfg.logotipo || '',
             cnpj: cfg.cnpj || '',
-            endereco: cfg.endereco || ''
+            endereco: cfg.endereco || '',
+            chavePix: cfg.chavePix || cfg.pix || ''
           });
         }
 
-        const locacoes = snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() }));
-        const compras = snapCompras.docs.map(d => ({ id: d.id, ...d.data() }));
-        const lancamentos = snapLancamentos.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        let totalReceitas = 0;
-        let totalDespesas = 0;
-        const listaTransacoes = [];
-        
-        const formatarData = (dataBase) => {
-          if (!dataBase) return new Date().toLocaleDateString('pt-BR');
-          if (typeof dataBase === 'string') {
-            const partes = dataBase.split('-');
-            if (partes.length >= 3) return `${partes[2].substring(0,2)}/${partes[1]}/${partes[0]}`;
-            return dataBase;
-          }
-          if (dataBase.toDate) return dataBase.toDate().toLocaleDateString('pt-BR');
-          return new Date(dataBase).toLocaleDateString('pt-BR');
-        };
-
-        const pegarTimestamp = (dataBase) => {
-          if (!dataBase) return new Date().getTime();
-          if (dataBase.toDate) return dataBase.toDate().getTime();
-          return new Date(dataBase).getTime();
-        };
-
-        // 1. ENTRADAS
-        locacoes.forEach(loc => {
-          if (loc.pagamentos && Array.isArray(loc.pagamentos)) {
-            loc.pagamentos.forEach((pag, index) => {
-              const valorPag = Number(pag.valor) || 0;
-              if (valorPag > 0) {
-                totalReceitas += valorPag;
-                listaTransacoes.push({
-                  id: `loc_pag_${loc.id}_${index}`,
-                  dataTimestamp: pegarTimestamp(pag.data || loc.criadoEm),
-                  dataStr: formatarData(pag.data || loc.criadoEm),
-                  descricao: `Pagamento de Pedido: ${loc.clienteNome || 'Cliente'} ${loc.numeroPedido ? `(#${loc.numeroPedido})` : ''}`,
-                  tipo: 'receita',
-                  valor: valorPag
-                });
-              }
-            });
-          } else if (loc.valorPago || loc.sinal || loc.valorSinal) {
-            const valorPag = Number(loc.valorPago || loc.sinal || loc.valorSinal) || 0;
-            if (valorPag > 0) {
-              totalReceitas += valorPag;
-              listaTransacoes.push({
-                id: `loc_sinal_${loc.id}`,
-                dataTimestamp: pegarTimestamp(loc.criadoEm),
-                dataStr: formatarData(loc.criadoEm),
-                descricao: `Sinal / Pagamento: ${loc.clienteNome || 'Cliente'} ${loc.numeroPedido ? `(#${loc.numeroPedido})` : ''}`,
-                tipo: 'receita',
-                valor: valorPag
-              });
-            }
-          }
-        });
-        
-        // 2. SAÍDAS (COMPRAS)
-        compras.forEach(comp => {
-          const statusLimpo = comp.status ? String(comp.status).toLowerCase().trim() : '';
-          if (statusLimpo === 'comprado' || statusLimpo === 'chegou') {
-            let valorLimpoStr = String(comp.valorEstimado || '0').replace(/[^\d.,-]/g, '').replace(',', '.');
-            const valorComp = (Number(valorLimpoStr) || 0) * (Number(comp.quantidade) || 1);
-            
-            totalDespesas += valorComp;
-  
-            let dataReal = comp.dataCompra || comp.createdAt || comp.prazo || new Date();
-            listaTransacoes.push({
-              id: `comp_${comp.id}`,
-              dataTimestamp: pegarTimestamp(dataReal),
-              dataStr: formatarData(dataReal),
-              descricao: `Compra: ${comp.nome || 'Acervo/Material'} (${comp.quantidade || 1}x)`,
-              tipo: 'despesa',
-              valor: valorComp
-            });
-          }
-        });
-        
-        // 3. LANÇAMENTOS MANUAIS
-        lancamentos.forEach(lan => {
-          let valorLimpo = String(lan.valor || '0').replace(/[^\d,-]/g, '').replace(',', '.');
-          const valorLan = Math.abs(Number(valorLimpo)) || 0;
-          const isReceita = lan.tipo === 'receita' || lan.categoria === 'Locação' || lan.tipo === 'entrada' || Number(valorLimpo) > 0;
-          
-          if (isReceita) totalReceitas += valorLan;
-          else totalDespesas += valorLan;
- 
-          listaTransacoes.push({
-            id: `lan_${lan.id}`,
-            dataTimestamp: pegarTimestamp(lan.data || lan.criadoEm),
-            dataStr: formatarData(lan.data || lan.criadoEm),
-            descricao: `Lançamento: ${lan.descricao || lan.categoria || 'Caixa'} (${lan.formaPagto || 'Manual'})`,
-            tipo: isReceita ? 'receita' : 'despesa',
-            valor: valorLan
-          });
-        });
-        
-        listaTransacoes.sort((a, b) => b.dataTimestamp - a.dataTimestamp);
-        setTransacoes(listaTransacoes);
-        
-        const lucroCalc = totalReceitas - totalDespesas;
-        const margemCalc = totalReceitas > 0 ? Math.round((lucroCalc / totalReceitas) * 100) : (totalDespesas > 0 ? -100 : 100);
-
-        setMetricas({ 
-          receitas: totalReceitas, 
-          despesas: totalDespesas, 
-          lucro: lucroCalc,
-          margem: margemCalc
-        });
+        setTodasLocacoes(snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() })));
+        setTodasCompras(snapCompras.docs.map(d => ({ id: d.id, ...d.data() })));
+        setTodosLancamentos(snapLancamentos.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (error) {
-        console.error("Erro ao carregar o financeiro:", error);
+        console.error("Erro ao carregar dados do relatório financeiro:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    buscarDadosFinanceirosEConfigs();
+    buscarDados();
   }, [usuarioLogado, tenantId]);
-  
-  const transacoesFiltradas = transacoes.filter(t => {
-    if (filtroTipo === 'todos') return true;
-    return t.tipo === filtroTipo;
-  });
 
-  const dadosGraficoMensal = React.useMemo(() => {
-    const mapa = {};
-    transacoes.forEach(t => {
-      if (!t.dataStr) return;
-      const partes = t.dataStr.split('/');
-      if (partes.length === 3) {
-        const mesAno = `${partes[1]}/${partes[2]}`;
-        if (!mapa[mesAno]) mapa[mesAno] = { mes: mesAno, Receitas: 0, Despesas: 0 };
-        if (t.tipo === 'receita') mapa[mesAno].Receitas += t.valor;
-        else mapa[mesAno].Despesas += t.valor;
+  // 🔥 FORMATADOR UNIFICADO DE TRANSAÇÕES
+  const transacoesBrutas = useMemo(() => {
+    const lista = [];
+
+    const formatarData = (dataBase) => {
+      if (!dataBase) return new Date().toLocaleDateString('pt-BR');
+      if (typeof dataBase === 'string') {
+        const partes = dataBase.split('T')[0].split('-');
+        if (partes.length >= 3) return `${partes[2]}/${partes[1]}/${partes[0]}`;
+        return dataBase;
+      }
+      if (dataBase.toDate) return dataBase.toDate().toLocaleDateString('pt-BR');
+      return new Date(dataBase).toLocaleDateString('pt-BR');
+    };
+
+    const pegarTimestamp = (dataBase) => {
+      if (!dataBase) return new Date().getTime();
+      if (typeof dataBase === 'string') return new Date(dataBase + 'T12:00:00').getTime();
+      if (dataBase.toDate) return dataBase.toDate().getTime();
+      return new Date(dataBase).getTime();
+    };
+
+    const pegarAnoMes = (dataBase) => {
+      if (!dataBase) {
+        const d = new Date();
+        return { ano: String(d.getFullYear()), mes: String(d.getMonth() + 1).padStart(2, '0') };
+      }
+      if (typeof dataBase === 'string') {
+        const p = dataBase.split('T')[0].split('-');
+        if (p.length >= 2) return { ano: p[0], mes: p[1] };
+      }
+      if (dataBase.toDate) {
+        const d = dataBase.toDate();
+        return { ano: String(d.getFullYear()), mes: String(d.getMonth() + 1).padStart(2, '0') };
+      }
+      const d = new Date(dataBase);
+      return { ano: String(d.getFullYear()), mes: String(d.getMonth() + 1).padStart(2, '0') };
+    };
+
+    // 1. RECEITAS DE LOCAÇÕES
+    todasLocacoes.forEach(loc => {
+      const st = String(loc.status || '').toLowerCase();
+      if (st.includes('cancel')) return;
+
+      const valorPago = Number(loc.valorPago || loc.sinal || loc.valorSinal || 0);
+      const dataRef = loc.dataRetirada || loc.dataEvento || loc.criadoEm;
+      const { ano, mes } = pegarAnoMes(dataRef);
+
+      if (valorPago > 0) {
+        lista.push({
+          id: `loc_${loc.id}`,
+          dataTimestamp: pegarTimestamp(dataRef),
+          dataStr: formatarData(dataRef),
+          ano,
+          mes,
+          descricao: `Locação #${loc.numeroPedido || loc.id.slice(0,6)} · ${loc.clienteNome || 'Cliente'}`,
+          categoria: 'Locações e Eventos',
+          tipo: 'receita',
+          formaPagto: loc.formaPagamento || loc.formaPagto || 'Pix',
+          valor: valorPago,
+          tema: loc.temaFesta || loc.tema || 'Locação Geral',
+          clienteNome: loc.clienteNome || 'Cliente'
+        });
       }
     });
-    const list = Object.values(mapa).reverse().slice(-5);
-    if (list.length === 0) {
-      return [{ mes: 'Mês Atual', Receitas: metricas.receitas, Despesas: metricas.despesas }];
-    }
-    return list;
-  }, [transacoes, metricas.receitas, metricas.despesas]);
 
+    // 2. COMPRAS DE ACERVO / INSUMOS
+    todasCompras.forEach(comp => {
+      const statusLimpo = String(comp.status || '').toLowerCase().trim();
+      if (statusLimpo === 'comprado' || statusLimpo === 'chegou') {
+        const valUnit = Number(comp.valorPago || comp.valorEstimado || 0);
+        const qtd = Number(comp.quantidade) || 1;
+        const totalComp = valUnit * qtd;
+        const dataRef = comp.dataCompra || comp.dataChegada || comp.createdAt;
+        const { ano, mes } = pegarAnoMes(dataRef);
+
+        lista.push({
+          id: `comp_${comp.id}`,
+          dataTimestamp: pegarTimestamp(dataRef),
+          dataStr: formatarData(dataRef),
+          ano,
+          mes,
+          descricao: `Compra: ${comp.nome || 'Acervo/Material'} (${qtd}x)`,
+          categoria: comp.categoria === 'material' ? 'Insumos e Embalagens' : 'Aquisição de Acervo',
+          tipo: 'despesa',
+          formaPagto: comp.formaPagto || 'Pix',
+          valor: totalComp,
+          fornecedor: comp.fornecedor || 'Fornecedor'
+        });
+      }
+    });
+
+    // 3. LANÇAMENTOS DO FINANCEIRO
+    todosLancamentos.forEach(lan => {
+      const valorLan = Number(lan.valor || 0);
+      const isEntrada = lan.tipo === 'entrada' || lan.tipo === 'receita';
+      const dataRef = lan.data || lan.criadoEm;
+      const { ano, mes } = pegarAnoMes(dataRef);
+
+      lista.push({
+        id: `lan_${lan.id}`,
+        dataTimestamp: pegarTimestamp(dataRef),
+        dataStr: formatarData(dataRef),
+        ano,
+        mes,
+        descricao: lan.descricao || lan.categoria || 'Caixa',
+        categoria: lan.categoria || (isEntrada ? 'Locações e Eventos' : 'Despesas Fixas'),
+        tipo: isEntrada ? 'receita' : 'despesa',
+        formaPagto: lan.formaPagto || 'Pix',
+        valor: valorLan,
+        clienteNome: lan.clienteNome || lan.cliente || ''
+      });
+    });
+
+    lista.sort((a, b) => b.dataTimestamp - a.dataTimestamp);
+    return lista;
+  }, [todasLocacoes, todasCompras, todosLancamentos]);
+
+  // FILTRAGEM POR PERÍODO (MÊS / ANO)
+  const transacoesPeriodo = useMemo(() => {
+    return transacoesBrutas.filter(t => {
+      if (filtroAno && t.ano !== filtroAno) return false;
+      if (filtroMes && t.mes !== filtroMes) return false;
+      return true;
+    });
+  }, [transacoesBrutas, filtroMes, filtroAno]);
+
+  const transacoesFiltradasTabela = useMemo(() => {
+    return transacoesPeriodo.filter(t => {
+      if (filtroTipo === 'todos') return true;
+      return t.tipo === filtroTipo;
+    });
+  }, [transacoesPeriodo, filtroTipo]);
+
+  // 📊 CÁLCULOS DRE CONSOLIDADOS
+  const metricasDRE = useMemo(() => {
+    const receitas = transacoesPeriodo.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+    const saidas = transacoesPeriodo.filter(t => t.tipo === 'despesa');
+
+    const custosAquisicao = saidas.filter(t => 
+      t.categoria === 'Aquisição de Acervo' || t.categoria === 'Compra para Estoque' || t.categoria?.toLowerCase().includes('acervo')
+    ).reduce((acc, t) => acc + t.valor, 0);
+
+    const custosInsumos = saidas.filter(t => 
+      t.categoria === 'Insumos e Embalagens' || t.categoria === 'Material de Consumo' || t.categoria?.toLowerCase().includes('insumo')
+    ).reduce((acc, t) => acc + t.valor, 0);
+
+    const custosManutencao = saidas.filter(t => 
+      t.categoria === 'Manutenção e Reparos' || t.categoria?.toLowerCase().includes('manuten')
+    ).reduce((acc, t) => acc + t.valor, 0);
+
+    const totalCustosDiretos = custosAquisicao + custosInsumos + custosManutencao;
+    const margemBruta = receitas - totalCustosDiretos;
+
+    const despesasFixas = saidas.filter(t => 
+      !['Aquisição de Acervo', 'Compra para Estoque', 'Insumos e Embalagens', 'Material de Consumo', 'Manutenção e Reparos'].includes(t.categoria)
+    ).reduce((acc, t) => acc + t.valor, 0);
+
+    const totalDespesasGerais = totalCustosDiretos + despesasFixas;
+    const lucroLiquido = receitas - totalDespesasGerais;
+    const margemLiquidaPct = receitas > 0 ? Math.round((lucroLiquido / receitas) * 100) : (totalDespesasGerais > 0 ? -100 : 0);
+
+    // Formas de Pagamento
+    const formas = { pix: 0, cartao: 0, dinheiro: 0, outros: 0 };
+    transacoesPeriodo.filter(t => t.tipo === 'receita').forEach(t => {
+      const f = String(t.formaPagto || '').toLowerCase();
+      if (f.includes('pix')) formas.pix += t.valor;
+      else if (f.includes('cart') || f.includes('cred') || f.includes('deb')) formas.cartao += t.valor;
+      else if (f.includes('dinheiro') || f.includes('especie')) formas.dinheiro += t.valor;
+      else formas.outros += t.valor;
+    });
+
+    // Ranking de Temas
+    const temasMap = {};
+    transacoesPeriodo.filter(t => t.tipo === 'receita' && t.tema).forEach(t => {
+      if (!temasMap[t.tema]) temasMap[t.tema] = { tema: t.tema, total: 0, qtd: 0 };
+      temasMap[t.tema].total += t.valor;
+      temasMap[t.tema].qtd += 1;
+    });
+    const rankingTemas = Object.values(temasMap).sort((a, b) => b.total - a.total).slice(0, 5);
+
+    // Contratos Futuros a Receber
+    let saldoFuturoAReceber = 0;
+    let qtdFestasPendentes = 0;
+    todasLocacoes.forEach(loc => {
+      const st = String(loc.status || '').toLowerCase();
+      if (!st.includes('cancel') && !st.includes('orcam')) {
+        const tot = Number(loc.valorTotal || loc.total || 0);
+        const pag = Number(loc.valorPago || loc.sinal || 0);
+        const pend = Math.max(0, tot - pag);
+        if (pend > 0) {
+          saldoFuturoAReceber += pend;
+          qtdFestasPendentes += 1;
+        }
+      }
+    });
+
+    return {
+      receitas,
+      custosAquisicao,
+      custosInsumos,
+      custosManutencao,
+      totalCustosDiretos,
+      margemBruta,
+      despesasFixas,
+      totalDespesasGerais,
+      lucroLiquido,
+      margemLiquidaPct,
+      formas,
+      rankingTemas,
+      saldoFuturoAReceber,
+      qtdFestasPendentes
+    };
+  }, [transacoesPeriodo, todasLocacoes]);
+
+  // EXPORTAR EXCEL / CSV
+  const exportarCSV = () => {
+    const cabecalho = ["Data", "Descricao", "Categoria", "Operacao", "Forma Pagto", "Valor (R$)"];
+    const linhas = transacoesFiltradasTabela.map(t => [
+      `"${t.dataStr}"`,
+      `"${t.descricao?.replace(/"/g, '""')}"`,
+      `"${t.categoria || 'Geral'}"`,
+      `"${t.tipo === 'receita' ? 'Entrada' : 'Saida'}"`,
+      `"${t.formaPagto || 'Pix'}"`,
+      `"${t.valor.toFixed(2).replace('.', ',')}"`
+    ]);
+
+    const csvContent = "data:text/csv;charset=utf-8," + [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `DRE_Financeiro_${filtroMes || 'Geral'}_${filtroAno || 'Geral'}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    registrarLog("EXPORTACAO_CSV_RELATORIO", `Exportou planilha CSV do DRE financeiro (${filtroMes}/${filtroAno}).`);
+  };
+
+  // EXPORTAR PDF EXECUTIVO
   const exportarPDF = async () => {
     try {
       const doc = new jsPDF();
-      const dataHoje = new Date().toLocaleDateString('pt-BR');
-      let startY = 25;
+      const dataHojeStr = new Date().toLocaleDateString('pt-BR');
+      let startY = 22;
 
-      if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
-        try {
-          doc.addImage(dadosEmpresa.logotipo, 'PNG', 14, 10, 30, 30);
-        } catch(e) {}
-        
-        doc.setFontSize(18);
-        doc.setTextColor(15, 23, 42);
-        doc.text(dadosEmpresa.nomeEmpresa, 48, 20);
-        
-        doc.setFontSize(9);
-        doc.setTextColor(100);
-        if (dadosEmpresa.cnpj) doc.text(`CNPJ: ${dadosEmpresa.cnpj}`, 48, 26);
-        if (dadosEmpresa.endereco) {
-           const splitEndereco = doc.splitTextToSize(dadosEmpresa.endereco, 140);
-           doc.text(splitEndereco, 48, 31);
-        }
-        startY = 50;
-      } else {
-        doc.setFontSize(18);
-        doc.setTextColor(15, 23, 42); 
-        doc.text(`Relatório Financeiro DRE - ${dadosEmpresa.nomeEmpresa}`, 14, 22);
-        startY = 35;
-      }
-
-      doc.setFontSize(12);
+      doc.setFontSize(18);
       doc.setTextColor(15, 23, 42);
+      doc.text(dadosEmpresa.nomeEmpresa, 14, startY);
       
-      let tituloPDF = `DEMONSTRATIVO DE RESULTADOS (DRE)`;
-      if (filtroTipo === 'receita') tituloPDF = `RELATÓRIO DE ENTRADAS (RECEITAS)`;
-      if (filtroTipo === 'despesa') tituloPDF = `RELATÓRIO DE SAÍDAS (DESPESAS)`;
-      
-      doc.text(tituloPDF, 14, startY - 5);
-      doc.setFontSize(10);
-      doc.text(`Gerado em: ${dataHoje}`, 160, startY - 5);
+      doc.setFontSize(9);
+      doc.setTextColor(100);
+      const periodoTexto = (filtroMes && filtroAno) ? `${NOMES_MESES[Number(filtroMes) - 1]} de ${filtroAno}` : 'Histórico Geral Consolidado';
+      doc.text(`DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO (DRE) · Período: ${periodoTexto}`, 14, startY + 6);
+      doc.text(`Gerado em: ${dataHojeStr} por ${usuarioLogado?.email || 'Administrador'}`, 14, startY + 11);
 
+      // Resumo DRE Box
       doc.setFillColor(248, 250, 252);
-      doc.rect(14, startY, 182, 25, 'F');
-      
-      doc.setFontSize(11);
-      doc.setTextColor(0);
-      doc.text(`Total de Entradas: R$ ${metricas.receitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 8);
-      doc.text(`Total de Saídas: R$ ${metricas.despesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 16);
-      
-      const saldoText = `SALDO EM CAIXA: R$ ${metricas.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${metricas.margem}% Margem)`;
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(metricas.lucro >= 0 ? 22 : 220, metricas.lucro >= 0 ? 163 : 38, metricas.lucro >= 0 ? 74 : 38);
-      doc.text(saldoText, 100, startY + 12);
+      doc.rect(14, startY + 16, 182, 32, 'F');
 
-      const tableColumn = ["Data", "Descrição da Movimentação", "Tipo", "Valor (R$)"];
-      
-      const tableRows = transacoesFiltradas.map(t => [
+      doc.setFontSize(10);
+      doc.setTextColor(15, 23, 42);
+      doc.text(`(+) Receita Bruta: R$ ${metricasDRE.receitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 24);
+      doc.text(`(-) Custos Diretos: R$ ${metricasDRE.totalCustosDiretos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 31);
+      doc.text(`(-) Despesas Fixas: R$ ${metricasDRE.despesasFixas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 38);
+
+      doc.setFont(undefined, 'bold');
+      doc.setTextColor(metricasDRE.lucroLiquido >= 0 ? 22 : 220, metricasDRE.lucroLiquido >= 0 ? 163 : 38, metricasDRE.lucroLiquido >= 0 ? 74 : 38);
+      doc.text(`LUCRO LÍQUIDO: R$ ${metricasDRE.lucroLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${metricasDRE.margemLiquidaPct}% Margem)`, 100, startY + 31);
+
+      const tableColumn = ["Data", "Descrição da Operação", "Categoria", "Tipo", "Valor (R$)"];
+      const tableRows = transacoesFiltradasTabela.map(t => [
         t.dataStr || '-',
         t.descricao || '-',
+        t.categoria || 'Geral',
         t.tipo === 'receita' ? 'Entrada' : 'Saída',
         `${t.tipo === 'receita' ? '+' : '-'} R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
       ]);
-      
+
       autoTable(doc, {
         head: [tableColumn],
         body: tableRows,
-        startY: startY + 32, 
+        startY: startY + 54, 
         theme: 'striped',
         headStyles: { fillColor: [15, 23, 42] }, 
-        styles: { fontSize: 9 },
-        columnStyles: { 3: { halign: 'right', fontStyle: 'bold' } }
+        styles: { fontSize: 8.5 },
+        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } }
       });
-      
-      doc.save(`Relatorio_DRE_${filtroTipo}_${dataHoje.replace(/\//g, '-')}.pdf`);
-      await registrarLog("EXPORTAÇÃO DE RELATÓRIO FINANCEIRO", `Fez o download do DRE/Livro Caixa em PDF (Filtro utilizado: ${filtroTipo}).`);
+
+      doc.save(`DRE_Executivo_${dadosEmpresa.nomeEmpresa}_${filtroMes}_${filtroAno}.pdf`);
+      await registrarLog("EXPORTACAO_PDF_DRE", `Fez o download do PDF executivo do DRE (${filtroMes}/${filtroAno}).`);
     } catch (error) {
       console.error("Erro ao gerar PDF: ", error);
       alert("Erro ao gerar o PDF financeiro.");
     }
   };
 
-  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 'bold'}}>Calculando DRE e indicadores de caixa...</div>;
-  
-  const totalMovimentado = metricas.receitas + metricas.despesas || 1; 
-  const percReceita = Math.min(100, Math.max(0, Math.round((metricas.receitas / totalMovimentado) * 100)));
+  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 'bold'}}>Calculando inteligência financeira e DRE...</div>;
 
-  let statusInsight = {
-    icon: '🟢',
-    label: 'FLUXO DE CAIXA SAUDÁVEL',
-    tag: 'OPERAÇÃO LUCRATIVA',
-    text: `Lucro real de R$ ${metricas.lucro.toLocaleString('pt-BR')} com margem de ${metricas.margem}%.`,
-    bg: '#dcfce7',
-    color: '#15803d',
-    accentColor: '#10b981'
-  };
-
-  if (metricas.lucro < 0) {
-    statusInsight = {
-      icon: '🚨',
-      label: 'ATENÇÃO AO FLUXO DE CAIXA',
-      tag: 'DÉFICIT OPERACIONAL',
-      text: `As saídas (R$ ${metricas.despesas.toLocaleString('pt-BR')}) superaram as receitas. Avalie compras e despesas.`,
-      bg: '#fee2e2',
-      color: '#b91c1c',
-      accentColor: '#ef4444'
-    };
-  } else if (metricas.margem < 25) {
-    statusInsight = {
-      icon: '🟡',
-      label: 'MARGEM DE LUCRO COMPRIMIDA',
-      tag: 'ATENÇÃO OPERACIONAL',
-      text: `Margem em ${metricas.margem}% (abaixo do ideal de 25%). Otimize compras de acervo e despesas fixas.`,
-      bg: '#fef3c7',
-      color: '#b45309',
-      accentColor: '#f59e0b'
-    };
-  }
+  const totalMov = metricasDRE.receitas + metricasDRE.totalDespesasGerais || 1;
+  const percReceita = Math.min(100, Math.max(0, Math.round((metricasDRE.receitas / totalMov) * 100)));
 
   return (
     <div className="fade-in">
       
-      {/* 💡 CARD DE INSIGHT INTELIGENTE COMPACTO */}
-      <div style={{ background: '#ffffff', border: '1.5px solid #e2e8f0', borderLeft: `5px solid ${statusInsight.accentColor}`, padding: '14px 18px', borderRadius: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+      {/* 🗓️ BARRA SUPERIOR DE FILTRO DINÂMICO DE PERÍODO */}
+      <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '14px 20px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <span style={{ fontSize: '1.3rem' }}>{statusInsight.icon}</span>
+          <span style={{ fontSize: '1.4rem' }}>📈</span>
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <strong style={{ fontSize: '0.82rem', color: '#0f172a', letterSpacing: '0.4px', textTransform: 'uppercase' }}>{statusInsight.label}</strong>
-              <span style={{ fontSize: '0.66rem', fontWeight: 850, padding: '2px 8px', borderRadius: '6px', background: statusInsight.bg, color: statusInsight.color }}>
-                {statusInsight.tag}
-              </span>
-            </div>
-            <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b', lineHeight: 1.3 }}>{statusInsight.text}</p>
+            <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>Período de Análise Financeira & DRE</strong>
+            <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
+              {filtroMes && filtroAno ? `${NOMES_MESES[Number(filtroMes)-1]} / ${filtroAno}` : 'Histórico Consolidado'} · {dadosEmpresa.nomeEmpresa}
+            </p>
           </div>
         </div>
-        <div style={{ textAlign: 'right' }}>
-          <div style={{ fontSize: '0.65rem', color: '#94a3b8', fontWeight: 700, textTransform: 'uppercase' }}>Margem Real</div>
-          <strong style={{ fontSize: '1rem', color: metricas.lucro >= 0 ? '#10b981' : '#ef4444', fontWeight: 900 }}>
-            {metricas.margem}%
-          </strong>
+
+        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <select 
+            value={filtroMes} 
+            onChange={e => setFiltroMes(e.target.value)}
+            style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', background: '#f8fafc' }}
+          >
+            <option value="">📆 Mês: Todos</option>
+            {NOMES_MESES.map((m, idx) => (
+              <option key={idx} value={String(idx + 1).padStart(2, '0')}>{m}</option>
+            ))}
+          </select>
+
+          <select 
+            value={filtroAno} 
+            onChange={e => setFiltroAno(e.target.value)}
+            style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', background: '#f8fafc' }}
+          >
+            <option value="">📆 Ano: Todos</option>
+            <option value="2024">2024</option>
+            <option value="2025">2025</option>
+            <option value="2026">2026</option>
+            <option value="2027">2027</option>
+          </select>
+
+          <button 
+            type="button" 
+            onClick={() => { setFiltroMes(mesAtualNum); setFiltroAno(anoAtualNum); }}
+            style={{ padding: '7px 12px', borderRadius: '8px', border: filtroMes === mesAtualNum ? '1.5px solid #0f172a' : '1px solid #cbd5e1', background: filtroMes === mesAtualNum ? '#0f172a' : '#ffffff', color: filtroMes === mesAtualNum ? '#ffffff' : '#334155', fontSize: '0.78rem', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            Este Mês
+          </button>
+
+          <button 
+            type="button" 
+            onClick={() => { setFiltroMes(''); setFiltroAno(''); }}
+            style={{ padding: '7px 12px', borderRadius: '8px', border: !filtroMes && !filtroAno ? '1.5px solid #0f172a' : '1px solid #cbd5e1', background: !filtroMes && !filtroAno ? '#0f172a' : '#ffffff', color: !filtroMes && !filtroAno ? '#ffffff' : '#334155', fontSize: '0.78rem', fontWeight: 'bold', cursor: 'pointer' }}
+          >
+            Tudo
+          </button>
         </div>
       </div>
 
       {/* 4 CARDS KPI BLINDADOS (GOLDEN RULE 1 & 2) */}
-      <div className="clientes-stats-grid">
-        <div className="stat-card-pro card-green">
-          <div className="stat-icon-wrapper icon-green">🟢</div>
-          <div className="stat-content">
-            <span className="stat-title">ENTRADAS EFETIVAS</span>
-            <strong className="stat-number">R$ {metricas.receitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small className="stat-desc">Receitas consolidadas</small>
-          </div>
-        </div>
-        
-        <div className="stat-card-pro card-red">
-          <div className="stat-icon-wrapper icon-red">🔴</div>
-          <div className="stat-content">
-            <span className="stat-title">SAÍDAS &amp; CUSTOS</span>
-            <strong className="stat-number">R$ {metricas.despesas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small className="stat-desc">Despesas &amp; Compras</small>
-          </div>
-        </div>
-
-        <div className="stat-card-pro card-purple">
-          <div className="stat-icon-wrapper icon-purple">🏦</div>
-          <div className="stat-content">
-            <span className="stat-title">LUCRO OPERACIONAL (DRE)</span>
-            <strong className="stat-number" style={{ color: metricas.lucro >= 0 ? '#10b981' : '#ef4444' }}>
-              R$ {metricas.lucro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-            </strong>
-            <small className="stat-desc">Caixa líquido real</small>
-          </div>
-        </div>
-
-        <div className="stat-card-pro card-amber">
-          <div className="stat-icon-wrapper icon-amber">📈</div>
-          <div className="stat-content">
-            <span className="stat-title">MARGEM DE LUCRO REAL</span>
-            <strong className="stat-number">{metricas.margem}%</strong>
-            <small className="stat-desc">Eficiência operacional</small>
-          </div>
-        </div>
-      </div>
-
-      {/* 📊 PAINEL COMPACTO DE BALANÇO & RESUMO MENSAL (ZERO WHITE BOXES!) */}
-      <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '16px 20px', margin: '16px 0', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
-          <div>
-            <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: '850' }}>📊 Balanço Proporcional de Entradas vs Saídas</h3>
-            <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', color: '#64748b' }}>Proporção consolidada do volume financeiro</p>
-          </div>
-          <div style={{ display: 'flex', gap: '14px', alignItems: 'center' }}>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#10b981' }}>🟢 Entradas: R$ {metricas.receitas.toLocaleString('pt-BR')} ({percReceita}%)</span>
-            <span style={{ fontSize: '0.74rem', fontWeight: 800, color: '#ef4444' }}>🔴 Saídas: R$ {metricas.despesas.toLocaleString('pt-BR')} ({100 - percReceita}%)</span>
-          </div>
-        </div>
-
-        {/* BARRA EMPILHADA SLEEK DE 10px */}
-        <div style={{ height: '10px', background: '#f1f5f9', borderRadius: '10px', overflow: 'hidden', display: 'flex', marginBottom: '12px' }}>
-          <div style={{ width: `${percReceita}%`, background: 'linear-gradient(90deg, #10b981 0%, #34d399 100%)', transition: 'width 0.8s ease' }} title={`Entradas: ${percReceita}%`} />
-          <div style={{ width: `${100 - percReceita}%`, background: 'linear-gradient(90deg, #ef4444 0%, #f87171 100%)', transition: 'width 0.8s ease' }} title={`Saídas: ${100 - percReceita}%`} />
-        </div>
-
-        {/* CHIPS COMPACTOS DE MÊS */}
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-          {dadosGraficoMensal.map((item, idx) => (
-            <div key={idx} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '5px 10px', borderRadius: '10px', fontSize: '0.7rem', display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <strong style={{ color: '#0f172a' }}>📅 {item.mes}:</strong>
-              <span style={{ color: '#10b981', fontWeight: 800 }}>+R$ {item.Receitas >= 1000 ? (item.Receitas/1000).toFixed(1) + 'k' : item.Receitas.toLocaleString('pt-BR')}</span>
-              <span style={{ color: '#cbd5e1' }}>|</span>
-              <span style={{ color: '#ef4444', fontWeight: 800 }}>-R$ {item.Despesas >= 1000 ? (item.Despesas/1000).toFixed(1) + 'k' : item.Despesas.toLocaleString('pt-BR')}</span>
+      {mostrarIndicadores && (
+        <div className="clientes-stats-grid">
+          <div className="stat-card-pro card-green">
+            <div className="stat-icon-wrapper icon-green">🟢</div>
+            <div className="stat-content">
+              <span className="stat-title">RECEITA OPERACIONAL</span>
+              <strong className="stat-number">R$ {metricasDRE.receitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+              <small className="stat-desc">Entradas de contratos</small>
             </div>
-          ))}
-        </div>
-      </div>
-
-      {/* EXTRATO DRE & TABELA */}
-      <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '18px 22px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-        <div className="dre-header">
-          <div>
-            <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>📋 DRE - Livro Caixa Efetivado</h3>
-            <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Extrato detalhado de movimentações registradas na empresa.</p>
           </div>
           
-          <div className="dre-actions-group">
-            <div className="dre-filter-buttons">
-              <button 
-                type="button"
-                className={filtroTipo === 'todos' ? 'active' : ''} 
-                onClick={() => setFiltroTipo('todos')}
-              >
-                Todos
-              </button>
-              <button 
-                type="button"
-                className={filtroTipo === 'receita' ? 'active btn-verde' : ''} 
-                onClick={() => setFiltroTipo('receita')}
-              >
-                🟢 Entradas
-              </button>
-              <button 
-                type="button"
-                className={filtroTipo === 'despesa' ? 'active btn-vermelho' : ''} 
-                onClick={() => setFiltroTipo('despesa')}
-              >
-                🔴 Saídas
-              </button>
+          <div className="stat-card-pro card-red">
+            <div className="stat-icon-wrapper icon-red">🔴</div>
+            <div className="stat-content">
+              <span className="stat-title">CUSTOS &amp; DESPESAS</span>
+              <strong className="stat-number">R$ {metricasDRE.totalDespesasGerais.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+              <small className="stat-desc">Acervo, compras e fixas</small>
             </div>
-            
-            <button type="button" className="btn-export-pdf" onClick={exportarPDF}>
-              📄 Baixar Relatório (PDF)
-            </button>
+          </div>
+
+          <div className="stat-card-pro card-purple">
+            <div className="stat-icon-wrapper icon-purple">🏦</div>
+            <div className="stat-content">
+              <span className="stat-title">LUCRO LÍQUIDO (DRE)</span>
+              <strong className="stat-number" style={{ color: metricasDRE.lucroLiquido >= 0 ? '#10b981' : '#ef4444' }}>
+                R$ {metricasDRE.lucroLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+              <small className="stat-desc">{metricasDRE.margemLiquidaPct}% margem real</small>
+            </div>
+          </div>
+
+          <div className="stat-card-pro card-amber">
+            <div className="stat-icon-wrapper icon-amber">🔮</div>
+            <div className="stat-content">
+              <span className="stat-title">SALDO A RECEBER</span>
+              <strong className="stat-number">R$ {metricasDRE.saldoFuturoAReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+              <small className="stat-desc">{metricasDRE.qtdFestasPendentes} festas agendadas</small>
+            </div>
           </div>
         </div>
-        
-        <div className="table-container" style={{ marginTop: '15px' }}>
-          <table className="custom-table table-pro">
+      )}
+
+      {/* 📊 SELETOR DE SUB-VISÕES DO RELATÓRIO */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
+        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+          <button
+            type="button"
+            onClick={() => setVisaoRelatorio('dre')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: visaoRelatorio === 'dre' ? '#0f172a' : '#f1f5f9',
+              color: visaoRelatorio === 'dre' ? '#ffffff' : '#475569',
+              fontWeight: '800',
+              fontSize: '0.8rem',
+              cursor: 'pointer'
+            }}
+          >
+            📈 Demonstrativo DRE
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVisaoRelatorio('extrato')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: visaoRelatorio === 'extrato' ? '#0f172a' : '#f1f5f9',
+              color: visaoRelatorio === 'extrato' ? '#ffffff' : '#475569',
+              fontWeight: '800',
+              fontSize: '0.8rem',
+              cursor: 'pointer'
+            }}
+          >
+            📋 Extrato Livro Caixa ({transacoesPeriodo.length})
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVisaoRelatorio('formas')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: visaoRelatorio === 'formas' ? '#0f172a' : '#f1f5f9',
+              color: visaoRelatorio === 'formas' ? '#ffffff' : '#475569',
+              fontWeight: '800',
+              fontSize: '0.8rem',
+              cursor: 'pointer'
+            }}
+          >
+            ⚡ Formas de Pagamento
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setVisaoRelatorio('temas')}
+            style={{
+              padding: '8px 16px',
+              borderRadius: '10px',
+              border: 'none',
+              background: visaoRelatorio === 'temas' ? '#0f172a' : '#f1f5f9',
+              color: visaoRelatorio === 'temas' ? '#ffffff' : '#475569',
+              fontWeight: '800',
+              fontSize: '0.8rem',
+              cursor: 'pointer'
+            }}
+          >
+            🏆 Temas Mais Rentáveis
+          </button>
+        </div>
+
+        <button 
+          type="button" 
+          onClick={alternarIndicadores}
+          style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '700', fontSize: '0.74rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+        >
+          {mostrarIndicadores ? '👁️ Ocultar Indicadores' : '📊 Ver Indicadores & KPIs'}
+        </button>
+      </div>
+
+      {/* VISÃO 1: DEMONSTRATIVO DRE CONTÁBIL */}
+      {visaoRelatorio === 'dre' && (
+        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', overflow: 'hidden', padding: '20px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+            <div>
+              <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a', fontWeight: '850' }}>
+                Demonstração do Resultado do Exercício (DRE Gerencial)
+              </h3>
+              <p style={{ margin: '2px 0 0 0', fontSize: '0.74rem', color: '#64748b' }}>
+                Visão contábil detalhada com margem de contribuição e lucro operacional limpo.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '8px' }}>
+              <button 
+                type="button" 
+                onClick={exportarCSV}
+                style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                📊 Exportar Excel (CSV)
+              </button>
+              <button 
+                type="button" 
+                onClick={exportarPDF}
+                style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#ffffff', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              >
+                📄 Baixar PDF Executivo
+              </button>
+            </div>
+          </div>
+
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
             <thead>
-              <tr>
-                <th width="15%">DATA</th>
-                <th width="45%">DESCRIÇÃO / ORIGEM</th>
-                <th style={{textAlign: 'center'}} width="20%">OPERAÇÃO</th>
-                <th style={{textAlign: 'right'}} width="20%">VALOR (R$)</th>
+              <tr style={{ background: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                <th style={{ padding: '12px 18px', textAlign: 'left' }}>Estrutura de Resultados</th>
+                <th style={{ padding: '12px 18px', textAlign: 'right', width: '180px' }}>Valor (R$)</th>
+                <th style={{ padding: '12px 18px', textAlign: 'right', width: '120px' }}>% da Receita</th>
               </tr>
             </thead>
             <tbody>
-              {transacoesFiltradas.length === 0 ? (
-                <tr>
-                   <td colSpan="4" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhuma movimentação encontrada para este filtro.</td>
-                </tr>
-              ) : (
-                transacoesFiltradas.map((t) => (
-                  <tr key={t.id}>
-                    <td style={{color: '#64748b', fontWeight: '600'}}>{t.dataStr}</td>
-                    <td>
-                      <strong style={{color: '#0f172a'}}>{t.descricao}</strong>
-                    </td>
-                    <td style={{textAlign: 'center'}}>
-                      <span className={`badge-dre ${t.tipo}`}>
-                        {t.tipo === 'receita' ? '🟢 Entrada' : '🔴 Saída'}
-                      </span>
-                    </td>
-                    <td style={{
-                      textAlign: 'right', 
-                      fontWeight: '850', 
-                      color: t.tipo === 'receita' ? '#10b981' : '#ef4444'
-                    }}>
-                      {t.tipo === 'receita' ? '+ ' : '- '} 
-                      R$ {t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                    </td>
-                  </tr>
-                ))
-              )}
+              {/* 1. RECEITA OPERACIONAL */}
+              <tr style={{ background: '#f8fafc', fontWeight: '850', borderBottom: '1px solid #e2e8f0' }}>
+                <td style={{ padding: '12px 18px', color: '#0f172a' }}>(+) 1. RECEITA OPERACIONAL BRUTA (Locações e Eventos)</td>
+                <td style={{ padding: '12px 18px', textAlign: 'right', color: '#15803d' }}>R$ {metricasDRE.receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '12px 18px', textAlign: 'right', color: '#64748b' }}>100.0%</td>
+              </tr>
+
+              {/* 2. CUSTOS DIRETOS */}
+              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Aquisição de Acervo e Compras para Estoque</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.custosAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.custosAquisicao / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+              </tr>
+              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Insumos, Materiais & Embalagens</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.custosInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.custosInsumos / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+              </tr>
+              <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
+                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Manutenção & Reparos do Acervo</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.custosManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.custosManutencao / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+              </tr>
+
+              {/* 3. MARGEM DE CONTRIBUIÇÃO */}
+              <tr style={{ background: '#f8fafc', fontWeight: '850', borderBottom: '1.5px solid #cbd5e1' }}>
+                <td style={{ padding: '12px 18px', color: '#0f172a' }}>(=) MARGEM DE CONTRIBUIÇÃO / LUCRO BRUTO</td>
+                <td style={{ padding: '12px 18px', textAlign: 'right', color: metricasDRE.margemBruta >= 0 ? '#15803d' : '#dc2626' }}>R$ {metricasDRE.margemBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '12px 18px', textAlign: 'right', color: '#0f172a' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.margemBruta / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+              </tr>
+
+              {/* 4. DESPESAS FIXAS */}
+              <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
+                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Despesas Fixas, Equipe, Aluguel & Operacionais</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.despesasFixas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.despesasFixas / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+              </tr>
+
+              {/* 5. LUCRO LÍQUIDO FINAL */}
+              <tr style={{ background: '#f8fafc', fontWeight: '900', fontSize: '1rem' }}>
+                <td style={{ padding: '14px 18px', color: '#0f172a' }}>🏆 (=) RESULTADO OPERACIONAL LÍQUIDO</td>
+                <td style={{ padding: '14px 18px', textAlign: 'right', color: metricasDRE.lucroLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
+                  R$ {metricasDRE.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                </td>
+                <td style={{ padding: '14px 18px', textAlign: 'right', color: metricasDRE.lucroLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
+                  {metricasDRE.margemLiquidaPct}%
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>
-      </div>
+      )}
+
+      {/* VISÃO 2: EXTRATO COMPLETO LIVRO CAIXA */}
+      {visaoRelatorio === 'extrato' && (
+        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '18px 22px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+          <div className="dre-header">
+            <div>
+              <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>📋 Extrato Livro Caixa ({transacoesFiltradasTabela.length})</h3>
+              <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Movimentações do período selecionado.</p>
+            </div>
+            
+            <div className="dre-actions-group">
+              <div className="dre-filter-buttons">
+                <button type="button" className={filtroTipo === 'todos' ? 'active' : ''} onClick={() => setFiltroTipo('todos')}>Todos</button>
+                <button type="button" className={filtroTipo === 'receita' ? 'active btn-verde' : ''} onClick={() => setFiltroTipo('receita')}>🟢 Entradas</button>
+                <button type="button" className={filtroTipo === 'despesa' ? 'active btn-vermelho' : ''} onClick={() => setFiltroTipo('despesa')}>🔴 Saídas</button>
+              </div>
+
+              <button type="button" className="btn-export-pdf" onClick={exportarPDF}>
+                📄 Baixar PDF
+              </button>
+            </div>
+          </div>
+
+          <div className="table-container" style={{ marginTop: '15px' }}>
+            <table className="custom-table table-pro">
+              <thead>
+                <tr>
+                  <th width="15%">DATA</th>
+                  <th width="45%">DESCRIÇÃO / ORIGEM</th>
+                  <th style={{textAlign: 'center'}} width="20%">OPERAÇÃO</th>
+                  <th style={{textAlign: 'right'}} width="20%">VALOR (R$)</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transacoesFiltradasTabela.length === 0 ? (
+                  <tr>
+                     <td colSpan="4" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhuma movimentação encontrada para o período selecionado.</td>
+                  </tr>
+                ) : (
+                  transacoesFiltradasTabela.map((t) => (
+                    <tr key={t.id}>
+                      <td style={{color: '#64748b', fontWeight: '600'}}>{t.dataStr}</td>
+                      <td>
+                        <strong style={{color: '#0f172a'}}>{t.descricao}</strong>
+                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{t.categoria} · {t.formaPagto}</div>
+                      </td>
+                      <td style={{textAlign: 'center'}}>
+                        <span className={`badge-dre ${t.tipo}`}>
+                          {t.tipo === 'receita' ? '🟢 Entrada' : '🔴 Saída'}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: 'right', fontWeight: '850', color: t.tipo === 'receita' ? '#10b981' : '#ef4444' }}>
+                        {t.tipo === 'receita' ? '+ ' : '- '} 
+                        R$ {t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* VISÃO 3: RAIO-X DE FORMAS DE PAGAMENTO */}
+      {visaoRelatorio === 'formas' && (
+        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>⚡ Distribuição de Recebimentos por Forma de Pagamento</h3>
+          
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
+            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#166534' }}>⚡ PIX</span>
+                <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 'bold' }}>
+                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.pix / metricasDRE.receitas) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+              <strong style={{ fontSize: '1.25rem', color: '#15803d', display: 'block', marginTop: '6px' }}>
+                R$ {metricasDRE.formas.pix.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+            </div>
+
+            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '14px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#1e40af' }}>💳 CARTÃO</span>
+                <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 'bold' }}>
+                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.cartao / metricasDRE.receitas) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+              <strong style={{ fontSize: '1.25rem', color: '#1d4ed8', display: 'block', marginTop: '6px' }}>
+                R$ {metricasDRE.formas.cartao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+            </div>
+
+            <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '14px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#854d0e' }}>💵 DINHEIRO</span>
+                <span style={{ fontSize: '0.7rem', color: '#a16207', fontWeight: 'bold' }}>
+                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.dinheiro / metricasDRE.receitas) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+              <strong style={{ fontSize: '1.25rem', color: '#ca8a04', display: 'block', marginTop: '6px' }}>
+                R$ {metricasDRE.formas.dinheiro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+            </div>
+
+            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '14px', padding: '16px' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569' }}>🏦 OUTROS</span>
+                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 'bold' }}>
+                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.outros / metricasDRE.receitas) * 100).toFixed(0) : 0}%
+                </span>
+              </div>
+              <strong style={{ fontSize: '1.25rem', color: '#334155', display: 'block', marginTop: '6px' }}>
+                R$ {metricasDRE.formas.outros.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* VISÃO 4: TEMAS MAIS RENTÁVEIS */}
+      {visaoRelatorio === 'temas' && (
+        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>🏆 Top Temas e Serviços Mais Rentáveis no Período</h3>
+
+          {metricasDRE.rankingTemas.length === 0 ? (
+            <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>Nenhum tema com faturamento no período selecionado.</div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              {metricasDRE.rankingTemas.map((t, idx) => (
+                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 18px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#c5a059' }}>#{idx + 1}</span>
+                    <div>
+                      <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>{t.tema}</strong>
+                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>{t.qtd} locações realizadas</span>
+                    </div>
+                  </div>
+                  <strong style={{ fontSize: '1rem', color: '#15803d' }}>
+                    R$ {t.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </strong>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
 };

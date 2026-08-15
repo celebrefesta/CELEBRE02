@@ -1316,11 +1316,114 @@ main,
     flex: initial !important;
     width: 100% !important;
     grid-column: auto !important;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    border-radius: 16px !important;
+    min-width: 0 !important;
+  }
+
+  .clientes-stats-grid .stat-icon-wrapper,
+  .stats-wide-row .stat-icon-wrapper {
+    width: 34px !important;
+    height: 34px !important;
+    font-size: 15px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .clientes-stats-grid .stat-content,
+  .stats-wide-row .stat-content {
+    min-width: 0 !important;
+    overflow: hidden !important;
+    gap: 2px !important;
+  }
+
+  .clientes-stats-grid .stat-title,
+  .stats-wide-row .stat-title {
+    font-size: 0.60rem !important;
+    line-height: 1.2 !important;
+    letter-spacing: 0.2px !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 2 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .clientes-stats-grid .stat-number,
+  .clientes-stats-grid .stat-value,
+  .stats-wide-row .stat-number,
+  .stats-wide-row .stat-value {
+    font-size: 1.10rem !important;
+    font-weight: 850 !important;
+    letter-spacing: -0.3px !important;
+    margin: 1px 0 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .clientes-stats-grid .stat-desc,
+  .clientes-stats-grid .stat-sub,
+  .stats-wide-row .stat-desc,
+  .stats-wide-row .stat-sub {
+    font-size: 0.62rem !important;
+    line-height: 1.15 !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-line-clamp: 1 !important;
+    -webkit-box-orient: vertical !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .clientes-stats-grid .stat-card-pro:nth-child(5):last-child,
   .stats-wide-row .stat-card-pro:nth-child(5):last-child {
     grid-column: span 2 !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .clientes-stats-grid,
+  .stats-wide-row {
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro,
+  .stats-wide-row .stat-card-pro {
+    padding: 8px 10px !important;
+    gap: 7px !important;
+    border-radius: 13px !important;
+  }
+
+  .clientes-stats-grid .stat-icon-wrapper,
+  .stats-wide-row .stat-icon-wrapper {
+    width: 28px !important;
+    height: 28px !important;
+    font-size: 13px !important;
+    border-radius: 8px !important;
+  }
+
+  .clientes-stats-grid .stat-title,
+  .stats-wide-row .stat-title {
+    font-size: 0.56rem !important;
+    line-height: 1.15 !important;
+  }
+
+  .clientes-stats-grid .stat-number,
+  .clientes-stats-grid .stat-value,
+  .stats-wide-row .stat-number,
+  .stats-wide-row .stat-value {
+    font-size: 0.98rem !important;
+  }
+
+  .clientes-stats-grid .stat-desc,
+  .clientes-stats-grid .stat-sub,
+  .stats-wide-row .stat-desc,
+  .stats-wide-row .stat-sub {
+    font-size: 0.58rem !important;
   }
 }
 

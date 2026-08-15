@@ -1805,3 +1805,31 @@
   background: #1e293b !important;
   color: #ffffff !important;
 }
+
+/* 📱 RESPONSIVIDADE MOBILE DO MODAL DE MANUTENÇÃO */
+@media (max-width: 600px) {
+  .modal-maintenance-card {
+    width: 94vw !important;
+    max-height: 90vh !important;
+    overflow-y: auto !important;
+  }
+
+  .modal-maintenance-body {
+    padding: 16px !important;
+    max-height: 70vh !important;
+    overflow-y: auto !important;
+  }
+
+  .modal-maintenance-footer {
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+    padding: 12px 16px !important;
+  }
+
+  .modal-maintenance-footer button,
+  .btn-modal-cancel {
+    width: 100% !important;
+    flex: none !important;
+    height: 42px !important;
+  }
+}

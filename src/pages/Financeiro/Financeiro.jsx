@@ -51,6 +51,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
   const [itensCompras, setItensCompras] = useState([]);
   const [comprovantesExtras, setComprovantesExtras] = useState([]);
   const [totalAReceber, setTotalAReceber] = useState(0);
+  const [todasLocacoes, setTodasLocacoes] = useState([]);
 
   // 🗓️ FILTRO PERSONALIZADO DE MÊS E ANO
   const [filtroMes, setFiltroMes] = useState(mesAtualNum);
@@ -63,6 +64,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
   const [filtroForma, setFiltroForma] = useState('todas');
   const [modoVisualizacaoComprovantes, setModoVisualizacaoComprovantes] = useState('grid'); // 'grid' | 'lista'
   const [comprovanteModal, setComprovanteModal] = useState(null);
+  const [modalDetalhesRegistro, setModalDetalhesRegistro] = useState(null);
   const [cardDetalheAberto, setCardDetalheAberto] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -149,6 +151,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
 
         const locsComComprovante = locs.filter(l => l.ultimoComprovanteUrl);
         setComprovantesExtras(locsComComprovante);
+        setTodasLocacoes(locs);
 
         // Saldo pendente a receber de pedidos abertos
         let pendente = 0;
@@ -182,6 +185,112 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
       unsubRec();
     };
   }, [usuarioLogado, navigate, tenantId]);
+
+  // 📈 CÁLCULOS DO DRE GERENCIAL (MÊS/ANO SELECIONADO OU GERAL)
+  const calcularDRE = () => {
+    const entradasDoPeriodo = transacoesFiltradas.filter(t => t.tipo === 'entrada');
+    const receitaBruta = entradasDoPeriodo.reduce((acc, t) => acc + Number(t.valor || 0), 0);
+    
+    const saidasDoPeriodo = transacoesFiltradas.filter(t => t.tipo === 'saida');
+    
+    const custosAquisicao = saidasDoPeriodo.filter(t => 
+      t.categoria === 'Aquisição de Acervo' || t.categoria === 'Compra para Estoque'
+    ).reduce((acc, t) => acc + Number(t.valor || 0), 0);
+
+    const custosInsumos = saidasDoPeriodo.filter(t => 
+      t.categoria === 'Insumos e Embalagens' || t.categoria === 'Material de Consumo'
+    ).reduce((acc, t) => acc + Number(t.valor || 0), 0);
+
+    const custosManutencao = saidasDoPeriodo.filter(t => 
+      t.categoria === 'Manutenção e Reparos'
+    ).reduce((acc, t) => acc + Number(t.valor || 0), 0);
+
+    const totalCustosDiretos = custosAquisicao + custosInsumos + custosManutencao;
+    const margemContribuicao = receitaBruta - totalCustosDiretos;
+
+    const despesasEquipe = saidasDoPeriodo.filter(t => t.categoria === 'Equipe e Pessoal').reduce((acc, t) => acc + Number(t.valor || 0), 0);
+    const despesasFixasPredio = saidasDoPeriodo.filter(t => t.categoria === 'Despesas Fixas').reduce((acc, t) => acc + Number(t.valor || 0), 0);
+    const despesasMarketing = saidasDoPeriodo.filter(t => t.categoria === 'Marketing e Vendas').reduce((acc, t) => acc + Number(t.valor || 0), 0);
+    const despesasImpostos = saidasDoPeriodo.filter(t => t.categoria === 'Impostos e Contabilidade').reduce((acc, t) => acc + Number(t.valor || 0), 0);
+    const despesasTaxas = saidasDoPeriodo.filter(t => t.categoria === 'Taxas Bancárias').reduce((acc, t) => acc + Number(t.valor || 0), 0);
+    const despesasOutras = saidasDoPeriodo.filter(t => 
+      !['Aquisição de Acervo', 'Compra para Estoque', 'Insumos e Embalagens', 'Material de Consumo', 'Manutenção e Reparos', 'Equipe e Pessoal', 'Despesas Fixas', 'Marketing e Vendas', 'Impostos e Contabilidade', 'Taxas Bancárias'].includes(t.categoria)
+    ).reduce((acc, t) => acc + Number(t.valor || 0), 0);
+
+    const totalDespesasFixas = despesasEquipe + despesasFixasPredio + despesasMarketing + despesasImpostos + despesasTaxas + despesasOutras;
+    const resultadoLiquido = margemContribuicao - totalDespesasFixas;
+    const margemLiquidaPct = receitaBruta > 0 ? (resultadoLiquido / receitaBruta) * 100 : 0;
+
+    return {
+      receitaBruta,
+      custosAquisicao,
+      custosInsumos,
+      custosManutencao,
+      totalCustosDiretos,
+      margemContribuicao,
+      despesasEquipe,
+      despesasFixasPredio,
+      despesasMarketing,
+      despesasImpostos,
+      despesasTaxas,
+      despesasOutras,
+      totalDespesasFixas,
+      resultadoLiquido,
+      margemLiquidaPct
+    };
+  };
+
+  // 🔮 CÁLCULOS DO FLUXO DE CAIXA PROJETADO (PRÓXIMOS 30 E 60 DIAS)
+  const calcularFluxoProjetado = () => {
+    const hoje = new Date();
+    const em30Dias = new Date();
+    em30Dias.setDate(hoje.getDate() + 30);
+    const em60Dias = new Date();
+    em60Dias.setDate(hoje.getDate() + 60);
+
+    const locacoesFuturas30 = [];
+    const locacoesFuturas60 = [];
+
+    todasLocacoes.forEach(loc => {
+      const st = String(loc.status || '').toLowerCase();
+      if (st.includes('cancel') || st.includes('orcam')) return;
+      const tot = Number(loc.valorTotal || loc.total || 0);
+      const pag = Number(loc.valorPago || 0);
+      const saldo = Math.max(0, tot - pag);
+      if (saldo <= 0) return;
+
+      const dataRef = loc.dataRetirada || loc.dataDevolucao;
+      if (!dataRef) return;
+      const dt = new Date(dataRef + 'T12:00:00');
+      if (dt >= hoje && dt <= em30Dias) {
+        locacoesFuturas30.push({ ...loc, saldo, dataRef, dt });
+      } else if (dt > em30Dias && dt <= em60Dias) {
+        locacoesFuturas60.push({ ...loc, saldo, dataRef, dt });
+      }
+    });
+
+    const entradasPrevistas30 = locacoesFuturas30.reduce((acc, l) => acc + l.saldo, 0);
+    const entradasPrevistas60 = locacoesFuturas60.reduce((acc, l) => acc + l.saldo, 0);
+
+    const totalContasFixasMes = despesasRecorrentes.reduce((acc, r) => acc + (Number(r.valor) || 0), 0);
+    const saidasPrevistas30 = totalContasFixasMes;
+    const saidasPrevistas60 = totalContasFixasMes * 2;
+
+    const saldoProjetado30 = entradasPrevistas30 - saidasPrevistas30;
+    const saldoProjetado60 = (entradasPrevistas30 + entradasPrevistas60) - saidasPrevistas60;
+
+    return {
+      locacoesFuturas30,
+      locacoesFuturas60,
+      entradasPrevistas30,
+      entradasPrevistas60,
+      totalContasFixasMes,
+      saidasPrevistas30,
+      saidasPrevistas60,
+      saldoProjetado30,
+      saldoProjetado60
+    };
+  };
 
 
 
@@ -802,6 +911,118 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
     { num: '12', nome: 'Dezembro' }
   ];
 
+  // 🏷️ RENDERIZADOR DE CHIPS DE VÍNCULO INTERATIVOS (Locação, Cliente, Fornecedor, Peça, Compra)
+  const renderChipsVinculo = (t) => {
+    const hasVinculo = t.locacaoNumero || t.locacaoId || t.clienteNome || t.fornecedorNome || t.pecaNome || t.itemNome || t.compraId;
+    if (!hasVinculo) return null;
+
+    return (
+      <div className="chips-vinculos-container">
+        {(t.locacaoNumero || t.locacaoId) && (
+          <span 
+            className="chip-vinculo-fin chip-locacao"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalDetalhesRegistro({
+                tipo: 'locacao',
+                titulo: `Locação Pedido #${t.locacaoNumero || (t.locacaoId ? t.locacaoId.slice(0,6) : '')}`,
+                id: t.locacaoId,
+                numero: t.locacaoNumero,
+                cliente: t.clienteNome,
+                valor: t.valor,
+                data: t.data,
+                descricao: t.descricao
+              });
+            }}
+            title="Ver detalhes da Locação vinculada"
+          >
+            🔗 #{t.locacaoNumero || (t.locacaoId ? t.locacaoId.slice(0,6) : '')}
+          </span>
+        )}
+
+        {t.clienteNome && (
+          <span 
+            className="chip-vinculo-fin chip-cliente"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalDetalhesRegistro({
+                tipo: 'cliente',
+                titulo: `Cliente: ${t.clienteNome}`,
+                nome: t.clienteNome,
+                id: t.clienteId,
+                valor: t.valor,
+                data: t.data
+              });
+            }}
+            title="Ver detalhes do Cliente"
+          >
+            👤 {t.clienteNome}
+          </span>
+        )}
+
+        {t.fornecedorNome && (
+          <span 
+            className="chip-vinculo-fin chip-fornecedor"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalDetalhesRegistro({
+                tipo: 'fornecedor',
+                titulo: `Fornecedor: ${t.fornecedorNome}`,
+                nome: t.fornecedorNome,
+                tel: t.fornecedorTelefone,
+                valor: t.valor,
+                data: t.data
+              });
+            }}
+            title="Ver detalhes do Fornecedor"
+          >
+            🏢 {t.fornecedorNome}
+          </span>
+        )}
+
+        {(t.pecaNome || t.itemNome) && (
+          <span 
+            className="chip-vinculo-fin chip-peca"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalDetalhesRegistro({
+                tipo: 'peca',
+                titulo: `Acervo: ${t.pecaNome || t.itemNome}`,
+                nome: t.pecaNome || t.itemNome,
+                id: t.pecaId || t.itemId,
+                valor: t.valor,
+                data: t.data
+              });
+            }}
+            title="Ver detalhes da Peça do Acervo"
+          >
+            📦 {t.pecaNome || t.itemNome}
+          </span>
+        )}
+
+        {t.compraId && (
+          <span 
+            className="chip-vinculo-fin chip-compra"
+            onClick={(e) => {
+              e.stopPropagation();
+              setModalDetalhesRegistro({
+                tipo: 'compra',
+                titulo: `Ordem de Compra`,
+                id: t.compraId,
+                descricao: t.descricao,
+                valor: t.valor,
+                data: t.data
+              });
+            }}
+            title="Ver detalhes da Compra"
+          >
+            🛒 Compra
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="clientes-container fade-in">
       
@@ -818,25 +1039,50 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
         </div>
         <div className="header-actions">
           {abaAtiva === 'contas-fixas' ? (
-            <button 
-              type="button" 
-              className="btn-primary-celebre"
-              onClick={() => {
-                setEditandoContaId(null);
-                setFormContaFixa({
-                  descricao: '',
-                  categoria: 'Equipe e Pessoal',
-                  valor: 0,
-                  valorFormatado: '',
-                  diaVencimento: '10',
-                  formaPagto: 'Pix',
-                  observacoes: ''
-                });
-                setFormContaFixaAberto(true);
-              }}
-            >
-              + CADASTRAR NOVA CONTA
-            </button>
+            <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+              <button 
+                type="button" 
+                className="btn-lancar-lote-contas"
+                onClick={handleLancarContasFixasMesAtual}
+                disabled={lancandoContasFixasLote || despesasRecorrentes.length === 0}
+                style={{
+                  background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 16px',
+                  fontWeight: '800',
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 3px 10px rgba(79, 70, 229, 0.25)'
+                }}
+              >
+                {lancandoContasFixasLote ? '⏳ Lançando...' : `⚡ Gerar Contas Fixas de ${nomesMeses.find(m => m.num === (filtroMes || mesAtualNum))?.nome || 'Mês'}`}
+              </button>
+
+              <button 
+                type="button" 
+                className="btn-primary-celebre"
+                onClick={() => {
+                  setEditandoContaId(null);
+                  setFormContaFixa({
+                    descricao: '',
+                    categoria: 'Equipe e Pessoal',
+                    valor: 0,
+                    valorFormatado: '',
+                    diaVencimento: '10',
+                    formaPagto: 'Pix',
+                    observacoes: ''
+                  });
+                  setFormContaFixaAberto(true);
+                }}
+              >
+                + CADASTRAR NOVA CONTA
+              </button>
+            </div>
           ) : (
             <button className="btn-primary-celebre" onClick={() => navigate("/financeiro/novo")}>
               + NOVO LANÇAMENTO
@@ -854,6 +1100,22 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
         >
           <span>📊 Fluxo de Caixa</span>
           <span className="tab-badge">{transacoesFiltradas.length}</span>
+        </button>
+
+        <button 
+          type="button"
+          onClick={() => setAbaAtiva('dre-gerencial')}
+          className={`tab-btn-celebre ${abaAtiva === 'dre-gerencial' ? 'active' : ''}`}
+        >
+          <span>📈 DRE Gerencial</span>
+        </button>
+
+        <button 
+          type="button"
+          onClick={() => setAbaAtiva('fluxo-projetado')}
+          className={`tab-btn-celebre ${abaAtiva === 'fluxo-projetado' ? 'active' : ''}`}
+        >
+          <span>🔮 Projeção (30/60d)</span>
         </button>
 
         <button 
@@ -1241,6 +1503,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                         
                         <td className="td-item-info">
                           <strong className="nome-produto">{t.descricao}</strong>
+                          {renderChipsVinculo(t)}
                         </td>
                         
                         <td className="td-forma-pagto">
@@ -1252,7 +1515,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                         <td className="td-comprovante" style={{ textAlign: 'center' }}>
                           {t.comprovanteUrl ? (
                             <button 
-                              type="button"
+                              type="button" 
                               className="btn-comprovante-link"
                               onClick={() => setComprovanteModal({
                                 titulo: t.descricao,
@@ -1288,7 +1551,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                             {/* ✅ BOTÃO BAIXA RÁPIDA (1 CLIQUE) */}
                             {isPendente && (
                               <button 
-                                type="button"
+                                type="button" 
                                 className="action-btn quit-btn" 
                                 title="Quitar / Dar Baixa no Lançamento" 
                                 onClick={() => handleQuitarLancamento(t)}
@@ -1348,9 +1611,10 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                       </span>
                     </div>
 
-                    {/* 3. ITEM COMPRADO / DESCRIÇÃO */}
+                    {/* 3. ITEM COMPRADO / DESCRIÇÃO COM CHIPS */}
                     <div className="fin-mcard-item-box">
                       <span className="fin-mcard-item-title">{t.descricao}</span>
+                      {renderChipsVinculo(t)}
                     </div>
 
                     {/* 4. RODAPÉ COM BOTÃO VER MAIS E LIXEIRA */}
@@ -1428,6 +1692,319 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
               })
             )}
           </div>
+        </div>
+      )}
+
+      {/* ABA: DRE GERENCIAL */}
+      {abaAtiva === 'dre-gerencial' && (
+        <div className="table-card-container fade-in">
+          {(() => {
+            const dre = calcularDRE();
+            return (
+              <div>
+                {/* BARRA DE FILTRO DE PERÍODO DRE */}
+                <div className="table-filter-bar">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>📈</span>
+                    <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Demonstração do Resultado do Exercício (DRE)</strong>
+                  </div>
+
+                  <div className="fin-mes-selector-wrapper">
+                    <div className="fin-selects-row">
+                      <select 
+                        className="fin-select-custom" 
+                        value={filtroMes} 
+                        onChange={e => setFiltroMes(e.target.value)}
+                        title="Selecionar Mês"
+                      >
+                        <option value="">📆 Mês: Todos</option>
+                        {NOMES_MESES.map((m, idx) => (
+                          <option key={idx} value={String(idx + 1).padStart(2, '0')}>{m}</option>
+                        ))}
+                      </select>
+
+                      <select 
+                        className="fin-select-custom" 
+                        value={filtroAno} 
+                        onChange={e => setFiltroAno(e.target.value)}
+                        title="Selecionar Ano"
+                      >
+                        <option value="">📆 Ano: Todos</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                        <option value="2026">2026</option>
+                        <option value="2027">2027</option>
+                      </select>
+                    </div>
+
+                    <div className="fin-quick-dates">
+                      <button 
+                        type="button" 
+                        className={`btn-date-quick ${filtroMes === mesAtualNum && filtroAno === anoAtualNum ? 'active' : ''}`}
+                        onClick={() => setFiltroMesPredefinido('atual')}
+                      >
+                        Este Mês
+                      </button>
+                      <button 
+                        type="button" 
+                        className={`btn-date-quick ${!filtroMes && !filtroAno ? 'active' : ''}`}
+                        onClick={() => setFiltroMesPredefinido('todos')}
+                      >
+                        Tudo
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 4 CARDS DESTAQUE DO DRE */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', margin: '20px 0' }}>
+                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '16px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>1. Receita Bruta</span>
+                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#15803d', marginTop: '4px' }}>
+                      R$ {dre.receitaBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: '#16a34a' }}>entradas de contratos</span>
+                  </div>
+
+                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '14px', padding: '16px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#991b1b', textTransform: 'uppercase' }}>2. Custos Diretos</span>
+                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#dc2626', marginTop: '4px' }}>
+                      R$ {dre.totalCustosDiretos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>acervo, insumos & reparos</span>
+                  </div>
+
+                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '16px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#92400e', textTransform: 'uppercase' }}>3. Despesas Fixas</span>
+                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#d97706', marginTop: '4px' }}>
+                      R$ {dre.totalDespesasFixas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    <span style={{ fontSize: '0.7rem', color: '#b45309' }}>equipe, aluguel, luz, net</span>
+                  </div>
+
+                  <div style={{ background: dre.resultadoLiquido >= 0 ? '#f0fdf4' : '#fef2f2', border: `1.5px solid ${dre.resultadoLiquido >= 0 ? '#86efac' : '#fca5a5'}`, borderRadius: '14px', padding: '16px' }}>
+                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: dre.resultadoLiquido >= 0 ? '#166534' : '#991b1b', textTransform: 'uppercase' }}>4. Lucro Líquido</span>
+                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: dre.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c', marginTop: '4px' }}>
+                      R$ {dre.resultadoLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                    </div>
+                    <span style={{ fontSize: '0.72rem', color: dre.resultadoLiquido >= 0 ? '#16a34a' : '#ef4444', fontWeight: '800' }}>
+                      {dre.margemLiquidaPct.toFixed(1)}% margem líquida
+                    </span>
+                  </div>
+                </div>
+
+                {/* TABELA ESTRUTURADA DE DRE CONTÁBIL */}
+                <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', margin: '15px 0' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                    <thead>
+                      <tr style={{ background: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
+                        <th style={{ padding: '12px 18px', textAlign: 'left' }}>Estrutura de Resultados (DRE)</th>
+                        <th style={{ padding: '12px 18px', textAlign: 'right', width: '180px' }}>Valor (R$)</th>
+                        <th style={{ padding: '12px 18px', textAlign: 'right', width: '120px' }}>% da Receita</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {/* RECEITA BRUTA */}
+                      <tr style={{ background: '#f8fafc', fontWeight: '800', borderBottom: '1px solid #e2e8f0' }}>
+                        <td style={{ padding: '12px 18px', color: '#0f172a' }}>(+) 1. RECEITA OPERACIONAL BRUTA (Locações & Eventos)</td>
+                        <td style={{ padding: '12px 18px', textAlign: 'right', color: '#15803d' }}>R$ {dre.receitaBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '12px 18px', textAlign: 'right', color: '#64748b' }}>100.0%</td>
+                      </tr>
+
+                      {/* CUSTOS DIRETOS */}
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Aquisição de Acervo & Peças para Estoque</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.custosAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.custosAquisicao / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Insumos, Materiais & Embalagens</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.custosInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.custosInsumos / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Manutenção & Reparos do Acervo</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.custosManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.custosManutencao / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+
+                      {/* MARGEM DE CONTRIBUIÇÃO */}
+                      <tr style={{ background: '#f8fafc', fontWeight: '800', borderBottom: '1.5px solid #cbd5e1' }}>
+                        <td style={{ padding: '12px 18px', color: '#0f172a' }}>(=) MARGEM DE CONTRIBUIÇÃO / LUCRO BRUTO</td>
+                        <td style={{ padding: '12px 18px', textAlign: 'right', color: dre.margemContribuicao >= 0 ? '#15803d' : '#dc2626' }}>R$ {dre.margemContribuicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '12px 18px', textAlign: 'right', color: '#0f172a' }}>{dre.receitaBruta > 0 ? ((dre.margemContribuicao / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+
+                      {/* DESPESAS FIXAS */}
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Equipe & Pessoal (Salários, Diárias, Pró-Labore)</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasEquipe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasEquipe / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Despesas Prediais (Aluguel, Luz, Água, Internet)</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasFixasPredio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasFixasPredio / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Marketing & Vendas</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasMarketing.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasMarketing / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Impostos & Contabilidade</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasImpostos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasImpostos / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+                      <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
+                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Taxas Bancárias & Outros Gastos</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {(dre.despesasTaxas + dre.despesasOutras).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? (((dre.despesasTaxas + dre.despesasOutras) / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
+                      </tr>
+
+                      {/* LUCRO LÍQUIDO FINAL */}
+                      <tr style={{ background: '#f8fafc', fontWeight: '900', fontSize: '0.98rem' }}>
+                        <td style={{ padding: '14px 18px', color: '#0f172a' }}>🏆 (=) RESULTADO / LUCRO LÍQUIDO OPERACIONAL</td>
+                        <td style={{ padding: '14px 18px', textAlign: 'right', color: dre.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
+                          R$ {dre.resultadoLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </td>
+                        <td style={{ padding: '14px 18px', textAlign: 'right', color: dre.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
+                          {dre.margemLiquidaPct.toFixed(1)}%
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            );
+          })()}
+        </div>
+      )}
+
+      {/* ABA: FLUXO DE CAIXA PROJETADO (30 E 60 DIAS) */}
+      {abaAtiva === 'fluxo-projetado' && (
+        <div className="table-card-container fade-in">
+          {(() => {
+            const proj = calcularFluxoProjetado();
+            return (
+              <div>
+                {/* CABEÇALHO DA PROJEÇÃO */}
+                <div className="table-filter-bar">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <span style={{ fontSize: '1.1rem' }}>🔮</span>
+                    <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Fluxo de Caixa Futuro & Previsibilidade</strong>
+                  </div>
+                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                    Baseado em contratos ativos com saldo a receber e contas fixas cadastradas.
+                  </span>
+                </div>
+
+                {/* 2 GRANDES CARDS DE PROJEÇÃO */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', margin: '20px 0' }}>
+                  
+                  {/* CARD 30 DIAS */}
+                  <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '850', color: '#1e40af', textTransform: 'uppercase' }}>🔮 Projeção dos Próximos 30 Dias</span>
+                      <span style={{ background: '#dbeafe', color: '#1e40af', padding: '3px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold' }}>{proj.locacoesFuturas30.length} festas agendadas</span>
+                    </div>
+
+                    <div style={{ margin: '14px 0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#1e40af' }}>Entradas de Contratos a Receber:</span>
+                        <strong style={{ color: '#15803d' }}>+ R$ {proj.entradasPrevistas30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#1e40af' }}>Contas Fixas a Vencer no Mês:</span>
+                        <strong style={{ color: '#dc2626' }}>- R$ {proj.saidasPrevistas30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid #bfdbfe', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#1e3a8a' }}>Saldo Projetado em Caixa (30d):</span>
+                      <strong style={{ fontSize: '1.4rem', fontWeight: '900', color: proj.saldoProjetado30 >= 0 ? '#15803d' : '#b91c1c' }}>
+                        R$ {proj.saldoProjetado30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+                  </div>
+
+                  {/* CARD 60 DIAS */}
+                  <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '16px', padding: '20px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.8rem', fontWeight: '850', color: '#334155', textTransform: 'uppercase' }}>🚀 Projeção Acumulada 60 Dias</span>
+                      <span style={{ background: '#e2e8f0', color: '#334155', padding: '3px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold' }}>{proj.locacoesFuturas30.length + proj.locacoesFuturas60.length} festas no horizonte</span>
+                    </div>
+
+                    <div style={{ margin: '14px 0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#475569' }}>Total de Entradas em 60 dias:</span>
+                        <strong style={{ color: '#15803d' }}>+ R$ {(proj.entradasPrevistas30 + proj.entradasPrevistas60).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
+                        <span style={{ color: '#475569' }}>Contas Fixas dos 2 meses:</span>
+                        <strong style={{ color: '#dc2626' }}>- R$ {proj.saidasPrevistas60.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      </div>
+                    </div>
+
+                    <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#1e293b' }}>Saldo Projetado em Caixa (60d):</span>
+                      <strong style={{ fontSize: '1.4rem', fontWeight: '900', color: proj.saldoProjetado60 >= 0 ? '#15803d' : '#b91c1c' }}>
+                        R$ {proj.saldoProjetado60.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+                  </div>
+
+                </div>
+
+                {/* LISTA DE CONTRATOS COM SALDO A RECEBER */}
+                <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', margin: '15px 0' }}>
+                  <div style={{ padding: '14px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>📅 Contratos com Saldo a Receber nos Próximos 60 Dias</strong>
+                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{proj.locacoesFuturas30.length + proj.locacoesFuturas60.length} pedidos pendentes</span>
+                  </div>
+
+                  {proj.locacoesFuturas30.length + proj.locacoesFuturas60.length === 0 ? (
+                    <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                      ✨ Todos os contratos futuros já foram 100% quitados ou não há novos pedidos agendados no período!
+                    </div>
+                  ) : (
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+                      <thead>
+                        <tr style={{ background: '#f1f5f9', color: '#475569', textTransform: 'uppercase', fontSize: '0.72rem' }}>
+                          <th style={{ padding: '10px 16px', textAlign: 'left' }}>Data Prevista</th>
+                          <th style={{ padding: '10px 16px', textAlign: 'left' }}>Pedido / Cliente</th>
+                          <th style={{ padding: '10px 16px', textAlign: 'right' }}>Total do Contrato</th>
+                          <th style={{ padding: '10px 16px', textAlign: 'right' }}>Já Pago</th>
+                          <th style={{ padding: '10px 16px', textAlign: 'right' }}>Saldo a Receber</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {[...proj.locacoesFuturas30, ...proj.locacoesFuturas60].map((loc, idx) => (
+                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
+                            <td style={{ padding: '10px 16px', fontWeight: '700', color: '#0f172a' }}>
+                              📅 {new Date(loc.dataRef + "T12:00").toLocaleDateString('pt-BR')}
+                            </td>
+                            <td style={{ padding: '10px 16px' }}>
+                              <strong>#{loc.numeroPedido || loc.id.slice(0,6)}</strong> · {loc.clienteNome}
+                            </td>
+                            <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                              R$ {Number(loc.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td style={{ padding: '10px 16px', textAlign: 'right', color: '#16a34a' }}>
+                              R$ {Number(loc.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                            <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: '850', color: '#dc2626' }}>
+                              R$ {loc.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 
@@ -2328,6 +2905,173 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                 🔗 Abrir em Nova Aba
               </button>
             </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* 🏷️ MODAL DE DETALHES DO REGISTRO / VÍNCULO (POPUP RÁPIDO) */}
+      {modalDetalhesRegistro && createPortal(
+        <div className="modal-cf-overlay fade-in" onClick={() => setModalDetalhesRegistro(null)}>
+          <div className="modal-cf-box" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px', borderRadius: '20px', overflow: 'hidden' }}>
+            
+            {/* CABEÇALHO */}
+            <div className="modal-cf-header" style={{ background: '#0f172a', color: '#ffffff', padding: '18px 24px' }}>
+              <div className="modal-cf-header-left">
+                <div className="modal-cf-icon-badge" style={{ background: 'rgba(255,255,255,0.1)', color: '#fde68a' }}>
+                  {modalDetalhesRegistro.tipo === 'locacao' ? '🔗' : modalDetalhesRegistro.tipo === 'cliente' ? '👤' : modalDetalhesRegistro.tipo === 'fornecedor' ? '🏢' : modalDetalhesRegistro.tipo === 'peca' ? '📦' : '🛒'}
+                </div>
+                <div>
+                  <h3 className="modal-cf-title" style={{ color: '#fde68a', fontSize: '1.1rem', margin: 0 }}>
+                    {modalDetalhesRegistro.titulo}
+                  </h3>
+                  <p className="modal-cf-subtitle" style={{ color: '#cbd5e1', fontSize: '0.75rem', margin: '2px 0 0 0' }}>
+                    Vínculo direto com o registro no sistema
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button" 
+                className="modal-cf-close-btn" 
+                onClick={() => setModalDetalhesRegistro(null)}
+                style={{ color: '#ffffff', fontSize: '20px' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* CONTEÚDO */}
+            <div className="modal-cf-body" style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+              
+              {modalDetalhesRegistro.tipo === 'locacao' && (
+                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Número do Pedido: <strong style={{ color: '#0f172a' }}>#{modalDetalhesRegistro.numero || (modalDetalhesRegistro.id ? modalDetalhesRegistro.id.slice(0,6) : '')}</strong>
+                  </div>
+                  {modalDetalhesRegistro.cliente && (
+                    <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                      Cliente: <strong>{modalDetalhesRegistro.cliente}</strong>
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Valor do Lançamento: <strong style={{ color: '#16a34a' }}>R$ {Number(modalDetalhesRegistro.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Data: <strong>{modalDetalhesRegistro.data ? new Date(modalDetalhesRegistro.data + "T12:00").toLocaleDateString('pt-BR') : '-'}</strong>
+                  </div>
+                </div>
+              )}
+
+              {modalDetalhesRegistro.tipo === 'cliente' && (
+                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: '800' }}>👤 {modalDetalhesRegistro.nome}</div>
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Movimentação no Caixa: <strong style={{ color: '#16a34a' }}>R$ {Number(modalDetalhesRegistro.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                </div>
+              )}
+
+              {modalDetalhesRegistro.tipo === 'fornecedor' && (
+                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: '800' }}>🏢 {modalDetalhesRegistro.nome}</div>
+                  {modalDetalhesRegistro.tel && (
+                    <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                      Telefone / WhatsApp: <strong>{modalDetalhesRegistro.tel}</strong>
+                    </div>
+                  )}
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Valor Pago: <strong style={{ color: '#dc2626' }}>R$ {Number(modalDetalhesRegistro.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                </div>
+              )}
+
+              {modalDetalhesRegistro.tipo === 'peca' && (
+                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: '800' }}>📦 {modalDetalhesRegistro.nome}</div>
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Custo / Movimentação: <strong style={{ color: '#b45309' }}>R$ {Number(modalDetalhesRegistro.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                </div>
+              )}
+
+              {modalDetalhesRegistro.tipo === 'compra' && (
+                <div style={{ background: '#f8fafc', padding: '14px', borderRadius: '12px', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ fontSize: '0.95rem', color: '#0f172a', fontWeight: '800' }}>🛒 Ordem de Compra</div>
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Item / Descrição: <strong>{modalDetalhesRegistro.descricao}</strong>
+                  </div>
+                  <div style={{ fontSize: '0.84rem', color: '#475569' }}>
+                    Valor Pago: <strong style={{ color: '#dc2626' }}>R$ {Number(modalDetalhesRegistro.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                  </div>
+                </div>
+              )}
+
+            </div>
+
+            {/* RODAPÉ */}
+            <div className="modal-cf-footer" style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
+              {modalDetalhesRegistro.tipo === 'locacao' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDetalhesRegistro(null);
+                    navigate('/locacoes');
+                  }}
+                  style={{ flex: 1, padding: '10px 14px', background: '#3b82f6', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  📋 Abrir em Locações
+                </button>
+              )}
+
+              {modalDetalhesRegistro.tipo === 'cliente' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDetalhesRegistro(null);
+                    navigate('/clientes');
+                  }}
+                  style={{ flex: 1, padding: '10px 14px', background: '#db2777', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  👤 Abrir em Clientes
+                </button>
+              )}
+
+              {modalDetalhesRegistro.tipo === 'peca' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDetalhesRegistro(null);
+                    navigate('/estoque');
+                  }}
+                  style={{ flex: 1, padding: '10px 14px', background: '#c5a059', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  📦 Abrir no Estoque
+                </button>
+              )}
+
+              {modalDetalhesRegistro.tipo === 'compra' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setModalDetalhesRegistro(null);
+                    navigate('/compras');
+                  }}
+                  style={{ flex: 1, padding: '10px 14px', background: '#10b981', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  🛒 Abrir em Compras
+                </button>
+              )}
+
+              <button
+                type="button"
+                className="btn-cf-modal-cancel"
+                onClick={() => setModalDetalhesRegistro(null)}
+                style={{ padding: '10px 16px', background: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
+              >
+                Fechar
+              </button>
+            </div>
+
           </div>
         </div>,
         document.body

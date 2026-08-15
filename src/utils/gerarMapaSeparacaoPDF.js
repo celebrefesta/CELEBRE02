@@ -99,19 +99,19 @@ export const gerarMapaSeparacaoPDF = (
   doc.setFontSize(9);
   doc.setTextColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
 
-  doc.text(`🎉 Total de Festas: `, 20, 42);
+  doc.text(`TOTAL DE FESTAS: `, 20, 42);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${kpisMes.totalFestas || 0} eventos`, 52, 42);
+  doc.text(`${kpisMes.totalFestas || 0} eventos`, 58, 42);
 
   doc.setFont('helvetica', 'bold');
-  doc.text(`📦 Reservas no Acervo: `, 100, 42);
+  doc.text(`RESERVAS NO ACERVO: `, 104, 42);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${kpisMes.totalPecasAlugadas || 0} unidades alugadas`, 140, 42);
+  doc.text(`${kpisMes.totalPecasAlugadas || 0} unidades alugadas`, 146, 42);
 
   doc.setFont('helvetica', 'bold');
-  doc.text(`📈 Taxa de Ocupação: `, 200, 42);
+  doc.text(`TAXA DE OCUPAÇÃO: `, 204, 42);
   doc.setFont('helvetica', 'normal');
-  doc.text(`${kpisMes.taxaOcupacao || 0}% dos dias ocupados`, 238, 42);
+  doc.text(`${kpisMes.taxaOcupacao || 0}% dos dias ocupados`, 242, 42);
 
   // ── PREPARAÇÃO DOS DADOS DA TABELA ──
   const tableHead = incluirCheckbox
@@ -137,7 +137,7 @@ export const gerarMapaSeparacaoPDF = (
       datasComReserva = datasComReserva.filter(d => d >= dataInicio);
     }
 
-    let detalhamentoAgenda = '🟢 Livre no período';
+    let detalhamentoAgenda = 'Livre no período';
 
     if (datasComReserva.length > 0) {
       const linhasDet = [];

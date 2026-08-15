@@ -147,6 +147,8 @@ const NovaLocacao = () => {
   const [desconto, setDesconto] = useState(0);
   const [tipoDesconto, setTipoDesconto] = useState('R$'); // 'R$' ou '%'
   const [obsInternas, setObsInternas] = useState('');
+  const [kmDistancia, setKmDistancia] = useState('');
+  const [taxaPorKm, setTaxaPorKm] = useState('3.50');
 
   const [modalCompraAberto, setModalCompraAberto] = useState(false);
   const [formCompra, setFormCompra] = useState({ 
@@ -622,17 +624,28 @@ const NovaLocacao = () => {
       if (valorRecebidoNoCaixa > 0) {
         await addDoc(collection(db, "financeiro_lancamentos"), {
             tipo: 'entrada', 
-            categoria: 'Locação', 
+            categoria: 'Locações e Eventos', 
+            centroCusto: 'Receitas Operacionais',
             valor: valorRecebidoNoCaixa, 
-            formaPagto: formaPagtoSinal,
+            valorTotal: valorRecebidoNoCaixa,
+            formaPagamento: formaPagtoSinal || 'Pix',
+            formaPagto: formaPagtoSinal || 'Pix',
             data: new Date().toISOString().split('T')[0], 
             status: 'pago', 
-            createdAt: serverTimestamp(), 
-            descricao: `SINAL - Pedido #${codigo} - ${nomeClienteReal}`,
-            userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
+            locacaoId: docRef.id,
+            locacaoNumero: codigo,
+            clienteId: clienteSelecionado || '',
+            clienteNome: nomeClienteReal,
+            origem: 'novo_pedido_sinal',
+            descricao: `Sinal / Entrada - Pedido #${codigo} (${nomeClienteReal})`,
+            observacoes: `Pagamento de sinal/entrada registrado na assinatura da locação (${tipoServico}).`,
+            userId: tenantId,
+            empresaId: tenantId,
+            createdAt: serverTimestamp(),
+            criadoEm: serverTimestamp()
         });
         
-        await registrarLog("PAGAMENTO Lançado", `Registrou entrada financeira de R$ ${valorRecebidoNoCaixa.toFixed(2)} na criação do pedido.`, docRef.id, codigo);
+        await registrarLog("PAGAMENTO Lançado", `Registrou entrada financeira de R$ ${valorRecebidoNoCaixa.toFixed(2)} (Sinal da Locação) na criação do pedido #${codigo}.`, docRef.id, codigo);
       }
 
       const acaoLog = statusFinal === 'orcamento' ? 'NOVO ORÇAMENTO' : 'NOVA LOCAÇÃO';
@@ -1178,6 +1191,52 @@ const NovaLocacao = () => {
             </div>
 
             <div className="carrinho-container mt-15">
+              {/* 🚨 ALERTA DE CONFLITO DE AGENDA / SOBRELOCAÇÃO EM TEMPO REAL */}
+              {(() => {
+                const itensConflito = carrinho.map(item => {
+                  const disp = getDisponibilidade(item.id);
+                  const qtdPedida = Number(item.qtd) || 1;
+                  const falta = Math.max(0, qtdPedida - disp.livresReais);
+                  return { item, disp, qtdPedida, falta, temConflito: falta > 0 };
+                }).filter(c => c.temConflito);
+
+                if (itensConflito.length === 0) return null;
+
+                return (
+                  <div style={{
+                    background: '#fff1f2',
+                    border: '2px solid #fecdd3',
+                    borderRadius: '12px',
+                    padding: '14px 18px',
+                    marginBottom: '16px',
+                    boxShadow: '0 4px 12px rgba(225, 29, 72, 0.1)'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#be123c', fontWeight: '850', fontSize: '0.92rem' }}>
+                      <span>🚨 ALERTA: CONFLITO DE AGENDA / SOBRELOCAÇÃO!</span>
+                    </div>
+                    <p style={{ margin: '6px 0 10px 0', fontSize: '0.8rem', color: '#881337', lineHeight: '1.4' }}>
+                      As seguintes peças <strong>não possuem estoque livre suficiente</strong> para o período de <strong>{datas.retirada ? new Date(datas.retirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'retirada'}</strong> até <strong>{datas.devolucao ? new Date(datas.devolucao + 'T12:00:00').toLocaleDateString('pt-BR') : 'devolução'}</strong>:
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {itensConflito.map(({ item, disp, qtdPedida, falta }, idx) => (
+                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ffffff', padding: '8px 12px', borderRadius: '8px', border: '1px solid #fecdd3', fontSize: '0.78rem' }}>
+                          <div>
+                            <strong style={{ color: '#be123c' }}>{item.nome}</strong> · Solicitado: <strong>{qtdPedida} un</strong> | Livre no período: <strong style={{ color: '#059669' }}>{disp.livresReais} un</strong> (<span style={{ color: '#dc2626', fontWeight: 'bold' }}>Faltam {falta} un</span>)
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => dispararCompraAutomatica(item)}
+                            style={{ background: '#f43f5e', color: '#fff', border: 'none', borderRadius: '6px', padding: '4px 10px', fontSize: '0.72rem', fontWeight: 'bold', cursor: 'pointer' }}
+                          >
+                            🛒 Pedir Reposição (+{falta})
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+
               {carrinho.length === 0 ? (
                 <div className="carrinho-vazio">Nenhuma peça adicionada ainda. Clique em "+ Adc. Peças".</div>
               ) : (
@@ -1335,6 +1394,41 @@ const NovaLocacao = () => {
               <span>Frete</span> 
               <span>+ R$ {getFreteNumerico().toFixed(2)}</span>
             </div>
+
+            {/* 🧮 CALCULADORA RÁPIDA DE FRETE POR KM */}
+            <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', margin: '8px 0' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#334155' }}>🧮 Calculadora de Frete por KM</span>
+                <span style={{ fontSize: '0.68rem', color: '#64748b' }}>R$ {taxaPorKm}/km</span>
+              </div>
+              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                <input 
+                  type="number" 
+                  placeholder="Distância KM" 
+                  value={kmDistancia} 
+                  onChange={e => {
+                    const km = Number(e.target.value) || 0;
+                    setKmDistancia(e.target.value);
+                    if (km > 0) {
+                      const valorFrete = Math.round(km * (Number(taxaPorKm) || 3.5));
+                      setLogistica(prev => ({ ...prev, frete: String(valorFrete) }));
+                    }
+                  }}
+                  style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    const km = Number(kmDistancia) || 0;
+                    const valorFrete = Math.round(km * (Number(taxaPorKm) || 3.5));
+                    setLogistica(prev => ({ ...prev, frete: String(valorFrete) }));
+                  }}
+                  style={{ padding: '5px 10px', background: '#e2e8f0', color: '#1e293b', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
+                >
+                  Calcular
+                </button>
+              </div>
+            </div>
             
             <div className="fin-linha desconto-linha" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -1402,6 +1496,32 @@ const NovaLocacao = () => {
                 - R$ {calcularTotal().valorDesconto.toFixed(2)} ({desconto}% desc.)
               </div>
             )}
+
+            {/* 📊 TERMÔMETRO DE MARGEM COMERCIAL */}
+            {(() => {
+              const tot = calcularTotal();
+              const sub = tot.subtotal;
+              const desc = tot.valorDesconto;
+              const margem = sub > 0 ? ((sub - desc) / sub) * 100 : 100;
+              let statusCor = '#16a34a';
+              let statusTxt = '🟢 Margem Saudável';
+              if (margem < 80 && margem >= 65) {
+                statusCor = '#d97706';
+                statusTxt = '🟡 Margem Moderada';
+              } else if (margem < 65) {
+                statusCor = '#dc2626';
+                statusTxt = '🔴 Margem Crítica / Desconto Alto';
+              }
+
+              return (
+                <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${statusCor}40`, margin: '8px 0', fontSize: '0.74rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', color: statusCor }}>
+                    <span>Margem: {margem.toFixed(0)}%</span>
+                    <span>{statusTxt}</span>
+                  </div>
+                </div>
+              );
+            })()}
             
             <div className="fin-total" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0', padding: '12px 0', borderTop: '2px dashed #e2e8f0' }}>
               <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem' }}>TOTAL</span>

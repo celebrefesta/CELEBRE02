@@ -43,6 +43,17 @@ const Relatorios = () => {
     }
   };
 
+  const [mostrarIndicadores, setMostrarIndicadores] = useState(() => {
+    const salvo = localStorage.getItem('relatorios_mostrar_indicadores');
+    return salvo !== null ? salvo === 'true' : true;
+  });
+
+  const alternarIndicadores = () => {
+    const novoValor = !mostrarIndicadores;
+    setMostrarIndicadores(novoValor);
+    localStorage.setItem('relatorios_mostrar_indicadores', String(novoValor));
+  };
+
   // Dispara o espião sempre que a aba é alterada
   useEffect(() => {
     if (!usuarioLogado) {
@@ -98,10 +109,10 @@ const Relatorios = () => {
       </div>
 
       <div className="relatorio-content">
-        {activeTab === 'financeiro' && <FinanceiroTab />}
-        {activeTab === 'clientes' && <ClientesTab />}
-        {activeTab === 'estoque' && <EstoqueTab />}
-        {activeTab === 'pedidos' && <PedidosTab />}
+        {activeTab === 'financeiro' && <FinanceiroTab mostrarIndicadores={mostrarIndicadores} alternarIndicadores={alternarIndicadores} />}
+        {activeTab === 'clientes' && <ClientesTab mostrarIndicadores={mostrarIndicadores} alternarIndicadores={alternarIndicadores} />}
+        {activeTab === 'estoque' && <EstoqueTab mostrarIndicadores={mostrarIndicadores} alternarIndicadores={alternarIndicadores} />}
+        {activeTab === 'pedidos' && <PedidosTab mostrarIndicadores={mostrarIndicadores} alternarIndicadores={alternarIndicadores} />}
       </div>
       
     </div>

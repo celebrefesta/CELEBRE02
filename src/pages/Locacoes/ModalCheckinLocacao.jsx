@@ -423,6 +423,36 @@ const ModalCheckinLocacao = ({
           }
         }
 
+        // 💰 INTEGRAÇÃO FINANCEIRA: Lançar cobrança de taxa de avaria para o cliente no Financeiro
+        const totalCustoAvarias = itensAvaria.reduce((acc, i) => acc + Number(i.custoAvaria || 0), 0);
+        if (totalCustoAvarias > 0) {
+          try {
+            await addDoc(collection(db, "financeiro_lancamentos"), {
+              userId: tenantId,
+              empresaId: tenantId,
+              tipo: "entrada",
+              categoria: "Manutenção e Reparos",
+              centroCusto: "Taxas e Reparações",
+              descricao: `🛠️ Taxa de Avaria / Reparo: Pedido #${numeroPedido} - ${clienteNome}`,
+              valor: totalCustoAvarias,
+              valorTotal: totalCustoAvarias,
+              data: new Date().toISOString().split('T')[0],
+              status: "pendente",
+              formaPagamento: "Pix",
+              formaPagto: "Pix",
+              locacaoId: locacao.id,
+              locacaoNumero: numeroPedido,
+              clienteId: locacao.clienteId || "",
+              clienteNome: clienteNome,
+              origem: "checkin_avaria_devolucao",
+              observacoes: `Cobrança de avaria gerada na vistoria de devolução (${itensAvaria.length} peça(s) avariada(s)).`,
+              criadoEm: serverTimestamp()
+            });
+          } catch (finErr) {
+            console.error("Erro ao gerar lançamento financeiro de avaria:", finErr);
+          }
+        }
+
         const dadosAtualizar = {
           itens: itensState,
           obsRetorno: observacoes,
@@ -438,10 +468,10 @@ const ModalCheckinLocacao = ({
 
         await registrarLogAuditoria(
           "CHECK-IN DE RETORNO (DEVOLUÇÃO MÁXIMA)",
-          `Recebimento finalizado: ${totalConferido}/${totalContratado} peças devolvidas. Avarias: ${itensAvaria.length}, Faltas: ${itensFaltou.length}. Resp: ${responsavel}.`
+          `Recebimento finalizado: ${totalConferido}/${totalContratado} peças devolvidas. Avarias: ${itensAvaria.length}, Faltas: ${itensFaltou.length}. Resp: ${responsavel}.${totalCustoAvarias > 0 ? ` Taxa de avaria de R$ ${totalCustoAvarias.toFixed(2)} lançada no Financeiro.` : ''}`
         );
 
-        alert(`✅ Check-in de Retorno (VOLTA) finalizado com sucesso!`);
+        alert(`✅ Check-in de Retorno (VOLTA) finalizado com sucesso!${totalCustoAvarias > 0 ? `\n💰 Uma cobrança de R$ ${totalCustoAvarias.toFixed(2)} por avaria foi lançada no Financeiro.` : ''}`);
       }
 
       if (onSalvarSucesso) onSalvarSucesso();
@@ -454,21 +484,34 @@ const ModalCheckinLocacao = ({
     }
   };
 
+  const formatarMoedaInput = (valor) => {
+    if (!valor && valor !== 0) return '';
+    const apenasDigitos = String(valor).replace(/\D/g, '');
+    if (!apenasDigitos) return '';
+    const num = Number(apenasDigitos) / 100;
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  };
+
+  const extrairValorNumerico = (val) => {
+    if (typeof val === 'number') return val;
+    if (!val) return 0;
+    const limpo = String(val).replace(/\./g, '').replace(',', '.').replace(/[^\d.-]/g, '');
+    const n = parseFloat(limpo);
+    return isNaN(n) ? 0 : n;
+  };
+
   const totalContratado = itensState.reduce((acc, i) => acc + Number(i.quantidade || 1), 0);
   const totalConferido = itensState.reduce((acc, i) => acc + Number(i.qtdConferida || 0), 0);
   const progressoPct = totalContratado > 0 ? Math.round((totalConferido / totalContratado) * 100) : 0;
 
   return (
     <div className="modal-checkin-overlay">
-      <div className="modal-checkin-box animate-pop">
+      <div className="modal-checkin-box animate-pop modal-checkin-wide">
         
-        {/* HEADER MODERNO E LIMPO */}
+        {/* HEADER MODERNO, LIMPO E COM BORDAS ELEGANTES */}
         <div className={`modal-checkin-header ${isIda ? 'header-ida' : 'header-volta'}`}>
           <div className="header-top-line">
-            <div className="header-left-badges">
-              <span className="badge-modo">{isIda ? '🛫 CHECK-IN DE IDA' : '🛬 CHECK-IN DE VOLTA'}</span>
-              <span className="header-pedido-txt">Pedido #{numeroPedido}</span>
-            </div>
+            <span className="badge-modo">{isIda ? 'CONFERÊNCIA DE SAÍDA' : 'VISTORIA DE DEVOLUÇÃO'}</span>
             <div className="header-top-actions">
               <button type="button" className="btn-header-pdf" onClick={handleGerarPDF} title="Baixar PDF">📄 PDF</button>
               <button type="button" className="btn-header-wsp" onClick={handleEnviarWhatsApp} title="Enviar por WhatsApp">💬 Whats</button>
@@ -476,7 +519,10 @@ const ModalCheckinLocacao = ({
             </div>
           </div>
           <div className="header-bottom-line">
-            <h2 className="cliente-txt">👤 {clienteNome}</h2>
+            <div className="header-cliente-row">
+              <h2 className="cliente-txt">👤 {clienteNome}</h2>
+              <span className="header-pedido-txt">Pedido #{numeroPedido}</span>
+            </div>
             <div className="header-dates-inline">
               <span>📅 Evento: <strong>{locacao.dataRetirada ? locacao.dataRetirada.split('-').reverse().join('/') : 'S/D'}</strong></span>
               {locacao.dataDevolucao && <span> ➔ Devolução: <strong>{locacao.dataDevolucao.split('-').reverse().join('/')}</strong></span>}
@@ -549,81 +595,84 @@ const ModalCheckinLocacao = ({
           </div>
         )}
 
-        {/* CORPO DO CHECK-IN */}
-        <div className="modal-checkin-body">
+        {/* CORPO DO CHECK-IN EM 2 COLUNAS NO DESKTOP */}
+        <div className="modal-checkin-body modal-checkin-grid-body">
           
-          {/* BOTÕES DE AÇÃO EM LOTE */}
-          <div className="lote-actions-bar">
-            {isIda ? (
-              <>
-                <button type="button" className="btn-lote-gold" onClick={() => marcarTodosLote('todos_ida')}>
-                  ✨ Marcar Tudo Conferido
+          {/* COLUNA ESQUERDA: LISTAGEM DE PEÇAS & CONFERÊNCIA */}
+          <div className="modal-col-esquerda">
+            {/* BOTÕES DE AÇÃO EM LOTE */}
+            <div className="lote-actions-bar">
+              {isIda ? (
+                <>
+                  <button type="button" className="btn-lote-gold" onClick={() => marcarTodosLote('todos_ida')}>
+                    Marcar Tudo Conferido
+                  </button>
+                  <button type="button" className="btn-lote-outline" onClick={() => marcarTodosLote('desmarcar')}>
+                    Zerar
+                  </button>
+                </>
+              ) : (
+                <button type="button" className="btn-lote-green" onClick={() => marcarTodosLote('todos_volta_ok')}>
+                  Marcar Todos como OK
                 </button>
-                <button type="button" className="btn-lote-outline" onClick={() => marcarTodosLote('desmarcar')}>
-                  🔄 Zerar
-                </button>
-              </>
-            ) : (
-              <button type="button" className="btn-lote-green" onClick={() => marcarTodosLote('todos_volta_ok')}>
-                🟢 Marcar Todos como OK
-              </button>
-            )}
-          </div>
+              )}
+            </div>
 
-          {/* LISTA DE PEÇAS COM CONTROLE QUANTITATIVO FRACIONADO */}
-          <div className="checkin-itens-list">
-            {itensState.map((item, idx) => {
-              const isTotal = item.qtdConferida >= item.quantidade;
-              const isParcial = item.qtdConferida > 0 && item.qtdConferida < item.quantidade;
+            {/* LISTA DE PEÇAS COM CONTROLE QUANTITATIVO FRACIONADO */}
+            <div className="checkin-itens-list">
+              {itensState.map((item, idx) => {
+                const isTotal = item.qtdConferida >= item.quantidade;
+                const isParcial = item.qtdConferida > 0 && item.qtdConferida < item.quantidade;
 
-              return (
-                <div 
-                  key={idx} 
-                  className={`checkin-item-card ${
-                    isIda 
-                      ? (isTotal ? 'card-checked-ida' : isParcial ? 'card-parcial' : '') 
-                      : (item.statusRetorno === 'ok' ? 'card-checked-ok' : item.statusRetorno === 'avaria' ? 'card-checked-avaria' : item.statusRetorno === 'faltou' ? 'card-checked-falta' : '')
-                  }`}
-                >
-                  <div className="item-main-row">
-                    {/* IMAGEM DA PEÇA */}
-                    <div className="item-thumb-box">
-                      {item.imagem || item.foto ? (
-                        <img src={item.imagem || item.foto} alt={item.nome} className="item-thumb-img" />
-                      ) : (
-                        <div className="item-thumb-placeholder">📦</div>
-                      )}
-                    </div>
+                return (
+                  <div 
+                    key={idx} 
+                    className={`checkin-item-card ${
+                      isIda 
+                        ? (isTotal ? 'card-checked-ida' : isParcial ? 'card-parcial' : '') 
+                        : (item.statusRetorno === 'ok' ? 'card-checked-ok' : item.statusRetorno === 'avaria' ? 'card-checked-avaria' : item.statusRetorno === 'faltou' ? 'card-checked-falta' : '')
+                    }`}
+                  >
+                    {/* LINHA SUPERIOR DO ITEM (FOTO + NOME + TAGS) */}
+                    <div className="item-top-header-row">
+                      <div className="item-thumb-box">
+                        {item.imagem || item.foto ? (
+                          <img src={item.imagem || item.foto} alt={item.nome} className="item-thumb-img" />
+                        ) : (
+                          <div className="item-thumb-placeholder">📦</div>
+                        )}
+                      </div>
 
-                    {/* INFO DA PEÇA */}
-                    <div className="item-info-col">
-                      <h4 className="item-nome-txt">{item.nome || item.descricao || 'Peça sem nome'}</h4>
-                      <div className="item-tags">
-                        <span className="badge-qtd">Total: <strong>{item.quantidade} un</strong></span>
-                        {item.categoria && <span className="badge-cat">{item.categoria}</span>}
-                        {item.codigo && <span className="badge-cod">Cód: <strong>{item.codigo}</strong></span>}
+                      <div className="item-info-col">
+                        <h4 className="item-nome-txt">{item.nome || item.descricao || 'Peça sem nome'}</h4>
+                        <div className="item-tags">
+                          <span className="badge-qtd">Total: <strong>{item.quantidade} un</strong></span>
+                          {item.categoria && <span className="badge-cat">{item.categoria}</span>}
+                          {item.codigo && <span className="badge-cod">Cód: <strong>{item.codigo}</strong></span>}
+                        </div>
                       </div>
                     </div>
 
-                    {/* CONTROLE QUANTITATIVO FRACIONADO (- / + / MAX) */}
-                    <div className="stepper-qtd-box">
-                      <span className="stepper-title">Conferido:</span>
-                      <div className="stepper-controls">
-                        <button type="button" className="btn-step" onClick={() => alterarQtdConferida(idx, -1)}>-</button>
-                        <input 
-                          type="number" 
-                          className="input-step-num"
-                          value={item.qtdConferida}
-                          onChange={(e) => setQtdConferidaDireta(idx, e.target.value)}
-                        />
-                        <button type="button" className="btn-step" onClick={() => alterarQtdConferida(idx, 1)}>+</button>
-                        <button type="button" className="btn-step-max" onClick={() => alterarQtdConferida(idx, item.quantidade)}>Max</button>
+                    {/* LINHA INFERIOR DE CONTROLES (STEPPER + BOTÕES DE STATUS) */}
+                    <div className="item-bottom-controls-row">
+                      {/* CONTROLE QUANTITATIVO FRACIONADO */}
+                      <div className="stepper-qtd-box">
+                        <span className="stepper-title">Conferido:</span>
+                        <div className="stepper-controls">
+                          <button type="button" className="btn-step" onClick={() => alterarQtdConferida(idx, -1)}>-</button>
+                          <input 
+                            type="number" 
+                            className="input-step-num"
+                            value={item.qtdConferida}
+                            onChange={(e) => setQtdConferidaDireta(idx, e.target.value)}
+                          />
+                          <button type="button" className="btn-step" onClick={() => alterarQtdConferida(idx, 1)}>+</button>
+                          <button type="button" className="btn-step-max" onClick={() => alterarQtdConferida(idx, item.quantidade)}>Max</button>
+                        </div>
                       </div>
-                    </div>
 
-                    {/* CONTROLES DO MODO VOLTA (OK / AVARIA / FALTA) */}
-                    {!isIda && (
-                      <div className="item-controls-col">
+                      {/* CONTROLES DO MODO VOLTA (OK / AVARIA / FALTA) */}
+                      {!isIda && (
                         <div className="botoes-status-retorno">
                           <button 
                             type="button" 
@@ -647,129 +696,132 @@ const ModalCheckinLocacao = ({
                             ❌ Falta
                           </button>
                         </div>
+                      )}
+                    </div>
+
+                    {/* PAINEL CONDICIONAL DE AVARIA / REPOSIÇÃO */}
+                    {!isIda && item.statusRetorno === 'avaria' && (
+                      <div className="gaveta-avaria-box animate-fade-down">
+                        <div className="gaveta-header">
+                          <span>🛠️ REGISTRO DE AVARIA E MANUTENÇÃO</span>
+                        </div>
+                        <div className="gaveta-inputs-grid">
+                          <div className="field-group">
+                            <label>Motivo do Dano / Defeito:</label>
+                            <input 
+                              type="text"
+                              placeholder="Ex: Vaso trincado, tecido manchado..."
+                              value={item.motivoAvaria || ''}
+                              onChange={(e) => setCampoItemRetorno(idx, 'motivoAvaria', e.target.value)}
+                            />
+                          </div>
+                          <div className="field-group short">
+                            <label>Custo de Reparação (R$):</label>
+                            <input 
+                              type="text"
+                              placeholder="0,00"
+                              value={item.custoAvaria ? (String(item.custoAvaria).includes(',') ? item.custoAvaria : formatarMoedaInput(item.custoAvaria)) : ''}
+                              onChange={(e) => setCampoItemRetorno(idx, 'custoAvaria', formatarMoedaInput(e.target.value))}
+                            />
+                          </div>
+                        </div>
+                        <label className="checkbox-maint">
+                          <input 
+                            type="checkbox"
+                            checked={item.enviarManutencao !== false}
+                            onChange={(e) => setCampoItemRetorno(idx, 'enviarManutencao', e.target.checked)}
+                          />
+                          <span>Enviar peça automaticamente para a fila de Manutenção do Acervo</span>
+                        </label>
                       </div>
                     )}
                   </div>
+                );
+              })}
+            </div>
+          </div>
 
-                  {/* PAINEL CONDICIONAL DE AVARIA / REPOSIÇÃO */}
-                  {!isIda && item.statusRetorno === 'avaria' && (
-                    <div className="gaveta-avaria-box animate-fade-down">
-                      <div className="gaveta-header">
-                        <span>🛠️ REGISTRO DE AVARIA E MANUTENÇÃO</span>
-                      </div>
-                      <div className="gaveta-inputs-grid">
-                        <div className="field-group">
-                          <label>Motivo do Dano / Defeito:</label>
-                          <input 
-                            type="text"
-                            placeholder="Ex: Vaso trincado, tecido manchado..."
-                            value={item.motivoAvaria || ''}
-                            onChange={(e) => setCampoItemRetorno(idx, 'motivoAvaria', e.target.value)}
-                          />
-                        </div>
-                        <div className="field-group short">
-                          <label>Custo de Reparação (R$):</label>
-                          <input 
-                            type="number"
-                            placeholder="0.00"
-                            value={item.custoAvaria || ''}
-                            onChange={(e) => setCampoItemRetorno(idx, 'custoAvaria', e.target.value)}
-                          />
-                        </div>
-                      </div>
-                      <label className="checkbox-maint">
-                        <input 
-                          type="checkbox"
-                          checked={item.enviarManutencao !== false}
-                          onChange={(e) => setCampoItemRetorno(idx, 'enviarManutencao', e.target.checked)}
-                        />
-                        <span>Enviar peça automaticamente para a fila de Manutenção do Acervo</span>
-                      </label>
+          {/* COLUNA DIREITA: FOTOS, ASSINATURA & OBSERVAÇÕES */}
+          <div className="modal-col-direita">
+            {/* 📷 ANEXO DE FOTOS DA VISTORIA */}
+            <div className="fotos-vistoria-section">
+              <div className="section-header-row">
+                <label className="section-lbl">📷 Fotos da Vistoria de {isIda ? 'Saída' : 'Devolução'}:</label>
+                <label className="btn-upload-foto">
+                  + Adicionar Fotos
+                  <input type="file" accept="image/*" multiple onChange={handleUploadFotos} style={{ display: 'none' }} />
+                </label>
+              </div>
+              {fotosVistoria.length > 0 ? (
+                <div className="fotos-grid">
+                  {fotosVistoria.map((ft, fIdx) => (
+                    <div key={fIdx} className="foto-item-box">
+                      <img src={ft} alt={`Vistoria ${fIdx}`} className="foto-img" />
+                      <button type="button" className="btn-del-foto" onClick={() => removerFotoVistoria(fIdx)}>✕</button>
                     </div>
-                  )}
+                  ))}
                 </div>
-              );
-            })}
-          </div>
-
-          {/* 📷 ANEXO DE FOTOS DA VISTORIA */}
-          <div className="fotos-vistoria-section">
-            <div className="section-header-row">
-              <label className="section-lbl">📷 Fotos da Vistoria de {isIda ? 'Saída' : 'Devolução'}:</label>
-              <label className="btn-upload-foto">
-                + Adicionar Fotos
-                <input type="file" accept="image/*" multiple onChange={handleUploadFotos} style={{ display: 'none' }} />
-              </label>
+              ) : (
+                <p className="no-fotos-txt">Nenhuma foto anexada. Clique em "+ Adicionar Fotos" para registrar a vistoria.</p>
+              )}
             </div>
-            {fotosVistoria.length > 0 ? (
-              <div className="fotos-grid">
-                {fotosVistoria.map((ft, fIdx) => (
-                  <div key={fIdx} className="foto-item-box">
-                    <img src={ft} alt={`Vistoria ${fIdx}`} className="foto-img" />
-                    <button type="button" className="btn-del-foto" onClick={() => removerFotoVistoria(fIdx)}>✕</button>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <p className="no-fotos-txt">Nenhuma foto anexada ainda. Clique em "+ Adicionar Fotos" para registar a vistoria.</p>
-            )}
-          </div>
 
-          {/* ✍️ CANVAS DE ASSINATURA DIGITAL */}
-          <div className="assinatura-digital-section">
-            <div className="section-header-row">
-              <label className="section-lbl">✍️ Assinatura Digital do Cliente / Retirante:</label>
-              <button type="button" className="btn-limpar-sig" onClick={limparAssinatura}>Limpar Assinatura</button>
-            </div>
-            {assinaturaSalvaUrl ? (
-              <div className="assinatura-preview-box">
-                <img src={assinaturaSalvaUrl} alt="Assinatura Coletada" className="sig-preview-img" />
-                <span className="sig-badge">✓ Assinatura Confirmada</span>
+            {/* ✍️ CANVAS DE ASSINATURA DIGITAL */}
+            <div className="assinatura-digital-section">
+              <div className="section-header-row">
+                <label className="section-lbl">✍️ Assinatura Digital do Cliente / Retirante:</label>
+                <button type="button" className="btn-limpar-sig" onClick={limparAssinatura}>Limpar</button>
               </div>
-            ) : (
-              <div className="canvas-wrapper">
-                <SignatureCanvas 
-                  ref={sigCanvasRef} 
-                  penColor="#0f172a" 
-                  canvasProps={{ 
-                    className: "sig-canvas-pad",
-                    style: { touchAction: 'none', width: '100%', height: '100%' }
-                  }} 
-                  backgroundColor="transparent" 
-                  velocityFilterWeight={0.7}
+              {assinaturaSalvaUrl ? (
+                <div className="assinatura-preview-box">
+                  <img src={assinaturaSalvaUrl} alt="Assinatura Coletada" className="sig-preview-img" />
+                  <span className="sig-badge">✓ Assinatura Confirmada</span>
+                </div>
+              ) : (
+                <div className="canvas-wrapper">
+                  <SignatureCanvas 
+                    ref={sigCanvasRef} 
+                    penColor="#0f172a" 
+                    canvasProps={{ 
+                      className: "sig-canvas-pad",
+                      style: { touchAction: 'none', width: '100%', height: '100%' }
+                    }} 
+                    backgroundColor="transparent" 
+                    velocityFilterWeight={0.7}
+                  />
+                  <span className="canvas-hint">Assine com o dedo no celular ou com o mouse</span>
+                </div>
+              )}
+            </div>
+
+            {/* OBSERVACÕES E RESPONSÁVEL */}
+            <div className="checkin-footer-fields">
+              <div className="field-group full">
+                <label>📝 Observações da Vistoria ({isIda ? 'Saída' : 'Devolução'}):</label>
+                <textarea 
+                  rows="2"
+                  placeholder={isIda ? "Ex: Embalado na caixa 01 e 02." : "Ex: Material devolvido em ordem."}
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
                 />
-                <span className="canvas-hint">Assine com o dedo no celular ou com o mouse</span>
               </div>
-            )}
-          </div>
-
-          {/* OBSERVACÕES E RESPONSÁVEL */}
-          <div className="checkin-footer-fields">
-            <div className="field-group full">
-              <label>📝 Observações da Vistoria ({isIda ? 'Saída' : 'Retorno'}):</label>
-              <textarea 
-                rows="2"
-                placeholder={isIda ? "Ex: Embalado na caixa 01 e 02." : "Ex: Material devolvido em ordem."}
-                value={observacoes}
-                onChange={(e) => setObservacoes(e.target.value)}
-              />
-            </div>
-            <div className="field-group half">
-              <label>👤 Responsável pela Conferência (Colaborador / Proprietário):</label>
-              <select 
-                value={responsavel}
-                onChange={(e) => setResponsavel(e.target.value)}
-                className="select-colaborador"
-              >
-                {listaColaboradores.map((colab, cIdx) => (
-                  <option key={cIdx} value={colab}>
-                    👤 {colab}
-                  </option>
-                ))}
-                {!listaColaboradores.includes(responsavel) && responsavel && (
-                  <option value={responsavel}>👤 {responsavel}</option>
-                )}
-              </select>
+              <div className="field-group full">
+                <label>👤 Responsável pela Conferência (Colaborador / Proprietário):</label>
+                <select 
+                  value={responsavel}
+                  onChange={(e) => setResponsavel(e.target.value)}
+                  className="select-colaborador"
+                >
+                  {listaColaboradores.map((colab, cIdx) => (
+                    <option key={cIdx} value={colab}>
+                      👤 {colab}
+                    </option>
+                  ))}
+                  {!listaColaboradores.includes(responsavel) && responsavel && (
+                    <option value={responsavel}>👤 {responsavel}</option>
+                  )}
+                </select>
+              </div>
             </div>
           </div>
 
@@ -786,7 +838,7 @@ const ModalCheckinLocacao = ({
             onClick={handleSalvarCheckin}
             disabled={salvando}
           >
-            {salvando ? '💾 Gravando Vistoria...' : (isIda ? '🛫 Finalizar Check-in de Saída' : '🛬 Concluir Check-in de Retorno')}
+            {salvando ? 'Gravando Vistoria...' : (isIda ? 'Finalizar Conferência de Saída' : 'Concluir Vistoria de Devolução')}
           </button>
         </div>
 

@@ -510,10 +510,46 @@ const Agenda = () => {
           {ev.observacoes  && <span className="list-obs">📝 {ev.observacoes}</span>}
        
           {saldo !== null && Number(ev.valorTotal) > 0 && (
-            <span className="list-financeiro">
-              💰 R$ {Number(ev.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·{' '}
-              {saldo > 0 ? <span className="saldo-devedor">Falta R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span> : <span className="saldo-pago">✅ Pago</span>}
-            </span>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px', marginTop: '4px', flexWrap: 'wrap' }}>
+              <span className="list-financeiro">
+                💰 R$ {Number(ev.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })} ·{' '}
+                {saldo > 0 ? <span className="saldo-devedor">Falta R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span> : <span className="saldo-pago">✅ Pago</span>}
+              </span>
+
+              {saldo > 0 && (
+                <button
+                  type="button"
+                  className="btn-quick-receber-agenda"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate('/novo-lancamento', {
+                      state: {
+                        locacaoId: ev.locacaoId || ev.id,
+                        clienteNome: ev.clienteNome,
+                        tipo: 'entrada'
+                      }
+                    });
+                  }}
+                  style={{
+                    padding: '4px 10px',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '0.72rem',
+                    fontWeight: '800',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    boxShadow: '0 2px 5px rgba(16,185,129,0.25)'
+                  }}
+                  title="Lançar Recebimento deste pedido no Financeiro"
+                >
+                  💰 Receber Saldo
+                </button>
+              )}
+            </div>
           )}
         </div>
         
@@ -542,16 +578,27 @@ const Agenda = () => {
               <span className="day-number">{dia}</span>
           </div>
           <div className="eventos-container">
-            {evsDia.slice(0, MAX).map(ev => (
-              <div key={ev.id} className={`event-tag tag-${ev.tipo}${ev.origem === 'locacao' ? ' tag-locacao-origem' : ''}`} onClick={e => { e.stopPropagation(); abrirModalForm(dia, ev); }}>
-                {ev.horario && <span className="event-time">{ev.horario}</span>}
-                <span className="event-titulo" style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>
-                    {ev.status === 'concluido' && '✅ '}
-                    {ev.status === 'cancelado' && '❌ '}
-                    {ev.titulo}
-                </span>
-              </div>
-            ))}
+            {evsDia.slice(0, MAX).map(ev => {
+              const totalEv = Number(ev.valorTotal || 0);
+              const pagoEv = Number(ev.valorPago || 0);
+              const saldoEv = ev.origem === 'locacao' ? Math.max(0, totalEv - pagoEv) : null;
+
+              return (
+                <div key={ev.id} className={`event-tag tag-${ev.tipo}${ev.origem === 'locacao' ? ' tag-locacao-origem' : ''}`} onClick={e => { e.stopPropagation(); abrirModalForm(dia, ev); }}>
+                  {ev.horario && <span className="event-time">{ev.horario}</span>}
+                  <span className="event-titulo" style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>
+                      {ev.status === 'concluido' && '✅ '}
+                      {ev.status === 'cancelado' && '❌ '}
+                      {ev.origem === 'locacao' && totalEv > 0 && (
+                        <span style={{ marginRight: '3px', fontSize: '10px' }} title={saldoEv === 0 ? 'Quitado' : `Resta R$ ${saldoEv.toFixed(2)}`}>
+                          {saldoEv === 0 ? '🟢' : (pagoEv > 0 ? '🟡' : '🔴')}
+                        </span>
+                      )}
+                      {ev.titulo}
+                  </span>
+                </div>
+              );
+            })}
             {extra > 0 && <div className="event-tag tag-mais" onClick={e => { e.stopPropagation(); setDiaSelecionado(dia); setModalListaAberto(true); }}>+ {extra} a mais</div>}
           </div>
         </div>
@@ -835,7 +882,68 @@ const Agenda = () => {
                   <div className="fin-row fin-saldo"><span>Saldo</span><strong style={{ color: saldo > 0 ? '#ef4444' : '#22c55e' }}>{saldo > 0 ? `R$ ${saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} a receber` : '✅ Pago'}</strong></div>
                 </div>
               )}
-              <p className="locacao-aviso">⚠️ Entregas e Devoluções só podem ser alteradas na tela de Locações.</p>
+
+              {/* AÇÕES DA LOCAÇÃO DENTRO DA AGENDA */}
+              <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
+                {saldo > 0 && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setModalFormAberto(false);
+                      navigate('/novo-lancamento', { 
+                        state: { 
+                          locacaoId: formData.locacaoId || formData.id,
+                          clienteNome: formData.clienteNome,
+                          tipo: 'entrada' 
+                        } 
+                      });
+                    }}
+                    style={{
+                      flex: 1,
+                      padding: '10px 14px',
+                      background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '10px',
+                      fontWeight: '800',
+                      fontSize: '0.82rem',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '6px',
+                      boxShadow: '0 3px 8px rgba(16, 185, 129, 0.25)'
+                    }}
+                  >
+                    💰 Lançar Recebimento (R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                  </button>
+                )}
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setModalFormAberto(false);
+                    navigate('/locacoes');
+                  }}
+                  style={{
+                    padding: '10px 14px',
+                    background: '#f1f5f9',
+                    color: '#334155',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '10px',
+                    fontWeight: '700',
+                    fontSize: '0.82rem',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '4px'
+                  }}
+                >
+                  📋 Ver em Locações
+                </button>
+              </div>
+
+              <p className="locacao-aviso" style={{ marginTop: '12px' }}>⚠️ Entregas e Devoluções só podem ser alteradas na tela de Locações.</p>
             </div>
           ) : (
             <form onSubmit={salvarEvento} className="modal-form">

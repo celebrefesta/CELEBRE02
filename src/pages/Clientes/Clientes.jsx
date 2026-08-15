@@ -259,6 +259,46 @@ const Clientes = () => {
     return { historico, totalGasto };
   };
 
+  const getSeloVIPCliente = (clienteId) => {
+    const { historico, totalGasto } = getHistoricoDoCliente(clienteId);
+    const qtdFestas = historico.filter(h => {
+      const st = String(h.status || '').toLowerCase();
+      return !st.includes('cancelado') && !st.includes('orcam');
+    }).length;
+
+    if (totalGasto >= 5000) {
+      return {
+        badge: `⭐ VIP Ouro — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`,
+        totalGasto,
+        qtdFestas,
+        bg: '#fefce8',
+        color: '#a16207',
+        border: '#fde047'
+      };
+    }
+    if (totalGasto >= 2000) {
+      return {
+        badge: `✨ VIP Prata — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`,
+        totalGasto,
+        qtdFestas,
+        bg: '#f8fafc',
+        color: '#334155',
+        border: '#cbd5e1'
+      };
+    }
+    if (totalGasto >= 800 || qtdFestas >= 2) {
+      return {
+        badge: `⭐ Cliente VIP — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`,
+        totalGasto,
+        qtdFestas,
+        bg: '#eff6ff',
+        color: '#1d4ed8',
+        border: '#bfdbfe'
+      };
+    }
+    return null;
+  };
+
   const getUltimaLocacao = (clienteId) => {
     const locs = allLocacoes.filter(loc => loc.clienteId === clienteId || loc.cliente?.id === clienteId);
     const validas = locs.filter(loc => {
@@ -977,16 +1017,25 @@ const Clientes = () => {
                           <div className="user-details">
                             <div className="client-header-info" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
                                <strong className="client-name">{nomeBonito}</strong>
-                               {rankingsClientesMap[c.id] && (
-                                 <span className="badge-ranking-cliente" style={{ backgroundColor: rankingsClientesMap[c.id].bg, color: rankingsClientesMap[c.id].color, border: `1px solid ${rankingsClientesMap[c.id].border}`, padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '850' }}>
-                                   {rankingsClientesMap[c.id].badge}
-                                 </span>
-                               )}
-                               {isRecorrente && !rankingsClientesMap[c.id] && (
-                                 <span className="badge-recorrente-cliente" title="Cliente Recorrente: 2 ou mais locações confirmadas">
-                                   💎 RECORRENTE
-                                 </span>
-                               )}
+                               {(() => {
+                                 const vip = getSeloVIPCliente(c.id);
+                                 if (vip) {
+                                   return (
+                                     <span 
+                                       className="badge-ranking-cliente" 
+                                       style={{ backgroundColor: vip.bg, color: vip.color, border: `1px solid ${vip.border}`, padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '850', cursor: 'pointer' }}
+                                       title={`LTV Acumulado: R$ ${vip.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em ${vip.qtdFestas} locações`}
+                                     >
+                                       {vip.badge}
+                                     </span>
+                                   );
+                                 }
+                                 return isRecorrente ? (
+                                   <span className="badge-recorrente-cliente" title="Cliente Recorrente: 2 ou mais locações confirmadas">
+                                     💎 RECORRENTE
+                                   </span>
+                                 ) : null;
+                               })()}
                                 {eAniversariante && (
                                   <span className="badge-aniversario-mini" title="Aniversariante deste Mês!">
                                     🎂 ANIVERSARIANTE
@@ -1228,6 +1277,9 @@ const Clientes = () => {
                     <button onClick={() => setAbaAtiva('timeline')} className={`ptab ${abaAtiva === 'timeline' ? 'active' : ''}`}>
                       <i className="fas fa-stream"></i> Linha do Tempo ({gerarTimelineCompleta(clienteVisualizacao.id).length + historicoNotasCliente.length})
                     </button>
+                    <button onClick={() => setAbaAtiva('financeiro')} className={`ptab ${abaAtiva === 'financeiro' ? 'active' : ''}`}>
+                      <i className="fas fa-wallet"></i> Extrato Financeiro & Saldo
+                    </button>
                   </div>
                   
                   <div className="perfil-tab-body">
@@ -1408,29 +1460,216 @@ const Clientes = () => {
                                   <div className="tl-card tl-card-nota">
                                     <div className="tl-card-header">
                                       <span className="tl-badge" style={{ background: '#f5f3ff', color: '#6d28d9' }}>{entrada.tipo || 'Nota'}</span>
-                                      <span className="tl-author"><i className="far fa-user-circle"></i> {entrada.autor}</span>
-                                      <span className="tl-date">{new Date(entrada.dataHora).toLocaleString('pt-BR')}</span>
+                                      <span className="tl-date">{entrada.data.toLocaleString('pt-BR')}</span>
                                     </div>
                                     <p className="tl-text">{entrada.texto}</p>
+                                    <div className="tl-author">
+                                      <i className="fas fa-user-circle"></i> {entrada.autor || 'Equipe'}
+                                    </div>
                                   </div>
                                 </div>
                               ) : (
                                 // EVENTO DE LOCAÇÃO
-                                <div key={entrada.id} className="tl-item tl-evento">
-                                  <div className="tl-dot" style={{ background: entrada.bg, borderColor: entrada.cor, fontSize: '14px', display:'flex',alignItems:'center',justifyContent:'center' }}>
-                                    {entrada.icone}
-                                  </div>
-                                  <div className="tl-card" style={{ borderLeft: `3px solid ${entrada.cor}` }}>
+                                <div key={`loc-${entrada.id || idx}`} className="tl-item tl-locacao">
+                                  <div className="tl-dot" style={{ background: '#3b82f6', borderColor: '#1d4ed8' }}>📦</div>
+                                  <div className="tl-card tl-card-loc">
                                     <div className="tl-card-header">
-                                      <span className="tl-badge" style={{ background: entrada.bg, color: entrada.cor }}>{entrada.label}</span>
+                                      <span className="tl-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>Pedido #{entrada.numeroPedido || entrada.id?.substring(0,6)}</span>
                                       <span className="tl-date">{entrada.data.toLocaleDateString('pt-BR')}</span>
                                     </div>
-                                    {entrada.sub && <p className="tl-text" style={{ color: '#64748b', marginTop: '4px' }}>{entrada.sub}</p>}
+                                    <h5 className="tl-title">{entrada.titulo}</h5>
+                                    <p className="tl-sub">{entrada.descricao}</p>
+                                    <div className="tl-footer">
+                                      <span className={`status-pill ${entrada.status}`}>{entrada.status}</span>
+                                      <strong className="tl-val">R$ {Number(entrada.valorTotal || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</strong>
+                                    </div>
                                   </div>
                                 </div>
                               )
                             ))}
                           </div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* ABA 4: EXTRATO FINANCEIRO & SALDO */}
+                    {abaAtiva === 'financeiro' && (() => {
+                      const locacoesValidas = perfilHistorico.filter(l => !String(l.status || '').toLowerCase().includes('cancelado'));
+                      const totalContratado = locacoesValidas.reduce((acc, l) => acc + Number(l.valorTotal || l.total || 0), 0);
+                      const totalPago = locacoesValidas.reduce((acc, l) => acc + Number(l.valorPago || 0), 0);
+                      const saldoDevedor = Math.max(0, totalContratado - totalPago);
+
+                      return (
+                        <div className="perfil-financeiro-wrapper">
+                          
+                          {/* CARDS DE BALANÇO DO CLIENTE */}
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px', marginBottom: '16px' }}>
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px' }}>
+                              <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>👑 Total Contratado (LTV)</span>
+                              <div style={{ fontSize: '1.15rem', fontWeight: '850', color: '#0f172a', marginTop: '2px' }}>
+                                R$ {totalContratado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
+
+                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '12px 14px' }}>
+                              <span style={{ fontSize: '0.68rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>✅ Total Liquidado (Pago)</span>
+                              <div style={{ fontSize: '1.15rem', fontWeight: '850', color: '#15803d', marginTop: '2px' }}>
+                                R$ {totalPago.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </div>
+                            </div>
+
+                            <div style={{ background: saldoDevedor > 0 ? '#fef2f2' : '#f8fafc', border: saldoDevedor > 0 ? '1px solid #fecaca' : '1px solid #e2e8f0', borderRadius: '12px', padding: '12px 14px' }}>
+                              <span style={{ fontSize: '0.68rem', fontWeight: '800', color: saldoDevedor > 0 ? '#991b1b' : '#64748b', textTransform: 'uppercase' }}>
+                                {saldoDevedor > 0 ? '⚠️ Saldo Devedor / A Receber' : '🟢 Situação Financeira'}
+                              </span>
+                              <div style={{ fontSize: '1.15rem', fontWeight: '850', color: saldoDevedor > 0 ? '#b91c1c' : '#16a34a', marginTop: '2px' }}>
+                                {saldoDevedor > 0 ? `R$ ${saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '100% Quitado'}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* LISTAGEM DE PEDIDOS COM STATUS FINANCEIRO E BOTÃO LANÇAR RECEBIMENTO */}
+                          <h4 style={{ margin: '0 0 10px 0', fontSize: '0.82rem', color: '#334155', fontWeight: '800', textTransform: 'uppercase' }}>
+                            📋 Extrato de Pedidos & Pagamentos
+                          </h4>
+
+                          {locacoesValidas.length === 0 ? (
+                            <div className="empty-history">
+                              <i className="fas fa-wallet"></i> Nenhum pedido registrado para este cliente.
+                            </div>
+                          ) : (
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                              {locacoesValidas.map(loc => {
+                                const tot = Number(loc.valorTotal || loc.total || 0);
+                                const pg = Number(loc.valorPago || 0);
+                                const sld = Math.max(0, tot - pg);
+                                const numPed = loc.numeroPedido || (loc.id ? loc.id.slice(0,6).toUpperCase() : '');
+
+                                return (
+                                  <div 
+                                    key={loc.id}
+                                    style={{
+                                      background: '#ffffff',
+                                      border: '1px solid #e2e8f0',
+                                      borderRadius: '12px',
+                                      padding: '12px 14px',
+                                      display: 'flex',
+                                      justifyContent: 'space-between',
+                                      alignItems: 'center',
+                                      gap: '12px',
+                                      flexWrap: 'wrap'
+                                    }}
+                                  >
+                                    <div>
+                                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                        <strong style={{ fontSize: '0.9rem', color: '#0f172a' }}>Pedido #{numPed}</strong>
+                                        <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                                          {loc.dataRetirada ? new Date(loc.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
+                                        </span>
+                                        <span style={{ 
+                                          padding: '2px 6px', 
+                                          borderRadius: '6px', 
+                                          fontSize: '0.65rem', 
+                                          fontWeight: '800',
+                                          background: sld === 0 ? '#dcfce7' : (pg > 0 ? '#fef3c7' : '#fee2e2'),
+                                          color: sld === 0 ? '#166534' : (pg > 0 ? '#92400e' : '#991b1b')
+                                        }}>
+                                          {sld === 0 ? 'QUITADO' : (pg > 0 ? 'PARCIAL' : 'PENDENTE')}
+                                        </span>
+                                      </div>
+
+                                      <div style={{ fontSize: '0.78rem', color: '#475569', marginTop: '4px' }}>
+                                        Total: <b>R$ {tot.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b> | 
+                                        Pago: <b style={{ color: '#16a34a' }}>R$ {pg.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b> | 
+                                        Resta: <b style={{ color: sld > 0 ? '#b91c1c' : '#16a34a' }}>R$ {sld.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b>
+                                      </div>
+                                    </div>
+
+                                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                      {sld > 0 && (
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            setClienteVisualizacao(null);
+                                            navigate('/novo-lancamento', {
+                                              state: {
+                                                locacaoId: loc.id,
+                                                clienteId: clienteVisualizacao.id,
+                                                clienteNome: perfilNomeBonito,
+                                                tipo: 'entrada'
+                                              }
+                                            });
+                                          }}
+                                          style={{
+                                            padding: '6px 12px',
+                                            background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                                            color: '#ffffff',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            fontWeight: '800',
+                                            fontSize: '0.74rem',
+                                            cursor: 'pointer',
+                                            display: 'inline-flex',
+                                            alignItems: 'center',
+                                            gap: '4px',
+                                            boxShadow: '0 2px 6px rgba(16,185,129,0.25)'
+                                          }}
+                                        >
+                                          💰 Lançar Recebimento
+                                        </button>
+                                      )}
+
+                                      <button
+                                        type="button"
+                                        onClick={() => irParaLocacaoEspecifica(loc.id)}
+                                        style={{
+                                          padding: '6px 10px',
+                                          background: '#f1f5f9',
+                                          color: '#475569',
+                                          border: '1px solid #cbd5e1',
+                                          borderRadius: '8px',
+                                          fontSize: '0.74rem',
+                                          fontWeight: '700',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        Ver Pedido
+                                      </button>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {saldoDevedor > 0 && clienteVisualizacao.celular && (
+                            <div style={{ marginTop: '16px', padding: '12px 14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                              <div>
+                                <strong style={{ color: '#92400e', fontSize: '0.85rem' }}>💬 Cobrança Rápida por WhatsApp</strong>
+                                <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#b45309' }}>Envie um lembrete amigável com o saldo devedor e os dados de pagamento.</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => abrirModalWhatsApp(clienteVisualizacao, 'cobranca')}
+                                style={{
+                                  padding: '8px 14px',
+                                  background: '#25d366',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  fontWeight: '800',
+                                  fontSize: '0.78rem',
+                                  cursor: 'pointer',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '6px'
+                                }}
+                              >
+                                <i className="fab fa-whatsapp"></i> Cobrar Saldo
+                              </button>
+                            </div>
+                          )}
+
                         </div>
                       );
                     })()}

@@ -143,7 +143,7 @@ export const gerarComprovanteCheckinPDF = (
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(8);
   doc.setFont('helvetica', 'bold');
-  doc.text(isIda ? '🚚 SAÍDA' : '🛬 DEVOLUÇÃO', 175, y + 9.5, { align: 'center' });
+  doc.text(isIda ? 'SAÍDA' : 'DEVOLUÇÃO', 175, y + 9.5, { align: 'center' });
 
   doc.setTextColor(15, 23, 42);
   doc.setFontSize(11);
@@ -180,21 +180,24 @@ export const gerarComprovanteCheckinPDF = (
     const qtdConf = Number(item.qtdConferida ?? qtdContratada);
     const isConferidoTot = qtdConf >= qtdContratada;
 
-    let statusTxt = '✅  OK';
+    let statusTxt = 'OK';
     let obsLinha = isConferidoTot
       ? `Conferido (${qtdConf}/${qtdContratada} un)`
       : '___________________________';
 
     if (!isIda && item.statusRetorno === 'avaria') {
-      statusTxt = '🛠️  AVARIA';
+      statusTxt = 'AVARIA';
+      const custoNum = typeof item.custoAvaria === 'number' 
+        ? item.custoAvaria 
+        : Number(String(item.custoAvaria || '0').replace(/\./g, '').replace(',', '.'));
       obsLinha = item.obsRetorno || item.motivoAvaria
-        ? `Dano: ${item.obsRetorno || item.motivoAvaria}${item.custoAvaria ? `  |  Est. R$ ${Number(item.custoAvaria).toFixed(2)}` : ''}`
+        ? `Dano: ${item.obsRetorno || item.motivoAvaria}${custoNum > 0 ? `  |  Est. R$ ${custoNum.toFixed(2)}` : ''}`
         : 'Peça danificada — avaliar reparo';
     } else if (!isIda && (item.statusRetorno === 'faltou' || qtdConf < qtdContratada)) {
-      statusTxt = '❌  FALTOU';
+      statusTxt = 'FALTOU';
       obsLinha = `Devolvido: ${qtdConf} de ${qtdContratada} un — EXTRAVIO`;
     } else if (isIda && !isConferidoTot) {
-      statusTxt = '⬜  PEND.';
+      statusTxt = 'PEND.';
     }
 
     return [
@@ -284,7 +287,7 @@ export const gerarComprovanteCheckinPDF = (
     doc.setFontSize(8.5);
     doc.setFont('helvetica', 'bold');
     doc.setTextColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
-    doc.text('📝 Observações Gerais da Vistoria:', 14, y + 8);
+    doc.text('Observações Gerais da Vistoria:', 14, y + 8);
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     const splitObs = doc.splitTextToSize(dadosAdicionais.observacoes, 180);
@@ -371,7 +374,7 @@ export const gerarComprovanteCheckinPDF = (
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('⚠️  RELATÓRIO DE IRREGULARIDADES NA DEVOLUÇÃO', 105, yIrreg + 7, { align: 'center' });
+    doc.text('RELATÓRIO DE IRREGULARIDADES NA DEVOLUÇÃO', 105, yIrreg + 7, { align: 'center' });
     yIrreg += 16;
 
     // Contador de avarias e faltas
@@ -402,21 +405,26 @@ export const gerarComprovanteCheckinPDF = (
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(185, 28, 28);
-      doc.text('🛠️  Peças com Avaria / Dano:', 14, yIrreg);
+      doc.text('Peças com Avaria / Dano:', 14, yIrreg);
       yIrreg += 5;
 
-      const rowsAvaria = itensAvaria.map((item, idx) => [
-        idx + 1,
-        item.codigo || 'S/C',
-        item.nome || 'Item sem nome',
-        `${item.quantidade || 1} un`,
-        item.obsRetorno || item.motivoAvaria || 'Avaria registrada',
-        item.custoAvaria ? `R$ ${Number(item.custoAvaria).toFixed(2)}` : 'A avaliar'
-      ]);
+      const rowsAvaria = itensAvaria.map((item, idx) => {
+        const custoNum = typeof item.custoAvaria === 'number' 
+          ? item.custoAvaria 
+          : Number(String(item.custoAvaria || '0').replace(/\./g, '').replace(',', '.'));
+        return [
+          idx + 1,
+          item.codigo || 'S/C',
+          item.nome || 'Item sem nome',
+          `${item.quantidade || 1} un`,
+          item.obsRetorno || item.motivoAvaria || 'Avaria registrada',
+          custoNum > 0 ? `R$ ${custoNum.toFixed(2)}` : 'A avaliar'
+        ];
+      });
 
       // Total custo avarias
       const totalCustoAvaria = itensAvaria.reduce(
-        (acc, i) => acc + Number(i.custoAvaria || 0), 0
+        (acc, i) => acc + (typeof i.custoAvaria === 'number' ? i.custoAvaria : Number(String(i.custoAvaria || '0').replace(/\./g, '').replace(',', '.'))), 0
       );
 
       autoTable(doc, {
@@ -451,7 +459,7 @@ export const gerarComprovanteCheckinPDF = (
       doc.setFontSize(9);
       doc.setFont('helvetica', 'bold');
       doc.setTextColor(146, 64, 14);
-      doc.text('❌  Peças Faltantes / Extravio:', 14, yIrreg);
+      doc.text('Peças Faltantes / Extravio:', 14, yIrreg);
       yIrreg += 5;
 
       const rowsFalta = itensFalta.map((item, idx) => [
@@ -511,7 +519,7 @@ export const gerarComprovanteCheckinPDF = (
     doc.setTextColor(253, 230, 138);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
-    doc.text('📷  FOTOS DA VISTORIA DE DEVOLUÇÃO', 105, yFotos + 7, { align: 'center' });
+    doc.text('FOTOS DA VISTORIA DE DEVOLUÇÃO', 105, yFotos + 7, { align: 'center' });
     yFotos += 16;
 
     // Info complementar
@@ -573,7 +581,7 @@ export const gerarComprovanteCheckinPDF = (
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(148, 163, 184);
       doc.text(
-        `⚠ ${fotosVistoria.length - 6} foto(s) adicional(is) não exibida(s) por limite de espaço. Acesse o sistema para visualizá-las.`,
+        `Aviso: ${fotosVistoria.length - 6} foto(s) adicional(is) não exibida(s) por limite de espaço. Acesse o sistema para visualizá-las.`,
         14, yAviso, { maxWidth: 182 }
       );
     }

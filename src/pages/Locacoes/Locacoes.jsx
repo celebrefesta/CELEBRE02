@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate, useLocation } from 'react-router-dom';
 import './Locacoes.css';
 import { db } from '../../firebaseConfig';
@@ -50,8 +51,56 @@ const Locacoes = () => {
   // 📅 MODAL CALENDÁRIO & ESTOQUE / CONFIG
   const [modalCalendarioAberto, setModalCalendarioAberto] = useState(false);
   const [estoque, setEstoque] = useState([]);
+  const [listaCompras, setListaCompras] = useState([]);
+  const [lancamentosFin, setLancamentosFin] = useState([]);
+  const [modalLucroPedido, setModalLucroPedido] = useState(null);
   const [configEmpresa, setConfigEmpresa] = useState({});
   const [clientesObjMap, setClientesObjMap] = useState({});
+
+  // 💰 CÁLCULO DE LUCRO REAL DA FESTA (FATURAMENTO - COMPRAS/INSUMOS/DESPESAS)
+  const calcularLucroFesta = (pedido) => {
+    const faturamento = Number(pedido.valorTotal || pedido.total || 0);
+    const pedId = pedido.id;
+    const pedNum = pedido.numeroPedido || (pedido.id ? pedido.id.slice(0,6) : '');
+
+    const comprasVinculadas = listaCompras.filter(c => 
+      (c.locacaoId && c.locacaoId === pedId) ||
+      (c.numeroPedido && c.numeroPedido === pedNum) ||
+      (c.vinculo && (c.vinculo.includes(pedNum) || c.vinculo.includes(pedId)))
+    );
+    const totalCompras = comprasVinculadas.reduce((acc, c) => acc + (Number(c.valorPago || c.valorEstimado || 0)), 0);
+
+    const despesasVinculadas = lancamentosFin.filter(l =>
+      l.tipo === 'saida' &&
+      ((l.locacaoId && l.locacaoId === pedId) || (l.locacaoNumero && l.locacaoNumero === pedNum))
+    );
+    const totalDespesas = despesasVinculadas.reduce((acc, l) => acc + (Number(l.valor || 0)), 0);
+
+    const gastosTotais = totalCompras + totalDespesas;
+    const lucroLimpo = faturamento - gastosTotais;
+    const margemPct = faturamento > 0 ? (lucroLimpo / faturamento) * 100 : 0;
+
+    return {
+      faturamento,
+      gastosTotais,
+      lucroLimpo,
+      margemPct,
+      totalCompras,
+      totalDespesas,
+      comprasVinculadas,
+      despesasVinculadas
+    };
+  };
+
+  // ⭐ SELO VIP DO CLIENTE
+  const getSeloVIPLocacao = (clienteId, clienteNome) => {
+    const locsCliente = locacoes.filter(l => (l.clienteId === clienteId || l.clienteNome === clienteNome) && !String(l.status || '').toLowerCase().includes('cancel') && !String(l.status || '').toLowerCase().includes('orcam'));
+    const totalGasto = locsCliente.reduce((acc, l) => acc + Number(l.valorTotal || 0), 0);
+    if (totalGasto >= 5000) return { badge: `⭐ VIP Ouro — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, color: '#a16207', bg: '#fefce8', border: '#fde047' };
+    if (totalGasto >= 2000) return { badge: `✨ VIP Prata — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, color: '#334155', bg: '#f8fafc', border: '#cbd5e1' };
+    if (totalGasto >= 800 || locsCliente.length >= 2) return { badge: `⭐ Cliente VIP — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, color: '#1d4ed8', bg: '#eff6ff', border: '#bfdbfe' };
+    return null;
+  };
 
   // 🛫🛬 MODAL DE CHECK-IN DE IDA E VOLTA
   const [modalCheckinAberta, setModalCheckinAberta] = useState(false);
@@ -79,7 +128,6 @@ const Locacoes = () => {
   const [hoverPos, setHoverPos] = useState({ x: 0, y: 0 });
   // 🏷️ MODAL DE TIPO DE EVENTO
   const [modalEvento, setModalEvento] = useState(null);
-
   const [modalPagamento, setModalPagamento] = useState(false);
   const [pedidoSelecionado, setPedidoSelecionado] = useState(null);
   const [pagamento, setPagamento] = useState({ 
@@ -90,71 +138,115 @@ const Locacoes = () => {
     comprovantePreview: ''
   });
   const [salvandoPagamento, setSalvandoPagamento] = useState(false);
+  const [modalWhatsAppLocacao, setModalWhatsAppLocacao] = useState(null);
+  const [tipoMensagemZap, setTipoMensagemZap] = useState('cobranca');
+  const [mensagemCustomZap, setMensagemCustomZap] = useState('');
 
-  // 📲 DISPARO RÁPIDO VIA WHATSAPP DO PEDIDO
-  const enviarWhatsAppPedido = (pedido) => {
+  // 📲 ABRIR MODAL INTELIGENTE DE WHATSAPP DO PEDIDO
+  const abrirModalWhatsAppPedido = (pedido, tipo = 'cobranca') => {
     const tel = (pedido.clienteCelular || pedido.celular || pedido.telefone || '').replace(/\D/g, '');
     const nome = (pedido.clienteNome || 'Cliente').split(' ')[0];
     const num = pedido.numeroPedido || (pedido.id ? pedido.id.substring(0, 6).toUpperCase() : 'S/N');
     const total = Number(pedido.valorTotal || pedido.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const pago = Number(pedido.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const saldoNum = Number(pedido.valorTotal || pedido.total || 0) - Number(pedido.valorPago || 0);
+    const saldo = saldoNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
     const dataEv = pedido.dataRetirada ? new Date(pedido.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'A definir';
-    
-    let msg = `Olá, *${nome}*! Tudo bem? 😊\n\nPassando para confirmar os detalhes do seu pedido *#${num}* na Celebre Festas:\n\n📅 *Data do Evento:* ${dataEv}\n💰 *Valor Total:* R$ ${total}\n\nQualquer dúvida estamos à disposição! 🎈✨`;
-    
-    if (tel) {
-      window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank');
+    const dataDev = pedido.dataDevolucao ? new Date(pedido.dataDevolucao + 'T12:00:00').toLocaleDateString('pt-BR') : 'A definir';
+    const chavePix = configEmpresa?.chavePix || configEmpresa?.pix || 'Chave Pix da Empresa';
+    const nomeEmpresa = configEmpresa?.nomeFantasia || configEmpresa?.nome || 'Celebre Festas';
+
+    let txt = '';
+    if (tipo === 'cobranca') {
+      txt = `Olá, *${nome}*! Tudo bem? 😊\n\nPassando com um lembrete amigável sobre o saldo da sua locação para o evento do dia *${dataEv}* (Pedido *#${num}*):\n\n💰 *Valor Total:* R$ ${total}\n✅ *Valor Já Pago:* R$ ${pago}\n⏳ *Saldo a Quitar:* R$ ${saldo}\n\n🔑 *Chave Pix:* ${chavePix}\n🏢 *Favorecido:* ${nomeEmpresa}\n\nAssim que efetuar o pagamento, basta nos enviar o comprovante por aqui. Muito obrigado! 🎉✨`;
+    } else if (tipo === 'pre_evento') {
+      txt = `Olá, *${nome}*! Sua festa está chegando! 🎈🥳\n\nConfirmamos a data de retirada/entrega das suas peças para o dia *${dataEv}* (Pedido *#${num}*).\n\nNossa equipe já está com os itens separados com todo o carinho para que seu evento seja inesquecível! Se precisar de algo a mais, estamos à disposição! ✨`;
+    } else if (tipo === 'devolucao') {
+      txt = `Olá, *${nome}*! Esperamos que seu evento tenha sido incrível e cheio de momentos especiais! 💖\n\nLembramos que a devolução das peças do pedido *#${num}* está agendada para *${dataDev}*.\n\nQualquer dúvida sobre horário de funcionamento do galpão, estamos por aqui. Obrigado pela preferência! 🙏`;
     } else {
-      alert("Telefone/WhatsApp do cliente não encontrado.");
+      txt = `Olá, *${nome}*! Tudo bem? 😊\n\nPassando para confirmar os detalhes do seu pedido *#${num}* na Celebre Festas:\n\n📅 *Data do Evento:* ${dataEv}\n💰 *Valor Total:* R$ ${total}\n\nQualquer dúvida estamos à disposição! 🎈✨`;
     }
+
+    setTipoMensagemZap(tipo);
+    setMensagemCustomZap(txt);
+    setModalWhatsAppLocacao({ pedido, tel, nome, num, total, saldo, saldoNum, dataEv, dataDev, chavePix });
   };
 
-  // 🖨️ IMPRESSÃO DE RECIBO / COMPROVANTE DO PEDIDO EM PDF
+  const enviarWhatsAppFinal = () => {
+    if (!modalWhatsAppLocacao || !modalWhatsAppLocacao.tel) {
+      alert("⚠️ Telefone/WhatsApp do cliente não cadastrado no pedido.");
+      return;
+    }
+    const url = `https://wa.me/55${modalWhatsAppLocacao.tel}?text=${encodeURIComponent(mensagemCustomZap)}`;
+    window.open(url, '_blank');
+    setModalWhatsAppLocacao(null);
+  };
+
+  // 🖨️ IMPRESSÃO DE RECIBO / COMPROVANTE DO PEDIDO EM PDF COM QR CODE PIX
   const imprimirComprovante = (pedido) => {
     const num = pedido.numeroPedido || (pedido.id ? pedido.id.substring(0, 6).toUpperCase() : 'S/N');
     const cliente = pedido.clienteNome || 'Cliente';
     const dataEv = pedido.dataRetirada ? new Date(pedido.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data';
     const dataDev = pedido.dataDevolucao ? new Date(pedido.dataDevolucao + 'T12:00:00').toLocaleDateString('pt-BR') : 'Sem data';
     const itens = pedido.carrinho || pedido.itens || [];
-    const total = Number(pedido.valorTotal || pedido.total || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    const pago = Number(pedido.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
-    const saldo = (Number(pedido.valorTotal || pedido.total || 0) - Number(pedido.valorPago || 0)).toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const totalNum = Number(pedido.valorTotal || pedido.total || 0);
+    const pagoNum = Number(pedido.valorPago || 0);
+    const saldoNum = Math.max(0, totalNum - pagoNum);
+    const total = totalNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const pago = pagoNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const saldo = saldoNum.toLocaleString('pt-BR', { minimumFractionDigits: 2 });
+    const nomeEmpresa = configEmpresa?.nomeFantasia || configEmpresa?.nome || 'CELEBRE FESTAS';
+    const chavePix = configEmpresa?.chavePix || configEmpresa?.pix || 'contato@celebre.com.br';
 
-    const win = window.open('', '_blank', 'width=800,height=900');
+    const win = window.open('', '_blank', 'width=850,height=950');
     win.document.write(`
       <!DOCTYPE html>
       <html>
         <head>
-          <title>Recibo - Pedido #${num}</title>
+          <title>Recibo e Comprovante - Pedido #${num}</title>
           <style>
-            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 30px; color: #0f172a; }
-            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #c5a059; padding-bottom: 15px; margin-bottom: 20px; }
-            .logo { font-size: 24px; font-weight: 900; color: #c5a059; letter-spacing: 1px; }
-            .title { font-size: 18px; font-weight: bold; text-align: right; }
-            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; background: #f8fafc; padding: 15px; border-radius: 10px; margin-bottom: 20px; border: 1px solid #e2e8f0; }
-            .table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            .table th { background: #0f172a; color: #fff; padding: 10px; font-size: 12px; text-transform: uppercase; text-align: left; }
-            .table td { padding: 10px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
-            .totals { margin-left: auto; width: 280px; background: #f8fafc; padding: 15px; border-radius: 10px; border: 1px solid #e2e8f0; }
+            body { font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; padding: 35px; color: #0f172a; background: #ffffff; }
+            .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #c5a059; padding-bottom: 18px; margin-bottom: 24px; }
+            .logo { font-size: 26px; font-weight: 900; color: #c5a059; letter-spacing: 1.5px; }
+            .title { font-size: 18px; font-weight: 800; text-align: right; color: #0f172a; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; background: #f8fafc; padding: 18px; border-radius: 12px; margin-bottom: 24px; border: 1px solid #e2e8f0; font-size: 13.5px; }
+            .table { width: 100%; border-collapse: collapse; margin-bottom: 24px; }
+            .table th { background: #0f172a; color: #fff; padding: 11px 14px; font-size: 11.5px; text-transform: uppercase; text-align: left; letter-spacing: 0.5px; }
+            .table td { padding: 11px 14px; border-bottom: 1px solid #e2e8f0; font-size: 13px; }
+            .totals { margin-left: auto; width: 300px; background: #f8fafc; padding: 16px; border-radius: 12px; border: 1px solid #e2e8f0; }
             .totals-row { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 14px; }
-            .totals-row.total { font-weight: 900; font-size: 18px; color: #c5a059; border-top: 1px solid #cbd5e1; padding-top: 8px; }
-            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 15px; }
+            .totals-row.total { font-weight: 900; font-size: 18px; color: #c5a059; border-top: 2px solid #cbd5e1; padding-top: 10px; margin-top: 8px; }
+            .pix-box { margin-top: 28px; padding: 20px; border: 2px dashed #16a34a; background: #f0fdf4; border-radius: 14px; display: flex; align-items: center; justify-content: space-between; gap: 20px; }
+            .footer { margin-top: 40px; text-align: center; font-size: 12px; color: #64748b; border-top: 1px solid #e2e8f0; padding-top: 16px; }
+            @media print {
+              body { padding: 15px; }
+              .pix-box { border-color: #15803d !important; -webkit-print-color-adjust: exact; }
+            }
           </style>
         </head>
         <body>
           <div class="header">
-            <div class="logo">CELEBRE FESTAS</div>
-            <div class="title">COMPROVANTE DE LOCAÇÃO<br><small style="color: #64748b; font-size: 12px;">Pedido #${num}</small></div>
+            <div>
+              <div class="logo">${nomeEmpresa}</div>
+              <div style="font-size: 11px; color: #64748b; margin-top: 2px;">Locação de Acervo, Mobiliário & Decoração</div>
+            </div>
+            <div class="title">
+              COMPROVANTE DE LOCAÇÃO<br>
+              <small style="color: #64748b; font-size: 12px; font-weight: 600;">Pedido #${num}</small>
+            </div>
           </div>
+
           <div class="info-grid">
             <div><strong>Cliente:</strong> ${cliente}</div>
-            <div><strong>Serviço:</strong> ${pedido.tipoServicoFormatado || 'Locação'}</div>
-            <div><strong>Data Retirada/Evento:</strong> ${dataEv}</div>
-            <div><strong>Data Devolução:</strong> ${dataDev}</div>
+            <div><strong>Modalidade:</strong> ${pedido.tipoServicoFormatado || 'Locação'}</div>
+            <div><strong>📅 Retirada / Evento:</strong> ${dataEv}</div>
+            <div><strong>📦 Devolução:</strong> ${dataDev}</div>
           </div>
+
           <table class="table">
             <thead>
               <tr>
-                <th>Item / Peça</th>
+                <th>Item / Peça do Acervo</th>
                 <th style="text-align: center;">Qtd</th>
                 <th style="text-align: right;">Unitário</th>
                 <th style="text-align: right;">Subtotal</th>
@@ -163,20 +255,44 @@ const Locacoes = () => {
             <tbody>
               ${itens.length > 0 ? itens.map(i => `
                 <tr>
-                  <td>${i.nome || i.titulo || 'Item'}</td>
+                  <td><strong>${i.nome || i.titulo || 'Item'}</strong></td>
                   <td style="text-align: center;">${i.qtd || 1}</td>
                   <td style="text-align: right;">R$ ${Number(i.preco || 0).toFixed(2)}</td>
-                  <td style="text-align: right;">R$ ${(Number(i.preco || 0) * Number(i.qtd || 1)).toFixed(2)}</td>
+                  <td style="text-align: right; font-weight: bold;">R$ ${(Number(i.preco || 0) * Number(i.qtd || 1)).toFixed(2)}</td>
                 </tr>
               `).join('') : '<tr><td colspan="4" style="text-align:center;">Locação Registrada</td></tr>'}
             </tbody>
           </table>
+
           <div class="totals">
-            <div class="totals-row"><span>Valor Total:</span> <strong>R$ ${total}</strong></div>
-            <div class="totals-row"><span>Valor Pago:</span> <span>R$ ${pago}</span></div>
-            <div class="totals-row total"><span>Saldo Restante:</span> <span>R$ ${saldo}</span></div>
+            <div class="totals-row"><span>Valor do Contrato:</span> <strong>R$ ${total}</strong></div>
+            <div class="totals-row"><span>Valor Já Pago:</span> <span style="color: #16a34a; font-weight: bold;">R$ ${pago}</span></div>
+            <div class="totals-row total">
+              <span>Saldo Restante:</span> 
+              <span style="color: ${saldoNum > 0 ? '#dc2626' : '#16a34a'}; font-weight: 900;">
+                ${saldoNum > 0 ? `R$ ${saldo}` : '✓ QUITADO'}
+              </span>
+            </div>
           </div>
-          <div class="footer">Obrigado pela preferência! Celebre Festas - Eventos & Locações</div>
+
+          ${saldoNum > 0 ? `
+            <div class="pix-box">
+              <div style="flex: 1;">
+                <div style="font-weight: 900; color: #166534; font-size: 15px; margin-bottom: 4px;">⚡ PAGAMENTO RÁPIDO VIA PIX</div>
+                <div style="color: #15803d; font-size: 13px; margin-bottom: 8px;">Pague o saldo restante de <strong>R$ ${saldo}</strong> pelo QR Code abaixo:</div>
+                <div style="background: #ffffff; padding: 10px 14px; border-radius: 8px; border: 1px solid #bbf7d0; font-family: monospace; font-size: 12px; color: #0f172a; word-break: break-all;">
+                  <strong>Chave Pix Copia & Cola:</strong> ${chavePix}
+                </div>
+                <div style="font-size: 11px; color: #166534; margin-top: 6px;">Favorecido: <strong>${nomeEmpresa}</strong></div>
+              </div>
+              <div style="text-align: center;">
+                <img src="https://api.qrserver.com/v1/create-qr-code/?size=140x140&data=${encodeURIComponent(chavePix)}" alt="QR Code Pix" style="width: 130px; height: 130px; border-radius: 8px; border: 1px solid #bbf7d0; display: block;" />
+                <span style="font-size: 10px; color: #15803d; font-weight: bold; margin-top: 4px; display: block;">Escanear no App</span>
+              </div>
+            </div>
+          ` : ''}
+
+          <div class="footer">Obrigado pela preferência! ${nomeEmpresa} · Gestão de Eventos & Locações</div>
         </body>
       </html>
     `);
@@ -207,14 +323,21 @@ const Locacoes = () => {
       const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
       const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
       const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
+      const qCompras = query(collection(db, "lista_compras"), where("userId", "==", tenantId));
+      const qFin = query(collection(db, "financeiro_lancamentos"), where("userId", "==", tenantId));
       const docConfigRef = doc(db, "configuracoes_empresa", tenantId);
 
-      const [clientesSnapshot, snapEstoque, querySnapshot, docConf] = await Promise.all([
+      const [clientesSnapshot, snapEstoque, querySnapshot, snapCompras, snapFin, docConf] = await Promise.all([
         getDocs(qClientes),
         getDocs(qEstoque),
         getDocs(qLocacoes),
+        getDocs(qCompras),
+        getDocs(qFin),
         getDoc(docConfigRef)
       ]);
+
+      setListaCompras(snapCompras.docs.map(d => ({ id: d.id, ...d.data() })));
+      setLancamentosFin(snapFin.docs.map(d => ({ id: d.id, ...d.data() })));
 
       const dicionarioClientes = {};
       const mapaObjetosClientes = {};
@@ -1009,12 +1132,24 @@ const Locacoes = () => {
                                 type="button"
                                 onClick={(e) => { 
                                   e.stopPropagation();
-                                  enviarWhatsAppPedido(item);
+                                  abrirModalWhatsAppPedido(item, item.valorTotal - item.valorPago > 0 ? 'cobranca' : 'pre_evento');
                                   setMenuAberto(null);
                                 }} 
                                 className="item-menu"
                               >
-                                <span className="item-icon green">💬</span> Enviar por WhatsApp
+                                <span className="item-icon green">💬</span> WhatsApp & Cobrança
+                              </button>
+
+                              <button 
+                                type="button" 
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  setModalLucroPedido(item);
+                                  setMenuAberto(null);
+                                }} 
+                                className="item-menu"
+                              >
+                                <span className="item-icon emerald">📈</span> Lucro Real da Festa
                               </button>
 
                               <button 
@@ -1030,7 +1165,7 @@ const Locacoes = () => {
                               </button>
 
                               <button 
-                                type="button"
+                                type="button" 
                                 onClick={(e) => { 
                                   e.stopPropagation();
                                   setModalPagamento(item);
@@ -1038,11 +1173,29 @@ const Locacoes = () => {
                                 }} 
                                 className="item-menu"
                               >
-                                <span className="item-icon emerald">💳</span> Registrar Pagamento
+                                <span className="item-icon emerald">💳</span> Registrar Pagamento Rápido
                               </button>
 
                               <button 
-                                type="button"
+                                type="button" 
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  navigate('/novo-lancamento', {
+                                    state: {
+                                      locacaoId: item.id,
+                                      clienteNome: item.clienteNome,
+                                      tipo: 'entrada'
+                                    }
+                                  });
+                                  setMenuAberto(null);
+                                }} 
+                                className="item-menu"
+                              >
+                                <span className="item-icon gold">💰</span> Lançar no Financeiro Completo
+                              </button>
+
+                              <button 
+                                type="button" 
                                 onClick={(e) => { 
                                   e.stopPropagation();
                                   setModalRomaneioPedido(item);
@@ -1056,7 +1209,7 @@ const Locacoes = () => {
                               <div className="menu-divider" />
 
                               <button 
-                                type="button"
+                                type="button" 
                                 onClick={(e) => { 
                                   e.stopPropagation();
                                   handleExcluir(item.id);
@@ -1079,9 +1232,22 @@ const Locacoes = () => {
                           {initials}
                         </div>
                         <div>
-                          <strong style={{ textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '0.94rem', fontWeight: '800' }}>
-                            {item.clienteNome}
-                          </strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <strong style={{ textDecoration: isCancelado ? 'line-through' : 'none', color: 'var(--texto-principal)', fontSize: '0.94rem', fontWeight: '800' }}>
+                              {item.clienteNome}
+                            </strong>
+                            {(() => {
+                              const selo = getSeloVIPLocacao(item.clienteId, item.clienteNome);
+                              if (selo) {
+                                return (
+                                  <span style={{ backgroundColor: selo.bg, color: selo.color, border: `1px solid ${selo.border}`, padding: '1px 6px', borderRadius: '8px', fontSize: '0.65rem', fontWeight: '800' }}>
+                                    {selo.badge}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </div>
                           <div 
                             className="tags-row" 
                             style={{ marginTop: '4px' }}
@@ -1127,13 +1293,75 @@ const Locacoes = () => {
                     {/* DESKTOP COLUNAS SEPARADAS DE VALOR E A RECEBER */}
                     <td className="desktop-only-cell valor-cell">
                       <span className="valor-total" style={{ fontSize: '0.9rem', fontWeight: '800' }}>R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                      {(() => {
+                        const lk = calcularLucroFesta(item);
+                        return (
+                          <div 
+                            onClick={(e) => { e.stopPropagation(); setModalLucroPedido(item); }}
+                            style={{
+                              marginTop: '4px',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px',
+                              background: lk.gastosTotais > 0 ? '#f0fdf4' : '#f8fafc',
+                              border: `1px solid ${lk.gastosTotais > 0 ? '#bbf7d0' : '#e2e8f0'}`,
+                              borderRadius: '6px',
+                              padding: '2px 6px',
+                              fontSize: '0.68rem',
+                              fontWeight: '800',
+                              color: lk.lucroLimpo >= 0 ? '#15803d' : '#dc2626',
+                              cursor: 'pointer'
+                            }}
+                            title="Clique para ver o Raio-X de Custos e Lucro Real desta festa"
+                          >
+                            <span>📈 Lucro: R$ {lk.lucroLimpo.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}</span>
+                          </div>
+                        );
+                      })()}
                     </td>
                     
                     <td className="desktop-only-cell receber-cell">
                       {saldoDevedor > 0 ? (
-                        <span className="badge-status-pro devedor">
-                          ▲ R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                        </span>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                          <span className="badge-status-pro devedor">
+                            ▲ R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/novo-lancamento', {
+                                state: {
+                                  locacaoId: item.id,
+                                  locacaoNumero: item.numeroPedido || (item.id ? item.id.slice(0,6) : ''),
+                                  clienteId: item.clienteId || '',
+                                  clienteNome: item.clienteNome,
+                                  tipo: 'entrada',
+                                  categoria: 'Locações e Eventos',
+                                  valor: saldoDevedor,
+                                  descricao: `Recebimento de Saldo - Pedido #${item.numeroPedido || (item.id ? item.id.slice(0,6) : '')} (${item.clienteNome})`
+                                }
+                              });
+                            }}
+                            style={{
+                              background: '#f0fdf4',
+                              color: '#15803d',
+                              border: '1px solid #86efac',
+                              borderRadius: '6px',
+                              padding: '2px 6px',
+                              fontSize: '0.68rem',
+                              fontWeight: '800',
+                              cursor: 'pointer',
+                              whiteSpace: 'nowrap',
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '3px'
+                            }}
+                            title="Quitar / Abater saldo no Financeiro"
+                          >
+                            💰 Quitar / Abater
+                          </button>
+                        </div>
                       ) : (
                         <span className="badge-status-pro ok">
                           ✓ PAGO
@@ -1157,9 +1385,41 @@ const Locacoes = () => {
                               R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </strong>
                             {saldoDevedor > 0 ? (
-                              <span className="badge-status-pro devedor">
-                                ▲ R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                              </span>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px' }}>
+                                <span className="badge-status-pro devedor">
+                                  ▲ R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate('/novo-lancamento', {
+                                      state: {
+                                        locacaoId: item.id,
+                                        locacaoNumero: item.numeroPedido || (item.id ? item.id.slice(0,6) : ''),
+                                        clienteId: item.clienteId || '',
+                                        clienteNome: item.clienteNome,
+                                        tipo: 'entrada',
+                                        categoria: 'Locações e Eventos',
+                                        valor: saldoDevedor,
+                                        descricao: `Recebimento de Saldo - Pedido #${item.numeroPedido || (item.id ? item.id.slice(0,6) : '')} (${item.clienteNome})`
+                                      }
+                                    });
+                                  }}
+                                  style={{
+                                    background: '#f0fdf4',
+                                    color: '#15803d',
+                                    border: '1px solid #86efac',
+                                    borderRadius: '5px',
+                                    padding: '2px 5px',
+                                    fontSize: '0.65rem',
+                                    fontWeight: '800',
+                                    cursor: 'pointer'
+                                  }}
+                                >
+                                  💰 Quitar
+                                </button>
+                              </div>
                             ) : (
                               <span className="badge-status-pro ok">
                                 ✓ PAGO
@@ -1581,6 +1841,274 @@ const Locacoes = () => {
           pedido={modalRomaneioPedido}
           onClose={() => setModalRomaneioPedido(null)}
         />
+      )}
+
+      {/* 💰 MODAL DE RAIO-X & LUCRO REAL DA FESTA */}
+      {modalLucroPedido && createPortal(
+        (() => {
+          const lk = calcularLucroFesta(modalLucroPedido);
+          const numPed = modalLucroPedido.numeroPedido || (modalLucroPedido.id ? modalLucroPedido.id.slice(0,6).toUpperCase() : '');
+
+          return (
+            <div className="modal-overlay-evento" onClick={() => setModalLucroPedido(null)} style={{ background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)', zIndex: 999999 }}>
+              <div className="modal-evento-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px', borderRadius: '20px', overflow: 'hidden' }}>
+                
+                {/* CABEÇALHO */}
+                <div style={{ background: '#0f172a', color: '#ffffff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fde68a', fontWeight: '800' }}>
+                      📈 Raio-X de Lucro Real da Festa
+                    </h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#cbd5e1' }}>
+                      Pedido #{numPed} · {modalLucroPedido.clienteNome}
+                    </p>
+                  </div>
+                  <button onClick={() => setModalLucroPedido(null)} style={{ color: '#fff', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+                </div>
+
+                <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                  
+                  {/* CARDS DE FATURAMENTO / CUSTO / LUCRO */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
+                    
+                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '12px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase' }}>💰 Faturamento</span>
+                      <div style={{ fontSize: '1.2rem', fontWeight: '850', color: '#1d4ed8', marginTop: '2px' }}>
+                        R$ {lk.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: '#3b82f6' }}>valor do contrato</span>
+                    </div>
+
+                    <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#991b1b', textTransform: 'uppercase' }}>🛒 Compras/Custos</span>
+                      <div style={{ fontSize: '1.2rem', fontWeight: '850', color: '#dc2626', marginTop: '2px' }}>
+                        R$ {lk.gastosTotais.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: '#ef4444' }}>insumos & despesas</span>
+                    </div>
+
+                    <div style={{ background: lk.lucroLimpo >= 0 ? '#f0fdf4' : '#fef2f2', border: `1px solid ${lk.lucroLimpo >= 0 ? '#bbf7d0' : '#fecaca'}`, borderRadius: '12px', padding: '12px' }}>
+                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: lk.lucroLimpo >= 0 ? '#166534' : '#991b1b', textTransform: 'uppercase' }}>💎 Lucro Líquido</span>
+                      <div style={{ fontSize: '1.2rem', fontWeight: '850', color: lk.lucroLimpo >= 0 ? '#15803d' : '#b91c1c', marginTop: '2px' }}>
+                        R$ {lk.lucroLimpo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </div>
+                      <span style={{ fontSize: '0.65rem', color: lk.lucroLimpo >= 0 ? '#16a34a' : '#ef4444', fontWeight: '700' }}>
+                        {lk.margemPct.toFixed(0)}% margem real
+                      </span>
+                    </div>
+
+                  </div>
+
+                  {/* LISTA DE COMPRAS E INSUMOS VINCULADOS A ESTA FESTA */}
+                  <div>
+                    <h5 style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#334155', fontWeight: '800', textTransform: 'uppercase' }}>
+                      🛒 Itens Comprados Especificamente para este Evento ({lk.comprasVinculadas.length})
+                    </h5>
+
+                    {lk.comprasVinculadas.length === 0 ? (
+                      <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '10px', color: '#64748b', fontSize: '0.78rem', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                        ✨ Nenhum gasto ou compra adicional registrado para esta festa (100% de margem com acervo existente).
+                      </div>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>
+                        {lk.comprasVinculadas.map((c, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.78rem' }}>
+                            <div>
+                              <strong>{c.nome}</strong> · <span style={{ color: '#64748b' }}>{c.fornecedor || 'Fornecedor'} ({c.quantidade || 1} un)</span>
+                            </div>
+                            <strong style={{ color: '#dc2626' }}>- R$ {Number(c.valorPago || c.valorEstimado || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+
+                </div>
+
+                {/* RODAPÉ */}
+                <div style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const it = modalLucroPedido;
+                      setModalLucroPedido(null);
+                      navigate('/nova-compra', { state: { locacaoId: it.id, numeroPedido: numPed, clienteNome: it.clienteNome } });
+                    }}
+                    style={{ flex: 1, padding: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    🛒 Vincular Nova Compra a esta Festa
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setModalLucroPedido(null)}
+                    style={{ padding: '10px 16px', background: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}
+                  >
+                    Fechar
+                  </button>
+                </div>
+
+              </div>
+            </div>
+          );
+        })(),
+        document.body
+      )}
+
+      {/* 📲 MODAL INTELIGENTE DE MENSAGENS WHATSAPP */}
+      {modalWhatsAppLocacao && createPortal(
+        (
+          <div className="modal-overlay-evento" onClick={() => setModalWhatsAppLocacao(null)} style={{ background: 'rgba(15, 23, 42, 0.7)', backdropFilter: 'blur(6px)', zIndex: 999999 }}>
+            <div className="modal-evento-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px', borderRadius: '20px', overflow: 'hidden' }}>
+              
+              {/* CABEÇALHO WHATSAPP */}
+              <div style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#ffffff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '24px' }}>💬</span>
+                  <div>
+                    <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#ffffff', fontWeight: '800' }}>
+                      Assistente WhatsApp com 1 Clique
+                    </h3>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#d1fae5' }}>
+                      Pedido #{modalWhatsAppLocacao.num} · {modalWhatsAppLocacao.nome}
+                    </p>
+                  </div>
+                </div>
+                <button onClick={() => setModalWhatsAppLocacao(null)} style={{ color: '#fff', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+              </div>
+
+              <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                
+                {/* SELETOR DE MODELOS DE MENSAGEM */}
+                <div>
+                  <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
+                    Selecione o Modelo de Mensagem:
+                  </label>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                    <button
+                      type="button"
+                      onClick={() => abrirModalWhatsAppPedido(modalWhatsAppLocacao.pedido, 'cobranca')}
+                      style={{
+                        padding: '10px 8px',
+                        borderRadius: '10px',
+                        border: tipoMensagemZap === 'cobranca' ? '2px solid #059669' : '1px solid #cbd5e1',
+                        background: tipoMensagemZap === 'cobranca' ? '#ecfdf5' : '#ffffff',
+                        color: tipoMensagemZap === 'cobranca' ? '#047857' : '#334155',
+                        fontWeight: '800',
+                        fontSize: '0.74rem',
+                        cursor: 'pointer',
+                        textAlign: 'center'
+                      }}
+                    >
+                      💰 Cobrança / Pix<br/>
+                      <small style={{ fontWeight: 'normal', color: '#059669' }}>R$ {modalWhatsAppLocacao.saldo}</small>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => abrirModalWhatsAppPedido(modalWhatsAppLocacao.pedido, 'pre_evento')}
+                      style={{
+                        padding: '10px 8px',
+                        borderRadius: '10px',
+                        border: tipoMensagemZap === 'pre_evento' ? '2px solid #059669' : '1px solid #cbd5e1',
+                        background: tipoMensagemZap === 'pre_evento' ? '#ecfdf5' : '#ffffff',
+                        color: tipoMensagemZap === 'pre_evento' ? '#047857' : '#334155',
+                        fontWeight: '800',
+                        fontSize: '0.74rem',
+                        cursor: 'pointer',
+                        textAlign: 'center'
+                      }}
+                    >
+                      🎉 Pré-Evento<br/>
+                      <small style={{ fontWeight: 'normal' }}>Festa Chegando</small>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => abrirModalWhatsAppPedido(modalWhatsAppLocacao.pedido, 'devolucao')}
+                      style={{
+                        padding: '10px 8px',
+                        borderRadius: '10px',
+                        border: tipoMensagemZap === 'devolucao' ? '2px solid #059669' : '1px solid #cbd5e1',
+                        background: tipoMensagemZap === 'devolucao' ? '#ecfdf5' : '#ffffff',
+                        color: tipoMensagemZap === 'devolucao' ? '#047857' : '#334155',
+                        fontWeight: '800',
+                        fontSize: '0.74rem',
+                        cursor: 'pointer',
+                        textAlign: 'center'
+                      }}
+                    >
+                      📦 Devolução<br/>
+                      <small style={{ fontWeight: 'normal' }}>Lembrete Galpão</small>
+                    </button>
+                  </div>
+                </div>
+
+                {/* TEXTAREA COM PREVIEW EDITÁVEL */}
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                    <label style={{ fontSize: '0.75rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase' }}>
+                      Mensagem que será enviada:
+                    </label>
+                    <span style={{ fontSize: '0.7rem', color: '#64748b' }}>WhatsApp: {modalWhatsAppLocacao.tel || 'Sem telefone'}</span>
+                  </div>
+                  <textarea
+                    rows={8}
+                    value={mensagemCustomZap}
+                    onChange={(e) => setMensagemCustomZap(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      borderRadius: '10px',
+                      border: '1.5px solid #cbd5e1',
+                      fontSize: '0.85rem',
+                      fontFamily: 'inherit',
+                      lineHeight: '1.45',
+                      background: '#f8fafc',
+                      color: '#0f172a',
+                      resize: 'vertical'
+                    }}
+                  />
+                </div>
+
+              </div>
+
+              {/* RODAPÉ COM BOTÃO ENVIAR */}
+              <div style={{ padding: '14px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                <button
+                  type="button"
+                  onClick={() => setModalWhatsAppLocacao(null)}
+                  style={{ padding: '10px 16px', background: '#ffffff', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  onClick={enviarWhatsAppFinal}
+                  style={{
+                    padding: '10px 20px',
+                    background: '#25D366',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '10px',
+                    fontWeight: '850',
+                    fontSize: '0.85rem',
+                    cursor: 'pointer',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                    boxShadow: '0 4px 12px rgba(37, 211, 102, 0.35)'
+                  }}
+                >
+                  <span>🚀 Abrir WhatsApp & Enviar</span>
+                </button>
+              </div>
+
+            </div>
+          </div>
+        ),
+        document.body
       )}
 
     </div>
