@@ -3,17 +3,66 @@ import autoTable from 'jspdf-autotable';
 import logoCelebreMarcaDagua from '../../assets/LOGO_CELEBRE.png';
 
 /**
+ * 🚚 DETECÇÃO ROBUSTA DE ENTREGA VS RETIRADA NA LOJA
+ */
+const verificarSeEhEntrega = (loc) => {
+  if (!loc) return false;
+  const freteTipo = String(
+    loc.tipoFrete || 
+    loc.modalidadeFrete || 
+    loc.tipoEnvio || 
+    loc.logistica?.tipo || 
+    loc.logistica?.tipoFrete || 
+    ''
+  ).toLowerCase().trim();
+
+  if (freteTipo.includes('entrega') || freteTipo.includes('frete') || freteTipo.includes('transport') || freteTipo.includes('levar')) {
+    return true;
+  }
+  if (freteTipo.includes('loja') || freteTipo.includes('retirada') || freteTipo.includes('balcao') || freteTipo.includes('pegue')) {
+    return false;
+  }
+  if (loc.modalidadeServico === 'decoracao_completa' || loc.modalidadeServico === 'decoracao') {
+    return true;
+  }
+  if (Number(loc.taxaEntrega || loc.valorFrete || loc.frete || 0) > 0) {
+    return true;
+  }
+  const end = loc.logistica?.endereco || loc.endereco || '';
+  if (end.trim() && !end.toLowerCase().includes('retirada') && !end.toLowerCase().includes('balcão') && !end.toLowerCase().includes('loja')) {
+    return true;
+  }
+  return false;
+};
+
+/**
+ * 📍 FORMATAÇÃO DE ENDEREÇO COMPLETO
+ */
+const obterEnderecoCompleto = (loc) => {
+  if (!loc) return '';
+  const partes = [
+    loc.logistica?.endereco || loc.endereco,
+    loc.logistica?.numero || loc.numero,
+    loc.logistica?.bairro || loc.bairro,
+    loc.logistica?.cidade || loc.cidade,
+    loc.logistica?.estado || loc.estado
+  ].filter(Boolean);
+  return partes.join(', ');
+};
+
+/**
  * 📦 GERADOR DE FOLHA DE SEPARAÇÃO GERAL DE GALPÃO (PDF)
- * Consolida todas as peças a serem separadas para as festas do período selecionado.
+ * Layout Luxury 100% Blindado agrupado por Pedido / Cliente
  */
 export const gerarFolhaSeparacaoGalpaoPDF = (
   locacoes = [],
   filtroInfo = {},
-  dadosEmpresa = {}
+  dadosEmpresa = {},
+  acao = 'preview'
 ) => {
   if (!locacoes || locacoes.length === 0) {
     alert("⚠️ Não há pedidos na lista para gerar a Folha de Separação.");
-    return;
+    return null;
   }
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -24,132 +73,371 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
   const dataHoje = new Date().toLocaleDateString('pt-BR');
   const horaHoje = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
+  // 🎨 PALETA DE CORES
   const corDourado = [197, 160, 89];
   const corAzulEscuro = [15, 23, 42];
+  const corCinzaBorda = [203, 213, 225];
+  const corCinzaFundo = [248, 250, 252];
+  const corTextoEscuro = [15, 23, 42];
+  const corTextoSuave = [100, 116, 139];
 
-  // Marca d'água
+  // 💧 MARCA D'ÁGUA SUAVE
   const adicionarMarcaDagua = () => {
     try {
       doc.saveGraphicsState();
       if (typeof doc.setGState === 'function') {
-        doc.setGState(new doc.GState({ opacity: 0.04 }));
+        doc.setGState(new doc.GState({ opacity: 0.035 }));
       }
-      doc.addImage(logoCelebreMarcaDagua, 'PNG', 55, 90, 100, 100);
+      doc.addImage(logoCelebreMarcaDagua, 'PNG', (pageWidth - 90) / 2, (pageHeight - 90) / 2, 90, 90);
       doc.restoreGraphicsState();
     } catch (e) {}
   };
 
-  adicionarMarcaDagua();
+  // 📐 CÁLCULO DE KPIS CONSOLIDADOS
+  let totalPecasGeral = 0;
+  let totalEntregas = 0;
+  let totalRetiradas = 0;
 
-  // Cabeçalho Top Bar
-  doc.setFillColor(corDourado[0], corDourado[1], corDourado[2]);
-  doc.rect(0, 0, pageWidth, 3, 'F');
+  locacoes.forEach(loc => {
+    const isEnt = verificarSeEhEntrega(loc);
+    if (isEnt) totalEntregas++;
+    else totalRetiradas++;
 
-  doc.setFillColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
-  doc.rect(0, 3, pageWidth, 24, 'F');
-
-  doc.setTextColor(255, 255, 255);
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(13);
-  doc.text('MAPA GERAL DE SEPARACAO & EXPEDICAO (GALPAO)', 14, 13);
-
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(8.5);
-  doc.setTextColor(corDourado[0], corDourado[1], corDourado[2]);
-  doc.text(`${nomeEmpresa.toUpperCase()} • EMISSAO: ${dataHoje} as ${horaHoje}`, 14, 20);
-
-  // Consolidação de Peças
-  const tabelaLinhas = [];
-  let totalPecasConsolidado = 0;
-
-  locacoes.forEach((loc, idx) => {
-    const numPed = loc.numeroPedido ? `#${loc.numeroPedido}` : `PED-${idx + 1}`;
-    const cliente = loc.clienteNome || 'Cliente';
-    const dataFesta = loc.dataRetirada ? loc.dataRetirada.split('-').reverse().join('/') : '--/--/----';
     const itens = loc.itens || [];
-
     itens.forEach(item => {
-      const qtd = Number(item.quantidade || item.qtd || 1);
-      totalPecasConsolidado += qtd;
-      tabelaLinhas.push([
-        '[  ]',
-        String(qtd),
-        item.codigo || item.sku || '-',
-        item.nome || item.descricao || 'Item do Acervo',
-        `${numPed} - ${cliente}`,
-        dataFesta
-      ]);
+      totalPecasGeral += Number(item.quantidade || item.qtd || 1);
     });
   });
 
-  // KPIs
-  let startY = 32;
-  doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(226, 232, 240);
-  doc.roundedRect(14, startY, pageWidth - 28, 14, 2, 2, 'FD');
+  // ═══════════════════════════════════════════════════════════
+  // 1. CABEÇALHO PRINCIPAL DA FOLHA
+  // ═══════════════════════════════════════════════════════════
+  const desenharCabecalhoPrincipal = () => {
+    // Top Bar Dourado
+    doc.setFillColor(corDourado[0], corDourado[1], corDourado[2]);
+    doc.rect(0, 0, pageWidth, 3.5, 'F');
+
+    // Barra Superior Azul Navy
+    doc.setFillColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
+    doc.rect(0, 3.5, pageWidth, 23, 'F');
+
+    // Título Principal
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('MAPA GERAL DE SEPARACAO & EXPEDICAO (GALPAO)', 14, 13);
+
+    // Subtítulo e Empresa
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(corDourado[0], corDourado[1], corDourado[2]);
+    doc.text(`${nomeEmpresa.toUpperCase()}`, 14, 20.5);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(203, 213, 225);
+    doc.setFontSize(7.5);
+    doc.text(`• Emissao: ${dataHoje} as ${horaHoje}`, 14 + doc.getTextWidth(nomeEmpresa.toUpperCase()) + 3, 20.5);
+  };
+
+  desenharCabecalhoPrincipal();
+  adicionarMarcaDagua();
+
+  // ═══════════════════════════════════════════════════════════
+  // 2. RESUMO EXECUTIVO (KPIS)
+  // ═══════════════════════════════════════════════════════════
+  let currentY = 30;
+  doc.setFillColor(241, 245, 249);
+  doc.setDrawColor(corCinzaBorda[0], corCinzaBorda[1], corCinzaBorda[2]);
+  doc.setLineWidth(0.3);
+  doc.roundedRect(14, currentY, pageWidth - 28, 12, 2, 2, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8.5);
-  doc.setTextColor(15, 23, 42);
-  doc.text(`Total de Pedidos: ${locacoes.length}`, 18, startY + 9);
-  doc.text(`Total de Peças a Separar: ${totalPecasConsolidado} un.`, 80, startY + 9);
-  doc.text(`Filtro: ${filtroInfo.data ? filtroInfo.data : 'Geral'}`, 155, startY + 9);
+  doc.setFontSize(7.8);
+  doc.setTextColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
+  doc.text(`PEDIDOS: ${locacoes.length}`, 18, currentY + 7.5);
 
-  // Tabela com autotable
-  autoTable(doc, {
-    startY: startY + 18,
-    head: [['CONF', 'QTD', 'COD / SKU', 'DESCRICAO DA PECA / ACERVO', 'PEDIDO / CLIENTE', 'DATA SAIDA']],
-    body: tabelaLinhas,
-    theme: 'grid',
-    styles: {
-      fontSize: 8,
-      cellPadding: 3,
-      valign: 'middle',
-      textColor: [15, 23, 42],
-      lineColor: [226, 232, 240],
-      lineWidth: 0.1
-    },
-    headStyles: {
-      fillColor: [15, 23, 42],
-      textColor: [255, 255, 255],
-      fontStyle: 'bold',
-      halign: 'left',
-      fontSize: 8
-    },
-    columnStyles: {
-      0: { cellWidth: 14, halign: 'center', fontStyle: 'bold' },
-      1: { cellWidth: 14, halign: 'center', fontStyle: 'bold' },
-      2: { cellWidth: 22, halign: 'center', fontStyle: 'bold' },
-      3: { cellWidth: 'auto' },
-      4: { cellWidth: 46 },
-      5: { cellWidth: 22, halign: 'center' }
-    },
-    alternateRowStyles: {
-      fillColor: [248, 250, 252]
-    },
-    didDrawPage: (data) => {
+  doc.setTextColor(corDourado[0], corDourado[1], corDourado[2]);
+  doc.text(`TOTAL DE PECAS: ${totalPecasGeral} un.`, 54, currentY + 7.5);
+
+  doc.setTextColor(37, 99, 235);
+  doc.text(`MODALIDADE: ${totalEntregas} Entrega(s) | ${totalRetiradas} Balcao`, 108, currentY + 7.5);
+
+  const textoFiltro = filtroInfo.data ? `Data: ${filtroInfo.data}` : (filtroInfo.motorista ? `Motorista: ${filtroInfo.motorista}` : 'Geral / Todos');
+  doc.setTextColor(15, 118, 110);
+  doc.text(`FILTRO: ${textoFiltro}`, pageWidth - 18, currentY + 7.5, { align: 'right' });
+
+  currentY += 16;
+
+  // ═══════════════════════════════════════════════════════════
+  // 3. RENDERIZAÇÃO DOS PEDIDOS (AGRUPADO POR CLIENTE / PEDIDO)
+  // ═══════════════════════════════════════════════════════════
+  locacoes.forEach((loc, pedIdx) => {
+    const numPed = loc.numeroPedido ? `#${loc.numeroPedido}` : `PED-${pedIdx + 1}`;
+    const clienteNome = loc.clienteNome || 'Cliente nao informado';
+    const foneCliente = loc.clienteTelefone || loc.telefone || '';
+    const tema = loc.tema || loc.temaFesta || '';
+    const isEntrega = verificarSeEhEntrega(loc);
+    const endereco = obterEnderecoCompleto(loc);
+
+    const dataSaidaBr = loc.dataRetirada ? loc.dataRetirada.split('-').reverse().join('/') : '--/--/----';
+    const horaSaida = loc.horarioRetirada ? `as ${loc.horarioRetirada}` : '';
+    const dataDevBr = loc.dataDevolucao ? loc.dataDevolucao.split('-').reverse().join('/') : '';
+    const horaDev = loc.horarioDevolucao ? `as ${loc.horarioDevolucao}` : '';
+
+    const motorista = loc.logistica?.motoristaNome;
+    const veiculo = loc.logistica?.veiculo;
+    const caixasQtd = loc.embalagens?.caixas || loc.embalagens?.caixasPlasticas || 0;
+    const sacolasQtd = loc.embalagens?.sacolas || loc.embalagens?.sacolasTecido || 0;
+    const capasQtd = loc.embalagens?.capas || loc.embalagens?.capasPainel || 0;
+    const observacoes = loc.observacoes || loc.obsSeparacao || loc.logistica?.instrucoesMotorista || '';
+
+    const itens = loc.itens || [];
+    const totalPecasPedido = itens.reduce((acc, it) => acc + Number(it.quantidade || it.qtd || 1), 0);
+
+    // Calcular altura necessária para o cabeçalho do pedido
+    const temInfoTransporte = motorista || caixasQtd > 0 || sacolasQtd > 0 || capasQtd > 0;
+    let cardHeaderHeight = 20;
+    if (temInfoTransporte) cardHeaderHeight += 5;
+    if (observacoes) cardHeaderHeight += 5;
+
+    // Checagem de quebra de página antes do pedido
+    if (currentY + cardHeaderHeight + 25 > pageHeight - 15) {
+      doc.addPage();
       adicionarMarcaDagua();
-      // Rodapé
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(7.5);
-      doc.setTextColor(100, 116, 139);
-      doc.text(`Celebre Sistema de Gestao • Folha de Galpao • Pagina ${doc.internal.getNumberOfPages()}`, 14, pageHeight - 8);
+      currentY = 16;
     }
+
+    // ── BOX DO CABEÇALHO DO PEDIDO ──
+    const cardHeaderY = currentY;
+
+    doc.setFillColor(corCinzaFundo[0], corCinzaFundo[1], corCinzaFundo[2]);
+    doc.setDrawColor(corCinzaBorda[0], corCinzaBorda[1], corCinzaBorda[2]);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(14, cardHeaderY, pageWidth - 28, cardHeaderHeight, 2, 2, 'FD');
+
+    // Faixa esquerda indicadora de modalidade
+    doc.setFillColor(isEntrega ? 37 : 217, isEntrega ? 99 : 119, isEntrega ? 235 : 6);
+    doc.roundedRect(14, cardHeaderY, 3, cardHeaderHeight, 1, 1, 'F');
+
+    // Linha 1: Pedido #, Cliente e Tag de Frete
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(9.5);
+    doc.setTextColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
+    const textoClienteHeader = `${numPed} — ${clienteNome.toUpperCase()}${foneCliente ? ` (Tel: ${foneCliente})` : ''}`;
+    doc.text(textoClienteHeader.length > 60 ? `${textoClienteHeader.substring(0, 58)}...` : textoClienteHeader, 20, cardHeaderY + 5.5);
+
+    // Tag Frete no Canto Direito
+    const tagTxt = isEntrega ? '[ ENTREGA ]' : '[ RETIRADA NO BALCAO ]';
+    const tagBg = isEntrega ? [239, 246, 255] : [254, 252, 232];
+    const tagBorder = isEntrega ? [191, 219, 254] : [254, 240, 138];
+    const tagColor = isEntrega ? [29, 78, 216] : [161, 98, 7];
+
+    const tagWidth = 44;
+    const tagX = pageWidth - 14 - tagWidth - 2;
+    doc.setFillColor(tagBg[0], tagBg[1], tagBg[2]);
+    doc.setDrawColor(tagBorder[0], tagBorder[1], tagBorder[2]);
+    doc.roundedRect(tagX, cardHeaderY + 1.8, tagWidth, 5.5, 1, 1, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(6.8);
+    doc.setTextColor(tagColor[0], tagColor[1], tagColor[2]);
+    doc.text(tagTxt, tagX + (tagWidth / 2), cardHeaderY + 5.5, { align: 'center' });
+
+    // Linha 2: Datas de Saída / Retorno e Tema
+    let linha2Y = cardHeaderY + 10.5;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.2);
+    doc.setTextColor(corTextoEscuro[0], corTextoEscuro[1], corTextoEscuro[2]);
+
+    let textoLinha2 = `SAIDA: ${dataSaidaBr} ${horaSaida}`;
+    if (dataDevBr) textoLinha2 += `   |   RETORNO: ${dataDevBr} ${horaDev}`;
+    if (tema) textoLinha2 += `   |   TEMA: ${tema}`;
+    doc.text(textoLinha2, 20, linha2Y);
+
+    // Linha 3: Local / Endereço
+    let linha3Y = linha2Y + 5;
+    const localExibir = isEntrega ? (endereco || 'Endereco nao informado') : 'Retirada no Galpao / Loja';
+    doc.text(`LOCAL: ${localExibir.length > 85 ? `${localExibir.substring(0, 82)}...` : localExibir}`, 20, linha3Y);
+
+    // Linha 4 (Opcional): Transporte e Embalagens
+    let proximaLinhaY = linha3Y;
+    if (temInfoTransporte) {
+      proximaLinhaY += 5;
+      const partesTransp = [];
+      if (motorista) partesTransp.push(`MOTORISTA: ${motorista}${veiculo ? ` (${veiculo})` : ''}`);
+      const partesEmb = [];
+      if (caixasQtd > 0) partesEmb.push(`${caixasQtd}cx`);
+      if (sacolasQtd > 0) partesEmb.push(`${sacolasQtd}sc`);
+      if (capasQtd > 0) partesEmb.push(`${capasQtd}cp`);
+      if (partesEmb.length > 0) partesTransp.push(`EMBALAGENS: ${partesEmb.join(', ')}`);
+
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7);
+      doc.setTextColor(30, 41, 59);
+      doc.text(partesTransp.join('   |   '), 20, proximaLinhaY);
+    }
+
+    // Linha 5 (Opcional): Observações
+    if (observacoes) {
+      proximaLinhaY += 5;
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(6.8);
+      doc.setTextColor(180, 83, 9);
+      doc.text(`OBSERVACOES: ${observacoes.length > 88 ? `${observacoes.substring(0, 85)}...` : observacoes}`, 20, proximaLinhaY);
+    }
+
+    currentY += cardHeaderHeight + 2;
+
+    // ── TABELA DE PEÇAS DESTE PEDIDO ──
+    const tabelaItensPedido = itens.map(it => {
+      const qtd = String(it.quantidade || it.qtd || 1);
+      const cod = it.codigo || it.sku || '-';
+      const nome = it.nome || it.descricao || 'Item sem nome';
+      const cat = it.categoria || 'Geral';
+      const obsItem = it.observacoes || it.obs || (it.checkedSeparacao ? '[Pre-separado]' : '-');
+
+      return [
+        '[   ]',
+        qtd,
+        cod,
+        nome,
+        cat,
+        obsItem
+      ];
+    });
+
+    autoTable(doc, {
+      startY: currentY,
+      head: [['CONF', 'QTD', 'CODIGO / SKU', 'DESCRICAO DA PECA / ACERVO', 'CATEGORIA', 'OBSERVACOES DE SEPARACAO']],
+      body: tabelaItensPedido.length > 0 ? tabelaItensPedido : [['[   ]', '0', '-', 'Nenhuma peca cadastrada neste pedido', '-', '-']],
+      theme: 'grid',
+      styles: {
+        fontSize: 7.5,
+        cellPadding: 2.2,
+        valign: 'middle',
+        textColor: [15, 23, 42],
+        lineColor: [226, 232, 240],
+        lineWidth: 0.1
+      },
+      headStyles: {
+        fillColor: [15, 23, 42],
+        textColor: [255, 255, 255],
+        fontStyle: 'bold',
+        halign: 'left',
+        fontSize: 7.5,
+        cellPadding: 2.5
+      },
+      columnStyles: {
+        0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', textColor: [100, 116, 139] },
+        1: { cellWidth: 14, halign: 'center', fontStyle: 'bold' },
+        2: { cellWidth: 26, halign: 'center', fontStyle: 'bold', textColor: [15, 23, 42] },
+        3: { cellWidth: 'auto', fontStyle: 'bold' },
+        4: { cellWidth: 32 },
+        5: { cellWidth: 42, fontSize: 7, textColor: [71, 85, 105] }
+      },
+      alternateRowStyles: {
+        fillColor: [248, 250, 252]
+      },
+      margin: { left: 14, right: 14 },
+      didDrawPage: () => {
+        adicionarMarcaDagua();
+      }
+    });
+
+    // Subtotal do pedido
+    const finalTableY = doc.lastAutoTable.finalY;
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.rect(14, finalTableY, pageWidth - 28, 5, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(71, 85, 105);
+    doc.text(`Subtotal do Pedido ${numPed}: ${totalPecasPedido} peca(s) a separar`, pageWidth - 16, finalTableY + 3.5, { align: 'right' });
+
+    currentY = finalTableY + 8;
   });
 
-  const totalPages = doc.internal.getNumberOfPages();
-  const finalY = doc.lastAutoTable.finalY + 12;
-
-  if (finalY + 25 < pageHeight) {
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(8);
-    doc.setTextColor(15, 23, 42);
-    doc.line(14, finalY + 10, 85, finalY + 10);
-    doc.text('Responsavel pela Separacao', 14, finalY + 15);
-
-    doc.line(125, finalY + 10, 196, finalY + 10);
-    doc.text('Conferente / Expedicao', 125, finalY + 15);
+  // ═══════════════════════════════════════════════════════════
+  // 4. ÁREA DE EXPEDIÇÃO & ASSINATURAS (RODAPÉ FINAL)
+  // ═══════════════════════════════════════════════════════════
+  if (currentY + 30 > pageHeight - 12) {
+    doc.addPage();
+    adicionarMarcaDagua();
+    currentY = 20;
   }
 
-  doc.save(`Folha_Separacao_Galpao_${dataHoje.replace(/\//g, '-')}.pdf`);
+  // Box de Orientação de Galpão
+  doc.setFillColor(254, 252, 232);
+  doc.setDrawColor(254, 240, 138);
+  doc.roundedRect(14, currentY, pageWidth - 28, 8, 1.5, 1.5, 'FD');
+
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(6.8);
+  doc.setTextColor(161, 98, 7);
+  doc.text('ORIENTACAO DE GALPAO:', 18, currentY + 5.2);
+  doc.setFont('helvetica', 'normal');
+  doc.text('Conferir a integridade e estado de conservacao de cada peca antes do carregamento. Acondicionar em embalagens apropriadas.', 56, currentY + 5.2);
+
+  currentY += 14;
+
+  // Linhas de Assinatura
+  const sigWidth = 54;
+  const sigGap = (pageWidth - 28 - (sigWidth * 3)) / 2;
+
+  const sigs = [
+    { label: 'Responsavel pela Separacao', sub: 'Assinatura / Galpao' },
+    { label: 'Conferente de Expedicao', sub: 'Conferencia de Saida' },
+    { label: 'Motorista / Retirante', sub: 'Recebido para Transporte' }
+  ];
+
+  sigs.forEach((sig, sIdx) => {
+    const sigX = 14 + sIdx * (sigWidth + sigGap);
+    doc.setDrawColor(15, 23, 42);
+    doc.setLineWidth(0.3);
+    doc.line(sigX, currentY + 7, sigX + sigWidth, currentY + 7);
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
+    doc.setTextColor(15, 23, 42);
+    doc.text(sig.label, sigX + (sigWidth / 2), currentY + 11, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6);
+    doc.setTextColor(100, 116, 139);
+    doc.text(sig.sub, sigX + (sigWidth / 2), currentY + 14, { align: 'center' });
+  });
+
+  // ═══════════════════════════════════════════════════════════
+  // 5. NUMERAÇÃO DE PÁGINAS & AUDITORIA DE RODAPÉ
+  // ═══════════════════════════════════════════════════════════
+  const totalPages = doc.internal.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+
+    // Linha divisória de rodapé
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.2);
+    doc.line(14, pageHeight - 9, pageWidth - 14, pageHeight - 9);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`${nomeEmpresa} • Mapa Geral de Separacao de Galpao`, 14, pageHeight - 5);
+    doc.text(`Pagina ${p} de ${totalPages}`, pageWidth - 14, pageHeight - 5, { align: 'right' });
+  }
+
+  // Nome do arquivo e Título
+  const nomeArquivo = `Mapa_Separacao_Galpao_${dataHoje.replace(/\//g, '-')}.pdf`;
+  const titulo = `Mapa de Separacao de Galpao (${locacoes.length} pedidos)`;
+
+  if (acao === 'download') {
+    doc.save(nomeArquivo);
+    return { doc, nomeArquivo, titulo };
+  }
+
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  return { doc, blob, url, nomeArquivo, titulo };
 };
+

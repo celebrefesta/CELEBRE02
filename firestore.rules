@@ -164,6 +164,27 @@ service cloud.firestore {
       allow read, update, delete: if false;
     }
 
+    // contratos/{docId}
+    match /contratos/{docId} {
+      allow get: if true;
+      allow list: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId) || (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'dataAssinatura', 'assinaturaUrl', 'assinaturaClienteUrl', 'termoAssinado', 'ipAssinatura', 'assinadoDigitalmente']));
+      allow delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // modelosContrato/{docId}
+    match /modelosContrato/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
+    // relatorio_avarias/{tenantId}
+    match /relatorio_avarias/{tenantId} {
+      allow read, write: if isSuperAdmin() || souDonoOuFuncionario(tenantId);
+    }
+
     // Bloqueio padrão para qualquer outra coleção
     match /{document=**} {
       allow read, write: if false;

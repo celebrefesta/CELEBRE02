@@ -10,11 +10,12 @@ import logoCelebreMarcaDagua from '../../assets/LOGO_CELEBRE.png';
 export const gerarRomaneioPDF = (
   locacoes = [],
   filtroInfo = {},
-  dadosEmpresa = {}
+  dadosEmpresa = {},
+  acao = 'preview'
 ) => {
   if (!locacoes || locacoes.length === 0) {
     alert("⚠️ Não há pedidos na lista para gerar o Romaneio de Carga.");
-    return;
+    return null;
   }
 
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
@@ -258,12 +259,16 @@ export const gerarRomaneioPDF = (
   doc.text(`Motorista / Transportador: ${motoristaNome}`, 54.5, finalY + 14, { align: 'center' });
   doc.text(`Expedição / Conferência Galpão`, pageWidth - 54.5, finalY + 14, { align: 'center' });
 
-  // ── PAGINAÇÃO E CABEÇALHOS ──
-  const totalPaginas = doc.internal.getNumberOfPages();
-  for (let i = 1; i <= totalPaginas; i++) {
-    doc.setPage(i);
-    adicionarCabecalhoRodape(i, totalPaginas);
+  // ── SALVAR OU RETORNAR OBJETO DE PREVIEW ──
+  const nomeArquivo = `Romaneio_Rota_${dataRota.replace(/\//g, '-')}_${motoristaNome.replace(/\s+/g, '_')}.pdf`;
+  const titulo = `Romaneio da Rota (${motoristaNome} • ${locacoes.length} paradas)`;
+
+  if (acao === 'download') {
+    doc.save(nomeArquivo);
+    return { doc, nomeArquivo, titulo };
   }
 
-  doc.save(`Romaneio_Rota_${dataRota.replace(/\//g, '-')}_${motoristaNome.replace(/\s+/g, '_')}.pdf`);
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  return { doc, blob, url, nomeArquivo, titulo };
 };

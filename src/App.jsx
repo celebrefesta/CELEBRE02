@@ -487,6 +487,7 @@ const AppContent = () => {
             {/* 💰 FINANCEIRO */}
             <Route path="/financeiro" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><Financeiro /></TravaSeguranca></RotaPrivada>} />
             <Route path="/financeiro/novo" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><NovoLancamento /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/novo-lancamento" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><NovoLancamento /></TravaSeguranca></RotaPrivada>} />
             <Route path="/financeiro/contas-fixas" element={<RotaPrivada><TravaSeguranca modulo="Financeiro" recursoExigido="Gestão Financeira"><ContasFixas /></TravaSeguranca></RotaPrivada>} />
             
             {/* 🚚 LOGÍSTICA E AGENDA */}

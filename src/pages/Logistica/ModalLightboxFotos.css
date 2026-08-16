@@ -1,0 +1,210 @@
+/* ═══════════════════════════════════════════════════════════════
+   📸 LIGHTBOX DE FOTOS DE VISTORIA (FULLSCREEN TOUCH & DESKTOP)
+   ═══════════════════════════════════════════════════════════════ */
+
+.lightbox-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 15, 30, 0.94);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 16px;
+  animation: fadeInLightbox 0.2s ease-out;
+}
+
+@keyframes fadeInLightbox {
+  from { opacity: 0; transform: scale(0.98); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.lightbox-container {
+  width: 100%;
+  max-width: 1000px;
+  max-height: 94vh;
+  display: flex;
+  flex-direction: column;
+  background: #0f172a;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.7);
+}
+
+.lightbox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 18px;
+  background: #1e293b;
+  border-bottom: 2px solid #c5a059;
+  color: #ffffff;
+}
+
+.lightbox-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.lightbox-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+.lightbox-counter {
+  font-size: 0.75rem;
+  font-weight: 750;
+  background: rgba(197, 160, 89, 0.2);
+  color: #fde68a;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(197, 160, 89, 0.4);
+}
+
+.lightbox-btn-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border: none;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.lightbox-btn-close:hover {
+  background: #ef4444;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+.lightbox-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: relative;
+  min-height: 320px;
+  max-height: 68vh;
+  padding: 10px;
+  background: #090d16;
+}
+
+.lightbox-nav-btn {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  font-size: 1.8rem;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  z-index: 10;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.lightbox-nav-btn:hover {
+  background: #c5a059;
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.lightbox-image-wrapper {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.lightbox-image {
+  max-width: 100%;
+  max-height: 56vh;
+  object-fit: contain;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  animation: fadeInImg 0.2s ease;
+}
+
+@keyframes fadeInImg {
+  from { opacity: 0.7; transform: scale(0.99); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.lightbox-caption {
+  font-size: 0.78rem;
+  color: #cbd5e1;
+  background: rgba(15, 23, 42, 0.85);
+  padding: 4px 12px;
+  border-radius: 6px;
+  margin-top: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.lightbox-thumbnails {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: #1e293b;
+  overflow-x: auto;
+  flex-shrink: 0;
+}
+
+.lightbox-thumb-btn {
+  width: 50px;
+  height: 50px;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  background: #0f172a;
+  overflow: hidden;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.lightbox-thumb-btn.active {
+  border-color: #c5a059;
+  transform: scale(1.08);
+  box-shadow: 0 0 10px rgba(197, 160, 89, 0.5);
+}
+
+.lightbox-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+@media (max-width: 768px) {
+  .lightbox-overlay { padding: 0; }
+  .lightbox-container { width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; }
+  .lightbox-nav-btn { width: 36px; height: 36px; font-size: 1.4rem; }
+  .lightbox-image { max-height: 60vh; }
+}

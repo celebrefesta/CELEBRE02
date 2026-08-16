@@ -25,30 +25,32 @@
 .kanban-header-top { 
   display: flex; 
   justify-content: space-between; 
-  align-items: center; 
-  margin-bottom: 12px; 
+  align-items: flex-end; 
+  margin-bottom: 14px; 
   flex-wrap: wrap; 
-  gap: 12px; 
+  gap: 14px; 
   flex-shrink: 0; 
 }
 
 .logistica-badge-head {
-  display: inline-block;
-  background: #eff6ff;
-  color: #2563eb;
-  border: 1px solid #dbeafe;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
   padding: 3px 10px;
-  border-radius: 20px;
+  border-radius: 6px;
   font-size: 0.72rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
+  font-weight: 750;
+  letter-spacing: 0.3px;
   text-transform: uppercase;
 }
 
 .kanban-titles h1 { 
-  font-size: 1.45rem; 
+  font-size: 1.55rem; 
   color: #0f172a; 
-  margin: 0 0 3px 0; 
+  margin: 0 0 2px 0; 
   font-weight: 850; 
   letter-spacing: -0.5px;
 }
@@ -56,121 +58,215 @@
 .kanban-titles p { 
   color: #64748b; 
   margin: 0; 
-  font-size: 0.82rem; 
+  font-size: 0.84rem; 
 }
 
-.kanban-top-actions { 
+.kanban-header-actions { 
   display: flex; 
-  gap: 10px; 
+  gap: 8px; 
   align-items: center; 
   flex-wrap: wrap; 
 }
 
-/* 📄 BOTÃO ROMANEIO DA ROTA (PDF) */
-.btn-romaneio-pdf {
-  background: #ffffff;
-  color: #0f172a;
-  border: 1.5px solid #cbd5e1;
-  padding: 7px 14px;
-  border-radius: 10px;
+/* ⚡ BOTÃO PRIMÁRIO: BIPAGEM */
+.btn-log-primary {
+  background: #0f172a;
+  color: #ffffff;
+  border: 1px solid #0f172a;
+  border-bottom: 2.5px solid #c5a059;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
-  font-weight: 850;
-  font-size: 0.78rem;
+  font-weight: 750;
+  font-size: 0.82rem;
   display: flex;
   align-items: center;
   gap: 6px;
   transition: all 0.2s ease;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  box-shadow: 0 2px 4px rgba(15, 23, 42, 0.1);
 }
 
-.btn-romaneio-pdf:hover {
-  background: #f8fafc;
-  border-color: #94a3b8;
+.btn-log-primary:hover {
+  background: #1e293b;
   transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(15, 23, 42, 0.15);
 }
 
-/* 🚗 FILTRO POR MOTORISTA / VEÍCULO */
-.driver-filter-box {
+/* 📄 BOTÕES SECUNDÁRIOS: DOCUMENTOS PDF */
+.btn-log-secondary {
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 650;
+  font-size: 0.82rem;
   display: flex;
   align-items: center;
   gap: 6px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+}
+
+.btn-log-secondary:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+/* =========================================
+   🎛️ PAINEL DE CONTROLES & FILTROS INTEGRADOS
+   ========================================= */
+.logistica-filter-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
   background: #ffffff;
-  padding: 4px 10px;
-  border-radius: 10px;
-  border: 1.5px solid #e2e8f0;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
+  padding: 8px 12px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  flex-wrap: wrap;
+  flex-shrink: 0;
 }
 
-.driver-filter-box label {
+.logistica-search-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 280px;
+}
+
+.logistica-search-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 38px;
+  flex: 1;
+  transition: border-color 0.2s ease;
+}
+
+.logistica-search-input-wrapper:focus-within {
+  border-color: #3b82f6;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.search-icon-log {
   font-size: 0.85rem;
+  color: #94a3b8;
 }
 
-.select-filtro-motorista {
+.logistica-input-search {
+  width: 100%;
   border: none;
   background: transparent;
-  font-size: 0.78rem;
-  font-weight: 750;
+  font-size: 0.82rem;
+  font-weight: 500;
   color: #0f172a;
+  outline: none;
+}
+
+.btn-clear-search-log {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.btn-clear-search-log:hover {
+  color: #ef4444;
+}
+
+.logistica-driver-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0 10px;
+  height: 38px;
+}
+
+.logistica-driver-select {
+  border: none;
+  background: transparent;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #334155;
   outline: none;
   cursor: pointer;
 }
 
-.view-switcher-log, .kanban-filters { 
-  display: flex; 
-  background: #ffffff; 
-  padding: 4px; 
-  border-radius: 10px; 
-  border: 1.5px solid #e2e8f0; 
-  box-shadow: 0 1px 3px rgba(0,0,0,0.03);
-}
-
-.view-switcher-log button, .kanban-filters button { 
-  background: transparent; 
-  border: none; 
-  padding: 7px 14px; 
-  border-radius: 8px; 
-  cursor: pointer; 
-  font-weight: 750; 
-  color: #64748b; 
-  font-size: 0.78rem; 
-  transition: all 0.2s ease; 
-}
-
-.view-switcher-log button:hover, .kanban-filters button:hover { 
-  background: #f1f5f9; 
-  color: #0f172a;
-}
-
-.view-switcher-log button.ativo, .kanban-filters button.ativo { 
-  background: var(--dourado, #0f172a) !important; 
-  color: white !important; 
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1); 
-}
-
-/* =========================================
-   🔍 BARRA DE PESQUISA RÁPIDA LOGÍSTICA
-   ========================================= */
-.logistica-search-bar {
+.logistica-controls-group {
   display: flex;
   align-items: center;
-  gap: 10px;
-  margin-bottom: 12px;
-  background: #ffffff;
-  padding: 8px 14px;
-  border-radius: 12px;
-  border: 1.5px solid #e2e8f0;
-  box-shadow: 0 2px 8px rgba(15,23,42,0.02);
-  flex-shrink: 0;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.logistica-input-busca {
-  width: 100%;
+.segmented-tabs-log {
+  display: flex;
+  align-items: center;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.segmented-tab {
   border: none;
   background: transparent;
-  font-size: 0.85rem;
-  font-weight: 600;
+  color: #64748b;
+  font-weight: 650;
+  font-size: 0.78rem;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.segmented-tab:hover {
   color: #0f172a;
-  outline: none;
+}
+
+.segmented-tab.active {
+  background: #ffffff;
+  color: #0f172a;
+  font-weight: 800;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.segmented-tab.tab-atrasados.active {
+  background: #ffe4e6 !important;
+  color: #e11d48 !important;
+}
+
+.tab-badge-count {
+  background: #e11d48;
+  color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 850;
+  padding: 1px 5px;
+  border-radius: 10px;
+  margin-left: 2px;
 }
 
 .logistica-input-busca::placeholder {
@@ -646,6 +742,125 @@
 .card-com-falta { border: 2px solid #ef4444 !important; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.15) !important; }
 .avaria-badge { background: #fef3c7 !important; color: #b45309 !important; border: 1px solid #fde68a !important; }
 .falta-badge { background: #fef2f2 !important; color: #dc2626 !important; border: 1px solid #fecaca !important; }
+
+/* =========================================
+   🚨 CARD DE AVISO DE ATRASO CRÍTICO (ITEM POR ITEM)
+   ========================================= */
+.card-aviso-atraso-critico {
+  background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+  border: 1.5px solid #fecdd3;
+  border-left: 4px solid #e11d48;
+  border-radius: 10px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(225, 29, 72, 0.06);
+  animation: fadeIn 0.3s ease;
+  margin: 4px 0 2px 0;
+}
+
+.aviso-atraso-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.aviso-atraso-icone {
+  font-size: 1.2rem;
+  line-height: 1;
+}
+
+.aviso-atraso-info {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.aviso-atraso-titulo {
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #9f1239;
+  letter-spacing: -0.2px;
+  line-height: 1.2;
+}
+
+.aviso-atraso-sub {
+  font-size: 0.68rem;
+  color: #be123c;
+  font-weight: 750;
+}
+
+.aviso-atraso-texto {
+  font-size: 0.72rem;
+  color: #475569;
+  line-height: 1.35;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.85);
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: 1px solid rgba(254, 205, 211, 0.7);
+}
+
+.aviso-atraso-texto strong {
+  color: #0f172a;
+}
+
+.btn-vistoria-atrasado-destaque {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 0.76rem;
+  font-weight: 850;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  box-shadow: 0 2px 5px rgba(225, 29, 72, 0.25);
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.btn-vistoria-atrasado-destaque:hover {
+  background: linear-gradient(135deg, #be123c 0%, #9f1239 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(225, 29, 72, 0.35);
+}
+
+.btn-regularizar-vistoria {
+  background: #fff1f2 !important;
+  color: #be123c !important;
+  border: 1px solid #fecdd3 !important;
+  font-weight: 850 !important;
+  font-size: 0.72rem !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 4px !important;
+  width: 100% !important;
+  margin-top: 6px !important;
+}
+
+.btn-regularizar-vistoria:hover {
+  background: #ffe4e6 !important;
+  color: #9f1239 !important;
+  border-color: #fda4af !important;
+}
+
+.filtro-btn-atrasados {
+  background: #fff1f2 !important;
+  color: #be123c !important;
+  border: 1px solid #fecdd3 !important;
+}
+
+.filtro-btn-atrasados.ativo {
+  background: #e11d48 !important;
+  color: #ffffff !important;
+  border-color: #be123c !important;
+}
 
 /* =========================================
    📱 RESPONSIVIDADE ULTRA POLIDA MOBILE
@@ -1685,4 +1900,247 @@
     font-size: 0.82rem !important;
     text-align: center !important;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   🧺 BARRA DE EMBALAGENS EM CAMPO & MODAL DE DETALHES
+   ═══════════════════════════════════════════════════════════════ */
+
+.barra-embalagens-campo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.embalagens-info-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.embalagens-badge {
+  font-size: 0.72rem;
+  font-weight: 850;
+  color: #15803d;
+  letter-spacing: 0.3px;
+}
+
+.embalagens-stat {
+  font-size: 0.8rem;
+  color: #166534;
+  background: #ffffff;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #86efac;
+}
+
+.btn-ver-embalagens {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  font-weight: 800;
+  border-radius: 8px;
+  border: 1px solid #16a34a;
+  background: #16a34a;
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-ver-embalagens:hover {
+  background: #15803d;
+}
+
+.modal-container-embalagens {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-embalagens-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #0f172a;
+  border-bottom: 3px solid #10b981;
+  color: #ffffff;
+}
+
+.modal-embalagens-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+}
+
+.modal-embalagens-resumo {
+  display: flex;
+  gap: 12px;
+  padding: 10px 18px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.82rem;
+  color: #334155;
+}
+
+.modal-embalagens-lista {
+  padding: 14px 18px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.embalagem-item-card {
+  padding: 10px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.embalagem-item-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.embalagem-status-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #e0f2fe;
+  color: #0369a1;
+}
+
+.embalagem-item-detalhes {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.76rem;
+  color: #475569;
+}
+
+.embalagem-item-acoes {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.btn-emb-wpp {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  border-radius: 6px;
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #16a34a;
+  cursor: pointer;
+}
+
+.btn-emb-det {
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 750;
+  border-radius: 6px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+  cursor: pointer;
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   📸 MINI GALERIA DE FOTOS DA VISTORIA NO CARD
+   ═══════════════════════════════════════════════════════════════ */
+
+.card-mini-galeria-fotos {
+  margin-top: 6px;
+  padding: 8px 10px;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.mini-galeria-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  font-weight: 750;
+  color: #475569;
+}
+
+.btn-ver-todas-fotos {
+  background: none;
+  border: none;
+  color: #2563eb;
+  font-size: 0.7rem;
+  font-weight: 800;
+  cursor: pointer;
+  padding: 0;
+}
+
+.btn-ver-todas-fotos:hover {
+  text-decoration: underline;
+}
+
+.mini-galeria-strip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.mini-galeria-thumb {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1.5px solid #cbd5e1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mini-galeria-thumb:hover {
+  transform: scale(1.1);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.mini-galeria-mais {
+  width: 38px;
+  height: 38px;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mini-galeria-mais:hover {
+  background: #cbd5e1;
 }

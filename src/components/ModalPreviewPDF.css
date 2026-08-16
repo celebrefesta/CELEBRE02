@@ -1,0 +1,243 @@
+/* ═══════════════════════════════════════════════════════════════
+   💎 MODAL UNIVERSAL DE PRÉ-VISUALIZAÇÃO DE PDF (PREVIEW LUXURY)
+   ═══════════════════════════════════════════════════════════════ */
+
+.modal-preview-pdf-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999999;
+  padding: 16px;
+  animation: fadeInModalPreview 0.25s ease-out;
+}
+
+@keyframes fadeInModalPreview {
+  from {
+    opacity: 0;
+    transform: scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.modal-preview-pdf-container {
+  background: #ffffff;
+  width: 95vw;
+  max-width: 1200px;
+  height: 92vh;
+  border-radius: 16px;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e2e8f0;
+}
+
+/* ── CABEÇALHO DO VISUALIZADOR ── */
+.modal-preview-pdf-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-bottom: 3px solid #c5a059;
+  color: #ffffff;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.modal-preview-pdf-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.modal-preview-pdf-badge {
+  font-size: 0.65rem;
+  font-weight: 850;
+  color: #c5a059;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.modal-preview-pdf-title {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.2px;
+}
+
+.modal-preview-pdf-filename {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  font-family: monospace;
+}
+
+/* ── BOTÕES DE AÇÃO NO TOPO ── */
+.modal-preview-pdf-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-preview-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-preview-tab {
+  background: rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.btn-preview-tab:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.btn-preview-print {
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.btn-preview-print:hover {
+  background: rgba(255, 255, 255, 0.25);
+  transform: translateY(-1px);
+}
+
+.btn-preview-download {
+  background: linear-gradient(135deg, #c5a059 0%, #b38e46 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.35);
+}
+
+.btn-preview-download:hover {
+  background: linear-gradient(135deg, #d4b26f 0%, #c5a059 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(197, 160, 89, 0.45);
+}
+
+.btn-preview-close {
+  background: rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  margin-left: 4px;
+}
+
+.btn-preview-close:hover {
+  background: #ef4444;
+  color: #ffffff;
+  transform: rotate(90deg);
+}
+
+/* ── CORPO COM IFRAME ── */
+.modal-preview-pdf-body {
+  flex: 1;
+  background: #525659;
+  position: relative;
+  overflow: hidden;
+}
+
+.modal-preview-pdf-iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+  display: block;
+}
+
+/* ── RODAPÉ MOBILE (OCULTO EM DESKTOP) ── */
+.modal-preview-pdf-footer-mobile {
+  display: none;
+  padding: 10px 14px;
+  background: #0f172a;
+  border-top: 1px solid #1e293b;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.btn-mobile-act {
+  flex: 1;
+  padding: 9px;
+  font-size: 0.75rem;
+  font-weight: 750;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  cursor: pointer;
+}
+
+.btn-mobile-download {
+  flex: 1.5;
+  background: #c5a059;
+  border-color: #c5a059;
+  color: #ffffff;
+}
+
+/* ── RESPONSIVIDADE MOBILE ── */
+@media (max-width: 768px) {
+  .modal-preview-pdf-overlay {
+    padding: 0;
+  }
+
+  .modal-preview-pdf-container {
+    width: 100vw;
+    height: 100vh;
+    border-radius: 0;
+    max-width: 100vw;
+  }
+
+  .modal-preview-pdf-header {
+    padding: 10px 12px;
+  }
+
+  .modal-preview-pdf-title {
+    font-size: 0.9rem;
+  }
+
+  .modal-preview-pdf-actions .btn-preview-action {
+    display: none;
+  }
+
+  .modal-preview-pdf-footer-mobile {
+    display: flex;
+  }
+}

@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { db } from "../../firebaseConfig";
 import { doc, getDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import logoCelebrePadrao from "../../assets/LOGO_CELEBRE.png";
 import "./VisualizarContrato.css";
 
 const VisualizarContrato = () => {
@@ -41,8 +42,8 @@ const VisualizarContrato = () => {
 
   useEffect(() => {
     if (!usuarioLogado) {
-        navigate('/login');
-        return;
+      navigate('/login');
+      return;
     }
 
     const buscarDados = async () => {
@@ -54,26 +55,25 @@ const VisualizarContrato = () => {
 
           // 🔥 BLINDAGEM: Verifica se o contrato pertence à sua empresa
           if (data.userId && data.userId !== tenantId) {
-              alert("Acesso negado: Este contrato pertence a outra empresa.");
-              navigate('/contratos');
-              return;
+            alert("Acesso negado: Este contrato pertence a outra empresa.");
+            navigate('/contratos');
+            return;
           }
 
           setContrato(data);
           
-          // Regista que o documento oficial foi aberto para visualização/impressão
+          // Registra visualização
           await registrarLog("VISUALIZAÇÃO DE CONTRATO", `Acessou o documento oficial do contrato de "${data.cliente}".`);
-
         } else {
           alert("Contrato não encontrado!");
           navigate("/contratos");
           return;
         }
 
-        // 🔥 BLINDAGEM: Busca os dados da Empresa (Logo, CNPJ, etc) no cofre principal
+        // 🔥 BLINDAGEM: Busca os dados completos da Empresa
         const configSnap = await getDoc(doc(db, "configuracoes_empresa", tenantId));
         if (configSnap.exists()) {
-            setEmpresa(configSnap.data());
+          setEmpresa(configSnap.data());
         }
       } catch (err) {
         console.error("Erro ao carregar documento:", err);
@@ -86,78 +86,138 @@ const VisualizarContrato = () => {
   }, [id, navigate, usuarioLogado, tenantId]);
 
   const handleImprimir = async () => {
-    await registrarLog("IMPRESSÃO DE CONTRATO", `Gerou a impressão ou salvou o PDF via navegador do contrato de "${contrato?.cliente}".`);
+    await registrarLog("IMPRESSÃO DE CONTRATO", `Gerou a impressão ou salvou o PDF do contrato de "${contrato?.cliente}".`);
     window.print();
   };
 
-  if (carregando) return <div className="loading-screen">Gerando documento...</div>;
+  if (carregando) return <div className="loading-screen">Gerando documento oficial...</div>;
+  if (!contrato) return null;
 
-  // 🔥 NOME DINÂMICO DA EMPRESA
-  const nomeEmpresaDinamico = empresa?.nomeEmpresa || empresa?.nome || "Sua Empresa";
+  // 🔥 DADOS DA EMPRESA FORMATADOS
+  const nomeEmpresa = empresa?.nomeEmpresa || empresa?.nomeFantasia || empresa?.nome || "CELEBRE FESTAS & EVENTOS";
+  const cnpjEmpresa = empresa?.cnpj ? `CNPJ: ${empresa.cnpj}` : "";
+  const telEmpresa = empresa?.telefone || empresa?.celular || empresa?.whatsapp || "";
+  const emailEmpresa = empresa?.emailEmpresa || empresa?.email || "";
+  const enderecoEmpresa = empresa?.endereco || [
+    empresa?.rua, 
+    empresa?.numero ? `nº ${empresa.numero}` : '', 
+    empresa?.bairro, 
+    empresa?.cidade ? `${empresa.cidade}/${empresa.uf || ''}` : ''
+  ].filter(Boolean).join(' - ');
+  const logoEmpresa = empresa?.logotipo || logoCelebrePadrao;
+
+  // 🔥 DATAS E ENDEREÇO DO EVENTO
+  const dtEvento = contrato.dataEvento ? contrato.dataEvento.split('-').reverse().join('/') : "--/--/----";
+  const dtRetirada = contrato.dataRetirada ? contrato.dataRetirada.split('-').reverse().join('/') : dtEvento;
+  const dtDevolucao = contrato.dataDevolucao ? contrato.dataDevolucao.split('-').reverse().join('/') : dtEvento;
+  const enderecoEvento = contrato.endereco || "Endereço acordado na reserva";
 
   return (
     <div className="visualizar-container">
       <div className="acoes-flutuantes">
         <button className="btn-voltar" onClick={() => navigate("/contratos")}>← Voltar</button>
-        <button className="btn-imprimir" onClick={handleImprimir}>🖨️ Imprimir / Salvar PDF</button>
+        <div style={{ display: 'flex', gap: '10px' }}>
+          <button className="btn-imprimir" onClick={handleImprimir}>
+            🖨️ Imprimir / Salvar PDF (2 Folhas - Frente e Verso)
+          </button>
+        </div>
       </div>
 
-      {/* A FOLHA A4 VIRTUAL */}
+      {/* A FOLHA A4 VIRTUAL COM DESIGN CORPORATIVO */}
       <div className="documento-a4">
         
-        {/* CABEÇALHO DO DOCUMENTO */}
-        <header className="doc-header">
+        {/* CABEÇALHO COM LOGO E DADOS DA EMPRESA */}
+        <header className="doc-header-luxury">
           <div className="doc-empresa-info">
-            <h2>{nomeEmpresaDinamico.toUpperCase()}</h2>
-            <p>{empresa?.cnpj ? `CNPJ: ${empresa.cnpj}` : ""}</p>
-            <p>{empresa?.telefone ? `WhatsApp: ${empresa.telefone}` : ""}</p>
-            <p>{empresa?.endereco || ""}</p>
-          </div>
-          {empresa?.logotipo && (
-            <div className="doc-logo">
-              <img src={empresa.logotipo} alt="Logo Empresa" />
+            <h2 className="doc-empresa-nome">{nomeEmpresa.toUpperCase()}</h2>
+            <div className="doc-empresa-metas">
+              {cnpjEmpresa && <span>{cnpjEmpresa}</span>}
+              {telEmpresa && <span> • Tel/WhatsApp: {telEmpresa}</span>}
+              {emailEmpresa && <span> • {emailEmpresa}</span>}
             </div>
-          )}
+            {enderecoEmpresa && (
+              <p className="doc-empresa-endereco">📍 {enderecoEmpresa}</p>
+            )}
+          </div>
+
+          <div className="doc-logo-box">
+            <img src={logoEmpresa} alt="Logo da Empresa" className="doc-logo-img" />
+          </div>
         </header>
 
-        <hr className="doc-divisor" />
+        <div className="doc-faixa-dourada"></div>
 
-        <h1 className="doc-titulo">CONTRATO DE PRESTAÇÃO DE SERVIÇOS</h1>
+        <h1 className="doc-titulo-principal">
+          INSTRUMENTO PARTICULAR DE LOCAÇÃO DE BENS MÓVEIS E ACERVO PARA EVENTOS
+        </h1>
 
-        {/* RESUMO DO EVENTO */}
-        <div className="doc-resumo-caixa">
-          <p><strong>CONTRATANTE:</strong> {contrato.cliente}</p>
-          <p><strong>EVENTO / TEMA:</strong> {contrato.tema || "Não informado"}</p>
-          <p><strong>DATA DO EVENTO:</strong> {contrato.dataEvento ? contrato.dataEvento.split('-').reverse().join('/') : "--/--/----"}</p>
-          <p><strong>LOCAL:</strong> {contrato.endereco || "Não informado"}</p>
-          <p><strong>VALOR TOTAL:</strong> R$ {Number(contrato.valorTotal || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</p>
+        {/* RESUMO EXECUTIVO DO EVENTO E CLIENTE */}
+        <div className="doc-resumo-grid">
+          <div className="doc-resumo-item full">
+            <span className="doc-label">LOCATÁRIO(A):</span>
+            <span className="doc-valor"><strong>{contrato.cliente || "Não informado"}</strong> {contrato.cpf ? `(CPF/CNPJ: ${contrato.cpf})` : ""}</span>
+          </div>
+
+          <div className="doc-resumo-item">
+            <span className="doc-label">WHATSAPP / CONTATO:</span>
+            <span className="doc-valor">{contrato.telefone || "Não informado"}</span>
+          </div>
+
+          <div className="doc-resumo-item">
+            <span className="doc-label">TEMA DA CELEBRAÇÃO:</span>
+            <span className="doc-valor">{contrato.tema || "Celebração Geral"}</span>
+          </div>
+
+          <div className="doc-resumo-item">
+            <span className="doc-label">DATA DO EVENTO:</span>
+            <span className="doc-valor"><strong>{dtEvento}</strong></span>
+          </div>
+
+          <div className="doc-resumo-item">
+            <span className="doc-label">RETIRADA &amp; DEVOLUÇÃO:</span>
+            <span className="doc-valor">{dtRetirada} ➔ {dtDevolucao} {contrato.horario ? `(${contrato.horario})` : ''}</span>
+          </div>
+
+          <div className="doc-resumo-item full">
+            <span className="doc-label">ENDEREÇO DO EVENTO:</span>
+            <span className="doc-valor">{enderecoEvento}</span>
+          </div>
+
+          <div className="doc-resumo-item full doc-valor-destaque-box">
+            <span className="doc-label">VALOR TOTAL DA LOCAÇÃO:</span>
+            <span className="doc-valor-moeda">
+              R$ {Number(contrato.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+            </span>
+          </div>
         </div>
 
-        {/* CLÁUSULAS */}
-        <div className="doc-clausulas">
-          {contrato.descricao ? contrato.descricao : "Nenhum termo ou cláusula adicionada a este contrato."}
+        {/* CORPO DO CONTRATO / MINUTA E CLÁUSULAS */}
+        <div className="doc-clausulas-texto">
+          {contrato.descricao ? contrato.descricao : "Relação de itens e cláusulas contratuais conforme termo firmado."}
         </div>
 
-        {/* ÁREA DE ASSINATURAS */}
+        {/* ÁREA DE ASSINATURAS NO FINAL */}
         <div className="doc-assinaturas-area">
           <div className="box-assinatura">
             {contrato.assinaturaCliente ? (
-              <img src={contrato.assinaturaCliente} alt="Assinatura Cliente" className="img-assinatura" />
+              <img src={contrato.assinaturaCliente} alt="Assinatura Locatário" className="img-assinatura" />
             ) : (
               <div className="linha-em-branco"></div>
             )}
-            <p><strong>{contrato.cliente}</strong></p>
-            <span>Contratante</span>
+            <p className="nome-signatario"><strong>{contrato.cliente}</strong></p>
+            <span className="cargo-signatario">LOCATÁRIO(A)</span>
+            {contrato.cpf && <span className="doc-signatario">Doc: {contrato.cpf}</span>}
           </div>
 
           <div className="box-assinatura">
-            {contrato.assinaturaAgape ? (
-              <img src={contrato.assinaturaAgape} alt="Assinatura Empresa" className="img-assinatura" />
+            {contrato.assinaturaAgape || empresa?.assinatura ? (
+              <img src={contrato.assinaturaAgape || empresa?.assinatura} alt="Assinatura Locadora" className="img-assinatura" />
             ) : (
               <div className="linha-em-branco"></div>
             )}
-            <p><strong>{nomeEmpresaDinamico}</strong></p>
-            <span>Contratada</span>
+            <p className="nome-signatario"><strong>{nomeEmpresa}</strong></p>
+            <span className="cargo-signatario">LOCADORA</span>
+            {empresa?.cnpj && <span className="doc-signatario">{empresa.cnpj}</span>}
           </div>
         </div>
 

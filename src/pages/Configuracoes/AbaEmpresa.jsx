@@ -494,6 +494,169 @@ const AbaEmpresa = ({
         </div>
       </div>
 
+      {/* CARD: PARÂMETROS DE FRETE & LOGÍSTICA POR KM */}
+      <div className="config-card span-2-col-full">
+        <div className="card-top-bar gold-bar" style={{ background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)' }}></div>
+        <div className="config-card-header">
+          <div className="card-header-icon gold" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#d97706' }}>
+            <i className="fas fa-truck-moving"></i>
+          </div>
+          <div>
+            <h3>Parâmetros de Frete & Logística por KM</h3>
+            <p className="subtext">Configure o preço do combustível, tipo de veículo e percursos para calcular o frete justo e automático.</p>
+          </div>
+        </div>
+        
+        <div className="form-grid-3-col">
+          {/* PREÇO DO COMBUSTÍVEL */}
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-gas-pump" style={{ color: '#ef4444' }}></i> Preço do Combustível (R$/Litro)</label>
+            <div className="input-with-icon">
+              <i className="fas fa-dollar-sign input-icon" style={{ color: '#ef4444' }}></i>
+              <input 
+                type="number" 
+                step="0.01"
+                min="0"
+                value={config.precoGasolina !== undefined ? config.precoGasolina : '5.90'} 
+                onChange={(e) => handleConfigChange('precoGasolina', e.target.value)} 
+                onBlur={(e) => salvarConfigTextual('precoGasolina', e.target.value)} 
+                placeholder="Ex: 5.90" 
+              />
+            </div>
+          </div>
+
+          {/* TIPO DE VEÍCULO PADRÃO */}
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-car-side" style={{ color: '#3b82f6' }}></i> Veículo Padrão da Empresa</label>
+            <div className="input-with-icon">
+              <i className="fas fa-truck input-icon" style={{ color: '#3b82f6' }}></i>
+              <select
+                value={config.veiculoPadrao || '1.0'}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  handleConfigChange('veiculoPadrao', v);
+                  salvarConfigTextual('veiculoPadrao', v);
+                  const consumos = { '1.0': '12.0', '1.6': '9.5', '2.0': '7.5', 'fiorino': '6.5', 'caminhao': '4.5' };
+                  if (consumos[v]) {
+                    handleConfigChange('consumoKmL', consumos[v]);
+                    salvarConfigTextual('consumoKmL', consumos[v]);
+                  }
+                }}
+                style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#ffffff', color: '#0f172a', fontWeight: '700' }}
+              >
+                <option value="1.0">🚗 Carro 1.0 (~12 km/l)</option>
+                <option value="1.6">🚗 Carro 1.4 / 1.6 (~9.5 km/l)</option>
+                <option value="2.0">🚙 Carro 2.0 / SUV (~7.5 km/l)</option>
+                <option value="fiorino">🚐 Fiorino / Van / Utilitário (~6.5 km/l)</option>
+                <option value="caminhao">🚛 Caminhão de Carga (~4.5 km/l)</option>
+                <option value="personalizado">⚙️ Personalizado</option>
+              </select>
+            </div>
+          </div>
+
+          {/* CONSUMO EM KM/L */}
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-tachometer-alt" style={{ color: '#10b981' }}></i> Consumo Médio (km/l)</label>
+            <div className="input-with-icon">
+              <i className="fas fa-route input-icon" style={{ color: '#10b981' }}></i>
+              <input 
+                type="number" 
+                step="0.1"
+                min="1"
+                value={config.consumoKmL !== undefined ? config.consumoKmL : '12.0'} 
+                onChange={(e) => handleConfigChange('consumoKmL', e.target.value)} 
+                onBlur={(e) => salvarConfigTextual('consumoKmL', e.target.value)} 
+                placeholder="Ex: 12.0" 
+              />
+            </div>
+          </div>
+
+          {/* PADRÃO DE VIAGENS PARA EVENTOS */}
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-sync-alt" style={{ color: '#8b5cf6' }}></i> Padrão de Trajetos por Locação</label>
+            <div className="input-with-icon">
+              <i className="fas fa-arrows-alt-h input-icon" style={{ color: '#8b5cf6' }}></i>
+              <select
+                value={config.tipoViagemPadrao || '4'}
+                onChange={(e) => {
+                  handleConfigChange('tipoViagemPadrao', e.target.value);
+                  salvarConfigTextual('tipoViagemPadrao', e.target.value);
+                }}
+                style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '10px', border: '1px solid #cbd5e1', fontSize: '13px', background: '#ffffff', color: '#0f172a', fontWeight: '700' }}
+              >
+                <option value="4">🔁 4 Percursos (Levar, Voltar, Buscar, Voltar)</option>
+                <option value="2">➡️ 2 Percursos (Apenas Entrega / Ida e Volta)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* CUSTO OPERACIONAL / DESGASTE POR KM */}
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-tools" style={{ color: '#f59e0b' }}></i> Desgaste Veicular / Custo Op. (R$/km)</label>
+            <div className="input-with-icon">
+              <i className="fas fa-wrench input-icon" style={{ color: '#f59e0b' }}></i>
+              <input 
+                type="number" 
+                step="0.10"
+                min="0"
+                value={config.custoAdicionalKm !== undefined ? config.custoAdicionalKm : '1.50'} 
+                onChange={(e) => handleConfigChange('custoAdicionalKm', e.target.value)} 
+                onBlur={(e) => salvarConfigTextual('custoAdicionalKm', e.target.value)} 
+                placeholder="Ex: 1.50" 
+              />
+            </div>
+          </div>
+
+          {/* TAXA MÍNIMA DE FRETE */}
+          <div className="f-group span-1-col">
+            <label><i className="fas fa-tag" style={{ color: '#06b6d4' }}></i> Taxa Mínima de Frete (R$)</label>
+            <div className="input-with-icon">
+              <i className="fas fa-coins input-icon" style={{ color: '#06b6d4' }}></i>
+              <input 
+                type="number" 
+                step="1"
+                min="0"
+                value={config.taxaMinimaFrete !== undefined ? config.taxaMinimaFrete : '25.00'} 
+                onChange={(e) => handleConfigChange('taxaMinimaFrete', e.target.value)} 
+                onBlur={(e) => salvarConfigTextual('taxaMinimaFrete', e.target.value)} 
+                placeholder="Ex: 25.00" 
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* PRÉVIA DA FÓRMULA DE FRETE COM MEMÓRIA DE CÁLCULO */}
+        {(() => {
+          const precoGas = Number(config.precoGasolina !== undefined ? config.precoGasolina : 5.90) || 5.90;
+          const consumo = Number(config.consumoKmL !== undefined ? config.consumoKmL : 12.0) || 12.0;
+          const viagens = Number(config.tipoViagemPadrao !== undefined ? config.tipoViagemPadrao : 4) || 4;
+          const custoOp = Number(config.custoAdicionalKm !== undefined ? config.custoAdicionalKm : 1.50) || 0;
+          const minFrete = Number(config.taxaMinimaFrete !== undefined ? config.taxaMinimaFrete : 25.00) || 0;
+
+          const kmExemplo = 10;
+          const custoGasExemplo = ((kmExemplo * viagens) / consumo) * precoGas;
+          const freteTotalExemplo = Math.max(minFrete, custoGasExemplo + (kmExemplo * custoOp));
+          const taxaEfetivaKm = (freteTotalExemplo / kmExemplo).toFixed(2);
+
+          return (
+            <div style={{ marginTop: '18px', padding: '14px 18px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
+              <div>
+                <strong style={{ color: '#92400e', fontSize: '0.88rem' }}>
+                  <i className="fas fa-calculator" style={{ marginRight: '6px' }}></i> 
+                  Simulação da Fórmula (Exemplo para 10 km de distância):
+                </strong>
+                <p style={{ margin: '4px 0 0 0', fontSize: '0.78rem', color: '#b45309', lineHeight: '1.4' }}>
+                  Gasolina: ({kmExemplo}km × {viagens} percursos ÷ {consumo}km/l × R$ {precoGas.toFixed(2)}) = R$ {custoGasExemplo.toFixed(2)} + Desgaste (R$ {(kmExemplo * custoOp).toFixed(2)}) = <strong>R$ {freteTotalExemplo.toFixed(2)}</strong>.
+                </p>
+              </div>
+              <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '6px 12px', borderRadius: '8px', fontWeight: '900', fontSize: '0.85rem' }}>
+                Taxa Média Base: ~R$ {taxaEfetivaKm}/km
+              </span>
+            </div>
+          );
+        })()}
+      </div>
+
       {/* CARD 5: ASSINATURA OFICIAL DA EMPRESA */}
       <div className="config-card span-2-col-full">
         <div className="card-top-bar gold-bar"></div>

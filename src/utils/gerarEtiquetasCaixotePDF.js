@@ -6,7 +6,13 @@ import autoTable from 'jspdf-autotable';
  * Imprime folha de identificação oficial de caixas/caixotes com QR Code para bipagem no Galpão.
  * 100% blindado contra sobreposições e caracteres de emoji corrompidos.
  */
-export const gerarEtiquetasCaixotePDF = async (locacao, dadosEmpresa = {}, volumeNum = 1, totalVolumes = 1) => {
+export const gerarEtiquetasCaixotePDF = async (
+  locacao, 
+  dadosEmpresa = {}, 
+  volumeNum = 1, 
+  totalVolumes = 1,
+  acao = 'preview'
+) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
   const numPedido = locacao.numeroPedido ? `#${locacao.numeroPedido}` : `#${locacao.id?.substring(0, 6).toUpperCase()}`;
@@ -231,7 +237,16 @@ export const gerarEtiquetasCaixotePDF = async (locacao, dadosEmpresa = {}, volum
   doc.setTextColor(148, 163, 184);
   doc.text(`Etiqueta gerada via Celebre Festas SaaS em ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`, 105, 282, { align: 'center' });
 
-  // Salvar PDF
+  // Salvar PDF ou Retornar Preview
   const nomeArquivo = `Etiqueta_Caixote_Pedido_${locacao.numeroPedido || 'S_N'}_Vol_${volumeNum}.pdf`;
-  doc.save(nomeArquivo);
+  const titulo = `Etiqueta de Caixote (${numPedido} - ${clienteNome})`;
+
+  if (acao === 'download') {
+    doc.save(nomeArquivo);
+    return { doc, nomeArquivo, titulo };
+  }
+
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  return { doc, blob, url, nomeArquivo, titulo };
 };

@@ -11,7 +11,8 @@ export const gerarComprovanteCheckinPDF = (
   modo = 'IDA',
   itensConferidos = [],
   dadosAdicionais = {},
-  dadosEmpresa = {}
+  dadosEmpresa = {},
+  acao = 'preview'
 ) => {
   const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
 
@@ -587,9 +588,16 @@ export const gerarComprovanteCheckinPDF = (
     }
   }
 
-  // ── SALVAR PDF ───────────────────────────────────────────────────────────
+  // ── SALVAR PDF OU RETORNAR PREVIEW ──────────────────────────────────────
   const nomeArquivo = `Comprovante_Vistoria_${modo}_Pedido_${numeroPedido}.pdf`;
-  doc.save(nomeArquivo);
+  const titulo = `Comprovante de Vistoria (${modo === 'IDA' ? 'Saída' : 'Devolução'} • ${numeroPedido} - ${clienteNome})`;
 
-  return doc;
+  if (acao === 'download') {
+    doc.save(nomeArquivo);
+    return { doc, nomeArquivo, titulo };
+  }
+
+  const blob = doc.output('blob');
+  const url = URL.createObjectURL(blob);
+  return { doc, blob, url, nomeArquivo, titulo };
 };

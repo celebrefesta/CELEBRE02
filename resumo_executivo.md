@@ -291,6 +291,67 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 16/08/2026 — 13h55 às 18h15 (BRT)
+- ✅ **💰 Registro da Rota `/novo-lancamento` no Roteador Global (`App.jsx`)**:
+  - Resolvido o erro de rota não mapeada (`No routes matched location "/novo-lancamento"`). Agora atalhos rápidos do menu de 3 pontinhos em Locações, Clientes, Estoque e Agenda abrem diretamente o formulário financeiro pré-preenchido.
+- ✅ **📈 Integração dos Custos Logísticos (Gasolina + Desgaste) no Lucro Real da Festa (`Locacoes.jsx` e `NovaLocacao.jsx`)**:
+  - **Causa Identificada**: O sistema considerava apenas compras de peças novas e lançamentos manuais como custos, ignorando o custo de combustível e manutenção do deslocamento até a festa.
+  - **Novo Cálculo Contábil**:
+    $$\text{Gastos Totais} = \text{Compras de Peças} + \text{Despesas Vinculadas} + \text{Custo de Transporte (Gasolina + Desgaste)}$$
+    $$\text{Lucro Líquido Real} = \text{Faturamento} - \text{Gastos Totais}$$
+  - **Novo Card no Modal `Raio-X de Lucro Real da Festa`**:
+    - Exibe detalhadamente: `🚚 Custo Logístico (Transporte & Frota): - R$ XX,XX (X km · ⛽ Gasolina: R$ XX,XX · 🛠️ Desgaste: R$ XX,XX)`;
+    - A margem percentual e o lucro líquido passam a refletir o retorno limpo real da decoração considerando o trajeto.
+- ✅ **🛡️ Geocodificação Silenciosa e Resiliente**:
+  - Eliminado o popup/alerta invasivo durante a digitação de endereços, usando busca em cascata (Rua + Bairro + Cidade + CEP) e deixando o alerta apenas se o usuário clicar ativamente no botão manual.
+- ✅ **🚚 Unificação da Calculadora de Frete dentro da Seção de Logística & Entrega (`NovaLocacao.jsx`)**:
+  - A calculadora de frete por KM foi movida da barra lateral para dentro do card principal **`🚚 LOGÍSTICA & ENTREGA`**, onde o endereço, CEP e transporte são definidos.
+  - A barra lateral de **Resumo Financeiro** agora exibe somente a linha limpa de `Frete: R$ XX,XX` (com botão de zerar).
+- ✅ **📍 Cálculo Automático de Distância (Sede da Empresa $\leftrightarrow$ Local do Evento)**:
+  - **Disparo Automático no CEP**: Ao digitar o CEP de entrega (ou quando o cliente selecionado já tiver endereço cadastrado), o sistema busca os dados via ViaCEP e **calcula a distância rodoviária exata automaticamente** através de geolocalização e rotas abertas (OpenStreetMap + OSRM).
+  - **Botão Sob Demanda**: Botão **`📍 Calcular Distância Automática`** disponível para recalcular a rota a qualquer momento com base na sede cadastrada da empresa em *Configurações > Empresa*.
+  - **Integração com Google Maps**: Adicionado link direto **`🗺️ Abrir no Google Maps`** para que o atendente visualize a rota visual em tempo real.
+  - **Aplicação Flexível**: Após a estimativa em KM, o atendente escolhe o veículo/trajeto e clica em **`➕ Aplicar este Frete (R$ XX,XX)`** ou **`Frete Grátis / Zerar`**.
+- ✅ **🗑️ Remoção do Valor de Reposição/Garantia (`NovaLocacao.jsx`)**:
+  - Removida a linha de "Valor Reposição (Garantia)" do card financeiro, alinhado à diretriz de que avarias são regidas pelo contrato de locação com cobrança direta em caso de quebra.
+- ✅ **🛡️ Blindagem do Checador de Conflitos de Estoque (`NovaLocacao.jsx`)**:
+  - Corrigido o verificador em tempo real de estoque/sobrelocação para **ignorar itens de regularização financeira de débitos anteriores**, checando exclusivamente peças físicas do acervo.
+- ✅ **💳 Sugestão Inteligente & Incorporação de Débito Anterior na Nova Locação (`NovaLocacao.jsx`)**:
+  - Ao disparar o **Modal de Trava de Segurança**, o gestor conta com duas opções inteligentes de liberação:
+    1. **`➕ Autorizar e SOMAR Débito Anterior (+ R$ X,XX) no Pedido`** (Botão Verde Destaque):
+       - Insere automaticamente uma linha no carrinho: `💳 Regularização: Saldo Devedor Anterior (Pedido #2026-032)` com o valor exato pendente;
+       - Soma o valor de forma unificada no subtotal e valor final da nova locação;
+       - Adiciona automaticamente nota nas observações internas do pedido: `[REGULARIZAÇÃO FINANCEIRA]: Incluído valor de R$ X,XX referente ao saldo devedor de locações anteriores para quitação unificada nesta locação.`;
+       - Exibe linha destacada em vermelho/ouro no carrinho com botão de remoção caso decida retirar.
+    2. **`⚠️ Autorizar Sem Somar (Cobrar Débito Separadamente)`** (Botão Âmbar):
+       - Permite ao atendente realizar a locação sem somar o débito, mantendo o histórico de cobrança separado.
+- ✅ **🚨 Trava de Segurança & Alerta de Inadimplência em Nova Locação (`Clientes.jsx` e `NovaLocacao.jsx`)**:
+  - **Detecção Automática**: O sistema identifica em tempo real se o cliente possui status `inadimplente` ou pedidos anteriores com saldo devedor em aberto / não quitados.
+  - **Bloqueio & Alerta em Clientes**: Ao clicar em `Nova Locação` (no menu 3 pontinhos ou no Fichário/Perfil do Cliente), se o cliente possuir pendências, abre o **Modal de Trava de Segurança** destacando em vermelho o valor total devido (`R$ X,XX`) e os pedidos pendentes.
+  - **Modal Centralizado**: Estilizado como overlay flutuante com *backdrop blur* escuro no centro da tela.
+- ✅ **⚡ Filtragem Estrita por Cliente & Regra Temporal de Contrato (`NovoContrato.jsx`)**:
+  - **Correção da Correspondência de Clientes**: Eliminado o erro de correspondência que causava o vazamento de pedidos de outros clientes. Agora a lista filtra estritamente por `clienteId` ou `nomeCliente === clienteSelecionado`.
+  - **Regra de Elegibilidade Jurídica de Contratos**: Orçamentos em aberto e locações confirmadas cuja data da celebração ainda não passou. Pedidos passados, devolvidos ou cancelados são sumariamente excluídos.
+  - **Rodapé de Ações**: Botões fixos com `Cancelar` e `💾 Salvar e Gerar Contrato ➔`.
+  - **Modal de Importação Rápida Padronizado**: Abas de filtro (`Todos Ativos`, `Locações`, `Orçamentos`), busca instantânea e cards informativos.
+- ✅ **🔒 Regras de Segurança do Firestore Publicadas (`firestore.rules`)**:
+  - Adicionadas regras com isolamento multi-empresa para as coleções `contratos`, `modelosContrato` e `relatorio_avarias`.
+  - Liberada leitura pública por ID (`allow get: if true`) para assinatura digital de contratos pelos clientes via WhatsApp (`/assinatura/:id`).
+  - Deploy executado e publicado com sucesso no Firebase (`released rules firestore.rules to cloud.firestore`).
+- ✅ **📜 Filtragem Inteligente de Contratos (Orçamentos & Locações Ativas)**:
+  - Exclusão rigorosa de pedidos finalizados, devolvidos ou cancelados da listagem de importação.
+  - Abas segmentadas no modal: `⚡ Todos Ativos`, `🎉 Locações Confirmadas`, `📝 Orçamentos`.
+  - Badges visuais com cores distintas identificando claramente o status do pedido (`⚡ Locação Confirmada` vs `📝 Orçamento`).
+  - Botão de atalho direto **`📜 Gerar Contrato (1 Clique)`** adicionado no menu de ações rápidas de cada pedido na página de Locações.
+  - 🛠️ **Correção de Estado & Sessão**: `onAuthStateChanged` integrado de forma segura para garantir que as consultas ao Firestore ocorram apenas com usuário autenticado e `tenantId` válido, eliminando alertas de permissão.
+- ✅ **📜 Reformulação Completa da Gestão de Contratos (`Contratos.jsx`, `Contratos.css`, `NovoContrato.jsx`, `Locacoes.jsx`)**:
+  - 📊 **1. Cards de Indicadores (KPIs) Blindados no Topo**: 1 linha no Desktop / 2 colunas no Mobile (`.clientes-stats-grid`) com Total de Contratos, Assinados, Aguardando Assinatura e Volume Financeiro Contratado (R$).
+  - 🔍 **2. Barra de Busca & Filtros Rápidos (Padrão Celebre)**: Input instantâneo por cliente, tema, CPF ou endereço + Abas segmentadas (`Todos`, `✍️ Assinados`, `⏳ Pendentes`, `📆 Este Mês`).
+  - ⚡ **3. Geração de Contrato a partir de um Pedido (1 Clique)**: Botão `⚡ Gerar de uma Locação` e modal interativo que preenche automaticamente dados do cliente, data, acervo/itens e valores.
+  - 📱 **4. Envio Rápido de Assinatura via WhatsApp**: Botão direto `💬` que gera a URL pública `/assinatura/:id` e abre mensagem formatada para o cliente assinar no celular.
+  - 🎨 **5. Repaginação Visual, Empty State Luxury & Ações Rápidas**: Visualizador nativo de PDF em nova aba (`window.open`), tabela com avatares dourados e cards responsivos no mobile.
+- ✅ **Build de Produção Verificado**: `npm run build` aprovado com **0 erros** (`built in 13.10s`).
+
 ### 🗓️ Sessão: 15/08/2026 — 08h30 às 13h15 (BRT)
 - ✅ **🚚 Reformulação Completa da Esteira Logística & Operação de Galpão (`Logistica.jsx`, `Logistica.css`)**:
   - Organização da esteira em **4 Etapas Operacionais Reais**: `1. A Separar`, `2. Em Separação`, `3. Na Rua / Evento`, `4. Devolvidos`.
@@ -362,5 +423,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 15/08/2026  
+> **⏱️ Última atualização:** 16/08/2026 — 18h15 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

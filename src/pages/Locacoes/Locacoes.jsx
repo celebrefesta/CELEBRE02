@@ -57,26 +57,67 @@ const Locacoes = () => {
   const [configEmpresa, setConfigEmpresa] = useState({});
   const [clientesObjMap, setClientesObjMap] = useState({});
 
-  // 💰 CÁLCULO DE LUCRO REAL DA FESTA (FATURAMENTO - COMPRAS/INSUMOS/DESPESAS)
+  // 💰 CÁLCULO DE LUCRO REAL DA FESTA (FATURAMENTO - COMPRAS/INSUMOS/LOGÍSTICA/DESPESAS)
   const calcularLucroFesta = (pedido) => {
     const faturamento = Number(pedido.valorTotal || pedido.total || 0);
     const pedId = pedido.id;
     const pedNum = pedido.numeroPedido || (pedido.id ? pedido.id.slice(0,6) : '');
 
-    const comprasVinculadas = listaCompras.filter(c => 
+    const comprasVinculadas = (listaCompras || []).filter(c => 
       (c.locacaoId && c.locacaoId === pedId) ||
       (c.numeroPedido && c.numeroPedido === pedNum) ||
       (c.vinculo && (c.vinculo.includes(pedNum) || c.vinculo.includes(pedId)))
     );
     const totalCompras = comprasVinculadas.reduce((acc, c) => acc + (Number(c.valorPago || c.valorEstimado || 0)), 0);
 
-    const despesasVinculadas = lancamentosFin.filter(l =>
+    const despesasVinculadas = (lancamentosFin || []).filter(l =>
       l.tipo === 'saida' &&
       ((l.locacaoId && l.locacaoId === pedId) || (l.locacaoNumero && l.locacaoNumero === pedNum))
     );
     const totalDespesas = despesasVinculadas.reduce((acc, l) => acc + (Number(l.valor || 0)), 0);
 
-    const gastosTotais = totalCompras + totalDespesas;
+    // 🚚 Custo Logístico Real (Combustível + Desgaste do Veículo)
+    let custoLogistica = 0;
+    let infoLogistica = null;
+
+    const log = pedido.logistica || {};
+    if (log.custoTotalLogistica !== undefined && Number(log.custoTotalLogistica) > 0) {
+      custoLogistica = Number(log.custoTotalLogistica);
+      infoLogistica = {
+        distanciaKm: log.distanciaKm || 0,
+        custoCombustivel: Number(log.custoCombustivel || 0),
+        custoDesgaste: Number(log.custoDesgaste || 0),
+        total: custoLogistica
+      };
+    } else if (log.distanciaKm && Number(log.distanciaKm) > 0) {
+      const km = Number(log.distanciaKm);
+      const pf = log.paramFrete || configEmpresa || {};
+      const gas = Number(pf.precoGasolina || 5.90);
+      const consumo = Number(pf.consumoKmL || 12.0);
+      const viagens = Number(pf.viagens || pf.tipoViagemPadrao || 4);
+      const desgasteKm = Number(pf.custoAdicionalKm || 1.50);
+
+      const cGas = ((km * viagens) / consumo) * gas;
+      const cDesgaste = km * desgasteKm;
+      custoLogistica = Math.round((cGas + cDesgaste) * 100) / 100;
+      infoLogistica = {
+        distanciaKm: km,
+        custoCombustivel: Math.round(cGas * 100) / 100,
+        custoDesgaste: Math.round(cDesgaste * 100) / 100,
+        total: custoLogistica
+      };
+    } else if (Number(log.frete || 0) > 0) {
+      const freteCobrado = Number(log.frete || 0);
+      custoLogistica = Math.round(freteCobrado * 0.7 * 100) / 100;
+      infoLogistica = {
+        distanciaKm: 0,
+        custoCombustivel: Math.round(custoLogistica * 0.6 * 100) / 100,
+        custoDesgaste: Math.round(custoLogistica * 0.4 * 100) / 100,
+        total: custoLogistica
+      };
+    }
+
+    const gastosTotais = totalCompras + totalDespesas + custoLogistica;
     const lucroLimpo = faturamento - gastosTotais;
     const margemPct = faturamento > 0 ? (lucroLimpo / faturamento) * 100 : 0;
 
@@ -87,6 +128,8 @@ const Locacoes = () => {
       margemPct,
       totalCompras,
       totalDespesas,
+      custoLogistica,
+      infoLogistica,
       comprasVinculadas,
       despesasVinculadas
     };
@@ -94,7 +137,7 @@ const Locacoes = () => {
 
   // ⭐ SELO VIP DO CLIENTE
   const getSeloVIPLocacao = (clienteId, clienteNome) => {
-    const locsCliente = locacoes.filter(l => (l.clienteId === clienteId || l.clienteNome === clienteNome) && !String(l.status || '').toLowerCase().includes('cancel') && !String(l.status || '').toLowerCase().includes('orcam'));
+    const locsCliente = (lista || []).filter(l => (l.clienteId === clienteId || l.clienteNome === clienteNome) && !String(l.status || '').toLowerCase().includes('cancel') && !String(l.status || '').toLowerCase().includes('orcam'));
     const totalGasto = locsCliente.reduce((acc, l) => acc + Number(l.valorTotal || 0), 0);
     if (totalGasto >= 5000) return { badge: `⭐ VIP Ouro — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, color: '#a16207', bg: '#fefce8', border: '#fde047' };
     if (totalGasto >= 2000) return { badge: `✨ VIP Prata — R$ ${totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}`, color: '#334155', bg: '#f8fafc', border: '#cbd5e1' };
@@ -1514,6 +1557,20 @@ const Locacoes = () => {
                                 <span className="item-icon slate">🖨️</span> Imprimir Recibo / PDF
                               </button>
 
+                              {!isCancelado && (
+                                <button 
+                                  type="button"
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    setMenuAberto(null);
+                                    navigate('/novo-contrato', { state: { pedidoImportado: item } });
+                                  }} 
+                                  className="item-menu"
+                                >
+                                  <span className="item-icon gold">📜</span> Gerar Contrato (1 Clique)
+                                </button>
+                              )}
+
                               {item.ultimoComprovanteUrl && (
                                 <button 
                                   type="button"
@@ -1899,6 +1956,31 @@ const Locacoes = () => {
 
                   </div>
 
+                  {/* CUSTOS LOGÍSTICOS & TRANSPORTE */}
+                  {lk.custoLogistica > 0 && (
+                    <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '12px', padding: '12px' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                        <span style={{ fontSize: '0.78rem', fontWeight: '800', color: '#1e293b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          🚚 Custo Logístico (Transporte & Frota)
+                        </span>
+                        <strong style={{ color: '#dc2626', fontSize: '0.88rem' }}>
+                          - R$ {lk.custoLogistica.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </strong>
+                      </div>
+                      <div style={{ fontSize: '0.72rem', color: '#64748b', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+                        {lk.infoLogistica?.distanciaKm > 0 && (
+                          <span>📍 <strong>Distância:</strong> {lk.infoLogistica.distanciaKm} km</span>
+                        )}
+                        {lk.infoLogistica?.custoCombustivel > 0 && (
+                          <span>⛽ <strong>Gasolina:</strong> R$ {lk.infoLogistica.custoCombustivel.toFixed(2)}</span>
+                        )}
+                        {lk.infoLogistica?.custoDesgaste > 0 && (
+                          <span>🛠️ <strong>Desgaste:</strong> R$ {lk.infoLogistica.custoDesgaste.toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* LISTA DE COMPRAS E INSUMOS VINCULADOS A ESTA FESTA */}
                   <div>
                     <h5 style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#334155', fontWeight: '800', textTransform: 'uppercase' }}>
@@ -1906,8 +1988,11 @@ const Locacoes = () => {
                     </h5>
 
                     {lk.comprasVinculadas.length === 0 ? (
-                      <div style={{ padding: '14px', background: '#f8fafc', borderRadius: '10px', color: '#64748b', fontSize: '0.78rem', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-                        ✨ Nenhum gasto ou compra adicional registrado para esta festa (100% de margem com acervo existente).
+                      <div style={{ padding: '12px', background: '#f8fafc', borderRadius: '10px', color: '#64748b', fontSize: '0.76rem', textAlign: 'center', border: '1px solid #e2e8f0' }}>
+                        {lk.custoLogistica > 0 
+                          ? '✨ Nenhuma compra de peça extra registrada para esta festa.' 
+                          : '✨ Nenhum gasto ou compra adicional registrado para esta festa (100% de margem com acervo existente).'
+                        }
                       </div>
                     ) : (
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '150px', overflowY: 'auto' }}>

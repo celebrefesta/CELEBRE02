@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import './NovaLocacao.css';
 import { db } from '../../firebaseConfig'; 
 import { collection, getDocs, doc, getDoc, addDoc, getCountFromServer, serverTimestamp, query, where } from 'firebase/firestore';
@@ -23,6 +23,7 @@ const TIPOS_EVENTO = [
 
 const NovaLocacao = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -36,6 +37,10 @@ const NovaLocacao = () => {
   const [estoque, setEstoque] = useState([]);
   const [todasLocacoes, setTodasLocacoes] = useState([]);
   const [carrinho, setCarrinho] = useState([]);
+
+  // 🚨 ESTADOS DA TRAVA DE SEGURANÇA CONTRA INADIMPLÊNCIA / PENDÊNCIAS
+  const [modalTravaCliente, setModalTravaCliente] = useState(null); // { cliente, pendencias, valorDevido }
+  const [autorizacaoExcepcional, setAutorizacaoExcepcional] = useState(false);
   
   const [modalAberto, setModalAberto] = useState(false);
   const [modalCalendarioAberto, setModalCalendarioAberto] = useState(false);
@@ -150,6 +155,19 @@ const NovaLocacao = () => {
   const [kmDistancia, setKmDistancia] = useState('');
   const [taxaPorKm, setTaxaPorKm] = useState('3.50');
 
+  // 🚚 Parâmetros avançados de frete baseados em veículo e combustível
+  const [paramFrete, setParamFrete] = useState({
+    precoGasolina: '5.90',
+    veiculo: '1.0',
+    consumoKmL: '12.0',
+    viagens: '4',
+    custoAdicionalKm: '1.50',
+    taxaMinima: '0'
+  });
+  const [mostrarAjusteFrete, setMostrarAjusteFrete] = useState(false);
+  const [calculandoDistancia, setCalculandoDistancia] = useState(false);
+  const [infoRota, setInfoRota] = useState(null);
+
   const [modalCompraAberto, setModalCompraAberto] = useState(false);
   const [formCompra, setFormCompra] = useState({ 
       nome: "", 
@@ -204,6 +222,74 @@ const NovaLocacao = () => {
     }
   };
 
+  // 🚨 Helper para identificar pendências de um cliente
+  const getPendenciasCliente = (cId, clientesList = clientes, locacoesList = todasLocacoes) => {
+    if (!cId) return { temPendencia: false, valorDevido: 0, qtdPendencias: 0, pendencias: [], clienteObj: null };
+    const clienteObj = clientesList.find(c => c.id === cId || String(c.id) === String(cId));
+    
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const pendencias = locacoesList.filter(loc => {
+      if (loc.clienteId !== cId && loc.cliente?.id !== cId) return false;
+      const status = (loc.status || '').toLowerCase().trim();
+      if (status === 'cancelado' || status === 'orcamento' || status === 'orçamento') return false;
+      
+      const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
+      if (!dataStr) return false;
+      const dataEvento = new Date(dataStr + 'T00:00:00');
+      const pagStatus = (loc.statusPagamento || '').toLowerCase();
+      const vTotal = Number(loc.valorTotal || loc.total || 0);
+      const vPago = Number(loc.valorPago || 0);
+      return dataEvento < hoje && (vTotal - vPago) > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado';
+    });
+
+    const valorDevido = pendencias.reduce((acc, loc) => {
+      const vTotal = Number(loc.valorTotal || loc.total || 0);
+      const vPago = Number(loc.valorPago || 0);
+      return acc + Math.max(0, vTotal - vPago);
+    }, 0);
+
+    const isInadimplenteCadastral = clienteObj?.situacaoFinanceira === 'inadimplente';
+    const temPendencia = isInadimplenteCadastral || pendencias.length > 0;
+
+    return { temPendencia, valorDevido, qtdPendencias: pendencias.length, pendencias, clienteObj };
+  };
+
+  // ➕ Incorpora a pendência financeira do cliente diretamente no pedido atual
+  const handleAutorizarESomarDebito = () => {
+    if (!modalTravaCliente) return;
+    const { valorDevido, pendencias } = modalTravaCliente;
+    
+    const numPedsStr = pendencias?.map(p => p.numeroPedido ? `#${p.numeroPedido}` : `#${p.id.slice(0,6).toUpperCase()}`).join(', ') || 'Anterior';
+    const itemDebito = {
+      id: `debito_anterior_${Date.now()}`,
+      nome: `💳 Regularização: Saldo Devedor Anterior (${numPedsStr})`,
+      preco: Number(valorDevido || 0),
+      qtd: 1,
+      quantidade: 1,
+      categoria: 'Regularização Financeira',
+      isDebitoAnterior: true,
+      pendenciasVinculadas: pendencias,
+      foto: ''
+    };
+
+    setCarrinho(prev => [...prev.filter(i => !i.isDebitoAnterior), itemDebito]);
+
+    setObsInternas(prev => {
+      const nota = `[REGULARIZAÇÃO FINANCEIRA]: Incluído valor de R$ ${Number(valorDevido).toFixed(2)} referente ao saldo devedor de locações anteriores (${numPedsStr}) para quitação unificada nesta locação.`;
+      return prev ? `${prev}\n${nota}` : nota;
+    });
+
+    setAutorizacaoExcepcional(true);
+    setModalTravaCliente(null);
+  };
+
+  const handleAutorizarSemSomar = () => {
+    setAutorizacaoExcepcional(true);
+    setModalTravaCliente(null);
+  };
+
   const [configEmpresa, setConfigEmpresa] = useState(null);
 
   useEffect(() => {
@@ -227,10 +313,45 @@ const NovaLocacao = () => {
           getDoc(docConfigRef)
         ]);
         
-        setClientes(snapCli.docs.map(d => ({ id: d.id, ...d.data() })));
-        setEstoque(snapEst.docs.map(d => ({ id: d.id, ...d.data() })));
-        setTodasLocacoes(snapLoc.docs.map(d => ({ id: d.id, ...d.data() })));
-        if (snapConf.exists()) setConfigEmpresa(snapConf.data());
+        const clis = snapCli.docs.map(d => ({ id: d.id, ...d.data() }));
+        const ests = snapEst.docs.map(d => ({ id: d.id, ...d.data() }));
+        const locs = snapLoc.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        setClientes(clis);
+        setEstoque(ests);
+        setTodasLocacoes(locs);
+        if (snapConf.exists()) {
+          const conf = snapConf.data();
+          setConfigEmpresa(conf);
+          setParamFrete({
+            precoGasolina: conf.precoGasolina !== undefined ? String(conf.precoGasolina) : '5.90',
+            veiculo: conf.veiculoPadrao || '1.0',
+            consumoKmL: conf.consumoKmL !== undefined ? String(conf.consumoKmL) : '12.0',
+            viagens: conf.tipoViagemPadrao !== undefined ? String(conf.tipoViagemPadrao) : '4',
+            custoAdicionalKm: conf.custoAdicionalKm !== undefined ? String(conf.custoAdicionalKm) : '1.50',
+            taxaMinima: conf.taxaMinimaFrete !== undefined ? String(conf.taxaMinimaFrete) : '25.00'
+          });
+        }
+
+        // Se veio clienteSelecionado pelo state da navegação:
+        if (location.state?.clienteSelecionado) {
+          const cliPassado = location.state.clienteSelecionado;
+          const cId = cliPassado.id;
+          setClienteSelecionado(cId);
+
+          if (location.state.autorizacaoPendente) {
+            setAutorizacaoExcepcional(true);
+          } else {
+            const infoPend = getPendenciasCliente(cId, clis, locs);
+            if (infoPend.temPendencia) {
+              setModalTravaCliente({
+                cliente: infoPend.clienteObj || cliPassado,
+                pendencias: infoPend.pendencias,
+                valorDevido: infoPend.valorDevido
+              });
+            }
+          }
+        }
       } catch (error) {
         console.error("Erro ao carregar:", error);
       } finally {
@@ -239,7 +360,7 @@ const NovaLocacao = () => {
     };
 
     carregarDados();
-  }, [usuarioLogado, navigate, tenantId]);
+  }, [usuarioLogado, navigate, tenantId, location.state]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
   const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
@@ -486,7 +607,44 @@ const NovaLocacao = () => {
 
   const getFreteNumerico = () => {
     if (!logistica.frete) return 0;
-    return Number(logistica.frete.toString().replace(/\./g, "").replace(",", "."));
+    if (typeof logistica.frete === 'number') return logistica.frete;
+    const str = String(logistica.frete).trim();
+    if (str.includes(',')) {
+      const limpo = str.replace(/\./g, "").replace(",", ".");
+      const n = parseFloat(limpo);
+      return isNaN(n) ? 0 : n;
+    }
+    const n = parseFloat(str);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const calcularFreteEstimado = (distanciaKm) => {
+    const km = Number(String(distanciaKm).replace(',', '.')) || 0;
+    if (km <= 0) return { freteTotal: 0, custoGasolina: 0, custoDesgaste: 0, taxaEfetivaKm: '0.00', viagens: 4, consumo: 12, precoGas: 5.9, custoOp: 1.5 };
+
+    const precoGas = Number(String(paramFrete.precoGasolina || 5.90).replace(',', '.')) || 5.90;
+    const consumo = Number(String(paramFrete.consumoKmL || 12.0).replace(',', '.')) || 12.0;
+    const viagens = Number(paramFrete.viagens) || 4;
+    const custoOp = Number(String(paramFrete.custoAdicionalKm || 0).replace(',', '.')) || 0;
+    const taxaMin = Number(String(paramFrete.taxaMinima || 0).replace(',', '.')) || 0;
+
+    const custoGasolina = ((km * viagens) / consumo) * precoGas;
+    const custoDesgaste = km * custoOp;
+    const somaReal = custoGasolina + custoDesgaste;
+    const freteTotal = Math.max(taxaMin, somaReal);
+    const taxaEfetivaKm = km > 0 ? (somaReal / km).toFixed(2) : '0.00';
+
+    return { 
+      freteTotal: Math.round(freteTotal * 100) / 100, 
+      somaReal: Math.round(somaReal * 100) / 100,
+      custoGasolina: Math.round(custoGasolina * 100) / 100, 
+      custoDesgaste: Math.round(custoDesgaste * 100) / 100, 
+      taxaEfetivaKm, 
+      viagens, 
+      consumo, 
+      precoGas, 
+      custoOp 
+    };
   };
 
   const getValorDescontoCalculado = (subtotal) => {
@@ -504,6 +662,117 @@ const NovaLocacao = () => {
     return { subtotal, valorDesconto, total: Math.max(0, total) };
   };
 
+  const calcularDistanciaAutomatica = async (destinoCustom = null, isManual = false) => {
+    const dest = destinoCustom || logistica;
+    const ruaDest = dest.rua || '';
+    const cidadeDest = dest.cidade || '';
+    const cepDest = (dest.cep || '').replace(/\D/g, '');
+    const numDest = dest.numero || '';
+
+    // Endereço de destino
+    const endDestino = `${ruaDest} ${numDest}, ${cidadeDest} ${dest.cep || ''}`.trim();
+    
+    // Endereço de origem (Sede da empresa cadastrada em configuracoes_empresa)
+    const conf = configEmpresa || {};
+    const endOrigem = `${conf.rua || conf.endereco || ''} ${conf.numero || ''}, ${conf.bairro || ''}, ${conf.cidade || ''} ${conf.uf || ''} ${conf.cep || ''}`.trim();
+
+    if (!ruaDest && cepDest.length < 8) {
+      if (isManual) alert("Por favor, informe o CEP ou o endereço do local da festa para calcular a distância.");
+      return;
+    }
+
+    if (!endOrigem || endOrigem.length < 3) {
+      if (isManual) alert("Endereço da sede da sua empresa não foi configurado. Configure o endereço em 'Configurações > Empresa' para que a distância automática funcione com base na sua sede.");
+      return;
+    }
+
+    setCalculandoDistancia(true);
+    try {
+      const buscarCoord = async (qList) => {
+        for (const q of qList) {
+          if (!q || q.trim().length < 3) continue;
+          try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`, {
+              headers: { 'Accept-Language': 'pt-BR' }
+            });
+            const data = await res.json();
+            if (data && data.length > 0) return data[0];
+          } catch (e) {
+            // fallback
+          }
+        }
+        return null;
+      };
+
+      // 1. Geocodificar Origem (Empresa)
+      const coordOrigem = await buscarCoord([
+        `${conf.rua || conf.endereco || ''}, ${conf.cidade || ''} - ${conf.uf || ''}, Brasil`,
+        `${conf.bairro || ''}, ${conf.cidade || ''} - ${conf.uf || ''}, Brasil`,
+        `${conf.cep || ''}, Brasil`,
+        `${conf.cidade || ''} - ${conf.uf || ''}, Brasil`
+      ]);
+
+      // 2. Geocodificar Destino (Evento)
+      const coordDestino = await buscarCoord([
+        `${ruaDest} ${numDest}, ${cidadeDest}, Brasil`,
+        `${ruaDest}, ${cidadeDest}, Brasil`,
+        `${dest.bairro || ''}, ${cidadeDest}, Brasil`,
+        `${dest.cep || ''}, Brasil`,
+        `${cidadeDest}, Brasil`
+      ]);
+
+      let kmCalculado = 0;
+
+      if (coordOrigem && coordDestino) {
+        const lat1 = parseFloat(coordOrigem.lat);
+        const lon1 = parseFloat(coordOrigem.lon);
+        const lat2 = parseFloat(coordDestino.lat);
+        const lon2 = parseFloat(coordDestino.lon);
+
+        // Rota de trânsito rodoviária OSRM
+        try {
+          const resRoute = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`);
+          const dataRoute = await resRoute.json();
+          if (dataRoute.routes && dataRoute.routes.length > 0) {
+            kmCalculado = Math.round((dataRoute.routes[0].distance / 1000) * 10) / 10;
+          }
+        } catch (eRoute) {
+          console.warn("OSRM routing fallback", eRoute);
+        }
+
+        // Fallback Haversine geodésico (com fator de curvas 1.25x)
+        if (!kmCalculado || kmCalculado <= 0) {
+          const R = 6371; // km
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                    Math.sin(dLon/2) * Math.sin(dLon/2);
+          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+          kmCalculado = Math.round(R * c * 1.25 * 10) / 10;
+        }
+      }
+
+      if (kmCalculado > 0) {
+        setKmDistancia(String(kmCalculado));
+        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(endOrigem)}&destination=${encodeURIComponent(endDestino)}`;
+        setInfoRota({
+          km: kmCalculado,
+          origem: endOrigem,
+          destino: endDestino,
+          mapsUrl: googleMapsUrl
+        });
+      } else if (isManual) {
+        alert("Não foi possível encontrar a rota exata automaticamente. Você pode digitar a distância em KM manualmente no campo.");
+      }
+    } catch (err) {
+      console.error("Erro ao calcular rota automática:", err);
+      if (isManual) alert("Não foi possível conectar ao serviço de rotas. Você pode preencher o KM manualmente.");
+    } finally {
+      setCalculandoDistancia(false);
+    }
+  };
+
   const handleCepChange = async (e) => {
     let value = e.target.value.replace(/\D/g, "");
     let cepFormatado = value.replace(/^(\d{5})(\d)/, "$1-$2").substring(0, 9);
@@ -514,14 +783,28 @@ const NovaLocacao = () => {
         const res = await fetch(`https://viacep.com.br/ws/${value}/json/`);
         const dados = await res.json();
         if (!dados.erro) {
+          const novaRua = dados.logradouro || '';
+          const novoBairro = dados.bairro || '';
+          const novaCidade = `${dados.localidade || ''} - ${dados.uf || ''}`;
+
           setLogistica(prev => ({
             ...prev, 
             cep: cepFormatado, 
-            rua: dados.logradouro || '', 
-            bairro: dados.bairro || '', 
-            cidade: `${dados.localidade || ''} - ${dados.uf || ''}`
+            rua: novaRua, 
+            bairro: novoBairro, 
+            cidade: novaCidade
           }));
-          setTimeout(() => document.getElementById('numeroInput').focus(), 100);
+
+          setTimeout(() => document.getElementById('numeroInput')?.focus(), 100);
+
+          // 🚀 Calcula a distância automaticamente com base na sede da empresa!
+          calcularDistanciaAutomatica({
+            cep: cepFormatado,
+            rua: novaRua,
+            bairro: novoBairro,
+            cidade: dados.localidade || '',
+            uf: dados.uf || ''
+          });
         }
       } catch (e) {
           console.error("Erro ao buscar CEP");
@@ -564,9 +847,12 @@ const NovaLocacao = () => {
         return alert("A data de devolução não pode ser menor que a data de retirada!");
     }
     
-    if (carrinho.length === 0) return alert("Você precisa adicionar pelo menos 1 peça no pedido!");
+    const pecasFisicasNoCarrinho = carrinho.filter(i => !i.isDebitoAnterior && !i.isTaxa && !i.isServico);
+    if (pecasFisicasNoCarrinho.length === 0) {
+      return alert("Você precisa adicionar pelo menos 1 peça do acervo no pedido!");
+    }
     
-    for (let item of carrinho) {
+    for (let item of pecasFisicasNoCarrinho) {
         if (item.isPendenteCompra) continue;
         const disp = getDisponibilidade(item.id);
         const qtdNoCarrinho = Number(item.qtd) || 1;
@@ -596,8 +882,8 @@ const NovaLocacao = () => {
 
       const clienteEncontrado = clientes.find(c => String(c.id) === String(clienteSelecionado));
       const nomeClienteReal = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || clienteEncontrado.razaoSocial || "Cliente") : "Cliente";
-      const temaFinalParaSalvar = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : temaFesta;
-      
+      const estFrete = calcularFreteEstimado(kmDistancia);
+
       const docRef = await addDoc(coll, {
         numeroPedido: codigo, 
         clienteId: clienteSelecionado, 
@@ -608,7 +894,15 @@ const NovaLocacao = () => {
         dataRetirada: datas.retirada, 
         dataDevolucao: datas.devolucao, 
         itens: carrinho, 
-        logistica: { ...logistica, frete: getFreteNumerico() }, 
+        logistica: { 
+          ...logistica, 
+          frete: getFreteNumerico(),
+          distanciaKm: Number(kmDistancia) || 0,
+          paramFrete: paramFrete,
+          custoCombustivel: estFrete.custoGasolina || 0,
+          custoDesgaste: estFrete.custoDesgaste || 0,
+          custoTotalLogistica: (estFrete.custoGasolina + estFrete.custoDesgaste) || 0
+        }, 
         obsInternas, 
         desconto: calcularTotal().valorDesconto, 
         tipoDesconto,
@@ -929,16 +1223,113 @@ const NovaLocacao = () => {
               </div>
                 <select 
                   value={clienteSelecionado} 
-                  onChange={e => setClienteSelecionado(e.target.value)}
+                  onChange={e => {
+                    const cId = e.target.value;
+                    setClienteSelecionado(cId);
+                    setAutorizacaoExcepcional(false);
+                    if (cId) {
+                      const infoPend = getPendenciasCliente(cId);
+                      if (infoPend.temPendencia) {
+                        setModalTravaCliente({
+                          cliente: infoPend.clienteObj,
+                          pendencias: infoPend.pendencias,
+                          valorDevido: infoPend.valorDevido
+                        });
+                      }
+
+                      // Preenche endereço do cliente na logística se houver
+                      const cli = clientes.find(c => String(c.id) === String(cId));
+                      if (cli && (cli.rua || cli.endereco || cli.cep || cli.cidade)) {
+                        const endCli = {
+                          cep: cli.cep || '',
+                          rua: cli.rua || cli.endereco || '',
+                          numero: cli.numero || '',
+                          bairro: cli.bairro || '',
+                          cidade: cli.cidade ? `${cli.cidade}${cli.uf ? ` - ${cli.uf}` : ''}` : ''
+                        };
+                        setLogistica(prev => ({
+                          ...prev,
+                          cep: prev.cep || endCli.cep,
+                          rua: prev.rua || endCli.rua,
+                          numero: prev.numero || endCli.numero,
+                          bairro: prev.bairro || endCli.bairro,
+                          cidade: prev.cidade || endCli.cidade
+                        }));
+
+                        if (endCli.rua || endCli.cep) {
+                          calcularDistanciaAutomatica(endCli);
+                        }
+                      }
+                    }
+                  }}
                   className="select-cliente-vip"
+                  style={{
+                    borderColor: clienteSelecionado && getPendenciasCliente(clienteSelecionado).temPendencia ? '#ef4444' : '#cbd5e1',
+                    background: clienteSelecionado && getPendenciasCliente(clienteSelecionado).temPendencia ? '#fef2f2' : '#ffffff'
+                  }}
                 >
                   <option value="" disabled hidden>Selecione um cliente cadastrado...</option>
-                  {clientes.map(c => (
-                    <option key={c.id} value={c.id}>
-                      👤 {c.nome || c.nomeFantasia || c.razaoSocial} {c.celular ? `(${c.celular})` : ''}
-                    </option>
-                  ))}
+                  {clientes.map(c => {
+                    const infoPend = getPendenciasCliente(c.id);
+                    return (
+                      <option key={c.id} value={c.id}>
+                        {infoPend.temPendencia ? '⚠️ [PENDÊNCIA] ' : '👤 '} 
+                        {c.nome || c.nomeFantasia || c.razaoSocial} {c.celular ? `(${c.celular})` : ''}
+                        {infoPend.temPendencia ? ` — Débito R$ ${infoPend.valorDevido.toFixed(2)}` : ''}
+                      </option>
+                    );
+                  })}
                 </select>
+
+                {/* BANNER DE ALERTA DE PENDÊNCIA SE O CLIENTE ATUAL TIVER RESTRIÇÃO */}
+                {clienteSelecionado && (() => {
+                  const info = getPendenciasCliente(clienteSelecionado);
+                  if (!info.temPendencia) return null;
+                  return (
+                    <div style={{
+                      marginTop: '8px',
+                      background: '#fef2f2',
+                      border: '1px solid #fecaca',
+                      borderRadius: '10px',
+                      padding: '10px 14px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      gap: '10px',
+                      flexWrap: 'wrap'
+                    }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <span style={{ fontSize: '1.2rem', color: '#dc2626' }}>🚨</span>
+                        <div>
+                          <strong style={{ fontSize: '0.84rem', color: '#991b1b', display: 'block' }}>
+                            ATENÇÃO: CLIENTE COM PENDÊNCIA FINANCEIRA (R$ {info.valorDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
+                          </strong>
+                          <span style={{ fontSize: '0.74rem', color: '#b91c1c' }}>
+                            {autorizacaoExcepcional 
+                              ? '⚠️ Locação autorizada pelo gestor sob termo de ciência.' 
+                              : 'Recomendado regularizar débitos em atraso antes de concluir a locação.'}
+                          </span>
+                        </div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => setModalTravaCliente({ cliente: info.clienteObj, pendencias: info.pendencias, valorDevido: info.valorDevido })}
+                        style={{
+                          background: '#dc2626',
+                          color: '#ffffff',
+                          border: 'none',
+                          padding: '6px 12px',
+                          borderRadius: '8px',
+                          fontSize: '0.74rem',
+                          fontWeight: '800',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        🔍 Ver Pendência
+                      </button>
+                    </div>
+                  );
+                })()}
               </div>
 
             <div className="form-row mt-10">
@@ -1124,7 +1515,7 @@ const NovaLocacao = () => {
               <div className="logistica-form mt-15">
                 <div className="form-row">
                   <div className="form-group flex-1">
-                    <label>CEP</label>
+                    <label>CEP do Local da Festa</label>
                     <input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} />
                   </div>
                   <div className="form-group flex-2">
@@ -1132,14 +1523,32 @@ const NovaLocacao = () => {
                     <input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} />
                   </div>
                   <div className="form-group flex-1">
-                    <label>Taxa Frete (R$)</label>
-                    <input type="text" placeholder="0,00" value={logistica.frete} onChange={handleFreteChange} />
+                    <label>Taxa de Frete Final (R$)</label>
+                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                      <input 
+                        type="text" 
+                        placeholder="0,00" 
+                        value={logistica.frete} 
+                        onChange={handleFreteChange} 
+                        style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#16a34a' : '#0f172a' }}
+                      />
+                      {getFreteNumerico() > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
+                          style={{ padding: '6px 8px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecdd3', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer' }}
+                          title="Zerar Frete"
+                        >
+                          <i className="fas fa-times"></i>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
                 
                 <div className="form-row mt-10">
                   <div className="form-group flex-2">
-                    <label>Logradouro</label>
+                    <label>Logradouro (Rua / Av.)</label>
                     <input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} />
                   </div>
                   <div className="form-group flex-1">
@@ -1163,6 +1572,286 @@ const NovaLocacao = () => {
                   <label>Observações de Transporte</label>
                   <textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})}></textarea>
                 </div>
+
+                {/* 🧮 CALCULADORA INTEGRADA DE FRETE POR KM AUTOMÁTICA */}
+                <div style={{ marginTop: '16px', background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.2rem' }}>🧮</span>
+                      <div>
+                        <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>Calculadora de Frete por KM</strong>
+                        <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b' }}>Cálculo automático baseado no endereço da sede da sua empresa</p>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        onClick={() => calcularDistanciaAutomatica(null, true)}
+                        disabled={calculandoDistancia}
+                        style={{
+                          background: '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '6px 12px',
+                          fontSize: '0.74rem',
+                          fontWeight: '750',
+                          color: '#2563eb',
+                          cursor: calculandoDistancia ? 'not-allowed' : 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                        }}
+                      >
+                        {calculandoDistancia ? (
+                          <><i className="fas fa-spinner fa-spin"></i> Calculando Rota...</>
+                        ) : (
+                          <><i className="fas fa-map-marker-alt"></i> 📍 Calcular Distância Automática</>
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setMostrarAjusteFrete(!mostrarAjusteFrete)}
+                        style={{
+                          background: mostrarAjusteFrete ? '#e2e8f0' : '#ffffff',
+                          border: '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          padding: '6px 10px',
+                          fontSize: '0.74rem',
+                          fontWeight: '750',
+                          color: '#334155',
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '4px',
+                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
+                        }}
+                      >
+                        <i className="fas fa-sliders-h" style={{ color: '#c5a059' }}></i> 
+                        {mostrarAjusteFrete ? 'Fechar Ajustes' : '⚙️ Ajustar Veículo & Gasolina'}
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* PAINEL RETRÁTIL DE AJUSTE RÁPIDO DO VEÍCULO & GASOLINA */}
+                  {mostrarAjusteFrete && (
+                    <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
+                        <div>
+                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                            🚗 Tipo de Veículo & Consumo
+                          </label>
+                          <select
+                            value={paramFrete.veiculo}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              const consumos = { '1.0': '12.0', '1.6': '9.5', '2.0': '7.5', 'fiorino': '6.5', 'caminhao': '4.5' };
+                              setParamFrete(prev => ({
+                                ...prev,
+                                veiculo: v,
+                                consumoKmL: consumos[v] || prev.consumoKmL
+                              }));
+                            }}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', background: '#f8fafc' }}
+                          >
+                            <option value="1.0">🚗 Carro 1.0 (12 km/l)</option>
+                            <option value="1.6">🚗 Carro 1.4 / 1.6 (9.5 km/l)</option>
+                            <option value="2.0">🚙 Carro 2.0 / SUV (7.5 km/l)</option>
+                            <option value="fiorino">🚐 Fiorino / Van (6.5 km/l)</option>
+                            <option value="caminhao">🚛 Caminhão (4.5 km/l)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                            ⛽ Gasolina (R$/Litro)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.05"
+                            value={paramFrete.precoGasolina}
+                            onChange={(e) => setParamFrete(prev => ({ ...prev, precoGasolina: e.target.value }))}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', boxSizing: 'border-box' }}
+                          />
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                            🔁 Trajetos da Locação
+                          </label>
+                          <select
+                            value={paramFrete.viagens}
+                            onChange={(e) => setParamFrete(prev => ({ ...prev, viagens: e.target.value }))}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.76rem', fontWeight: '700', color: '#0f172a', background: '#f8fafc' }}
+                          >
+                            <option value="4">🔁 4 Viagens (Levar, Voltar, Buscar, Voltar)</option>
+                            <option value="2">➡️ 2 Viagens (Apenas Entrega / Ida e Volta)</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                            🛠️ Desgaste Veicular (R$/km)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.10"
+                            value={paramFrete.custoAdicionalKm}
+                            onChange={(e) => setParamFrete(prev => ({ ...prev, custoAdicionalKm: e.target.value }))}
+                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', boxSizing: 'border-box' }}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* CAMPO DE DISTÂNCIA KM COM INFO DA ROTA */}
+                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
+                    <div style={{ flex: '1 1 220px' }}>
+                      <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
+                        Distância em KM (Sede da Empresa ↔ Local da Festa)
+                      </label>
+                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                        <input 
+                          type="number" 
+                          min="0"
+                          step="0.1"
+                          placeholder="Digite ou clique em Calcular Automática" 
+                          value={kmDistancia} 
+                          onChange={e => setKmDistancia(e.target.value)}
+                          style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.86rem', fontWeight: '800', color: '#0f172a' }}
+                        />
+                        {kmDistancia && (
+                          <button
+                            type="button"
+                            onClick={() => setKmDistancia('')}
+                            style={{ padding: '9px 12px', background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '0.8rem', cursor: 'pointer' }}
+                            title="Limpar KM"
+                          >
+                            <i className="fas fa-times"></i>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    {infoRota?.mapsUrl && (
+                      <div style={{ alignSelf: 'flex-end' }}>
+                        <a
+                          href={infoRota.mapsUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          style={{
+                            padding: '9px 14px',
+                            background: '#ffffff',
+                            border: '1px solid #cbd5e1',
+                            borderRadius: '10px',
+                            fontSize: '0.76rem',
+                            fontWeight: '750',
+                            color: '#1e293b',
+                            textDecoration: 'none',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '6px',
+                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
+                          }}
+                        >
+                          <i className="fas fa-external-link-alt" style={{ color: '#3b82f6' }}></i> Abrir no Google Maps
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* RESULTADO CALCULADO COM MEMÓRIA DE CÁLCULO E BOTÕES DE APLICAÇÃO */}
+                  {(() => {
+                    const est = calcularFreteEstimado(kmDistancia);
+                    if (!kmDistancia || est.freteTotal <= 0) return null;
+
+                    const freteFormatado = est.freteTotal.toFixed(2).replace('.', ',');
+                    const freteNum = getFreteNumerico();
+                    const jaAplicado = Math.abs(freteNum - est.freteTotal) < 0.01;
+
+                    const nomeVeiculo = {
+                      '1.0': 'Carro 1.0 (12 km/l)',
+                      '1.6': 'Carro 1.4 / 1.6 (9.5 km/l)',
+                      '2.0': 'Carro 2.0 / SUV (7.5 km/l)',
+                      'fiorino': 'Fiorino / Van (6.5 km/l)',
+                      'caminhao': 'Caminhão (4.5 km/l)'
+                    }[paramFrete.veiculo] || 'Veículo';
+
+                    return (
+                      <div style={{ marginTop: '14px', background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+                          <div>
+                            <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                              Frete Calculado ({kmDistancia} km · {nomeVeiculo}):
+                            </span>
+                            <div style={{ fontSize: '1.25rem', color: '#0f172a', fontWeight: '900' }}>
+                              R$ {freteFormatado}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setLogistica(prev => ({ ...prev, tipo: 'entrega', frete: freteFormatado }));
+                              }}
+                              style={{
+                                background: jaAplicado ? '#16a34a' : 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
+                                color: '#ffffff',
+                                border: 'none',
+                                borderRadius: '10px',
+                                padding: '10px 18px',
+                                fontSize: '0.84rem',
+                                fontWeight: '850',
+                                cursor: 'pointer',
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: '8px',
+                                transition: '0.2s',
+                                boxShadow: jaAplicado ? 'none' : '0 4px 14px rgba(15, 23, 42, 0.25)'
+                              }}
+                            >
+                              {jaAplicado ? (
+                                <><i className="fas fa-check-circle"></i> Frete Aplicado ao Pedido</>
+                              ) : (
+                                <><i className="fas fa-plus-circle"></i> ➕ Aplicar este Frete (R$ {freteFormatado})</>
+                              )}
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
+                              style={{
+                                background: '#f8fafc',
+                                border: '1px solid #cbd5e1',
+                                borderRadius: '10px',
+                                padding: '10px 14px',
+                                fontSize: '0.78rem',
+                                fontWeight: '750',
+                                color: '#64748b',
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Frete Grátis / Zerar
+                            </button>
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '0.76rem', color: '#475569', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', lineHeight: '1.5', border: '1px solid #f1f5f9' }}>
+                          ⛽ <strong>Gasolina:</strong> R$ {est.custoGasolina.toFixed(2)} ({est.viagens} percursos de ida/volta ÷ {est.consumo} km/l × R$ {Number(est.precoGas).toFixed(2)})
+                          <span style={{ margin: '0 8px', color: '#cbd5e1' }}>|</span>
+                          🛠️ <strong>Desgaste & Tempo:</strong> R$ {est.custoDesgaste.toFixed(2)} (R$ {Number(est.custoOp).toFixed(2)}/km)
+                          <span style={{ margin: '0 8px', color: '#cbd5e1' }}>|</span>
+                          <strong>Taxa Média:</strong> ~R$ {est.taxaEfetivaKm}/km
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
               </div>
             ) : (
               <p className="texto-aviso-logistica mt-15">⚠️ O cliente fará a retirada e devolução dos itens diretamente no local.</p>
@@ -1191,14 +1880,16 @@ const NovaLocacao = () => {
             </div>
 
             <div className="carrinho-container mt-15">
-              {/* 🚨 ALERTA DE CONFLITO DE AGENDA / SOBRELOCAÇÃO EM TEMPO REAL */}
+              {/* 🚨 ALERTA DE CONFLITO DE AGENDA / SOBRELOCAÇÃO EM TEMPO REAL (APENAS PEÇAS FÍSICAS) */}
               {(() => {
-                const itensConflito = carrinho.map(item => {
-                  const disp = getDisponibilidade(item.id);
-                  const qtdPedida = Number(item.qtd) || 1;
-                  const falta = Math.max(0, qtdPedida - disp.livresReais);
-                  return { item, disp, qtdPedida, falta, temConflito: falta > 0 };
-                }).filter(c => c.temConflito);
+                const itensConflito = carrinho
+                  .filter(item => !item.isDebitoAnterior && !item.isTaxa && !item.isServico)
+                  .map(item => {
+                    const disp = getDisponibilidade(item.id);
+                    const qtdPedida = Number(item.qtd) || 1;
+                    const falta = Math.max(0, qtdPedida - disp.livresReais);
+                    return { item, disp, qtdPedida, falta, temConflito: falta > 0 };
+                  }).filter(c => c.temConflito);
 
                 if (itensConflito.length === 0) return null;
 
@@ -1241,6 +1932,12 @@ const NovaLocacao = () => {
                 <div className="carrinho-vazio">Nenhuma peça adicionada ainda. Clique em "+ Adc. Peças".</div>
               ) : (
                 <div style={{overflowX: 'auto'}}>
+                  {carrinho.filter(i => !i.isDebitoAnterior).length === 0 && (
+                    <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', color: '#475569', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <span style={{ fontSize: '1.1rem' }}>💡</span>
+                      <span><strong>Débito anterior incorporado!</strong> Agora adicione as peças da nova locação clicando no botão <strong>"+ ADC. PEÇAS"</strong> acima.</span>
+                    </div>
+                  )}
                     <table style={{width: '100%', borderCollapse: 'collapse', minWidth: '500px'}}>
                       <thead>
                         <tr style={{borderBottom: '2px solid #e2e8f0', color: '#64748b', fontSize: '11px', textTransform: 'uppercase', textAlign: 'left'}}>
@@ -1252,6 +1949,47 @@ const NovaLocacao = () => {
                       </thead>
                       <tbody>
                         {carrinho.map(item => {
+                          if (item.isDebitoAnterior) {
+                            return (
+                              <tr key={item.id} style={{ borderBottom: '1px solid #fee2e2', background: '#fff1f2', transition: '0.2s' }}>
+                                <td style={{ padding: '12px 10px' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+                                    <div style={{ width: '45px', height: '45px', backgroundColor: '#fee2e2', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', flexShrink: 0, border: '1px solid #fecdd3' }}>
+                                      💳
+                                    </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                      <span style={{ background: '#dc2626', color: '#ffffff', fontSize: '9px', padding: '2px 6px', borderRadius: '4px', fontWeight: '850', width: 'fit-content', marginBottom: '3px' }}>
+                                        REGULARIZAÇÃO DE DÉBITO ANTERIOR
+                                      </span>
+                                      <strong style={{ color: '#991b1b', fontSize: '14px' }}>
+                                        {item.nome}
+                                      </strong>
+                                      <span style={{ color: '#b91c1c', fontSize: '11px', marginTop: '2px' }}>Soma unificada para quitação conjunta nesta locação</span>
+                                    </div>
+                                  </div>
+                                </td>
+                                <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                  <span style={{ background: '#fecdd3', color: '#9f1239', padding: '4px 10px', borderRadius: '6px', fontSize: '0.74rem', fontWeight: '850' }}>
+                                    1 un. (Fixo)
+                                  </span>
+                                </td>
+                                <td style={{ padding: '12px 10px', textAlign: 'right', fontWeight: '900', color: '#dc2626', fontSize: '14px' }}>
+                                  + R$ {Number(item.preco).toFixed(2)}
+                                </td>
+                                <td style={{ padding: '12px 10px', textAlign: 'center' }}>
+                                  <button 
+                                    type="button" 
+                                    onClick={() => setCarrinho(carrinho.filter(i => i.id !== item.id))} 
+                                    style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '16px' }}
+                                    title="Remover Acréscimo do Débito"
+                                  >
+                                    <i className="fas fa-trash-alt"></i>
+                                  </button>
+                                </td>
+                              </tr>
+                            );
+                          }
+
                           const isDeco = item.isDecoracao || item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa' || item.tipoCadastro === 'decoracao';
                           const pecasCompostas = item.itensDecoracao || item.itensDoKit || item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || [];
 
@@ -1385,48 +2123,22 @@ const NovaLocacao = () => {
               <span>R$ {calcularTotal().subtotal.toFixed(2)}</span>
             </div>
 
-            <div className="fin-linha" style={{ background: '#f8fafc', padding: '6px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', margin: '8px 0' }}>
-              <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '600' }}>🛡️ Valor Reposição (Garantia)</span> 
-              <span style={{ fontSize: '0.82rem', color: '#0f172a', fontWeight: '800' }}>R$ {calcularValorReposicao().toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
-            </div>
-            
-            <div className="fin-linha">
+            <div className="fin-linha" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <span>Frete</span> 
-              <span>+ R$ {getFreteNumerico().toFixed(2)}</span>
-            </div>
-
-            {/* 🧮 CALCULADORA RÁPIDA DE FRETE POR KM */}
-            <div style={{ background: '#f8fafc', padding: '10px', borderRadius: '10px', border: '1px solid #e2e8f0', margin: '8px 0' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                <span style={{ fontSize: '0.74rem', fontWeight: '800', color: '#334155' }}>🧮 Calculadora de Frete por KM</span>
-                <span style={{ fontSize: '0.68rem', color: '#64748b' }}>R$ {taxaPorKm}/km</span>
-              </div>
-              <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <input 
-                  type="number" 
-                  placeholder="Distância KM" 
-                  value={kmDistancia} 
-                  onChange={e => {
-                    const km = Number(e.target.value) || 0;
-                    setKmDistancia(e.target.value);
-                    if (km > 0) {
-                      const valorFrete = Math.round(km * (Number(taxaPorKm) || 3.5));
-                      setLogistica(prev => ({ ...prev, frete: String(valorFrete) }));
-                    }
-                  }}
-                  style={{ flex: 1, padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1', fontSize: '0.8rem' }}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    const km = Number(kmDistancia) || 0;
-                    const valorFrete = Math.round(km * (Number(taxaPorKm) || 3.5));
-                    setLogistica(prev => ({ ...prev, frete: String(valorFrete) }));
-                  }}
-                  style={{ padding: '5px 10px', background: '#e2e8f0', color: '#1e293b', border: 'none', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 'bold', cursor: 'pointer' }}
-                >
-                  Calcular
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#0f172a' : '#64748b' }}>
+                  {getFreteNumerico() > 0 ? `+ R$ ${getFreteNumerico().toFixed(2)}` : 'R$ 0,00'}
+                </span>
+                {getFreteNumerico() > 0 && (
+                  <button 
+                    type="button" 
+                    onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
+                    style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.8rem', padding: '0 2px' }}
+                    title="Remover / Zerar Frete"
+                  >
+                    <i className="fas fa-times-circle"></i>
+                  </button>
+                )}
               </div>
             </div>
             
@@ -2057,6 +2769,133 @@ const NovaLocacao = () => {
           </div>
         </div>
       )}
+
+      {/* 🚨 MODAL DE TRAVA DE SEGURANÇA: CLIENTE COM PENDÊNCIAS EM NOVA LOCAÇÃO */}
+      {modalTravaCliente && (
+        <div className="modal-overlay-fin fade-in" onClick={() => setModalTravaCliente(null)} style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.75)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px' }}>
+          <div className="modal-content-fin" onClick={e => e.stopPropagation()} style={{ maxWidth: '560px', width: '100%', background: '#ffffff', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', borderTop: '6px solid #dc2626' }}>
+            <div style={{ background: '#fef2f2', borderBottom: '1px solid #fee2e2', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.6rem', color: '#dc2626' }}>🚨</span>
+                <div>
+                  <h3 style={{ color: '#991b1b', margin: 0, fontSize: '1.05rem', fontWeight: '900' }}>
+                    TRAVA DE SEGURANÇA: CLIENTE COM PENDÊNCIAS!
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#b91c1c', fontWeight: '700' }}>
+                    Alerta de restrição antes de formalizar novo pedido
+                  </span>
+                </div>
+              </div>
+              <button onClick={() => setModalTravaCliente(null)} style={{ background: 'transparent', border: 'none', fontSize: '1.5rem', cursor: 'pointer', color: '#64748b' }}>&times;</button>
+            </div>
+
+            <div style={{ padding: '20px' }}>
+              <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '12px', padding: '14px', marginBottom: '16px' }}>
+                <p style={{ margin: 0, fontSize: '0.88rem', color: '#9f1239', lineHeight: '1.5' }}>
+                  O(a) cliente <strong>{modalTravaCliente.cliente?.nome || modalTravaCliente.cliente?.nomeFantasia || 'Cliente'}</strong> possui <strong>débitos em aberto / pendências financeiras</strong> no valor acumulado de <strong style={{ color: '#e11d48', fontSize: '1rem' }}>R$ {modalTravaCliente.valorDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
+                </p>
+              </div>
+
+              {modalTravaCliente.pendencias && modalTravaCliente.pendencias.length > 0 && (
+                <div style={{ marginBottom: '18px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: '850', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>
+                    📌 Pedidos com Saldo Devedor em Aberto:
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '160px', overflowY: 'auto' }}>
+                    {modalTravaCliente.pendencias.map(p => {
+                      const vTotal = Number(p.valorTotal || p.total || 0);
+                      const vPago = Number(p.valorPago || 0);
+                      const saldo = vTotal - vPago;
+                      const num = p.numeroPedido ? `#${p.numeroPedido}` : `#${p.id.slice(0, 6).toUpperCase()}`;
+                      const dt = p.dataRetirada || p.dataEvento || '--/--/----';
+                      return (
+                        <div key={p.id} style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>Pedido {num}</strong>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b' }}>Data: {dt} | Total: R$ {vTotal.toFixed(2)}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '0.84rem', color: '#dc2626', fontWeight: '900' }}>R$ {saldo.toFixed(2)}</span>
+                            <div style={{ fontSize: '0.65rem', color: '#b91c1c', fontWeight: '800' }}>EM ABERTO</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={handleAutorizarESomarDebito}
+                  style={{
+                    background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
+                    color: '#ffffff',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '12px 16px',
+                    fontWeight: '850',
+                    fontSize: '0.86rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: 'pointer',
+                    boxShadow: '0 4px 14px rgba(22, 163, 74, 0.28)'
+                  }}
+                >
+                  <i className="fas fa-plus-circle" style={{ fontSize: '1rem' }}></i> 
+                  Autorizar e SOMAR Débito Anterior (+ R$ {Number(modalTravaCliente.valorDevido || 0).toFixed(2)}) no Pedido
+                </button>
+
+                <button 
+                  type="button" 
+                  onClick={handleAutorizarSemSomar}
+                  style={{
+                    background: '#f59e0b',
+                    color: '#0f172a',
+                    border: 'none',
+                    borderRadius: '12px',
+                    padding: '11px 16px',
+                    fontWeight: '850',
+                    fontSize: '0.84rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ⚠️ Autorizar Sem Somar (Cobrar Débito Separadamente)
+                </button>
+
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    setClienteSelecionado('');
+                    setModalTravaCliente(null);
+                  }}
+                  style={{
+                    background: '#f1f5f9',
+                    color: '#475569',
+                    border: '1px solid #cbd5e1',
+                    borderRadius: '12px',
+                    height: '40px',
+                    fontWeight: '750',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer'
+                  }}
+                >
+                  ❌ Cancelar / Trocar de Cliente
+                </button>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

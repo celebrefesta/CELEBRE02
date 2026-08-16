@@ -333,6 +333,19 @@ graph TD
 - **Modal de Vistoria de Devolução Touch Luxury**: Bipagem de QR/Barcode ao vivo, steppers fracionados `[-] 0 [+] [Max]`, status de avaria/falta, máscara monetária em tempo real (`R$ 25,00`), lançamento no Caixa e Canvas de Assinatura Digital responsivo com bordas arredondadas e margens flutuantes.
 - **Gestão de Transporte & Embalagens**: Atribuição de motorista, veículo e contagem de embalagens retornáveis de galpão (Caixas Plásticas, Sacolas, Capas de Painel).
 
+### 7.5. Calculadora de Frete Inteligente & Rota Georreferenciada (`NovaLocacao.jsx`, `AbaEmpresa.jsx`)
+- **Unificação no Bloco de Logística**: A calculadora de frete foi transferida da barra lateral para o card `🚚 LOGÍSTICA & ENTREGA`, mantendo a barra lateral financeira limpa.
+- **Cálculo Automático por GPS / CEP**: Ao digitar o CEP ou selecionar um cliente, calcula a distância rodoviária exata em KM entre a sede da empresa e o evento via geolocalização com busca progressiva silenciosa.
+- **Cálculo Dinâmico por Tipo de Veículo & Gasolina**: Parâmetros em *Configurações > Empresa* para veículos 1.0 (12 km/l), 1.6 (9.5 km/l), SUV (7.5 km/l), Fiorino (6.5 km/l) e Caminhão (4.5 km/l).
+
+### 7.6. Lucro Real da Festa & Raio-X de Custos Operacionais (`Locacoes.jsx`)
+- **Cálculo Preciso com Despesas de Transporte**: O lucro real abate automaticamente compras de acervo, despesas vinculadas e o custo operacional de transporte (gasolina + desgaste do carro).
+- **Modal Raio-X Atualizado**: Apresenta a memória de cálculo: `🚚 Custo Logístico (Transporte & Frota): - R$ XX,XX (Distância, Gasolina, Desgaste)`.
+
+### 7.7. Rota de Lançamento Financeiro & Trava de Segurança (`App.jsx`, `NovaLocacao.jsx`, `Clientes.jsx`)
+- **Rota `/novo-lancamento` Ativa**: Mapeada no `App.jsx` com `TravaSeguranca` e autenticação privada.
+- **Trava de Segurança e Incorporação de Débitos**: Alerta ao tentar locar para clientes inadimplentes com opção de somar o saldo devedor anterior no novo pedido.
+
 ---
 
 *Manual técnico e Resumo Executivo atualizados com sucesso para o Sistema Celebre.*

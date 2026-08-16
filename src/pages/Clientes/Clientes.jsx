@@ -43,6 +43,7 @@ const Clientes = () => {
   const [allLocacoes, setAllLocacoes] = useState([]); 
   const [modalAberto, setModalAberto] = useState(false);
   const [detalhesDivida, setDetalhesDivida] = useState({ cliente: '', pendencias: [] });
+  const [modalTravaLocacao, setModalTravaLocacao] = useState(null); // { cliente, pendencias, valorDevido }
 
   const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('dados');
@@ -79,23 +80,23 @@ const Clientes = () => {
       let listaClientes = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
 
       const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
-      const snapLocacoes = await getDocs(qLocacoes);
-      const locacoes = snapLocacoes.docs.map(d => ({ ...d.data(), id: d.id }));
-      setAllLocacoes(locacoes);
+      const locacoesSnapshot = await getDocs(qLocacoes);
+      const locs = locacoesSnapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      setAllLocacoes(locs);
 
-      const hoje = new Date(); 
+      const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
+
       const batch = writeBatch(db);
       let precisaAtualizarBanco = false;
 
       listaClientes = listaClientes.map(cliente => {
         let temDivida = false;
-        const locsCliente = locacoes.filter(loc => loc.clienteId === cliente.id || loc.cliente?.id === cliente.id);
-
-        locsCliente.forEach(loc => {
-          if (loc.status === 'cancelado' || loc.status === 'orcamento') return;
-          const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
-          if (dataStr) {
+        locs.forEach(loc => {
+          if (loc.clienteId === cliente.id || loc.cliente?.id === cliente.id) {
+            if (loc.status === 'cancelado' || loc.status === 'orcamento' || loc.status === 'orçamento') return;
+            const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
+            if (!dataStr) return;
             const dataEvento = new Date(dataStr + 'T00:00:00');
             const pagStatus = (loc.statusPagamento || '').toLowerCase();
             const vTotal = Number(loc.valorTotal || loc.total || 0);
@@ -130,6 +131,47 @@ const Clientes = () => {
     }
   };
 
+  // 🚨 TRAVA DE SEGURANÇA: Verifica se o cliente tem pendências antes de iniciar nova locação
+  const verificarETentarNovaLocacao = (cliente) => {
+    setMenuAberto(null);
+    if (!cliente) return;
+
+    const hoje = new Date(); 
+    hoje.setHours(0, 0, 0, 0);
+
+    const pendencias = allLocacoes.filter(loc => {
+      if (loc.clienteId !== cliente.id && loc.cliente?.id !== cliente.id) return false;
+      if (loc.status === 'cancelado' || loc.status === 'orcamento' || loc.status === 'orçamento') return false;
+      const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
+      if (!dataStr) return false;
+      const dataEvento = new Date(dataStr + 'T00:00:00');
+      const pagStatus = (loc.statusPagamento || '').toLowerCase();
+      const vTotal = Number(loc.valorTotal || loc.total || 0);
+      const vPago = Number(loc.valorPago || 0);
+      return dataEvento < hoje && (vTotal - vPago) > 0.01 && pagStatus !== 'pago' && pagStatus !== 'quitado';
+    });
+
+    const valorDevido = pendencias.reduce((acc, loc) => {
+      const vTotal = Number(loc.valorTotal || loc.total || 0);
+      const vPago = Number(loc.valorPago || 0);
+      return acc + Math.max(0, vTotal - vPago);
+    }, 0);
+
+    const isInadimplente = cliente.situacaoFinanceira === 'inadimplente' || pendencias.length > 0;
+
+    if (isInadimplente) {
+      setModalTravaLocacao({
+        cliente,
+        pendencias,
+        valorDevido
+      });
+      return;
+    }
+
+    setClienteVisualizacao(null);
+    navigate('/locacoes/nova', { state: { clienteSelecionado: cliente } });
+  };
+
   const verPorQueInadimplente = (e, cliente) => {
     e.stopPropagation(); 
     if (cliente.situacaoFinanceira !== 'inadimplente') return;
@@ -139,7 +181,7 @@ const Clientes = () => {
 
     const pendencias = allLocacoes.filter(loc => {
       if (loc.clienteId !== cliente.id && loc.cliente?.id !== cliente.id) return false;
-      if (loc.status === 'cancelado' || loc.status === 'orcamento') return false;
+      if (loc.status === 'cancelado' || loc.status === 'orcamento' || loc.status === 'orçamento') return false;
       const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
       if (!dataStr) return false;
       const dataEvento = new Date(dataStr + 'T00:00:00');
@@ -1149,7 +1191,7 @@ const Clientes = () => {
                               <button onClick={() => { navigate('/cadastro-cliente', { state: { clienteEditando: c } }); setMenuAberto(null); }} className="item-menu">
                                 <i className="fas fa-edit color-blue"></i> Editar Cadastro
                               </button>
-                              <button onClick={() => { navigate('/locacoes/nova', { state: { clienteSelecionado: c } }); setMenuAberto(null); }} className="item-menu">
+                              <button onClick={() => verificarETentarNovaLocacao(c)} className="item-menu">
                                 <i className="fas fa-cart-plus color-green"></i> Nova Locação
                               </button>
                               <div className="menu-divider"></div>
@@ -1249,7 +1291,7 @@ const Clientes = () => {
                     )}
 
                     <button 
-                      onClick={() => { setClienteVisualizacao(null); navigate('/locacoes/nova', { state: { clienteSelecionado: clienteVisualizacao } }); }} 
+                      onClick={() => verificarETentarNovaLocacao(clienteVisualizacao)} 
                       className="btn-add-nota"
                       style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', height: '38px', borderRadius: '10px', fontSize: '0.78rem' }}
                     >
@@ -1867,6 +1909,152 @@ const Clientes = () => {
               </button>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* 🚨 MODAL DE TRAVA DE SEGURANÇA: CLIENTE COM PENDÊNCIAS FINANCEIRAS */}
+      {modalTravaLocacao && (
+        <div 
+          className="fade-in" 
+          onClick={() => setModalTravaLocacao(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            backgroundColor: 'rgba(15, 23, 42, 0.75)',
+            backdropFilter: 'blur(5px)',
+            WebkitBackdropFilter: 'blur(5px)',
+            zIndex: 999999,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '16px'
+          }}
+        >
+          <div 
+            onClick={e => e.stopPropagation()} 
+            style={{
+              maxWidth: '540px',
+              width: '100%',
+              backgroundColor: '#ffffff',
+              borderRadius: '20px',
+              overflow: 'hidden',
+              boxShadow: '0 25px 60px -15px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(220, 38, 38, 0.2)',
+              borderTop: '6px solid #dc2626'
+            }}
+          >
+            <div style={{ background: '#fef2f2', borderBottom: '1px solid #fee2e2', padding: '18px 22px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '42px', height: '42px', borderRadius: '12px', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem' }}>
+                  🚨
+                </div>
+                <div>
+                  <h3 style={{ color: '#991b1b', margin: 0, fontSize: '1.05rem', fontWeight: '900', letterSpacing: '-0.2px' }}>
+                    TRAVA DE SEGURANÇA: PENDÊNCIAS
+                  </h3>
+                  <span style={{ fontSize: '0.75rem', color: '#b91c1c', fontWeight: '700' }}>
+                    Atenção antes de formalizar nova locação de acervo
+                  </span>
+                </div>
+              </div>
+              <button 
+                onClick={() => setModalTravaLocacao(null)}
+                style={{
+                  background: 'rgba(239, 68, 68, 0.1)',
+                  border: 'none',
+                  color: '#dc2626',
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  fontSize: '1.3rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  fontWeight: '700'
+                }}
+              >
+                &times;
+              </button>
+            </div>
+
+            <div style={{ padding: '22px' }}>
+              <div style={{ background: '#fff1f2', border: '1px solid #fecdd3', borderRadius: '14px', padding: '16px', marginBottom: '18px' }}>
+                <p style={{ margin: 0, fontSize: '0.9rem', color: '#9f1239', lineHeight: '1.55' }}>
+                  O(a) cliente <strong>{modalTravaLocacao.cliente.nome || modalTravaLocacao.cliente.nomeFantasia}</strong> possui <strong>débitos em aberto / status inadimplente</strong> no valor acumulado de <strong style={{ color: '#e11d48', fontSize: '1.05rem', display: 'inline-block', marginLeft: '4px' }}>R$ {modalTravaLocacao.valorDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>.
+                </p>
+              </div>
+
+              {modalTravaLocacao.pendencias && modalTravaLocacao.pendencias.length > 0 && (
+                <div style={{ marginBottom: '20px' }}>
+                  <span style={{ fontSize: '0.74rem', fontWeight: '850', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '8px', letterSpacing: '0.5px' }}>
+                    📌 Pedidos com Saldo Devedor em Aberto:
+                  </span>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '170px', overflowY: 'auto' }}>
+                    {modalTravaLocacao.pendencias.map(p => {
+                      const vTotal = Number(p.valorTotal || p.total || 0);
+                      const vPago = Number(p.valorPago || 0);
+                      const saldo = vTotal - vPago;
+                      const num = p.numeroPedido ? `#${p.numeroPedido}` : `#${p.id.slice(0, 6).toUpperCase()}`;
+                      const dt = p.dataRetirada ? p.dataRetirada.split('-').reverse().join('/') : (p.dataEvento ? p.dataEvento.split('-').reverse().join('/') : '--/--/----');
+                      return (
+                        <div key={p.id} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <div>
+                            <strong style={{ fontSize: '0.85rem', color: '#0f172a' }}>Pedido {num}</strong>
+                            <div style={{ fontSize: '0.72rem', color: '#64748b', marginTop: '2px' }}>Vencimento: {dt} | Total: R$ {vTotal.toFixed(2)}</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span style={{ fontSize: '0.88rem', color: '#dc2626', fontWeight: '900' }}>R$ {saldo.toFixed(2)}</span>
+                            <div style={{ fontSize: '0.65rem', color: '#b91c1c', fontWeight: '850' }}>EM ABERTO</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                {modalTravaLocacao.cliente.celular && (
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      const c = modalTravaLocacao.cliente;
+                      setModalTravaLocacao(null);
+                      abrirModalWhatsApp(c, 'cobranca');
+                    }}
+                    style={{ background: '#25d366', color: '#ffffff', border: 'none', borderRadius: '12px', height: '44px', fontWeight: '850', fontSize: '0.84rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37, 211, 102, 0.25)' }}
+                  >
+                    <i className="fab fa-whatsapp" style={{ fontSize: '1.1rem' }}></i> Cobrar / Negociar Pendência no WhatsApp
+                  </button>
+                )}
+
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    const c = modalTravaLocacao.cliente;
+                    setModalTravaLocacao(null);
+                    setClienteVisualizacao(null);
+                    navigate('/locacoes/nova', { state: { clienteSelecionado: c, autorizacaoPendente: true } });
+                  }}
+                  style={{ background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', height: '44px', fontWeight: '850', fontSize: '0.84rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', cursor: 'pointer', boxShadow: '0 4px 12px rgba(245, 158, 11, 0.25)' }}
+                >
+                  ⚠️ Autorizar e Prosseguir com a Nova Locação
+                </button>
+
+                <button 
+                  type="button" 
+                  onClick={() => setModalTravaLocacao(null)}
+                  style={{ background: '#f1f5f9', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '12px', height: '40px', fontWeight: '750', fontSize: '0.8rem', cursor: 'pointer' }}
+                >
+                  ❌ Cancelar e Bloquear Nova Locação
+                </button>
+              </div>
+
+            </div>
           </div>
         </div>
       )}

@@ -1,295 +1,773 @@
-/* =========================================
-   BLINDAGEM GERAL DA PÁGINA (ANTI-VAZAMENTO)
-   ========================================= */
+/* ===================================================================
+   📜 CRIAR / EDITAR CONTRATO (ENTERPRISE LUXURY DESIGN)
+   =================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
+
 * { box-sizing: border-box !important; }
 
-html, body {
-  max-width: 100vw;
-  overflow-x: hidden;
-}
-
-/* =========================================
-   LAYOUT BASE E CABEÇALHO (DINÂMICO)
-   ========================================= */
 .novo-contrato-layout {
-  background-color: var(--fundo-cinza);
-  min-height: 100vh;
-  padding: 40px 20px;
-  font-family: 'Inter', sans-serif;
-  transition: 0.3s;
-  max-width: 100vw;
-  overflow-x: hidden;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  background-color: var(--fundo-principal, #f8fafc);
+  min-height: calc(100vh - 60px);
+  padding: 28px 36px;
+  color: var(--texto-principal, #0f172a);
 }
 
-.container-form {
-  max-width: 900px;
+.container-form-luxury {
+  max-width: 100%;
+  width: 100%;
   margin: 0 auto;
-  animation: fadeIn 0.4s ease-in-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-.form-header { margin-bottom: 30px; }
-
-.btn-voltar-link {
-  background: white; 
-  border: 1px solid var(--borda, #cbd5e1); 
-  padding: 8px 16px; 
-  border-radius: 8px; 
-  cursor: pointer; 
-  color: var(--texto-principal, #0f172a); 
-  font-weight: 700;
-  font-size: 13px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-  transition: 0.2s;
-  margin-bottom: 20px;
-  display: inline-block;
-}
-.btn-voltar-link:hover { background: #f1f5f9; border-color: #94a3b8; }
-
-.novo-contrato-container .header-title-row { display: flex; justify-content: space-between; align-items: center; }
-.novo-contrato-container .header-title-row h1 { font-size: 28px; color: var(--texto-principal); margin: 0; font-weight: 900; letter-spacing: -0.5px;}
-
-.btn-import-acao {
-  background: var(--branco); 
-  color: var(--dourado); 
-  border: 2px solid var(--dourado);
-  padding: 10px 24px; 
-  border-radius: 10px; 
-  font-weight: 800; 
-  cursor: pointer;
-  transition: all 0.2s; 
-  box-shadow: 0 2px 5px rgba(197, 160, 89, 0.1);
-  font-size: 14px;
-}
-.btn-import-acao:hover { 
-  background: var(--dourado); 
-  color: white; 
-  transform: translateY(-2px); 
 }
 
 /* =========================================
-   CARTÕES DO FORMULÁRIO
+   👑 CABEÇALHO EXECUTIVO
    ========================================= */
-.form-section-card {
-  background: var(--branco); 
-  padding: 30px; 
-  border-radius: 16px;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03); 
-  margin-bottom: 25px; 
-  border: 1px solid var(--borda);
-  border-top: 5px solid #0f172a; 
-  transition: 0.3s;
-}
-[data-theme='dark'] .form-section-card { border-top-color: var(--dourado); }
-
-.section-title {
-  font-size: 13px; 
-  color: var(--texto-secundario); 
-  text-transform: uppercase; 
-  letter-spacing: 0.5px;
-  border-bottom: 2px solid var(--borda); 
-  padding-bottom: 10px; 
-  margin-bottom: 20px; 
-  font-weight: 800;
-  margin-top: 0;
+.form-header-luxury {
+  margin-bottom: 24px;
 }
 
-/* =========================================
-   INPUTS E CAMPOS DE TEXTO
-   ========================================= */
-div.input-field {
-  background: transparent !important;
-  border: none !important;
-  padding: 0 !important;
-  box-shadow: none !important;
-}
-
-.grid-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.grid-inputs.three-cols { grid-template-columns: 1fr 1fr 1fr; }
-.input-field.full { grid-column: 1 / -1; }
-
-.input-field label { 
-  display: block; 
-  font-size: 11px; 
-  font-weight: 800; 
-  color: var(--texto-secundario); 
-  margin-bottom: 8px; 
-  text-transform: uppercase;
-}
-
-.input-field input, .input-field select, .input-field textarea {
-  width: 100%; 
-  padding: 14px; 
-  border: 1px solid var(--borda); 
-  border-radius: 10px;
-  background: var(--fundo-cinza); 
-  color: var(--texto-principal);
-  box-sizing: border-box; 
-  font-family: inherit; 
-  font-size: 14px;
-  transition: 0.2s;
-}
-
-.input-field input:focus, .input-field textarea:focus, .input-field select:focus { 
-  outline: none; 
-  border-color: var(--dourado); 
-  background: var(--branco);
-}
-
-.input-field textarea { resize: vertical; min-height: 120px; line-height: 1.5; }
-
-.input-valor { font-weight: 800; color: #059669 !important; font-size: 16px !important; }
-[data-theme='dark'] .input-valor { color: #10b981 !important; }
-
-/* =========================================
-   SELETOR DE MODELO DE CONTRATO
-   ========================================= */
-.header-section-modelos { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: center; 
-  margin-bottom: 20px; 
-  border-bottom: 2px solid var(--borda); 
-  padding-bottom: 10px; 
-}
-.header-section-modelos .section-title { border: none; margin: 0; padding: 0; }
-
-.select-modelo-clean {
-  padding: 10px 15px; 
-  border: 2px solid var(--borda); 
+.btn-voltar-luxury {
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  padding: 8px 16px;
   border-radius: 8px;
-  background-color: var(--fundo-cinza); 
-  color: #0f172a; 
-  font-size: 13px; 
-  font-weight: 700;
-  cursor: pointer; 
-  outline: none;
-  transition: 0.2s;
+  cursor: pointer;
+  color: #334155;
+  font-weight: 750;
+  font-size: 0.78rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
 }
-.select-modelo-clean:hover { 
-  border-color: #0f172a; 
-  background: var(--branco); 
+
+.btn-voltar-luxury:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #94a3b8;
+  transform: translateX(-2px);
+}
+
+.header-title-row-luxury {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.badge-minuta-head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.title-novo-contrato {
+  font-size: 1.65rem;
+  font-weight: 850;
+  color: #0f172a;
+  margin: 0 0 4px 0;
+  letter-spacing: -0.6px;
+}
+
+.subtitle-novo-contrato {
+  font-size: 0.85rem;
+  color: #64748b;
+  margin: 0;
+  font-weight: 500;
+}
+
+.btn-import-acao-luxury {
+  background: #0f172a !important;
+  color: #ffffff !important;
+  border: 1px solid #0f172a !important;
+  border-bottom: 2.5px solid #c5a059 !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  font-weight: 750 !important;
+  font-size: 0.82rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.btn-import-acao-luxury:hover {
+  background: #1e293b !important;
+  color: #c5a059 !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.2) !important;
 }
 
 /* =========================================
-   BOTÃO DE FINALIZAR
+   📦 GRID DE 2 COLUNAS AMPLAS (DESKTOP)
    ========================================= */
-.btn-finalizar-tudo {
-  width: 100%; 
-  background: #0f172a; 
-  color: white; 
-  padding: 18px; 
+.main-form-luxury {
+  width: 100%;
+}
+
+.grid-duas-colunas-contrato {
+  display: grid;
+  grid-template-columns: 1fr 1.15fr;
+  gap: 24px;
+  align-items: stretch;
+}
+
+.coluna-formulario-esquerda {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.coluna-formulario-direita {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  height: 100%;
+}
+
+.form-section-card-luxury {
+  background: #ffffff;
+  padding: 22px 26px;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+}
+
+.form-section-card-luxury.card-minuta-full {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.textarea-container-flex {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-top: 14px;
+}
+
+.textarea-full-height {
+  flex: 1;
+  min-height: 480px;
+  height: 100%;
+}
+
+.form-section-card-luxury:hover {
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.05);
+}
+
+.section-header-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.section-icon-box {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.section-title-luxury {
+  font-size: 0.95rem;
+  font-weight: 850;
+  color: #0f172a;
+  margin: 0;
+  letter-spacing: -0.2px;
+}
+
+.section-sub-luxury {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+/* =========================================
+   📝 INPUTS & GRIDS (PADRÃO CELEBRE)
+   ========================================= */
+.grid-inputs-luxury {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.grid-inputs-luxury.three-cols {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.input-field-luxury.full {
+  grid-column: 1 / -1;
+}
+
+.banner-pedido-sugerido-contrato {
+  background: linear-gradient(135deg, #fefce8 0%, #fffbeb 100%);
+  border: 1px solid #fde047;
+  border-left: 4px solid #c5a059;
+  padding: 10px 14px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  animation: fadeInCelebre 0.2s ease;
+  flex-wrap: wrap;
+}
+
+.banner-pedido-texto {
+  font-size: 0.78rem;
+  color: #854d0e;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-puxar-pedido-sugerido {
+  background: #0f172a;
+  color: #ffffff;
   border: none;
-  border-radius: 12px; 
-  font-weight: 800; 
-  cursor: pointer; 
-  font-size: 16px; 
-  margin-top: 10px;
-  transition: 0.2s;
-  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.2);
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
 }
-.btn-finalizar-tudo:hover { background: #1e293b; transform: translateY(-2px); box-shadow: 0 6px 12px rgba(15, 23, 42, 0.3); }
 
-[data-theme='dark'] .btn-finalizar-tudo { background: var(--dourado); color: white; }
-[data-theme='dark'] .btn-finalizar-tudo:hover { background: #b48a3c; }
+.btn-puxar-pedido-sugerido:hover {
+  background: #c5a059;
+  color: #0f172a;
+  transform: translateY(-1px);
+}
+
+.seletor-pedido-rapido-box {
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  padding: 10px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.seletor-pedido-rapido-box label {
+  font-size: 0.73rem;
+  font-weight: 800;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.input-field-luxury {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input-field-luxury label {
+  font-size: 0.75rem;
+  font-weight: 750;
+  color: #475569;
+  letter-spacing: 0.2px;
+}
+
+.input-celebre,
+.select-celebre,
+.textarea-celebre {
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.82rem;
+  font-weight: 500;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  outline: none;
+}
+
+.input-celebre:focus,
+.select-celebre:focus,
+.textarea-celebre:focus {
+  background: #ffffff;
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+.input-celebre::placeholder,
+.textarea-celebre::placeholder {
+  color: #94a3b8;
+  font-weight: 400;
+}
+
+/* CAMPO DE VALOR EM DESTAQUE */
+.input-valor-wrapper {
+  display: flex;
+  align-items: center;
+  background: #f0fdf4;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  padding: 0 12px;
+  height: 42px;
+  transition: all 0.2s ease;
+}
+
+.input-valor-wrapper:focus-within {
+  border-color: #16a34a;
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.15);
+}
+
+.prefix-moeda {
+  font-size: 0.85rem;
+  font-weight: 850;
+  color: #16a34a;
+  margin-right: 6px;
+}
+
+.input-valor-destaque {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 1.05rem;
+  font-weight: 850;
+  color: #16a34a;
+  outline: none;
+}
+
+/* SEÇÃO DE MINUTA E MODELOS */
+.header-section-modelos-luxury {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.select-modelo-luxury {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  font-size: 0.78rem;
+  font-weight: 750;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.select-modelo-luxury:hover {
+  border-color: #94a3b8;
+  background: #ffffff;
+}
+
+.textarea-celebre {
+  line-height: 1.6;
+  resize: vertical;
+  min-height: 220px;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, monospace;
+}
 
 /* =========================================
-   MODAL DE IMPORTAÇÃO DE LOCAÇÃO
+   🔘 RODAPÉ DE AÇÕES FIXAS / FORMULÁRIO
    ========================================= */
-.modal-import-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(15, 23, 42, 0.7); backdrop-filter: blur(4px); display: flex; justify-content: center; align-items: center; z-index: 9999; }
-.modal-import-box { background: var(--branco); width: 90%; max-width: 450px; border-radius: 16px; padding: 25px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid var(--borda); }
-.modal-import-box h3 { text-align: center; margin-top: 0; border-bottom: 2px solid var(--borda); padding-bottom: 15px; color: var(--texto-principal); font-weight: 800;}
-.import-scroll-list { max-height: 400px; overflow-y: auto; border: 1px solid var(--borda); border-radius: 10px; margin-bottom: 20px; background: var(--fundo-cinza); }
-.import-card-item { padding: 15px; border-bottom: 1px solid var(--borda); cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: var(--texto-principal); transition: 0.2s; background: var(--branco); margin: 5px; border-radius: 8px;}
-.import-card-item:hover { background-color: #f0fdf4; border-color: #bbf7d0; transform: scale(0.98);}
-.valor-verde { font-weight: 800; color: #059669; font-size: 15px;}
-.btn-fechar-modal { width: 100%; padding: 14px; background: transparent; border: 2px solid var(--borda); border-radius: 10px; color: var(--texto-secundario); font-weight: 800; font-size: 14px; cursor: pointer; transition: 0.2s; }
-.btn-fechar-modal:hover { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+.form-footer-actions-luxury {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+  margin-bottom: 30px;
+}
+
+.btn-cancelar-form-luxury {
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 12px 24px;
+  border-radius: 10px;
+  font-weight: 750;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-cancelar-form-luxury:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-submit-contrato-luxury {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid #0f172a !important;
+  border-bottom: 3px solid #c5a059 !important;
+  padding: 12px 32px !important;
+  border-radius: 10px !important;
+  font-weight: 850 !important;
+  font-size: 0.88rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.15) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.btn-submit-contrato-luxury:hover:not(:disabled) {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.25) !important;
+  color: #c5a059 !important;
+}
+
+.btn-submit-contrato-luxury:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-cliente-acao-luxury {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+  padding: 10px 18px !important;
+  border-radius: 10px !important;
+  font-weight: 750 !important;
+  font-size: 0.82rem !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.btn-cliente-acao-luxury:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
+  transform: translateY(-1px) !important;
+}
+
+/* ===================================================================
+   ⚡ MODAIS DE IMPORTAÇÃO (PEDIDOS / ORÇAMENTOS E CLIENTES)
+   =================================================================== */
+.modal-overlay-contratos {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: fadeInModalContrato 0.2s ease-out;
+}
+
+@keyframes fadeInModalContrato {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.modal-container-importar-contrato {
+  background: #ffffff;
+  border-radius: 16px;
+  width: 100%;
+  max-width: 640px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  animation: slideUpModalContrato 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid #e2e8f0;
+}
+
+@keyframes slideUpModalContrato {
+  from { opacity: 0; transform: translateY(20px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.modal-importar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  background: #0f172a;
+  border-bottom: 3px solid #c5a059;
+  color: #ffffff;
+}
+
+.modal-importar-titulo-box {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.modal-importar-titulo-box h3 {
+  margin: 0;
+  font-size: 1.02rem;
+  font-weight: 850;
+  letter-spacing: -0.2px;
+}
+
+.btn-fechar-modal-contrato {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 4px;
+  line-height: 1;
+  transition: color 0.15s ease;
+}
+
+.btn-fechar-modal-contrato:hover {
+  color: #ffffff;
+}
+
+.modal-importar-sub {
+  margin: 0;
+  padding: 12px 20px;
+  font-size: 0.78rem;
+  color: #64748b;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  line-height: 1.4;
+}
+
+.segmented-tabs-contratos {
+  display: flex;
+  background: #e2e8f0;
+  padding: 3px;
+  border-radius: 10px;
+  gap: 3px;
+}
+
+.segmented-tab-contrato {
+  padding: 7px 12px;
+  border: none;
+  background: transparent;
+  color: #475569;
+  font-size: 0.75rem;
+  font-weight: 750;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.segmented-tab-contrato.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.modal-importar-busca-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 20px 0 20px;
+  padding: 0 12px;
+  height: 38px;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  transition: border-color 0.2s ease;
+}
+
+.modal-importar-busca-box:focus-within {
+  border-color: #3b82f6;
+  background: #ffffff;
+}
+
+.search-icon-contratos {
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.modal-importar-input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  font-size: 0.82rem;
+  outline: none;
+  color: #0f172a;
+  font-family: inherit;
+}
+
+.modal-importar-lista {
+  padding: 12px 20px 20px 20px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 480px;
+}
+
+.carregando-modal-locacoes, .empty-modal-locacoes {
+  padding: 36px 20px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.locacao-importar-card {
+  padding: 12px 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: all 0.15s ease;
+  cursor: pointer;
+}
+
+.locacao-importar-card:hover {
+  border-color: #c5a059;
+  background: #ffffff;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.12);
+  transform: translateY(-1px);
+}
+
+.locacao-importar-topo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: #0f172a;
+}
+
+.locacao-importar-tag {
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.locacao-importar-meio {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 0.75rem;
+  color: #475569;
+  flex-wrap: wrap;
+}
+
+.btn-gerar-contrato-card {
+  margin-top: 4px;
+  padding: 7px 12px;
+  border-radius: 6px;
+  border: none;
+  background: #0f172a;
+  color: #ffffff;
+  font-size: 0.75rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  align-self: flex-start;
+}
+
+.locacao-importar-card:hover .btn-gerar-contrato-card {
+  background: #c5a059;
+  color: #0f172a;
+}
 
 /* =========================================
-   📱 RESPONSIVIDADE MOBILE (CARTÕES LARGOS E CHEIOS)
+   📱 RESPONSIVIDADE MOBILE
    ========================================= */
 @media (max-width: 900px) {
-  
-  /* 🔥 A MÁGICA: FULL BLEED 🔥 
-     Ignora as margens do sistema e estica de ponta a ponta */
   .novo-contrato-layout {
-      padding: 60px 10px 20px 10px !important; /* 60px no topo pra não bater no menu, 10px nas laterais para ficar GIGANTE */
-      margin-left: calc(-50vw + 50%) !important; 
-      margin-right: calc(-50vw + 50%) !important;
-      width: 100vw !important;
-      max-width: 100vw !important;
-      box-sizing: border-box !important;
+    padding: 16px 12px !important;
   }
 
-  .container-form { 
-      width: 100% !important; 
-      padding: 0 !important; 
-      margin: 0 !important; 
+  .header-title-row-luxury {
+    flex-direction: column !important;
+    align-items: flex-start !important;
   }
 
-  /* Cartão esticado até o limite da tela */
-  .form-section-card { 
-      padding: 20px 15px !important; 
-      border-radius: 12px !important; 
-      margin: 0 0 20px 0 !important; /* Zero de margem nas laterais! */
-      width: 100% !important;
-      box-sizing: border-box !important;
+  .grid-duas-colunas-contrato {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
   }
 
-  .form-header { margin-bottom: 20px; }
-  .btn-voltar-link { margin-bottom: 15px; margin-left: 5px; }
-
-  .header-title-row { 
-      flex-direction: column !important; 
-      align-items: flex-start !important; 
-      gap: 15px !important; 
-      padding: 0 5px !important;
-  }
-  
-  .header-title-row h1 { font-size: 26px !important; }
-
-  .btn-import-acao { 
-      width: 100% !important; 
-      text-align: center !important; 
-      padding: 14px !important; 
-      font-size: 15px !important;
+  .btn-import-acao-luxury,
+  .btn-cliente-acao-luxury {
+    width: 100% !important;
+    justify-content: center !important;
   }
 
-  /* QUEBRA TODOS OS GRIDS PARA 1 COLUNA PARA NÃO ESPREMER */
-  .grid-inputs, .grid-inputs.three-cols { 
-      grid-template-columns: 1fr !important; 
-      gap: 15px !important;
-      width: 100% !important;
+  .form-section-card-luxury {
+    padding: 18px 16px !important;
   }
 
-  .input-field { width: 100% !important; box-sizing: border-box !important; }
-
-  .header-section-modelos {
-      flex-direction: column !important;
-      align-items: flex-start !important;
-      gap: 12px !important;
+  .grid-inputs-luxury,
+  .grid-inputs-luxury.three-cols {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
   }
 
-  .select-modelo-clean {
-      width: 100% !important;
-      padding: 14px !important;
-      font-size: 14px !important;
+  .header-section-modelos-luxury {
+    flex-direction: column !important;
+    align-items: flex-start !important;
   }
-  
-  .input-field input, .input-field select, .input-field textarea {
-      font-size: 16px !important; /* Evita zoom automático no iPhone */
-      width: 100% !important;
+
+  .select-modelo-luxury {
+    width: 100% !important;
   }
-  
-  .btn-finalizar-tudo { 
-      width: 100% !important; 
-      margin: 10px 0 40px 0 !important; 
-      padding: 18px !important; 
-      font-size: 16px !important; 
+
+  .form-footer-actions-luxury {
+    flex-direction: column !important;
+    gap: 10px !important;
   }
-}
+
+  .btn-cancelar-form-luxury,
+  .btn-submit-contrato-luxury {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}

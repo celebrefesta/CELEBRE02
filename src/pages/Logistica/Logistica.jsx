@@ -11,6 +11,9 @@ import { gerarRomaneioPDF } from './gerarRomaneioPDF';
 import { gerarFolhaSeparacaoGalpaoPDF } from './gerarFolhaSeparacaoGalpaoPDF';
 import { ModalAssinaturaEntrega } from './ModalAssinaturaEntrega';
 import { ModalDesignarMotorista } from './ModalDesignarMotorista';
+import ModalBipagemGalpao from './ModalBipagemGalpao';
+import TimelineLogistica from './TimelineLogistica';
+import ModalLightboxFotos from './ModalLightboxFotos';
 
 const Logistica = () => {
   const navigate = useNavigate();
@@ -25,15 +28,43 @@ const Logistica = () => {
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroTempo, setFiltroTempo] = useState('mes_atual'); // 'hoje' | 'mes_atual' | 'tudo'
   const [filtroMotorista, setFiltroMotorista] = useState('todos');
-  const [vistaAtual, setVistaAtual] = useState('kanban'); // 'kanban' | 'lista'
+  const [vistaAtual, setVistaAtual] = useState('kanban'); // 'kanban' | 'lista' | 'timeline'
   const [etapaMobileAtiva, setEtapaMobileAtiva] = useState('preparacao'); // 'orcamento' | 'confirmado' | 'preparacao' | 'entregue' | 'finalizado'
   
   const [checklistModalId, setChecklistModalId] = useState(null);
   const [relatorioModalLoc, setRelatorioModalLoc] = useState(null);
   const [modalAssinaturaLoc, setModalAssinaturaLoc] = useState(null);
   const [modalDesignarLoc, setModalDesignarLoc] = useState(null);
+  const [modalBipagemAberta, setModalBipagemAberta] = useState(false);
+  const [modalEmbalagensAberta, setModalEmbalagensAberta] = useState(false);
   const [parametros, setParametros] = useState(null);
   const [textoRelatorio, setTextoRelatorio] = useState('');
+
+  // 📸 LIGHTBOX FULLSCREEN DE FOTOS DE VISTORIA
+  const [lightboxState, setLightboxState] = useState({
+    isOpen: false,
+    fotos: [],
+    titulo: '',
+    initialIndex: 0
+  });
+
+  const abrirLightboxFotos = (fotos, initialIndex = 0, titulo = 'Fotos da Vistoria') => {
+    setLightboxState({
+      isOpen: true,
+      fotos,
+      titulo,
+      initialIndex
+    });
+  };
+
+  // 📄 ABERTURA DIRETA DE VISUALIZAÇÃO DE PDF EM NOVA ABA (VISUALIZADOR NATIVO COM DOWNLOAD & IMPRESSÃO)
+  const abrirPDFEmNovaAba = (res) => {
+    if (!res) return;
+    const url = typeof res === 'string' ? res : res.url;
+    if (url) {
+      window.open(url, '_blank');
+    }
+  };
 
   // 🛫🛬 MODAL DE CHECK-IN DE IDA E VOLTA
   const [modalCheckinAberta, setModalCheckinAberta] = useState(false);
@@ -388,9 +419,14 @@ const Logistica = () => {
       }
 
       // 2. Filtro de Tempo
-      if (loc.dataRetirada) {
+      if (loc.dataRetirada || loc.dataDevolucao) {
         if (filtroTempo === 'hoje' && !(loc.dataRetirada === hojeStr || (loc.dataDevolucao === hojeStr && loc.status === 'entregue'))) return false;
         if (filtroTempo === 'mes_atual' && !(loc.dataRetirada.startsWith(mesAtual) || (loc.dataDevolucao && loc.dataDevolucao.startsWith(mesAtual)))) return false;
+        if (filtroTempo === 'atrasados') {
+          const dataRef = loc.dataDevolucao || loc.dataRetirada;
+          const isAtrasado = dataRef && dataRef < hojeStr && loc.status !== 'finalizado' && loc.status !== 'cancelado' && loc.status !== 'orcamento';
+          if (!isAtrasado) return false;
+        }
       }
 
       // 3. Filtro por Motorista
@@ -415,8 +451,36 @@ const Logistica = () => {
 
   // Contagem de pedidos atrasados não finalizados
   const pedidosAtrasados = useMemo(() => {
-    return locacoes.filter(l => l.dataRetirada && l.dataRetirada < hojeStr && l.status !== 'finalizado');
+    return locacoes.filter(l => {
+      if (l.status === 'finalizado' || l.status === 'devolvido' || l.status === 'cancelado' || l.status === 'orcamento') return false;
+      const dataRef = l.dataDevolucao || l.dataRetirada;
+      return dataRef && dataRef < hojeStr;
+    });
   }, [locacoes, hojeStr]);
+
+  // 🧺 CÁLCULO DE SALDO DE EMBALAGENS RETORNÁVEIS EM CAMPO
+  const saldoEmbalagens = useMemo(() => {
+    let caixas = 0;
+    let sacolas = 0;
+    let capas = 0;
+    const pedidos = [];
+
+    locacoes.forEach(loc => {
+      if (loc.status === 'preparacao' || loc.status === 'entregue' || loc.status === 'em_transito') {
+        const c = Number(loc.embalagens?.caixas || loc.embalagens?.caixasPlasticas || 0);
+        const s = Number(loc.embalagens?.sacolas || loc.embalagens?.sacolasTecido || 0);
+        const cp = Number(loc.embalagens?.capas || loc.embalagens?.capasPainel || 0);
+        if (c > 0 || s > 0 || cp > 0) {
+          caixas += c;
+          sacolas += s;
+          capas += cp;
+          pedidos.push({ loc, caixas: c, sacolas: s, capas: cp });
+        }
+      }
+    });
+
+    return { caixas, sacolas, capas, total: caixas + sacolas + capas, pedidos };
+  }, [locacoes]);
 
   if (loading) return <div className="carregando-kanban">Atualizando esteira logística e rotas... ⏳</div>;
 
@@ -433,44 +497,86 @@ const Logistica = () => {
       {/* CABEÇALHO EXECUTIVO DA LOGÍSTICA */}
       <header className="kanban-header-top">
         <div className="kanban-titles">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
             <span className="logistica-badge-head">🚚 OPERAÇÃO &amp; FLUXO DE GALPÃO</span>
           </div>
           <h1>Logística &amp; Roteiro</h1>
           <p>Esteira operacional de separação, transporte, eventos em andamento e devoluções.</p>
         </div>
 
-        <div className="kanban-top-actions">
-          
-          {/* 📄 BOTÃO GERAR ROMANEIO DE CARGA EM PDF */}
+        <div className="kanban-header-actions">
+          {/* ⚡ BOTÃO PRIMÁRIO: BIPAGEM DE GALPÃO */}
           <button 
             type="button" 
-            className="btn-romaneio-pdf"
-            onClick={() => gerarRomaneioPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null, motorista: filtroMotorista !== 'todos' ? filtroMotorista : null }, parametros)}
-            title="Gerar Romaneio de Carga e Rota do Motorista em PDF"
+            className="btn-log-primary"
+            onClick={() => setModalBipagemAberta(true)}
+            title="Abrir Scanner de Bipagem Contínua de Peças e Caixotes"
           >
-            📋 Romaneio da Rota (PDF)
+            ⚡ Bipar Galpão
           </button>
 
-          {/* 📦 BOTÃO GERAR MAPA GERAL DE SEPARAÇÃO EM PDF */}
+          {/* 📄 BOTÃO SECUNDÁRIO: ROMANEIO DE ROTA */}
           <button 
             type="button" 
-            className="btn-romaneio-pdf"
-            style={{ background: 'linear-gradient(135deg, #1e293b, #334155)', border: '1px solid #475569' }}
-            onClick={() => gerarFolhaSeparacaoGalpaoPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null }, parametros)}
-            title="Gerar Folha de Separação de Peças de Galpão em PDF"
+            className="btn-log-secondary"
+            onClick={() => {
+              const res = gerarRomaneioPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null, motorista: filtroMotorista !== 'todos' ? filtroMotorista : null }, parametros, 'preview');
+              abrirPDFEmNovaAba(res);
+            }}
+            title="Visualizar e Imprimir Romaneio de Carga e Rota do Motorista em PDF"
+          >
+            📋 Romaneio (PDF)
+          </button>
+
+          {/* 📦 BOTÃO SECUNDÁRIO: MAPA GERAL DE SEPARAÇÃO */}
+          <button 
+            type="button" 
+            className="btn-log-secondary"
+            onClick={() => {
+              const res = gerarFolhaSeparacaoGalpaoPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null }, parametros, 'preview');
+              abrirPDFEmNovaAba(res);
+            }}
+            title="Visualizar e Imprimir Folha de Separação de Peças de Galpão em PDF"
           >
             📦 Mapa de Separação (PDF)
           </button>
+        </div>
+      </header>
 
-          {/* 🚗 FILTRO POR MOTORISTA / VEÍCULO */}
+      {/* 🎛️ BARRA INTEGRADA DE BUSCA E CONTROLES (PADRÃO CELEBRE) */}
+      <div className="logistica-filter-panel">
+        
+        {/* LADO ESQUERDO: BUSCA + MOTORISTA */}
+        <div className="logistica-search-group">
+          <div className="logistica-search-input-wrapper">
+            <span className="search-icon-log">🔍</span>
+            <input 
+              type="text" 
+              placeholder="Buscar por cliente, pedido #, motorista, tema ou endereço..." 
+              value={termoBusca}
+              onChange={e => setTermoBusca(e.target.value)}
+              className="logistica-input-search"
+            />
+            {termoBusca && (
+              <button 
+                type="button" 
+                onClick={() => setTermoBusca('')}
+                className="btn-clear-search-log"
+                title="Limpar busca"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+
+          {/* FILTRO POR MOTORISTA */}
           {listaMotoristas.length > 0 && (
-            <div className="driver-filter-box">
-              <label>🚗</label>
+            <div className="logistica-driver-box">
+              <span>🚗</span>
               <select 
                 value={filtroMotorista} 
                 onChange={e => setFiltroMotorista(e.target.value)}
-                className="select-filtro-motorista"
+                className="logistica-driver-select"
                 title="Filtrar pedidos por motorista/equipe"
               >
                 <option value="todos">Todos os Motoristas ({locacoes.length})</option>
@@ -480,325 +586,361 @@ const Logistica = () => {
               </select>
             </div>
           )}
+        </div>
 
-          {/* SELETOR DE VISÃO */}
-          <div className="view-switcher-log">
+        {/* LADO DIREITO: SELETOR DE VISÃO + FILTROS DE TEMPO */}
+        <div className="logistica-controls-group">
+          
+          {/* TABS DE VISUALIZAÇÃO SEGMENTADA */}
+          <div className="segmented-tabs-log">
             <button 
-              type="button"
-              className={vistaAtual === 'kanban' ? 'ativo' : ''} 
+              type="button" 
+              className={`segmented-tab ${vistaAtual === 'kanban' ? 'active' : ''}`} 
               onClick={() => setVistaAtual('kanban')}
             >
               🖥️ Kanban
             </button>
             <button 
-              type="button"
-              className={vistaAtual === 'lista' ? 'ativo' : ''} 
+              type="button" 
+              className={`segmented-tab ${vistaAtual === 'lista' ? 'active' : ''}`} 
               onClick={() => setVistaAtual('lista')}
             >
-              📋 Roteiro / Lista
+              📋 Roteiro
+            </button>
+            <button 
+              type="button" 
+              className={`segmented-tab ${vistaAtual === 'timeline' ? 'active' : ''}`} 
+              onClick={() => setVistaAtual('timeline')}
+            >
+              ⏱️ Linha do Tempo
             </button>
           </div>
 
-          {/* FILTRO DE TEMPO */}
-          <div className="kanban-filters">
+          {/* PÍLULAS DE FILTRO DE TEMPO */}
+          <div className="segmented-tabs-log">
             <button 
-              type="button"
-              className={filtroTempo === 'hoje' ? 'ativo' : ''} 
+              type="button" 
+              className={`segmented-tab ${filtroTempo === 'hoje' ? 'active' : ''}`} 
               onClick={() => setFiltroTempo('hoje')}
             >
-              🚀 Hoje
+              Hoje
             </button>
             <button 
-              type="button"
-              className={filtroTempo === 'mes_atual' ? 'ativo' : ''} 
+              type="button" 
+              className={`segmented-tab ${filtroTempo === 'mes_atual' ? 'active' : ''}`} 
               onClick={() => setFiltroTempo('mes_atual')}
             >
-              📆 Este Mês
+              Este Mês
             </button>
+            {pedidosAtrasados.length > 0 && (
+              <button 
+                type="button" 
+                className={`segmented-tab tab-atrasados ${filtroTempo === 'atrasados' ? 'active' : ''}`} 
+                onClick={() => setFiltroTempo(prev => prev === 'atrasados' ? 'tudo' : 'atrasados')}
+                title="Filtrar pedidos com devolução ou saída atrasada"
+              >
+                🚨 Atrasados <span className="tab-badge-count">{pedidosAtrasados.length}</span>
+              </button>
+            )}
             <button 
-              type="button"
-              className={filtroTempo === 'tudo' ? 'ativo' : ''} 
+              type="button" 
+              className={`segmented-tab ${filtroTempo === 'tudo' ? 'active' : ''}`} 
               onClick={() => setFiltroTempo('tudo')}
             >
-              🌐 Tudo
+              Tudo
             </button>
           </div>
-        </div>
-      </header>
 
-      {/* BARRA DE PESQUISA RÁPIDA */}
-      <div className="logistica-search-bar">
-        <div style={{ flex: '1', minWidth: '180px' }}>
-          <input 
-            type="text" 
-            placeholder="🔍 Buscar por cliente, pedido #, motorista, tema ou endereço..." 
-            value={termoBusca}
-            onChange={e => setTermoBusca(e.target.value)}
-            className="logistica-input-busca"
-          />
         </div>
 
-        {termoBusca && (
-          <button 
-            type="button" 
-            onClick={() => setTermoBusca('')}
-            className="btn-limpar-busca"
-          >
-            Limpar
-          </button>
-        )}
-
-        {pedidosAtrasados.length > 0 && (
-          <button 
-            type="button" 
-            onClick={regularizarTodosAtrasados}
-            className="btn-destravar-desktop-only"
-            title="Mover todos os pedidos com eventos já passados para a etapa de Devolvidos"
-          >
-            ⚡ Destravar Atrasados ({pedidosAtrasados.length})
-          </button>
-        )}
       </div>
 
-      {/* 📱 BANNER DE DESTRAVAMENTO EM LOTE EXCLUSIVO PARA O CELULAR */}
-      {pedidosAtrasados.length > 0 && (
-        <div className="alerta-atrasados-mobile-banner">
-          <div className="banner-txt">
-            <span>⚡ <strong>{pedidosAtrasados.length}</strong> {pedidosAtrasados.length === 1 ? 'pedido atrasado pendente' : 'pedidos atrasados pendentes'}</span>
+      {/* 🧺 BARRA DE SALDO DE EMBALAGENS RETORNÁVEIS EM CAMPO */}
+      {saldoEmbalagens.total > 0 && (
+        <div className="barra-embalagens-campo">
+          <div className="embalagens-info-left">
+            <span className="embalagens-badge">🧺 EMBALAGENS EM CAMPO ({saldoEmbalagens.pedidos.length} pedidos):</span>
+            {saldoEmbalagens.caixas > 0 && <span className="embalagens-stat"><strong>{saldoEmbalagens.caixas}</strong> Caixas Plásticas</span>}
+            {saldoEmbalagens.sacolas > 0 && <span className="embalagens-stat"><strong>{saldoEmbalagens.sacolas}</strong> Sacolas</span>}
+            {saldoEmbalagens.capas > 0 && <span className="embalagens-stat"><strong>{saldoEmbalagens.capas}</strong> Capas de Painel</span>}
           </div>
           <button 
             type="button" 
-            onClick={regularizarTodosAtrasados}
-            className="banner-btn"
+            className="btn-ver-embalagens"
+            onClick={() => setModalEmbalagensAberta(true)}
           >
-            Regularizar Todos
+            📋 Detalhes dos Clientes ➔
           </button>
         </div>
       )}
 
-      {/* 📱 PÍLULAS DE ETAPAS EXCLUSIVAS PARA O CELULAR */}
-      <div className="mobile-etapas-bar">
-        {etapasInfo.map(et => (
-          <button
-            key={et.key}
-            type="button"
-            className={`mobile-etapa-pill ${etapaMobileAtiva === et.key ? 'ativa' : ''}`}
-            onClick={() => setEtapaMobileAtiva(et.key)}
-            style={{
-              borderTop: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
-              borderRight: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
-              borderBottom: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
-              borderLeft: `4px solid ${et.cor}`
-            }}
+      {/* 📱 BANNER DE ALERTA DE ATRASADOS EXCLUSIVO PARA O CELULAR */}
+      {pedidosAtrasados.length > 0 && (
+        <div className="alerta-atrasados-mobile-banner">
+          <div className="banner-txt">
+            <span>🚨 <strong>{pedidosAtrasados.length}</strong> {pedidosAtrasados.length === 1 ? 'pedido com devolução atrasada pendente' : 'pedidos com devolução atrasada pendentes'}</span>
+          </div>
+          <button 
+            type="button" 
+            onClick={() => setFiltroTempo(prev => prev === 'atrasados' ? 'tudo' : 'atrasados')}
+            className="banner-btn"
           >
-            <span className="mobile-etapa-nome">{et.nome.replace(/^\d+\.\s*/, '')}</span>
-            <span 
-              className="mobile-etapa-count"
-              style={{ background: et.badgeBg, color: et.badgeColor }}
-            >
-              {et.count}
-            </span>
+            {filtroTempo === 'atrasados' ? 'Ver Todos' : 'Conferir Atrasados'}
           </button>
-        ))}
-      </div>
-
-      {/* 📱 MODO CELULAR: LISTAGEM DIRETA DA ETAPA SELECIONADA */}
-      <div className="mobile-only-col-view">
-        <div className="mobile-col-header">
-          <span className="dot" style={{ background: etapasInfo.find(e => e.key === etapaMobileAtiva)?.cor }}></span>
-          <h3>{etapasInfo.find(e => e.key === etapaMobileAtiva)?.nome}</h3>
-          <span className="badge-count">{colunas[etapaMobileAtiva]?.length || 0}</span>
         </div>
+      )}
 
-        <div className="mobile-col-body">
-          {colunas[etapaMobileAtiva]?.length === 0 ? (
-            <div className="coluna-vazia-aviso">
-              <span>🍃 Nenhum pedido nesta etapa no momento.</span>
-            </div>
-          ) : (
-            colunas[etapaMobileAtiva]?.map(loc => (
-              <CartaoKanban 
-                key={loc.id} 
-                loc={loc} 
-                navigate={navigate} 
-                verificarSeEhEntrega={verificarSeEhEntrega}
-                obterEnderecoCompleto={obterEnderecoCompleto}
-                onAvancar={() => {
-                  if (etapaMobileAtiva === 'confirmado') moverCard(loc.id, 'preparacao');
-                  else if (etapaMobileAtiva === 'preparacao') moverCard(loc.id, 'entregue');
-                  else if (etapaMobileAtiva === 'entregue') abrirCheckin(loc, 'VOLTA');
+      {/* ⏱️ RENDERIZAÇÃO CONDICIONAL: VISÃO TIMELINE (LINHA DO TEMPO) */}
+      {vistaAtual === 'timeline' ? (
+        <TimelineLogistica 
+          locacoes={locacoesFiltradas}
+          navigate={navigate}
+          onAbrirCheckinIda={(loc) => abrirCheckin(loc, 'IDA')}
+          onAbrirCheckinVolta={(loc) => abrirCheckin(loc, 'VOLTA')}
+          onAbrirGPS={abrirGPS}
+          onAbrirWhatsApp={abrirWhatsApp}
+          verificarSeEhEntrega={verificarSeEhEntrega}
+          obterEnderecoCompleto={obterEnderecoCompleto}
+        />
+      ) : (
+        <>
+          {/* 📱 PÍLULAS DE ETAPAS EXCLUSIVAS PARA O CELULAR */}
+          <div className="mobile-etapas-bar">
+            {etapasInfo.map(et => (
+              <button
+                key={et.key}
+                type="button"
+                className={`mobile-etapa-pill ${etapaMobileAtiva === et.key ? 'ativa' : ''}`}
+                onClick={() => setEtapaMobileAtiva(et.key)}
+                style={{
+                  borderTop: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
+                  borderRight: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
+                  borderBottom: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
+                  borderLeft: `4px solid ${et.cor}`
                 }}
-                onVoltar={() => moverCard(loc.id, 'entregue')}
-                onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
-                onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
-                onAbrirDesignar={() => setModalDesignarLoc(loc)}
-                btnTxt={
-                  etapaMobileAtiva === 'confirmado' ? 'Separar ➔' :
-                  etapaMobileAtiva === 'preparacao' ? 'Enviar ➔' :
-                  etapaMobileAtiva === 'entregue' ? 'Receber ➔' : 'Voltar'
-                } 
-                btnCor={etapasInfo.find(e => e.key === etapaMobileAtiva)?.cor || '#3b82f6'} 
-                isFinal={etapaMobileAtiva === 'finalizado'}
-                onAbrirChecklist={() => {
-                  if (etapaMobileAtiva === 'preparacao') abrirCheckin(loc, 'IDA');
-                  else if (etapaMobileAtiva === 'entregue' || etapaMobileAtiva === 'finalizado') abrirCheckin(loc, 'VOLTA');
-                  else setChecklistModalId(loc.id);
-                }} 
-                onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
-                onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
-                onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
-                onAbrirGPS={() => abrirGPS(loc)}
-                onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                isModoLista={true} 
-                parametros={parametros}
-              />
-            ))
-          )}
-        </div>
-      </div>
+              >
+                <span className="mobile-etapa-nome">{et.nome.replace(/^\d+\.\s*/, '')}</span>
+                <span 
+                  className="mobile-etapa-count"
+                  style={{ background: et.badgeBg, color: et.badgeColor }}
+                >
+                  {et.count}
+                </span>
+              </button>
+            ))}
+          </div>
 
-      {/* 🖥️ MODO DESKTOP (KANBAN POLIDO DE 4 ETAPAS OPERACIONAIS) */}
-      <div className={`kanban-board desktop-only-board ${vistaAtual === 'lista' ? 'board-lista' : 'board-colunas'}`}>
-        
-        {/* COLUNA 1: A SEPARAR / CONFIRMADOS */}
-        <div className="kanban-col">
-          <div className="col-header">
-            <span className="dot" style={{background: '#3b82f6'}}></span>
-            <h3>1. A Separar</h3>
-            <span className="badge-count">{colunas.confirmado.length}</span>
-          </div>
-          <div className="col-body">
-            {colunas.confirmado.length === 0 ? (
-              <div className="coluna-vazia-placeholder">Nenhum pedido</div>
-            ) : (
-              colunas.confirmado.map(loc => (
-                <CartaoKanban 
-                  key={loc.id} loc={loc} navigate={navigate} 
-                  verificarSeEhEntrega={verificarSeEhEntrega}
-                  obterEnderecoCompleto={obterEnderecoCompleto}
-                  onAvancar={() => moverCard(loc.id, 'preparacao')} 
-                  onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
-                  onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
-                  onAbrirDesignar={() => setModalDesignarLoc(loc)}
-                  btnTxt="Separar ➔" btnCor="#3b82f6" 
-                  onAbrirChecklist={() => setChecklistModalId(loc.id)} 
-                  onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
-                  onAbrirGPS={() => abrirGPS(loc)}
-                  onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                  isModoLista={vistaAtual === 'lista'} 
-                  parametros={parametros}
-                />
-              ))
-            )}
-          </div>
-        </div>
+          {/* 📱 MODO CELULAR: LISTAGEM DIRETA DA ETAPA SELECIONADA */}
+          <div className="mobile-only-col-view">
+            <div className="mobile-col-header">
+              <span className="dot" style={{ background: etapasInfo.find(e => e.key === etapaMobileAtiva)?.cor }}></span>
+              <h3>{etapasInfo.find(e => e.key === etapaMobileAtiva)?.nome}</h3>
+              <span className="badge-count">{colunas[etapaMobileAtiva]?.length || 0}</span>
+            </div>
 
-        {/* COLUNA 2: EM SEPARAÇÃO */}
-        <div className="kanban-col">
-          <div className="col-header">
-            <span className="dot" style={{background: '#f59e0b'}}></span>
-            <h3>2. Em Separação</h3>
-            <span className="badge-count">{colunas.preparacao.length}</span>
+            <div className="mobile-col-body">
+              {colunas[etapaMobileAtiva]?.length === 0 ? (
+                <div className="coluna-vazia-aviso">
+                  <span>🍃 Nenhum pedido nesta etapa no momento.</span>
+                </div>
+              ) : (
+                colunas[etapaMobileAtiva]?.map(loc => (
+                  <CartaoKanban 
+                    key={loc.id} 
+                    loc={loc} 
+                    navigate={navigate} 
+                    verificarSeEhEntrega={verificarSeEhEntrega}
+                    obterEnderecoCompleto={obterEnderecoCompleto}
+                    onAvancar={() => {
+                      if (etapaMobileAtiva === 'confirmado') moverCard(loc.id, 'preparacao');
+                      else if (etapaMobileAtiva === 'preparacao') moverCard(loc.id, 'entregue');
+                      else if (etapaMobileAtiva === 'entregue') abrirCheckin(loc, 'VOLTA');
+                    }}
+                    onVoltar={() => moverCard(loc.id, 'entregue')}
+                    onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
+                    onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
+                    onAbrirDesignar={() => setModalDesignarLoc(loc)}
+                    btnTxt={
+                      etapaMobileAtiva === 'confirmado' ? 'Separar ➔' :
+                      etapaMobileAtiva === 'preparacao' ? 'Enviar ➔' :
+                      etapaMobileAtiva === 'entregue' ? 'Receber ➔' : 'Voltar'
+                    } 
+                    btnCor={etapasInfo.find(e => e.key === etapaMobileAtiva)?.cor || '#3b82f6'} 
+                    isFinal={etapaMobileAtiva === 'finalizado'}
+                    onAbrirChecklist={() => {
+                      if (etapaMobileAtiva === 'preparacao') abrirCheckin(loc, 'IDA');
+                      else if (etapaMobileAtiva === 'entregue' || etapaMobileAtiva === 'finalizado') abrirCheckin(loc, 'VOLTA');
+                      else setChecklistModalId(loc.id);
+                    }} 
+                    onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                    onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                    onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
+                    onAbrirGPS={() => abrirGPS(loc)}
+                    onAbrirWhatsApp={() => abrirWhatsApp(loc)}
+                    isModoLista={true} 
+                    parametros={parametros}
+                    onAbrirPreviewPDF={abrirPDFEmNovaAba}
+                    onAbrirLightboxFotos={abrirLightboxFotos}
+                  />
+                ))
+              )}
+            </div>
           </div>
-          <div className="col-body">
-            {colunas.preparacao.length === 0 ? (
-              <div className="coluna-vazia-placeholder">Nenhum pedido</div>
-            ) : (
-              colunas.preparacao.map(loc => (
-                <CartaoKanban 
-                  key={loc.id} loc={loc} navigate={navigate} 
-                  verificarSeEhEntrega={verificarSeEhEntrega}
-                  obterEnderecoCompleto={obterEnderecoCompleto}
-                  onAvancar={() => moverCard(loc.id, 'entregue')} 
-                  onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
-                  onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
-                  onAbrirDesignar={() => setModalDesignarLoc(loc)}
-                  btnTxt="Enviar ➔" btnCor="#f59e0b" 
-                  onAbrirChecklist={() => abrirCheckin(loc, 'IDA')} 
-                  onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
-                  onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
-                  onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
-                  onAbrirGPS={() => abrirGPS(loc)}
-                  onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                  isModoLista={vistaAtual === 'lista'} 
-                  parametros={parametros}
-                />
-              ))
-            )}
-          </div>
-        </div>
 
-        {/* COLUNA 3: NA RUA / EVENTO */}
-        <div className="kanban-col">
-          <div className="col-header">
-            <span className="dot" style={{background: '#8b5cf6'}}></span>
-            <h3>3. Na Rua / Evento</h3>
-            <span className="badge-count">{colunas.entregue.length}</span>
-          </div>
-          <div className="col-body">
-            {colunas.entregue.length === 0 ? (
-              <div className="coluna-vazia-placeholder">Nenhum pedido</div>
-            ) : (
-              colunas.entregue.map(loc => (
-                <CartaoKanban 
-                  key={loc.id} loc={loc} navigate={navigate} 
-                  verificarSeEhEntrega={verificarSeEhEntrega}
-                  obterEnderecoCompleto={obterEnderecoCompleto}
-                  onAvancar={() => abrirCheckin(loc, 'VOLTA')} 
-                  onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
-                  onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
-                  onAbrirDesignar={() => setModalDesignarLoc(loc)}
-                  btnTxt="Receber ➔" btnCor="#8b5cf6" 
-                  onAbrirChecklist={() => abrirCheckin(loc, 'VOLTA')} 
-                  onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
-                  onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
-                  onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
-                  onAbrirGPS={() => abrirGPS(loc)}
-                  onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                  isModoLista={vistaAtual === 'lista'} 
-                  parametros={parametros}
-                />
-              ))
-            )}
-          </div>
-        </div>
+          {/* 🖥️ MODO DESKTOP (KANBAN POLIDO DE 4 ETAPAS OPERACIONAIS) */}
+          <div className={`kanban-board desktop-only-board ${vistaAtual === 'lista' ? 'board-lista' : 'board-colunas'}`}>
+            
+            {/* COLUNA 1: A SEPARAR / CONFIRMADOS */}
+            <div className="kanban-col">
+              <div className="col-header">
+                <span className="dot" style={{background: '#3b82f6'}}></span>
+                <h3>1. A Separar</h3>
+                <span className="badge-count">{colunas.confirmado.length}</span>
+              </div>
+              <div className="col-body">
+                {colunas.confirmado.length === 0 ? (
+                  <div className="coluna-vazia-placeholder">Nenhum pedido</div>
+                ) : (
+                  colunas.confirmado.map(loc => (
+                    <CartaoKanban 
+                      key={loc.id} loc={loc} navigate={navigate} 
+                      verificarSeEhEntrega={verificarSeEhEntrega}
+                      obterEnderecoCompleto={obterEnderecoCompleto}
+                      onAvancar={() => moverCard(loc.id, 'preparacao')} 
+                      onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
+                      onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
+                      onAbrirDesignar={() => setModalDesignarLoc(loc)}
+                      btnTxt="Separar ➔" btnCor="#3b82f6" 
+                      onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                      onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                      onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                      onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
+                      onAbrirGPS={() => abrirGPS(loc)}
+                      onAbrirWhatsApp={() => abrirWhatsApp(loc)}
+                      isModoLista={vistaAtual === 'lista'} 
+                      parametros={parametros}
+                      onAbrirPreviewPDF={abrirPDFEmNovaAba}
+                      onAbrirLightboxFotos={abrirLightboxFotos}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
 
-        {/* COLUNA 4: DEVOLVIDOS */}
-        <div className="kanban-col">
-          <div className="col-header">
-            <span className="dot" style={{background: '#10b981'}}></span>
-            <h3>4. Devolvidos</h3>
-            <span className="badge-count">{colunas.finalizado.length}</span>
-          </div>
-          <div className="col-body">
-            {colunas.finalizado.length === 0 ? (
-              <div className="coluna-vazia-placeholder">Nenhum pedido</div>
-            ) : (
-              colunas.finalizado.slice(0, 20).map(loc => (
-                <CartaoKanban 
-                  key={loc.id} loc={loc} navigate={navigate} isFinal={true} 
-                  verificarSeEhEntrega={verificarSeEhEntrega}
-                  obterEnderecoCompleto={obterEnderecoCompleto}
-                  onVoltar={() => moverCard(loc.id, 'entregue')} 
-                  onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
-                  onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
-                  onAbrirDesignar={() => setModalDesignarLoc(loc)}
-                  onAbrirChecklist={() => abrirCheckin(loc, 'VOLTA')} 
-                  onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
-                  onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
-                  onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
-                  onAbrirGPS={() => abrirGPS(loc)}
-                  onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                  isModoLista={vistaAtual === 'lista'} 
-                  parametros={parametros}
-                />
-              ))
-            )}
-            {colunas.finalizado.length > 20 && <p className="limite-aviso">+ {colunas.finalizado.length - 20} arquivados...</p>}
-          </div>
-        </div>
+            {/* COLUNA 2: EM SEPARAÇÃO */}
+            <div className="kanban-col">
+              <div className="col-header">
+                <span className="dot" style={{background: '#f59e0b'}}></span>
+                <h3>2. Em Separação</h3>
+                <span className="badge-count">{colunas.preparacao.length}</span>
+              </div>
+              <div className="col-body">
+                {colunas.preparacao.length === 0 ? (
+                  <div className="coluna-vazia-placeholder">Nenhum pedido</div>
+                ) : (
+                  colunas.preparacao.map(loc => (
+                    <CartaoKanban 
+                      key={loc.id} loc={loc} navigate={navigate} 
+                      verificarSeEhEntrega={verificarSeEhEntrega}
+                      obterEnderecoCompleto={obterEnderecoCompleto}
+                      onAvancar={() => moverCard(loc.id, 'entregue')} 
+                      onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
+                      onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
+                      onAbrirDesignar={() => setModalDesignarLoc(loc)}
+                      btnTxt="Enviar ➔" btnCor="#f59e0b" 
+                      onAbrirChecklist={() => abrirCheckin(loc, 'IDA')} 
+                      onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                      onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                      onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
+                      onAbrirGPS={() => abrirGPS(loc)}
+                      onAbrirWhatsApp={() => abrirWhatsApp(loc)}
+                      isModoLista={vistaAtual === 'lista'} 
+                      parametros={parametros}
+                      onAbrirPreviewPDF={abrirPDFEmNovaAba}
+                      onAbrirLightboxFotos={abrirLightboxFotos}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
 
-      </div>
+            {/* COLUNA 3: NA RUA / EVENTO */}
+            <div className="kanban-col">
+              <div className="col-header">
+                <span className="dot" style={{background: '#8b5cf6'}}></span>
+                <h3>3. Na Rua / Evento</h3>
+                <span className="badge-count">{colunas.entregue.length}</span>
+              </div>
+              <div className="col-body">
+                {colunas.entregue.length === 0 ? (
+                  <div className="coluna-vazia-placeholder">Nenhum pedido</div>
+                ) : (
+                  colunas.entregue.map(loc => (
+                    <CartaoKanban 
+                      key={loc.id} loc={loc} navigate={navigate} 
+                      verificarSeEhEntrega={verificarSeEhEntrega}
+                      obterEnderecoCompleto={obterEnderecoCompleto}
+                      onAvancar={() => abrirCheckin(loc, 'VOLTA')} 
+                      onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
+                      onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
+                      onAbrirDesignar={() => setModalDesignarLoc(loc)}
+                      btnTxt="Receber ➔" btnCor="#8b5cf6" 
+                      onAbrirChecklist={() => abrirCheckin(loc, 'VOLTA')} 
+                      onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                      onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                      onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
+                      onAbrirGPS={() => abrirGPS(loc)}
+                      onAbrirWhatsApp={() => abrirWhatsApp(loc)}
+                      isModoLista={vistaAtual === 'lista'} 
+                      parametros={parametros}
+                      onAbrirPreviewPDF={abrirPDFEmNovaAba}
+                      onAbrirLightboxFotos={abrirLightboxFotos}
+                    />
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* COLUNA 4: DEVOLVIDOS */}
+            <div className="kanban-col">
+              <div className="col-header">
+                <span className="dot" style={{background: '#10b981'}}></span>
+                <h3>4. Devolvidos</h3>
+                <span className="badge-count">{colunas.finalizado.length}</span>
+              </div>
+              <div className="col-body">
+                {colunas.finalizado.length === 0 ? (
+                  <div className="coluna-vazia-placeholder">Nenhum pedido</div>
+                ) : (
+                  colunas.finalizado.slice(0, 20).map(loc => (
+                    <CartaoKanban 
+                      key={loc.id} loc={loc} navigate={navigate} isFinal={true} 
+                      verificarSeEhEntrega={verificarSeEhEntrega}
+                      obterEnderecoCompleto={obterEnderecoCompleto}
+                      onVoltar={() => moverCard(loc.id, 'entregue')} 
+                      onForcarAvanco={(destino) => forcarAvancar(loc.id, destino)}
+                      onAbrirAssinatura={() => setModalAssinaturaLoc(loc)}
+                      onAbrirDesignar={() => setModalDesignarLoc(loc)}
+                      onAbrirChecklist={() => abrirCheckin(loc, 'VOLTA')} 
+                      onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
+                      onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
+                      onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
+                      onAbrirGPS={() => abrirGPS(loc)}
+                      onAbrirWhatsApp={() => abrirWhatsApp(loc)}
+                      isModoLista={vistaAtual === 'lista'} 
+                      parametros={parametros}
+                      onAbrirPreviewPDF={abrirPDFEmNovaAba}
+                      onAbrirLightboxFotos={abrirLightboxFotos}
+                    />
+                  ))
+                )}
+                {colunas.finalizado.length > 20 && <p className="limite-aviso">+ {colunas.finalizado.length - 20} arquivados...</p>}
+              </div>
+            </div>
+
+          </div>
+        </>
+      )}
 
       {/* 🛫🛬 MODAL CHECK-IN DE IDA E VOLTA */}
       <ModalCheckinLocacao 
@@ -852,6 +994,64 @@ const Logistica = () => {
         />
       )}
 
+      {/* ⚡ MODAL DE BIPAGEM CONTÍNUA DE GALPÃO */}
+      <ModalBipagemGalpao 
+        isOpen={modalBipagemAberta}
+        onClose={() => setModalBipagemAberta(false)}
+        locacoes={locacoes}
+        onAtualizarLocacoes={carregarDados}
+        tenantId={tenantId}
+      />
+
+      {/* 📸 MODAL LIGHTBOX DE FOTOS DE VISTORIA */}
+      <ModalLightboxFotos 
+        isOpen={lightboxState.isOpen}
+        onClose={() => setLightboxState(prev => ({ ...prev, isOpen: false }))}
+        fotos={lightboxState.fotos}
+        titulo={lightboxState.titulo}
+        initialIndex={lightboxState.initialIndex}
+      />
+
+      {/* 🧺 MODAL DE DETALHES DE EMBALAGENS EM CAMPO */}
+      {modalEmbalagensAberta && (
+        <div className="modal-overlay" onClick={() => setModalEmbalagensAberta(false)}>
+          <div className="modal-container-embalagens" onClick={e => e.stopPropagation()}>
+            <div className="modal-embalagens-header">
+              <h3>🧺 Embalagens em Circulação ({saldoEmbalagens.pedidos.length} Pedidos)</h3>
+              <button type="button" className="btn-fechar-modal" onClick={() => setModalEmbalagensAberta(false)}>✕</button>
+            </div>
+            
+            <div className="modal-embalagens-resumo">
+              <span><strong>{saldoEmbalagens.caixas}</strong> Caixas</span>
+              <span><strong>{saldoEmbalagens.sacolas}</strong> Sacolas</span>
+              <span><strong>{saldoEmbalagens.capas}</strong> Capas</span>
+            </div>
+
+            <div className="modal-embalagens-lista">
+              {saldoEmbalagens.pedidos.map((item, idx) => {
+                const numPed = item.loc.numeroPedido ? `#${item.loc.numeroPedido}` : `#${item.loc.id.substring(0, 5)}`;
+                return (
+                  <div key={idx} className="embalagem-item-card">
+                    <div className="embalagem-item-topo">
+                      <strong>{numPed} — {item.loc.clienteNome}</strong>
+                      <span className="embalagem-status-tag">{item.loc.status === 'entregue' ? 'Na Rua' : 'Em Preparação'}</span>
+                    </div>
+                    <div className="embalagem-item-detalhes">
+                      <span>📦 {item.caixas} caixas | 🛍️ {item.sacolas} sacolas | 🛡️ {item.capas} capas</span>
+                      {item.loc.dataDevolucao && <small>Retorno Previsto: {item.loc.dataDevolucao.split('-').reverse().join('/')}</small>}
+                    </div>
+                    <div className="embalagem-item-acoes">
+                      <button type="button" onClick={() => abrirWhatsApp(item.loc)} className="btn-emb-wpp">💬 WhatsApp</button>
+                      <button type="button" onClick={() => navigate(`/locacoes/editar/${item.loc.id}`)} className="btn-emb-det">🔍 Detalhes</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
@@ -872,12 +1072,16 @@ const CartaoKanban = ({
   isFinal, 
   onAbrirChecklist, 
   onAbrirRelatorio, 
+  onAbrirCheckinIda,
+  onAbrirCheckinVolta,
   onAbrirGPS,
   onAbrirWhatsApp,
   isModoLista, 
   parametros,
   verificarSeEhEntrega,
-  obterEnderecoCompleto
+  obterEnderecoCompleto,
+  onAbrirPreviewPDF,
+  onAbrirLightboxFotos
 }) => {
   const [expandido, setExpandido] = useState(false);
   const isEntrega = verificarSeEhEntrega ? verificarSeEhEntrega(loc) : (loc.logistica?.tipo === 'entrega');
@@ -886,6 +1090,44 @@ const CartaoKanban = ({
   
   const hojeStr = new Date().toISOString().split('T')[0];
   const eventoJaPassou = loc.dataRetirada && loc.dataRetirada < hojeStr;
+
+  // 📸 FOTOS DA VISTORIA (SAÍDA + RETORNO)
+  const todasFotosVistoria = useMemo(() => {
+    const lista = [];
+    if (Array.isArray(loc.fotosCheckinSaida)) {
+      loc.fotosCheckinSaida.forEach(f => lista.push({ url: typeof f === 'string' ? f : f?.url || f?.dataUrl, tipo: 'Vistoria de Saída' }));
+    }
+    if (Array.isArray(loc.fotosCheckinRetorno)) {
+      loc.fotosCheckinRetorno.forEach(f => lista.push({ url: typeof f === 'string' ? f : f?.url || f?.dataUrl, tipo: 'Vistoria de Devolução' }));
+    }
+    return lista;
+  }, [loc.fotosCheckinSaida, loc.fotosCheckinRetorno]);
+
+  // 🚨 CÁLCULO EXATO DE DIAS DE ATRASO PARA AVISO DE CONFERÊNCIA
+  const dataRefDevolucao = loc.dataDevolucao || loc.dataRetirada;
+  let diasAtrasoDevolucao = 0;
+  let ehAtrasoDevolucao = false;
+
+  if (dataRefDevolucao && !isFinal && loc.status !== 'orcamento' && loc.status !== 'cancelado') {
+    const hojeDate = new Date();
+    hojeDate.setHours(0, 0, 0, 0);
+    const devDate = new Date(dataRefDevolucao + 'T00:00:00');
+    const diffDev = Math.ceil((devDate.getTime() - hojeDate.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDev < 0) {
+      diasAtrasoDevolucao = Math.abs(diffDev);
+      ehAtrasoDevolucao = true;
+    }
+  }
+
+  const handleAbrirVistoriaAtrasado = () => {
+    if (loc.status === 'entregue' || loc.status === 'finalizado') {
+      if (onAbrirCheckinVolta) onAbrirCheckinVolta();
+      else if (onAbrirChecklist) onAbrirChecklist();
+    } else {
+      if (onAbrirCheckinIda) onAbrirCheckinIda();
+      else if (onAbrirChecklist) onAbrirChecklist();
+    }
+  };
 
   const getAlertaUrgencia = () => {
     if (!loc.dataRetirada || isFinal || loc.status === 'orcamento') return null;
@@ -940,9 +1182,9 @@ const CartaoKanban = ({
   const handleAvancarClick = () => {
     if (checklistBloqueiaBotao) {
       if (eventoJaPassou) {
-        const conf = window.confirm(`⚡ EVENTO COM DATA PASSADA (${dataBr}):\nAs peças ainda não foram marcadas no checklist, mas a festa já ocorreu.\n\nDeseja destravar e avançar para "${btnTxt}" mesmo assim?`);
+        const conf = window.confirm(`⚡ EVENTO COM DATA PASSADA (${dataBr}):\nAs peças ainda não foram marcadas no checklist, mas a festa já ocorreu.\n\nDeseja abrir a vistoria para conferir item por item?`);
         if (conf) {
-          onAvancar();
+          handleAbrirVistoriaAtrasado();
           return;
         }
       }
@@ -1027,31 +1269,89 @@ const CartaoKanban = ({
         </div>
       </div>
 
-      {/* AÇÕES PRINCIPAIS RÁPIDAS (SEPARAR / AVANÇAR + CHECKLIST) */}
-      <div className="k-card-actions-main">
-        <button 
-          type="button"
-          className={`k-btn-itens-toggle ${(isFaseSeparacao || (isFaseDevolucao && itensCheckados < totalItens)) ? 'pulse-btn' : ''}`} 
-          onClick={onAbrirChecklist}
-        >
-          📝 {btnChecklistTxt}
-        </button>
+      {/* 🚨 CARD DE AVISO DE ATRASO CRÍTICO & CONFERÊNCIA ITEM A ITEM (BOTÃO ÚNICO) */}
+      {ehAtrasoDevolucao && !isFinal ? (
+        <div className="card-aviso-atraso-critico">
+          <div className="aviso-atraso-header">
+            <span className="aviso-atraso-icone">🚨</span>
+            <div className="aviso-atraso-info">
+              <strong className="aviso-atraso-titulo">
+                {loc.status === 'entregue' ? 'Devolução Atrasada' : 'Data de Evento Ultrapassada'} ({diasAtrasoDevolucao} {diasAtrasoDevolucao === 1 ? 'dia' : 'dias'})
+              </strong>
+              <span className="aviso-atraso-sub">
+                {loc.status === 'entregue' ? `Devolução prevista: ${dataDevBr || dataBr}` : `Evento era em: ${dataBr}`}
+              </span>
+            </div>
+          </div>
+          <p className="aviso-atraso-texto">
+            ⚠️ <strong>Conferência Obrigatória:</strong> As peças deste pedido devem ser conferidas <strong>item por item</strong> na vistoria para registrar eventuais avarias ou faltas antes de liberar o acervo.
+          </p>
 
-        {!isFinal ? (
-          <button 
-            type="button"
-            className={`k-btn-move ${checklistBloqueiaBotao ? 'btn-bloqueado' : ''}`} 
-            style={{ backgroundColor: checklistBloqueiaBotao ? '#cbd5e1' : btnCor, color: checklistBloqueiaBotao ? '#64748b' : 'white' }} 
-            onClick={handleAvancarClick}
-          >
-            {checklistBloqueiaBotao ? `🔒 Trava` : btnTxt}
-          </button>
-        ) : (
-          <button type="button" className="k-btn-view" onClick={onVoltar} style={{ color: '#ef4444', borderColor: '#fca5a5' }}>
-            ⏪ Voltar
-          </button>
-        )}
-      </div>
+          {/* 🎯 BOTÃO ÚNICO DE AÇÃO */}
+          {itensCheckados < totalItens ? (
+            <button 
+              type="button" 
+              className="btn-vistoria-atrasado-destaque"
+              onClick={handleAbrirVistoriaAtrasado}
+              title="Abrir Vistoria Item por Item para Conferência"
+            >
+              📥 Iniciar Vistoria &amp; Conferir ({itensCheckados}/{totalItens}) ➔
+            </button>
+          ) : (
+            <button 
+              type="button" 
+              className="btn-vistoria-atrasado-destaque"
+              style={{ background: 'linear-gradient(135deg, #10b981, #059669)', borderColor: '#059669' }}
+              onClick={handleAvancarClick}
+              title="Todas as peças foram conferidas. Clique para finalizar recebimento"
+            >
+              ✅ Concluir Recebimento ➔
+            </button>
+          )}
+        </div>
+      ) : (
+        /* AÇÕES PRINCIPAIS (QUANDO NÃO ESTÁ EM ATRASO CRÍTICO) */
+        <div className="k-card-actions-main">
+          {checklistBloqueiaBotao ? (
+            /* BOTÃO ÚNICO DE CONFERÊNCIA OBRIGATÓRIA */
+            <button 
+              type="button"
+              className="k-btn-itens-toggle pulse-btn" 
+              onClick={onAbrirChecklist}
+              style={{ width: '100%', justifyContent: 'center' }}
+            >
+              📝 Conferir Itens ({itensCheckados}/{totalItens}) ➔
+            </button>
+          ) : (
+            <>
+              {hasItens && (isFaseSeparacao || isFaseDevolucao) && (
+                <button 
+                  type="button"
+                  className="k-btn-itens-toggle" 
+                  onClick={onAbrirChecklist}
+                >
+                  📝 {btnChecklistTxt}
+                </button>
+              )}
+
+              {!isFinal ? (
+                <button 
+                  type="button"
+                  className="k-btn-move" 
+                  style={{ backgroundColor: btnCor, color: 'white', flex: (hasItens && (isFaseSeparacao || isFaseDevolucao)) ? 1 : '1 1 100%' }} 
+                  onClick={handleAvancarClick}
+                >
+                  {btnTxt}
+                </button>
+              ) : (
+                <button type="button" className="k-btn-view" onClick={onVoltar} style={{ color: '#ef4444', borderColor: '#fca5a5', width: '100%' }}>
+                  ⏪ Voltar
+                </button>
+              )}
+            </>
+          )}
+        </div>
+      )}
 
       {/* 🔽 BOTÃO SANFONA "VER MAIS / RECOLHER" */}
       <button 
@@ -1079,13 +1379,50 @@ const CartaoKanban = ({
                 {isEntrega ? (enderecoFormatado || 'Endereço cadastrado') : 'Retirada na Loja'}
               </strong>
             </div>
+
+            {/* 📸 MINI GALERIA DE FOTOS DA VISTORIA */}
+            {todasFotosVistoria.length > 0 && (
+              <div className="card-mini-galeria-fotos">
+                <div className="mini-galeria-topo">
+                  <span>📸 Fotos da Vistoria ({todasFotosVistoria.length})</span>
+                  <button 
+                    type="button" 
+                    className="btn-ver-todas-fotos"
+                    onClick={() => onAbrirLightboxFotos(todasFotosVistoria, 0, `Vistoria #${loc.numeroPedido || loc.id.substring(0,5)}`)}
+                  >
+                    Ver Galeria ➔
+                  </button>
+                </div>
+                <div className="mini-galeria-strip">
+                  {todasFotosVistoria.slice(0, 4).map((f, fIdx) => (
+                    <img
+                      key={fIdx}
+                      src={f.url}
+                      alt=""
+                      className="mini-galeria-thumb"
+                      onClick={() => onAbrirLightboxFotos(todasFotosVistoria, fIdx, `Vistoria #${loc.numeroPedido || loc.id.substring(0,5)}`)}
+                      title={`Clique para ampliar (${f.tipo})`}
+                    />
+                  ))}
+                  {todasFotosVistoria.length > 4 && (
+                    <div 
+                      className="mini-galeria-mais"
+                      onClick={() => onAbrirLightboxFotos(todasFotosVistoria, 4, `Vistoria #${loc.numeroPedido || loc.id.substring(0,5)}`)}
+                      title="Ver mais fotos"
+                    >
+                      +{todasFotosVistoria.length - 4}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* ═════════════════════════════════════════════════════════
               BOTÕES CONTEXTUAIS CONFORME A ETAPA DA LOGÍSTICA
              ═════════════════════════════════════════════════════════ */}
           {isFaseDevolucao ? (
-            /* ═══ ABA 5. DEVOLVIDOS (GALPÃO / PÓS-EVENTO) ═══ */
+            /* ═══ ABA 4. DEVOLVIDOS (GALPÃO / PÓS-EVENTO) ═══ */
             <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
               <button 
                 type="button" 
@@ -1108,19 +1445,23 @@ const CartaoKanban = ({
 
               {(loc.dataCheckinRetorno || loc.obsRetorno || loc.assinaturaRetornoUrl) && (
                 <button 
-                  type="button"
+                  type="button" 
                   className="k-btn-view" 
-                  onClick={() => gerarComprovanteCheckinPDF(
-                    loc, 
-                    loc.itens || [], 
-                    'VOLTA', 
-                    { 
-                      responsavel: loc.responsavelRetorno || 'Equipe Galpão',
-                      observacoes: loc.obsRetorno || '',
-                      assinaturaUrl: loc.assinaturaRetornoUrl || null
-                    }, 
-                    parametros
-                  )}
+                  onClick={() => {
+                    const res = gerarComprovanteCheckinPDF(
+                      loc, 
+                      'VOLTA', 
+                      loc.itens || [], 
+                      { 
+                        responsavel: loc.responsavelRetorno || 'Equipe Galpão',
+                        observacoes: loc.obsRetorno || '',
+                        assinaturaUrl: loc.assinaturaRetornoUrl || null
+                      }, 
+                      parametros,
+                      'preview'
+                    );
+                    if (onAbrirPreviewPDF) onAbrirPreviewPDF(res);
+                  }}
                   style={{ flex: 1.2, padding: '7px 6px', backgroundColor: '#f8fafc', color: '#334155', borderColor: '#cbd5e1', fontWeight: '800', fontSize: '0.74rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                   title="Visualizar Comprovante de Vistoria de Devolução em PDF"
                 >
@@ -1176,7 +1517,7 @@ const CartaoKanban = ({
 
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                 <button 
-                  type="button"
+                  type="button" 
                   className="k-btn-view" 
                   onClick={() => navigate(`/locacoes/editar/${loc.id}`)}
                   style={{ width: '100%', padding: '6px', fontSize: '0.72rem' }}
@@ -1199,7 +1540,7 @@ const CartaoKanban = ({
                 </button>
 
                 <button 
-                  type="button"
+                  type="button" 
                   className="k-quick-btn"
                   onClick={onAbrirDesignar}
                   style={{ backgroundColor: motoristaDesignado ? '#eff6ff' : '#ffffff', color: motoristaDesignado ? '#1d4ed8' : '#334155', borderColor: motoristaDesignado ? '#bfdbfe' : '#cbd5e1', fontWeight: '800', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
@@ -1211,7 +1552,7 @@ const CartaoKanban = ({
 
               <div style={{ display: 'flex', gap: '6px', marginTop: '6px' }}>
                 <button 
-                  type="button"
+                  type="button" 
                   className="k-btn-view" 
                   onClick={() => navigate(`/locacoes/editar/${loc.id}`)}
                   style={{ flex: 1, padding: '6px', fontSize: '0.72rem' }}
@@ -1220,11 +1561,14 @@ const CartaoKanban = ({
                 </button>
 
                 <button 
-                  type="button"
+                  type="button" 
                   className="k-btn-view" 
-                  onClick={() => gerarEtiquetasCaixotePDF(loc, parametros)} 
+                  onClick={async () => {
+                    const res = await gerarEtiquetasCaixotePDF(loc, parametros, 1, 1, 'preview');
+                    if (onAbrirPreviewPDF) onAbrirPreviewPDF(res);
+                  }} 
                   style={{ flex: 1.2, padding: '6px', backgroundColor: '#fefce8', color: '#b45309', borderColor: '#fde68a', fontWeight: 'bold', fontSize: '0.72rem' }}
-                  title="Gerar etiquetas de caixote em PDF para colar antes da saída"
+                  title="Visualizar e Imprimir etiquetas de caixote em PDF"
                 >
                   🏷️ Etiqueta PDF
                 </button>
@@ -1232,22 +1576,21 @@ const CartaoKanban = ({
             </>
           )}
 
-          {/* ⚡ BOTÃO DE DESTRAVAMENTO RÁPIDO PARA EVENTOS PASSADOS */}
-          {eventoJaPassou && !isFinal && onForcarAvanco && (
+          {/* 🔍 BOTÃO DE REGULARIZAÇÃO COM CONFERÊNCIA ITEM POR ITEM */}
+          {eventoJaPassou && !isFinal && (
             <button 
               type="button"
-              className="k-btn-view" 
-              onClick={() => onForcarAvanco('finalizado')} 
-              style={{ width: '100%', marginTop: '6px', backgroundColor: '#fefce8', color: '#b45309', borderColor: '#fde68a', fontWeight: '850', fontSize: '0.72rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
-              title="Mover este pedido diretamente para Devolvidos para regularizar o estoque"
+              className="k-btn-view btn-regularizar-vistoria" 
+              onClick={handleAbrirVistoriaAtrasado} 
+              title="Realizar vistoria item por item para liberar as peças no acervo com segurança"
             >
-              ⚡ Destravar e Mover para Devolvidos
+              🔍 Vistoria &amp; Conferência (Item por Item)
             </button>
           )}
 
           {(temAvaria || temFalta) && (
             <button 
-              type="button"
+              type="button" 
               className="k-btn-view" 
               onClick={onAbrirRelatorio} 
               style={{ width: '100%', marginTop: '6px', backgroundColor: '#fef2f2', color: '#dc2626', borderColor: '#fca5a5', fontWeight: 'bold', fontSize: '0.72rem' }}
