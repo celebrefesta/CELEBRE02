@@ -188,6 +188,27 @@ graph TD
 
 ---
 
+
+### 🎨 6.10. Celebre Studio Pro & Moodboard Digital (`/src/pages/Moodboard/`)
+- **Estúdio de Cenografia 3D e Montagem de Projetos (`Moodboard.jsx`, `Moodboard.css`)**:
+  - **Prancheta de Alta Performance a 120 FPS**: Motor de arraste e movimentação ultrarrápido com coordenadas absolutas e sincronização nativa via `requestAnimationFrame` (RAF), eliminando qualquer latência ou delay.
+  - **Ajustes Consolidados no Painel Direito (Estilo Photoshop / Figma)**:
+    - **Dimensões & Posição**: Inputs numéricos de precisão para Largura (W), Altura (H), X e Y.
+    - **Filtros e Efeitos Visuais**: Sliders de Brilho (0-200%), Contraste (0-200%), Opacidade (0-100%), Sombra 3D (0-50px) e Rotação 360° com atalho de 2 cliques para restauração do valor padrão.
+    - **Estruturas & Mesas Cilindro 3D**: Upload de fotos de capa pelo computador, catálogo de tecidos sublimados prontos e seleção de acabamento de tampo (contínuo vs tampo liso colorido).
+    - **Ações Rápidas em Grid**: Centralizar, Alinhar no Chão, Espelhar, Duplicar, Trazer p/ Frente, Enviar p/ Trás, Bloquear e Excluir.
+  - **Menu Lateral Esquerdo Clean de Inserção**:
+    - 🛋️ **Acervo**: Peças físicas do próprio estoque com busca e contagem.
+    - 👑 **Galeria**: Portfólio próprio e arcos de balões oficiais Celebre.
+    - 🏛️ **Estruturas**: Painéis romanos, redondos e mesas cilindro 3D.
+    - ✍️ **Texto**: Tipografia moderna com efeitos de Neon Glow.
+    - 🎨 **Cenário**: Paredes, pisos, iluminação e ciclorama estúdio.
+  - **Calculadora de Bexigas & Comercial Integrada**:
+    - Pílula flutuante no rodapé com valor total do projeto e identificador de peças a comprar/sublocar.
+    - Exportação da lista de compras de pacotes de bexigas formatada diretamente para o WhatsApp.
+  - **Responsividade Mobile Completa**:
+    - Painel direito convertido em **Drawer Lateral Flutuante (Off-canvas)** com fundo escurecido (*backdrop*), mantendo a prancheta ampla e visível no celular.
+
 ### 🚚 6.9. Logística, Roteiro de Galpão & Vistoria de Campo (`/src/pages/Logistica/`, `/Agenda/`)
 - **Agenda de Eventos (`Agenda.jsx`)**: Calendário interativo (Mês, Semana, Dia) diferenciando saídas (🚚), eventos (🎉) e recolhes (📦).
 - **Esteira Operacional de Galpão em 4 Etapas (`Logistica.jsx`, `Logistica.css`)**:
@@ -290,6 +311,18 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 ---
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 17/08/2026 — 13h00 às 14h45 (BRT)
+- ✅ **Motor de Interação e Arraste a 120 FPS (`Moodboard.jsx`)**:
+  - Eliminação de delay e latência através de cálculo com coordenadas de origem absolutas (`startPointerPos` / `startItemPos`) e renderização sincronizada com a taxa do monitor via `requestAnimationFrame` (RAF).
+  - Aceleração por GPU (`will-change: left, top, transform;`) e remoção de transições interpoladas no canvas (`transition: none !important;`).
+- ✅ **Consolidação dos Ajustes no Painel Direito Estilo Photoshop/Figma (`Moodboard.jsx`)**:
+  - Remoção da aba redundante de ajustes do menu esquerdo e centralização completa de controles visuais, dimensões, rotação, capas e ações rápidas na aba `Propriedades` do painel direito.
+- ✅ **Responsividade Mobile & Drawer Lateral Flutuante (`Moodboard.css`)**:
+  - Painel direito transformado em gaveta lateral deslizante com backdrop no mobile (≤ 900px), sem comprimir nem quebrar o canvas.
+- ✅ **Blindagem e Resolução de Erros de Runtime e Console**:
+  - Correção do warning `src=""` em tags `<img>`, remoção do caractere fantasma `))}` na galeria e resolução do `ReferenceError: handlePointerMove is not defined`.
+- ✅ **Build de Produção Verificado**: `npm run build` aprovado com **0 erros** (`built in 10.77s`).
 
 ### 🗓️ Sessão: 16/08/2026 — 13h55 às 18h15 (BRT)
 - ✅ **💰 Registro da Rota `/novo-lancamento` no Roteador Global (`App.jsx`)**:
@@ -423,5 +456,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 16/08/2026 — 18h15 (BRT)  
+> **⏱️ Última atualização:** 17/08/2026 — 14h45 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

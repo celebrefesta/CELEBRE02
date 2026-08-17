@@ -2,8 +2,6 @@
    ✨ ESTILOS DA LISTA DE COMPRAS (PADRONIZADO 100% GESTÃO DE CLIENTES)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=Outfit:wght@500;600;700;800&display=swap');
-
 .clientes-container,
 .compras-container {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
@@ -767,6 +765,7 @@
     white-space: normal !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -788,6 +787,7 @@
     white-space: normal !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 1 !important;
+    line-clamp: 1 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;

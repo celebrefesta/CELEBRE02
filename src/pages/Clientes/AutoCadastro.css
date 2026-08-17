@@ -2,8 +2,6 @@
    AUTO-CADASTRO PÚBLICO - ENTERPRISE LUXURY
    ========================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&display=swap');
-
 .autocadastro-luxury-wrapper {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
   min-height: 100vh;

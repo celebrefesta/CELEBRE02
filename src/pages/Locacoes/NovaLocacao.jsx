@@ -352,6 +352,42 @@ const NovaLocacao = () => {
             }
           }
         }
+
+        // 🎨 Se veio itensMoodboard do Decorador Virtual:
+        if (location.state?.itensMoodboard && Array.isArray(location.state.itensMoodboard)) {
+          const itensMapeados = [];
+          location.state.itensMoodboard.forEach(mItem => {
+            const itemEstoque = ests.find(e => e.id === mItem.id || e.id === mItem.pecaId);
+            const baseItem = itemEstoque || mItem;
+            const precoItem = Number(baseItem.financeiro?.valorAluguel || baseItem.preco || baseItem.valorLocacao || baseItem.valor || 0);
+            const isDeco = baseItem.especificacoes?.isDecoracao || baseItem.categoria === 'Decoração Completa' || baseItem.tipoCadastro === 'decoracao';
+            const pecasCompostas = baseItem.especificacoes?.itensDecoracao || baseItem.especificacoes?.itensDoKit || baseItem.itensDecoracao || baseItem.itensDoKit || [];
+            
+            itensMapeados.push({
+              ...baseItem,
+              id: baseItem.id || `mood_${Date.now()}_${Math.random()}`,
+              nome: baseItem.nome || 'Peça do Acervo',
+              isDecoracao: isDeco,
+              itensDecoracao: pecasCompostas,
+              itensDoKit: pecasCompostas,
+              qtd: mItem.quantidade || 1,
+              preco: precoItem,
+              foto: baseItem.foto || baseItem.imagem || (baseItem.fotos?.[0]) || '',
+              qtdOriginal: Number(baseItem.quantidade) || 1,
+              checkedSeparacao: false,
+              checkedDevolucao: false,
+              avaria: false,
+              faltou: false
+            });
+          });
+          if (itensMapeados.length > 0) {
+            setCarrinho(itensMapeados);
+          }
+          if (location.state?.nomeProjeto) {
+            setTemaDigitadoPersonalizado(location.state.nomeProjeto);
+            setTemaFesta('OUTRO_TEMA');
+          }
+        }
       } catch (error) {
         console.error("Erro ao carregar:", error);
       } finally {

@@ -2,8 +2,6 @@
    🎨 DESIGN SYSTEM PREMIUM: NAVBAR LATERAL (CELEBRE)
    ========================================================================== */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
-
 .sidebar {
   font-family: 'Plus Jakarta Sans', sans-serif !important;
   background: linear-gradient(180deg, #0b0f19 0%, #05070c 100%) !important;

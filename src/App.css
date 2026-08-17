@@ -1346,6 +1346,7 @@ main,
     white-space: normal !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;
@@ -1373,6 +1374,7 @@ main,
     white-space: normal !important;
     display: -webkit-box !important;
     -webkit-line-clamp: 1 !important;
+    line-clamp: 1 !important;
     -webkit-box-orient: vertical !important;
     overflow: hidden !important;
     text-overflow: ellipsis !important;

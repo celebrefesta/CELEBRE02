@@ -123,6 +123,13 @@ service cloud.firestore {
       allow read, write: if logado();
     }
 
+    // financeiro_config/{docId}
+    match /financeiro_config/{docId} {
+      allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+      allow create: if isSuperAdmin() || souDonoOuFuncionario(request.resource.data.userId);
+      allow update, delete: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
+    }
+
     // lista_compras/{docId}
     match /lista_compras/{docId} {
       allow read: if isSuperAdmin() || souDonoOuFuncionario(resource.data.userId);
@@ -183,6 +190,13 @@ service cloud.firestore {
     // relatorio_avarias/{tenantId}
     match /relatorio_avarias/{tenantId} {
       allow read, write: if isSuperAdmin() || souDonoOuFuncionario(tenantId);
+    }
+
+    // moodboard_elementos/{docId}
+    match /moodboard_elementos/{docId} {
+      allow read: if logado();
+      allow create: if logado();
+      allow update, delete: if isSuperAdmin() || (logado() && resource.data.empresaId == request.auth.uid) || (logado() && souDonoOuFuncionario(resource.data.empresaId));
     }
 
     // Bloqueio padrão para qualquer outra coleção
