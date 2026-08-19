@@ -57,7 +57,8 @@ const Icons = {
   Maximize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>,
   Minimize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>,
   Eye: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
-  Sliders: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>
+  Sliders: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>,
+  Sun: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
 };
 
 // 🎈 Categorias da Galeria de Cenografia & Inspirações
@@ -1658,7 +1659,7 @@ const Moodboard = () => {
   const [estoqueReal, setEstoqueReal] = useState([]);
   const [itensCanvas, setItensCanvas] = useState([]);
   const [selecionadoId, setSelecionadoId] = useState(null);
-  const [abaAtiva, setAbaAtiva] = useState('estoque'); 
+  const [abaAtiva, setAbaAtiva] = useState('fundo'); 
   const [editingTextId, setEditingTextId] = useState(null);
   const [subAbaTexto, setSubAbaTexto] = useState('texto'); // 'texto' | 'icones'
   const [cenarioAba, setCenarioAba] = useState('parede'); // 'parede' | 'piso' | 'ambiente'
@@ -1712,6 +1713,14 @@ const Moodboard = () => {
   const [sombraChaoIntensidade, setSombraChaoIntensidade] = useState(25); // sombra do ciclorama / contato (0 a 60%)
   const [estiloRodape, setEstiloRodape] = useState('suave');
   const [profundidadeFoco, setProfundidadeFoco] = useState(0); // profundidade / blur de fundo (0 a 10px)
+
+  // ✨ EFEITOS & ILUMINAÇÃO GLOBAL DO AMBIENTE
+  const [luminosidadeGlobal, setLuminosidadeGlobal] = useState(100); // 50 a 200% (100 = neutro)
+  const [contrasteGlobal, setContrasteGlobal] = useState(100); // 50 a 200%
+  const [saturacaoGlobal, setSaturacaoGlobal] = useState(100); // 0 a 200%
+  const [tonalidadeCor, setTonalidadeCor] = useState(''); // cor hex para overlay tonal
+  const [tonalidadeIntensidade, setTonalidadeIntensidade] = useState(0); // 0 a 60%
+  const [vignettaIntensidade, setVignettaIntensidade] = useState(0); // 0 a 100% (efeito vinheta)
 
   // 📐 Enquadramento, Posição & Escala das Imagens de Fundo
   const [posicaoParedeY, setPosicaoParedeY] = useState(50); // 0 a 100%
@@ -3486,64 +3495,64 @@ const Moodboard = () => {
             <Icons.Crown />
           </div>
 
-          {/* 1. MEU ESTOQUE / CATÁLOGO DE PEÇAS */}
+          {/* 1. CENÁRIO & AMBIENTAÇÃO — sempre primeiro: define o palco */}
           <div 
-            className={`tool-item ${abaAtiva === 'estoque' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
-            onClick={() => abrirAbaMobile('estoque')}
-            title="Peças, móveis e catálogo do seu acervo"
+            className={`tool-item ${abaAtiva === 'fundo' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            onClick={() => abrirAbaMobile('fundo')}
+            title="Defina o cenário: parede, piso e ambiente"
           >
-            <Icons.Couch />
-            <span>Estoque</span>
+            <Icons.Layers />
+            <span>Cenário</span>
           </div>
 
-          {/* 2. ESTRUTURAS & PAINÉIS */}
+          {/* 2. ESTRUTURAS & PAINÉIS — esqueleto da decoração */}
           <div 
             className={`tool-item ${abaAtiva === 'formas' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('formas')}
-            title="Painéis, arcos, mesas e cilindros"
+            title="Painéis, arcos romanos, mesas e cilindros"
           >
             <Icons.Shapes />
             <span>Estruturas</span>
           </div>
 
-          {/* 3. BALÕES & CENOGRAFIA */}
+          {/* 3. ACERVO & UPLOAD — itens reais do estoque + PNG externos */}
+          <div 
+            className={`tool-item ${abaAtiva === 'estoque' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            onClick={() => abrirAbaMobile('estoque')}
+            title="Seu acervo físico, catálogo e upload de imagens"
+          >
+            <Icons.Couch />
+            <span>Acervo</span>
+          </div>
+
+          {/* 4. EFEITOS & ILUMINAÇÃO — atmosfera e luz do ambiente */}
+          <div 
+            className={`tool-item ${abaAtiva === 'efeitos' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            onClick={() => abrirAbaMobile('efeitos')}
+            title="Luminosidade, contraste, saturação e efeitos do ambiente"
+          >
+            <Icons.Sun />
+            <span>Efeitos</span>
+          </div>
+
+          {/* 5. BEXIGAS & CENOGRAFIA — arcos orgânicos, guirlandas, balões */}
           <div 
             className={`tool-item ${abaAtiva === 'baloes' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('baloes')}
             title="Arcos orgânicos, guirlandas e bexigas"
           >
             <Icons.Balloon />
-            <span>Balões</span>
+            <span>Bexigas</span>
           </div>
 
-          {/* 4. UPLOAD RÁPIDO */}
-          <div 
-            className="tool-item tool-item-upload" 
-            onClick={handleUploadImagemRapida} 
-            title="Subir foto recortada (PNG) direto no canvas"
-          >
-            <Icons.UploadCloud />
-            <span>Upload</span>
-          </div>
-
-          {/* 5. TEXTO & EFEITOS */}
+          {/* 6. LETREIROS & TEXTO — finalização com nomes, fontes e efeitos */}
           <div 
             className={`tool-item ${abaAtiva === 'texto' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('texto')}
-            title="Títulos, nomes, letreiros e efeitos"
+            title="Letreiros, nomes, fontes e efeitos de texto"
           >
             <Icons.Type />
-            <span>Texto</span>
-          </div>
-
-          {/* 6. CENÁRIO & AMBIENTAÇÃO */}
-          <div 
-            className={`tool-item ${abaAtiva === 'fundo' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
-            onClick={() => abrirAbaMobile('fundo')}
-            title="Paredes, chão 3D, ciclorama e iluminação"
-          >
-            <Icons.Layers />
-            <span>Cenário</span>
+            <span>Letreiros</span>
           </div>
         </div>
       )}
@@ -3566,11 +3575,12 @@ const Moodboard = () => {
             <div className="bottom-sheet-handle-wrap" onClick={() => setPainelMobileAberto(false)}>
               <div className="bottom-sheet-handle" />
               <span className="bottom-sheet-handle-label">
-                {abaAtiva === 'estoque' && '📦 Meu Estoque & Acervo'}
+                {abaAtiva === 'fundo' && '🏞️ Cenário & Ambiente'}
                 {abaAtiva === 'formas' && '🏛️ Estruturas & Painéis'}
-                {abaAtiva === 'baloes' && '🎈 Balões & Cenografia'}
-                {abaAtiva === 'texto' && '🔤 Texto & Efeitos'}
-                {abaAtiva === 'fundo' && '🖼️ Cenário & Paredes'}
+                {abaAtiva === 'estoque' && '📦 Acervo & Upload'}
+                {abaAtiva === 'efeitos' && '✨ Efeitos & Iluminação'}
+                {abaAtiva === 'baloes' && '🎈 Bexigas & Cenografia'}
+                {abaAtiva === 'texto' && '✍️ Letreiros & Texto'}
               </span>
               <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: 'auto' }}>▼ fechar</span>
             </div>
@@ -4893,6 +4903,172 @@ const Moodboard = () => {
                     )}
                </div>
           )}
+
+          {/* ABA: EFEITOS & ILUMINAÇÃO DO AMBIENTE */}
+          {abaAtiva === 'efeitos' && (
+            <div className="panel-content">
+              <div className="panel-header-row" style={{ marginBottom: '10px' }}>
+                <h3 className="panel-title" style={{ margin: 0 }}>✨ EFEITOS & ILUMINAÇÃO</h3>
+              </div>
+
+              {/* 💡 LUMINOSIDADE */}
+              <div className="effect-control-group">
+                <div className="effect-control-header">
+                  <span className="effect-control-label">☀️ Luminosidade</span>
+                  <span className="effect-control-value">{luminosidadeGlobal}%</span>
+                  <button className="btn-link-reset" onClick={() => setLuminosidadeGlobal(100)} title="Resetar">↺</button>
+                </div>
+                <input
+                  type="range" min="30" max="200" step="1"
+                  value={luminosidadeGlobal}
+                  onChange={e => setLuminosidadeGlobal(Number(e.target.value))}
+                  className="enquadramento-slider"
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                  <span>Escuro</span><span>Normal</span><span>Brilhante</span>
+                </div>
+              </div>
+
+              {/* 🎛️ CONTRASTE */}
+              <div className="effect-control-group">
+                <div className="effect-control-header">
+                  <span className="effect-control-label">🎨 Contraste</span>
+                  <span className="effect-control-value">{contrasteGlobal}%</span>
+                  <button className="btn-link-reset" onClick={() => setContrasteGlobal(100)} title="Resetar">↺</button>
+                </div>
+                <input
+                  type="range" min="30" max="200" step="1"
+                  value={contrasteGlobal}
+                  onChange={e => setContrasteGlobal(Number(e.target.value))}
+                  className="enquadramento-slider"
+                />
+              </div>
+
+              {/* 🌈 SATURAÇÃO */}
+              <div className="effect-control-group">
+                <div className="effect-control-header">
+                  <span className="effect-control-label">🌈 Saturação</span>
+                  <span className="effect-control-value">{saturacaoGlobal}%</span>
+                  <button className="btn-link-reset" onClick={() => setSaturacaoGlobal(100)} title="Resetar">↺</button>
+                </div>
+                <input
+                  type="range" min="0" max="250" step="1"
+                  value={saturacaoGlobal}
+                  onChange={e => setSaturacaoGlobal(Number(e.target.value))}
+                  className="enquadramento-slider"
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                  <span>P&B</span><span>Normal</span><span>Vívido</span>
+                </div>
+              </div>
+
+              {/* 🌫️ DESFOQUE / PROFUNDIDADE */}
+              <div className="effect-control-group">
+                <div className="effect-control-header">
+                  <span className="effect-control-label">🌫️ Profundidade de Foco</span>
+                  <span className="effect-control-value">{profundidadeFoco}px</span>
+                  <button className="btn-link-reset" onClick={() => setProfundidadeFoco(0)} title="Resetar">↺</button>
+                </div>
+                <input
+                  type="range" min="0" max="15" step="0.5"
+                  value={profundidadeFoco}
+                  onChange={e => setProfundidadeFoco(Number(e.target.value))}
+                  className="enquadramento-slider"
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
+                  <span>Foco total</span><span>Desfocado</span>
+                </div>
+              </div>
+
+              {/* 🔴 TONALIDADE DE COR (COLOR OVERLAY) */}
+              <div className="effect-control-group">
+                <div className="effect-control-header">
+                  <span className="effect-control-label">🌅 Tonalidade de Cor</span>
+                  {tonalidadeCor && <button className="btn-link-reset" onClick={() => { setTonalidadeCor(''); setTonalidadeIntensidade(0); }} title="Remover">✕</button>}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', margin: '6px 0' }}>
+                  {['#ffedd5','#fce7f3','#e0f2fe','#dcfce7','#fef9c3','#f3e8ff','#fee2e2'].map(cor => (
+                    <button
+                      key={cor}
+                      title={cor}
+                      onClick={() => { setTonalidadeCor(cor); if (tonalidadeIntensidade === 0) setTonalidadeIntensidade(20); }}
+                      style={{
+                        width: '28px', height: '28px', borderRadius: '50%',
+                        background: cor,
+                        border: tonalidadeCor === cor ? '2.5px solid #a855f7' : '2px solid #334155',
+                        cursor: 'pointer',
+                        transform: tonalidadeCor === cor ? 'scale(1.2)' : 'scale(1)',
+                        transition: 'transform 0.15s ease, border-color 0.15s ease'
+                      }}
+                    />
+                  ))}
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', margin: '0 0 8px 0' }}>
+                  {['#1e1b4b','#0c1a2e','#1a0a0a','#022c22','#1c1917','#1f1427','#fafafa'].map(cor => (
+                    <button
+                      key={cor}
+                      title={cor}
+                      onClick={() => { setTonalidadeCor(cor); if (tonalidadeIntensidade === 0) setTonalidadeIntensidade(20); }}
+                      style={{
+                        width: '28px', height: '28px', borderRadius: '50%',
+                        background: cor,
+                        border: tonalidadeCor === cor ? '2.5px solid #a855f7' : '2px solid #334155',
+                        cursor: 'pointer',
+                        transform: tonalidadeCor === cor ? 'scale(1.2)' : 'scale(1)',
+                        transition: 'transform 0.15s ease, border-color 0.15s ease'
+                      }}
+                    />
+                  ))}
+                </div>
+                {tonalidadeCor && (
+                  <>
+                    <div className="effect-control-header" style={{ marginTop: '4px' }}>
+                      <span className="effect-control-label">Intensidade</span>
+                      <span className="effect-control-value">{tonalidadeIntensidade}%</span>
+                    </div>
+                    <input
+                      type="range" min="0" max="80" step="1"
+                      value={tonalidadeIntensidade}
+                      onChange={e => setTonalidadeIntensidade(Number(e.target.value))}
+                      className="enquadramento-slider"
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* 🖤 VINHETA */}
+              <div className="effect-control-group">
+                <div className="effect-control-header">
+                  <span className="effect-control-label">🕸️ Vinheta</span>
+                  <span className="effect-control-value">{vignettaIntensidade}%</span>
+                  <button className="btn-link-reset" onClick={() => setVignettaIntensidade(0)} title="Resetar">↺</button>
+                </div>
+                <input
+                  type="range" min="0" max="100" step="1"
+                  value={vignettaIntensidade}
+                  onChange={e => setVignettaIntensidade(Number(e.target.value))}
+                  className="enquadramento-slider"
+                />
+                <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '3px' }}>Escurece as bordas da cena</div>
+              </div>
+
+              {/* 🔄 RESETAR TUDO */}
+              <button
+                className="btn-reset-all-effects"
+                onClick={() => {
+                  setLuminosidadeGlobal(100);
+                  setContrasteGlobal(100);
+                  setSaturacaoGlobal(100);
+                  setProfundidadeFoco(0);
+                  setTonalidadeCor('');
+                  setTonalidadeIntensidade(0);
+                  setVignettaIntensidade(0);
+                }}
+              >
+                ↺ Resetar Todos os Efeitos
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -5039,7 +5215,16 @@ const Moodboard = () => {
               ))}
               
               {/* Camadas do Cenário (Suavização / Ciclorama 3D) */}
-              <div className="canvas-layers" style={{ filter: profundidadeFoco > 0 ? `blur(${profundidadeFoco}px)` : 'none', transform: profundidadeFoco > 0 ? 'scale(1.03)' : 'none', transition: 'filter 0.2s ease, transform 0.2s ease' }}>
+              <div className="canvas-layers" style={{
+                filter: [
+                  luminosidadeGlobal !== 100 ? `brightness(${luminosidadeGlobal}%)` : '',
+                  contrasteGlobal !== 100 ? `contrast(${contrasteGlobal}%)` : '',
+                  saturacaoGlobal !== 100 ? `saturate(${saturacaoGlobal}%)` : '',
+                  profundidadeFoco > 0 ? `blur(${profundidadeFoco}px)` : ''
+                ].filter(Boolean).join(' ') || 'none',
+                transform: profundidadeFoco > 0 ? 'scale(1.03)' : 'none',
+                transition: 'filter 0.2s ease, transform 0.2s ease'
+              }}>
                 {modoCenario === 'unico' ? (
                   <div className="layer-single-bg" style={getStyle(wallBackground, "ambiente")} />
                 ) : (
@@ -5082,6 +5267,36 @@ const Moodboard = () => {
                   </>
                 )}
               </div>
+
+              {/* 🌅 OVERLAY DE TONALIDADE DE COR (COLOR GRADING) */}
+              {tonalidadeCor && tonalidadeIntensidade > 0 && (
+                <div
+                  className="canvas-overlay-tonalidade"
+                  style={{
+                    position: 'absolute', inset: 0,
+                    background: tonalidadeCor,
+                    opacity: tonalidadeIntensidade / 100,
+                    pointerEvents: 'none',
+                    zIndex: 1,
+                    mixBlendMode: 'color',
+                    transition: 'opacity 0.2s ease'
+                  }}
+                />
+              )}
+
+              {/* 🕸️ OVERLAY DE VINHETA */}
+              {vignettaIntensidade > 0 && (
+                <div
+                  className="canvas-overlay-vignetta"
+                  style={{
+                    position: 'absolute', inset: 0,
+                    background: `radial-gradient(ellipse at center, transparent ${Math.max(10, 70 - vignettaIntensidade * 0.5)}%, rgba(0,0,0,${vignettaIntensidade / 150}) 100%)`,
+                    pointerEvents: 'none',
+                    zIndex: 2,
+                    transition: 'background 0.2s ease'
+                  }}
+                />
+              )}
       
               {itensCanvas.map((item, index) => {
                 const isSelected = selecionadoId === item.uniqueId && !modoApresentacao;
