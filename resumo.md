@@ -354,6 +354,63 @@ graph TD
 ### 7.5. Inteligência de Frete & Lucro Real da Festa
 - **Cálculo de Frete por GPS/CEP e tipo de veículo**, com apuração do lucro real abatendo custos operacionais e de transporte.
 
+
+### 7.6. Celebre Studio 4.0 — Reorganização do Fluxo de Trabalho da Toolbar
+
+**Data:** 19/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
+
+A ordem da barra lateral (toolbar) foi completamente reorganizada para seguir o fluxo lógico e natural de uma decoradora profissional — do palco às peças, até os detalhes finais:
+
+| Posição | Aba | Finalidade |
+|---------|-----|------------|
+| 1ª | 🏞️ **Cenário** | Define o palco — parede, piso 3D ou salão inteiro |
+| 2ª | 🏛️ **Estruturas** | Arcos romanos, painéis temáticos, cilindros, mesas |
+| 3ª | 📦 **Acervo** | Estoque próprio + elementos PNG globais + upload rápido |
+| 4ª | ✨ **Efeitos** | Efeitos visuais e atmosfera do ambiente (ver 7.7) |
+| 5ª | 🎈 **Bexigas** | Arcos orgânicos, guirlandas, balões cluster e colunas |
+| 6ª | ✍️ **Letreiros** | Texto, fontes artísticas, materiais realistas e apliques |
+
+**Mudanças adicionais:**
+- Estado inicial da aba ao abrir o Moodboard alterado para `'fundo'` (Cenário) — o usuário começa pelo palco.
+- Labels do Bottom Sheet mobile atualizados para refletir a nova nomenclatura.
+- Ícone `Sun` adicionado ao objeto `Icons` para a aba Efeitos.
+
 ---
 
-*Manual técnico e Resumo Executivo atualizados com sucesso para o Sistema Celebre.*
+### 7.7. Celebre Studio 4.0 — Nova Aba ✨ Efeitos & Iluminação
+
+**Data:** 19/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
+
+Implementação da nova aba de efeitos visuais globais do ambiente, com controles em tempo real:
+
+#### Controles CSS Globais (aplicados via `filter` no `canvas-layers`):
+- **☀️ Luminosidade** (30–200%): Ajusta o brilho geral da cena — de estúdio escuro a ambiente externo.
+- **🎨 Contraste** (30–200%): Define a dramaticidade visual — de suave a cinematográfico.
+- **🌈 Saturação** (0–250%): De preto e branco total a cores super-vívidas e festivas.
+- **🌫️ Profundidade de Foco** (0–15px): Desfoque bokeh do cenário de fundo (movido do painel Cenário).
+
+#### Overlays Visuais (camadas renderizadas no artboard):
+- **🌅 Tonalidade de Cor**: Paleta de 14 tons (claros e escuros) com `mix-blend-mode: color` e intensidade ajustável (0–80%) — permite tingir a cena com tons dourados, azulados, rosados ou dramáticos.
+- **🕸️ Vinheta** (0–100%): Gradiente radial que escurece as bordas da cena, criando foco visual no centro.
+- **🔄 Resetar Tudo**: Botão que zera todos os efeitos de uma só vez.
+
+#### Arquitetura técnica:
+- Estados: `luminosidadeGlobal`, `contrasteGlobal`, `saturacaoGlobal`, `tonalidadeCor`, `tonalidadeIntensidade`, `vignettaIntensidade`.
+- Filtros compostos com `Array.filter(Boolean).join(' ')` para eficiência.
+- Overlays com `position: absolute; inset: 0; pointer-events: none` para não interferir na interação.
+
+#### 📌 PRÓXIMA EVOLUÇÃO PLANEJADA — Efeitos Animados de Partículas:
+A aba de Efeitos evoluirá para incluir atmosferas animadas em tempo real:
+
+| Efeito | Descrição técnica |
+|--------|-------------------|
+| 🎊 **Confete no Ar** | Partículas coloridas caindo com CSS `@keyframes` |
+| 🫧 **Bolhas de Sabão** | Círculos translúcidos flutuando com `border-radius: 50%` |
+| 🌅 **Pôr do Sol** | Gradiente dinâmico laranja/dourado com transição suave |
+| 🌧️ **Chuva** | Linhas diagonais animadas sobrepostas |
+| ✨ **Faíscas/Brilhos** | Partículas de luz piscando (efeito estrelas) |
+| 💡 **Iluminação de Palco** | Holofotes simulados com gradientes radiais |
+
+---
+
+*Manual técnico e Resumo Executivo atualizados em 19/08/2026 — Sistema Celebre v4.0*
