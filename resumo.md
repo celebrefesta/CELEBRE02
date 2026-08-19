@@ -19,15 +19,15 @@
    - [4.6 Compras e Reposições (`/compras`)](#46-compras-e-reposições-compras)
    - [4.7 Fornecedores (`/fornecedores`)](#47-fornecedores-fornecedores)
    - [4.8 Agenda de Eventos (`/agenda`)](#48-agenda-de-eventos-agenda)
-   - [4.9 Logística & Carregamento (`/logistica`)](#49-logística--carregamento-logistica)
+   - [4.9 Logística, Galpão & Vistoria de Campo (`/logistica`)](#49-logística-roteiro-de-galpão--vistoria-de-campo-logistica)
    - [4.10 Contratos Digitais & Assinatura (`/contratos`)](#410-contratos-digitais--assinatura-contratos)
-   - [4.11 Moodboard & Projetos Visuais (`/moodboard`)](#411-moodboard--projetos-visuais-moodboard)
+   - [4.11 Celebre Studio 4.0 — Moodboard & Cenografia Interativa (`/moodboard`)](#411-celebre-studio-40--moodboard--cenografia-interativa-moodboard)
    - [4.12 Catálogo Virtual & Vitrine (`/catalogo`)](#412-catálogo-virtual--vitrine-catalogo)
    - [4.13 Relatórios & Inteligência de Negócio (`/relatorios`)](#413-relatórios--inteligência-de-negócio-relatorios)
    - [4.14 Configurações do Sistema (`/configuracoes`)](#414-configurações-do-sistema-configuracoes)
    - [4.15 Central de Notificações (`/notificacoes`)](#415-central-de-notificações-notificacoes)
    - [4.16 Equipe & Controle ASO (`/Usuarios`)](#416-equipe--controle-aso-usuarios)
-   - [4.17 Planos, Assinaturas & Painel Admin (`/planos` / `/admin`)](#417-planos-assinaturas--painel-admin-planos--admin)
+   - [4.17 Planos, Assinaturas & Painel Master Super Admin (`/planos` / `/admin`)](#417-planos-assinaturas--painel-master-super-admin-planos--admin)
 5. [Workflows Operacionais Integrados](#5-workflows-operacionais-integrados)
 6. [Regramento de Blindagem de Layout & UI/UX](#6-regramento-de-blindagem-de-layout--uiux)
 7. [Resumo Executivo de Atualizações & Modernizações Recentes](#7-resumo-executivo-de-atualizações--modernizações-recentes)
@@ -45,16 +45,17 @@ O **Sistema Celebre** foi desenvolvido para resolver as dores operacionais diár
   - *Firestore Database*: Banco de dados NoSQL em tempo real.
   - *Firebase Authentication*: Autenticação via e-mail/senha.
   - *Firebase Storage*: Armazenamento de imagens de produtos, fotos de avarias, comprovantes e contratos.
+- **Inteligência Artificial no Navegador (Edge AI)**: `@imgly/background-removal` via WebAssembly (WASM) para remoção automática de fundo de fotos de peças e decorações, com processamento 100% local e sem custos de APIs externas.
 - **Visualização de Dados**: `recharts` (Gráficos de Área, Barras e Donut responsivos).
-- **Estilização**: Vanilla CSS 3 modularizado com CSS Variables (Design System Enterprise com suporte nativo a responsividade mobile e dark/light tokens).
-- **Geração de Documentos**: HTML5 Canvas e utilitários para impressão térmica e exportação em PDF.
+- **Estilização**: Vanilla CSS 3 modularizado com CSS Variables (Design System Dark Luxury Enterprise com suporte nativo a responsividade mobile e dark/light tokens).
+- **Geração de Documentos**: HTML5 Canvas, `html2canvas` e `jspdf` para exportação de orçamentos, propostas com imagem, contratos, comprovantes e romaneios.
 
 ### 🛡️ Arquitetura de Segurança & Multitenancy:
 - **Isolamento de Dados (Multitenancy)**: Todos os documentos gravados nas coleções contêm a chave `tenantId`. Consultas Firestore utilizam obrigatoriamente `where('tenantId', '==', tenantId)`, garantindo isolamento total entre diferentes empresas.
 - **Guardiões de Rota (`App.jsx`)**:
   - `RotaPrivada`: Exige autenticação de usuário ativo.
-  - `RotaAdmin`: Restringe acesso a funções exclusivas do Super Admin.
-  - `TravaSeguranca`: Componente de validação dupla que checa permissões por módulo (`Financeiro`, `Relatorios`, `Equipe`) para perfis de funcionários.
+  - `RotaAdmin`: Restringe acesso a funções exclusivas do Super Admin (`celebrefesta25@gmail.com`).
+  - `TravaSeguranca`: Componente de validação dupla que checa permissões por módulo (`Financeiro`, `Relatorios`, `Equipe`, `Moodboard`) para perfis de funcionários.
 
 ---
 
@@ -70,26 +71,28 @@ O sistema opera sobre um ecossistema NoSQL organizado nas seguintes coleções p
 6. `compras`: Aquisições de peças de acervo e insumos (balões, fitas, embalagens) com vinculação a fornecedores e rastreio de prazos de entrega.
 7. `fornecedores`: Parceiros comerciais, e-commerces (Mercado Livre, Shopee), artesãos, marceneiros e freteiros.
 8. `contratos`: Minutas de contratos e instâncias de contratos assinados digitalmente.
-9. `equipe`: Cadastro de colaboradores da empresa, seus cargos e mapa de permissões granulares por módulo.
-10. `configuracoes`: Parâmetros da empresa (logo, chave PIX, endereço, margem de bloqueio de estoque).
-11. `notificacoes`: Alertas do sistema referentes a atrasos e tarefas do dia.
+9. `moodboard_elementos`: Biblioteca oficial e portfólio customizado de recortes PNG, arcos desconstruídos, painéis temáticos, texturas de parede, pisos e ambientes inteiros para o Moodboard Studio, gerenciados pelo Super Admin.
+10. `projetos_moodboard`: Projetos e maquetes 2D/3D salvas com array de objetos do canvas, texturas de parede e piso, configurações de luz, desfoque óptico e proposta comercial.
+11. `equipe`: Cadastro de colaboradores da empresa, seus cargos e mapa de permissões granulares por módulo.
+12. `configuracoes`: Parâmetros da empresa (logo, chave PIX, endereço, dados da frota, margem de bloqueio de estoque).
+13. `notificacoes`: Alertas do sistema referentes a atrasos e tarefas do dia.
 
 ---
 
 ## 3. NAVEGAÇÃO E LAYOUT BASE
 
-O layout é composto por três estruturas globais:
+O layout é composto por estruturas globais e isolamento de telas de estúdio:
 
 - **`Navbar.jsx` (Menu Lateral / Drawer Mobile)**:
   - Navegação expansível com ícones para todos os módulos.
   - Exibição do plano ativo da empresa.
   - Badges de notificações em tempo real.
-- **`Topbar.jsx` (Barra Superior)**:
+- **`Topbar.jsx` (Barra Superior Global)**:
   - Identificação da empresa e do usuário logado.
   - Atalho rápido de busca e central de notificações (`SininhoNotificacoes.jsx`).
-  - Botão de logout seguro.
-- **`SininhoNotificacoes.jsx`**:
-  - Popover inteligente com alertas de locações a saírem hoje, devoluções vencendo ou atrasadas.
+  - Seletor de tema claro/escuro e logout.
+- **Modo Estúdio Imersivo (`rotasSemMenu`)**:
+  - A rota `/moodboard` opera em modo *Tela Cheia Dedicada*, ocultando Navbar e Topbar globais para fornecer 100% de área visual ao Canvas de criação, com botão próprio de retorno ao Início.
 
 ---
 
@@ -113,7 +116,8 @@ Página central de inteligência e controle de fluxo do negócio.
 - **Nova Locação / Edição (`NovaLocacao.jsx`)**:
   - Simulador de disponibilidade em tempo real por intervalo de datas.
   - Seleção visual de acervos com leitor de SKU e filtros de categoria.
-  - Cálculo automático de frete, desconto, valor de sinal e caução.
+  - Cálculo automático de frete dinâmico por geolocalização e consumo veicular.
+  - Cálculo automático de desconto, valor de sinal e caução.
 - **Visualizador de Contrato (`VisualizarLocacao.jsx`)**:
   - Emissão de contrato com minuta dinâmica, espelho do pedido e botão para envio via WhatsApp ou PDF.
 - **Romaneio & Expedição (`RomaneioModal.jsx`)**:
@@ -212,12 +216,6 @@ Página unificada com arquitetura de 3 abas sem descontinuidade visual ou quebra
   - `gerarFolhaSeparacaoGalpaoPDF.js`: Mapa Geral de Separação de Peças consolidado por período.
   - `gerarComprovanteCheckinPDF.js`: Comprovante oficial de vistoria e conferência de devolução/saída com dados do responsável e assinatura.
   - `gerarEtiquetasCaixotePDF.js`: Etiquetas de expedição para colar nos caixotes antes da saída do galpão.
-- **Ações Inteligentes e Contextuais por Etapa**:
-  - `Na Rua`: Exibe atalhos de `📍 Rota GPS` e `✍️ Assinar Entrega`.
-  - `Expedição / Saída`: Exibe `🏷️ Etiqueta PDF` e `🚚 Transporte & Carga`.
-  - `Devolvidos`: Exibe `📄 Vistoria PDF` e remove atalhos de GPS/etiquetas desnecessários.
-- **Destravamento e Regularização em Lote de Pedidos Atrasados**:
-  - Botão `⚡ Destravar Atrasados` para mover em 1-clique pedidos retroativos para a etapa de Devolvidos.
 
 ---
 
@@ -229,9 +227,30 @@ Página unificada com arquitetura de 3 abas sem descontinuidade visual ou quebra
 
 ---
 
-### 4.11 Moodboard & Projetos Visuais (`/moodboard`)
-- **Mural Criativo (`Moodboard.jsx`)**:
-  - Tela interativa estilo "canvas" para combinar peças do acervo, móveis e arranjos visuais antes do evento.
+### 4.11 Celebre Studio 4.0 — Moodboard & Cenografia Interativa (`/moodboard`)
+O estúdio criativo do sistema é uma ferramenta profissional especializada no mercado de festas:
+
+- **1. Cenografia Oficial Exclusiva Super Admin**:
+  - Todos os presets estáticos de imagens externas foram removidos.
+  - Exibição de paredes, pisos e ambientes inteiros carregados dinamicamente do Firestore e cadastrados exclusivamente pelo Super Admin.
+- **2. Enquadramento, Movimentação & Zoom de Cenário (Pan & Zoom)**:
+  - **↕️ Posição Vertical (0% a 100%)**: Move a imagem para cima e para baixo para enquadrar a melhor área fotográfica.
+  - **↔️ Posição Horizontal (0% a 100%)**: Move a imagem para a esquerda ou direita.
+  - **🔍 Zoom / Escala (80% a 250%)**: Ajusta o tamanho da textura de tijolos, piso ou foto do salão.
+  - **↺ Centralizar**: Botão de 1 clique para resetar os eixos.
+- **3. Foco Óptico & Profundidade 3D (Bokeh)**:
+  - Slider `📷 Profundidade de Tela / Desfoque (0 a 10px)` que aplica desfoque suave de profundidade de campo (*bokeh* óptico) no fundo, destacando as peças em primeiro plano com visual cinematográfico.
+- **4. Cenários Modulares (Parede + Piso) vs. Fotos de Salão (Ambiente Inteiro)**:
+  - *Ambiente Inteiro*: Ao selecionar foto de salão/jardim, ativa o **Modo Fundo Único**, cobrindo 100% da prancheta sem chão artificial sobreposto.
+  - *Parede + Piso*: Ativa o **Modo Duplo**, com ciclorama 3D, sombra de oclusão de contato (`0% a 60%`), altura da linha do chão (`15% a 55%`) e opção de rodapé de estúdio.
+- **5. Remoção Automática de Fundo com IA Local (WASM)**:
+  - Integração do modelo `@imgly/background-removal` rodando 100% no navegador do usuário, recortando fotos instantaneamente.
+- **6. Catálogo com 12 Estruturas Vetoriais Cenográficas**:
+  - Painéis romanos, redondos, retangulares, hexagonais, nichos, meia-lua, mesas, cilindros, arcos orgânicos de balões, guirlandas e tipografia metálica (Gold Mirror, Rose Gold, Silver, MDF Wood e Glitter).
+- **7. Indicador Comercial "A Comprar"**:
+  - Badge pulsante para peças não disponíveis no estoque físico da decoradora e botão **`👑 GERAR LOCAÇÃO`** para converter a maquete visual em pedido formal.
+- **8. Arquitetura Mobile-First Bottom Sheet**:
+  - Canvas em tela cheia, dock inferior e drawer com gesto de deslizar (*swipe down*).
 
 ---
 
@@ -251,7 +270,7 @@ Dividido em 4 abas analíticas avançadas:
 ---
 
 ### 4.14 Configurações do Sistema (`/configuracoes`)
-- Gestão de dados da empresa, chave PIX, logomarca, permissões de equipe, margem de bloqueio de estoque e cópia de segurança (Backup).
+- Gestão de dados da empresa, chave PIX, logomarca, frota de veículos, permissões de equipe, margem de bloqueio de estoque e cópia de segurança (Backup).
 
 ---
 
@@ -265,8 +284,13 @@ Dividido em 4 abas analíticas avançadas:
 
 ---
 
-### 4.17 Planos, Assinaturas & Painel Admin (`/planos` / `/admin`)
-- Painel de planos SaaS do Celebre e controle geral de tenants para o Super Admin.
+### 4.17 Planos, Assinaturas & Painel Master Super Admin (`/planos` / `/admin`)
+- **Painel Master / Controle Geral (`ControleGeral.jsx`, `ControleGeral.css`)**:
+  - Acesso restrito ao Super Admin (`celebrefesta25@gmail.com`).
+  - Largura padronizada a 100% da tela (`.cg-wrapper.fade-in`).
+  - Dropdown compacto de categorias e pílulas de status sem barra de rolagem horizontal extensa.
+  - Subchips contextuais inteligentes no cadastro de cenários (Paredes: *Cor Lisa, Ripado, Tijolo, Janela*; Pisos: *Madeira, Porcelanato, Grama*; Ambientes: *Salão Nobre, Jardim, Rústico*).
+  - Gestão e liberação global de elementos para todos os clientes da plataforma SaaS.
 
 ---
 
@@ -274,17 +298,17 @@ Dividido em 4 abas analíticas avançadas:
 
 ```mermaid
 graph TD
-    A[Atendimento Inicial / Catálogo Virtual] --> B[Geração de Orçamento em Nova Locação]
+    A[Atendimento Inicial / Catálogo Virtual / Moodboard Studio] --> B[Geração de Orçamento em Nova Locação]
     B --> C[Checagem Automática de Disponibilidade de Estoque]
-    C --> D[Envio da Proposta Comercial via WhatsApp/PDF]
+    C --> D[Envio da Proposta Comercial com Projeto Visual via WhatsApp/PDF]
     D --> E[Aprovação do Cliente & Assinatura do Contrato Digital]
     E --> F[Locação Confirmada & Reserva de Estoque Efetuada]
-    F --> G[Geração do Romaneio de Separação de Galpão]
-    G --> H[Checkout / Registro de Saída das Peças]
+    F --> G[Geração do Romaneio e Mapa de Separação de Galpão]
+    G --> H[Checkout / Registro de Saída das Peças com Bipagem]
     H --> I[Realização do Evento]
-    I --> J[Checkin / Conferência de Retorno das Peças]
+    I --> J[Checkin / Conferência de Retorno das Peças e Vistoria de Avarias]
     J -->|Sem Avarias| K[Devolução de Caução & Finalização]
-    J -->|Com Avarias| L[Lançamento de Taxa de Reposição & Fechamento]
+    J -->|Com Avarias| L[Cobrança de Reposição & Lançamento Automático no Caixa]
 ```
 
 ---
@@ -307,44 +331,28 @@ graph TD
 
 ## 7. RESUMO EXECUTIVO DE ATUALIZAÇÕES & MODERNIZAÇÕES RECENTES
 
-### 7.1. Página de Financeiro (`Financeiro.jsx` & `Financeiro.css`)
-- **Arquitetura Unificada de 3 Abas**: `Fluxo de Caixa`, `Comprovantes` e `Contas Fixas` residem na mesma página, compartilhando cabeçalho, cards KPI e filtros, eliminando qualquer salto ou desalinhamento entre telas.
-- **Remoção de Duplicidades**: Botão redundante no topo removido; navegação centralizada nas abas principais.
-- **Card KPI 4 Enriquecido**: Subtexto dinâmico no card `SALDO LÍQUIDO REAL` (`Est. Fim Mês: R$ ...`).
-- **Novo Widget de Distribuição por Categoria**: Rosca Donut + Barras de Progresso de Categoria com tooltips ricos.
-- **Exportador Excel / CSV**: Botão **`📥 Exportar (.CSV)`** para download dos lançamentos.
+### 7.1. Celebre Studio 4.0 — Moodboard, Cenografia & Profundidade 3D
+- **Exclusividade de Cenários do Super Admin**: Remoção de presets estáticos genéricos; liberação das coleções oficiais de Paredes, Pisos e Ambientes Inteiros alimentadas via Firestore.
+- **Movimentação Livre, Pan & Zoom**: Sliders de posição vertical (Y), horizontal (X) e zoom (80% a 250%) com botão de reset de 1 clique.
+- **Foco Óptico / Bokeh**: Controle de profundidade e desfoque suave de fundo (0 a 10px).
+- **Modo Único vs Duplo**: Fotos inteiras cobrem 100% da tela contínua; estúdios modulares aplicam ciclorama 3D com sombra de oclusão de contato e ajuste de linha do chão.
+- **Expansão de Espaço Vertical**: Grid de texturas sem barra de rolagem reduzida, utilizando toda a área do painel lateral.
+- **Blindagem de Compatibilidade CSS**: Inclusão de `background-clip: text` em todos os materiais e letreiros realistas.
 
-### 7.2. Módulo de Contas Fixas & Despesas Recorrentes
-- **4 Cards KPI Dedicados**: Métricas automáticas para *Custo Fixo Total*, *Folha de Pagamento*, *Infraestrutura* e *Lançamentos do Mês*.
-- **Lançamento Automático em 1 Clique**: Lança o salário ou custo fixo no fluxo de caixa real do mês instantaneamente.
-- **Modal VIP de Cadastro e Edição**:
-  - Renderizado diretamente no `document.body` via React Portal.
-  - Fundo escurecido e desfocado em 100% da tela (`backdrop-filter: blur(14px) saturate(180%)`).
-  - Layout harmonioso em grid 2x2 com ícones visuais, máscara de moeda em tempo real e validações completas.
+### 7.2. Painel Master Super Admin (`ControleGeral.jsx` & `ControleGeral.css`)
+- **Largura 100% Padronizada**: Alinhamento visual pleno com as páginas principais do sistema.
+- **Toolbar Compacta**: Eliminação da fita horizontal com dropdown ágil de categorias e subfiltros contextuais.
+- **Cadastro Inteligente de Cenários**: Ocultação da paleta pesada de balões e exibição de chips de subtipos específicos de acordo com a categoria selecionada.
 
-### 7.4. Módulo de Logística, Galpão & Vistorias de Campo (`Logistica.jsx`, `ModalCheckinLocacao.jsx`, `ModalDesignarMotorista.jsx`)
-- **Esteira Kanban de 4 Etapas Operacionais**: Transição fluida entre `1. A Separar`, `2. Em Separação`, `3. Na Rua / Evento` e `4. Devolvidos`.
-- **Validação Completa de Frete**: Função inteligente `verificarSeEhEntrega(loc)` para classificar perfeitamente pedidos de Entrega vs Retirada no Balcão.
-- **Ecossistema de PDFs de Galpão**:
-  - `📦 Mapa de Separação (PDF)` para a equipe de galpão.
-  - `📋 Romaneio da Rota (PDF)` para o motorista.
-  - `📄 Vistoria de Devolução (PDF)` sem caracteres corrompidos.
-  - `🏷️ Etiquetas de Expedição (PDF)` para caixotes.
-- **Modal de Vistoria de Devolução Touch Luxury**: Bipagem de QR/Barcode ao vivo, steppers fracionados `[-] 0 [+] [Max]`, status de avaria/falta, máscara monetária em tempo real (`R$ 25,00`), lançamento no Caixa e Canvas de Assinatura Digital responsivo com bordas arredondadas e margens flutuantes.
-- **Gestão de Transporte & Embalagens**: Atribuição de motorista, veículo e contagem de embalagens retornáveis de galpão (Caixas Plásticas, Sacolas, Capas de Painel).
+### 7.3. Página de Financeiro (`Financeiro.jsx` & `Financeiro.css`)
+- **Arquitetura Unificada de 3 Abas**: `Fluxo de Caixa`, `Comprovantes` e `Contas Fixas` integradas com cards KPI protegidos e exportação CSV.
+- **Módulo de Contas Fixas VIP**: 4 Cards KPI, lançamento de despesa em 1 clique e modal de cadastro via React Portal.
 
-### 7.5. Calculadora de Frete Inteligente & Rota Georreferenciada (`NovaLocacao.jsx`, `AbaEmpresa.jsx`)
-- **Unificação no Bloco de Logística**: A calculadora de frete foi transferida da barra lateral para o card `🚚 LOGÍSTICA & ENTREGA`, mantendo a barra lateral financeira limpa.
-- **Cálculo Automático por GPS / CEP**: Ao digitar o CEP ou selecionar um cliente, calcula a distância rodoviária exata em KM entre a sede da empresa e o evento via geolocalização com busca progressiva silenciosa.
-- **Cálculo Dinâmico por Tipo de Veículo & Gasolina**: Parâmetros em *Configurações > Empresa* para veículos 1.0 (12 km/l), 1.6 (9.5 km/l), SUV (7.5 km/l), Fiorino (6.5 km/l) e Caminhão (4.5 km/l).
+### 7.4. Logística, Galpão & Vistorias de Campo
+- **Esteira Kanban de 4 Etapas**, vistoria touch com bipagem e assinatura digital, e ecossistema de PDFs (Romaneio, Folha de Separação, Comprovante de Check-in e Etiquetas de Caixote).
 
-### 7.6. Lucro Real da Festa & Raio-X de Custos Operacionais (`Locacoes.jsx`)
-- **Cálculo Preciso com Despesas de Transporte**: O lucro real abate automaticamente compras de acervo, despesas vinculadas e o custo operacional de transporte (gasolina + desgaste do carro).
-- **Modal Raio-X Atualizado**: Apresenta a memória de cálculo: `🚚 Custo Logístico (Transporte & Frota): - R$ XX,XX (Distância, Gasolina, Desgaste)`.
-
-### 7.7. Rota de Lançamento Financeiro & Trava de Segurança (`App.jsx`, `NovaLocacao.jsx`, `Clientes.jsx`)
-- **Rota `/novo-lancamento` Ativa**: Mapeada no `App.jsx` com `TravaSeguranca` e autenticação privada.
-- **Trava de Segurança e Incorporação de Débitos**: Alerta ao tentar locar para clientes inadimplentes com opção de somar o saldo devedor anterior no novo pedido.
+### 7.5. Inteligência de Frete & Lucro Real da Festa
+- **Cálculo de Frete por GPS/CEP e tipo de veículo**, com apuração do lucro real abatendo custos operacionais e de transporte.
 
 ---
 
