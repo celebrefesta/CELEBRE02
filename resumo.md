@@ -399,18 +399,52 @@ Implementação da nova aba de efeitos visuais globais do ambiente, com controle
 - Filtros compostos com `Array.filter(Boolean).join(' ')` para eficiência.
 - Overlays com `position: absolute; inset: 0; pointer-events: none` para não interferir na interação.
 
-#### 📌 PRÓXIMA EVOLUÇÃO PLANEJADA — Efeitos Animados de Partículas:
-A aba de Efeitos evoluirá para incluir atmosferas animadas em tempo real:
+### 7.8. Celebre Studio — Gradiente de Parede & Padronização de Cenário
 
-| Efeito | Descrição técnica |
-|--------|-------------------|
-| 🎊 **Confete no Ar** | Partículas coloridas caindo com CSS `@keyframes` |
-| 🫧 **Bolhas de Sabão** | Círculos translúcidos flutuando com `border-radius: 50%` |
-| 🌅 **Pôr do Sol** | Gradiente dinâmico laranja/dourado com transição suave |
-| 🌧️ **Chuva** | Linhas diagonais animadas sobrepostas |
-| ✨ **Faíscas/Brilhos** | Partículas de luz piscando (efeito estrelas) |
-| 💡 **Iluminação de Palco** | Holofotes simulados com gradientes radiais |
+**Data:** 20/08/2026 | **Arquivos:** `Moodboard.jsx`
+
+- **🌈 Gradiente de Parede Personalizável**:
+  - Checkbox para ativação/desativação rápida do gradiente na aba Cenário (Parede).
+  - 6 Presets visuais clicáveis (*Neve → Cinza*, *Rosa Suave*, *Dourado*, *Crepúsculo*, *Noturno*, *Menta*).
+  - Seletores independentes de **Cor 1** e **Cor 2** com `input type="color"`.
+  - 4 Direções de degradê: `↓ Vertical`, `→ Horizontal`, `↘ Diagonal`, `↗ Anti-Diagonal`.
+  - Desativação automática e inteligente ao selecionar cores sólidas ou texturas fotográficas.
+- **🧱 Modo Mosaico (Tiling) para Texturas de Parede**:
+  - Modo `repeat` para texturas flat (tijolinho, mármore, azulejos), evitando esticamento de imagem.
+- **🪵 Padronização do Piso em Modo Cover**:
+  - Eliminação de repetições verticais em imagens perspectivadas de piso, garantindo preenchimento integral com controle de enquadramento vertical e horizontal.
 
 ---
 
-*Manual técnico e Resumo Executivo atualizados em 19/08/2026 — Sistema Celebre v4.0*
+### 7.9. Celebre Studio — Limpeza de Acervo & Nova Coleção de Estruturas Vetoriais 3D
+
+**Data:** 20/08/2026 | **Arquivos:** `Moodboard.jsx`
+
+- **Limpeza do Catálogo**: Remoção de modelos obsoletos do menu de seleção (*Mesa Rústica, Provençal, Mesa Cubo, Cômoda, Carrinho, Shimmer, Biombo 3F, Meia Lua e Nichos*), mantendo retrocompatibilidade com projetos antigos.
+- **Inclusão de 5 Novas Peças de Tendência em SVG 3D**:
+  1. 🏛️ **Arco Romano 3 Camadas (`Romano 3C`)**: Três molduras concêntricas escalonadas em relevo com degraus de chão.
+  2. 🌀 **Arco Orgânico 3 Camadas (`Orgânico 3C`)**: Portal com curvas sinuosas em 3 níveis de profundidade com pés escalonados.
+  3. ☁️ **Painel Nuvem Totem (`P. Nuvem`)**: Totem vertical com gomos arredondados contínuos nas laterais e pezinhos estilo cavalete MDF.
+  4. 🦴 **Mesa Osso Pet / Infantil (`Mesa Osso`)**: Frente recortada com moldura externa e miolo rebaixado + tampo superior isométrico para apoio de doces.
+  5. 🚙 **Mesa Jeep Safari / Carro Infantil (`Mesa Jeep`)**: Frente completa de Jeep com para-brisa vazado, volante, retrovisores, prateleira de apoio, grade de 7 aletas, faróis redondos, para-choque com placa "JEEP 4X4" e pneus tratorados.
+
+---
+
+### 7.10. Celebre Studio — Sistema de Colorização Multi-Camadas & Inspector Inteligente
+
+**Data:** 20/08/2026 | **Arquivos:** `Moodboard.jsx`
+
+- **🌈 Colorização Multi-Camadas dos Arcos Triplos**:
+  - Alternador: **🎨 1 Cor (Tudo Igual)** vs **🌈 Modo 3 Cores (Degradê)**.
+  - Seletores independentes para *Camada 1 (Externa/Fundo)*, *Camada 2 (Intermediária)* e *Camada 3 (Interna/Portal)*.
+  - 6 Presets rápidos de degradê: *Branco / Cinzas*, *Nude Areia*, *Rosa Bebê*, *Azul Céu*, *Terracota* e *Ouro Real*.
+- **🦴 Colorização da Mesa Osso**:
+  - Seletores individuais para *Borda/Moldura Externa*, *Miolo Central Rebaixado* e *Tampo Superior*.
+- **🚙 Colorização da Mesa Jeep Safari**:
+  - Seletores individuais para *Carroceria*, *Pneus/Rodas Tratoradas*, *Faróis/Detalhes* e *Tampo Superior*.
+- **🎨 Paleta Rápida para Estruturas Simples**:
+  - Seletor de cor universal e chips de tons clássicos para arcos e painéis no painel de propriedades.
+
+---
+
+*Manual técnico e Resumo Executivo atualizados em 20/08/2026 — Sistema Celebre v4.1*
