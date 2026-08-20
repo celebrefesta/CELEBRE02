@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { collection, getDocs, getDoc, setDoc, query, addDoc, deleteDoc, doc, where, serverTimestamp } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom'; 
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { getAuth } from 'firebase/auth';
-import html2canvas from 'html2canvas'; 
+import html2canvas from 'html2canvas';
 import { gerarPropostaMoodboardPDF } from '../../utils/gerarPropostaMoodboardPDF';
 import './Moodboard.css';
 
@@ -19,21 +19,21 @@ const carregarBgRemoval = async () => {
 
 // 🎨 Ícones SVG do Celebre Studio 3.0
 const Icons = {
-  Crown: (props) => <svg {...props} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14"/></svg>,
-  Couch: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h20v8H2zm0 0l2-6h16l2 6M6 16v4m12-4v4"/></svg>,
-  Balloon: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a7 7 0 0 0-7 7c0 4.2 4.2 8.4 6 9.8l1 .2 1-.2c1.8-1.4 6-5.6 6-9.8a7 7 0 0 0-7-7z"/><path d="M12 19v3"/></svg>,
-  UploadCloud: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/></svg>,
-  Type: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>,
+  Crown: (props) => <svg {...props} width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 4l3 12h14l3-12-6 7-4-7-4 7-6-7zm3 16h14" /></svg>,
+  Couch: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M2 12h20v8H2zm0 0l2-6h16l2 6M6 16v4m12-4v4" /></svg>,
+  Balloon: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2a7 7 0 0 0-7 7c0 4.2 4.2 8.4 6 9.8l1 .2 1-.2c1.8-1.4 6-5.6 6-9.8a7 7 0 0 0-7-7z" /><path d="M12 19v3" /></svg>,
+  UploadCloud: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 16 12 12 8 16" /><line x1="12" y1="12" x2="12" y2="21" /><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3" /></svg>,
+  Type: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 7V4h16v3M9 20h6M12 4v16" /></svg>,
   Layers: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>,
   Magic: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>,
-  Shapes: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7" cy="7" r="4"/><rect x="13" y="3" width="8" height="8" rx="1"/><polygon points="7 14 11 21 3 21"/></svg>,
+  Shapes: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="7" cy="7" r="4" /><rect x="13" y="3" width="8" height="8" rx="1" /><polygon points="7 14 11 21 3 21" /></svg>,
   Save: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>,
   Folder: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>,
-  Trash: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18m-2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>,
+  Trash: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 6h18m-2 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2" /></svg>,
   Download: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
   FileText: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
   ShoppingBag: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"></path><line x1="3" y1="6" x2="21" y2="6"></line><path d="M16 10a4 4 0 0 1-8 0"></path></svg>,
-  ShoppingCart: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>,
+  ShoppingCart: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="9" cy="21" r="1" /><circle cx="20" cy="21" r="1" /><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6" /></svg>,
   Undo: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7v6h6"></path><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"></path></svg>,
   Redo: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 7v6h-6"></path><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3L21 13"></path></svg>,
   Copy: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>,
@@ -42,23 +42,23 @@ const Icons = {
   Search: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>,
   Lock: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>,
   Unlock: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 9.9-1"></path></svg>,
-  Rotate: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3"/></svg>,
-  Flip: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12l-4-4m4 4l-4 4m4-4H9m-4 0l4-4m-4 4l4 4m-4-4h10"/></svg>,
+  Rotate: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.3" /></svg>,
+  Flip: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M19 12l-4-4m4 4l-4 4m4-4H9m-4 0l4-4m-4 4l4 4m-4-4h10" /></svg>,
   Bold: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M6 4h8a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path><path d="M6 12h9a4 4 0 0 1 4 4 4 4 0 0 1-4 4H6z"></path></svg>,
   Italic: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="19" y1="4" x2="10" y2="4"></line><line x1="14" y1="20" x2="5" y2="20"></line><line x1="15" y1="4" x2="9" y2="20"></line></svg>,
-  ArrowUp: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>,
-  ArrowDown: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7"/></svg>,
+  ArrowUp: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 19V5M5 12l7-7 7 7" /></svg>,
+  ArrowDown: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 5v14M19 12l-7 7-7-7" /></svg>,
   AlignHorizontal: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="2" x2="12" y2="22"></line><rect x="4" y="6" width="16" height="4" rx="1"></rect><rect x="6" y="14" width="12" height="4" rx="1"></rect></svg>,
   AlignBottom: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="2" y1="22" x2="22" y2="22"></line><rect x="4" y="8" width="6" height="10" rx="1"></rect><rect x="14" y="4" width="6" height="14" rx="1"></rect></svg>,
-  Image: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>,
-  Move: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="5 9 2 12 5 15"/><polyline points="9 5 12 2 15 5"/><polyline points="15 19 12 22 9 19"/><polyline points="19 9 22 12 19 15"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="12" y1="2" x2="12" y2="22"/></svg>,
-  Sparkles: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.912 5.885L20 10l-4.885 3.912L17 20l-5-3.885L7 20l1.885-6.088L4 10l6.088-1.115L12 3z"/></svg>,
-  Lightbulb: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 0 0-7-7z"/></svg>,
-  Maximize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>,
-  Minimize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg>,
+  Image: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2" /><circle cx="8.5" cy="8.5" r="1.5" /><polyline points="21 15 16 10 5 21" /></svg>,
+  Move: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="5 9 2 12 5 15" /><polyline points="9 5 12 2 15 5" /><polyline points="15 19 12 22 9 19" /><polyline points="19 9 22 12 19 15" /><line x1="2" y1="12" x2="22" y2="12" /><line x1="12" y1="2" x2="12" y2="22" /></svg>,
+  Sparkles: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 3l1.912 5.885L20 10l-4.885 3.912L17 20l-5-3.885L7 20l1.885-6.088L4 10l6.088-1.115L12 3z" /></svg>,
+  Lightbulb: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 18h6M10 22h4M12 2a7 7 0 0 0-7 7c0 2.5 1.5 4.5 3 6h8c1.5-1.5 3-3.5 3-6a7 7 0 0 0-7-7z" /></svg>,
+  Maximize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>,
+  Minimize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" /></svg>,
   Eye: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
   Sliders: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>,
-  Sun: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+  Sun: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
 };
 
 // 🎈 Categorias da Galeria de Cenografia & Inspirações
@@ -129,8 +129,8 @@ const PALETAS_BALOES = [
 // 🎈 Galeria de Arcos & Cenografia carregada dinamicamente do Firestore (moodboard_elementos)
 
 // 🎈 Componente SVG de Guirlanda & Arcos de Balões 3D Realistas (Clássico, Orgânico & Modelável)
-const GuirlandaBaloesRealista = ({ 
-  tipo = 'lateral_l', 
+const GuirlandaBaloesRealista = ({
+  tipo = 'lateral_l',
   cores = ['#b76e79', '#dfb6b2', '#f4e6d4', '#c5a059', '#ffffff'],
   curvatura = 30,
   ondulacao = 25,
@@ -144,7 +144,7 @@ const GuirlandaBaloesRealista = ({
   estiloColuna = 'organica',
   densidadeCluster = 'cheio'
 }) => {
-  
+
   // 0. 🌊 GERADOR PROCEDURAL DINÂMICO & CUSTOMIZÁVEL DE GUIRLANDAS (Modelador Superior / Mesa)
   const gerarGuirlandaCustomizavel = () => {
     const baloes = [];
@@ -354,10 +354,10 @@ const GuirlandaBaloesRealista = ({
     const radius = 125;
     const cob = coberturaAro || 'meio_aro';
     const s = Number(seed || 0);
-    
+
     let startAngleDeg = 145;
     let spanDeg = 240;
-    
+
     if (cob === 'completo') {
       startAngleDeg = 90;
       spanDeg = 360;
@@ -379,7 +379,7 @@ const GuirlandaBaloesRealista = ({
       const angle = (startAngleDeg - t * spanDeg) * (Math.PI / 180);
       const cx = centerX + radius * Math.cos(angle);
       const cy = centerY - radius * Math.sin(angle);
-      
+
       const colorIdx = (Math.floor(t * cores.length) + s) % cores.length;
 
       // Balão Fundo
@@ -593,12 +593,12 @@ const GuirlandaBaloesRealista = ({
   const viewBoxH = res.viewBoxH || 300;
 
   return (
-    <svg 
-      width="100%" 
-      height="100%" 
-      viewBox={`0 0 ${viewBoxW} ${viewBoxH}`} 
-      style={{ 
-        overflow: 'visible', 
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={`0 0 ${viewBoxW} ${viewBoxH}`}
+      style={{
+        overflow: 'visible',
         pointerEvents: 'none'
       }}
     >
@@ -630,22 +630,22 @@ const GuirlandaBaloesRealista = ({
             <circle cx={b.cx} cy={b.cy} r={b.r} fill={`url(#grad-balao-3d-${corIndex})`} />
 
             {/* Ponto de Brilho Acetinado / Reflexo Glossy Superior Esquerdo */}
-            <ellipse 
-              cx={b.cx - b.r * 0.32} 
-              cy={b.cy - b.r * 0.35} 
-              rx={Math.max(1, b.r * 0.22)} 
-              ry={Math.max(1, b.r * 0.14)} 
-              transform={`rotate(-25 ${b.cx - b.r * 0.32} ${b.cy - b.r * 0.35})`} 
-              fill="#ffffff" 
-              opacity="0.75" 
+            <ellipse
+              cx={b.cx - b.r * 0.32}
+              cy={b.cy - b.r * 0.35}
+              rx={Math.max(1, b.r * 0.22)}
+              ry={Math.max(1, b.r * 0.14)}
+              transform={`rotate(-25 ${b.cx - b.r * 0.32} ${b.cy - b.r * 0.35})`}
+              fill="#ffffff"
+              opacity="0.75"
             />
             {/* Micro Ponto de Luz Especular */}
-            <circle 
-              cx={b.cx - b.r * 0.12} 
-              cy={b.cy - b.r * 0.46} 
-              r={Math.max(1.5, b.r * 0.08)} 
-              fill="#ffffff" 
-              opacity="0.9" 
+            <circle
+              cx={b.cx - b.r * 0.12}
+              cy={b.cy - b.r * 0.46}
+              r={Math.max(1.5, b.r * 0.08)}
+              fill="#ffffff"
+              opacity="0.9"
             />
           </g>
         );
@@ -667,14 +667,14 @@ const CilindroMesa3D = ({ item }) => {
   return (
     <div className="cylinder-3d-container">
       {/* Corpo Cilíndrico com Base Curva */}
-      <div 
+      <div
         className="cylinder-3d-body"
         style={{ backgroundColor: cor }}
       >
         {capaUrl ? (
-          <img 
-            src={capaUrl} 
-            alt="Capa Cilindro" 
+          <img
+            src={capaUrl}
+            alt="Capa Cilindro"
             draggable="false"
             style={{
               width: '100%',
@@ -684,25 +684,25 @@ const CilindroMesa3D = ({ item }) => {
               transform: `scale(${scale})`,
               transformOrigin: `${posX}% ${posY}%`,
               pointerEvents: 'none'
-            }} 
+            }}
           />
         ) : (
           <div className="cylinder-base-fill" style={{ backgroundColor: cor }} />
         )}
-        
+
         {/* Iluminação 3D Cilíndrica e Sombra Lateral */}
         <div className="cylinder-3d-gradient-overlay" />
       </div>
 
       {/* Tampo Oval Superior (Perspectiva 3D da Mesa) */}
-      <div 
+      <div
         className="cylinder-3d-top"
         style={{ backgroundColor: isTampoLiso ? tampoCor : cor }}
       >
         {capaUrl && !isTampoLiso ? (
-          <img 
-            src={capaUrl} 
-            alt="Tampo Cilindro" 
+          <img
+            src={capaUrl}
+            alt="Tampo Cilindro"
             draggable="false"
             style={{
               width: '100%',
@@ -713,7 +713,7 @@ const CilindroMesa3D = ({ item }) => {
               transformOrigin: `${posX}% ${posY}%`,
               pointerEvents: 'none',
               filter: 'brightness(1.08)'
-            }} 
+            }}
           />
         ) : (
           <div className="cylinder-top-sheen" style={{ backgroundColor: isTampoLiso ? tampoCor : 'transparent' }} />
@@ -735,7 +735,7 @@ const MesaRetangular3D = ({ item }) => {
   return (
     <div className="mesa-retangular-3d-wrapper" style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', flexDirection: 'column', overflow: 'visible' }}>
       {/* Tampo da Mesa com Perspectiva e Borda Chanfrada */}
-      <div 
+      <div
         style={{
           width: '100%',
           height: '32%',
@@ -748,9 +748,9 @@ const MesaRetangular3D = ({ item }) => {
         }}
       >
         {capaUrl ? (
-          <img 
-            src={capaUrl} 
-            alt="Capa Mesa" 
+          <img
+            src={capaUrl}
+            alt="Capa Mesa"
             draggable="false"
             style={{
               width: '100%',
@@ -760,7 +760,7 @@ const MesaRetangular3D = ({ item }) => {
               transform: `scale(${scale})`,
               transformOrigin: `${posX}% ${posY}%`,
               pointerEvents: 'none'
-            }} 
+            }}
           />
         ) : (
           <div style={{ width: '100%', height: '100%', background: `linear-gradient(90deg, rgba(255,255,255,0.15) 0%, transparent 20%, transparent 80%, rgba(0,0,0,0.2) 100%)` }} />
@@ -772,10 +772,10 @@ const MesaRetangular3D = ({ item }) => {
       <div style={{ width: '100%', height: '68%', position: 'relative', display: 'flex', justifyContent: 'space-between', padding: '0 12%', boxSizing: 'border-box' }}>
         {/* Travessa Superior */}
         <div style={{ position: 'absolute', top: 0, left: '10%', right: '10%', height: '14%', background: `linear-gradient(180deg, rgba(0,0,0,0.3) 0%, ${cor} 100%)`, borderRadius: '0 0 2px 2px' }} />
-        
+
         {/* Pé Esquerdo */}
         <div style={{ width: '14%', height: '100%', background: `linear-gradient(90deg, ${cor} 0%, rgba(255,255,255,0.15) 40%, rgba(0,0,0,0.25) 100%)`, borderRadius: '0 0 3px 3px', boxShadow: '2px 4px 8px rgba(0,0,0,0.2)' }} />
-        
+
         {/* Travessa Central */}
         <div style={{ position: 'absolute', bottom: '25%', left: '16%', right: '16%', height: '8%', background: cor, opacity: 0.85, boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
 
@@ -862,15 +862,15 @@ const PainelRipado3D = ({ item }) => {
       overflow: 'hidden'
     }}>
       {ripas.map(r => (
-        <div 
-          key={r} 
-          style={{ 
-            flex: 1, 
-            height: '100%', 
+        <div
+          key={r}
+          style={{
+            flex: 1,
+            height: '100%',
             background: `linear-gradient(90deg, ${cor} 0%, rgba(255,255,255,0.18) 35%, rgba(0,0,0,0.2) 100%)`,
             borderRadius: '2px',
             boxShadow: '1px 0 3px rgba(0,0,0,0.4)'
-          }} 
+          }}
         />
       ))}
     </div>
@@ -899,8 +899,8 @@ const PainelShimmer3D = ({ item }) => {
         <div
           key={idx}
           style={{
-            background: (idx % 2 === 0) 
-              ? `radial-gradient(circle at 35% 35%, #ffffff 0%, ${cor} 60%, rgba(0,0,0,0.4) 100%)` 
+            background: (idx % 2 === 0)
+              ? `radial-gradient(circle at 35% 35%, #ffffff 0%, ${cor} 60%, rgba(0,0,0,0.4) 100%)`
               : `radial-gradient(circle at 65% 65%, #fffdf0 0%, ${cor} 70%, rgba(0,0,0,0.3) 100%)`,
             borderRadius: '2px',
             boxShadow: '0 2px 4px rgba(0,0,0,0.3)',
@@ -967,13 +967,13 @@ const ArcoDuplo3D = ({ item }) => {
         {capaUrl ? (
           <g clipPath={`url(#${clipId})`}>
             <rect x="25" y="20" width="150" height="280" fill="#ffffff" />
-            <image 
-              href={capaUrl} 
-              x="25" 
-              y="20" 
-              width="150" 
-              height="280" 
-              preserveAspectRatio="xMidYMid slice" 
+            <image
+              href={capaUrl}
+              x="25"
+              y="20"
+              width="150"
+              height="280"
+              preserveAspectRatio="xMidYMid slice"
               transform={`scale(${scale})`}
               transformOrigin={`${posX}% ${posY}%`}
               style={{ objectPosition: `${posX}% ${posY}%` }}
@@ -985,33 +985,33 @@ const ArcoDuplo3D = ({ item }) => {
         )}
 
         {/* 1. Aro Externo (Tubo Metálico 3D) */}
-        <path 
-          d="M 12,300 L 12,95 A 88,88 0 0,1 188,95 L 188,300" 
-          fill="none" 
-          stroke={cor} 
-          strokeWidth="6" 
-          strokeLinecap="round" 
+        <path
+          d="M 12,300 L 12,95 A 88,88 0 0,1 188,95 L 188,300"
+          fill="none"
+          stroke={cor}
+          strokeWidth="6"
+          strokeLinecap="round"
         />
-        <path 
-          d="M 12,300 L 12,95 A 88,88 0 0,1 188,95 L 188,300" 
-          fill="none" 
-          stroke={`url(#grad-metal-${item.uniqueId || 'def'})`} 
-          strokeWidth="5" 
+        <path
+          d="M 12,300 L 12,95 A 88,88 0 0,1 188,95 L 188,300"
+          fill="none"
+          stroke={`url(#grad-metal-${item.uniqueId || 'def'})`}
+          strokeWidth="5"
         />
 
         {/* 2. Aro Interno (Tubo Metálico Paralelo) */}
-        <path 
-          d="M 28,300 L 28,95 A 72,72 0 0,1 172,95 L 172,300" 
-          fill="none" 
-          stroke={cor} 
-          strokeWidth="5" 
-          strokeLinecap="round" 
+        <path
+          d="M 28,300 L 28,95 A 72,72 0 0,1 172,95 L 172,300"
+          fill="none"
+          stroke={cor}
+          strokeWidth="5"
+          strokeLinecap="round"
         />
-        <path 
-          d="M 28,300 L 28,95 A 72,72 0 0,1 172,95 L 172,300" 
-          fill="none" 
-          stroke={`url(#grad-metal-${item.uniqueId || 'def'})`} 
-          strokeWidth="4" 
+        <path
+          d="M 28,300 L 28,95 A 72,72 0 0,1 172,95 L 172,300"
+          fill="none"
+          stroke={`url(#grad-metal-${item.uniqueId || 'def'})`}
+          strokeWidth="4"
         />
 
         {/* Travessas Metálicas de Conexão entre os Aros */}
@@ -1094,6 +1094,375 @@ const CarrinhoGourmet3D = ({ item }) => {
         {/* Rodinha Dianteira */}
         <circle cx="135" cy="155" r="14" fill="none" stroke={cor} strokeWidth="3" />
         <circle cx="135" cy="155" r="3" fill={cor} />
+      </svg>
+    </div>
+  );
+};
+
+// 🏛️ Componente Arco Romano Triplo 3D em Camadas Escalonadas
+const ArcoRomanoTriplo3D = ({ item }) => {
+  const c1 = item.color || '#ffffff';
+  const c2 = item.multiColor ? (item.corCamada2 || '#f1f5f9') : c1;
+  const c3 = item.multiColor ? (item.corCamada3 || '#e2e8f0') : c1;
+  const capaUrl = item.capaUrl;
+  const clipId = `arco-romano-triplo-${item.uniqueId || 'def'}`;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 220 300" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-step-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+          <clipPath id={clipId}>
+            <path d="M 66,300 L 66,130 A 44,44 0 0,1 154,130 L 154,300 Z" />
+          </clipPath>
+        </defs>
+
+        {/* Camada 1: Arco Externo (Fundo mais alto e mais largo) */}
+        <path
+          d="M 12,300 L 12,105 A 98,98 0 0,1 208,105 L 208,300 L 176,300 L 176,115 A 66,66 0 0,0 44,115 L 44,300 Z"
+          fill={c1}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="1.5"
+          filter={`url(#shadow-step-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Camada 2: Arco Intermediário (Meio) */}
+        <path
+          d="M 38,300 L 38,118 A 72,72 0 0,1 182,118 L 182,300 L 154,300 L 154,128 A 44,44 0 0,0 66,128 L 66,300 Z"
+          fill={c2}
+          stroke="rgba(0,0,0,0.1)"
+          strokeWidth="1.5"
+          filter={`url(#shadow-step-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Camada 3: Arco Interno (Portal Vazado ou com Capa) */}
+        <path
+          d="M 62,300 L 62,130 A 48,48 0 0,1 158,130 L 158,300 L 140,300 L 140,136 A 30,30 0 0,0 80,136 L 80,300 Z"
+          fill={c3}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="1.5"
+        />
+
+        {/* Degraus/Bases no chão dos 3 níveis */}
+        <rect x="10" y="292" width="36" height="8" rx="1" fill={c1} stroke="rgba(0,0,0,0.15)" />
+        <rect x="174" y="292" width="36" height="8" rx="1" fill={c1} stroke="rgba(0,0,0,0.15)" />
+
+        <rect x="36" y="294" width="32" height="6" rx="1" fill={c2} stroke="rgba(0,0,0,0.12)" />
+        <rect x="152" y="294" width="32" height="6" rx="1" fill={c2} stroke="rgba(0,0,0,0.12)" />
+
+        {/* Capa no fundo central se houver */}
+        {capaUrl && (
+          <g clipPath={`url(#${clipId})`}>
+            <image href={capaUrl} x="66" y="60" width="88" height="240" preserveAspectRatio="xMidYMid slice" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+};
+
+// 🌀 Componente Arco Orgânico Triplo 3D em Camadas Sinuosas
+const ArcoOrganicoTriplo3D = ({ item }) => {
+  const c1 = item.color || '#ffffff';
+  const c2 = item.multiColor ? (item.corCamada2 || '#f1f5f9') : c1;
+  const c3 = item.multiColor ? (item.corCamada3 || '#e2e8f0') : c1;
+  const capaUrl = item.capaUrl;
+  const clipId = `arco-org-triplo-${item.uniqueId || 'def'}`;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 240 320" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-org-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+          <clipPath id={clipId}>
+            <path d="M 75,315 C 65,280 62,230 72,170 C 78,135 70,110 85,92 C 100,75 115,85 120,85 C 125,85 140,75 155,92 C 170,110 162,135 168,170 C 178,230 175,280 165,315 Z" />
+          </clipPath>
+        </defs>
+
+        {/* Camada 1: Externa (Mais ampla, curva mais expansiva) */}
+        <path
+          d="M 20,315 C 12,270 8,210 22,150 C 32,105 18,65 42,32 C 68,-2 102,28 120,28 C 138,28 172,-2 198,32 C 222,65 208,105 218,150 C 232,210 228,270 220,315 L 182,315 C 190,270 194,220 182,165 C 172,125 180,95 162,65 C 146,38 130,52 120,52 C 110,52 94,38 78,65 C 60,95 68,125 58,165 C 46,220 50,270 58,315 Z"
+          fill={c1}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="1.5"
+          filter={`url(#shadow-org-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Camada 2: Intermediária */}
+        <path
+          d="M 48,315 C 40,275 44,225 54,170 C 64,120 56,92 72,66 C 88,40 106,55 120,55 C 134,55 152,40 168,66 C 184,92 176,120 186,170 C 196,225 200,275 192,315 L 164,315 C 172,278 170,230 160,175 C 150,135 158,110 144,88 C 132,68 124,75 120,75 C 116,75 108,68 96,88 C 82,110 90,135 80,175 C 70,230 68,278 76,315 Z"
+          fill={c2}
+          stroke="rgba(0,0,0,0.1)"
+          strokeWidth="1.5"
+          filter={`url(#shadow-org-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Camada 3: Interna (Portal Central) */}
+        <path
+          d="M 72,315 C 64,280 66,230 76,175 C 84,130 76,105 92,82 C 104,64 114,75 120,75 C 126,75 136,64 148,82 C 164,105 156,130 164,175 C 174,230 176,280 168,315 L 152,315 C 158,280 156,235 148,180 C 140,140 144,118 134,100 C 126,86 122,90 120,90 C 118,90 114,86 106,100 C 96,118 100,140 92,180 C 84,235 82,280 88,315 Z"
+          fill={c3}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="1.5"
+        />
+
+        {/* Bases / Pés escalonados */}
+        <ellipse cx="38" cy="316" rx="20" ry="4" fill={c1} opacity="0.9" />
+        <ellipse cx="202" cy="316" rx="20" ry="4" fill={c1} opacity="0.9" />
+        <ellipse cx="60" cy="317" rx="15" ry="3" fill={c2} opacity="0.9" />
+        <ellipse cx="180" cy="317" rx="15" ry="3" fill={c2} opacity="0.9" />
+
+        {/* Capa no vão central se houver */}
+        {capaUrl && (
+          <g clipPath={`url(#${clipId})`}>
+            <image href={capaUrl} x="60" y="70" width="120" height="250" preserveAspectRatio="xMidYMid slice" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+};
+
+// ☁️ Componente Painel Nuvem Totem com Borda Ondulada em Gomos
+const PainelNuvemGomos3D = ({ item }) => {
+  const cor = item.color || '#ffffff';
+  const capaUrl = item.capaUrl;
+  const clipId = `painel-nuvem-clip-${item.uniqueId || 'def'}`;
+
+  const pathD = `
+    M 30,60
+    A 60,50 0 0,1 150,60
+    A 22,20 0 0,1 160,95
+    A 22,20 0 0,1 160,130
+    A 22,20 0 0,1 160,165
+    A 22,20 0 0,1 160,200
+    A 22,20 0 0,1 160,235
+    A 22,20 0 0,1 160,270
+    A 22,20 0 0,1 160,305
+    A 20,18 0 0,1 145,335
+    L 35,335
+    A 20,18 0 0,1 20,305
+    A 22,20 0 0,1 20,270
+    A 22,20 0 0,1 20,235
+    A 22,20 0 0,1 20,200
+    A 22,20 0 0,1 20,165
+    A 22,20 0 0,1 20,130
+    A 22,20 0 0,1 20,95
+    A 22,20 0 0,1 30,60
+    Z
+  `;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 180 350" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-nuvem-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#000000" floodOpacity="0.2" />
+          </filter>
+          <clipPath id={clipId}>
+            <path d={pathD} />
+          </clipPath>
+        </defs>
+
+        {/* Corpo do Painel Nuvem */}
+        <path
+          d={pathD}
+          fill={cor}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="2"
+          filter={`url(#shadow-nuvem-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Capa de Tecido Sublimado se houver */}
+        {capaUrl && (
+          <g clipPath={`url(#${clipId})`}>
+            <image href={capaUrl} x="0" y="0" width="180" height="350" preserveAspectRatio="xMidYMid slice" />
+          </g>
+        )}
+
+        {/* Pés de sustentação MDF estilo cavalete */}
+        <polygon points="36,330 30,348 48,348 44,330" fill="#e2e8f0" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+        <polygon points="136,330 132,348 150,348 144,330" fill="#e2e8f0" stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+      </svg>
+    </div>
+  );
+};
+
+// 🦴 Componente Mesa Osso Pet/Infantil com Tampo Superior e Rebaixo
+const MesaOsso3D = ({ item }) => {
+  const corBorda = item.color || '#ffffff';
+  const corCentro = item.corCentro || (item.multiColor ? '#f8fafc' : corBorda);
+  const corTampo = item.tampoCor || '#ffffff';
+
+  const outerBone = `
+    M 70,30
+    L 170,30
+    A 28,28 0 0,1 205,18
+    A 28,28 0 0,1 228,45
+    A 28,28 0 0,1 202,78
+    A 28,28 0 0,1 228,115
+    A 28,28 0 0,1 205,142
+    A 28,28 0 0,1 170,130
+    L 70,130
+    A 28,28 0 0,1 35,142
+    A 28,28 0 0,1 12,115
+    A 28,28 0 0,1 38,78
+    A 28,28 0 0,1 12,45
+    A 28,28 0 0,1 35,18
+    A 28,28 0 0,1 70,30
+    Z
+  `;
+
+  const innerBone = `
+    M 75,44
+    L 165,44
+    A 20,20 0 0,1 192,34
+    A 20,20 0 0,1 210,54
+    A 20,20 0 0,1 190,78
+    A 20,20 0 0,1 210,106
+    A 20,20 0 0,1 192,126
+    A 20,20 0 0,1 165,116
+    L 75,116
+    A 20,20 0 0,1 48,126
+    A 20,20 0 0,1 30,106
+    A 20,20 0 0,1 50,78
+    A 20,20 0 0,1 30,54
+    A 20,20 0 0,1 48,34
+    A 20,20 0 0,1 75,44
+    Z
+  `;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 240 160" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-bone-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+        </defs>
+
+        {/* Tampo Superior Isométrico da Mesa (Base para doces/bolos) */}
+        <polygon
+          points="40,25 60,6 180,6 200,25"
+          fill={corTampo}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.5"
+          filter={`url(#shadow-bone-${item.uniqueId || 'def'})`}
+        />
+        <polygon points="40,25 200,25 200,29 40,29" fill="rgba(0,0,0,0.08)" />
+
+        {/* Pés traseiros da mesa */}
+        <rect x="58" y="26" width="8" height="28" fill="#cbd5e1" />
+        <rect x="174" y="26" width="8" height="28" fill="#cbd5e1" />
+
+        {/* Frente: Moldura / Borda Externa do Osso */}
+        <path
+          d={outerBone}
+          fill={corBorda}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="2"
+          filter={`url(#shadow-bone-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Frente: Miolo Rebaixado Central do Osso */}
+        <path
+          d={innerBone}
+          fill={corCentro}
+          stroke="rgba(0,0,0,0.1)"
+          strokeWidth="1.5"
+        />
+      </svg>
+    </div>
+  );
+};
+
+// 🚙 Componente Mesa Jeep Safari / Carro Infantil 3D
+const MesaJeep3D = ({ item }) => {
+  const corCarroceria = item.color || '#ffffff';
+  const corPneus = item.corPneus || '#334155';
+  const corDetalhes = item.corDetalhes || '#facc15';
+  const corTampo = item.tampoCor || '#f1f5f9';
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 220 260" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-jeep-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25" />
+          </filter>
+        </defs>
+
+        {/* PNEUS LATERAIS ROBUSTOS TRATORADOS */}
+        <g filter={`url(#shadow-jeep-${item.uniqueId || 'def'})`}>
+          <rect x="14" y="160" width="28" height="92" rx="4" fill={corPneus} stroke="rgba(0,0,0,0.3)" strokeWidth="1.5" />
+          {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+            <path key={i} d={`M 14,${168 + i * 11} Q 28,${164 + i * 11} 42,${168 + i * 11}`} fill="none" stroke="#64748b" strokeWidth="2" />
+          ))}
+        </g>
+        <g filter={`url(#shadow-jeep-${item.uniqueId || 'def'})`}>
+          <rect x="178" y="160" width="28" height="92" rx="4" fill={corPneus} stroke="rgba(0,0,0,0.3)" strokeWidth="1.5" />
+          {[0, 1, 2, 3, 4, 5, 6, 7].map(i => (
+            <path key={i} d={`M 178,${168 + i * 11} Q 192,${164 + i * 11} 206,${168 + i * 11}`} fill="none" stroke="#64748b" strokeWidth="2" />
+          ))}
+        </g>
+
+        {/* QUADRO DO PARA-BRISA */}
+        <rect x="42" y="16" width="136" height="80" rx="6" fill={corCarroceria} stroke="rgba(0,0,0,0.15)" strokeWidth="2" filter={`url(#shadow-jeep-${item.uniqueId || 'def'})`} />
+        {/* Vidro Vazado / Abertura */}
+        <rect x="50" y="24" width="120" height="60" rx="3" fill="rgba(240,249,255,0.7)" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" />
+
+        {/* Volante atrás do para-brisa no lado direito */}
+        <circle cx="145" cy="62" r="18" fill="none" stroke="#475569" strokeWidth="3.5" />
+        <circle cx="145" cy="62" r="5" fill="#475569" />
+        <line x1="145" y1="62" x2="145" y2="80" stroke="#475569" strokeWidth="3" />
+        <line x1="145" y1="62" x2="130" y2="52" stroke="#475569" strokeWidth="3" />
+        <line x1="145" y1="62" x2="160" y2="52" stroke="#475569" strokeWidth="3" />
+
+        {/* Retrovisores Redondos */}
+        <circle cx="28" cy="52" r="9" fill={corCarroceria} stroke="rgba(0,0,0,0.18)" strokeWidth="1.5" />
+        <path d="M 37,52 L 42,60" stroke={corCarroceria} strokeWidth="3.5" strokeLinecap="round" />
+        <circle cx="192" cy="52" r="9" fill={corCarroceria} stroke="rgba(0,0,0,0.18)" strokeWidth="1.5" />
+        <path d="M 183,52 L 178,60" stroke={corCarroceria} strokeWidth="3.5" strokeLinecap="round" />
+
+        {/* TAMPO DA MESA (PRATELEIRA DE APOIO) */}
+        <polygon
+          points="28,102 36,92 184,92 192,102"
+          fill={corTampo}
+          stroke="rgba(0,0,0,0.18)"
+          strokeWidth="1.5"
+          filter={`url(#shadow-jeep-${item.uniqueId || 'def'})`}
+        />
+
+        {/* CAPÔ E GRADE FRONTAL */}
+        <path
+          d="M 30,102 L 190,102 L 190,180 L 30,180 Z"
+          fill={corCarroceria}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="2"
+          filter={`url(#shadow-jeep-${item.uniqueId || 'def'})`}
+        />
+
+        {/* FARÓIS REDONDOS CLÁSSICOS */}
+        <circle cx="48" cy="126" r="16" fill={corDetalhes} stroke="rgba(0,0,0,0.2)" strokeWidth="2" />
+        <circle cx="48" cy="126" r="12" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" />
+
+        <circle cx="172" cy="126" r="16" fill={corDetalhes} stroke="rgba(0,0,0,0.2)" strokeWidth="2" />
+        <circle cx="172" cy="126" r="12" fill="none" stroke="rgba(255,255,255,0.7)" strokeWidth="2" />
+
+        {/* 7 ALETAS VERTICAIS DA GRADE */}
+        {[0, 1, 2, 3, 4, 5, 6].map(i => (
+          <rect key={i} x={74 + i * 11} y="112" width="5" height="48" rx="2.5" fill="#334155" />
+        ))}
+
+        {/* PARA-CHOQUE FRONTAL ROBUSTO */}
+        <rect x="26" y="176" width="168" height="26" rx="4" fill={corCarroceria} stroke="rgba(0,0,0,0.2)" strokeWidth="2" filter={`url(#shadow-jeep-${item.uniqueId || 'def'})`} />
+
+        {/* PLACA DIANTEIRA */}
+        <rect x="80" y="180" width="60" height="18" rx="2" fill="#ffffff" stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
+        <text x="110" y="193" fontSize="8.5" fontWeight="bold" fill="#334155" textAnchor="middle" fontFamily="sans-serif">JEEP 4X4</text>
       </svg>
     </div>
   );
@@ -1328,32 +1697,32 @@ const ElementoOrnamentoSVG = ({ item }) => {
   const material = item.material || 'gold_mirror';
   const color = item.color || '#c5a059';
 
-  const fillStyle = material === 'gold_mirror' 
-    ? `url(#grad-gold-orn-${item.uniqueId})` 
+  const fillStyle = material === 'gold_mirror'
+    ? `url(#grad-gold-orn-${item.uniqueId})`
     : material === 'rose_gold'
-    ? `url(#grad-rose-orn-${item.uniqueId})`
-    : material === 'silver_mirror'
-    ? `url(#grad-silver-orn-${item.uniqueId})`
-    : material === 'mdf_wood'
-    ? `url(#pat-mdf-wood-orn)`
-    : color;
+      ? `url(#grad-rose-orn-${item.uniqueId})`
+      : material === 'silver_mirror'
+        ? `url(#grad-silver-orn-${item.uniqueId})`
+        : material === 'mdf_wood'
+          ? `url(#pat-mdf-wood-orn)`
+          : color;
 
   const mdfStroke = material === 'mdf_wood' ? '#5a3512' : undefined;
   const mdfStrokeW = material === 'mdf_wood' ? 1.2 : undefined;
 
   return (
-    <svg 
-      width="100%" 
-      height="100%" 
-      viewBox={ornamentoData.viewBox || "0 0 100 100"} 
-      style={{ 
+    <svg
+      width="100%"
+      height="100%"
+      viewBox={ornamentoData.viewBox || "0 0 100 100"}
+      style={{
         overflow: 'visible',
         color: fillStyle,
-        filter: material === 'mdf_wood' 
-          ? 'drop-shadow(2px 3px 2px rgba(60,30,10,0.6))' 
+        filter: material === 'mdf_wood'
+          ? 'drop-shadow(2px 3px 2px rgba(60,30,10,0.6))'
           : material === 'gold_mirror' || material === 'rose_gold' || material === 'silver_mirror'
-          ? 'drop-shadow(1.5px 2px 2px rgba(0,0,0,0.35))'
-          : (item.shadow > 0 ? `drop-shadow(2px 2px ${item.shadow}px rgba(0,0,0,0.4))` : undefined)
+            ? 'drop-shadow(1.5px 2px 2px rgba(0,0,0,0.35))'
+            : (item.shadow > 0 ? `drop-shadow(2px 2px ${item.shadow}px rgba(0,0,0,0.4))` : undefined)
       }}
     >
       <defs>
@@ -1405,8 +1774,8 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
   const placaFundo = item.placaFundo || 'nenhuma';
   const fontSize = Number(item.fontSize || 48);
   const letterSpacing = Number(item.letterSpacing || 0);
-  const textShadow = item.neonGlow > 0 
-    ? `0 0 4px ${item.neonColor || item.color}, 0 0 10px ${item.neonColor || item.color}, 0 0 ${item.neonGlow}px ${item.neonColor || item.color}, 0 0 ${item.neonGlow * 1.8}px ${item.neonColor || item.color}` 
+  const textShadow = item.neonGlow > 0
+    ? `0 0 4px ${item.neonColor || item.color}, 0 0 10px ${item.neonColor || item.color}, 0 0 ${item.neonGlow}px ${item.neonColor || item.color}, 0 0 ${item.neonGlow * 1.8}px ${item.neonColor || item.color}`
     : (item.shadow > 0 ? `2px 2px ${item.shadow}px rgba(0,0,0,0.5)` : 'none');
 
   let materialClass = '';
@@ -1448,32 +1817,32 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
 
     const fillStyle = isCustomTex && textureUrl
       ? `url(#pat-custom-tex-${item.uniqueId})`
-      : material === 'gold_mirror' 
-      ? `url(#grad-gold-${item.uniqueId})` 
-      : material === 'rose_gold'
-      ? `url(#grad-rose-${item.uniqueId})`
-      : material === 'silver_mirror'
-      ? `url(#grad-silver-${item.uniqueId})`
-      : material === 'mdf_wood'
-      ? `url(#pat-mdf-wood-${item.uniqueId})`
-      : material === 'glitter_gold'
-      ? `url(#pat-glitter-${item.uniqueId})`
-      : (item.color || '#c5a059');
+      : material === 'gold_mirror'
+        ? `url(#grad-gold-${item.uniqueId})`
+        : material === 'rose_gold'
+          ? `url(#grad-rose-${item.uniqueId})`
+          : material === 'silver_mirror'
+            ? `url(#grad-silver-${item.uniqueId})`
+            : material === 'mdf_wood'
+              ? `url(#pat-mdf-wood-${item.uniqueId})`
+              : material === 'glitter_gold'
+                ? `url(#pat-glitter-${item.uniqueId})`
+                : (item.color || '#c5a059');
 
     const mdfStroke = (material === 'mdf_wood' && !isCustomTex) ? '#5a3512' : (strokeWidth > 0 ? strokeColor : undefined);
     const mdfStrokeW = (material === 'mdf_wood' && !isCustomTex) ? 1.5 : (strokeWidth > 0 ? strokeWidth : undefined);
     const patSize = Math.max(60, Math.round(fontSize * (textureScale / 60)));
 
     return (
-      <svg 
-        width={svgW} 
-        height={svgH} 
-        viewBox={`0 0 ${svgW} ${svgH}`} 
-        style={{ 
+      <svg
+        width={svgW}
+        height={svgH}
+        viewBox={`0 0 ${svgW} ${svgH}`}
+        style={{
           overflow: 'visible',
-          filter: (material === 'mdf_wood' || isCustomTex || material === 'gold_mirror' || material === 'glitter_gold') 
-            ? 'drop-shadow(2px 3px 3px rgba(0,0,0,0.45))' 
-            : undefined 
+          filter: (material === 'mdf_wood' || isCustomTex || material === 'gold_mirror' || material === 'glitter_gold')
+            ? 'drop-shadow(2px 3px 3px rgba(0,0,0,0.45))'
+            : undefined
         }}
       >
         <defs>
@@ -1530,9 +1899,9 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
           stroke={mdfStroke}
           strokeWidth={mdfStrokeW}
           paintOrder="stroke fill"
-          style={{ 
-            textShadow: (!isCustomTex && material === 'none') ? textShadow : undefined, 
-            filter: item.neonGlow > 0 ? `drop-shadow(0 0 ${item.neonGlow * 0.7}px ${item.neonColor || item.color})` : undefined 
+          style={{
+            textShadow: (!isCustomTex && material === 'none') ? textShadow : undefined,
+            filter: item.neonGlow > 0 ? `drop-shadow(0 0 ${item.neonGlow * 0.7}px ${item.neonColor || item.color})` : undefined
           }}
         >
           <textPath href={`#${pathId}`} startOffset="50%" textAnchor="middle">
@@ -1649,7 +2018,7 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
 
 const Moodboard = () => {
   const navigate = useNavigate();
-  
+
   // 🔥 Autenticação e Chave Mestra
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -1659,18 +2028,18 @@ const Moodboard = () => {
   const [estoqueReal, setEstoqueReal] = useState([]);
   const [itensCanvas, setItensCanvas] = useState([]);
   const [selecionadoId, setSelecionadoId] = useState(null);
-  const [abaAtiva, setAbaAtiva] = useState('fundo'); 
+  const [abaAtiva, setAbaAtiva] = useState('fundo');
   const [editingTextId, setEditingTextId] = useState(null);
   const [subAbaTexto, setSubAbaTexto] = useState('texto'); // 'texto' | 'icones'
   const [cenarioAba, setCenarioAba] = useState('parede'); // 'parede' | 'piso' | 'ambiente'
   const [wallBackground, setWallBackground] = useState('#f8fafc');
   const [floorBackground, setFloorBackground] = useState('#e2e8f0');
   const [activeSurface, setActiveSurface] = useState('wall');
-  
+
   const [texturasParede, setTexturasParede] = useState(PRESETS_PAREDE_PADRAO);
   const [texturasChao, setTexturasChao] = useState(PRESETS_CHAO_PADRAO);
   const [filtroCategoriaTextura, setFiltroCategoriaTextura] = useState('todas'); // 'todas' | 'mar' | 'grama' | 'madeira' | 'aco' | 'marmore' | 'tijolo' | 'luzes' | 'minhas'
-  
+
   // 🔍 Filtros e Busca no Estoque & Acervo
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroCategoriaEstoque, setFiltroCategoriaEstoque] = useState('todas');
@@ -1726,10 +2095,20 @@ const Moodboard = () => {
   const [posicaoParedeY, setPosicaoParedeY] = useState(50); // 0 a 100%
   const [posicaoParedeX, setPosicaoParedeX] = useState(50); // 0 a 100%
   const [zoomParede, setZoomParede] = useState(100); // 100 a 250%
+  const [modoTileParede, setModoTileParede] = useState(false); // false=cover | true=tile/mosaico
+  const [tileSizeParede, setTileSizeParede] = useState(300); // tamanho do padrão em px (100 a 800)
 
   const [posicaoPisoY, setPosicaoPisoY] = useState(50); // 0 a 100%
   const [posicaoPisoX, setPosicaoPisoX] = useState(50); // 0 a 100%
   const [zoomPiso, setZoomPiso] = useState(100); // 100 a 250%
+  const [modoTilePiso, setModoTilePiso] = useState(false); // false=cover | true=tile/mosaico
+  const [tileSizePiso, setTileSizePiso] = useState(300); // tamanho do padrão em px (100 a 800)
+
+  // 🎨 Gradiente de Parede
+  const [gradienteAtivoParede, setGradienteAtivoParede] = useState(false);
+  const [gradienteCor1, setGradienteCor1] = useState('#f8fafc');
+  const [gradienteCor2, setGradienteCor2] = useState('#e2e8f0');
+  const [gradienteDirecao, setGradienteDirecao] = useState('to bottom'); // 'to bottom' | 'to right' | '135deg' | '45deg'
 
   const [posicaoAmbienteY, setPosicaoAmbienteY] = useState(50); // 0 a 100%
   const [posicaoAmbienteX, setPosicaoAmbienteX] = useState(50); // 0 a 100%
@@ -1739,7 +2118,7 @@ const Moodboard = () => {
   const [history, setHistory] = useState([]);
   const [historyStep, setHistoryStep] = useState(-1);
   const isHistoryAction = useRef(false);
-  
+
   // 🕹️ Refs de Interação Ultrarrápida (Zero Delay / 120 FPS)
   const activeItemId = useRef(null);
   const interactionMode = useRef('none'); // 'none' | 'drag' | 'resize' | 'rotate' | 'pan_capa'
@@ -1783,10 +2162,10 @@ const Moodboard = () => {
   const [salvandoProjeto, setSalvandoProjeto] = useState(false);
   const [exportandoPDF, setExportandoPDF] = useState(false);
   const [avisoCopiadoCompras, setAvisoCopiadoCompras] = useState(false);
-  
+
   const boardRef = useRef(null);
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
-  
+
   // 📱 DETECTAR MOBILE
   useEffect(() => {
     const checkMobile = () => {
@@ -1823,26 +2202,26 @@ const Moodboard = () => {
       setAbaAtiva(aba);
     }
   }, [isMobile, painelMobileAberto, abaAtiva]);
-  
-  const fontesDisponiveis = [ 
+
+  const fontesDisponiveis = [
     // Caligrafia & Script (Festas / Casamentos / 15 Anos)
-    { nome: '✨ Great Vibes (Caligrafia Real)', valor: "'Great Vibes', cursive", categoria: 'script' }, 
-    { nome: '✍️ Dancing Script (Manuscrita)', valor: "'Dancing Script', cursive", categoria: 'script' }, 
-    { nome: '💫 Satisfy (Cursiva Moderna)', valor: "'Satisfy', cursive", categoria: 'script' }, 
-    { nome: '🎈 Pacifico (Descontraída)', valor: "'Pacifico', cursive", categoria: 'script' }, 
-    { nome: '🖋️ Caveat (Assinatura / Delicada)', valor: "'Caveat', cursive", categoria: 'script' }, 
+    { nome: '✨ Great Vibes (Caligrafia Real)', valor: "'Great Vibes', cursive", categoria: 'script' },
+    { nome: '✍️ Dancing Script (Manuscrita)', valor: "'Dancing Script', cursive", categoria: 'script' },
+    { nome: '💫 Satisfy (Cursiva Moderna)', valor: "'Satisfy', cursive", categoria: 'script' },
+    { nome: '🎈 Pacifico (Descontraída)', valor: "'Pacifico', cursive", categoria: 'script' },
+    { nome: '🖋️ Caveat (Assinatura / Delicada)', valor: "'Caveat', cursive", categoria: 'script' },
     // Luxo & Clássico (Serifadas)
-    { nome: '🏛️ Playfair Display (Luxo)', valor: "'Playfair Display', serif", categoria: 'serif' }, 
-    { nome: '👑 Cinzel (Romana / Casamento)', valor: "'Cinzel', serif", categoria: 'serif' }, 
-    { nome: '📖 Lora (Elegante)', valor: "'Lora', serif", categoria: 'serif' }, 
+    { nome: '🏛️ Playfair Display (Luxo)', valor: "'Playfair Display', serif", categoria: 'serif' },
+    { nome: '👑 Cinzel (Romana / Casamento)', valor: "'Cinzel', serif", categoria: 'serif' },
+    { nome: '📖 Lora (Elegante)', valor: "'Lora', serif", categoria: 'serif' },
     // Modernas & Letreiros (Sem Serifa / Caixa Alta)
-    { nome: '🏢 Outfit (Geométrica Premium)', valor: "'Outfit', sans-serif", categoria: 'sans' }, 
-    { nome: '💎 Montserrat (Moderna)', valor: "'Montserrat', sans-serif", categoria: 'sans' }, 
-    { nome: '⚡ Bebas Neue (Caixa Alta Forte)', valor: "'Bebas Neue', sans-serif", categoria: 'sans' }, 
-    { nome: '🌟 Poppins (Clean / Tendência)', valor: "'Poppins', sans-serif", categoria: 'sans' }, 
+    { nome: '🏢 Outfit (Geométrica Premium)', valor: "'Outfit', sans-serif", categoria: 'sans' },
+    { nome: '💎 Montserrat (Moderna)', valor: "'Montserrat', sans-serif", categoria: 'sans' },
+    { nome: '⚡ Bebas Neue (Caixa Alta Forte)', valor: "'Bebas Neue', sans-serif", categoria: 'sans' },
+    { nome: '🌟 Poppins (Clean / Tendência)', valor: "'Poppins', sans-serif", categoria: 'sans' },
     // Infantis & Temáticas
-    { nome: '🧸 Fredoka (Infantil Fofa)', valor: "'Fredoka', cursive", categoria: 'fun' }, 
-    { nome: '🎨 Amatic SC (Rústica / Boho)', valor: "'Amatic SC', cursive", categoria: 'fun' } 
+    { nome: '🧸 Fredoka (Infantil Fofa)', valor: "'Fredoka', cursive", categoria: 'fun' },
+    { nome: '🎨 Amatic SC (Rústica / Boho)', valor: "'Amatic SC', cursive", categoria: 'fun' }
   ];
 
   // 💰 RESUMO COMERCIAL DAS PEÇAS NO CANVAS (SEPARANDO ESTOQUE, BEXIGAS P/ COMPRAR E PEÇAS FÍSICAS)
@@ -1926,19 +2305,19 @@ const Moodboard = () => {
     }
     if (!termoBusca.trim()) return list;
     const t = termoBusca.toLowerCase();
-    return list.filter(item => 
+    return list.filter(item =>
       (item.nome && item.nome.toLowerCase().includes(t)) ||
       (item.codigo && item.codigo.toLowerCase().includes(t)) ||
       (item.categoria && item.categoria.toLowerCase().includes(t))
     );
   }, [estoqueReal, termoBusca, filtroCategoriaEstoque]);
-  
+
   const grouped = useMemo(() => {
     const mapa = {};
-    estoqueFiltrado.forEach(i => { 
-        const c = i.categoria || 'Sem Categoria'; 
-        if (!mapa[c]) mapa[c] = []; 
-        mapa[c].push(i); 
+    estoqueFiltrado.forEach(i => {
+      const c = i.categoria || 'Sem Categoria';
+      if (!mapa[c]) mapa[c] = [];
+      mapa[c].push(i);
     });
     return mapa;
   }, [estoqueFiltrado]);
@@ -2088,9 +2467,9 @@ const Moodboard = () => {
       const cat = (item.categoria || '').toLowerCase();
       const nome = (item.nome || '').toLowerCase();
       const tag = (item.tag || '').toLowerCase();
-      const isBalao = cat === 'baloes' || cat === 'balão' || cat === 'balao' || cat === 'balões' || 
-                      nome.includes('bal') || nome.includes('arco') || nome.includes('guirlanda') || 
-                      tag.includes('bal') || tag.includes('arco');
+      const isBalao = cat === 'baloes' || cat === 'balão' || cat === 'balao' || cat === 'balões' ||
+        nome.includes('bal') || nome.includes('arco') || nome.includes('guirlanda') ||
+        tag.includes('bal') || tag.includes('arco');
       return isBalao;
     });
   }, [elementosCenografia, filtroBiblioteca, tenantId, usuarioLogado]);
@@ -2100,7 +2479,7 @@ const Moodboard = () => {
     const oficiaisSuperAdm = (elementosCenografia || [])
       .filter(i => (i.categoria === 'Parede' || (i.categoria === 'Texturas' && (i.nome || '').toLowerCase().includes('parede'))) && (i.isGlobal || i.empresaId === tenantId))
       .map(i => ({ nome: i.nome, url: i.imagemUrl, isSuperAdm: i.isGlobal, isMeu: i.empresaId === tenantId }));
-    
+
     const urlsVistas = new Set();
     const resultado = [];
     oficiaisSuperAdm.forEach(item => {
@@ -2117,7 +2496,7 @@ const Moodboard = () => {
     const oficiaisSuperAdm = (elementosCenografia || [])
       .filter(i => (i.categoria === 'Piso' || (i.categoria === 'Texturas' && (i.nome || '').toLowerCase().includes('piso'))) && (i.isGlobal || i.empresaId === tenantId))
       .map(i => ({ nome: i.nome, url: i.imagemUrl, isSuperAdm: i.isGlobal, isMeu: i.empresaId === tenantId }));
-    
+
     const urlsVistas = new Set();
     const resultado = [];
     oficiaisSuperAdm.forEach(item => {
@@ -2134,7 +2513,7 @@ const Moodboard = () => {
     const oficiaisSuperAdm = (elementosCenografia || [])
       .filter(i => (i.categoria === 'Ambiente' || i.categoria === 'Salao') && (i.isGlobal || i.empresaId === tenantId))
       .map(i => ({ nome: i.nome, url: i.imagemUrl, isSuperAdm: i.isGlobal, isMeu: i.empresaId === tenantId }));
-    
+
     const urlsVistas = new Set();
     const resultado = [];
     oficiaisSuperAdm.forEach(item => {
@@ -2145,7 +2524,7 @@ const Moodboard = () => {
     });
     return resultado;
   }, [elementosCenografia, tenantId]);
-  
+
   // 📜 SISTEMA DE HISTÓRICO (UNDO / REDO)
   const saveSnapshot = useCallback((novosItens, wall = wallBackground, floor = floorBackground) => {
     if (isHistoryAction.current) {
@@ -2208,24 +2587,24 @@ const Moodboard = () => {
 
   useEffect(() => {
     if (!usuarioLogado) {
-        navigate('/login');
-        return;
+      navigate('/login');
+      return;
     }
 
     const carregarTudo = async () => {
       try {
         const q = query(collection(db, 'estoque'), where("userId", "==", tenantId));
         const snap = await getDocs(q);
-  
+
         let lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         lista.sort((a, b) => {
-            const dataA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
-            const dataB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
-            return dataB - dataA;
+          const dataA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
+          const dataB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
+          return dataB - dataA;
         });
 
-        const norm = lista.map(i => ({ 
-          ...i, 
+        const norm = lista.map(i => ({
+          ...i,
           imagem: i.foto || i.imagem || (i.fotos?.[0]) || '',
           valor: Number(i.financeiro?.valorAluguel || i.preco || i.valorLocacao || 0)
         }));
@@ -2233,10 +2612,10 @@ const Moodboard = () => {
 
         const paramSnap = await getDoc(doc(db, "configuracoes_empresa", tenantId));
         if (paramSnap.exists()) {
-            const data = paramSnap.data();
-            setEmpresaConfig(data);
-            if(data.texturasParede && data.texturasParede.length > 0) setTexturasParede(data.texturasParede);
-            if(data.texturasChao && data.texturasChao.length > 0) setTexturasChao(data.texturasChao);
+          const data = paramSnap.data();
+          setEmpresaConfig(data);
+          if (data.texturasParede && data.texturasParede.length > 0) setTexturasParede(data.texturasParede);
+          if (data.texturasChao && data.texturasChao.length > 0) setTexturasChao(data.texturasChao);
         }
 
         const initialSnap = { itens: [], wall: '#f8fafc', floor: '#e2e8f0' };
@@ -2396,7 +2775,7 @@ const Moodboard = () => {
       if (item.uniqueId === selecionadoId && !item.locked) {
         const itemW = item.width || 150;
         const itemH = item.height || 150;
-        
+
         if (tipoAlinhamento === 'center-h') {
           return { ...item, x: Math.round((boardWidth - itemW) / 2) };
         }
@@ -2419,11 +2798,11 @@ const Moodboard = () => {
 
   // 🖼️ APLICAR CAPA/ESTAMPA NA ESTRUTURA SELECIONADA
   const aplicarCapaNaEstrutura = (id, urlCapa) => {
-    atualizarItem(id, { 
-      capaUrl: urlCapa, 
-      capaPosX: 50, 
-      capaPosY: 50, 
-      capaScale: 1 
+    atualizarItem(id, {
+      capaUrl: urlCapa,
+      capaPosX: 50,
+      capaPosY: 50,
+      capaScale: 1
     });
   };
 
@@ -2571,7 +2950,7 @@ const Moodboard = () => {
           criadoEm: new Date().toISOString()
         });
         carregarElementosBiblioteca();
-      } catch(err) { console.error('Erro ao salvar no portfólio:', err); }
+      } catch (err) { console.error('Erro ao salvar no portfólio:', err); }
     }
 
     setModalUploadRapidoAberto(false);
@@ -2614,9 +2993,9 @@ const Moodboard = () => {
       setSelecionadoId(null);
       await new Promise(r => setTimeout(r, 250));
 
-      const canvas = await html2canvas(boardRef.current, { 
-        useCORS: true, 
-        allowTaint: true, 
+      const canvas = await html2canvas(boardRef.current, {
+        useCORS: true,
+        allowTaint: true,
         backgroundColor: null,
         scale: 2
       });
@@ -2644,71 +3023,71 @@ const Moodboard = () => {
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
-    
+
     input.onchange = (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        const reader = new FileReader();
-        reader.onload = (event) => {
-            const img = new Image();
-            img.onload = async () => {
-                const canvas = document.createElement('canvas');
-                const MAX_WIDTH = 1200; 
-                let width = img.width;
-                let height = img.height;
-                
-                if (width > MAX_WIDTH) {
-                    height *= MAX_WIDTH / width;
-                    width = MAX_WIDTH;
-                }
-                
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-                
-                const base64 = canvas.toDataURL('image/jpeg', 0.8);
-                const nome = prompt("Nome para este fundo (ex: Painel Ripado Bege):");
-                if (!nome) return;
-                
-                const nova = { nome, url: base64 };
-                try {
-                    if (tipo === 'wall') {
-                        const atualizadas = [...texturasParede, nova];
-                        setTexturasParede(atualizadas);
-                        await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
-                    } else {
-                        const atualizadas = [...texturasChao, nova];
-                        setTexturasChao(atualizadas);
-                        await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasChao: atualizadas }, { merge: true });
-                    }
-                    alert("✅ Fundo salvo na galeria com sucesso!");
-                } catch(err) { 
-                    alert("❌ Erro ao salvar fundo. Tente uma imagem mais leve.");
-                }
-            };
-            img.src = event.target.result;
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          const MAX_WIDTH = 1200;
+          let width = img.width;
+          let height = img.height;
+
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          const nome = prompt("Nome para este fundo (ex: Painel Ripado Bege):");
+          if (!nome) return;
+
+          const nova = { nome, url: base64 };
+          try {
+            if (tipo === 'wall') {
+              const atualizadas = [...texturasParede, nova];
+              setTexturasParede(atualizadas);
+              await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
+            } else {
+              const atualizadas = [...texturasChao, nova];
+              setTexturasChao(atualizadas);
+              await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasChao: atualizadas }, { merge: true });
+            }
+            alert("✅ Fundo salvo na galeria com sucesso!");
+          } catch (err) {
+            alert("❌ Erro ao salvar fundo. Tente uma imagem mais leve.");
+          }
         };
-        reader.readAsDataURL(file);
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
     };
     input.click();
   };
 
   const removerTextura = async (tipo, urlParaRemover) => {
-    if(!window.confirm("Deseja mesmo excluir este fundo da galeria?")) return;
+    if (!window.confirm("Deseja mesmo excluir este fundo da galeria?")) return;
     try {
-        if (tipo === 'wall') {
-            const atualizadas = texturasParede.filter(t => t.url !== urlParaRemover);
-            setTexturasParede(atualizadas);
-            await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
-        } else {
-            const atualizadas = texturasChao.filter(t => t.url !== urlParaRemover);
-            setTexturasChao(atualizadas);
-            await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasChao: atualizadas }, { merge: true });
-        }
-    } catch(e) { 
-        alert("Erro ao remover fundo.");
+      if (tipo === 'wall') {
+        const atualizadas = texturasParede.filter(t => t.url !== urlParaRemover);
+        setTexturasParede(atualizadas);
+        await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasParede: atualizadas }, { merge: true });
+      } else {
+        const atualizadas = texturasChao.filter(t => t.url !== urlParaRemover);
+        setTexturasChao(atualizadas);
+        await setDoc(doc(db, "configuracoes_empresa", tenantId), { texturasChao: atualizadas }, { merge: true });
+      }
+    } catch (e) {
+      alert("Erro ao remover fundo.");
     }
   };
 
@@ -2720,159 +3099,159 @@ const Moodboard = () => {
 
   const salvarProjeto = async () => {
     if (!nomeProjeto.trim()) return alert("Digite um nome para o projeto!");
-    
+
     try {
-        setSalvandoProjeto(true);
-        setSelecionadoId(null);
-        await new Promise(r => setTimeout(r, 150));
+      setSalvandoProjeto(true);
+      setSelecionadoId(null);
+      await new Promise(r => setTimeout(r, 150));
 
-        let thumbnailBase64 = '';
-        if (boardRef.current) {
-          try {
-            const miniCanvas = await html2canvas(boardRef.current, { scale: 0.3, backgroundColor: null, useCORS: true });
-            thumbnailBase64 = miniCanvas.toDataURL('image/jpeg', 0.6);
-          } catch(eThumb) {
-            console.warn("Erro ao gerar miniatura:", eThumb);
-          }
+      let thumbnailBase64 = '';
+      if (boardRef.current) {
+        try {
+          const miniCanvas = await html2canvas(boardRef.current, { scale: 0.3, backgroundColor: null, useCORS: true });
+          thumbnailBase64 = miniCanvas.toDataURL('image/jpeg', 0.6);
+        } catch (eThumb) {
+          console.warn("Erro ao gerar miniatura:", eThumb);
         }
+      }
 
-        await addDoc(collection(db, "projetos_moodboard"), {
-            nome: nomeProjeto.trim(), 
-            itens: itensCanvas, 
-            wallBackground, 
-            floorBackground,
-            thumbnail: thumbnailBase64,
-            valorTotal: resumoComercial.valorTotal,
-            totalPecas: resumoComercial.totalPecas,
-            createdAt: new Date().toISOString(),
-            userId: tenantId,
-            empresaId: tenantId,
-            funcionarioId: usuarioLogado.uid 
-        });
-        
-        await registrarLog("NOVO PROJETO MOODBOARD", `Salvou um novo projeto de design no Moodboard chamado "${nomeProjeto}".`);
-        
-        alert("✅ Projeto e miniatura salvos com sucesso!");
-        setModalSalvarAberto(false);
-    } catch (error) { 
-        console.error("Erro ao salvar projeto:", error);
-        alert("Erro ao salvar projeto.");
+      await addDoc(collection(db, "projetos_moodboard"), {
+        nome: nomeProjeto.trim(),
+        itens: itensCanvas,
+        wallBackground,
+        floorBackground,
+        thumbnail: thumbnailBase64,
+        valorTotal: resumoComercial.valorTotal,
+        totalPecas: resumoComercial.totalPecas,
+        createdAt: new Date().toISOString(),
+        userId: tenantId,
+        empresaId: tenantId,
+        funcionarioId: usuarioLogado.uid
+      });
+
+      await registrarLog("NOVO PROJETO MOODBOARD", `Salvou um novo projeto de design no Moodboard chamado "${nomeProjeto}".`);
+
+      alert("✅ Projeto e miniatura salvos com sucesso!");
+      setModalSalvarAberto(false);
+    } catch (error) {
+      console.error("Erro ao salvar projeto:", error);
+      alert("Erro ao salvar projeto.");
     } finally {
-        setSalvandoProjeto(false);
+      setSalvandoProjeto(false);
     }
   };
 
   const handleAbrirListaProjetos = async () => {
     try {
-        const q = query(collection(db, "projetos_moodboard"), where("userId", "==", tenantId));
-        const snapshot = await getDocs(q);
-        
-        let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        lista.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-        setProjetosSalvos(lista);
-        setModalAbrirAberto(true);
-    } catch (error) { 
-        alert("Erro ao buscar projetos salvos.");
+      const q = query(collection(db, "projetos_moodboard"), where("userId", "==", tenantId));
+      const snapshot = await getDocs(q);
+
+      let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      lista.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      setProjetosSalvos(lista);
+      setModalAbrirAberto(true);
+    } catch (error) {
+      alert("Erro ao buscar projetos salvos.");
     }
   };
 
   const carregarProjeto = (projeto) => {
     if (window.confirm(`Carregar o projeto "${projeto.nome}"? O desenho atual será substituído.`)) {
-        const itensCarregados = projeto.itens || [];
-        setItensCanvas(itensCarregados);
-        setWallBackground(projeto.wallBackground || '#f8fafc');
-        setFloorBackground(projeto.floorBackground || '#e2e8f0');
-        setNomeProjeto(projeto.nome || "");
-        setModalAbrirAberto(false);
-        saveSnapshot(itensCarregados, projeto.wallBackground || '#f8fafc', projeto.floorBackground || '#e2e8f0');
+      const itensCarregados = projeto.itens || [];
+      setItensCanvas(itensCarregados);
+      setWallBackground(projeto.wallBackground || '#f8fafc');
+      setFloorBackground(projeto.floorBackground || '#e2e8f0');
+      setNomeProjeto(projeto.nome || "");
+      setModalAbrirAberto(false);
+      saveSnapshot(itensCarregados, projeto.wallBackground || '#f8fafc', projeto.floorBackground || '#e2e8f0');
     }
   };
-  
+
   const deletarProjetoSalvo = async (id, nomeProjetoApagado) => {
     if (window.confirm(`Excluir permanentemente o projeto "${nomeProjetoApagado || 'Projeto'}"?`)) {
-        try {
-            await deleteDoc(doc(db, "projetos_moodboard", id));
-            setProjetosSalvos(prev => prev.filter(p => p.id !== id));
-            await registrarLog("EXCLUSÃO DE PROJETO MOODBOARD", `Excluiu o projeto de design "${nomeProjetoApagado || 'Desconhecido'}".`);
-        } catch (error) { 
-            alert("Erro ao excluir projeto.");
-        }
+      try {
+        await deleteDoc(doc(db, "projetos_moodboard", id));
+        setProjetosSalvos(prev => prev.filter(p => p.id !== id));
+        await registrarLog("EXCLUSÃO DE PROJETO MOODBOARD", `Excluiu o projeto de design "${nomeProjetoApagado || 'Desconhecido'}".`);
+      } catch (error) {
+        alert("Erro ao excluir projeto.");
+      }
     }
   };
 
-  const handleContextMenu = (e, id) => { 
-      e.preventDefault();
-      setSelecionadoId(id);
-      setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id }); 
-  };
-  
-  const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
-  
-  const bringToFront = (targetId = null) => { 
-      const id = targetId || contextMenu.itemId;
-      if (!id) return; 
-      
-      setItensCanvas(prev => { 
-          const idx = prev.findIndex(i => i.uniqueId === id); 
-          if(idx < 0) return prev; 
-          const item = prev[idx]; 
-          const rest = prev.filter(i => i.uniqueId !== id); 
-          const updated = [...rest, item];
-          saveSnapshot(updated);
-          return updated; 
-      });
-      closeContextMenu(); 
-  };
-  
-  const sendToBack = (targetId = null) => { 
-      const id = targetId || contextMenu.itemId;
-      if (!id) return; 
-      
-      setItensCanvas(prev => { 
-          const idx = prev.findIndex(i => i.uniqueId === id); 
-          if(idx < 0) return prev; 
-          const item = prev[idx]; 
-          const rest = prev.filter(i => i.uniqueId !== id); 
-          const updated = [item, ...rest];
-          saveSnapshot(updated);
-          return updated; 
-      });
-      closeContextMenu(); 
+  const handleContextMenu = (e, id) => {
+    e.preventDefault();
+    setSelecionadoId(id);
+    setContextMenu({ visible: true, x: e.clientX, y: e.clientY, itemId: id });
   };
 
-  const toggleLock = (targetId = null) => { 
-      const id = targetId || contextMenu.itemId;
-      if (!id) return; 
-      setItensCanvas(prev => {
-        const updated = prev.map(i => i.uniqueId === id ? { ...i, locked: !i.locked } : i);
-        saveSnapshot(updated);
-        return updated;
-      }); 
-      closeContextMenu();
+  const closeContextMenu = () => setContextMenu({ visible: false, x: 0, y: 0, itemId: null });
+
+  const bringToFront = (targetId = null) => {
+    const id = targetId || contextMenu.itemId;
+    if (!id) return;
+
+    setItensCanvas(prev => {
+      const idx = prev.findIndex(i => i.uniqueId === id);
+      if (idx < 0) return prev;
+      const item = prev[idx];
+      const rest = prev.filter(i => i.uniqueId !== id);
+      const updated = [...rest, item];
+      saveSnapshot(updated);
+      return updated;
+    });
+    closeContextMenu();
   };
-  
+
+  const sendToBack = (targetId = null) => {
+    const id = targetId || contextMenu.itemId;
+    if (!id) return;
+
+    setItensCanvas(prev => {
+      const idx = prev.findIndex(i => i.uniqueId === id);
+      if (idx < 0) return prev;
+      const item = prev[idx];
+      const rest = prev.filter(i => i.uniqueId !== id);
+      const updated = [item, ...rest];
+      saveSnapshot(updated);
+      return updated;
+    });
+    closeContextMenu();
+  };
+
+  const toggleLock = (targetId = null) => {
+    const id = targetId || contextMenu.itemId;
+    if (!id) return;
+    setItensCanvas(prev => {
+      const updated = prev.map(i => i.uniqueId === id ? { ...i, locked: !i.locked } : i);
+      saveSnapshot(updated);
+      return updated;
+    });
+    closeContextMenu();
+  };
+
   const toggleCategory = (cat) => setExpandedCats(prev => ({ ...prev, [cat]: !prev[cat] }));
-  
+
   const adicionarAoCanvas = (item, posX = 140, posY = 140) => {
-    const novoItem = { 
-        ...item, 
-        type: 'image', 
-        uniqueId: `img_${Date.now()}_${Math.floor(Math.random()*1000)}`, 
-        x: posX + (itensCanvas.length % 5) * 15, 
-        y: posY + (itensCanvas.length % 5) * 15, 
-        width: 170, 
-        height: 170, 
-        rotation: 0, 
-        flipH: false, 
-        locked: false, 
-        opacity: 100, 
-        brightness: 100, 
-        contrast: 100, 
-        shadow: 0 
+    const novoItem = {
+      ...item,
+      type: 'image',
+      uniqueId: `img_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      x: posX + (itensCanvas.length % 5) * 15,
+      y: posY + (itensCanvas.length % 5) * 15,
+      width: 170,
+      height: 170,
+      rotation: 0,
+      flipH: false,
+      locked: false,
+      opacity: 100,
+      brightness: 100,
+      contrast: 100,
+      shadow: 0
     };
     const updated = [...itensCanvas, novoItem];
-    setItensCanvas(updated); 
-    setSelecionadoId(novoItem.uniqueId); 
+    setItensCanvas(updated);
+    setSelecionadoId(novoItem.uniqueId);
     saveSnapshot(updated);
   };
 
@@ -2926,6 +3305,18 @@ const Moodboard = () => {
       novoItem.width = 260; novoItem.height = 160;
     } else if (tipoEstrutura === 'nicho_prateleira') {
       novoItem.width = 200; novoItem.height = 140;
+    } else if (tipoEstrutura === 'arco_organico') {
+      novoItem.width = 200; novoItem.height = 310; novoItem.color = '#c5a059';
+    } else if (tipoEstrutura === 'arco_romano_triplo') {
+      novoItem.width = 220; novoItem.height = 300; novoItem.color = '#ffffff'; novoItem.corCamada2 = '#f1f5f9'; novoItem.corCamada3 = '#e2e8f0'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'arco_organico_triplo') {
+      novoItem.width = 240; novoItem.height = 320; novoItem.color = '#ffffff'; novoItem.corCamada2 = '#f1f5f9'; novoItem.corCamada3 = '#e2e8f0'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'painel_ondulado') {
+      novoItem.width = 160; novoItem.height = 310; novoItem.color = '#c5a059';
+    } else if (tipoEstrutura === 'painel_borda_ondulada') {
+      novoItem.width = 190; novoItem.height = 310; novoItem.color = '#c5a059';
+    } else if (tipoEstrutura === 'painel_nuvem_gomos') {
+      novoItem.width = 170; novoItem.height = 330; novoItem.color = '#ffffff';
     }
     // --- Mesas & Cilindros 3D ---
     else if (tipoEstrutura === 'cilindro_g') {
@@ -2934,6 +3325,10 @@ const Moodboard = () => {
       novoItem.width = 110; novoItem.height = 160;
     } else if (tipoEstrutura === 'cilindro_p') {
       novoItem.width = 95; novoItem.height = 130;
+    } else if (tipoEstrutura === 'mesa_osso') {
+      novoItem.width = 240; novoItem.height = 160; novoItem.color = '#ffffff'; novoItem.corCentro = '#f8fafc'; novoItem.tampoCor = '#ffffff'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'mesa_jeep') {
+      novoItem.width = 220; novoItem.height = 260; novoItem.color = '#ffffff'; novoItem.corPneus = '#334155'; novoItem.corDetalhes = '#facc15'; novoItem.tampoCor = '#f1f5f9'; novoItem.multiColor = true;
     } else if (tipoEstrutura === 'mesa_retangular') {
       novoItem.width = 220; novoItem.height = 110; novoItem.color = '#8B6914'; novoItem.tampoCor = '#8B6914';
     } else if (tipoEstrutura === 'mesa_provencal') {
@@ -2985,39 +3380,39 @@ const Moodboard = () => {
 
   const adicionarTexto = (preset = {}) => {
     const idUnico = `txt_${Date.now()}`;
-    const itemTexto = { 
-        type: 'text', 
-        content: preset.content || "Nome da Festa", 
-        color: preset.color || (preset.neon ? "#ffffff" : "#c5a059"), 
-        neonColor: preset.neonColor || "#c5a059", 
-        fontSize: preset.fontSize || (preset.neon ? 52 : 48), 
-        fontFamily: preset.fontFamily || (preset.neon ? "'Great Vibes', cursive" : "'Dancing Script', cursive"), 
-        fontWeight: preset.fontWeight || 'normal',
-        fontStyle: preset.fontStyle || 'normal',
-        letterSpacing: preset.letterSpacing || 0,
-        textAlign: preset.textAlign || 'center',
-        material: preset.material || 'none',
-        textureUrl: preset.textureUrl || '',
-        textureScale: preset.textureScale || 100,
-        curvatura: preset.curvatura || 0,
-        placaFundo: preset.placaFundo || 'nenhuma',
-        strokeWidth: preset.strokeWidth || 0,
-        strokeColor: preset.strokeColor || '#ffffff',
-        uniqueId: idUnico, 
-        x: 120, 
-        y: 80, 
-        width: 220, 
-        height: 60, 
-        rotation: 0, 
-        locked: false, 
-        opacity: 100, 
-        shadow: preset.shadow || 0,
-        neonGlow: preset.neonGlow ?? (preset.neon ? 20 : 0) 
+    const itemTexto = {
+      type: 'text',
+      content: preset.content || "Nome da Festa",
+      color: preset.color || (preset.neon ? "#ffffff" : "#c5a059"),
+      neonColor: preset.neonColor || "#c5a059",
+      fontSize: preset.fontSize || (preset.neon ? 52 : 48),
+      fontFamily: preset.fontFamily || (preset.neon ? "'Great Vibes', cursive" : "'Dancing Script', cursive"),
+      fontWeight: preset.fontWeight || 'normal',
+      fontStyle: preset.fontStyle || 'normal',
+      letterSpacing: preset.letterSpacing || 0,
+      textAlign: preset.textAlign || 'center',
+      material: preset.material || 'none',
+      textureUrl: preset.textureUrl || '',
+      textureScale: preset.textureScale || 100,
+      curvatura: preset.curvatura || 0,
+      placaFundo: preset.placaFundo || 'nenhuma',
+      strokeWidth: preset.strokeWidth || 0,
+      strokeColor: preset.strokeColor || '#ffffff',
+      uniqueId: idUnico,
+      x: 120,
+      y: 80,
+      width: 220,
+      height: 60,
+      rotation: 0,
+      locked: false,
+      opacity: 100,
+      shadow: preset.shadow || 0,
+      neonGlow: preset.neonGlow ?? (preset.neon ? 20 : 0)
     };
-    
+
     const updated = [...itensCanvas, itemTexto];
-    setItensCanvas(updated); 
-    setSelecionadoId(idUnico); 
+    setItensCanvas(updated);
+    setSelecionadoId(idUnico);
     setAbaDireita('propriedades');
     saveSnapshot(updated);
   };
@@ -3107,36 +3502,36 @@ const Moodboard = () => {
   const aplicarAoFundo = (valor) => {
     const estiloFinal = valor.startsWith('data:image') || valor.startsWith('http') ? `url(${valor})` : valor;
     if (activeSurface === 'wall') {
-        setWallBackground(estiloFinal); 
-        saveSnapshot(itensCanvas, estiloFinal, floorBackground);
+      setWallBackground(estiloFinal);
+      saveSnapshot(itensCanvas, estiloFinal, floorBackground);
     } else {
-        setFloorBackground(estiloFinal);
-        saveSnapshot(itensCanvas, wallBackground, estiloFinal);
+      setFloorBackground(estiloFinal);
+      saveSnapshot(itensCanvas, wallBackground, estiloFinal);
     }
   };
-  
-  const handleExportImage = async () => { 
-      if (!boardRef.current) return;
-      setSelecionadoId(null); 
-      setIsPanCapaMode(false);
-      
-      setTimeout(async () => { 
-          const canvas = await html2canvas(boardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null, scale: 2 }); 
-          const link = document.createElement('a'); 
-          link.download = `Projeto_${(nomeProjeto || 'Moodboard').replace(/\s+/g, '_')}.png`; 
-          link.href = canvas.toDataURL(); 
-          link.click(); 
-          
-          await registrarLog("EXPORTAÇÃO DE MOODBOARD", `Fez o download do projeto "${nomeProjeto || 'Sem Nome'}" em alta resolução (PNG).`);
-      }, 200);
+
+  const handleExportImage = async () => {
+    if (!boardRef.current) return;
+    setSelecionadoId(null);
+    setIsPanCapaMode(false);
+
+    setTimeout(async () => {
+      const canvas = await html2canvas(boardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null, scale: 2 });
+      const link = document.createElement('a');
+      link.download = `Projeto_${(nomeProjeto || 'Moodboard').replace(/\s+/g, '_')}.png`;
+      link.href = canvas.toDataURL();
+      link.click();
+
+      await registrarLog("EXPORTAÇÃO DE MOODBOARD", `Fez o download do projeto "${nomeProjeto || 'Sem Nome'}" em alta resolução (PNG).`);
+    }, 200);
   };
 
-    // 🕹️ POINTER DOWN: DISPARADOR DE DRAG / RESIZE / ROTATE / PAN_CAPA (DIRETO NO DOM, 0ms LATÊNCIA, 120 FPS REAL)
+  // 🕹️ POINTER DOWN: DISPARADOR DE DRAG / RESIZE / ROTATE / PAN_CAPA (DIRETO NO DOM, 0ms LATÊNCIA, 120 FPS REAL)
   const handlePointerDown = (e, id, type, dir = null) => {
     e.stopPropagation();
-    
+
     setSelecionadoId(id);
-    
+
     // Foca automaticamente no painel de propriedades do lado direito
     if (typeof window !== 'undefined' && window.innerWidth > 900) {
       setPainelDireitoAberto(true);
@@ -3165,8 +3560,8 @@ const Moodboard = () => {
     currentPendingChanges.current = {};
 
     // Localiza o elemento DOM da peça no canvas
-    const targetDom = (e.currentTarget.classList?.contains('canvas-object') 
-      ? e.currentTarget 
+    const targetDom = (e.currentTarget.classList?.contains('canvas-object')
+      ? e.currentTarget
       : e.currentTarget.closest('.canvas-object')) || boardRef.current?.querySelector(`[data-item-id="${id}"]`);
     dragTargetDom.current = targetDom;
 
@@ -3196,7 +3591,7 @@ const Moodboard = () => {
 
     const onWindowMove = (moveEvt) => {
       if (interactionMode.current === 'none' || !activeItemId.current) return;
-      
+
       const el = dragTargetDom.current;
       if (!el) return;
 
@@ -3216,7 +3611,7 @@ const Moodboard = () => {
       if (interactionMode.current === 'drag') {
         let newX = Math.round(s.x + totalDx);
         let newY = Math.round(s.y + totalDy);
-        
+
         const guides = [];
         if (snappingAtivo && boardRef.current) {
           const boardW = boardRef.current.offsetWidth || 1000;
@@ -3401,17 +3796,17 @@ const Moodboard = () => {
     window.addEventListener('pointermove', onWindowMove, { passive: false });
     window.addEventListener('pointerup', onWindowUp, { passive: false });
   };
-  
+
   const handleCanvasClick = () => {
-      if (selecionadoId) {
-          setAbaAtiva('acervo');
-      }
-      setSelecionadoId(null);
-      setEditingTextId(null); 
-      setIsPanCapaMode(false);
-      closeContextMenu();
+    if (selecionadoId) {
+      setAbaAtiva('acervo');
+    }
+    setSelecionadoId(null);
+    setEditingTextId(null);
+    setIsPanCapaMode(false);
+    closeContextMenu();
   };
-  
+
   const atualizarItem = (id, alt) => {
     setItensCanvas(prev => {
       const updated = prev.map(i => i.uniqueId === id ? { ...i, ...alt } : i);
@@ -3419,14 +3814,14 @@ const Moodboard = () => {
       return updated;
     });
   };
-  
-  const deleteItem = (id) => { 
-      setItensCanvas(prev => {
-        const updated = prev.filter(i => i.uniqueId !== id);
-        saveSnapshot(updated);
-        return updated;
-      }); 
-      setSelecionadoId(null); 
+
+  const deleteItem = (id) => {
+    setItensCanvas(prev => {
+      const updated = prev.filter(i => i.uniqueId !== id);
+      saveSnapshot(updated);
+      return updated;
+    });
+    setSelecionadoId(null);
   };
 
   // 🎯 GESTÃO DE DRAG AND DROP DIRETO DO ACERVO PARA O PALCO
@@ -3446,48 +3841,80 @@ const Moodboard = () => {
         const dropY = Math.round((e.clientY - bRect.top) / zoom) - 75;
         adicionarAoCanvas(item, Math.max(10, dropX), Math.max(10, dropY));
       }
-    } catch(err){}
+    } catch (err) { }
   };
-  
+
   const itemSelecionado = itensCanvas.find(i => i.uniqueId === selecionadoId);
-  const isEstruturaSelecionada = itemSelecionado?.type === 'shape' && ['arco_romano', 'painel_redondo', 'painel_retangular', 'painel_hexagonal', 'meia_lua', 'nicho_prateleira', 'cilindro_g', 'cilindro_m', 'cilindro_p'].includes(itemSelecionado?.shapeType);
+  const isEstruturaSelecionada = itemSelecionado?.type === 'shape' && ['arco_romano', 'arco_romano_triplo', 'arco_duplo', 'arco_organico', 'arco_organico_triplo', 'painel_redondo', 'painel_retangular', 'painel_hexagonal', 'painel_ondulado', 'painel_borda_ondulada', 'painel_nuvem_gomos', 'meia_lua', 'nicho_prateleira', 'cilindro_g', 'cilindro_m', 'cilindro_p', 'mesa_osso', 'mesa_jeep', 'mesa_retangular', 'mesa_provencal', 'mesa_cubo', 'comoda_vintage', 'carrinho_gourmet'].includes(itemSelecionado?.shapeType);
   const isBalaoSelecionado = itemSelecionado?.type === 'shape' && ['arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal'].includes(itemSelecionado?.shapeType);
-  
-  const getStyle = (valor, surface = 'wall') => {
+
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const getStyle = useCallback((valor, surface = 'wall') => {
     if (!valor) return { background: '#fff' };
+
+    // 🎨 Gradiente de Parede
+    if (surface === 'wall' && gradienteAtivoParede) {
+      return { background: `linear-gradient(${gradienteDirecao}, ${gradienteCor1}, ${gradienteCor2})` };
+    }
+
     const isImg = valor.startsWith('http') || valor.startsWith('data:') || valor.startsWith('blob:') || valor.startsWith('/') || valor.startsWith('url');
     if (!isImg) return { backgroundColor: valor };
     const bgUrl = valor.startsWith('url') ? valor : `url("${valor}")`;
-    
-    let posX = 50;
-    let posY = 50;
-    let scale = 100;
-    
+
     if (surface === 'wall') {
-      posX = posicaoParedeX;
-      posY = posicaoParedeY;
-      scale = zoomParede;
-    } else if (surface === 'floor') {
-      posX = posicaoPisoX;
-      posY = posicaoPisoY;
-      scale = zoomPiso;
-    } else if (surface === 'ambiente') {
-      posX = posicaoAmbienteX;
-      posY = posicaoAmbienteY;
-      scale = zoomAmbiente;
+      // 🧱 Mosaico: repete em grade (tijolinho flat, mármore quadrado)
+      if (modoTileParede) {
+        return {
+          backgroundImage: bgUrl,
+          backgroundSize: `${tileSizeParede}px ${tileSizeParede}px`,
+          backgroundRepeat: 'repeat',
+          backgroundPosition: '0% 0%'
+        };
+      }
+      // Cobrir: preenche toda a parede
+      return {
+        backgroundImage: bgUrl,
+        backgroundPosition: `${posicaoParedeX}% ${posicaoParedeY}%`,
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat'
+      };
+    }
+
+    if (surface === 'floor') {
+      // 🪵 Piso: sempre cover — preenche toda a área sem gaps
+      return {
+        backgroundImage: bgUrl,
+        backgroundPosition: `${posicaoPisoX}% ${posicaoPisoY}%`,
+        backgroundSize: 'cover',
+        backgroundRepeat: 'no-repeat'
+      };
+    }
+
+    if (surface === 'ambiente') {
+      return {
+        backgroundImage: bgUrl,
+        backgroundPosition: `${posicaoAmbienteX}% ${posicaoAmbienteY}%`,
+        backgroundSize: zoomAmbiente === 100 ? 'cover' : `${zoomAmbiente}% auto`,
+        backgroundRepeat: 'no-repeat'
+      };
     }
 
     return {
       backgroundImage: bgUrl,
-      backgroundPosition: `${posX}% ${posY}%`,
-      backgroundSize: scale === 100 ? 'cover' : `${scale}% auto`,
-      backgroundRepeat: scale > 100 ? 'repeat' : 'no-repeat'
+      backgroundPosition: '50% 50%',
+      backgroundSize: 'cover',
+      backgroundRepeat: 'no-repeat'
     };
-  };
+  }, [
+    gradienteAtivoParede, gradienteDirecao, gradienteCor1, gradienteCor2,
+    modoTileParede, tileSizeParede, posicaoParedeX, posicaoParedeY,
+    modoTilePiso, tileSizePiso, posicaoPisoX, posicaoPisoY, zoomPiso,
+    posicaoAmbienteX, posicaoAmbienteY, zoomAmbiente
+  ]);
 
   return (
     <div className={`studio-page ${modoApresentacao ? 'showroom-mode' : ''} ${isMobile ? 'is-mobile' : ''}`} onClick={handleCanvasClick}>
-      
+
       {/* 👑 BARRA DE FERRAMENTAS (LATERAL NO DESKTOP / DOCK INFERIOR NO MOBILE) */}
       {!modoApresentacao && (
         <div className="studio-toolbar" onClick={e => e.stopPropagation()}>
@@ -3496,7 +3923,7 @@ const Moodboard = () => {
           </div>
 
           {/* 1. CENÁRIO & AMBIENTAÇÃO — sempre primeiro: define o palco */}
-          <div 
+          <div
             className={`tool-item ${abaAtiva === 'fundo' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('fundo')}
             title="Defina o cenário: parede, piso e ambiente"
@@ -3506,7 +3933,7 @@ const Moodboard = () => {
           </div>
 
           {/* 2. ESTRUTURAS & PAINÉIS — esqueleto da decoração */}
-          <div 
+          <div
             className={`tool-item ${abaAtiva === 'formas' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('formas')}
             title="Painéis, arcos romanos, mesas e cilindros"
@@ -3516,7 +3943,7 @@ const Moodboard = () => {
           </div>
 
           {/* 3. ACERVO & UPLOAD — itens reais do estoque + PNG externos */}
-          <div 
+          <div
             className={`tool-item ${abaAtiva === 'estoque' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('estoque')}
             title="Seu acervo físico, catálogo e upload de imagens"
@@ -3526,7 +3953,7 @@ const Moodboard = () => {
           </div>
 
           {/* 4. EFEITOS & ILUMINAÇÃO — atmosfera e luz do ambiente */}
-          <div 
+          <div
             className={`tool-item ${abaAtiva === 'efeitos' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('efeitos')}
             title="Luminosidade, contraste, saturação e efeitos do ambiente"
@@ -3536,7 +3963,7 @@ const Moodboard = () => {
           </div>
 
           {/* 5. BEXIGAS & CENOGRAFIA — arcos orgânicos, guirlandas, balões */}
-          <div 
+          <div
             className={`tool-item ${abaAtiva === 'baloes' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('baloes')}
             title="Arcos orgânicos, guirlandas e bexigas"
@@ -3546,7 +3973,7 @@ const Moodboard = () => {
           </div>
 
           {/* 6. LETREIROS & TEXTO — finalização com nomes, fontes e efeitos */}
-          <div 
+          <div
             className={`tool-item ${abaAtiva === 'texto' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('texto')}
             title="Letreiros, nomes, fontes e efeitos de texto"
@@ -3588,224 +4015,224 @@ const Moodboard = () => {
 
           {/* ABA 1: MEU ESTOQUE FÍSICO / ACERVO COMPLETO */}
           {abaAtiva === 'estoque' && (
-             <div className="panel-content">
-               {/* 🔀 Seletor de Origem Unificado */}
-               <div className="acervo-source-segmented-control" style={{ marginBottom: '10px' }}>
-                 <button 
-                   type="button"
-                   className={`source-seg-btn ${abaAcervoFonte === 'estoque' ? 'active' : ''}`}
-                   onClick={() => { setAbaAcervoFonte('estoque'); setTermoBusca(''); }}
-                   title="Peças físicas do seu estoque próprio"
-                 >
-                   <Icons.Couch width={13} height={13} />
-                   <span>Meu Estoque ({estoqueReal.length})</span>
-                 </button>
-                 <button 
-                   type="button"
-                   className={`source-seg-btn ${abaAcervoFonte === 'globais' ? 'active' : ''}`}
-                   onClick={() => { setAbaAcervoFonte('globais'); setTermoBusca(''); }}
-                   title="Elementos PNG oficiais e flores"
-                 >
-                   <Icons.Crown width={13} height={13} />
-                   <span>Elementos PNG ({elementosCenografia.filter(i => i.isGlobal).length})</span>
-                 </button>
-                 <button 
-                   type="button"
-                   className={`source-seg-btn ${abaAcervoFonte === 'portfolio' ? 'active' : ''}`}
-                   onClick={() => { setAbaAcervoFonte('portfolio'); setTermoBusca(''); }}
-                   title="Recortes PNG que você subiu"
-                 >
-                   <Icons.Image width={13} height={13} />
-                   <span>Meu Portfólio ({elementosCenografia.filter(i => i.empresaId === tenantId && !i.isGlobal).length})</span>
-                 </button>
-               </div>
+            <div className="panel-content">
+              {/* 🔀 Seletor de Origem Unificado */}
+              <div className="acervo-source-segmented-control" style={{ marginBottom: '10px' }}>
+                <button
+                  type="button"
+                  className={`source-seg-btn ${abaAcervoFonte === 'estoque' ? 'active' : ''}`}
+                  onClick={() => { setAbaAcervoFonte('estoque'); setTermoBusca(''); }}
+                  title="Peças físicas do seu estoque próprio"
+                >
+                  <Icons.Couch width={13} height={13} />
+                  <span>Meu Estoque ({estoqueReal.length})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`source-seg-btn ${abaAcervoFonte === 'globais' ? 'active' : ''}`}
+                  onClick={() => { setAbaAcervoFonte('globais'); setTermoBusca(''); }}
+                  title="Elementos PNG oficiais e flores"
+                >
+                  <Icons.Crown width={13} height={13} />
+                  <span>Elementos PNG ({elementosCenografia.filter(i => i.isGlobal).length})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`source-seg-btn ${abaAcervoFonte === 'portfolio' ? 'active' : ''}`}
+                  onClick={() => { setAbaAcervoFonte('portfolio'); setTermoBusca(''); }}
+                  title="Recortes PNG que você subiu"
+                >
+                  <Icons.Image width={13} height={13} />
+                  <span>Meu Portfólio ({elementosCenografia.filter(i => i.empresaId === tenantId && !i.isGlobal).length})</span>
+                </button>
+              </div>
 
-               {/* 1. SE FOR MEU ESTOQUE FÍSICO */}
-               {abaAcervoFonte === 'estoque' && (
-                 <>
-                   {/* Barra de Busca Rápida */}
-                   <div className="search-box-acervo-compact" style={{ marginBottom: '8px' }}>
-                      <Icons.Search width={14} height={14} />
-                      <input 
-                        type="text" 
-                        placeholder="Buscar nome, código ou categoria..." 
-                        value={termoBusca}
-                        onChange={e => setTermoBusca(e.target.value)}
-                      />
-                      {termoBusca ? (
-                        <button className="btn-clear-search" onClick={() => setTermoBusca('')}>✕</button>
-                      ) : (
-                        <span className="compact-item-counter">{estoqueFiltrado.length}</span>
-                      )}
-                   </div>
+              {/* 1. SE FOR MEU ESTOQUE FÍSICO */}
+              {abaAcervoFonte === 'estoque' && (
+                <>
+                  {/* Barra de Busca Rápida */}
+                  <div className="search-box-acervo-compact" style={{ marginBottom: '8px' }}>
+                    <Icons.Search width={14} height={14} />
+                    <input
+                      type="text"
+                      placeholder="Buscar nome, código ou categoria..."
+                      value={termoBusca}
+                      onChange={e => setTermoBusca(e.target.value)}
+                    />
+                    {termoBusca ? (
+                      <button className="btn-clear-search" onClick={() => setTermoBusca('')}>✕</button>
+                    ) : (
+                      <span className="compact-item-counter">{estoqueFiltrado.length}</span>
+                    )}
+                  </div>
 
-                   {/* Chips de Categorias do Estoque */}
-                   <div className="estoque-category-chips-row">
-                     <button
-                       type="button"
-                       className={`estoque-category-chip ${filtroCategoriaEstoque === 'todas' ? 'active' : ''}`}
-                       onClick={() => setFiltroCategoriaEstoque('todas')}
-                     >
-                       🏷️ Todas ({estoqueReal.length})
-                     </button>
-                     {categoriasDoEstoque.map(cat => (
-                       <button
-                         key={cat}
-                         type="button"
-                         className={`estoque-category-chip ${filtroCategoriaEstoque === cat ? 'active' : ''}`}
-                         onClick={() => setFiltroCategoriaEstoque(cat)}
-                       >
-                         {cat} ({estoqueReal.filter(i => (i.categoria || '').trim() === cat).length})
-                       </button>
-                     ))}
-                   </div>
+                  {/* Chips de Categorias do Estoque */}
+                  <div className="estoque-category-chips-row">
+                    <button
+                      type="button"
+                      className={`estoque-category-chip ${filtroCategoriaEstoque === 'todas' ? 'active' : ''}`}
+                      onClick={() => setFiltroCategoriaEstoque('todas')}
+                    >
+                      🏷️ Todas ({estoqueReal.length})
+                    </button>
+                    {categoriasDoEstoque.map(cat => (
+                      <button
+                        key={cat}
+                        type="button"
+                        className={`estoque-category-chip ${filtroCategoriaEstoque === cat ? 'active' : ''}`}
+                        onClick={() => setFiltroCategoriaEstoque(cat)}
+                      >
+                        {cat} ({estoqueReal.filter(i => (i.categoria || '').trim() === cat).length})
+                      </button>
+                    ))}
+                  </div>
 
-                   <div className="acervo-list-scroll">
-                     {Object.keys(grouped).length === 0 ? (
-                       <div className="empty-search-state">
-                         <p>Nenhuma peça encontrada no seu estoque para "{termoBusca}".</p>
-                       </div>
-                     ) : (
-                       Object.keys(grouped).sort().map(cat => (
-                         <div key={cat} className="acervo-category">
-                           <div className={`acervo-category-header ${expandedCats[cat] || termoBusca || filtroCategoriaEstoque !== 'todas' ? 'expanded' : ''}`} onClick={() => toggleCategory(cat)}>
-                             <span className="cat-name">{cat}</span> <span className="count">{grouped[cat].length}</span>
-                           </div>
-                           {(expandedCats[cat] || termoBusca || filtroCategoriaEstoque !== 'todas') && (
-                             <div className="acervo-grid">
-                               {grouped[cat].map(item => (
-                                 <div 
-                                   key={item.id} 
-                                   className="acervo-card" 
-                                   draggable 
-                                   onDragStart={(e) => handleDragStartAcervo(e, { ...item, isEstoqueProprio: true })}
-                                   onClick={() => adicionarAoCanvas({ ...item, isEstoqueProprio: true })} 
-                                   title="Clique ou arraste para o cenário"
-                                 >
-                                   <div className="card-thumb">
-                                       <img src={item.imagem || 'https://via.placeholder.com/120?text=Sem+Foto'} crossOrigin="anonymous" alt={item.nome} />
-                                       <span className="badge-card-stock">✓ No Estoque</span>
-                                       {typeof item.quantidadeDisponivel === 'number' && (
-                                         <span className={`badge-card-qty ${item.quantidadeDisponivel === 0 ? 'esgotado' : ''}`}>
-                                           {item.quantidadeDisponivel === 0 ? '⚠️ 0 disp.' : `${item.quantidadeDisponivel} disp.`}
-                                         </span>
-                                       )}
-                                   </div>
-                                   <div className="card-info-box">
-                                     <div className="card-name" title={item.nome}>{item.nome}</div>
-                                     <div className="card-price">
-                                       {item.valor > 0 ? `R$ ${item.valor.toFixed(2)}` : 'Sob Consulta'}
-                                     </div>
-                                   </div>
-                                 </div>
-                               ))}
-                             </div>
-                           )}
-                         </div>
-                       ))
-                     )}
-                   </div>
-                 </>
-               )}
+                  <div className="acervo-list-scroll">
+                    {Object.keys(grouped).length === 0 ? (
+                      <div className="empty-search-state">
+                        <p>Nenhuma peça encontrada no seu estoque para "{termoBusca}".</p>
+                      </div>
+                    ) : (
+                      Object.keys(grouped).sort().map(cat => (
+                        <div key={cat} className="acervo-category">
+                          <div className={`acervo-category-header ${expandedCats[cat] || termoBusca || filtroCategoriaEstoque !== 'todas' ? 'expanded' : ''}`} onClick={() => toggleCategory(cat)}>
+                            <span className="cat-name">{cat}</span> <span className="count">{grouped[cat].length}</span>
+                          </div>
+                          {(expandedCats[cat] || termoBusca || filtroCategoriaEstoque !== 'todas') && (
+                            <div className="acervo-grid">
+                              {grouped[cat].map(item => (
+                                <div
+                                  key={item.id}
+                                  className="acervo-card"
+                                  draggable
+                                  onDragStart={(e) => handleDragStartAcervo(e, { ...item, isEstoqueProprio: true })}
+                                  onClick={() => adicionarAoCanvas({ ...item, isEstoqueProprio: true })}
+                                  title="Clique ou arraste para o cenário"
+                                >
+                                  <div className="card-thumb">
+                                    <img src={item.imagem || 'https://via.placeholder.com/120?text=Sem+Foto'} crossOrigin="anonymous" alt={item.nome} />
+                                    <span className="badge-card-stock">✓ No Estoque</span>
+                                    {typeof item.quantidadeDisponivel === 'number' && (
+                                      <span className={`badge-card-qty ${item.quantidadeDisponivel === 0 ? 'esgotado' : ''}`}>
+                                        {item.quantidadeDisponivel === 0 ? '⚠️ 0 disp.' : `${item.quantidadeDisponivel} disp.`}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="card-info-box">
+                                    <div className="card-name" title={item.nome}>{item.nome}</div>
+                                    <div className="card-price">
+                                      {item.valor > 0 ? `R$ ${item.valor.toFixed(2)}` : 'Sob Consulta'}
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </>
+              )}
 
-               {/* 2. SE FOR ELEMENTOS OFICIAIS OU MEU PORTFÓLIO PNG */}
-               {(abaAcervoFonte === 'globais' || abaAcervoFonte === 'portfolio') && (
-                 <>
-                   {/* Botão de Upload para Portfólio */}
-                   {abaAcervoFonte === 'portfolio' && (
-                     <button 
-                       className="btn-upload-capa" 
-                       style={{ background: '#0f172a', marginBottom: '6px', padding: '6px 12px', fontSize: '11px' }} 
-                       onClick={() => setModalUploadElementoAberto(true)}
-                     >
-                       <Icons.Image width={14} height={14} /> 📷 + Subir Novo PNG p/ Portfólio
-                     </button>
-                   )}
+              {/* 2. SE FOR ELEMENTOS OFICIAIS OU MEU PORTFÓLIO PNG */}
+              {(abaAcervoFonte === 'globais' || abaAcervoFonte === 'portfolio') && (
+                <>
+                  {/* Botão de Upload para Portfólio */}
+                  {abaAcervoFonte === 'portfolio' && (
+                    <button
+                      className="btn-upload-capa"
+                      style={{ background: '#0f172a', marginBottom: '6px', padding: '6px 12px', fontSize: '11px' }}
+                      onClick={() => setModalUploadElementoAberto(true)}
+                    >
+                      <Icons.Image width={14} height={14} /> 📷 + Subir Novo PNG p/ Portfólio
+                    </button>
+                  )}
 
-                   {/* Busca Compacta com Contador Integrado */}
-                   <div className="search-box-acervo-compact">
-                      <Icons.Search width={14} height={14} />
-                      <input 
-                        type="text" 
-                        placeholder={abaAcervoFonte === 'globais' ? "Buscar flores, pelúcias, recortes..." : "Buscar no seu portfólio..."} 
-                        value={termoBusca}
-                        onChange={e => setTermoBusca(e.target.value)}
-                      />
-                      {termoBusca ? (
-                        <button className="btn-clear-search" onClick={() => setTermoBusca('')}>✕</button>
-                      ) : (
-                        <span className="compact-item-counter">{elementosFiltrados.length}</span>
-                      )}
-                    </div>
+                  {/* Busca Compacta com Contador Integrado */}
+                  <div className="search-box-acervo-compact">
+                    <Icons.Search width={14} height={14} />
+                    <input
+                      type="text"
+                      placeholder={abaAcervoFonte === 'globais' ? "Buscar flores, pelúcias, recortes..." : "Buscar no seu portfólio..."}
+                      value={termoBusca}
+                      onChange={e => setTermoBusca(e.target.value)}
+                    />
+                    {termoBusca ? (
+                      <button className="btn-clear-search" onClick={() => setTermoBusca('')}>✕</button>
+                    ) : (
+                      <span className="compact-item-counter">{elementosFiltrados.length}</span>
+                    )}
+                  </div>
 
-                    {/* Chips de Categorias */}
-                    <div className="mb-category-chips-row">
-                     {CATEGORIAS_BIBLIOTECA_MOODBOARD.map(cat => (
-                       <button
-                         key={cat.id}
-                         type="button"
-                         className={`mb-cat-chip ${categoriaBiblioteca === cat.id ? 'active' : ''}`}
-                         onClick={() => setCategoriaBiblioteca(cat.id)}
-                       >
-                         {cat.icone} {cat.nome}
-                       </button>
-                     ))}
-                   </div>
+                  {/* Chips de Categorias */}
+                  <div className="mb-category-chips-row">
+                    {CATEGORIAS_BIBLIOTECA_MOODBOARD.map(cat => (
+                      <button
+                        key={cat.id}
+                        type="button"
+                        className={`mb-cat-chip ${categoriaBiblioteca === cat.id ? 'active' : ''}`}
+                        onClick={() => setCategoriaBiblioteca(cat.id)}
+                      >
+                        {cat.icone} {cat.nome}
+                      </button>
+                    ))}
+                  </div>
 
-                   {/* Grid de Elementos PNG */}
-                   <div className="acervo-list-scroll">
-                     {loadingBiblioteca ? (
-                       <div className="empty-search-state"><p>Carregando biblioteca...</p></div>
-                     ) : elementosFiltrados.length === 0 ? (
-                       <div className="empty-search-state"><p>Nenhum elemento PNG encontrado.</p></div>
-                     ) : (
-                       <div className="acervo-grid">
-                         {elementosFiltrados.map(elem => (
-                           <div
-                             key={elem.id}
-                             className="acervo-card"
-                             draggable
-                             onDragStart={(e) => handleDragStartAcervo(e, {
-                               nome: elem.nome,
-                               imagem: elem.imagemUrl,
-                               isEstoqueProprio: false,
-                               isItemExterno: true,
-                               origem: elem.isGlobal ? 'catalogo_global' : 'portfolio_proprio'
-                             })}
-                             onClick={() => adicionarAoCanvas({
-                               nome: elem.nome,
-                               imagem: elem.imagemUrl,
-                               isEstoqueProprio: false,
-                               isItemExterno: true,
-                               origem: elem.isGlobal ? 'catalogo_global' : 'portfolio_proprio'
-                             })}
-                             title="Clique ou arraste para a prancheta"
-                           >
-                             <div className="card-thumb elem-preview-checkerboard">
-                               <img src={elem.imagemUrl} alt={elem.nome} crossOrigin="anonymous" />
-                               <span className="badge-card-stock" style={{ background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1' }}>
-                                 {elem.isGlobal ? '✨ Oficial' : '📁 Portfólio'}
-                               </span>
-                             </div>
-                             <div className="card-info-box">
-                               <div className="card-name" title={elem.nome}>{elem.nome}</div>
-                               <div className="card-price" style={{ color: '#64748b', fontSize: '9.5px' }}>{elem.categoria}</div>
-                             </div>
-                           </div>
-                         ))}
-                       </div>
-                     )}
-                   </div>
-                 </>
-               )}
-             </div>
+                  {/* Grid de Elementos PNG */}
+                  <div className="acervo-list-scroll">
+                    {loadingBiblioteca ? (
+                      <div className="empty-search-state"><p>Carregando biblioteca...</p></div>
+                    ) : elementosFiltrados.length === 0 ? (
+                      <div className="empty-search-state"><p>Nenhum elemento PNG encontrado.</p></div>
+                    ) : (
+                      <div className="acervo-grid">
+                        {elementosFiltrados.map(elem => (
+                          <div
+                            key={elem.id}
+                            className="acervo-card"
+                            draggable
+                            onDragStart={(e) => handleDragStartAcervo(e, {
+                              nome: elem.nome,
+                              imagem: elem.imagemUrl,
+                              isEstoqueProprio: false,
+                              isItemExterno: true,
+                              origem: elem.isGlobal ? 'catalogo_global' : 'portfolio_proprio'
+                            })}
+                            onClick={() => adicionarAoCanvas({
+                              nome: elem.nome,
+                              imagem: elem.imagemUrl,
+                              isEstoqueProprio: false,
+                              isItemExterno: true,
+                              origem: elem.isGlobal ? 'catalogo_global' : 'portfolio_proprio'
+                            })}
+                            title="Clique ou arraste para a prancheta"
+                          >
+                            <div className="card-thumb elem-preview-checkerboard">
+                              <img src={elem.imagemUrl} alt={elem.nome} crossOrigin="anonymous" />
+                              <span className="badge-card-stock" style={{ background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1' }}>
+                                {elem.isGlobal ? '✨ Oficial' : '📁 Portfólio'}
+                              </span>
+                            </div>
+                            <div className="card-info-box">
+                              <div className="card-name" title={elem.nome}>{elem.nome}</div>
+                              <div className="card-price" style={{ color: '#64748b', fontSize: '9.5px' }}>{elem.categoria}</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {/* ABA: ESTRUTURAS & PAINÉIS */}
           {abaAtiva === 'formas' && (
             <div className="panel-content">
               <h3 className="panel-title">ESTRUTURAS & PAINÉIS</h3>
-              <p className="hint-text" style={{margin: '0 0 6px 0'}}>Clique para adicionar ao cenário. Personalize com cores e capas:</p>
+              <p className="hint-text" style={{ margin: '0 0 6px 0' }}>Clique para adicionar ao cenário. Personalize com cores e capas:</p>
 
               {/* Seletor de Cor da Estrutura */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', background: '#f8fafc', borderRadius: '8px', padding: '8px 12px', border: '1px solid #e2e8f0' }}>
@@ -3817,8 +4244,18 @@ const Moodboard = () => {
               <div className="estruturas-section-label">🏛️ Painéis & Arcos</div>
               <div className="shapes-presets-grid">
                 <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_romano')}>
-                  <div className="shape-preview arco-romano-preview" style={{borderColor: corEstrutura, background: '#f8fafc'}}></div>
+                  <div className="shape-preview arco-romano-preview" style={{ borderColor: corEstrutura, background: '#f8fafc' }}></div>
                   <span>Arco Romano</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_romano_triplo')}>
+                  <div className="shape-preview" style={{ width: '38px', height: '48px', position: 'relative' }}>
+                    <svg viewBox="0 0 38 48" width="38" height="48" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 4,48 L 4,18 A 15,15 0 0,1 34,18 L 34,48 Z" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
+                      <path d="M 8,48 L 8,20 A 11,11 0 0,1 30,20 L 30,48 Z" fill="#f1f5f9" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
+                      <path d="M 12,48 L 12,22 A 7,7 0 0,1 26,22 L 26,48 Z" fill="#e2e8f0" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
+                    </svg>
+                  </div>
+                  <span>Romano 3C</span>
                 </div>
                 <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_duplo')}>
                   <div className="shape-preview" style={{ width: '32px', height: '46px', border: `2px solid ${corEstrutura}`, borderTopLeftRadius: '20px', borderTopRightRadius: '20px', borderBottom: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -3826,50 +4263,71 @@ const Moodboard = () => {
                   </div>
                   <span>Arco Duplo</span>
                 </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_organico')}>
+                  <div className="shape-preview" style={{ width: '38px', height: '50px', position: 'relative' }}>
+                    <svg viewBox="0 0 38 50" width="38" height="50" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M6 50 C6 50 4 40 4 32 C4 24 2 20 6 14 C10 8 14 4 19 4 C24 4 28 8 32 14 C36 20 34 24 34 32 C34 40 32 50 32 50" fill="none" stroke={corEstrutura || '#c5a059'} strokeWidth="3.5" strokeLinecap="round"/>
+                      <ellipse cx="7" cy="49" rx="5" ry="2" fill={corEstrutura || '#c5a059'} opacity="0.7"/>
+                      <ellipse cx="31" cy="49" rx="5" ry="2" fill={corEstrutura || '#c5a059'} opacity="0.7"/>
+                    </svg>
+                  </div>
+                  <span>Arco Org.</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_organico_triplo')}>
+                  <div className="shape-preview" style={{ width: '38px', height: '48px', position: 'relative' }}>
+                    <svg viewBox="0 0 38 48" width="38" height="48" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 4,48 C 2,36 4,22 8,14 C 12,6 26,6 30,14 C 34,22 36,36 34,48 Z" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
+                      <path d="M 8,48 C 6,38 8,24 12,18 C 16,10 22,10 26,18 C 30,24 32,38 30,48 Z" fill="#f1f5f9" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
+                      <path d="M 12,48 C 10,40 12,28 15,22 C 18,16 20,16 23,22 C 26,28 28,40 26,48 Z" fill="#e2e8f0" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
+                    </svg>
+                  </div>
+                  <span>Orgânico 3C</span>
+                </div>
                 <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_redondo')}>
-                  <div className="shape-preview painel-redondo-preview" style={{backgroundColor: corEstrutura}}></div>
+                  <div className="shape-preview painel-redondo-preview" style={{ backgroundColor: corEstrutura }}></div>
                   <span>Painel Redondo</span>
                 </div>
                 <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_retangular')}>
                   <div className="shape-preview" style={{ width: '32px', height: '46px', backgroundColor: corEstrutura, borderRadius: '3px', border: '1px solid rgba(0,0,0,0.1)' }}></div>
                   <span>Painel Ret.</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_ripado')}>
-                  <div className="shape-preview" style={{ width: '32px', height: '46px', background: '#3e2311', borderRadius: '4px 4px 0 0', display: 'flex', gap: '2px', padding: '2px', boxSizing: 'border-box' }}>
-                    {[0,1,2,3].map(i => <div key={i} style={{ flex: 1, background: corEstrutura || '#ba8249', borderRadius: '1px' }} />)}
-                  </div>
-                  <span>Ripado</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_shimmer')}>
-                  <div className="shape-preview" style={{ width: '34px', height: '46px', background: '#0f172a', borderRadius: '3px', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '2px', padding: '3px', boxSizing: 'border-box' }}>
-                    {Array.from({ length: 9 }).map((_, i) => <div key={i} style={{ background: '#d4af37', borderRadius: '1px' }} />)}
-                  </div>
-                  <span>Shimmer</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_biombo')}>
-                  <div className="shape-preview" style={{ width: '42px', height: '44px', display: 'flex', gap: '2px' }}>
-                    {[0,1,2].map(i => <div key={i} style={{ flex: 1, border: `1px solid ${corEstrutura}`, background: '#f8fafc', borderRadius: '2px' }} />)}
-                  </div>
-                  <span>Biombo 3F</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('meia_lua')}>
-                  <div className="shape-preview" style={{ width: '46px', height: '24px', background: corEstrutura, borderRadius: '30px 30px 0 0' }}></div>
-                  <span>Meia Lua</span>
-                </div>
                 <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_hexagonal')}>
                   <div className="shape-preview" style={{ width: '40px', height: '40px', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', backgroundColor: corEstrutura }}></div>
                   <span>Hexagonal</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('nicho_prateleira')}>
-                  <div className="shape-preview" style={{ width: '40px', height: '36px', border: `2.5px solid ${corEstrutura}`, borderRadius: '3px', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', padding: '2px', background: '#f8fafc' }}>
-                    {[0,1].map(i=><div key={i} style={{ height: '30%', background: corEstrutura, borderRadius: '2px' }} />)}
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_nuvem_gomos')}>
+                  <div className="shape-preview" style={{ width: '30px', height: '50px', position: 'relative' }}>
+                    <svg viewBox="0 0 30 50" width="30" height="50" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 6,10 A 9,9 0 0,1 24,10 A 4,4 0 0,1 26,16 A 4,4 0 0,1 26,22 A 4,4 0 0,1 26,28 A 4,4 0 0,1 26,34 A 4,4 0 0,1 26,40 A 4,4 0 0,1 26,46 L 4,46 A 4,4 0 0,1 4,40 A 4,4 0 0,1 4,34 A 4,4 0 0,1 4,28 A 4,4 0 0,1 4,22 A 4,4 0 0,1 4,16 A 4,4 0 0,1 6,10 Z" fill={corEstrutura || '#ffffff'} stroke="#94a3b8" strokeWidth="1.5" />
+                    </svg>
                   </div>
-                  <span>Nichos</span>
+                  <span>P. Nuvem</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_ondulado')}>
+                  <div className="shape-preview" style={{ width: '32px', height: '50px', position: 'relative' }}>
+                    <svg viewBox="0 0 32 50" width="32" height="50" style={{ position: 'absolute', inset: 0 }}>
+                      {[0,1,2,3,4,5,6].map(i => (
+                        <path key={i} d={`M${4+i*4} 2 C${4+i*4-2} 14 ${4+i*4+2} 26 ${4+i*4} 38 C${4+i*4-2} 44 ${4+i*4} 48 ${4+i*4} 48`}
+                          fill="none" stroke={corEstrutura || '#c5a059'} strokeWidth="2.5" strokeLinecap="round"/>
+                      ))}
+                      <line x1="8" y1="48" x2="12" y2="50" stroke={corEstrutura || '#c5a059'} strokeWidth="2"/>
+                      <line x1="20" y1="48" x2="24" y2="50" stroke={corEstrutura || '#c5a059'} strokeWidth="2"/>
+                    </svg>
+                  </div>
+                  <span>P. Ondulado</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_borda_ondulada')}>
+                  <div className="shape-preview" style={{ width: '32px', height: '50px', position: 'relative' }}>
+                    <svg viewBox="0 0 32 50" width="32" height="50" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M4 4 Q6 2 8 4 Q10 6 12 4 Q14 2 16 4 Q18 6 20 4 Q22 2 24 4 Q26 6 28 4 L28 46 Q26 48 24 46 Q22 44 20 46 Q18 48 16 46 Q14 44 12 46 Q10 48 8 46 Q6 44 4 46 Z" fill={corEstrutura || '#c5a059'} opacity="0.85"/>
+                    </svg>
+                  </div>
+                  <span>P. Orgânico</span>
                 </div>
               </div>
 
-              {/* 🪑 MESAS & CILINDROS 3D */}
-              <div className="estruturas-section-label">🪑 Mesas, Cilindros & Mobiliário 3D</div>
+              {/* 🪑 CILINDROS & MESAS TEMÁTICAS 3D */}
+              <div className="estruturas-section-label">🪑 Cilindros & Mesas Temáticas 3D</div>
               <div className="shapes-presets-grid">
                 <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('cilindro_g')}>
                   <div className="shape-preview cilindro-g-preview"></div>
@@ -3883,46 +4341,28 @@ const Moodboard = () => {
                   <div className="shape-preview cilindro-p-preview"></div>
                   <span>Cilindro (P)</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_retangular')}>
-                  <div className="shape-preview" style={{ width: '48px', height: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ width: '100%', height: '35%', backgroundColor: '#8B6914', borderRadius: '3px 3px 0 0', boxShadow: '0 2px 4px rgba(0,0,0,0.2)' }} />
-                    <div style={{ width: '78%', height: '65%', display: 'flex', justifyContent: 'space-between', padding: '0 4px' }}>
-                      <div style={{ width: '16%', height: '100%', backgroundColor: '#6B4F0A', borderRadius: '0 0 2px 2px' }} />
-                      <div style={{ width: '16%', height: '100%', backgroundColor: '#6B4F0A', borderRadius: '0 0 2px 2px' }} />
-                    </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_osso')}>
+                  <div className="shape-preview" style={{ width: '42px', height: '32px', position: 'relative' }}>
+                    <svg viewBox="0 0 42 32" width="42" height="32" style={{ position: 'absolute', inset: 0 }}>
+                      <polygon points="6,6 10,2 32,2 36,6" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
+                      <path d="M 12,8 L 30,8 A 5,5 0 0,1 36,5 A 5,5 0 0,1 40,11 A 5,5 0 0,1 36,18 A 5,5 0 0,1 40,25 A 5,5 0 0,1 36,30 A 5,5 0 0,1 30,28 L 12,28 A 5,5 0 0,1 6,30 A 5,5 0 0,1 2,25 A 5,5 0 0,1 6,18 A 5,5 0 0,1 2,11 A 5,5 0 0,1 6,5 A 5,5 0 0,1 12,8 Z" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
+                    </svg>
                   </div>
-                  <span>Mesa Rústica</span>
+                  <span>Mesa Osso</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_provencal')}>
-                  <div className="shape-preview" style={{ width: '48px', height: '32px', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                    <div style={{ width: '100%', height: '35%', backgroundColor: '#ffffff', borderRadius: '3px', border: '1px solid #cbd5e1', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }} />
-                    <div style={{ width: '85%', height: '65%', borderLeft: '2.5px solid #94a3b8', borderRight: '2.5px solid #94a3b8', borderBottom: '1px solid #cbd5e1' }} />
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_jeep')}>
+                  <div className="shape-preview" style={{ width: '38px', height: '42px', position: 'relative' }}>
+                    <svg viewBox="0 0 38 42" width="38" height="42" style={{ position: 'absolute', inset: 0 }}>
+                      <rect x="8" y="2" width="22" height="14" rx="2" fill="#ffffff" stroke="#94a3b8" strokeWidth="1.2" />
+                      <rect x="10" y="4" width="18" height="10" fill="#e0f2fe" />
+                      <rect x="5" y="16" width="28" height="15" rx="2" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
+                      <circle cx="8" cy="20" r="3" fill="#facc15" />
+                      <circle cx="30" cy="20" r="3" fill="#facc15" />
+                      <rect x="2" y="26" width="6" height="15" rx="1.5" fill="#334155" />
+                      <rect x="30" y="26" width="6" height="15" rx="1.5" fill="#334155" />
+                    </svg>
                   </div>
-                  <span>Provençal</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_cubo')}>
-                  <div className="shape-preview" style={{ width: '32px', height: '38px', border: `2px solid ${corEstrutura || '#c5a059'}`, borderRadius: '2px', display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ width: '100%', height: '25%', background: '#f8fafc', borderBottom: `1.5px solid ${corEstrutura || '#c5a059'}` }} />
-                    <div style={{ flex: 1, borderLeft: `1.5px solid ${corEstrutura || '#c5a059'}`, margin: '0 auto', width: '2px' }} />
-                  </div>
-                  <span>Mesa Cubo</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('comoda_vintage')}>
-                  <div className="shape-preview" style={{ width: '42px', height: '34px', background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '4px', display: 'flex', flexDirection: 'column', gap: '2px', padding: '3px' }}>
-                    {[0,1,2].map(i => <div key={i} style={{ flex: 1, background: '#e2e8f0', borderRadius: '1px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><div style={{ width: '6px', height: '2px', background: '#c5a059' }} /></div>)}
-                  </div>
-                  <span>Cômoda</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('carrinho_gourmet')}>
-                  <div className="shape-preview" style={{ width: '40px', height: '38px', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'space-between', padding: '2px' }}>
-                    <div style={{ width: '90%', height: '6px', background: corEstrutura || '#c5a059', borderRadius: '2px' }} />
-                    <div style={{ width: '70%', height: '5px', background: corEstrutura || '#c5a059', borderRadius: '1px' }} />
-                    <div style={{ display: 'flex', justifyContent: 'space-between', width: '90%' }}>
-                      <div style={{ width: '12px', height: '12px', borderRadius: '50%', border: `2px solid ${corEstrutura || '#c5a059'}` }} />
-                      <div style={{ width: '8px', height: '8px', borderRadius: '50%', border: `1.5px solid ${corEstrutura || '#c5a059'}` }} />
-                    </div>
-                  </div>
-                  <span>Carrinho</span>
+                  <span>Mesa Jeep</span>
                 </div>
               </div>
             </div>
@@ -3931,7 +4371,7 @@ const Moodboard = () => {
           {/* ABA: BALÕES & ARCOS */}
           {abaAtiva === 'baloes' && (
             <div className="panel-content">
-              <p className="hint-text" style={{margin: '0 0 8px 0'}}>Guirlandas orgânicas, arcos, colunas e biblioteca de balões PNG:</p>
+              <p className="hint-text" style={{ margin: '0 0 8px 0' }}>Guirlandas orgânicas, arcos, colunas e biblioteca de balões PNG:</p>
 
               {/* 🎨 SELETOR DE CORES & PALETA DE BEXIGAS */}
               <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
@@ -4015,22 +4455,22 @@ const Moodboard = () => {
 
               {/* SEÇÃO BIBLIOTECA & PORTFÓLIO EXCLUSIVA DE BALÕES */}
               <div className="baloes-section">
-                <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px'}}>
-                  <h4 style={{fontSize: '13px', color: '#0f172a', fontWeight: '800', margin: 0}}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <h4 style={{ fontSize: '13px', color: '#0f172a', fontWeight: '800', margin: 0 }}>
                     🎈 Biblioteca de Balões & Arcos (PNG)
                   </h4>
-                  <span style={{fontSize: '10px', color: '#c5a059', fontWeight: 'bold'}}>Fundo Transparente</span>
+                  <span style={{ fontSize: '10px', color: '#c5a059', fontWeight: 'bold' }}>Fundo Transparente</span>
                 </div>
 
                 {/* Filtro: Padrão Oficial vs Meu Portfólio */}
-                <div className="cenario-type-switcher" style={{marginBottom: '8px'}}>
-                  <button 
+                <div className="cenario-type-switcher" style={{ marginBottom: '8px' }}>
+                  <button
                     className={`switch-btn ${filtroBiblioteca === 'oficiais' ? 'active' : ''}`}
                     onClick={() => setFiltroBiblioteca('oficiais')}
                   >
                     👑 Oficiais Celebre
                   </button>
-                  <button 
+                  <button
                     className={`switch-btn ${filtroBiblioteca === 'meu_portfolio' ? 'active' : ''}`}
                     onClick={() => setFiltroBiblioteca('meu_portfolio')}
                   >
@@ -4039,9 +4479,9 @@ const Moodboard = () => {
                 </div>
 
                 {/* Botão de Adicionar Balão ao Portfólio */}
-                <button 
-                  className="btn-upload-capa" 
-                  style={{background: '#0f172a', marginBottom: '10px'}} 
+                <button
+                  className="btn-upload-capa"
+                  style={{ background: '#0f172a', marginBottom: '10px' }}
                   onClick={() => setModalUploadElementoAberto(true)}
                 >
                   <Icons.Image /> 📷 + Subir Novo Balão / Arco PNG
@@ -4049,22 +4489,22 @@ const Moodboard = () => {
 
                 {/* Grid de Elementos Exclusivos de Balões */}
                 {loadingBiblioteca ? (
-                  <div style={{textAlign: 'center', padding: '20px', fontSize: '11px', color: '#64748b'}}>
+                  <div style={{ textAlign: 'center', padding: '20px', fontSize: '11px', color: '#64748b' }}>
                     Carregando balões...
                   </div>
                 ) : elementosBaloesFiltrados.length === 0 ? (
-                  <div style={{textAlign: 'center', padding: '20px 10px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1'}}>
-                    <p style={{fontSize: '11px', color: '#64748b', margin: '0 0 8px 0'}}>
+                  <div style={{ textAlign: 'center', padding: '20px 10px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                    <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px 0' }}>
                       {filtroBiblioteca === 'meu_portfolio' ? 'Você ainda não adicionou balões ao seu portfólio.' : 'Nenhum balão oficial cadastrado.'}
                     </p>
-                    <button className="btn-secondary" style={{padding: '6px 10px', fontSize: '10px'}} onClick={() => setModalUploadElementoAberto(true)}>
+                    <button className="btn-secondary" style={{ padding: '6px 10px', fontSize: '10px' }} onClick={() => setModalUploadElementoAberto(true)}>
                       + Subir Balão / Arco PNG
                     </button>
                   </div>
                 ) : (
                   <div className="presets-arcos-grid">
                     {elementosBaloesFiltrados.map((item, idx) => (
-                      <div 
+                      <div
                         key={item.id || idx}
                         className="preset-arco-card"
                         onClick={() => {
@@ -4101,7 +4541,7 @@ const Moodboard = () => {
                         {/* Ações do item */}
                         <div className="elem-card-actions" onClick={e => e.stopPropagation()}>
                           {item.empresaId === tenantId && !item.isGlobal && (
-                            <button 
+                            <button
                               className={`btn-elem-action ${item.sugeridoParaGlobal ? 'suggested' : ''}`}
                               onClick={() => handleSugerirParaGlobal(item)}
                               title={item.sugeridoParaGlobal ? "Sugestão enviada para a Celebre" : "Sugerir para se tornar Padrão do Sistema"}
@@ -4111,9 +4551,9 @@ const Moodboard = () => {
                           )}
 
                           {usuarioLogado?.email === "celebrefesta25@gmail.com" && (
-                            <button 
-                              className="btn-elem-action" 
-                              style={{color: '#c5a059'}}
+                            <button
+                              className="btn-elem-action"
+                              style={{ color: '#c5a059' }}
                               onClick={() => handleAlternarGlobalElemento(item)}
                               title={item.isGlobal ? "Remover do Global" : "Tornar Global Oficial"}
                             >
@@ -4122,7 +4562,7 @@ const Moodboard = () => {
                           )}
 
                           {item.empresaId === tenantId && (
-                            <button 
+                            <button
                               className="btn-elem-del"
                               onClick={() => handleExcluirMeuElemento(item.id)}
                               title="Excluir do meu portfólio"
@@ -4190,7 +4630,7 @@ const Moodboard = () => {
               {/* SUB-ABA 1: CRIADOR DE TEXTO & EFEITOS */}
               {subAbaTexto === 'texto' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  
+
                   {/* Indicador de Edição Ativa */}
                   {itemSelecionado?.type === 'text' && (
                     <div style={{ padding: '8px 10px', background: '#fef3c7', borderRadius: '8px', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '6px' }}>
@@ -4204,7 +4644,7 @@ const Moodboard = () => {
                     <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
                       ✍️ Digite o Texto / Nome / Frase:
                     </label>
-                    <input 
+                    <input
                       type="text"
                       className="text-input-direct"
                       value={itemSelecionado?.type === 'text' ? (itemSelecionado.content || '') : textoNovoInput}
@@ -4305,8 +4745,8 @@ const Moodboard = () => {
                             }}
                             title={`Aplicar ${efeito.nome}`}
                           >
-                            <div 
-                              className="texture-swatch-thumb" 
+                            <div
+                              className="texture-swatch-thumb"
                               style={{ background: efeito.bg }}
                             >
                               {efeito.tipo === 'cor' && <span style={{ fontSize: '11px', color: '#fff' }}>Aa</span>}
@@ -4387,10 +4827,10 @@ const Moodboard = () => {
               )}
 
               {/* Botão Ver Peças */}
-              <button 
-                type="button" 
-                className="btn-secondary" 
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', fontWeight: 'bold', marginTop: '12px' }} 
+              <button
+                type="button"
+                className="btn-secondary"
+                style={{ width: '100%', padding: '10px', borderRadius: '8px', fontWeight: 'bold', marginTop: '12px' }}
                 onClick={() => { setSelecionadoId(null); setAbaAtiva('acervo'); }}
               >
                 ← Voltar ao Catálogo de Peças
@@ -4400,508 +4840,633 @@ const Moodboard = () => {
 
           {/* ABA: CENÁRIO & AMBIENTE */}
           {abaAtiva === 'fundo' && (
-               <div className="panel-content">
-                   <div className="panel-header-row" style={{ marginBottom: '10px' }}>
-                     <h3 className="panel-title" style={{ margin: 0 }}>CENÁRIO & AMBIENTE</h3>
-                   </div>
+            <div className="panel-content">
+              <div className="panel-header-row" style={{ marginBottom: '10px' }}>
+                <h3 className="panel-title" style={{ margin: 0 }}>CENÁRIO & AMBIENTE</h3>
+              </div>
 
-                   {/* 🔀 3 Abas Diretas: Parede, Piso e Ambiente Inteiro */}
-                   <div className="cenario-type-switcher" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '14px' }}>
-                     <button 
-                       type="button"
-                       className={`switch-btn ${cenarioAba === 'parede' ? 'active' : ''}`} 
-                       onClick={() => {
-                         setCenarioAba('parede');
-                         setModoCenario('duplo');
-                         setActiveSurface('wall');
-                       }}
-                       style={{ padding: '8px 2px', fontSize: '10.5px', fontWeight: '800' }}
-                     >
-                       🧱 Parede
-                     </button>
-                     <button 
-                       type="button"
-                       className={`switch-btn ${cenarioAba === 'piso' ? 'active' : ''}`} 
-                       onClick={() => {
-                         setCenarioAba('piso');
-                         setModoCenario('duplo');
-                         setActiveSurface('floor');
-                       }}
-                       style={{ padding: '8px 2px', fontSize: '10.5px', fontWeight: '800' }}
-                     >
-                       🪵 Piso
-                     </button>
-                     <button 
-                       type="button"
-                       className={`switch-btn ${cenarioAba === 'ambiente' ? 'active' : ''}`} 
-                       onClick={() => {
-                         setCenarioAba('ambiente');
-                         setModoCenario('unico');
-                       }}
-                       style={{ padding: '8px 2px', fontSize: '10.5px', fontWeight: '800' }}
-                     >
-                       🏞️ Ambiente
-                     </button>
-                   </div>
+              {/* 🔀 3 Abas Diretas: Parede, Piso e Ambiente Inteiro */}
+              <div className="cenario-type-switcher" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '14px' }}>
+                <button
+                  type="button"
+                  className={`switch-btn ${cenarioAba === 'parede' ? 'active' : ''}`}
+                  onClick={() => {
+                    // Se estava no modo AMBIENTE (unico), limpa wallBackground para não herdar foto de salão
+                    if (modoCenario === 'unico') {
+                      setWallBackground('#f8fafc');
+                    }
+                    setCenarioAba('parede');
+                    setModoCenario('duplo');
+                    setActiveSurface('wall');
+                  }}
+                  style={{ padding: '8px 2px', fontSize: '10.5px', fontWeight: '800' }}
+                >
+                  🧱 Parede
+                </button>
+                <button
+                  type="button"
+                  className={`switch-btn ${cenarioAba === 'piso' ? 'active' : ''}`}
+                  onClick={() => {
+                    // Se estava no modo AMBIENTE (unico), limpa wallBackground para não herdar foto de salão
+                    if (modoCenario === 'unico') {
+                      setWallBackground('#f8fafc');
+                    }
+                    setCenarioAba('piso');
+                    setModoCenario('duplo');
+                    setActiveSurface('floor');
+                  }}
+                  style={{ padding: '8px 2px', fontSize: '10.5px', fontWeight: '800' }}
+                >
+                  🪵 Piso
+                </button>
+                <button
+                  type="button"
+                  className={`switch-btn ${cenarioAba === 'ambiente' ? 'active' : ''}`}
+                  onClick={() => {
+                    // Se estava no modo DUPLO (parede+piso), limpa floorBackground para não aparecer piso sobreposto
+                    if (modoCenario === 'duplo') {
+                      setFloorBackground('#e2e8f0');
+                    }
+                    setCenarioAba('ambiente');
+                    setModoCenario('unico');
+                  }}
+                  style={{ padding: '8px 2px', fontSize: '10.5px', fontWeight: '800' }}
+                >
+                  🏞️ Ambiente
+                </button>
+              </div>
 
-                   {/* 1. ABA: PAREDE */}
-                   {cenarioAba === 'parede' && (
-                     <>
-                       {/* Cores Rápidas de Parede */}
-                       <div className="cenario-section-title">🎨 Cores de Parede:</div>
-                       <div className="fast-colors-palette">
-                         {[
-                           { nome: 'Branco Neve', cor: '#ffffff' },
-                           { nome: 'Off-White Suave', cor: '#f8fafc' },
-                           { nome: 'Bege Areia Nude', cor: '#f5ebe0' },
-                           { nome: 'Cinza Estúdio', cor: '#e2e8f0' },
-                           { nome: 'Rosa Bebê', cor: '#fce7f3' },
-                           { nome: 'Azul Céu', cor: '#e0f2fe' },
-                           { nome: 'Verde Eucalipto', cor: '#e2ece9' },
-                           { nome: 'Grafite Nobre', cor: '#1e293b' },
-                           { nome: 'Preto Noite', cor: '#0a0e17' }
-                         ].map((item, idx) => (
-                           <div 
-                             key={idx}
-                             className="fast-color-chip"
-                             style={{ backgroundColor: item.cor }}
-                             onClick={() => {
-                               setWallBackground(item.cor);
-                               saveSnapshot(itensCanvas, item.cor, floorBackground);
-                             }}
-                             title={item.nome}
-                           />
-                         ))}
-                         <label className="fast-color-picker-label" title="Escolher cor livre">
-                           <input 
-                             type="color" 
-                             className="invisible-color-input" 
-                             onChange={(e) => {
-                               setWallBackground(e.target.value);
-                               saveSnapshot(itensCanvas, e.target.value, floorBackground);
-                             }} 
-                           />
-                           <span>🎨</span>
-                         </label>
-                       </div>
+              {/* 1. ABA: PAREDE */}
+              {cenarioAba === 'parede' && (
+                <>
+                  {/* Cores Rápidas de Parede */}
+                  <div className="cenario-section-title">🎨 Cores de Parede:</div>
+                  <div className="fast-colors-palette">
+                    {[
+                      { nome: 'Branco Neve', cor: '#ffffff' },
+                      { nome: 'Off-White Suave', cor: '#f8fafc' },
+                      { nome: 'Bege Areia Nude', cor: '#f5ebe0' },
+                      { nome: 'Cinza Estúdio', cor: '#e2e8f0' },
+                      { nome: 'Rosa Bebê', cor: '#fce7f3' },
+                      { nome: 'Azul Céu', cor: '#e0f2fe' },
+                      { nome: 'Verde Eucalipto', cor: '#e2ece9' },
+                      { nome: 'Grafite Nobre', cor: '#1e293b' },
+                      { nome: 'Preto Noite', cor: '#0a0e17' }
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="fast-color-chip"
+                        style={{ backgroundColor: item.cor }}
+                        onClick={() => {
+                          setGradienteAtivoParede(false);
+                          setWallBackground(item.cor);
+                          saveSnapshot(itensCanvas, item.cor, floorBackground);
+                        }}
+                        title={item.nome}
+                      />
+                    ))}
+                    <label className="fast-color-picker-label" title="Escolher cor livre">
+                      <input
+                        type="color"
+                        className="invisible-color-input"
+                        onChange={(e) => {
+                          setGradienteAtivoParede(false);
+                          setWallBackground(e.target.value);
+                          saveSnapshot(itensCanvas, e.target.value, floorBackground);
+                        }}
+                      />
+                      <span>🎨</span>
+                    </label>
+                  </div>
 
-                       {/* Fundos e Texturas de Parede */}
-                        <div className="adm-header-flex" style={{ marginTop: '14px' }}>
-                          <h4>Fundos de Parede ({fundosParedeCompletos.length})</h4>
-                        </div>
+                  {/* 🎨 Gradiente de Parede */}
+                  <div className="transicao-chao-box" style={{ marginTop: '10px', marginBottom: '4px' }}>
+                    <div className="transicao-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                      <strong>🌈 Gradiente de Parede</strong>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px' }}>
+                        <input
+                          type="checkbox"
+                          checked={gradienteAtivoParede}
+                          onChange={e => {
+                            setGradienteAtivoParede(e.target.checked);
+                            if (e.target.checked) {
+                              // Usa cor atual como base do gradiente se for cor sólida
+                              if (wallBackground && !wallBackground.startsWith('http') && !wallBackground.startsWith('data:') && !wallBackground.startsWith('blob:')) {
+                                setGradienteCor1(wallBackground);
+                              }
+                            }
+                          }}
+                          style={{ accentColor: '#a855f7' }}
+                        />
+                        Ativar
+                      </label>
+                    </div>
 
-                        {fundosParedeCompletos.length === 0 ? (
-                          <div className="bg-presets-empty-box">
-                            <span style={{ fontSize: '24px' }}>🧱</span>
-                            <p>Nenhuma parede oficial cadastrada</p>
-                            <small>Cadastre novas paredes no Painel Master (Controle Geral).</small>
-                          </div>
-                        ) : (
-                          <div className="bg-presets-modern-grid">
-                            {fundosParedeCompletos.map((bg, idx) => (
-                              <div 
-                                key={idx} 
-                                className={`bg-preset-card ${wallBackground === bg.url && modoCenario === 'duplo' ? 'active' : ''}`} 
-                                onClick={() => {
-                                  setModoCenario('duplo');
-                                  setWallBackground(bg.url);
-                                  saveSnapshot(itensCanvas, bg.url, floorBackground);
-                                }} 
-                                title={bg.nome}
-                              >
-                                <img src={bg.url} alt={bg.nome} />
-                                <span>{bg.nome}</span>
-                                {bg.isSuperAdm && (
-                                  <span className="badge-card-stock" style={{ background: '#fef3c7', color: '#b45309', border: 'none' }}>
-                                    👑 Oficial
-                                  </span>
-                                )}
-                                {bg.isMeu && (
-                                  <div className="btn-del-bg" onClick={(e) => { e.stopPropagation(); removerTextura('wall', bg.url); }}>✕</div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                                                {/* Enquadramento & Posição da Parede */}
-                        {wallBackground && (wallBackground.startsWith('http') || wallBackground.startsWith('data:') || wallBackground.startsWith('blob:') || wallBackground.startsWith('/') || wallBackground.startsWith('url')) && (
-                          <div className="transicao-chao-box" style={{ marginTop: '12px' }}>
-                            <div className="transicao-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <strong>📐 Enquadramento & Posição</strong>
-                              <button 
-                                type="button"
-                                className="btn-link-reset"
-                                onClick={() => { setPosicaoParedeY(50); setPosicaoParedeX(50); setZoomParede(100); }}
-                                title="Resetar posição"
-                              >
-                                ↺ Centralizar
-                              </button>
-                            </div>
-                            <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
-                              Mova para cima/baixo para usar a melhor parte da imagem:
-                            </p>
-
-                            <div className="slider-group" style={{ marginBottom: '8px' }}>
-                              <label>↕️ Posição Vertical / Altura ({posicaoParedeY}%)</label>
-                              <input 
-                                type="range" min="0" max="100" value={posicaoParedeY} 
-                                onChange={e => setPosicaoParedeY(Number(e.target.value))} 
-                              />
-                            </div>
-
-                            <div className="slider-group" style={{ marginBottom: '8px' }}>
-                              <label>↔️ Posição Horizontal ({posicaoParedeX}%)</label>
-                              <input 
-                                type="range" min="0" max="100" value={posicaoParedeX} 
-                                onChange={e => setPosicaoParedeX(Number(e.target.value))} 
-                              />
-                            </div>
-
-                            <div className="slider-group" style={{ marginBottom: '4px' }}>
-                              <label>🔍 Zoom / Escala da Parede ({zoomParede}%)</label>
-                              <input 
-                                type="range" min="80" max="250" value={zoomParede} 
-                                onChange={e => setZoomParede(Number(e.target.value))} 
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Ajustes de Transição Ciclorama 3D & Profundidade */}
-                        <div className="transicao-chao-box" style={{ marginTop: '14px' }}>
-                          <div className="transicao-title-row">
-                            <strong>✨ Profundidade 3D & Ciclorama</strong>
-                          </div>
-                          <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>Ajuste a perspectiva, desfoque óptico e transição do chão:</p>
-
-                          <div className="slider-group" style={{ marginBottom: '8px' }}>
-                            <label>📷 Profundidade de Tela / Desfoque ({profundidadeFoco}px)</label>
-                            <input 
-                              type="range" min="0" max="10" value={profundidadeFoco} 
-                              onChange={e => setProfundidadeFoco(Number(e.target.value))} 
-                            />
-                          </div>
-
-                          <div className="slider-group" style={{ marginBottom: '8px' }}>
-                            <label>Sombra de Contato / Oclusão ({sombraChaoIntensidade}%)</label>
-                            <input 
-                              type="range" min="0" max="60" value={sombraChaoIntensidade} 
-                              onChange={e => setSombraChaoIntensidade(Number(e.target.value))} 
-                            />
-                          </div>
-
-                          <div className="slider-group" style={{ marginBottom: '8px' }}>
-                            <label>Altura da Linha do Piso ({alturaChao}%)</label>
-                            <input 
-                              type="range" min="15" max="55" value={alturaChao} 
-                              onChange={e => setAlturaChao(Number(e.target.value))} 
-                            />
-                          </div>
-
-                          <div className="tampo-type-toggle" style={{ marginTop: '6px' }}>
-                            <button 
-                              className={`btn-tampo-type ${estiloRodape === 'suave' ? 'active' : ''}`}
-                              onClick={() => setEstiloRodape('suave')}
-                            >
-                              ✨ Fundo Infinito Suave
-                            </button>
-                            <button 
-                              className={`btn-tampo-type ${estiloRodape === 'rodape' ? 'active' : ''}`}
-                              onClick={() => setEstiloRodape('rodape')}
-                            >
-                              📏 Rodapé de Estúdio
-                            </button>
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* 2. ABA: PISO */}
-                    {cenarioAba === 'piso' && (
-                     <>
-                       {/* Cores Rápidas de Piso */}
-                       <div className="cenario-section-title">🎨 Cores de Piso / Chão:</div>
-                       <div className="fast-colors-palette">
-                         {[
-                           { nome: 'Branco Polido', cor: '#ffffff' },
-                           { nome: 'Off-White', cor: '#f1f5f9' },
-                           { nome: 'Bege Madeira Clara', cor: '#f5ebe0' },
-                           { nome: 'Cinza Cimento', cor: '#cbd5e1' },
-                           { nome: 'Grafite Piso', cor: '#475569' },
-                           { nome: 'Marrom Tablado', cor: '#78350f' },
-                           { nome: 'Preto Noite', cor: '#0a0e17' }
-                         ].map((item, idx) => (
-                           <div 
-                             key={idx}
-                             className="fast-color-chip"
-                             style={{ backgroundColor: item.cor }}
-                             onClick={() => {
-                               setFloorBackground(item.cor);
-                               saveSnapshot(itensCanvas, wallBackground, item.cor);
-                             }}
-                             title={item.nome}
-                           />
-                         ))}
-                         <label className="fast-color-picker-label" title="Escolher cor livre">
-                           <input 
-                             type="color" 
-                             className="invisible-color-input" 
-                             onChange={(e) => {
-                               setFloorBackground(e.target.value);
-                               saveSnapshot(itensCanvas, wallBackground, e.target.value);
-                             }} 
-                           />
-                           <span>🎨</span>
-                         </label>
-                       </div>
-
-                       {/* Fundos e Texturas de Piso */}
-                        <div className="adm-header-flex" style={{ marginTop: '14px' }}>
-                          <h4>Fundos de Piso ({fundosPisoCompletos.length})</h4>
-                        </div>
-
-                        {fundosPisoCompletos.length === 0 ? (
-                          <div className="bg-presets-empty-box">
-                            <span style={{ fontSize: '24px' }}>🪵</span>
-                            <p>Nenhum chão oficial cadastrado</p>
-                            <small>Cadastre novos pisos no Painel Master (Controle Geral).</small>
-                          </div>
-                        ) : (
-                          <div className="bg-presets-modern-grid">
-                            {fundosPisoCompletos.map((bg, idx) => (
-                              <div 
-                                key={idx} 
-                                className={`bg-preset-card ${floorBackground === bg.url && modoCenario === 'duplo' ? 'active' : ''}`} 
-                                onClick={() => {
-                                  setModoCenario('duplo');
-                                  setFloorBackground(bg.url);
-                                  saveSnapshot(itensCanvas, wallBackground, bg.url);
-                                }} 
-                                title={bg.nome}
-                              >
-                                <img src={bg.url} alt={bg.nome} />
-                                <span>{bg.nome}</span>
-                                {bg.isSuperAdm && (
-                                  <span className="badge-card-stock" style={{ background: '#fef3c7', color: '#b45309', border: 'none' }}>
-                                    👑 Oficial
-                                  </span>
-                                )}
-                                {bg.isMeu && (
-                                  <div className="btn-del-bg" onClick={(e) => { e.stopPropagation(); removerTextura('floor', bg.url); }}>✕</div>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                                                {/* Enquadramento & Posição do Chão */}
-                        {floorBackground && (floorBackground.startsWith('http') || floorBackground.startsWith('data:') || floorBackground.startsWith('blob:') || floorBackground.startsWith('/') || floorBackground.startsWith('url')) && (
-                          <div className="transicao-chao-box" style={{ marginTop: '12px' }}>
-                            <div className="transicao-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <strong>📐 Enquadramento do Piso</strong>
-                              <button 
-                                type="button"
-                                className="btn-link-reset"
-                                onClick={() => { setPosicaoPisoY(50); setPosicaoPisoX(50); setZoomPiso(100); }}
-                                title="Resetar posição"
-                              >
-                                ↺ Centralizar
-                              </button>
-                            </div>
-                            <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
-                              Mova para posicionar veios da madeira, porcelanato ou grama:
-                            </p>
-
-                            <div className="slider-group" style={{ marginBottom: '8px' }}>
-                              <label>↕️ Posição Vertical ({posicaoPisoY}%)</label>
-                              <input 
-                                type="range" min="0" max="100" value={posicaoPisoY} 
-                                onChange={e => setPosicaoPisoY(Number(e.target.value))} 
-                              />
-                            </div>
-
-                            <div className="slider-group" style={{ marginBottom: '8px' }}>
-                              <label>↔️ Posição Horizontal ({posicaoPisoX}%)</label>
-                              <input 
-                                type="range" min="0" max="100" value={posicaoPisoX} 
-                                onChange={e => setPosicaoPisoX(Number(e.target.value))} 
-                              />
-                            </div>
-
-                            <div className="slider-group" style={{ marginBottom: '4px' }}>
-                              <label>🔍 Zoom / Escala do Piso ({zoomPiso}%)</label>
-                              <input 
-                                type="range" min="80" max="250" value={zoomPiso} 
-                                onChange={e => setZoomPiso(Number(e.target.value))} 
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Ajustes de Linha do Piso & Profundidade */}
-                        <div className="transicao-chao-box" style={{ marginTop: '14px' }}>
-                          <div className="transicao-title-row">
-                            <strong>📏 Profundidade 3D & Nivelamento do Chão</strong>
-                          </div>
-
-                          <div className="slider-group" style={{ marginBottom: '8px' }}>
-                            <label>📷 Profundidade de Tela / Desfoque ({profundidadeFoco}px)</label>
-                            <input 
-                              type="range" min="0" max="10" value={profundidadeFoco} 
-                              onChange={e => setProfundidadeFoco(Number(e.target.value))} 
-                            />
-                          </div>
-
-                          <div className="slider-group" style={{ marginBottom: '8px' }}>
-                            <label>Altura da Linha do Piso ({alturaChao}%)</label>
-                            <input 
-                              type="range" min="15" max="55" value={alturaChao} 
-                              onChange={e => setAlturaChao(Number(e.target.value))} 
-                            />
-                          </div>
-
-                          <div className="slider-group" style={{ marginBottom: '8px' }}>
-                            <label>Sombra de Contato ({sombraChaoIntensidade}%)</label>
-                            <input 
-                              type="range" min="0" max="60" value={sombraChaoIntensidade} 
-                              onChange={e => setSombraChaoIntensidade(Number(e.target.value))} 
-                            />
-                          </div>
-                        </div>
-                      </>
-                    )}
-
-                    {/* 3. ABA: AMBIENTE INTEIRO */}
-                    {cenarioAba === 'ambiente' && (
+                    {gradienteAtivoParede && (
                       <>
-                        {/* Modo Fundo Único */}
-                        <p className="hint-text" style={{ margin: '8px 0 10px 0' }}>
-                          Foto 100% de tela cheia (ideal para fotos de salão de festa, espaço de eventos ou papel de parede contínuo):
-                        </p>
-
-                        {/* Cores Rápidas */}
-                        <div className="cenario-section-title">🎨 Cor Sólida de Fundo:</div>
-                        <div className="fast-colors-palette" style={{ marginBottom: '14px' }}>
+                        {/* Pré-sets de gradiente */}
+                        <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '10px' }}>
                           {[
-                            { nome: 'Branco', cor: '#ffffff' },
-                            { nome: 'Off-White', cor: '#f8fafc' },
-                            { nome: 'Cinza Claro', cor: '#e2e8f0' },
-                            { nome: 'Bege Salão', cor: '#f5ebe0' },
-                            { nome: 'Grafite Escuro', cor: '#0f172a' }
-                          ].map((item, idx) => (
-                            <div 
-                              key={idx}
-                              className="fast-color-chip"
-                              style={{ backgroundColor: item.cor }}
-                              onClick={() => { setModoCenario('unico'); setWallBackground(item.cor); saveSnapshot(itensCanvas, item.cor, floorBackground); }}
-                              title={item.nome}
+                            { label: 'Neve → Cinza', c1: '#ffffff', c2: '#e2e8f0', dir: 'to bottom' },
+                            { label: 'Rosa Suave', c1: '#fce7f3', c2: '#e0f2fe', dir: 'to bottom right' },
+                            { label: 'Dourado', c1: '#fef9c3', c2: '#d97706', dir: 'to bottom' },
+                            { label: 'Crepúsculo', c1: '#fda4af', c2: '#7c3aed', dir: '135deg' },
+                            { label: 'Noturno', c1: '#1e293b', c2: '#0f172a', dir: 'to bottom' },
+                            { label: 'Menta', c1: '#d1fae5', c2: '#6ee7b7', dir: '45deg' },
+                          ].map((g, i) => (
+                            <div
+                              key={i}
+                              title={g.label}
+                              onClick={() => { setGradienteCor1(g.c1); setGradienteCor2(g.c2); setGradienteDirecao(g.dir); }}
+                              style={{
+                                width: '28px', height: '28px', borderRadius: '6px', cursor: 'pointer',
+                                background: `linear-gradient(${g.dir}, ${g.c1}, ${g.c2})`,
+                                border: '2px solid rgba(255,255,255,0.2)', flexShrink: 0
+                              }}
                             />
                           ))}
-                          <label className="fast-color-picker-label" title="Escolher cor livre">
-                            <input type="color" className="invisible-color-input" onChange={(e) => { setModoCenario('unico'); setWallBackground(e.target.value); saveSnapshot(itensCanvas, e.target.value, floorBackground); }} />
-                            <span>🎨</span>
-                          </label>
                         </div>
 
-                        {/* Galeria de Salões & Ambientes Inteiros */}
-                        <div className="adm-header-flex" style={{ marginTop: '14px' }}>
-                          <h4>Salões & Ambientes Inteiros ({fundosAmbienteCompletos.length})</h4>
-                        </div>
-
-                        {fundosAmbienteCompletos.length === 0 ? (
-                          <div className="bg-presets-empty-box">
-                            <span style={{ fontSize: '24px' }}>🏞️</span>
-                            <p>Nenhum ambiente oficial cadastrado</p>
-                            <small>Cadastre fotos de salões e espaços no Painel Master (Controle Geral).</small>
+                        {/* Seletor de cores */}
+                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginBottom: '3px' }}>Cor 1</label>
+                            <input type="color" value={gradienteCor1} onChange={e => setGradienteCor1(e.target.value)}
+                              style={{ width: '100%', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer', padding: '2px' }}
+                            />
                           </div>
-                        ) : (
-                          <div className="bg-presets-modern-grid">
-                            {fundosAmbienteCompletos.map((bg, idx) => (
-                              <div 
-                                key={idx} 
-                                className={`bg-preset-card ${wallBackground === bg.url && modoCenario === 'unico' ? 'active' : ''}`} 
-                                onClick={() => {
-                                  setModoCenario('unico');
-                                  setWallBackground(bg.url);
-                                  saveSnapshot(itensCanvas, bg.url, floorBackground);
-                                }} 
-                                title={bg.nome}
-                              >
-                                <img src={bg.url} alt={bg.nome} />
-                                <span>{bg.nome}</span>
-                                {bg.isSuperAdm && (
-                                  <span className="badge-card-stock" style={{ background: '#fef3c7', color: '#b45309', border: 'none' }}>
-                                    👑 Oficial
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        )}
-
-                                                {/* Enquadramento & Posição do Ambiente Inteiro */}
-                        {wallBackground && (wallBackground.startsWith('http') || wallBackground.startsWith('data:') || wallBackground.startsWith('blob:') || wallBackground.startsWith('/') || wallBackground.startsWith('url')) && (
-                          <div className="transicao-chao-box" style={{ marginTop: '12px' }}>
-                            <div className="transicao-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                              <strong>📐 Enquadramento da Foto do Salão</strong>
-                              <button 
-                                type="button"
-                                className="btn-link-reset"
-                                onClick={() => { setPosicaoAmbienteY(50); setPosicaoAmbienteX(50); setZoomAmbiente(100); }}
-                                title="Resetar posição"
-                              >
-                                ↺ Centralizar
-                              </button>
-                            </div>
-                            <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
-                              Mova a foto para cima/baixo para focar mais no chão ou no teto/lustres:
-                            </p>
-
-                            <div className="slider-group" style={{ marginBottom: '8px' }}>
-                              <label>↕️ Posição Vertical / Altura ({posicaoAmbienteY}%)</label>
-                              <input 
-                                type="range" min="0" max="100" value={posicaoAmbienteY} 
-                                onChange={e => setPosicaoAmbienteY(Number(e.target.value))} 
-                              />
-                            </div>
-
-                            <div className="slider-group" style={{ marginBottom: '8px' }}>
-                              <label>↔️ Posição Horizontal ({posicaoAmbienteX}%)</label>
-                              <input 
-                                type="range" min="0" max="100" value={posicaoAmbienteX} 
-                                onChange={e => setPosicaoAmbienteX(Number(e.target.value))} 
-                              />
-                            </div>
-
-                            <div className="slider-group" style={{ marginBottom: '4px' }}>
-                              <label>🔍 Zoom / Enquadramento ({zoomAmbiente}%)</label>
-                              <input 
-                                type="range" min="100" max="250" value={zoomAmbiente} 
-                                onChange={e => setZoomAmbiente(Number(e.target.value))} 
-                              />
-                            </div>
-                          </div>
-                        )}
-
-                        {/* Ajustes de Profundidade para Ambiente Inteiro */}
-                        <div className="transicao-chao-box" style={{ marginTop: '14px' }}>
-                          <div className="transicao-title-row">
-                            <strong>📷 Profundidade de Tela & Foco Óptico</strong>
-                          </div>
-                          <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>Desfoca o fundo fotográfico para destacar a decoração e os balões:</p>
-
-                          <div className="slider-group" style={{ marginBottom: '4px' }}>
-                            <label>Profundidade de Foco / Desfoque ({profundidadeFoco}px)</label>
-                            <input 
-                              type="range" min="0" max="10" value={profundidadeFoco} 
-                              onChange={e => setProfundidadeFoco(Number(e.target.value))} 
+                          <div style={{ fontSize: '16px', paddingTop: '16px' }}>→</div>
+                          <div style={{ flex: 1 }}>
+                            <label style={{ fontSize: '10px', color: '#94a3b8', display: 'block', marginBottom: '3px' }}>Cor 2</label>
+                            <input type="color" value={gradienteCor2} onChange={e => setGradienteCor2(e.target.value)}
+                              style={{ width: '100%', height: '32px', border: 'none', borderRadius: '6px', cursor: 'pointer', padding: '2px' }}
                             />
                           </div>
                         </div>
+
+                        {/* Direção do gradiente */}
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                          {[
+                            { label: '↓ Vertical', val: 'to bottom' },
+                            { label: '→ Horizontal', val: 'to right' },
+                            { label: '↘ Diagonal', val: '135deg' },
+                            { label: '↗ Anti-Diag.', val: '45deg' },
+                          ].map(d => (
+                            <button
+                              key={d.val}
+                              className={`btn-tampo-type ${gradienteDirecao === d.val ? 'active' : ''}`}
+                              onClick={() => setGradienteDirecao(d.val)}
+                              style={{ fontSize: '9.5px', padding: '5px 2px' }}
+                            >
+                              {d.label}
+                            </button>
+                          ))}
+                        </div>
                       </>
                     )}
-               </div>
+                  </div>
+
+                  {/* Fundos e Texturas de Parede */}
+                  <div className="adm-header-flex" style={{ marginTop: '14px' }}>
+                    <h4>Fundos de Parede ({fundosParedeCompletos.length})</h4>
+                  </div>
+
+                  {fundosParedeCompletos.length === 0 ? (
+                    <div className="bg-presets-empty-box">
+                      <span style={{ fontSize: '24px' }}>🧱</span>
+                      <p>Nenhuma parede oficial cadastrada</p>
+                      <small>Cadastre novas paredes no Painel Master (Controle Geral).</small>
+                    </div>
+                  ) : (
+                    <div className="bg-presets-modern-grid">
+                      {fundosParedeCompletos.map((bg, idx) => (
+                        <div
+                          key={idx}
+                          className={`bg-preset-card ${wallBackground === bg.url && modoCenario === 'duplo' ? 'active' : ''}`}
+                          onClick={() => {
+                            setModoCenario('duplo');
+                            setWallBackground(bg.url);
+                            saveSnapshot(itensCanvas, bg.url, floorBackground);
+                          }}
+                          title={bg.nome}
+                        >
+                          <img src={bg.url} alt={bg.nome} />
+                          <span>{bg.nome}</span>
+                          {bg.isSuperAdm && (
+                            <span className="badge-card-stock" style={{ background: '#fef3c7', color: '#b45309', border: 'none' }}>
+                              👑 Oficial
+                            </span>
+                          )}
+                          {bg.isMeu && (
+                            <div className="btn-del-bg" onClick={(e) => { e.stopPropagation(); removerTextura('wall', bg.url); }}>✕</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Enquadramento & Posição da Parede */}
+                  {wallBackground && (wallBackground.startsWith('http') || wallBackground.startsWith('data:') || wallBackground.startsWith('blob:') || wallBackground.startsWith('/') || wallBackground.startsWith('url')) && (
+                    <div className="transicao-chao-box" style={{ marginTop: '12px' }}>
+                      <div className="transicao-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong>📐 Enquadramento & Posição</strong>
+                        <button
+                          type="button"
+                          className="btn-link-reset"
+                          onClick={() => { setPosicaoParedeY(50); setPosicaoParedeX(50); setZoomParede(100); setModoTileParede(false); setTileSizeParede(300); }}
+                          title="Resetar posição"
+                        >
+                          ↺ Centralizar
+                        </button>
+                      </div>
+
+                      {/* 🧱 Toggle: Cobrir vs Mosaico */}
+                      <div className="tampo-type-toggle" style={{ marginBottom: '10px' }}>
+                        <button
+                          className={`btn-tampo-type ${!modoTileParede ? 'active' : ''}`}
+                          onClick={() => setModoTileParede(false)}
+                          title="Imagem ocupa toda a parede (ideal para fotos de ambiente)"
+                        >
+                          🖼️ Cobrir
+                        </button>
+                        <button
+                          className={`btn-tampo-type ${modoTileParede ? 'active' : ''}`}
+                          onClick={() => setModoTileParede(true)}
+                          title="Repete a textura em grade (ideal para tijolos, madeiras, mármores)"
+                        >
+                          🧱 Mosaico
+                        </button>
+                      </div>
+
+                      {/* Modo COBRIR: controles de posição */}
+                      {!modoTileParede && (
+                        <>
+                          <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
+                            Mova para cima/baixo para usar a melhor parte da imagem:
+                          </p>
+                          <div className="slider-group" style={{ marginBottom: '8px' }}>
+                            <label>↕️ Posição Vertical ({posicaoParedeY}%)</label>
+                            <input
+                              type="range" min="0" max="100" value={posicaoParedeY}
+                              onChange={e => setPosicaoParedeY(Number(e.target.value))}
+                            />
+                          </div>
+                          <div className="slider-group" style={{ marginBottom: '4px' }}>
+                            <label>↔️ Posição Horizontal ({posicaoParedeX}%)</label>
+                            <input
+                              type="range" min="0" max="100" value={posicaoParedeX}
+                              onChange={e => setPosicaoParedeX(Number(e.target.value))}
+                            />
+                          </div>
+                        </>
+                      )}
+
+                      {/* Modo MOSAICO: controle de tamanho do padrão */}
+                      {modoTileParede && (
+                        <>
+                          <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
+                            Arraste para a esquerda para tijolos menores, direita para maiores:
+                          </p>
+                          <div className="slider-group" style={{ marginBottom: '4px' }}>
+                            <label>🔲 Tamanho do Padrão ({tileSizeParede}px)</label>
+                            <input
+                              type="range" min="80" max="800" value={tileSizeParede}
+                              onChange={e => setTileSizeParede(Number(e.target.value))}
+                            />
+                          </div>
+                          <p className="hint-text" style={{ margin: '4px 0 0 0', fontSize: '10px', color: '#94a3b8' }}>
+                            💡 Dica: 80–200px = tijolos pequenos, 300–500px = médios, 600–800px = grandes
+                          </p>
+                        </>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Ajustes de Transição Ciclorama 3D & Profundidade */}
+                  <div className="transicao-chao-box" style={{ marginTop: '14px' }}>
+                    <div className="transicao-title-row">
+                      <strong>✨ Profundidade 3D & Ciclorama</strong>
+                    </div>
+                    <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>Ajuste a perspectiva, desfoque óptico e transição do chão:</p>
+
+                    <div className="slider-group" style={{ marginBottom: '8px' }}>
+                      <label>📷 Profundidade de Tela / Desfoque ({profundidadeFoco}px)</label>
+                      <input
+                        type="range" min="0" max="10" value={profundidadeFoco}
+                        onChange={e => setProfundidadeFoco(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="slider-group" style={{ marginBottom: '8px' }}>
+                      <label>Sombra de Contato / Oclusão ({sombraChaoIntensidade}%)</label>
+                      <input
+                        type="range" min="0" max="60" value={sombraChaoIntensidade}
+                        onChange={e => setSombraChaoIntensidade(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="slider-group" style={{ marginBottom: '8px' }}>
+                      <label>Altura da Linha do Piso ({alturaChao}%)</label>
+                      <input
+                        type="range" min="15" max="55" value={alturaChao}
+                        onChange={e => setAlturaChao(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="tampo-type-toggle" style={{ marginTop: '6px' }}>
+                      <button
+                        className={`btn-tampo-type ${estiloRodape === 'suave' ? 'active' : ''}`}
+                        onClick={() => setEstiloRodape('suave')}
+                      >
+                        ✨ Fundo Infinito Suave
+                      </button>
+                      <button
+                        className={`btn-tampo-type ${estiloRodape === 'rodape' ? 'active' : ''}`}
+                        onClick={() => setEstiloRodape('rodape')}
+                      >
+                        📏 Rodapé de Estúdio
+                      </button>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 2. ABA: PISO */}
+              {cenarioAba === 'piso' && (
+                <>
+                  {/* Cores Rápidas de Piso */}
+                  <div className="cenario-section-title">🎨 Cores de Piso / Chão:</div>
+                  <div className="fast-colors-palette">
+                    {[
+                      { nome: 'Branco Polido', cor: '#ffffff' },
+                      { nome: 'Off-White', cor: '#f1f5f9' },
+                      { nome: 'Bege Madeira Clara', cor: '#f5ebe0' },
+                      { nome: 'Cinza Cimento', cor: '#cbd5e1' },
+                      { nome: 'Grafite Piso', cor: '#475569' },
+                      { nome: 'Marrom Tablado', cor: '#78350f' },
+                      { nome: 'Preto Noite', cor: '#0a0e17' }
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="fast-color-chip"
+                        style={{ backgroundColor: item.cor }}
+                        onClick={() => {
+                          setFloorBackground(item.cor);
+                          saveSnapshot(itensCanvas, wallBackground, item.cor);
+                        }}
+                        title={item.nome}
+                      />
+                    ))}
+                    <label className="fast-color-picker-label" title="Escolher cor livre">
+                      <input
+                        type="color"
+                        className="invisible-color-input"
+                        onChange={(e) => {
+                          setFloorBackground(e.target.value);
+                          saveSnapshot(itensCanvas, wallBackground, e.target.value);
+                        }}
+                      />
+                      <span>🎨</span>
+                    </label>
+                  </div>
+
+                  {/* Fundos e Texturas de Piso */}
+                  <div className="adm-header-flex" style={{ marginTop: '14px' }}>
+                    <h4>Fundos de Piso ({fundosPisoCompletos.length})</h4>
+                  </div>
+
+                  {fundosPisoCompletos.length === 0 ? (
+                    <div className="bg-presets-empty-box">
+                      <span style={{ fontSize: '24px' }}>🪵</span>
+                      <p>Nenhum chão oficial cadastrado</p>
+                      <small>Cadastre novos pisos no Painel Master (Controle Geral).</small>
+                    </div>
+                  ) : (
+                    <div className="bg-presets-modern-grid">
+                      {fundosPisoCompletos.map((bg, idx) => (
+                        <div
+                          key={idx}
+                          className={`bg-preset-card ${floorBackground === bg.url && modoCenario === 'duplo' ? 'active' : ''}`}
+                          onClick={() => {
+                            setModoCenario('duplo');
+                            setFloorBackground(bg.url);
+                            saveSnapshot(itensCanvas, wallBackground, bg.url);
+                          }}
+                          title={bg.nome}
+                        >
+                          <img src={bg.url} alt={bg.nome} />
+                          <span>{bg.nome}</span>
+                          {bg.isSuperAdm && (
+                            <span className="badge-card-stock" style={{ background: '#fef3c7', color: '#b45309', border: 'none' }}>
+                              👑 Oficial
+                            </span>
+                          )}
+                          {bg.isMeu && (
+                            <div className="btn-del-bg" onClick={(e) => { e.stopPropagation(); removerTextura('floor', bg.url); }}>✕</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Enquadramento & Posição do Chão */}
+                  {floorBackground && (floorBackground.startsWith('http') || floorBackground.startsWith('data:') || floorBackground.startsWith('blob:') || floorBackground.startsWith('/') || floorBackground.startsWith('url')) && (
+                    <div className="transicao-chao-box" style={{ marginTop: '12px' }}>
+                      <div className="transicao-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong>📐 Enquadramento do Piso</strong>
+                        <button
+                          type="button"
+                          className="btn-link-reset"
+                          onClick={() => { setPosicaoPisoY(50); setPosicaoPisoX(50); setZoomPiso(100); }}
+                          title="Resetar posição"
+                        >
+                        ↺ Centralizar
+                        </button>
+                      </div>
+                      <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
+                        Mova para posicionar a melhor parte da imagem:
+                      </p>
+
+                      <div className="slider-group" style={{ marginBottom: '8px' }}>
+                        <label>↕️ Posição Vertical ({posicaoPisoY}%)</label>
+                        <input
+                          type="range" min="0" max="100" value={posicaoPisoY}
+                          onChange={e => setPosicaoPisoY(Number(e.target.value))}
+                        />
+                      </div>
+                      <div className="slider-group" style={{ marginBottom: '4px' }}>
+                        <label>↔️ Posição Horizontal ({posicaoPisoX}%)</label>
+                        <input
+                          type="range" min="0" max="100" value={posicaoPisoX}
+                          onChange={e => setPosicaoPisoX(Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ajustes de Linha do Piso & Profundidade */}
+                  <div className="transicao-chao-box" style={{ marginTop: '14px' }}>
+                    <div className="transicao-title-row">
+                      <strong>📏 Profundidade 3D & Nivelamento do Chão</strong>
+                    </div>
+
+                    <div className="slider-group" style={{ marginBottom: '8px' }}>
+                      <label>📷 Profundidade de Tela / Desfoque ({profundidadeFoco}px)</label>
+                      <input
+                        type="range" min="0" max="10" value={profundidadeFoco}
+                        onChange={e => setProfundidadeFoco(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="slider-group" style={{ marginBottom: '8px' }}>
+                      <label>Altura da Linha do Piso ({alturaChao}%)</label>
+                      <input
+                        type="range" min="15" max="55" value={alturaChao}
+                        onChange={e => setAlturaChao(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className="slider-group" style={{ marginBottom: '8px' }}>
+                      <label>Sombra de Contato ({sombraChaoIntensidade}%)</label>
+                      <input
+                        type="range" min="0" max="60" value={sombraChaoIntensidade}
+                        onChange={e => setSombraChaoIntensidade(Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 3. ABA: AMBIENTE INTEIRO */}
+              {cenarioAba === 'ambiente' && (
+                <>
+                  {/* Modo Fundo Único */}
+                  <p className="hint-text" style={{ margin: '8px 0 10px 0' }}>
+                    Foto 100% de tela cheia (ideal para fotos de salão de festa, espaço de eventos ou papel de parede contínuo):
+                  </p>
+
+                  {/* Cores Rápidas */}
+                  <div className="cenario-section-title">🎨 Cor Sólida de Fundo:</div>
+                  <div className="fast-colors-palette" style={{ marginBottom: '14px' }}>
+                    {[
+                      { nome: 'Branco', cor: '#ffffff' },
+                      { nome: 'Off-White', cor: '#f8fafc' },
+                      { nome: 'Cinza Claro', cor: '#e2e8f0' },
+                      { nome: 'Bege Salão', cor: '#f5ebe0' },
+                      { nome: 'Grafite Escuro', cor: '#0f172a' }
+                    ].map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="fast-color-chip"
+                        style={{ backgroundColor: item.cor }}
+                        onClick={() => { setModoCenario('unico'); setWallBackground(item.cor); saveSnapshot(itensCanvas, item.cor, floorBackground); }}
+                        title={item.nome}
+                      />
+                    ))}
+                    <label className="fast-color-picker-label" title="Escolher cor livre">
+                      <input type="color" className="invisible-color-input" onChange={(e) => { setModoCenario('unico'); setWallBackground(e.target.value); saveSnapshot(itensCanvas, e.target.value, floorBackground); }} />
+                      <span>🎨</span>
+                    </label>
+                  </div>
+
+                  {/* Galeria de Salões & Ambientes Inteiros */}
+                  <div className="adm-header-flex" style={{ marginTop: '14px' }}>
+                    <h4>Salões & Ambientes Inteiros ({fundosAmbienteCompletos.length})</h4>
+                  </div>
+
+                  {fundosAmbienteCompletos.length === 0 ? (
+                    <div className="bg-presets-empty-box">
+                      <span style={{ fontSize: '24px' }}>🏞️</span>
+                      <p>Nenhum ambiente oficial cadastrado</p>
+                      <small>Cadastre fotos de salões e espaços no Painel Master (Controle Geral).</small>
+                    </div>
+                  ) : (
+                    <div className="bg-presets-modern-grid">
+                      {fundosAmbienteCompletos.map((bg, idx) => (
+                        <div
+                          key={idx}
+                          className={`bg-preset-card ${wallBackground === bg.url && modoCenario === 'unico' ? 'active' : ''}`}
+                          onClick={() => {
+                            setModoCenario('unico');
+                            setWallBackground(bg.url);
+                            saveSnapshot(itensCanvas, bg.url, floorBackground);
+                          }}
+                          title={bg.nome}
+                        >
+                          <img src={bg.url} alt={bg.nome} />
+                          <span>{bg.nome}</span>
+                          {bg.isSuperAdm && (
+                            <span className="badge-card-stock" style={{ background: '#fef3c7', color: '#b45309', border: 'none' }}>
+                              👑 Oficial
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Enquadramento & Posição do Ambiente Inteiro */}
+                  {wallBackground && (wallBackground.startsWith('http') || wallBackground.startsWith('data:') || wallBackground.startsWith('blob:') || wallBackground.startsWith('/') || wallBackground.startsWith('url')) && (
+                    <div className="transicao-chao-box" style={{ marginTop: '12px' }}>
+                      <div className="transicao-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <strong>📐 Enquadramento da Foto do Salão</strong>
+                        <button
+                          type="button"
+                          className="btn-link-reset"
+                          onClick={() => { setPosicaoAmbienteY(50); setPosicaoAmbienteX(50); setZoomAmbiente(100); }}
+                          title="Resetar posição"
+                        >
+                          ↺ Centralizar
+                        </button>
+                      </div>
+                      <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
+                        Mova a foto para cima/baixo para focar mais no chão ou no teto/lustres:
+                      </p>
+
+                      <div className="slider-group" style={{ marginBottom: '8px' }}>
+                        <label>↕️ Posição Vertical / Altura ({posicaoAmbienteY}%)</label>
+                        <input
+                          type="range" min="0" max="100" value={posicaoAmbienteY}
+                          onChange={e => setPosicaoAmbienteY(Number(e.target.value))}
+                        />
+                      </div>
+
+                      <div className="slider-group" style={{ marginBottom: '8px' }}>
+                        <label>↔️ Posição Horizontal ({posicaoAmbienteX}%)</label>
+                        <input
+                          type="range" min="0" max="100" value={posicaoAmbienteX}
+                          onChange={e => setPosicaoAmbienteX(Number(e.target.value))}
+                        />
+                      </div>
+
+                      <div className="slider-group" style={{ marginBottom: '4px' }}>
+                        <label>🔍 Zoom / Enquadramento ({zoomAmbiente}%)</label>
+                        <input
+                          type="range" min="100" max="250" value={zoomAmbiente}
+                          onChange={e => setZoomAmbiente(Number(e.target.value))}
+                        />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Ajustes de Profundidade para Ambiente Inteiro */}
+                  <div className="transicao-chao-box" style={{ marginTop: '14px' }}>
+                    <div className="transicao-title-row">
+                      <strong>📷 Profundidade de Tela & Foco Óptico</strong>
+                    </div>
+                    <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>Desfoca o fundo fotográfico para destacar a decoração e os balões:</p>
+
+                    <div className="slider-group" style={{ marginBottom: '4px' }}>
+                      <label>Profundidade de Foco / Desfoque ({profundidadeFoco}px)</label>
+                      <input
+                        type="range" min="0" max="10" value={profundidadeFoco}
+                        onChange={e => setProfundidadeFoco(Number(e.target.value))}
+                      />
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
           )}
 
           {/* ABA: EFEITOS & ILUMINAÇÃO DO AMBIENTE */}
@@ -4987,7 +5552,7 @@ const Moodboard = () => {
                   {tonalidadeCor && <button className="btn-link-reset" onClick={() => { setTonalidadeCor(''); setTonalidadeIntensidade(0); }} title="Remover">✕</button>}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', margin: '6px 0' }}>
-                  {['#ffedd5','#fce7f3','#e0f2fe','#dcfce7','#fef9c3','#f3e8ff','#fee2e2'].map(cor => (
+                  {['#ffedd5', '#fce7f3', '#e0f2fe', '#dcfce7', '#fef9c3', '#f3e8ff', '#fee2e2'].map(cor => (
                     <button
                       key={cor}
                       title={cor}
@@ -5004,7 +5569,7 @@ const Moodboard = () => {
                   ))}
                 </div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', margin: '0 0 8px 0' }}>
-                  {['#1e1b4b','#0c1a2e','#1a0a0a','#022c22','#1c1917','#1f1427','#fafafa'].map(cor => (
+                  {['#1e1b4b', '#0c1a2e', '#1a0a0a', '#022c22', '#1c1917', '#1f1427', '#fafafa'].map(cor => (
                     <button
                       key={cor}
                       title={cor}
@@ -5073,270 +5638,270 @@ const Moodboard = () => {
       )}
 
       {/* 🎨 ÁREA DA PRANCHETA & STUDIO CANVAS */}
-      <div 
-        className="studio-canvas" 
+      <div
+        className="studio-canvas"
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropCanvas}
         onContextMenu={(e) => { e.preventDefault(); }}
       >
-        
+
         {/* 🌟 BARRA SUPERIOR DARK LUXURY */}
         <div className="canvas-header-overlay" onClick={e => e.stopPropagation()}>
-             <div className="header-actions-group">
-                 
-                 {/* Botão Sair / Voltar ao Início */}
-                 <button className="btn-header-action danger-exit" onClick={() => navigate('/dashboard')} title="Voltar ao Painel Principal">
-                     <Icons.Crown width={14} height={14} /> <span className="btn-text">INÍCIO</span>
-                 </button>
+          <div className="header-actions-group">
 
-                 <div className="header-divider"></div>
+            {/* Botão Sair / Voltar ao Início */}
+            <button className="btn-header-action danger-exit" onClick={() => navigate('/dashboard')} title="Voltar ao Painel Principal">
+              <Icons.Crown width={14} height={14} /> <span className="btn-text">INÍCIO</span>
+            </button>
 
-                 {/* Controles de Histórico */}
-                 {!modoApresentacao && (
-                   <div className="header-btn-cluster">
-                      <button className="btn-header-tool" onClick={handleUndo} disabled={historyStep <= 0} title="Desfazer (Ctrl + Z)">
-                        <Icons.Undo />
-                      </button>
-                      <button className="btn-header-tool" onClick={handleRedo} disabled={historyStep >= history.length - 1} title="Refazer (Ctrl + Y)">
-                        <Icons.Redo />
-                      </button>
-                   </div>
-                 )}
+            <div className="header-divider"></div>
 
-                 {/* Controles de Zoom */}
-                 <div className="header-btn-cluster zoom-cluster">
-                    <button className="btn-header-tool" onClick={() => setZoom(z => Math.max(0.5, Number((z - 0.1).toFixed(1))))} title="Diminuir Zoom">
-                      <Icons.ZoomOut />
-                    </button>
-                    <span className="zoom-indicator" onClick={() => setZoom(1)} title="Clique para resetar 100%">
-                      {Math.round(zoom * 100)}%
-                    </span>
-                    <button className="btn-header-tool" onClick={() => setZoom(z => Math.min(1.6, Number((z + 0.1).toFixed(1))))} title="Aumentar Zoom">
-                      <Icons.ZoomIn />
-                    </button>
-                 </div>
+            {/* Controles de Histórico */}
+            {!modoApresentacao && (
+              <div className="header-btn-cluster">
+                <button className="btn-header-tool" onClick={handleUndo} disabled={historyStep <= 0} title="Desfazer (Ctrl + Z)">
+                  <Icons.Undo />
+                </button>
+                <button className="btn-header-tool" onClick={handleRedo} disabled={historyStep >= history.length - 1} title="Refazer (Ctrl + Y)">
+                  <Icons.Redo />
+                </button>
+              </div>
+            )}
 
-                 <div className="header-divider"></div>
+            {/* Controles de Zoom */}
+            <div className="header-btn-cluster zoom-cluster">
+              <button className="btn-header-tool" onClick={() => setZoom(z => Math.max(0.5, Number((z - 0.1).toFixed(1))))} title="Diminuir Zoom">
+                <Icons.ZoomOut />
+              </button>
+              <span className="zoom-indicator" onClick={() => setZoom(1)} title="Clique para resetar 100%">
+                {Math.round(zoom * 100)}%
+              </span>
+              <button className="btn-header-tool" onClick={() => setZoom(z => Math.min(1.6, Number((z + 0.1).toFixed(1))))} title="Aumentar Zoom">
+                <Icons.ZoomIn />
+              </button>
+            </div>
 
-                 {/* 🌟 Modo Apresentação / Showroom */}
-                 <button 
-                  className={`btn-header-action ${modoApresentacao ? 'luxury-gold' : ''}`} 
-                  onClick={() => { setModoApresentacao(!modoApresentacao); setSelecionadoId(null); }}
-                  title="Modo Apresentação limpa para encantar o cliente"
-                 >
-                   {modoApresentacao ? <Icons.Minimize /> : <Icons.Maximize />} 
-                   <span className="btn-text">{modoApresentacao ? 'SAIR' : 'APRESENTAÇÃO'}</span>
-                 </button>
+            <div className="header-divider"></div>
 
-                 {!modoApresentacao && (
-                   <>
-                     <div className="header-divider"></div>
+            {/* 🌟 Modo Apresentação / Showroom */}
+            <button
+              className={`btn-header-action ${modoApresentacao ? 'luxury-gold' : ''}`}
+              onClick={() => { setModoApresentacao(!modoApresentacao); setSelecionadoId(null); }}
+              title="Modo Apresentação limpa para encantar o cliente"
+            >
+              {modoApresentacao ? <Icons.Minimize /> : <Icons.Maximize />}
+              <span className="btn-text">{modoApresentacao ? 'SAIR' : 'APRESENTAÇÃO'}</span>
+            </button>
 
-                     {/* 🧲 Alinhamento Magnético */}
-                     <button 
-                       className={`btn-header-action ${snappingAtivo ? 'luxury-gold' : ''}`} 
-                       onClick={() => setSnappingAtivo(!snappingAtivo)} 
-                       title={snappingAtivo ? "Alinhamento Magnético Ativado (Clique para desativar)" : "Alinhamento Magnético Desativado (Clique para ativar)"}
-                     >
-                       <span style={{ fontSize: '13px' }}>🧲</span>
-                       <span className="btn-text">{snappingAtivo ? 'MAGNET: ON' : 'MAGNET: OFF'}</span>
-                     </button>
+            {!modoApresentacao && (
+              <>
+                <div className="header-divider"></div>
 
-                     {/* ⌨️ Atalhos de Produtividade */}
-                     <button 
-                       className="btn-header-action" 
-                       onClick={() => setModalAtalhosAberto(true)} 
-                       title="Guia de Atalhos de Teclado (Pressione ?)"
-                     >
-                       <span style={{ fontSize: '13px' }}>⌨️</span>
-                       <span className="btn-text">ATALHOS</span>
-                     </button>
+                {/* 🧲 Alinhamento Magnético */}
+                <button
+                  className={`btn-header-action ${snappingAtivo ? 'luxury-gold' : ''}`}
+                  onClick={() => setSnappingAtivo(!snappingAtivo)}
+                  title={snappingAtivo ? "Alinhamento Magnético Ativado (Clique para desativar)" : "Alinhamento Magnético Desativado (Clique para ativar)"}
+                >
+                  <span style={{ fontSize: '13px' }}>🧲</span>
+                  <span className="btn-text">{snappingAtivo ? 'MAGNET: ON' : 'MAGNET: OFF'}</span>
+                </button>
 
-                     <div className="header-divider"></div>
+                {/* ⌨️ Atalhos de Produtividade */}
+                <button
+                  className="btn-header-action"
+                  onClick={() => setModalAtalhosAberto(true)}
+                  title="Guia de Atalhos de Teclado (Pressione ?)"
+                >
+                  <span style={{ fontSize: '13px' }}>⌨️</span>
+                  <span className="btn-text">ATALHOS</span>
+                </button>
 
-                     {/* Projetos */}
-                     <button className="btn-header-action" onClick={handleAbrirListaProjetos} title="Meus Projetos"><Icons.Folder /> <span className="btn-text">PROJETOS</span></button>
-                     <button className="btn-header-action" onClick={handleAbrirModalSalvar} title="Salvar Projeto"><Icons.Save /> <span className="btn-text">SALVAR</span></button>
-                     
-                     <div className="header-divider"></div>
+                <div className="header-divider"></div>
 
-                     {/* Alternador do Painel Direito Pro (Photoshop) */}
-                     <button 
-                       className={`btn-header-action ${painelDireitoAberto ? 'luxury-gold' : ''}`} 
-                       onClick={() => setPainelDireitoAberto(!painelDireitoAberto)}
-                       title="Alternar Painel Lateral Pro (Camadas & Inspetor Photoshop)"
-                     >
-                       <Icons.Sliders width={14} height={14} /> 
-                       <span className="btn-text">PAINEL PRO</span>
-                     </button>
+                {/* Projetos */}
+                <button className="btn-header-action" onClick={handleAbrirListaProjetos} title="Meus Projetos"><Icons.Folder /> <span className="btn-text">PROJETOS</span></button>
+                <button className="btn-header-action" onClick={handleAbrirModalSalvar} title="Salvar Projeto"><Icons.Save /> <span className="btn-text">SALVAR</span></button>
 
-                     <div className="header-divider"></div>
+                <div className="header-divider"></div>
 
-                     {/* Ações de Exportação */}
-                     <button className="btn-header-action primary" onClick={handleExportImage} title="Baixar Imagem PNG"><Icons.Download /> <span className="btn-text">PNG</span></button>
-                     <button className="btn-header-action luxury-gold" onClick={handleGerarPropostaPDF} disabled={exportandoPDF} title="Gerar Proposta Comercial PDF">
-                       <Icons.FileText /> <span className="btn-text">{exportandoPDF ? '...' : 'PDF'}</span>
-                     </button>
-                   </>
-                 )}
-             </div>
-         </div>
-        
+                {/* Alternador do Painel Direito Pro (Photoshop) */}
+                <button
+                  className={`btn-header-action ${painelDireitoAberto ? 'luxury-gold' : ''}`}
+                  onClick={() => setPainelDireitoAberto(!painelDireitoAberto)}
+                  title="Alternar Painel Lateral Pro (Camadas & Inspetor Photoshop)"
+                >
+                  <Icons.Sliders width={14} height={14} />
+                  <span className="btn-text">PAINEL PRO</span>
+                </button>
+
+                <div className="header-divider"></div>
+
+                {/* Ações de Exportação */}
+                <button className="btn-header-action primary" onClick={handleExportImage} title="Baixar Imagem PNG"><Icons.Download /> <span className="btn-text">PNG</span></button>
+                <button className="btn-header-action luxury-gold" onClick={handleGerarPropostaPDF} disabled={exportandoPDF} title="Gerar Proposta Comercial PDF">
+                  <Icons.FileText /> <span className="btn-text">{exportandoPDF ? '...' : 'PDF'}</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+
         {/* 🖼️ O QUADRO DECORATIVO (ARTBOARD) */}
         <div className="artboard-zoom-wrapper" style={{ transform: `scale(${zoom})` }}>
           <div className="canvas-artboard" ref={boardRef}>
-              
-              {/* 🧲 GUIAS MAGNÉTICAS DE ALINHAMENTO ATIVAS */}
-              {activeSnapGuides.map((guide, idx) => (
-                <div
-                  key={idx}
-                  className="snap-guide-line"
-                  style={guide.type === 'vertical' ? {
-                    left: `${guide.pos}px`,
-                    top: 0,
-                    width: '2px',
-                    height: '100%',
-                  } : {
-                    top: `${guide.pos}px`,
-                    left: 0,
-                    height: '2px',
-                    width: '100%',
-                  }}
-                >
-                  {guide.label && (
-                    <span 
-                      className="snap-guide-label" 
-                      style={guide.type === 'horizontal' ? { top: '-18px', left: '12px' } : { top: '12px', left: '6px' }}
-                    >
-                      {guide.label}
-                    </span>
-                  )}
-                </div>
-              ))}
-              
-              {/* Camadas do Cenário (Suavização / Ciclorama 3D) */}
-              <div className="canvas-layers" style={{
-                filter: [
-                  luminosidadeGlobal !== 100 ? `brightness(${luminosidadeGlobal}%)` : '',
-                  contrasteGlobal !== 100 ? `contrast(${contrasteGlobal}%)` : '',
-                  saturacaoGlobal !== 100 ? `saturate(${saturacaoGlobal}%)` : '',
-                  profundidadeFoco > 0 ? `blur(${profundidadeFoco}px)` : ''
-                ].filter(Boolean).join(' ') || 'none',
-                transform: profundidadeFoco > 0 ? 'scale(1.03)' : 'none',
-                transition: 'filter 0.2s ease, transform 0.2s ease'
-              }}>
-                {modoCenario === 'unico' ? (
-                  <div className="layer-single-bg" style={getStyle(wallBackground, "ambiente")} />
-                ) : (
-                  <>
-                    <div 
-                      className="layer-wall" 
-                      style={{
-                        ...getStyle(wallBackground, "wall"),
-                        height: `${100 - alturaChao}%`
-                      }}
-                    >
-                      {/* Sombra de Ambient Occlusion no fundo da parede (Curva de Ciclorama) */}
-                      <div 
-                        className="wall-bottom-shadow-gradient" 
-                        style={{
-                          opacity: sombraChaoIntensidade / 100
-                        }}
-                      />
-                    </div>
 
-                    {estiloRodape === 'rodape' && (
-                      <div className="layer-baseboard" />
-                    )}
-
-                    <div 
-                      className="layer-floor" 
-                      style={{
-                        ...getStyle(floorBackground, "floor"),
-                        height: `${alturaChao}%`
-                      }}
-                    >
-                      {/* Sombra de contato e reflexo sutil no chão */}
-                      <div 
-                        className="floor-top-shadow-gradient" 
-                        style={{
-                          opacity: sombraChaoIntensidade / 100
-                        }}
-                      />
-                    </div>
-                  </>
+            {/* 🧲 GUIAS MAGNÉTICAS DE ALINHAMENTO ATIVAS */}
+            {activeSnapGuides.map((guide, idx) => (
+              <div
+                key={idx}
+                className="snap-guide-line"
+                style={guide.type === 'vertical' ? {
+                  left: `${guide.pos}px`,
+                  top: 0,
+                  width: '2px',
+                  height: '100%',
+                } : {
+                  top: `${guide.pos}px`,
+                  left: 0,
+                  height: '2px',
+                  width: '100%',
+                }}
+              >
+                {guide.label && (
+                  <span
+                    className="snap-guide-label"
+                    style={guide.type === 'horizontal' ? { top: '-18px', left: '12px' } : { top: '12px', left: '6px' }}
+                  >
+                    {guide.label}
+                  </span>
                 )}
               </div>
+            ))}
 
-              {/* 🌅 OVERLAY DE TONALIDADE DE COR (COLOR GRADING) */}
-              {tonalidadeCor && tonalidadeIntensidade > 0 && (
-                <div
-                  className="canvas-overlay-tonalidade"
-                  style={{
-                    position: 'absolute', inset: 0,
-                    background: tonalidadeCor,
-                    opacity: tonalidadeIntensidade / 100,
-                    pointerEvents: 'none',
-                    zIndex: 1,
-                    mixBlendMode: 'color',
-                    transition: 'opacity 0.2s ease'
-                  }}
-                />
-              )}
-
-              {/* 🕸️ OVERLAY DE VINHETA */}
-              {vignettaIntensidade > 0 && (
-                <div
-                  className="canvas-overlay-vignetta"
-                  style={{
-                    position: 'absolute', inset: 0,
-                    background: `radial-gradient(ellipse at center, transparent ${Math.max(10, 70 - vignettaIntensidade * 0.5)}%, rgba(0,0,0,${vignettaIntensidade / 150}) 100%)`,
-                    pointerEvents: 'none',
-                    zIndex: 2,
-                    transition: 'background 0.2s ease'
-                  }}
-                />
-              )}
-      
-              {itensCanvas.map((item, index) => {
-                const isSelected = selecionadoId === item.uniqueId && !modoApresentacao;
-                const isAComprar = item.type === 'image' && item.isEstoqueProprio === false && !item.origem?.includes('upload');
-
-                return (
-                  <div key={item.uniqueId} 
-                      data-item-id={item.uniqueId}
-                      className={`canvas-object ${isSelected ? 'selected' : ''} ${item.locked ? 'locked-item' : ''} ${isPanCapaMode && isSelected ? 'in-pan-mode' : ''}`}
-                      style={{ 
-                          left: item.x, 
-                          top: item.y, 
-                          width: item.type === 'text' ? 'max-content' : `${item.width}px`, 
-                          height: item.type === 'text' ? 'max-content' : `${item.height}px`, 
-                          zIndex: index + 10,
-                          transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1}) scaleY(${item.flipV ? -1 : 1})`,
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          filter: (item.shadow > 0 || (item.brightness && item.brightness !== 100) || (item.contrast && item.contrast !== 100) || (item.saturate && item.saturate !== 100))
-                            ? `brightness(${item.brightness || 100}%) contrast(${item.contrast || 100}%) saturate(${item.saturate || 100}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`
-                            : undefined,
-                          opacity: (item.opacity || 100) / 100, 
-                          cursor: isPanCapaMode && isSelected ? 'move' : (item.locked ? 'not-allowed' : 'grab'),
-                          touchAction: 'none'
-                      }}
-                      onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type)} 
-                      onDoubleClick={(e) => {
-                        e.stopPropagation();
-                        if (item.type === 'text') {
-                          setEditingTextId(item.uniqueId);
-                        } else if (item.capaUrl) {
-                          setIsPanCapaMode(!isPanCapaMode);
-                        }
-                      }}
-                      onClick={e => e.stopPropagation()} 
-                      onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}
+            {/* Camadas do Cenário (Suavização / Ciclorama 3D) */}
+            <div className="canvas-layers" style={{
+              filter: [
+                luminosidadeGlobal !== 100 ? `brightness(${luminosidadeGlobal}%)` : '',
+                contrasteGlobal !== 100 ? `contrast(${contrasteGlobal}%)` : '',
+                saturacaoGlobal !== 100 ? `saturate(${saturacaoGlobal}%)` : '',
+                profundidadeFoco > 0 ? `blur(${profundidadeFoco}px)` : ''
+              ].filter(Boolean).join(' ') || 'none',
+              transform: profundidadeFoco > 0 ? 'scale(1.03)' : 'none',
+              transition: 'filter 0.2s ease, transform 0.2s ease'
+            }}>
+              {modoCenario === 'unico' ? (
+                <div className="layer-single-bg" style={getStyle(wallBackground, "ambiente")} />
+              ) : (
+                <>
+                  <div
+                    className="layer-wall"
+                    style={{
+                      ...getStyle(wallBackground, "wall"),
+                      height: `${100 - alturaChao}%`
+                    }}
                   >
-                  
+                    {/* Sombra de Ambient Occlusion no fundo da parede (Curva de Ciclorama) */}
+                    <div
+                      className="wall-bottom-shadow-gradient"
+                      style={{
+                        opacity: sombraChaoIntensidade / 100
+                      }}
+                    />
+                  </div>
+
+                  {estiloRodape === 'rodape' && (
+                    <div className="layer-baseboard" />
+                  )}
+
+                  <div
+                    className="layer-floor"
+                    style={{
+                      ...getStyle(floorBackground, "floor"),
+                      height: `${alturaChao}%`
+                    }}
+                  >
+                    {/* Sombra de contato e reflexo sutil no chão */}
+                    <div
+                      className="floor-top-shadow-gradient"
+                      style={{
+                        opacity: sombraChaoIntensidade / 100
+                      }}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* 🌅 OVERLAY DE TONALIDADE DE COR (COLOR GRADING) */}
+            {tonalidadeCor && tonalidadeIntensidade > 0 && (
+              <div
+                className="canvas-overlay-tonalidade"
+                style={{
+                  position: 'absolute', inset: 0,
+                  background: tonalidadeCor,
+                  opacity: tonalidadeIntensidade / 100,
+                  pointerEvents: 'none',
+                  zIndex: 1,
+                  mixBlendMode: 'color',
+                  transition: 'opacity 0.2s ease'
+                }}
+              />
+            )}
+
+            {/* 🕸️ OVERLAY DE VINHETA */}
+            {vignettaIntensidade > 0 && (
+              <div
+                className="canvas-overlay-vignetta"
+                style={{
+                  position: 'absolute', inset: 0,
+                  background: `radial-gradient(ellipse at center, transparent ${Math.max(10, 70 - vignettaIntensidade * 0.5)}%, rgba(0,0,0,${vignettaIntensidade / 150}) 100%)`,
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                  transition: 'background 0.2s ease'
+                }}
+              />
+            )}
+
+            {itensCanvas.map((item, index) => {
+              const isSelected = selecionadoId === item.uniqueId && !modoApresentacao;
+              const isAComprar = item.type === 'image' && item.isEstoqueProprio === false && !item.origem?.includes('upload');
+
+              return (
+                <div key={item.uniqueId}
+                  data-item-id={item.uniqueId}
+                  className={`canvas-object ${isSelected ? 'selected' : ''} ${item.locked ? 'locked-item' : ''} ${isPanCapaMode && isSelected ? 'in-pan-mode' : ''}`}
+                  style={{
+                    left: item.x,
+                    top: item.y,
+                    width: item.type === 'text' ? 'max-content' : `${item.width}px`,
+                    height: item.type === 'text' ? 'max-content' : `${item.height}px`,
+                    zIndex: index + 10,
+                    transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1}) scaleY(${item.flipV ? -1 : 1})`,
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    filter: (item.shadow > 0 || (item.brightness && item.brightness !== 100) || (item.contrast && item.contrast !== 100) || (item.saturate && item.saturate !== 100))
+                      ? `brightness(${item.brightness || 100}%) contrast(${item.contrast || 100}%) saturate(${item.saturate || 100}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`
+                      : undefined,
+                    opacity: (item.opacity || 100) / 100,
+                    cursor: isPanCapaMode && isSelected ? 'move' : (item.locked ? 'not-allowed' : 'grab'),
+                    touchAction: 'none'
+                  }}
+                  onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type)}
+                  onDoubleClick={(e) => {
+                    e.stopPropagation();
+                    if (item.type === 'text') {
+                      setEditingTextId(item.uniqueId);
+                    } else if (item.capaUrl) {
+                      setIsPanCapaMode(!isPanCapaMode);
+                    }
+                  }}
+                  onClick={e => e.stopPropagation()}
+                  onContextMenu={(e) => handleContextMenu(e, item.uniqueId)}
+                >
+
                   {/* TEXTO PROFISSIONAL (COM MATERIAIS, CURVAS, NEON E SUPORTES) */}
                   {item.type === 'text' && (
-                    <ElementoTextoPersonalizado 
+                    <ElementoTextoPersonalizado
                       item={item}
                       isEditing={editingTextId === item.uniqueId}
                       onDoubleClick={(e) => { e.stopPropagation(); setEditingTextId(item.uniqueId); }}
@@ -5374,19 +5939,19 @@ const Moodboard = () => {
                     <div className={`shape-render-element shape-${item.shapeType}`} style={{ width: '100%', height: '100%', backgroundColor: item.color || '#fff' }}>
                       {item.capaUrl ? (
                         <div className="shape-capa-viewport">
-                          <img 
-                            src={item.capaUrl} 
-                            alt="Capa" 
-                            draggable="false" 
-                            style={{ 
-                              width: '100%', 
-                              height: '100%', 
-                              objectFit: 'cover', 
+                          <img
+                            src={item.capaUrl}
+                            alt="Capa"
+                            draggable="false"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
                               objectPosition: `${item.capaPosX ?? 50}% ${item.capaPosY ?? 50}%`,
                               transform: `scale(${item.capaScale || 1})`,
                               transformOrigin: `${item.capaPosX ?? 50}% ${item.capaPosY ?? 50}%`,
-                              pointerEvents: 'none' 
-                            }} 
+                              pointerEvents: 'none'
+                            }}
                           />
                           {isPanCapaMode && isSelected && (
                             <div className="pan-grid-overlay">
@@ -5403,8 +5968,8 @@ const Moodboard = () => {
                   {/* 🎈 ARCOS & GUIRLANDAS DE BALÕES 3D REALISTAS */}
                   {item.type === 'shape' && item.shapeType === 'arco_classico_portal' && (
                     <div className="shape-render-element shape-baloes_geral" style={{ width: '100%', height: '100%' }}>
-                      <GuirlandaBaloesRealista 
-                        tipo="arco_classico_portal" 
+                      <GuirlandaBaloesRealista
+                        tipo="arco_classico_portal"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         formatoPortal={item.formatoPortal || 'romano'}
                         estiloPortal={item.estiloPortal || 'espiral'}
@@ -5414,8 +5979,8 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'baloes_aro_redondo' && (
                     <div className="shape-render-element shape-baloes_geral" style={{ width: '100%', height: '100%' }}>
-                      <GuirlandaBaloesRealista 
-                        tipo="baloes_aro_redondo" 
+                      <GuirlandaBaloesRealista
+                        tipo="baloes_aro_redondo"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         coberturaAro={item.coberturaAro || 'meio_aro'}
                         seed={item.seed}
@@ -5424,8 +5989,8 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'baloes_lateral_l' && (
                     <div className="shape-render-element shape-baloes_geral" style={{ width: '100%', height: '100%' }}>
-                      <GuirlandaBaloesRealista 
-                        tipo="lateral_l" 
+                      <GuirlandaBaloesRealista
+                        tipo="lateral_l"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         seed={item.seed}
                       />
@@ -5433,8 +5998,8 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'baloes_cluster_chao' && (
                     <div className="shape-render-element shape-baloes_geral" style={{ width: '100%', height: '100%' }}>
-                      <GuirlandaBaloesRealista 
-                        tipo="cluster_chao" 
+                      <GuirlandaBaloesRealista
+                        tipo="cluster_chao"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         densidadeCluster={item.densidadeCluster || 'cheio'}
                         seed={item.seed}
@@ -5443,8 +6008,8 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'coluna_baloes' && (
                     <div className="shape-render-element shape-baloes_geral" style={{ width: '100%', height: '100%' }}>
-                      <GuirlandaBaloesRealista 
-                        tipo="coluna_baloes" 
+                      <GuirlandaBaloesRealista
+                        tipo="coluna_baloes"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         estiloColuna={item.estiloColuna || 'organica'}
                         seed={item.seed}
@@ -5453,8 +6018,8 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'guirlanda_horizontal' && (
                     <div className="shape-render-element shape-baloes_geral" style={{ width: '100%', height: '100%' }}>
-                      <GuirlandaBaloesRealista 
-                        tipo="guirlanda_horizontal" 
+                      <GuirlandaBaloesRealista
+                        tipo="guirlanda_horizontal"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         curvatura={item.curvatura}
                         ondulacao={item.ondulacao}
@@ -5470,19 +6035,19 @@ const Moodboard = () => {
                     <div className="shape-render-element shape-painel_retangular" style={{ width: '100%', height: '100%', backgroundColor: item.color || '#e2e8f0', borderRadius: '4px' }}>
                       {item.capaUrl ? (
                         <div className="shape-capa-viewport">
-                          <img 
-                            src={item.capaUrl} 
-                            alt="Capa" 
-                            draggable="false" 
-                            style={{ 
-                              width: '100%', 
-                              height: '100%', 
-                              objectFit: 'cover', 
+                          <img
+                            src={item.capaUrl}
+                            alt="Capa"
+                            draggable="false"
+                            style={{
+                              width: '100%',
+                              height: '100%',
+                              objectFit: 'cover',
                               objectPosition: `${item.capaPosX ?? 50}% ${item.capaPosY ?? 50}%`,
                               transform: `scale(${item.capaScale || 1})`,
                               transformOrigin: `${item.capaPosX ?? 50}% ${item.capaPosY ?? 50}%`,
-                              pointerEvents: 'none' 
-                            }} 
+                              pointerEvents: 'none'
+                            }}
                           />
                         </div>
                       ) : <div className="shape-empty-placeholder" />}
@@ -5503,7 +6068,7 @@ const Moodboard = () => {
                     <div className="shape-render-element" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                       <svg width="100%" height="100%" viewBox="0 0 260 140" style={{ pointerEvents: 'none' }}>
                         <path d="M0,140 A130,130 0 0,1 260,140 Z" fill={item.color || '#e2e8f0'} />
-                        {item.capaUrl && <image href={item.capaUrl} x="0" y="0" width="260" height="140" clipPath="url(#meiaLuaClip)" preserveAspectRatio="xMidYMid slice"/>}
+                        {item.capaUrl && <image href={item.capaUrl} x="0" y="0" width="260" height="140" clipPath="url(#meiaLuaClip)" preserveAspectRatio="xMidYMid slice" />}
                         <defs><clipPath id="meiaLuaClip"><path d="M0,140 A130,130 0 0,1 260,140 Z" /></clipPath></defs>
                       </svg>
                     </div>
@@ -5537,9 +6102,92 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'nicho_prateleira' && (
                     <div className="shape-render-element" style={{ width: '100%', height: '100%', backgroundColor: item.color || '#f8fafc', border: `4px solid ${item.color || '#e2e8f0'}`, borderRadius: '6px', display: 'flex', flexDirection: 'column', justifyContent: 'space-around', padding: '8px', boxSizing: 'border-box' }}>
-                      {[0,1,2].map(i => <div key={i} style={{ height: '28%', backgroundColor: item.color ? item.color + '55' : '#e2e8f0', borderRadius: '3px', border: `1px solid ${item.color || '#cbd5e1'}` }} />)}
+                      {[0, 1, 2].map(i => <div key={i} style={{ height: '28%', backgroundColor: item.color ? item.color + '55' : '#e2e8f0', borderRadius: '3px', border: `1px solid ${item.color || '#cbd5e1'}` }} />)}
                     </div>
                   )}
+
+                  {/* 🌀 ARCO ORGÂNICO SVG */}
+                  {item.type === 'shape' && item.shapeType === 'arco_organico' && (
+                    <svg viewBox="0 0 200 310" width="100%" height="100%" style={{ display: 'block', overflow: 'visible' }}>
+                      <path d="M30 305 C30 305 20 280 18 250 C16 220 10 200 14 170 C18 140 22 120 30 100 C38 80 46 65 55 55" fill="none" stroke={item.color || '#c5a059'} strokeWidth="24" strokeLinecap="round"/>
+                      <path d="M170 305 C170 305 180 280 182 250 C184 220 190 200 186 170 C182 140 178 120 170 100 C162 80 154 65 145 55" fill="none" stroke={item.color || '#c5a059'} strokeWidth="24" strokeLinecap="round"/>
+                      <path d="M55 55 C60 28 80 14 100 12 C120 14 140 28 145 55" fill="none" stroke={item.color || '#c5a059'} strokeWidth="24" strokeLinecap="round"/>
+                      <path d="M30 305 C30 305 20 280 18 250 C16 220 10 200 14 170 C18 140 22 120 30 100 C38 80 46 65 55 55 C60 28 80 14 100 12 C120 14 140 28 145 55 C154 65 162 80 170 100 C178 120 182 140 186 170 C190 200 184 220 182 250 C180 280 170 305 170 305" fill="none" stroke={`${item.color || '#c5a059'}40`} strokeWidth="12" strokeLinecap="round"/>
+                      <ellipse cx="30" cy="305" rx="20" ry="7" fill={item.color || '#c5a059'} opacity="0.75"/>
+                      <ellipse cx="170" cy="305" rx="20" ry="7" fill={item.color || '#c5a059'} opacity="0.75"/>
+                    </svg>
+                  )}
+
+                  {/* 🌊 PAINEL ONDULADO SVG (Ripas em S) */}
+                  {item.type === 'shape' && item.shapeType === 'painel_ondulado' && (
+                    <svg viewBox="0 0 160 310" width="100%" height="100%" style={{ display: 'block' }}>
+                      {[0,1,2,3,4,5,6,7,8].map(i => {
+                        const x = 8 + i * 17;
+                        return (
+                          <path key={i}
+                            d={`M${x} 8 C${x-10} 55 ${x+10} 100 ${x} 145 C${x-10} 190 ${x+10} 235 ${x} 278 C${x-6} 292 ${x} 298 ${x} 298`}
+                            fill="none"
+                            stroke={item.color || '#c5a059'}
+                            strokeWidth="11"
+                            strokeLinecap="round"
+                            opacity={i % 2 === 0 ? 1 : 0.75}
+                          />
+                        );
+                      })}
+                      <rect x="22" y="298" width="10" height="12" rx="2" fill={item.color || '#c5a059'}/>
+                      <rect x="74" y="298" width="10" height="12" rx="2" fill={item.color || '#c5a059'}/>
+                      <rect x="126" y="298" width="10" height="12" rx="2" fill={item.color || '#c5a059'}/>
+                    </svg>
+                  )}
+
+                  {/* 🏛️ ARCO ROMANO TRIPLO 3D */}
+                  {item.type === 'shape' && item.shapeType === 'arco_romano_triplo' && (
+                    <ArcoRomanoTriplo3D item={item} />
+                  )}
+
+                  {/* 🌀 ARCO ORGÂNICO TRIPLO 3D */}
+                  {item.type === 'shape' && item.shapeType === 'arco_organico_triplo' && (
+                    <ArcoOrganicoTriplo3D item={item} />
+                  )}
+
+                  {/* ☁️ PAINEL NUVEM GOMOS 3D */}
+                  {item.type === 'shape' && item.shapeType === 'painel_nuvem_gomos' && (
+                    <PainelNuvemGomos3D item={item} />
+                  )}
+
+                  {/* 🦴 MESA OSSO 3D */}
+                  {item.type === 'shape' && item.shapeType === 'mesa_osso' && (
+                    <MesaOsso3D item={item} />
+                  )}
+
+                  {/* 🚙 MESA JEEP SAFARI 3D */}
+                  {item.type === 'shape' && item.shapeType === 'mesa_jeep' && (
+                    <MesaJeep3D item={item} />
+                  )}
+
+                  {/* 🏵️ PAINEL ORGÂNICO (Borda Ondulada) SVG */}
+                  {item.type === 'shape' && item.shapeType === 'painel_borda_ondulada' && (() => {
+                    const cor = item.color || '#c5a059';
+                    const uid = `onda-${item.uniqueId}`;
+                    const topWave = 'M8 14 Q20 0 32 14 Q44 28 56 14 Q68 0 80 14 Q92 28 104 14 Q116 0 128 14 Q140 28 152 14 Q164 0 176 14 Q188 28 192 14';
+                    const botWave = 'M8 296 Q20 310 32 296 Q44 282 56 296 Q68 310 80 296 Q92 282 104 296 Q116 310 128 296 Q140 282 152 296 Q164 310 176 296 Q188 282 192 296';
+                    const leftWave = 'M8 14 Q-4 30 8 46 Q20 62 8 78 Q-4 94 8 110 Q20 126 8 142 Q-4 158 8 174 Q20 190 8 206 Q-4 222 8 238 Q20 254 8 270 Q-4 286 8 296';
+                    const rightWave = 'M192 14 Q204 30 192 46 Q180 62 192 78 Q204 94 192 110 Q180 126 192 142 Q204 158 192 174 Q180 190 192 206 Q204 222 192 238 Q180 254 192 270 Q204 286 192 296';
+                    const clipD = `${topWave} ${rightWave.replace('M192 14', 'L192 14')} ${botWave.replace('M8 296', 'L192 296')} ${leftWave.replace('M8 14', 'L8 296')} Z`;
+                    return (
+                      <svg viewBox="0 0 200 310" width="100%" height="100%" style={{ display: 'block' }}>
+                        <defs>
+                          <clipPath id={uid}>
+                            <path d={clipD}/>
+                          </clipPath>
+                        </defs>
+                        <rect x="0" y="0" width="200" height="310" fill={cor} clipPath={`url(#${uid})`}/>
+                        {item.capaUrl && <image href={item.capaUrl} x="0" y="0" width="200" height="310" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${uid})`}/>}
+                        <path d={topWave} fill="none" stroke={cor} strokeWidth="3" strokeLinecap="round"/>
+                        <path d={botWave} fill="none" stroke={cor} strokeWidth="3" strokeLinecap="round"/>
+                      </svg>
+                    );
+                  })()}
 
                   {/* 🕹️ CONTROLES INTERATIVOS DIRETOS (CANVA/FIGMA STYLE) */}
                   {isSelected && !item.locked && !editingTextId && (() => {
@@ -5549,195 +6197,195 @@ const Moodboard = () => {
 
                     return (
                       <>
-                          {/* 4 Alças de Redimensionamento nos Cantos */}
-                          <div className="resize-handle nw" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'nw')} />
-                          <div className="resize-handle ne" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'ne')} />
-                          <div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} />
-                          <div className="resize-handle sw" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'sw')} />
-                          
-                          {/* Pino de Rotação Superior */}
-                          <div className="rotate-handle-stem" />
-                          <div 
-                            className="rotate-handle-knob" 
-                            style={unflipHandle}
-                            onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'rotate')}
-                            title="Girar Item"
-                          >
-                            <Icons.Rotate width={12} height={12} />
+                        {/* 4 Alças de Redimensionamento nos Cantos */}
+                        <div className="resize-handle nw" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'nw')} />
+                        <div className="resize-handle ne" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'ne')} />
+                        <div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} />
+                        <div className="resize-handle sw" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'sw')} />
+
+                        {/* Pino de Rotação Superior */}
+                        <div className="rotate-handle-stem" />
+                        <div
+                          className="rotate-handle-knob"
+                          style={unflipHandle}
+                          onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'rotate')}
+                          title="Girar Item"
+                        >
+                          <Icons.Rotate width={12} height={12} />
+                        </div>
+
+                        {/* Tooltip de Grau de Rotação */}
+                        {rotacaoTooltip && (
+                          <div className="rotation-degree-badge" style={unflipBar}>
+                            {rotacaoTooltip}
                           </div>
+                        )}
 
-                          {/* Tooltip de Grau de Rotação */}
-                          {rotacaoTooltip && (
-                            <div className="rotation-degree-badge" style={unflipBar}>
-                              {rotacaoTooltip}
+                        {/* Borda de Seleção */}
+                        <div className="selection-bounding-box" />
+
+                        {/* 🎈 Alças & Modificadores Rápidos no Canvas (Específicos para cada tipo de arco) */}
+                        {['guirlanda_horizontal', 'baloes_dinamico'].includes(item.shapeType) && (
+                          <>
+                            <div
+                              className="balloon-curve-handle"
+                              style={unflipHandle}
+                              onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'curve')}
+                              title="🎈 Puxe para cima/baixo para curvar o arco"
+                            >
+                              <span>〰️</span>
                             </div>
-                          )}
-
-                          {/* Borda de Seleção */}
-                          <div className="selection-bounding-box" />
-
-                          {/* 🎈 Alças & Modificadores Rápidos no Canvas (Específicos para cada tipo de arco) */}
-                          {['guirlanda_horizontal', 'baloes_dinamico'].includes(item.shapeType) && (
-                            <>
-                              <div 
-                                className="balloon-curve-handle"
-                                style={unflipHandle}
-                                onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'curve')}
-                                title="🎈 Puxe para cima/baixo para curvar o arco"
-                              >
-                                <span>〰️</span>
-                              </div>
-                              <div 
-                                className="balloon-wave-handle"
-                                style={unflipHandle}
-                                onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'wave')}
-                                title="🌊 Puxe para os lados para ondular o arco"
-                              >
-                                <span>🌊</span>
-                              </div>
-                            </>
-                          )}
-
-                          {/* 🏛️ Modificador Rápido no Topo do Arco Portal */}
-                          {item.shapeType === 'arco_classico_portal' && (
-                            <div className="floating-balloon-format-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${(item.formatoPortal || 'romano') === 'romano' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'romano' })}
-                                title="Formato Romano (Arredondado)"
-                              >
-                                🏛️ Romano
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.formatoPortal === 'retangular' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'retangular' })}
-                                title="Formato Retangular (Quadrado 90°)"
-                              >
-                                ⬛ Retangular
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.formatoPortal === 'circular_fechado' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'circular_fechado' })}
-                                title="Formato Circular (Fechado 360°)"
-                              >
-                                ⭕ 360°
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.formatoPortal === 'aberto_assimetrico' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'aberto_assimetrico' })}
-                                title="Formato Aberto / Passarela"
-                              >
-                                🚪 Aberto
-                              </button>
-                              <button 
-                                type="button" 
-                                className="btn-handle-mini"
-                                style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', marginLeft: '2px' }}
-                                onClick={() => atualizarItem(item.uniqueId, { estiloPortal: (item.estiloPortal === 'organico' ? 'espiral' : 'organico') })}
-                                title="Alternar entre Clássico Espiral e Orgânico Desconstruído"
-                              >
-                                {item.estiloPortal === 'organico' ? '✨ Orgânico' : '🌀 Espiral'}
-                              </button>
+                            <div
+                              className="balloon-wave-handle"
+                              style={unflipHandle}
+                              onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'wave')}
+                              title="🌊 Puxe para os lados para ondular o arco"
+                            >
+                              <span>🌊</span>
                             </div>
-                          )}
+                          </>
+                        )}
 
-                          {/* ⭕ Modificador Rápido no Topo do Aro Redondo */}
-                          {item.shapeType === 'baloes_aro_redondo' && (
-                            <div className="floating-balloon-format-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${(item.coberturaAro || 'meio_aro') === 'meio_aro' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'meio_aro' })}
-                                title="Meio Aro (180°)"
-                              >
-                                🌓 Meio Aro
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.coberturaAro === 'tres_quartos' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'tres_quartos' })}
-                                title="3/4 do Aro (270°)"
-                              >
-                                🌔 3/4 Aro
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.coberturaAro === 'completo' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'completo' })}
-                                title="Aro Completo 360°"
-                              >
-                                🌕 360° Fechado
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.coberturaAro === 'topo' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'topo' })}
-                                title="Apenas Topo Arqueado"
-                              >
-                                🌈 Topo
-                              </button>
-                            </div>
-                          )}
+                        {/* 🏛️ Modificador Rápido no Topo do Arco Portal */}
+                        {item.shapeType === 'arco_classico_portal' && (
+                          <div className="floating-balloon-format-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.formatoPortal || 'romano') === 'romano' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'romano' })}
+                              title="Formato Romano (Arredondado)"
+                            >
+                              🏛️ Romano
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.formatoPortal === 'retangular' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'retangular' })}
+                              title="Formato Retangular (Quadrado 90°)"
+                            >
+                              ⬛ Retangular
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.formatoPortal === 'circular_fechado' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'circular_fechado' })}
+                              title="Formato Circular (Fechado 360°)"
+                            >
+                              ⭕ 360°
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.formatoPortal === 'aberto_assimetrico' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'aberto_assimetrico' })}
+                              title="Formato Aberto / Passarela"
+                            >
+                              🚪 Aberto
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-handle-mini"
+                              style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', marginLeft: '2px' }}
+                              onClick={() => atualizarItem(item.uniqueId, { estiloPortal: (item.estiloPortal === 'organico' ? 'espiral' : 'organico') })}
+                              title="Alternar entre Clássico Espiral e Orgânico Desconstruído"
+                            >
+                              {item.estiloPortal === 'organico' ? '✨ Orgânico' : '🌀 Espiral'}
+                            </button>
+                          </div>
+                        )}
 
-                          {/* 🗼 Modificador Rápido da Coluna de Balões */}
-                          {item.shapeType === 'coluna_baloes' && (
-                            <div className="floating-balloon-format-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${(item.estiloColuna || 'organica') === 'organica' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { estiloColuna: 'organica' })}
-                                title="Orgânica Desconstruída"
-                              >
-                                ✨ Orgânica
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.estiloColuna === 'espiral' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { estiloColuna: 'espiral' })}
-                                title="Espiral Clássico"
-                              >
-                                🌀 Espiral
-                              </button>
-                              <button 
-                                type="button" 
-                                className={`btn-handle-mini ${item.estiloColuna === 'com_big_balloon' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(item.uniqueId, { estiloColuna: 'com_big_balloon' })}
-                                title="Com Big Balloon no Topo"
-                              >
-                                🎈 Big Balloon
-                              </button>
-                            </div>
-                          )}
+                        {/* ⭕ Modificador Rápido no Topo do Aro Redondo */}
+                        {item.shapeType === 'baloes_aro_redondo' && (
+                          <div className="floating-balloon-format-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.coberturaAro || 'meio_aro') === 'meio_aro' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'meio_aro' })}
+                              title="Meio Aro (180°)"
+                            >
+                              🌓 Meio Aro
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.coberturaAro === 'tres_quartos' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'tres_quartos' })}
+                              title="3/4 do Aro (270°)"
+                            >
+                              🌔 3/4 Aro
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.coberturaAro === 'completo' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'completo' })}
+                              title="Aro Completo 360°"
+                            >
+                              🌕 360° Fechado
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.coberturaAro === 'topo' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { coberturaAro: 'topo' })}
+                              title="Apenas Topo Arqueado"
+                            >
+                              🌈 Topo
+                            </button>
+                          </div>
+                        )}
 
-                          {/* ⚡ Barra de Ações Rápidas Acoplada ao Objeto (EXCLUSIVA MOBILE / CELULAR) */}
-                          {isMobile && (
-                            <div className="floating-object-action-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
-                              {isEstruturaSelecionada && (
-                                <button className="btn-obj-action" onClick={() => handleUploadCapaEstrutura(item.uniqueId)} title="Trocar Capa da Estrutura">
-                                  <Icons.Image /> Capa
-                                </button>
-                              )}
-                              <button className="btn-obj-action" onClick={() => duplicarItem(item.uniqueId)} title="Duplicar (Ctrl + D)">
-                                <Icons.Copy />
+                        {/* 🗼 Modificador Rápido da Coluna de Balões */}
+                        {item.shapeType === 'coluna_baloes' && (
+                          <div className="floating-balloon-format-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.estiloColuna || 'organica') === 'organica' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { estiloColuna: 'organica' })}
+                              title="Orgânica Desconstruída"
+                            >
+                              ✨ Orgânica
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.estiloColuna === 'espiral' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { estiloColuna: 'espiral' })}
+                              title="Espiral Clássico"
+                            >
+                              🌀 Espiral
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.estiloColuna === 'com_big_balloon' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { estiloColuna: 'com_big_balloon' })}
+                              title="Com Big Balloon no Topo"
+                            >
+                              🎈 Big Balloon
+                            </button>
+                          </div>
+                        )}
+
+                        {/* ⚡ Barra de Ações Rápidas Acoplada ao Objeto (EXCLUSIVA MOBILE / CELULAR) */}
+                        {isMobile && (
+                          <div className="floating-object-action-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
+                            {isEstruturaSelecionada && (
+                              <button className="btn-obj-action" onClick={() => handleUploadCapaEstrutura(item.uniqueId)} title="Trocar Capa da Estrutura">
+                                <Icons.Image /> Capa
                               </button>
-                              <button className="btn-obj-action" onClick={() => bringToFront(item.uniqueId)} title="Trazer para Frente">
-                                <Icons.ArrowUp />
-                              </button>
-                              <button className="btn-obj-action" onClick={() => sendToBack(item.uniqueId)} title="Enviar para Trás">
-                                <Icons.ArrowDown />
-                              </button>
-                              <button className="btn-obj-action" onClick={() => toggleLock(item.uniqueId)} title="Bloquear Posição">
-                                <Icons.Lock />
-                              </button>
-                              <button className="btn-obj-action danger" onClick={() => deleteItem(item.uniqueId)} title="Excluir (Del)">
-                                <Icons.Trash />
-                              </button>
-                            </div>
-                          )}
+                            )}
+                            <button className="btn-obj-action" onClick={() => duplicarItem(item.uniqueId)} title="Duplicar (Ctrl + D)">
+                              <Icons.Copy />
+                            </button>
+                            <button className="btn-obj-action" onClick={() => bringToFront(item.uniqueId)} title="Trazer para Frente">
+                              <Icons.ArrowUp />
+                            </button>
+                            <button className="btn-obj-action" onClick={() => sendToBack(item.uniqueId)} title="Enviar para Trás">
+                              <Icons.ArrowDown />
+                            </button>
+                            <button className="btn-obj-action" onClick={() => toggleLock(item.uniqueId)} title="Bloquear Posição">
+                              <Icons.Lock />
+                            </button>
+                            <button className="btn-obj-action danger" onClick={() => deleteItem(item.uniqueId)} title="Excluir (Del)">
+                              <Icons.Trash />
+                            </button>
+                          </div>
+                        )}
                       </>
                     );
                   })()}
@@ -5786,343 +6434,343 @@ const Moodboard = () => {
 
         {/* 📋 MENU DE CONTEXTO (CLIQUE DIREITO) */}
         {contextMenu.visible && (
-            <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
-                {isEstruturaSelecionada && (
-                  <>
-                    <div className="ctx-item" onClick={() => { handleUploadCapaEstrutura(contextMenu.itemId); closeContextMenu(); }}>
-                      <Icons.Image /> 📷 Trocar Capa (Foto)
-                    </div>
-                    <div className="ctx-divider"></div>
-                  </>
-                )}
-                <div className="ctx-item" onClick={() => duplicarItem(contextMenu.itemId)}><Icons.Copy /> Duplicar (Ctrl+D)</div>
-                <div className="ctx-divider"></div>
-                <div className="ctx-item" onClick={() => bringToFront()}><Icons.Layers style={{transform: 'rotate(180deg)'}} width={16} /> Trazer p/ Frente</div>
-                <div className="ctx-item" onClick={() => sendToBack()}><Icons.Layers width={16} /> Enviar p/ Trás</div>
-                <div className="ctx-divider"></div>
-                <div className="ctx-item" onClick={() => toggleLock()}>
-                    <Icons.Lock /> {itensCanvas.find(i => i.uniqueId === contextMenu.itemId)?.locked ? 'Desbloquear' : 'Bloquear'}
+          <div className="context-menu" style={{ top: contextMenu.y, left: contextMenu.x }} onClick={e => e.stopPropagation()}>
+            {isEstruturaSelecionada && (
+              <>
+                <div className="ctx-item" onClick={() => { handleUploadCapaEstrutura(contextMenu.itemId); closeContextMenu(); }}>
+                  <Icons.Image /> 📷 Trocar Capa (Foto)
                 </div>
                 <div className="ctx-divider"></div>
-                <div className="ctx-item delete" onClick={() => { deleteItem(contextMenu.itemId); closeContextMenu(); }}>
-                    <Icons.Trash /> Excluir (Del)
-                </div>
+              </>
+            )}
+            <div className="ctx-item" onClick={() => duplicarItem(contextMenu.itemId)}><Icons.Copy /> Duplicar (Ctrl+D)</div>
+            <div className="ctx-divider"></div>
+            <div className="ctx-item" onClick={() => bringToFront()}><Icons.Layers style={{ transform: 'rotate(180deg)' }} width={16} /> Trazer p/ Frente</div>
+            <div className="ctx-item" onClick={() => sendToBack()}><Icons.Layers width={16} /> Enviar p/ Trás</div>
+            <div className="ctx-divider"></div>
+            <div className="ctx-item" onClick={() => toggleLock()}>
+              <Icons.Lock /> {itensCanvas.find(i => i.uniqueId === contextMenu.itemId)?.locked ? 'Desbloquear' : 'Bloquear'}
             </div>
+            <div className="ctx-divider"></div>
+            <div className="ctx-item delete" onClick={() => { deleteItem(contextMenu.itemId); closeContextMenu(); }}>
+              <Icons.Trash /> Excluir (Del)
+            </div>
+          </div>
         )}
 
         {/* 💾 MODAL: SALVAR PROJETO */}
         {modalSalvarAberto && (
-            <div className="overlay">
-                <div className="modal-content luxury-modal">
-                    <div className="modal-header-luxury">
-                      <h3>Salvar Projeto Decorativo</h3>
-                      <p>Gera miniatura visual e salva no cofre da sua empresa</p>
-                    </div>
-                    <div className="modal-body-luxury">
-                      <label style={{fontSize: '13px', fontWeight: 'bold', color: '#0f172a', display: 'block', marginBottom: '6px'}}>Nome do Projeto / Tema:</label>
-                      <input 
-                        type="text" 
-                        placeholder="Ex: Chá Revelação Ursinho Príncipe" 
-                        value={nomeProjeto} 
-                        onChange={(e) => setNomeProjeto(e.target.value)} 
-                        autoFocus 
-                        className="input-modal-luxury"
-                      />
-                      
-                      <div className="save-summary-badge">
-                        <span>Total de Peças: <strong>{resumoComercial.totalPecas} un.</strong></span>
-                        <span>Valor Estimado: <strong>R$ {resumoComercial.valorTotal.toFixed(2)}</strong></span>
-                      </div>
-                    </div>
-                    <div className="modal-actions">
-                        <button className="btn-cancel" onClick={() => setModalSalvarAberto(false)} disabled={salvandoProjeto}>Cancelar</button>
-                        <button className="btn-confirm-luxury" onClick={salvarProjeto} disabled={salvandoProjeto}>
-                          {salvandoProjeto ? 'Salvando...' : 'Salvar Projeto'}
-                        </button>
-                    </div>
+          <div className="overlay">
+            <div className="modal-content luxury-modal">
+              <div className="modal-header-luxury">
+                <h3>Salvar Projeto Decorativo</h3>
+                <p>Gera miniatura visual e salva no cofre da sua empresa</p>
+              </div>
+              <div className="modal-body-luxury">
+                <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a', display: 'block', marginBottom: '6px' }}>Nome do Projeto / Tema:</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Chá Revelação Ursinho Príncipe"
+                  value={nomeProjeto}
+                  onChange={(e) => setNomeProjeto(e.target.value)}
+                  autoFocus
+                  className="input-modal-luxury"
+                />
+
+                <div className="save-summary-badge">
+                  <span>Total de Peças: <strong>{resumoComercial.totalPecas} un.</strong></span>
+                  <span>Valor Estimado: <strong>R$ {resumoComercial.valorTotal.toFixed(2)}</strong></span>
                 </div>
+              </div>
+              <div className="modal-actions">
+                <button className="btn-cancel" onClick={() => setModalSalvarAberto(false)} disabled={salvandoProjeto}>Cancelar</button>
+                <button className="btn-confirm-luxury" onClick={salvarProjeto} disabled={salvandoProjeto}>
+                  {salvandoProjeto ? 'Salvando...' : 'Salvar Projeto'}
+                </button>
+              </div>
             </div>
+          </div>
         )}
 
         {/* 📂 MODAL: ABRIR PROJETOS (GALERIA VISUAL COM THUMBNAILS) */}
         {modalAbrirAberto && (
-             <div className="overlay">
-                <div className="modal-content large luxury-modal">
-                    <div className="modal-header-luxury">
-                      <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                        <div>
-                          <h3>Galeria de Projetos Salvos</h3>
-                          <p>Escolha um projeto salvo para abrir ou gerenciar</p>
+          <div className="overlay">
+            <div className="modal-content large luxury-modal">
+              <div className="modal-header-luxury">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3>Galeria de Projetos Salvos</h3>
+                    <p>Escolha um projeto salvo para abrir ou gerenciar</p>
+                  </div>
+                  <span className="panel-badge-count">{projetosSalvos.length} projetos</span>
+                </div>
+              </div>
+
+              <div className="projects-grid-cards">
+                {projetosSalvos.length === 0 ? (
+                  <div className="empty-projects-state">
+                    <Icons.Folder width={40} height={40} style={{ opacity: 0.3 }} />
+                    <p>Nenhum projeto salvo no momento.</p>
+                  </div>
+                ) : (
+                  projetosSalvos.map(proj => (
+                    <div key={proj.id} className="project-card-luxury">
+                      <div className="proj-thumb" onClick={() => carregarProjeto(proj)}>
+                        {proj.thumbnail ? (
+                          <img src={proj.thumbnail} alt={proj.nome} />
+                        ) : (
+                          <div className="proj-thumb-placeholder">
+                            <Icons.Crown width={32} height={32} />
+                          </div>
+                        )}
+                        <div className="proj-hover-overlay">
+                          <span>Abrir Projeto</span>
                         </div>
-                        <span className="panel-badge-count">{projetosSalvos.length} projetos</span>
+                      </div>
+                      <div className="proj-info-bottom">
+                        <div className="proj-title-row">
+                          <h4 title={proj.nome}>{proj.nome}</h4>
+                          <button onClick={(e) => { e.stopPropagation(); deletarProjetoSalvo(proj.id, proj.nome); }} className="btn-del-proj-icon" title="Excluir Projeto">
+                            <Icons.Trash />
+                          </button>
+                        </div>
+                        <div className="proj-meta-row">
+                          <span>{proj.itens?.length || 0} itens</span>
+                          <span>{proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('pt-BR') : ''}</span>
+                        </div>
                       </div>
                     </div>
-                    
-                    <div className="projects-grid-cards">
-                        {projetosSalvos.length === 0 ? (
-                            <div className="empty-projects-state">
-                              <Icons.Folder width={40} height={40} style={{opacity: 0.3}} />
-                              <p>Nenhum projeto salvo no momento.</p>
-                            </div> 
-                        ) : (
-                            projetosSalvos.map(proj => (
-                                <div key={proj.id} className="project-card-luxury">
-                                    <div className="proj-thumb" onClick={() => carregarProjeto(proj)}>
-                                      {proj.thumbnail ? (
-                                        <img src={proj.thumbnail} alt={proj.nome} />
-                                      ) : (
-                                        <div className="proj-thumb-placeholder">
-                                          <Icons.Crown width={32} height={32} />
-                                        </div>
-                                      )}
-                                      <div className="proj-hover-overlay">
-                                        <span>Abrir Projeto</span>
-                                      </div>
-                                    </div>
-                                    <div className="proj-info-bottom">
-                                      <div className="proj-title-row">
-                                        <h4 title={proj.nome}>{proj.nome}</h4>
-                                        <button onClick={(e) => { e.stopPropagation(); deletarProjetoSalvo(proj.id, proj.nome); }} className="btn-del-proj-icon" title="Excluir Projeto">
-                                          <Icons.Trash />
-                                        </button>
-                                      </div>
-                                      <div className="proj-meta-row">
-                                        <span>{proj.itens?.length || 0} itens</span>
-                                        <span>{proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('pt-BR') : ''}</span>
-                                      </div>
-                                    </div>
-                                </div>
-                            ))
-                        )}
-                    </div>
-                    <div className="modal-footer-row">
-                      <button className="btn-cancel" onClick={() => setModalAbrirAberto(false)}>Fechar Galeria</button>
-                    </div>
-                </div>
+                  ))
+                )}
+              </div>
+              <div className="modal-footer-row">
+                <button className="btn-cancel" onClick={() => setModalAbrirAberto(false)}>Fechar Galeria</button>
+              </div>
             </div>
-         )}
+          </div>
+        )}
 
-         {/* 📦 MODAL: LISTA DETALHADA DE PEÇAS & CONFERÊNCIA COMERCIAL (ESTOQUE VS COMPRAS) */}
-         {modalPecasAberto && (
-           <div className="overlay">
-             <div className="modal-content large luxury-modal">
-               <div className="modal-header-luxury">
-                 <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                   <div>
-                     <h3>Conferência & Peças do Projeto</h3>
-                     <p>Separação automática de peças do seu acervo e itens a comprar/sublocar</p>
-                   </div>
-                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                     <span className="badge-modal-stock-count">📦 {resumoComercial.totalPecasEstoque} Estoque</span>
-                     {resumoComercial.totalPecasExternas > 0 && (
-                       <span className="badge-modal-buy-count">🛒 {resumoComercial.totalPecasExternas} a Comprar</span>
-                     )}
-                     <div className="modal-header-total">
-                       Total Locação: <strong>R$ {resumoComercial.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
-                     </div>
-                   </div>
-                 </div>
-               </div>
+        {/* 📦 MODAL: LISTA DETALHADA DE PEÇAS & CONFERÊNCIA COMERCIAL (ESTOQUE VS COMPRAS) */}
+        {modalPecasAberto && (
+          <div className="overlay">
+            <div className="modal-content large luxury-modal">
+              <div className="modal-header-luxury">
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3>Conferência & Peças do Projeto</h3>
+                    <p>Separação automática de peças do seu acervo e itens a comprar/sublocar</p>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <span className="badge-modal-stock-count">📦 {resumoComercial.totalPecasEstoque} Estoque</span>
+                    {resumoComercial.totalPecasExternas > 0 && (
+                      <span className="badge-modal-buy-count">🛒 {resumoComercial.totalPecasExternas} a Comprar</span>
+                    )}
+                    <div className="modal-header-total">
+                      Total Locação: <strong>R$ {resumoComercial.valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+                    </div>
+                  </div>
+                </div>
+              </div>
 
-               <div className="pieces-table-wrapper" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
-                 {resumoComercial.lista.length === 0 ? (
-                   <p style={{padding: '30px', textAlign: 'center', color: '#64748b'}}>Nenhuma peça foi adicionada ao cenário ainda.</p>
-                 ) : (
-                   <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                     
-                     {/* 1. SEÇÃO: PEÇAS DO ESTOQUE PRÓPRIO */}
-                     {resumoComercial.listaEstoque.length > 0 && (
-                       <div className="modal-pieces-group">
-                         <div className="modal-group-title-bar">
-                           <span className="group-title-txt">📦 PEÇAS DO SEU ESTOQUE (DISPONÍVEIS P/ LOCAÇÃO)</span>
-                           <span className="group-count-tag">{resumoComercial.listaEstoque.length} itens</span>
-                         </div>
-                         <table className="pieces-table-luxury">
-                           <thead>
-                             <tr>
-                               <th>Foto</th>
-                               <th>Descrição da Peça</th>
-                               <th>Categoria</th>
-                               <th style={{textAlign: 'center'}}>Qtd</th>
-                               <th style={{textAlign: 'right'}}>Unitário</th>
-                               <th style={{textAlign: 'right'}}>Subtotal</th>
-                             </tr>
-                           </thead>
-                           <tbody>
-                             {resumoComercial.listaEstoque.map((it, idx) => (
-                               <tr key={idx}>
-                                 <td style={{width: '50px'}}>
-                                   <img src={it.imagem || 'https://via.placeholder.com/50?text=Item'} className="piece-table-thumb" alt="" />
-                                 </td>
-                                 <td>
-                                   <strong>{it.nome}</strong>
-                                   {it.codigo && <div style={{fontSize: '11px', color: '#94a3b8'}}>Cód: {it.codigo}</div>}
-                                 </td>
-                                 <td>{it.categoria}</td>
-                                 <td style={{textAlign: 'center', fontWeight: 'bold'}}>{it.quantidade} un.</td>
-                                 <td style={{textAlign: 'right'}}>R$ {it.valorUnitario.toFixed(2)}</td>
-                                 <td style={{textAlign: 'right', fontWeight: 'bold', color: '#0f172a'}}>R$ {it.subtotal.toFixed(2)}</td>
-                               </tr>
-                             ))}
-                           </tbody>
-                         </table>
-                       </div>
-                     )}
+              <div className="pieces-table-wrapper" style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+                {resumoComercial.lista.length === 0 ? (
+                  <p style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>Nenhuma peça foi adicionada ao cenário ainda.</p>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
 
-                     {/* 2. SEÇÃO: BEXIGAS & BALÕES PARA PRODUÇÃO DOS ARCOS */}
-                     {resumoComercial.listaBaloesAComprar.length > 0 && (
-                       <div className="modal-pieces-group">
-                         <div className="mb-warning-buy-banner" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
-                           <div className="mb-warning-buy-header">
-                             <div className="mb-warning-buy-icon" style={{ background: '#f59e0b' }}>🎈</div>
-                             <div>
-                               <h4>🎈 Bexigas & Balões para Produção ({resumoComercial.totalBaloesAComprar} {resumoComercial.totalBaloesAComprar === 1 ? 'arco' : 'arcos'})</h4>
-                               <p>Para montar os arcos de balões abaixo, compre os <strong>pacotes de bexigas (5", 9", 12", 18")</strong> e consumíveis (nylon, 260s) nas cores indicadas.</p>
-                             </div>
-                           </div>
-                           <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                             <button 
-                               type="button" 
-                               className="btn-copy-shopping-list"
-                               onClick={() => {
-                                 const txt = resumoComercial.listaBaloesAComprar.map(it => `• ${it.quantidade}x ${it.nome} (Sugerido: 4 a 6 pacotes de bexigas)`).join('\n');
-                                 const mensagem = `🎈 *LISTA DE BEXIGAS / BALÕES*\n*Projeto:* ${nomeProjeto || 'Moodboard'}\n\n${txt}\n\nGerado via Celebre Sistema.`;
-                                 navigator.clipboard.writeText(mensagem);
-                                 setAvisoCopiadoCompras(true);
-                                 setTimeout(() => setAvisoCopiadoCompras(false), 3000);
-                               }}
-                             >
-                               {avisoCopiadoCompras ? '✓ Lista Copiada p/ o WhatsApp!' : '📋 Copiar Lista de Bexigas (WhatsApp)'}
-                             </button>
-                             <button 
-                               type="button" 
-                               className="btn-go-to-compras"
-                               onClick={() => { setModalPecasAberto(false); navigate('/compras'); }}
-                             >
-                               🛒 Gestão de Compras
-                             </button>
-                           </div>
-                         </div>
+                    {/* 1. SEÇÃO: PEÇAS DO ESTOQUE PRÓPRIO */}
+                    {resumoComercial.listaEstoque.length > 0 && (
+                      <div className="modal-pieces-group">
+                        <div className="modal-group-title-bar">
+                          <span className="group-title-txt">📦 PEÇAS DO SEU ESTOQUE (DISPONÍVEIS P/ LOCAÇÃO)</span>
+                          <span className="group-count-tag">{resumoComercial.listaEstoque.length} itens</span>
+                        </div>
+                        <table className="pieces-table-luxury">
+                          <thead>
+                            <tr>
+                              <th>Foto</th>
+                              <th>Descrição da Peça</th>
+                              <th>Categoria</th>
+                              <th style={{ textAlign: 'center' }}>Qtd</th>
+                              <th style={{ textAlign: 'right' }}>Unitário</th>
+                              <th style={{ textAlign: 'right' }}>Subtotal</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {resumoComercial.listaEstoque.map((it, idx) => (
+                              <tr key={idx}>
+                                <td style={{ width: '50px' }}>
+                                  <img src={it.imagem || 'https://via.placeholder.com/50?text=Item'} className="piece-table-thumb" alt="" />
+                                </td>
+                                <td>
+                                  <strong>{it.nome}</strong>
+                                  {it.codigo && <div style={{ fontSize: '11px', color: '#94a3b8' }}>Cód: {it.codigo}</div>}
+                                </td>
+                                <td>{it.categoria}</td>
+                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{it.quantidade} un.</td>
+                                <td style={{ textAlign: 'right' }}>R$ {it.valorUnitario.toFixed(2)}</td>
+                                <td style={{ textAlign: 'right', fontWeight: 'bold', color: '#0f172a' }}>R$ {it.subtotal.toFixed(2)}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
 
-                         <table className="pieces-table-luxury" style={{ marginTop: '10px' }}>
-                           <thead>
-                             <tr>
-                               <th>Foto</th>
-                               <th>Modelo do Arco / Cenografia</th>
-                               <th>Categoria</th>
-                               <th style={{textAlign: 'center'}}>Qtd de Arcos</th>
-                               <th style={{textAlign: 'right'}}>Produção</th>
-                             </tr>
-                           </thead>
-                           <tbody>
-                             {resumoComercial.listaBaloesAComprar.map((it, idx) => (
-                               <tr key={idx}>
-                                 <td style={{width: '50px'}}>
-                                   <img src={it.imagem || 'https://via.placeholder.com/50?text=Item'} className="piece-table-thumb" alt="" />
-                                 </td>
-                                 <td>
-                                   <strong>{it.nome}</strong>
-                                   <div style={{fontSize: '11px', color: '#b45309', fontWeight: '600'}}>Necessário comprar pacotes de bexigas p/ inflar</div>
-                                 </td>
-                                 <td>🎈 Balões</td>
-                                 <td style={{textAlign: 'center', fontWeight: 'bold'}}>{it.quantidade} un.</td>
-                                 <td style={{textAlign: 'right'}}>
-                                   <span className="badge-card-balloon-buy" style={{ position: 'static' }}>🎈 Bexigas p/ Comprar</span>
-                                 </td>
-                               </tr>
-                             ))}
-                           </tbody>
-                         </table>
-                       </div>
-                     )}
+                    {/* 2. SEÇÃO: BEXIGAS & BALÕES PARA PRODUÇÃO DOS ARCOS */}
+                    {resumoComercial.listaBaloesAComprar.length > 0 && (
+                      <div className="modal-pieces-group">
+                        <div className="mb-warning-buy-banner" style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+                          <div className="mb-warning-buy-header">
+                            <div className="mb-warning-buy-icon" style={{ background: '#f59e0b' }}>🎈</div>
+                            <div>
+                              <h4>🎈 Bexigas & Balões para Produção ({resumoComercial.totalBaloesAComprar} {resumoComercial.totalBaloesAComprar === 1 ? 'arco' : 'arcos'})</h4>
+                              <p>Para montar os arcos de balões abaixo, compre os <strong>pacotes de bexigas (5", 9", 12", 18")</strong> e consumíveis (nylon, 260s) nas cores indicadas.</p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <button
+                              type="button"
+                              className="btn-copy-shopping-list"
+                              onClick={() => {
+                                const txt = resumoComercial.listaBaloesAComprar.map(it => `• ${it.quantidade}x ${it.nome} (Sugerido: 4 a 6 pacotes de bexigas)`).join('\n');
+                                const mensagem = `🎈 *LISTA DE BEXIGAS / BALÕES*\n*Projeto:* ${nomeProjeto || 'Moodboard'}\n\n${txt}\n\nGerado via Celebre Sistema.`;
+                                navigator.clipboard.writeText(mensagem);
+                                setAvisoCopiadoCompras(true);
+                                setTimeout(() => setAvisoCopiadoCompras(false), 3000);
+                              }}
+                            >
+                              {avisoCopiadoCompras ? '✓ Lista Copiada p/ o WhatsApp!' : '📋 Copiar Lista de Bexigas (WhatsApp)'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-go-to-compras"
+                              onClick={() => { setModalPecasAberto(false); navigate('/compras'); }}
+                            >
+                              🛒 Gestão de Compras
+                            </button>
+                          </div>
+                        </div>
 
-                     {/* 3. SEÇÃO: PEÇAS FÍSICAS FORA DO ESTOQUE (MÓVEIS / PAINÉIS / LED) */}
-                     {resumoComercial.listaPecasAComprar.length > 0 && (
-                       <div className="modal-pieces-group">
-                         <div className="mb-warning-buy-banner" style={{ background: '#fff7ed', borderColor: '#fed7aa' }}>
-                           <div className="mb-warning-buy-header">
-                             <div className="mb-warning-buy-icon" style={{ background: '#ea580c' }}><Icons.ShoppingCart /></div>
-                             <div>
-                               <h4>📦 Peças Físicas p/ Sublocar ou Comprar ({resumoComercial.totalPecasAComprar} itens)</h4>
-                               <p>Estes móveis, painéis ou estruturas permanentes <strong>não constam no seu estoque próprio</strong>. Providencie a sublocação com parceiros ou compra.</p>
-                             </div>
-                           </div>
-                           <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                             <button 
-                               type="button" 
-                               className="btn-copy-shopping-list"
-                               style={{ background: '#0f172a' }}
-                               onClick={() => {
-                                 const txt = resumoComercial.listaPecasAComprar.map(it => `• ${it.quantidade}x ${it.nome} (${it.categoria || 'Decoração'})`).join('\n');
-                                 const mensagem = `📦 *LISTA DE SUBLOCAÇÃO / COMPRAS*\n*Projeto:* ${nomeProjeto || 'Moodboard'}\n\n${txt}\n\nGerado via Celebre Sistema.`;
-                                 navigator.clipboard.writeText(mensagem);
-                                 setAvisoCopiadoCompras(true);
-                                 setTimeout(() => setAvisoCopiadoCompras(false), 3000);
-                               }}
-                             >
-                               {avisoCopiadoCompras ? '✓ Lista Copiada!' : '📋 Copiar Lista de Peças'}
-                             </button>
-                             <button 
-                               type="button" 
-                               className="btn-go-to-compras"
-                               style={{ background: '#ea580c' }}
-                               onClick={() => { setModalPecasAberto(false); navigate('/compras'); }}
-                             >
-                               🛒 Ir para Compras
-                             </button>
-                           </div>
-                         </div>
+                        <table className="pieces-table-luxury" style={{ marginTop: '10px' }}>
+                          <thead>
+                            <tr>
+                              <th>Foto</th>
+                              <th>Modelo do Arco / Cenografia</th>
+                              <th>Categoria</th>
+                              <th style={{ textAlign: 'center' }}>Qtd de Arcos</th>
+                              <th style={{ textAlign: 'right' }}>Produção</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {resumoComercial.listaBaloesAComprar.map((it, idx) => (
+                              <tr key={idx}>
+                                <td style={{ width: '50px' }}>
+                                  <img src={it.imagem || 'https://via.placeholder.com/50?text=Item'} className="piece-table-thumb" alt="" />
+                                </td>
+                                <td>
+                                  <strong>{it.nome}</strong>
+                                  <div style={{ fontSize: '11px', color: '#b45309', fontWeight: '600' }}>Necessário comprar pacotes de bexigas p/ inflar</div>
+                                </td>
+                                <td>🎈 Balões</td>
+                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{it.quantidade} un.</td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <span className="badge-card-balloon-buy" style={{ position: 'static' }}>🎈 Bexigas p/ Comprar</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
 
-                         <table className="pieces-table-luxury" style={{ marginTop: '10px' }}>
-                           <thead>
-                             <tr>
-                               <th>Foto</th>
-                               <th>Peça Física</th>
-                               <th>Categoria</th>
-                               <th style={{textAlign: 'center'}}>Qtd</th>
-                               <th style={{textAlign: 'right'}}>Status</th>
-                             </tr>
-                           </thead>
-                           <tbody>
-                             {resumoComercial.listaPecasAComprar.map((it, idx) => (
-                               <tr key={idx}>
-                                 <td style={{width: '50px'}}>
-                                   <img src={it.imagem || 'https://via.placeholder.com/50?text=Item'} className="piece-table-thumb" alt="" />
-                                 </td>
-                                 <td>
-                                   <strong>{it.nome}</strong>
-                                   <div style={{fontSize: '11px', color: '#64748b'}}>Peça permanente externa</div>
-                                 </td>
-                                 <td>{it.categoria}</td>
-                                 <td style={{textAlign: 'center', fontWeight: 'bold'}}>{it.quantidade} un.</td>
-                                 <td style={{textAlign: 'right'}}>
-                                   <span className="badge-table-need-buy">📦 Sublocar / Comprar</span>
-                                 </td>
-                               </tr>
-                             ))}
-                           </tbody>
-                         </table>
-                       </div>
-                     )}
+                    {/* 3. SEÇÃO: PEÇAS FÍSICAS FORA DO ESTOQUE (MÓVEIS / PAINÉIS / LED) */}
+                    {resumoComercial.listaPecasAComprar.length > 0 && (
+                      <div className="modal-pieces-group">
+                        <div className="mb-warning-buy-banner" style={{ background: '#fff7ed', borderColor: '#fed7aa' }}>
+                          <div className="mb-warning-buy-header">
+                            <div className="mb-warning-buy-icon" style={{ background: '#ea580c' }}><Icons.ShoppingCart /></div>
+                            <div>
+                              <h4>📦 Peças Físicas p/ Sublocar ou Comprar ({resumoComercial.totalPecasAComprar} itens)</h4>
+                              <p>Estes móveis, painéis ou estruturas permanentes <strong>não constam no seu estoque próprio</strong>. Providencie a sublocação com parceiros ou compra.</p>
+                            </div>
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
+                            <button
+                              type="button"
+                              className="btn-copy-shopping-list"
+                              style={{ background: '#0f172a' }}
+                              onClick={() => {
+                                const txt = resumoComercial.listaPecasAComprar.map(it => `• ${it.quantidade}x ${it.nome} (${it.categoria || 'Decoração'})`).join('\n');
+                                const mensagem = `📦 *LISTA DE SUBLOCAÇÃO / COMPRAS*\n*Projeto:* ${nomeProjeto || 'Moodboard'}\n\n${txt}\n\nGerado via Celebre Sistema.`;
+                                navigator.clipboard.writeText(mensagem);
+                                setAvisoCopiadoCompras(true);
+                                setTimeout(() => setAvisoCopiadoCompras(false), 3000);
+                              }}
+                            >
+                              {avisoCopiadoCompras ? '✓ Lista Copiada!' : '📋 Copiar Lista de Peças'}
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-go-to-compras"
+                              style={{ background: '#ea580c' }}
+                              onClick={() => { setModalPecasAberto(false); navigate('/compras'); }}
+                            >
+                              🛒 Ir para Compras
+                            </button>
+                          </div>
+                        </div>
 
-                   </div>
-                 )}
-               </div>
+                        <table className="pieces-table-luxury" style={{ marginTop: '10px' }}>
+                          <thead>
+                            <tr>
+                              <th>Foto</th>
+                              <th>Peça Física</th>
+                              <th>Categoria</th>
+                              <th style={{ textAlign: 'center' }}>Qtd</th>
+                              <th style={{ textAlign: 'right' }}>Status</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {resumoComercial.listaPecasAComprar.map((it, idx) => (
+                              <tr key={idx}>
+                                <td style={{ width: '50px' }}>
+                                  <img src={it.imagem || 'https://via.placeholder.com/50?text=Item'} className="piece-table-thumb" alt="" />
+                                </td>
+                                <td>
+                                  <strong>{it.nome}</strong>
+                                  <div style={{ fontSize: '11px', color: '#64748b' }}>Peça permanente externa</div>
+                                </td>
+                                <td>{it.categoria}</td>
+                                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{it.quantidade} un.</td>
+                                <td style={{ textAlign: 'right' }}>
+                                  <span className="badge-table-need-buy">📦 Sublocar / Comprar</span>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
 
-               <div className="modal-footer-row" style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center'}}>
-                 <button className="btn-cancel" onClick={() => setModalPecasAberto(false)}>Voltar ao Cenário</button>
-                 <div style={{display: 'flex', gap: '10px'}}>
-                   <button className="btn-header-action primary" onClick={() => { setModalPecasAberto(false); handleGerarPropostaPDF(); }}>
-                     <Icons.FileText /> Exportar Proposta (PDF)
-                   </button>
-                   <button className="btn-confirm-luxury" onClick={() => { setModalPecasAberto(false); handleGerarLocacao(); }}>
-                     <Icons.Crown /> Gerar Nova Locação
-                   </button>
-                 </div>
-               </div>
-             </div>
-           </div>
-         )}
+                  </div>
+                )}
+              </div>
+
+              <div className="modal-footer-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <button className="btn-cancel" onClick={() => setModalPecasAberto(false)}>Voltar ao Cenário</button>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                  <button className="btn-header-action primary" onClick={() => { setModalPecasAberto(false); handleGerarPropostaPDF(); }}>
+                    <Icons.FileText /> Exportar Proposta (PDF)
+                  </button>
+                  <button className="btn-confirm-luxury" onClick={() => { setModalPecasAberto(false); handleGerarLocacao(); }}>
+                    <Icons.Crown /> Gerar Nova Locação
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 🎛️ PAINEL LATERAL DIREITO PRO (ESTILO PHOTOSHOP / FIGMA / CANVA) */}
@@ -6130,1059 +6778,1262 @@ const Moodboard = () => {
         <>
           <div className="studio-right-panel-backdrop" onClick={() => setPainelDireitoAberto(false)} />
           <div className="studio-right-panel" onClick={e => e.stopPropagation()}>
-          {/* Cabeçalho do Painel Direito */}
-          <div className="right-panel-header">
-            <div className="right-panel-title">
-              <Icons.Sparkles width={14} height={14} />
-              <span>ESTÚDIO PRO</span>
-            </div>
-            <button className="btn-close-right-panel" onClick={() => setPainelDireitoAberto(false)} title="Recolher Painel">✕</button>
-          </div>
-
-          {/* Abas do Painel Direito */}
-          <div className="right-panel-tabs">
-            <button 
-              type="button"
-              className={`r-tab-btn ${abaDireita === 'camadas' ? 'active' : ''}`}
-              onClick={() => setAbaDireita('camadas')}
-              title="Gerenciar Camadas e Z-Index"
-            >
-              <Icons.Layers width={13} height={13} />
-              <span>Camadas ({itensCanvas.length})</span>
-            </button>
-            <button 
-              type="button"
-              className={`r-tab-btn ${abaDireita === 'propriedades' ? 'active' : ''}`}
-              onClick={() => setAbaDireita('propriedades')}
-              title="Ajustes de Posição, Escala e Efeitos"
-            >
-              <Icons.Sliders width={13} height={13} />
-              <span>Propriedades</span>
-            </button>
-            <button 
-              type="button"
-              className={`r-tab-btn ${abaDireita === 'baloes' ? 'active' : ''}`}
-              onClick={() => setAbaDireita('baloes')}
-              title="Bexigas & Balões para Produção"
-            >
-              <span>🎈 Bexigas</span>
-            </button>
-          </div>
-
-          {/* CONTEÚDO DA ABA CAMADAS (LAYERS) */}
-          {abaDireita === 'camadas' && (
-            <div className="right-panel-body">
-              <div className="layers-header-row">
-                <span>ORDEM DE PROFUNDIDADE (Z-INDEX)</span>
-                <small>Topo para Base</small>
+            {/* Cabeçalho do Painel Direito */}
+            <div className="right-panel-header">
+              <div className="right-panel-title">
+                <Icons.Sparkles width={14} height={14} />
+                <span>ESTÚDIO PRO</span>
               </div>
-
-              {itensCanvas.length === 0 ? (
-                <div className="empty-layers-box">
-                  <Icons.Layers width={28} height={28} style={{ opacity: 0.3, marginBottom: '6px' }} />
-                  <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhuma peça adicionada ao cenário.</p>
-                </div>
-              ) : (
-                <div className="layers-list-scroll">
-                  {[...itensCanvas].reverse().map((item, revIdx) => {
-                    const isSelected = item.uniqueId === selecionadoId;
-                    const isBaloes = item.categoria === 'Baloes' || item.shapeType?.startsWith('baloes_') || (item.nome || '').toLowerCase().includes('arco');
-                    return (
-                      <div 
-                        key={item.uniqueId}
-                        className={`layer-row-item ${isSelected ? 'selected' : ''} ${item.locked ? 'locked' : ''}`}
-                        onClick={() => { setSelecionadoId(item.uniqueId); }}
-                      >
-                        <div className="layer-thumb-mini">
-                          {item.type === 'text' ? (
-                            <span className="layer-text-icon">T</span>
-                          ) : item.imagem ? (
-                            <img src={item.imagem} alt="" />
-                          ) : (
-                            <span className="layer-shape-icon">🏛️</span>
-                          )}
-                        </div>
-
-                        <div className="layer-name-col">
-                          <span className="layer-name-txt" title={item.nome || item.content || 'Item'}>
-                            {item.type === 'text' ? `Texto: "${item.content || ''}"` : (item.nome || item.shapeType || 'Elemento')}
-                          </span>
-                          <span className="layer-type-tag">
-                            {isBaloes ? '🎈 Bexigas / Balão' : item.isEstoqueProprio ? '📦 Estoque' : '🛒 Fora do Estoque'}
-                          </span>
-                        </div>
-
-                        <div className="layer-actions-group" onClick={e => e.stopPropagation()}>
-                          <button 
-                            type="button"
-                            className={`btn-layer-tool ${item.opacity === 0 ? 'muted' : ''}`} 
-                            onClick={() => atualizarItem(item.uniqueId, { opacity: item.opacity === 0 ? 100 : 0 })}
-                            title={item.opacity === 0 ? 'Mostrar Camada' : 'Ocultar Camada'}
-                          >
-                            <Icons.Eye width={11} height={11} />
-                          </button>
-                          <button 
-                            type="button"
-                            className={`btn-layer-tool ${item.locked ? 'active' : ''}`} 
-                            onClick={() => toggleLock(item.uniqueId)}
-                            title={item.locked ? 'Desbloquear' : 'Bloquear'}
-                          >
-                            <Icons.Lock width={11} height={11} />
-                          </button>
-                          <button 
-                            type="button"
-                            className="btn-layer-tool" 
-                            onClick={() => bringToFront(item.uniqueId)}
-                            title="Subir Camada"
-                          >
-                            <Icons.ArrowUp width={11} height={11} />
-                          </button>
-                          <button 
-                            type="button"
-                            className="btn-layer-tool" 
-                            onClick={() => sendToBack(item.uniqueId)}
-                            title="Descer Camada"
-                          >
-                            <Icons.ArrowDown width={11} height={11} />
-                          </button>
-                          <button 
-                            type="button"
-                            className="btn-layer-tool danger" 
-                            onClick={() => deleteItem(item.uniqueId)}
-                            title="Excluir Camada"
-                          >
-                            <Icons.Trash width={11} height={11} />
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              <button className="btn-close-right-panel" onClick={() => setPainelDireitoAberto(false)} title="Recolher Painel">✕</button>
             </div>
-          )}
 
-          {/* CONTEÚDO DA ABA PROPRIEDADES (INSPECTOR COMPLETO) */}
-          {abaDireita === 'propriedades' && (
-            <div className="right-panel-body">
-              {itemSelecionado ? (
-                <div className="inspector-content">
-                  {/* Card do Item Selecionado */}
-                  <div className="inspector-item-card">
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <div className="layer-thumb-mini" style={{ width: '28px', height: '28px' }}>
-                        {itemSelecionado.type === 'text' ? 'T' : (itemSelecionado.imagem ? <img src={itemSelecionado.imagem} alt="" /> : '🏛️')}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <strong style={{ display: 'block', fontSize: '11.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {itemSelecionado.nome || (itemSelecionado.type === 'text' ? `Texto: "${itemSelecionado.content || ''}"` : 'Elemento')}
-                        </strong>
-                        <small style={{ fontSize: '9.5px', color: '#64748b' }}>
-                          {itemSelecionado.isEstoqueProprio ? '📦 Peça do Estoque' : '🛒 Fora do Estoque'}
-                        </small>
-                      </div>
-                    </div>
+            {/* Abas do Painel Direito */}
+            <div className="right-panel-tabs">
+              <button
+                type="button"
+                className={`r-tab-btn ${abaDireita === 'camadas' ? 'active' : ''}`}
+                onClick={() => setAbaDireita('camadas')}
+                title="Gerenciar Camadas e Z-Index"
+              >
+                <Icons.Layers width={13} height={13} />
+                <span>Camadas ({itensCanvas.length})</span>
+              </button>
+              <button
+                type="button"
+                className={`r-tab-btn ${abaDireita === 'propriedades' ? 'active' : ''}`}
+                onClick={() => setAbaDireita('propriedades')}
+                title="Ajustes de Posição, Escala e Efeitos"
+              >
+                <Icons.Sliders width={13} height={13} />
+                <span>Propriedades</span>
+              </button>
+              <button
+                type="button"
+                className={`r-tab-btn ${abaDireita === 'baloes' ? 'active' : ''}`}
+                onClick={() => setAbaDireita('baloes')}
+                title="Bexigas & Balões para Produção"
+              >
+                <span>🎈 Bexigas</span>
+              </button>
+            </div>
+
+            {/* CONTEÚDO DA ABA CAMADAS (LAYERS) */}
+            {abaDireita === 'camadas' && (
+              <div className="right-panel-body">
+                <div className="layers-header-row">
+                  <span>ORDEM DE PROFUNDIDADE (Z-INDEX)</span>
+                  <small>Topo para Base</small>
+                </div>
+
+                {itensCanvas.length === 0 ? (
+                  <div className="empty-layers-box">
+                    <Icons.Layers width={28} height={28} style={{ opacity: 0.3, marginBottom: '6px' }} />
+                    <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhuma peça adicionada ao cenário.</p>
                   </div>
-
-                  {/* 1. Posicionamento & Dimensões */}
-                  <div className="inspector-section-title">Posicionamento & Dimensões</div>
-                  <div className="inspector-2col-grid">
-                    <div className="inspector-field">
-                      <label>Largura (W)</label>
-                      <input 
-                        type="number" 
-                        value={Math.round(itemSelecionado.width || 100)}
-                        onChange={e => atualizarItem(selecionadoId, { width: Math.max(20, Number(e.target.value)) })}
-                      />
-                    </div>
-                    <div className="inspector-field">
-                      <label>Altura (H)</label>
-                      <input 
-                        type="number" 
-                        value={Math.round(itemSelecionado.height || 100)}
-                        onChange={e => atualizarItem(selecionadoId, { height: Math.max(20, Number(e.target.value)) })}
-                      />
-                    </div>
-                    <div className="inspector-field">
-                      <label>Posição X</label>
-                      <input 
-                        type="number" 
-                        value={Math.round(itemSelecionado.x || 0)}
-                        onChange={e => atualizarItem(selecionadoId, { x: Number(e.target.value) })}
-                      />
-                    </div>
-                    <div className="inspector-field">
-                      <label>Posição Y</label>
-                      <input 
-                        type="number" 
-                        value={Math.round(itemSelecionado.y || 0)}
-                        onChange={e => atualizarItem(selecionadoId, { y: Number(e.target.value) })}
-                      />
-                    </div>
-                  </div>
-
-                  {/* 2. Ajustes Visuais, Filtros & Efeitos */}
-                  <div className="inspector-section-title" style={{ marginTop: '10px' }}>Filtros & Efeitos Visuais</div>
-                  
-                  {(itemSelecionado.type === 'image' || itemSelecionado.capaUrl) && (
-                    <>
-                      <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                          <span>Brilho</span>
-                          <span>{itemSelecionado.brightness || 100}%</span>
-                        </div>
-                        <input type="range" min="0" max="200" value={itemSelecionado.brightness || 100}
-                          onChange={e => atualizarItem(selecionadoId, { brightness: Number(e.target.value) })}
-                          onDoubleClick={() => atualizarItem(selecionadoId, { brightness: 100 })} />
-                      </div>
-
-                      <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                          <span>Contraste</span>
-                          <span>{itemSelecionado.contrast || 100}%</span>
-                        </div>
-                        <input type="range" min="0" max="200" value={itemSelecionado.contrast || 100}
-                          onChange={e => atualizarItem(selecionadoId, { contrast: Number(e.target.value) })}
-                          onDoubleClick={() => atualizarItem(selecionadoId, { contrast: 100 })} />
-                      </div>
-
-                      {/* 🌈 SATURAÇÃO (NOVA) */}
-                      <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                          <span>Saturação</span>
-                          <span>{itemSelecionado.saturate || 100}%</span>
-                        </div>
-                        <input type="range" min="0" max="300" value={itemSelecionado.saturate || 100}
-                          onChange={e => atualizarItem(selecionadoId, { saturate: Number(e.target.value) })}
-                          onDoubleClick={() => atualizarItem(selecionadoId, { saturate: 100 })} />
-                      </div>
-
-                      {/* 🪄 REMOVER FUNDO (IA WASM) */}
-                      <div style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
-                        <button
-                          type="button"
-                          className="btn-remove-bg-ia"
-                          style={{ flex: 1, margin: 0 }}
-                          onClick={() => removerFundoImagem(selecionadoId)}
-                          disabled={removendoFundo}
-                          title="Remove o fundo da imagem usando IA (WASM, sem custo)"
+                ) : (
+                  <div className="layers-list-scroll">
+                    {[...itensCanvas].reverse().map((item, revIdx) => {
+                      const isSelected = item.uniqueId === selecionadoId;
+                      const isBaloes = item.categoria === 'Baloes' || item.shapeType?.startsWith('baloes_') || (item.nome || '').toLowerCase().includes('arco');
+                      return (
+                        <div
+                          key={item.uniqueId}
+                          className={`layer-row-item ${isSelected ? 'selected' : ''} ${item.locked ? 'locked' : ''}`}
+                          onClick={() => { setSelecionadoId(item.uniqueId); }}
                         >
-                          {removendoFundo ? (
-                            <><i className="fas fa-spinner fa-spin" style={{ marginRight: '6px' }} />Processando IA...</>
-                          ) : (
-                            <>🪄 IA: Remover Fundo</>
-                          )}
-                        </button>
-                        {itemSelecionado.imagemOriginal && (
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '6px 10px', fontSize: '10.5px', color: '#0f172a', fontWeight: 'bold', background: '#fff' }}
-                            onClick={() => restaurarImagemOriginal(selecionadoId)}
-                            title="Restaurar foto original anterior à remoção de fundo"
-                          >
-                            ↩️ Restaurar
-                          </button>
-                        )}
-                      </div>
-                      <p style={{ fontSize: '9.5px', color: '#94a3b8', margin: '0 0 8px 0', lineHeight: 1.4 }}>
-                        {itemSelecionado.imagemOriginal 
-                          ? '✅ Recorte aplicado. Clique em "Restaurar" se quiser desfazer.' 
-                          : 'Funciona offline. Na 1ª vez baixa modelo (~60MB). Pode desfazer com Ctrl+Z.'}
-                      </p>
-                    </>
-                  )}
-
-                  {/* ✍️ SEÇÃO DE EDIÇÃO DE TEXTO & LETREIRO NEON NO INSPECTOR */}
-                  {itemSelecionado.type === 'text' && (
-                    <div style={{ marginTop: '10px', marginBottom: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1.5px solid #c5a059' }}>
-                      <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px', color: '#c5a059' }}>
-                        ✍️ Conteúdo & Tipografia
-                      </div>
-
-                      {/* Input de Texto */}
-                      <input 
-                        type="text"
-                        className="text-input-direct"
-                        value={itemSelecionado.content || ''}
-                        onChange={e => atualizarItem(selecionadoId, { content: e.target.value })}
-                        placeholder="Digite o texto..."
-                        style={{ marginBottom: '8px' }}
-                      />
-
-                      {/* Seletor de Fonte */}
-                      <div style={{ marginBottom: '8px' }}>
-                        <select className="font-selector" value={itemSelecionado.fontFamily} onChange={e => atualizarItem(selecionadoId, { fontFamily: e.target.value })}>
-                          {fontesDisponiveis.map(f => (
-                            <option key={f.nome} value={f.valor} style={{ fontFamily: f.valor }}>
-                              {f.nome}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-
-                      {/* Barra de Formatação (B, I, Alinhamento, Cor) */}
-                      <div className="style-controls-row" style={{ marginBottom: '8px' }}>
-                        <button 
-                          type="button"
-                          className={`btn-style ${itemSelecionado.fontWeight === 'bold' ? 'active' : ''}`} 
-                          onClick={() => atualizarItem(selecionadoId, { fontWeight: itemSelecionado.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                          title="Negrito"
-                        >
-                          <Icons.Bold />
-                        </button>
-                        <button 
-                          type="button"
-                          className={`btn-style ${itemSelecionado.fontStyle === 'italic' ? 'active' : ''}`} 
-                          onClick={() => atualizarItem(selecionadoId, { fontStyle: itemSelecionado.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                          title="Itálico"
-                        >
-                          <Icons.Italic />
-                        </button>
-                        <button 
-                          type="button"
-                          className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'left' ? 'active' : ''}`} 
-                          onClick={() => atualizarItem(selecionadoId, { textAlign: 'left' })}
-                        >
-                          <i className="fas fa-align-left" />
-                        </button>
-                        <button 
-                          type="button"
-                          className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'center' ? 'active' : ''}`} 
-                          onClick={() => atualizarItem(selecionadoId, { textAlign: 'center' })}
-                        >
-                          <i className="fas fa-align-center" />
-                        </button>
-                        <button 
-                          type="button"
-                          className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'right' ? 'active' : ''}`} 
-                          onClick={() => atualizarItem(selecionadoId, { textAlign: 'right' })}
-                        >
-                          <i className="fas fa-align-right" />
-                        </button>
-                        <div className="divider-v" />
-                        <label className="color-picker-wrapper" title="Cor do Texto">
-                          <input type="color" className="color-input-mini" value={itemSelecionado.color || '#c5a059'} onChange={e => atualizarItem(selecionadoId, { color: e.target.value })} />
-                        </label>
-                      </div>
-
-                      {/* ✨ MATERIAIS, TEXTURAS REAIS & UPLOAD NO INSPECTOR */}
-                      <div style={{ marginBottom: '10px', background: '#f8fafc', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                          <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155', textTransform: 'uppercase', margin: 0 }}>
-                            🪞 Textura / Material da Letra:
-                          </label>
-                        </div>
-
-                        {/* Botão Upload de Textura para o Texto */}
-                        <button
-                          type="button"
-                          onClick={() => handleUploadTexturaTexto(selecionadoId)}
-                          style={{
-                            width: '100%',
-                            padding: '6px 8px',
-                            background: '#0f172a',
-                            color: '#fef08a',
-                            border: '1px solid rgba(234, 179, 8, 0.4)',
-                            borderRadius: '6px',
-                            fontSize: '10.5px',
-                            fontWeight: 'bold',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            gap: '5px',
-                            marginBottom: '8px'
-                          }}
-                        >
-                          <span>📤</span>
-                          <span>Upload de Foto/Textura no Texto</span>
-                        </button>
-
-                        {/* Swatches Visuais de Materiais de Festa */}
-                        <div className="texture-swatches-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                          {[
-                            { id: 'none', nome: 'Cor Sólida', tipo: 'cor', thumb: null, bg: itemSelecionado.color || '#c5a059' },
-                            { id: 'gold_mirror', nome: 'Ouro Espelho', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #b38728 55%, #aa771c 100%)' },
-                            { id: 'rose_gold', nome: 'Rose Gold', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #b76e79 0%, #ffd1dc 30%, #e0a9af 55%, #9c4f5a 100%)' },
-                            { id: 'silver_mirror', nome: 'Prata Espelho', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #8a8a8a 0%, #ffffff 30%, #a6a6a6 55%, #737373 100%)' },
-                            { id: 'mdf_wood', nome: 'MDF Madeira', tipo: 'pat', thumb: null, bg: 'repeating-linear-gradient(45deg, #d29b62, #d29b62 6px, #ba8249 6px, #ba8249 12px)' },
-                            { id: 'glitter_gold', nome: 'Glitter Dourado', tipo: 'grad', thumb: null, bg: 'radial-gradient(circle at 50% 50%, #fff7cc 10%, #d4af37 40%, #996515 80%, #ffd700 100%)' },
-                            { id: 'backlight_halo', nome: 'Letreiro Neon', tipo: 'neon', thumb: null, bg: '#0f172a' },
-                            ...(elementosCenografia || [])
-                              .filter(e => e.categoria === 'Texturas' && (e.isGlobal || e.empresaId === tenantId))
-                              .map(e => ({ id: `admin_${e.id}`, nome: e.nome, url: e.imagemUrl, thumb: e.imagemUrl }))
-                          ].map(mat => {
-                            const isMatActive = mat.url 
-                              ? (itemSelecionado.textureUrl === mat.url) 
-                              : ((itemSelecionado.material || 'none') === mat.id && !itemSelecionado.textureUrl);
-
-                            return (
-                              <div
-                                key={mat.id}
-                                className={`texture-swatch-card ${isMatActive ? 'active' : ''}`}
-                                onClick={() => {
-                                  if (mat.url) {
-                                    atualizarItem(selecionadoId, { material: 'custom_texture', textureUrl: mat.url, textureScale: itemSelecionado.textureScale || 100 });
-                                  } else {
-                                    atualizarItem(selecionadoId, { material: mat.id, textureUrl: '' });
-                                  }
-                                }}
-                                title={mat.nome}
-                              >
-                                <div 
-                                  className="texture-swatch-thumb" 
-                                  style={mat.thumb ? { backgroundImage: `url("${mat.thumb}")` } : { background: mat.bg }}
-                                >
-                                  {mat.tipo === 'cor' && <span style={{ fontSize: '11px' }}>🎨</span>}
-                                  {mat.tipo === 'neon' && <span style={{ fontSize: '12px', filter: 'drop-shadow(0 0 4px #ec4899)' }}>💡</span>}
-                                  {isMatActive && (
-                                    <div style={{ position: 'absolute', top: '2px', right: '2px', background: '#c5a059', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8.5px', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
-                                      ✓
-                                    </div>
-                                  )}
-                                </div>
-                                <span className="texture-swatch-name">{mat.nome}</span>
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        {/* Slider de Escala da Textura (quando houver textura ativa) */}
-                        {(itemSelecionado.material === 'custom_texture' || !!itemSelecionado.textureUrl) && (
-                          <div className="slider-group" style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #cbd5e1' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                              <span>🔍 Zoom da Textura no Texto</span>
-                              <span>{itemSelecionado.textureScale || 100}%</span>
-                            </div>
-                            <input 
-                              type="range" min="30" max="300" value={itemSelecionado.textureScale || 100} 
-                              onChange={e => atualizarItem(selecionadoId, { textureScale: Number(e.target.value) })} 
-                              onDoubleClick={() => atualizarItem(selecionadoId, { textureScale: 100 })}
-                              style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                            />
+                          <div className="layer-thumb-mini">
+                            {item.type === 'text' ? (
+                              <span className="layer-text-icon">T</span>
+                            ) : item.imagem ? (
+                              <img src={item.imagem} alt="" />
+                            ) : (
+                              <span className="layer-shape-icon">🏛️</span>
+                            )}
                           </div>
-                        )}
-                      </div>
 
-                      {/* 🌈 TEXTO CURVADO / ARQUEADO NO INSPECTOR */}
-                      <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                          <span>🌈 Curvatura do Arco</span>
-                          <span>{itemSelecionado.curvatura || 0}%</span>
-                        </div>
-                        <input 
-                          type="range" min="-100" max="100" value={itemSelecionado.curvatura || 0} 
-                          onChange={e => atualizarItem(selecionadoId, { curvatura: Number(e.target.value) })} 
-                          onDoubleClick={() => atualizarItem(selecionadoId, { curvatura: 0 })}
-                        />
-                      </div>
-
-                      {/* 🎨 CONTORNO / BORDA EXTERNA NO INSPECTOR */}
-                      <div style={{ background: '#f1f5f9', padding: '6px 8px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                          <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#334155' }}>🎨 Contorno / Borda</span>
-                          <input type="color" className="color-input-mini" style={{ width: '18px', height: '18px' }} value={itemSelecionado.strokeColor || '#ffffff'} onChange={e => atualizarItem(selecionadoId, { strokeColor: e.target.value })} />
-                        </div>
-                        <input 
-                          type="range" min="0" max="12" value={itemSelecionado.strokeWidth || 0} 
-                          onChange={e => atualizarItem(selecionadoId, { strokeWidth: Number(e.target.value) })} 
-                          onDoubleClick={() => atualizarItem(selecionadoId, { strokeWidth: 0 })}
-                        />
-                      </div>
-
-                      {/* 🏷️ PLACA / SUPORTE DE FUNDO NO INSPECTOR */}
-                      <div style={{ marginBottom: '8px' }}>
-                        <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                          🏷️ Placa de Fundo:
-                        </label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
-                          {[
-                            { id: 'nenhuma', label: 'Nenhuma' },
-                            { id: 'acrilico_redondo', label: '🔘 Redonda' },
-                            { id: 'acrilico_arco', label: '🏛️ Arco' },
-                            { id: 'acrilico_retangular', label: '⬛ Retang.' },
-                            { id: 'flamula_tecido', label: '📜 Flâmula' },
-                            { id: 'cavalete_madeira', label: '🖼️ Cavalete' }
-                          ].map(p => (
-                            <button
-                              key={p.id}
-                              type="button"
-                              className={`btn-mat-choice ${(itemSelecionado.placaFundo || 'nenhuma') === p.id ? 'active' : ''}`}
-                              onClick={() => atualizarItem(selecionadoId, { placaFundo: p.id })}
-                            >
-                              {p.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Controle Avançado de Tamanho da Fonte */}
-                      <div className="slider-group" style={{ marginBottom: '8px', background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b' }}>🔤 Tamanho da Fonte</span>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            <button
-                              type="button"
-                              onClick={() => atualizarItem(selecionadoId, { fontSize: Math.max(12, Number(itemSelecionado.fontSize || 48) - 4) })}
-                              style={{ width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
-                              title="Diminuir Fonte (-4px)"
-                            >
-                              -
-                            </button>
-                            <input
-                              type="number"
-                              min="12"
-                              max="250"
-                              value={itemSelecionado.fontSize || 48}
-                              onChange={e => atualizarItem(selecionadoId, { fontSize: Math.max(12, Math.min(250, Number(e.target.value) || 12)) })}
-                              style={{ width: '46px', height: '24px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0 2px' }}
-                            />
-                            <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>px</span>
-                            <button
-                              type="button"
-                              onClick={() => atualizarItem(selecionadoId, { fontSize: Math.min(250, Number(itemSelecionado.fontSize || 48) + 4) })}
-                              style={{ width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
-                              title="Aumentar Fonte (+4px)"
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                        <input 
-                          type="range" min="12" max="220" value={itemSelecionado.fontSize || 48} 
-                          onChange={e => atualizarItem(selecionadoId, { fontSize: Number(e.target.value) })} 
-                          onDoubleClick={() => atualizarItem(selecionadoId, { fontSize: 48 })}
-                          style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                        />
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
-                          {[
-                            { label: 'P (32)', val: 32 },
-                            { label: 'M (48)', val: 48 },
-                            { label: 'G (68)', val: 68 },
-                            { label: 'GG (96)', val: 96 },
-                            { label: 'XG (130)', val: 130 }
-                          ].map(pill => (
-                            <button
-                              key={pill.val}
-                              type="button"
-                              onClick={() => atualizarItem(selecionadoId, { fontSize: pill.val })}
-                              style={{
-                                flex: 1, padding: '3px 0', fontSize: '9.5px', fontWeight: '700', borderRadius: '4px',
-                                border: (itemSelecionado.fontSize === pill.val) ? '1px solid #c5a059' : '1px solid #e2e8f0',
-                                background: (itemSelecionado.fontSize === pill.val) ? '#fef3c7' : '#f8fafc',
-                                color: (itemSelecionado.fontSize === pill.val) ? '#92400e' : '#475569',
-                                cursor: 'pointer'
-                              }}
-                            >
-                              {pill.label}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-
-                      {/* Slider de Letter Spacing */}
-                      <div className="slider-group" style={{ marginBottom: '8px' }} title="Dê 2 cliques para resetar">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                          <span>Espaçamento de Letras</span>
-                          <span>{itemSelecionado.letterSpacing || 0}px</span>
-                        </div>
-                        <input 
-                          type="range" min="-2" max="20" value={itemSelecionado.letterSpacing || 0} 
-                          onChange={e => atualizarItem(selecionadoId, { letterSpacing: Number(e.target.value) })} 
-                          onDoubleClick={() => atualizarItem(selecionadoId, { letterSpacing: 0 })}
-                        />
-                      </div>
-
-                      {/* Painel Neon LED */}
-                      <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                          <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '10.5px' }}>🌟 Neon LED</span>
-                          <button
-                            type="button"
-                            onClick={() => atualizarItem(selecionadoId, { neonGlow: (itemSelecionado.neonGlow > 0 ? 0 : 20) })}
-                            style={{
-                              fontSize: '9.5px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px',
-                              border: 'none', background: itemSelecionado.neonGlow > 0 ? '#22c55e' : '#334155', color: '#fff', cursor: 'pointer'
-                            }}
-                          >
-                            {itemSelecionado.neonGlow > 0 ? 'ON' : 'OFF'}
-                          </button>
-                        </div>
-                        <div className="neon-light-palette" style={{ marginTop: '4px' }}>
-                          {['#eab308', '#ec4899', '#38bdf8', '#fef08a', '#a855f7', '#22c55e', '#ef4444'].map(cor => (
-                            <button
-                              key={cor}
-                              type="button"
-                              className={`neon-dot-btn ${(itemSelecionado.neonColor || '#c5a059') === cor ? 'active' : ''}`}
-                              style={{ backgroundColor: cor, width: '18px', height: '18px' }}
-                              onClick={() => atualizarItem(selecionadoId, { neonColor: cor, neonGlow: Math.max(16, itemSelecionado.neonGlow || 20) })}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* 🌿 CONTROLES DO ENFEITE / APLIQUE DE FESTA NO INSPECTOR */}
-                  {itemSelecionado.type === 'ornament' && (
-                    <div className="inspector-group" style={{ marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px' }}>✨ Material & Acabamento</div>
-                      
-                      <div className="materials-selector-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', marginBottom: '8px' }}>
-                        {[
-                          { id: 'gold_mirror', label: '✨ Ouro Espelho' },
-                          { id: 'rose_gold', label: '🌸 Rose Gold' },
-                          { id: 'silver_mirror', label: '🥈 Prata' },
-                          { id: 'mdf_wood', label: '🪵 MDF Madeira' },
-                          { id: 'none', label: '🎨 Cor Própria' }
-                        ].map(mat => (
-                          <button
-                            key={mat.id}
-                            type="button"
-                            className={`btn-mat-choice ${(itemSelecionado.material || 'gold_mirror') === mat.id ? 'active' : ''}`}
-                            onClick={() => atualizarItem(selecionadoId, { material: mat.id })}
-                            style={{ padding: '6px', fontSize: '10px' }}
-                          >
-                            {mat.label}
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* Cor personalizada se material for none */}
-                      {itemSelecionado.material === 'none' && (
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', padding: '4px 6px', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                          <span style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#334155' }}>Cor do Enfeite</span>
-                          <input 
-                            type="color" 
-                            value={itemSelecionado.color || '#c5a059'} 
-                            onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                            style={{ width: '28px', height: '22px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
-                          />
-                        </div>
-                      )}
-
-                      {/* Slider de Tamanho */}
-                      <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                          <span>Tamanho</span>
-                          <span>{itemSelecionado.width || 100}px</span>
-                        </div>
-                        <input 
-                          type="range" min="30" max="300" 
-                          value={itemSelecionado.width || 100}
-                          onChange={e => {
-                            const sz = Number(e.target.value);
-                            atualizarItem(selecionadoId, { width: sz, height: sz });
-                          }}
-                          onDoubleClick={() => atualizarItem(selecionadoId, { width: 100, height: 100 })}
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                      <span>Opacidade</span>
-                      <span>{itemSelecionado.opacity ?? 100}%</span>
-                    </div>
-                    <input 
-                      type="range" min="0" max="100" 
-                      value={itemSelecionado.opacity ?? 100}
-                      onChange={e => atualizarItem(selecionadoId, { opacity: Number(e.target.value) })}
-                      onDoubleClick={() => atualizarItem(selecionadoId, { opacity: 100 })}
-                    />
-                  </div>
-
-                  <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                      <span>Sombra 3D</span>
-                      <span>{itemSelecionado.shadow || 0}px</span>
-                    </div>
-                    <input 
-                      type="range" min="0" max="50" 
-                      value={itemSelecionado.shadow || 0}
-                      onChange={e => atualizarItem(selecionadoId, { shadow: Number(e.target.value) })}
-                      onDoubleClick={() => atualizarItem(selecionadoId, { shadow: 0 })}
-                    />
-                  </div>
-
-                  <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                      <span>Rotação</span>
-                      <span>{itemSelecionado.rotation || 0}°</span>
-                    </div>
-                    <input 
-                      type="range" min="0" max="360" 
-                      value={itemSelecionado.rotation || 0}
-                      onChange={e => atualizarItem(selecionadoId, { rotation: Number(e.target.value) })}
-                      onDoubleClick={() => atualizarItem(selecionadoId, { rotation: 0 })}
-                    />
-                  </div>
-
-                  {/* 3. Se for Estrutura / Cilindro / Mesa: Capa Sublimada, Tampo & Enquadramento */}
-                  {isEstruturaSelecionada && (
-                    <div className="inspector-capa-section" style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                      <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px' }}>🎨 Capa de Tecido Sublimado</div>
-                      
-                      <div style={{ display: 'flex', gap: '6px', marginBottom: itemSelecionado.capaUrl ? '8px' : '0' }}>
-                        <button 
-                          type="button"
-                          className="btn-upload-capa" 
-                          style={{ flex: 1, fontSize: '11px', padding: '7px 10px', margin: 0 }}
-                          onClick={() => handleUploadCapaEstrutura(selecionadoId)}
-                        >
-                          <Icons.Image width={13} height={13} /> {itemSelecionado.capaUrl ? '🔄 Trocar Imagem / Capa' : '📷 Inserir Foto / Capa'}
-                        </button>
-                        {itemSelecionado.capaUrl && (
-                          <button
-                            type="button"
-                            className="btn-secondary"
-                            style={{ padding: '7px 10px', fontSize: '11px', color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
-                            onClick={() => aplicarCapaNaEstrutura(selecionadoId, '')}
-                            title="Remover Capa"
-                          >
-                            ✕ Remover
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 🔘 Acabamento e Cor do Tampo (Cilindros e Mesas) */}
-                      {(itemSelecionado.shapeType?.includes('cilindro') || itemSelecionado.shapeType?.includes('mesa')) && (
-                        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155' }}>🔘 Tampo Superior:</span>
-                            <span style={{ fontSize: '9.5px', color: '#64748b' }}>
-                              {itemSelecionado.tampoTipo === 'liso' ? 'Cor Fixa' : 'Contínuo com Capa'}
+                          <div className="layer-name-col">
+                            <span className="layer-name-txt" title={item.nome || item.content || 'Item'}>
+                              {item.type === 'text' ? `Texto: "${item.content || ''}"` : (item.nome || item.shapeType || 'Elemento')}
+                            </span>
+                            <span className="layer-type-tag">
+                              {isBaloes ? '🎈 Bexigas / Balão' : item.isEstoqueProprio ? '📦 Estoque' : '🛒 Fora do Estoque'}
                             </span>
                           </div>
 
-                          <div className="tampo-type-toggle" style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-                            <button 
+                          <div className="layer-actions-group" onClick={e => e.stopPropagation()}>
+                            <button
                               type="button"
-                              className={`btn-tampo-type ${itemSelecionado.tampoTipo !== 'liso' ? 'active' : ''}`}
-                              onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'continua' })}
-                              style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                              className={`btn-layer-tool ${item.opacity === 0 ? 'muted' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { opacity: item.opacity === 0 ? 100 : 0 })}
+                              title={item.opacity === 0 ? 'Mostrar Camada' : 'Ocultar Camada'}
                             >
-                              🔄 Estampa da Capa
+                              <Icons.Eye width={11} height={11} />
                             </button>
-                            <button 
+                            <button
                               type="button"
-                              className={`btn-tampo-type ${itemSelecionado.tampoTipo === 'liso' ? 'active' : ''}`}
-                              onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'liso', tampoCor: itemSelecionado.tampoCor || '#ffffff' })}
-                              style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                              className={`btn-layer-tool ${item.locked ? 'active' : ''}`}
+                              onClick={() => toggleLock(item.uniqueId)}
+                              title={item.locked ? 'Desbloquear' : 'Bloquear'}
                             >
-                              🎨 Cor do Tampo
+                              <Icons.Lock width={11} height={11} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-layer-tool"
+                              onClick={() => bringToFront(item.uniqueId)}
+                              title="Subir Camada"
+                            >
+                              <Icons.ArrowUp width={11} height={11} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-layer-tool"
+                              onClick={() => sendToBack(item.uniqueId)}
+                              title="Descer Camada"
+                            >
+                              <Icons.ArrowDown width={11} height={11} />
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-layer-tool danger"
+                              onClick={() => deleteItem(item.uniqueId)}
+                              title="Excluir Camada"
+                            >
+                              <Icons.Trash width={11} height={11} />
                             </button>
                           </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
 
-                          {/* Seletor de Cores do Tampo quando Liso/Fixo */}
-                          {itemSelecionado.tampoTipo === 'liso' && (
-                            <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '6px' }}>
-                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Escolha a Cor da Tampa:</div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                                {[
-                                  { label: 'Branco', cor: '#ffffff' },
-                                  { label: 'Madeira Pinus', cor: '#d29b62' },
-                                  { label: 'Ouro', cor: '#c5a059' },
-                                  { label: 'Rose Gold', cor: '#b76e79' },
-                                  { label: 'Preto', cor: '#1e293b' },
-                                  { label: 'Off-White', cor: '#f8fafc' }
-                                ].map(c => (
+            {/* CONTEÚDO DA ABA PROPRIEDADES (INSPECTOR COMPLETO) */}
+            {abaDireita === 'propriedades' && (
+              <div className="right-panel-body">
+                {itemSelecionado ? (
+                  <div className="inspector-content">
+                    {/* Card do Item Selecionado */}
+                    <div className="inspector-item-card">
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="layer-thumb-mini" style={{ width: '28px', height: '28px' }}>
+                          {itemSelecionado.type === 'text' ? 'T' : (itemSelecionado.imagem ? <img src={itemSelecionado.imagem} alt="" /> : '🏛️')}
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <strong style={{ display: 'block', fontSize: '11.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {itemSelecionado.nome || (itemSelecionado.type === 'text' ? `Texto: "${itemSelecionado.content || ''}"` : 'Elemento')}
+                          </strong>
+                          <small style={{ fontSize: '9.5px', color: '#64748b' }}>
+                            {itemSelecionado.isEstoqueProprio ? '📦 Peça do Estoque' : '🛒 Fora do Estoque'}
+                          </small>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 1. Posicionamento & Dimensões */}
+                    <div className="inspector-section-title">Posicionamento & Dimensões</div>
+                    <div className="inspector-2col-grid">
+                      <div className="inspector-field">
+                        <label>Largura (W)</label>
+                        <input
+                          type="number"
+                          value={Math.round(itemSelecionado.width || 100)}
+                          onChange={e => atualizarItem(selecionadoId, { width: Math.max(20, Number(e.target.value)) })}
+                        />
+                      </div>
+                      <div className="inspector-field">
+                        <label>Altura (H)</label>
+                        <input
+                          type="number"
+                          value={Math.round(itemSelecionado.height || 100)}
+                          onChange={e => atualizarItem(selecionadoId, { height: Math.max(20, Number(e.target.value)) })}
+                        />
+                      </div>
+                      <div className="inspector-field">
+                        <label>Posição X</label>
+                        <input
+                          type="number"
+                          value={Math.round(itemSelecionado.x || 0)}
+                          onChange={e => atualizarItem(selecionadoId, { x: Number(e.target.value) })}
+                        />
+                      </div>
+                      <div className="inspector-field">
+                        <label>Posição Y</label>
+                        <input
+                          type="number"
+                          value={Math.round(itemSelecionado.y || 0)}
+                          onChange={e => atualizarItem(selecionadoId, { y: Number(e.target.value) })}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 2. Ajustes Visuais, Filtros & Efeitos */}
+                    <div className="inspector-section-title" style={{ marginTop: '10px' }}>Filtros & Efeitos Visuais</div>
+
+                    {(itemSelecionado.type === 'image' || itemSelecionado.capaUrl) && (
+                      <>
+                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>Brilho</span>
+                            <span>{itemSelecionado.brightness || 100}%</span>
+                          </div>
+                          <input type="range" min="0" max="200" value={itemSelecionado.brightness || 100}
+                            onChange={e => atualizarItem(selecionadoId, { brightness: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { brightness: 100 })} />
+                        </div>
+
+                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>Contraste</span>
+                            <span>{itemSelecionado.contrast || 100}%</span>
+                          </div>
+                          <input type="range" min="0" max="200" value={itemSelecionado.contrast || 100}
+                            onChange={e => atualizarItem(selecionadoId, { contrast: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { contrast: 100 })} />
+                        </div>
+
+                        {/* 🌈 SATURAÇÃO (NOVA) */}
+                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>Saturação</span>
+                            <span>{itemSelecionado.saturate || 100}%</span>
+                          </div>
+                          <input type="range" min="0" max="300" value={itemSelecionado.saturate || 100}
+                            onChange={e => atualizarItem(selecionadoId, { saturate: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { saturate: 100 })} />
+                        </div>
+
+                        {/* 🪄 REMOVER FUNDO (IA WASM) */}
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
+                          <button
+                            type="button"
+                            className="btn-remove-bg-ia"
+                            style={{ flex: 1, margin: 0 }}
+                            onClick={() => removerFundoImagem(selecionadoId)}
+                            disabled={removendoFundo}
+                            title="Remove o fundo da imagem usando IA (WASM, sem custo)"
+                          >
+                            {removendoFundo ? (
+                              <><i className="fas fa-spinner fa-spin" style={{ marginRight: '6px' }} />Processando IA...</>
+                            ) : (
+                              <>🪄 IA: Remover Fundo</>
+                            )}
+                          </button>
+                          {itemSelecionado.imagemOriginal && (
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: '6px 10px', fontSize: '10.5px', color: '#0f172a', fontWeight: 'bold', background: '#fff' }}
+                              onClick={() => restaurarImagemOriginal(selecionadoId)}
+                              title="Restaurar foto original anterior à remoção de fundo"
+                            >
+                              ↩️ Restaurar
+                            </button>
+                          )}
+                        </div>
+                        <p style={{ fontSize: '9.5px', color: '#94a3b8', margin: '0 0 8px 0', lineHeight: 1.4 }}>
+                          {itemSelecionado.imagemOriginal
+                            ? '✅ Recorte aplicado. Clique em "Restaurar" se quiser desfazer.'
+                            : 'Funciona offline. Na 1ª vez baixa modelo (~60MB). Pode desfazer com Ctrl+Z.'}
+                        </p>
+                      </>
+                    )}
+
+                    {/* ✍️ SEÇÃO DE EDIÇÃO DE TEXTO & LETREIRO NEON NO INSPECTOR */}
+                    {itemSelecionado.type === 'text' && (
+                      <div style={{ marginTop: '10px', marginBottom: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1.5px solid #c5a059' }}>
+                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px', color: '#c5a059' }}>
+                          ✍️ Conteúdo & Tipografia
+                        </div>
+
+                        {/* Input de Texto */}
+                        <input
+                          type="text"
+                          className="text-input-direct"
+                          value={itemSelecionado.content || ''}
+                          onChange={e => atualizarItem(selecionadoId, { content: e.target.value })}
+                          placeholder="Digite o texto..."
+                          style={{ marginBottom: '8px' }}
+                        />
+
+                        {/* Seletor de Fonte */}
+                        <div style={{ marginBottom: '8px' }}>
+                          <select className="font-selector" value={itemSelecionado.fontFamily} onChange={e => atualizarItem(selecionadoId, { fontFamily: e.target.value })}>
+                            {fontesDisponiveis.map(f => (
+                              <option key={f.nome} value={f.valor} style={{ fontFamily: f.valor }}>
+                                {f.nome}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Barra de Formatação (B, I, Alinhamento, Cor) */}
+                        <div className="style-controls-row" style={{ marginBottom: '8px' }}>
+                          <button
+                            type="button"
+                            className={`btn-style ${itemSelecionado.fontWeight === 'bold' ? 'active' : ''}`}
+                            onClick={() => atualizarItem(selecionadoId, { fontWeight: itemSelecionado.fontWeight === 'bold' ? 'normal' : 'bold' })}
+                            title="Negrito"
+                          >
+                            <Icons.Bold />
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn-style ${itemSelecionado.fontStyle === 'italic' ? 'active' : ''}`}
+                            onClick={() => atualizarItem(selecionadoId, { fontStyle: itemSelecionado.fontStyle === 'italic' ? 'normal' : 'italic' })}
+                            title="Itálico"
+                          >
+                            <Icons.Italic />
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'left' ? 'active' : ''}`}
+                            onClick={() => atualizarItem(selecionadoId, { textAlign: 'left' })}
+                          >
+                            <i className="fas fa-align-left" />
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'center' ? 'active' : ''}`}
+                            onClick={() => atualizarItem(selecionadoId, { textAlign: 'center' })}
+                          >
+                            <i className="fas fa-align-center" />
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'right' ? 'active' : ''}`}
+                            onClick={() => atualizarItem(selecionadoId, { textAlign: 'right' })}
+                          >
+                            <i className="fas fa-align-right" />
+                          </button>
+                          <div className="divider-v" />
+                          <label className="color-picker-wrapper" title="Cor do Texto">
+                            <input type="color" className="color-input-mini" value={itemSelecionado.color || '#c5a059'} onChange={e => atualizarItem(selecionadoId, { color: e.target.value })} />
+                          </label>
+                        </div>
+
+                        {/* ✨ MATERIAIS, TEXTURAS REAIS & UPLOAD NO INSPECTOR */}
+                        <div style={{ marginBottom: '10px', background: '#f8fafc', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155', textTransform: 'uppercase', margin: 0 }}>
+                              🪞 Textura / Material da Letra:
+                            </label>
+                          </div>
+
+                          {/* Botão Upload de Textura para o Texto */}
+                          <button
+                            type="button"
+                            onClick={() => handleUploadTexturaTexto(selecionadoId)}
+                            style={{
+                              width: '100%',
+                              padding: '6px 8px',
+                              background: '#0f172a',
+                              color: '#fef08a',
+                              border: '1px solid rgba(234, 179, 8, 0.4)',
+                              borderRadius: '6px',
+                              fontSize: '10.5px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '5px',
+                              marginBottom: '8px'
+                            }}
+                          >
+                            <span>📤</span>
+                            <span>Upload de Foto/Textura no Texto</span>
+                          </button>
+
+                          {/* Swatches Visuais de Materiais de Festa */}
+                          <div className="texture-swatches-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
+                            {[
+                              { id: 'none', nome: 'Cor Sólida', tipo: 'cor', thumb: null, bg: itemSelecionado.color || '#c5a059' },
+                              { id: 'gold_mirror', nome: 'Ouro Espelho', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #b38728 55%, #aa771c 100%)' },
+                              { id: 'rose_gold', nome: 'Rose Gold', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #b76e79 0%, #ffd1dc 30%, #e0a9af 55%, #9c4f5a 100%)' },
+                              { id: 'silver_mirror', nome: 'Prata Espelho', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #8a8a8a 0%, #ffffff 30%, #a6a6a6 55%, #737373 100%)' },
+                              { id: 'mdf_wood', nome: 'MDF Madeira', tipo: 'pat', thumb: null, bg: 'repeating-linear-gradient(45deg, #d29b62, #d29b62 6px, #ba8249 6px, #ba8249 12px)' },
+                              { id: 'glitter_gold', nome: 'Glitter Dourado', tipo: 'grad', thumb: null, bg: 'radial-gradient(circle at 50% 50%, #fff7cc 10%, #d4af37 40%, #996515 80%, #ffd700 100%)' },
+                              { id: 'backlight_halo', nome: 'Letreiro Neon', tipo: 'neon', thumb: null, bg: '#0f172a' },
+                              ...(elementosCenografia || [])
+                                .filter(e => e.categoria === 'Texturas' && (e.isGlobal || e.empresaId === tenantId))
+                                .map(e => ({ id: `admin_${e.id}`, nome: e.nome, url: e.imagemUrl, thumb: e.imagemUrl }))
+                            ].map(mat => {
+                              const isMatActive = mat.url
+                                ? (itemSelecionado.textureUrl === mat.url)
+                                : ((itemSelecionado.material || 'none') === mat.id && !itemSelecionado.textureUrl);
+
+                              return (
+                                <div
+                                  key={mat.id}
+                                  className={`texture-swatch-card ${isMatActive ? 'active' : ''}`}
+                                  onClick={() => {
+                                    if (mat.url) {
+                                      atualizarItem(selecionadoId, { material: 'custom_texture', textureUrl: mat.url, textureScale: itemSelecionado.textureScale || 100 });
+                                    } else {
+                                      atualizarItem(selecionadoId, { material: mat.id, textureUrl: '' });
+                                    }
+                                  }}
+                                  title={mat.nome}
+                                >
                                   <div
-                                    key={c.cor}
-                                    onClick={() => atualizarItem(selecionadoId, { tampoCor: c.cor })}
-                                    title={`Tampo ${c.label}`}
-                                    style={{
-                                      width: '20px',
-                                      height: '20px',
-                                      borderRadius: '50%',
-                                      backgroundColor: c.cor,
-                                      border: (itemSelecionado.tampoCor === c.cor) ? '2px solid #0f172a' : '1px solid #cbd5e1',
-                                      boxShadow: (itemSelecionado.tampoCor === c.cor) ? '0 0 0 2px #c5a059' : 'none',
-                                      cursor: 'pointer'
-                                    }}
-                                  />
-                                ))}
-                                <label title="Cor personalizada da tampa" style={{ position: 'relative', width: '20px', height: '20px', borderRadius: '50%', border: '1.5px dashed #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden' }}>
-                                  <span style={{ fontSize: '9px' }}>🎨</span>
-                                  <input 
-                                    type="color" 
-                                    value={itemSelecionado.tampoCor || '#ffffff'} 
-                                    onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })} 
-                                    style={{ position: 'absolute', top: '-10px', left: '-10px', width: '200%', height: '200%', opacity: 0, cursor: 'pointer' }}
-                                  />
-                                </label>
+                                    className="texture-swatch-thumb"
+                                    style={mat.thumb ? { backgroundImage: `url("${mat.thumb}")` } : { background: mat.bg }}
+                                  >
+                                    {mat.tipo === 'cor' && <span style={{ fontSize: '11px' }}>🎨</span>}
+                                    {mat.tipo === 'neon' && <span style={{ fontSize: '12px', filter: 'drop-shadow(0 0 4px #ec4899)' }}>💡</span>}
+                                    {isMatActive && (
+                                      <div style={{ position: 'absolute', top: '2px', right: '2px', background: '#c5a059', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8.5px', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
+                                        ✓
+                                      </div>
+                                    )}
+                                  </div>
+                                  <span className="texture-swatch-name">{mat.nome}</span>
+                                </div>
+                              );
+                            })}
+                          </div>
+
+                          {/* Slider de Escala da Textura (quando houver textura ativa) */}
+                          {(itemSelecionado.material === 'custom_texture' || !!itemSelecionado.textureUrl) && (
+                            <div className="slider-group" style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #cbd5e1' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
+                                <span>🔍 Zoom da Textura no Texto</span>
+                                <span>{itemSelecionado.textureScale || 100}%</span>
                               </div>
+                              <input
+                                type="range" min="30" max="300" value={itemSelecionado.textureScale || 100}
+                                onChange={e => atualizarItem(selecionadoId, { textureScale: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { textureScale: 100 })}
+                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                              />
                             </div>
                           )}
                         </div>
-                      )}
 
-                      {/* 🖐️ MOVIMENTAÇÃO, ZOOM & ENQUADRAMENTO DA CAPA */}
-                      {itemSelecionado.capaUrl && (
-                        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>🖐️ Ajuste & Enquadramento da Imagem:</span>
-                            <button
-                              type="button"
-                              onClick={() => atualizarItem(selecionadoId, { capaPosX: 50, capaPosY: 50, capaScale: 1 })}
-                              style={{ fontSize: '9.5px', fontWeight: '700', color: '#c5a059', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                              title="Restaurar posição original"
-                            >
-                              🎯 Centralizar
-                            </button>
+                        {/* 🌈 TEXTO CURVADO / ARQUEADO NO INSPECTOR */}
+                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>🌈 Curvatura do Arco</span>
+                            <span>{itemSelecionado.curvatura || 0}%</span>
                           </div>
-
-                          {/* 1. Zoom / Escala da Capa */}
-                          <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar em 100%">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                              <span>🔍 Zoom da Capa</span>
-                              <span>{Math.round((itemSelecionado.capaScale || 1) * 100)}%</span>
-                            </div>
-                            <input 
-                              type="range" min="50" max="300" 
-                              value={Math.round((itemSelecionado.capaScale || 1) * 100)}
-                              onChange={e => atualizarItem(selecionadoId, { capaScale: Number(e.target.value) / 100 })}
-                              onDoubleClick={() => atualizarItem(selecionadoId, { capaScale: 1 })}
-                              style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                            />
-                          </div>
-
-                          {/* 2. Posição Horizontal X */}
-                          <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para centralizar">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                              <span>↔️ Mover Horizontal (X)</span>
-                              <span>{itemSelecionado.capaPosX ?? 50}%</span>
-                            </div>
-                            <input 
-                              type="range" min="0" max="100" 
-                              value={itemSelecionado.capaPosX ?? 50}
-                              onChange={e => atualizarItem(selecionadoId, { capaPosX: Number(e.target.value) })}
-                              onDoubleClick={() => atualizarItem(selecionadoId, { capaPosX: 50 })}
-                              style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                            />
-                          </div>
-
-                          {/* 3. Posição Vertical Y */}
-                          <div className="slider-group" style={{ marginBottom: '4px' }} title="Dê 2 cliques para centralizar">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                              <span>↕️ Mover Vertical (Y)</span>
-                              <span>{itemSelecionado.capaPosY ?? 50}%</span>
-                            </div>
-                            <input 
-                              type="range" min="0" max="100" 
-                              value={itemSelecionado.capaPosY ?? 50}
-                              onChange={e => atualizarItem(selecionadoId, { capaPosY: Number(e.target.value) })}
-                              onDoubleClick={() => atualizarItem(selecionadoId, { capaPosY: 50 })}
-                              style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                            />
-                          </div>
+                          <input
+                            type="range" min="-100" max="100" value={itemSelecionado.curvatura || 0}
+                            onChange={e => atualizarItem(selecionadoId, { curvatura: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { curvatura: 0 })}
+                          />
                         </div>
-                      )}
-                    </div>
-                  )}
 
-                  {/* 🎈 Se for Balão / Guirlanda: Cores e Paletas */}
-                  {isBalaoSelecionado && (
-                    <div className="inspector-balao-section" style={{ marginTop: '10px', padding: '10px', background: '#fdfbf7', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                      <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px', color: '#92400e' }}>
-                        🎈 Cores dos Balões da Guirlanda
-                      </div>
-
-                      {/* 5 Cores Individuais com Input Color */}
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '6px' }}>
-                        Personalizar Cores das Bexigas (1 a 5):
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                        {(itemSelecionado.coresBalao || paletaBalaoAtiva.cores).map((cor, idx) => (
-                          <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flex: 1 }}>
-                            <input
-                              type="color"
-                              value={cor}
-                              onChange={(e) => {
-                                const novasCores = [...(itemSelecionado.coresBalao || paletaBalaoAtiva.cores)];
-                                novasCores[idx] = e.target.value;
-                                atualizarItem(selecionadoId, { coresBalao: novasCores });
-                              }}
-                              style={{ width: '100%', height: '26px', border: '1.5px solid #d97706', borderRadius: '4px', cursor: 'pointer', padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
-                              title={`Cor da Bexiga #${idx + 1}`}
-                            />
-                            <span style={{ fontSize: '8.5px', fontWeight: '800', color: '#92400e' }}>#{idx + 1}</span>
+                        {/* 🎨 CONTORNO / BORDA EXTERNA NO INSPECTOR */}
+                        <div style={{ background: '#f1f5f9', padding: '6px 8px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#334155' }}>🎨 Contorno / Borda</span>
+                            <input type="color" className="color-input-mini" style={{ width: '18px', height: '18px' }} value={itemSelecionado.strokeColor || '#ffffff'} onChange={e => atualizarItem(selecionadoId, { strokeColor: e.target.value })} />
                           </div>
-                        ))}
-                      </div>
+                          <input
+                            type="range" min="0" max="12" value={itemSelecionado.strokeWidth || 0}
+                            onChange={e => atualizarItem(selecionadoId, { strokeWidth: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { strokeWidth: 0 })}
+                          />
+                        </div>
 
-                      {/* Paletas Prontas Rápidas */}
-                      <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '5px' }}>
-                        Trocar Paleta da Guirlanda:
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '130px', overflowY: 'auto' }}>
-                        {PALETAS_BALOES.map((pal, pIdx) => (
-                          <button
-                            key={pIdx}
-                            type="button"
-                            onClick={() => {
-                              setPaletaBalaoAtiva(pal);
-                              atualizarItem(selecionadoId, { coresBalao: pal.cores });
-                            }}
-                            style={{
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'space-between',
-                              padding: '5px 8px',
-                              borderRadius: '6px',
-                              background: '#ffffff',
-                              border: '1px solid #fde68a',
-                              cursor: 'pointer',
-                              textAlign: 'left'
-                            }}
-                          >
-                            <span style={{ fontSize: '10px', fontWeight: '700', color: '#1e293b' }}>{pal.nome}</span>
-                            <div style={{ display: 'flex', gap: '3px' }}>
-                              {pal.cores.map((c, i) => (
-                                <div key={i} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: '1px solid rgba(0,0,0,0.15)' }} />
-                              ))}
-                            </div>
-                          </button>
-                        ))}
-                      </div>
-
-                      {/* 🎲 EMBARALHAR CORES DOS BALÕES */}
-                      <button 
-                        type="button" 
-                        className="btn-inspector-action"
-                        style={{ width: '100%', marginTop: '8px', padding: '7px', fontSize: '10.5px', fontWeight: '700', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                        onClick={() => atualizarItem(selecionadoId, { seed: (itemSelecionado.seed || 0) + 1 })}
-                        title="Embaralhar as cores nas bexigas"
-                      >
-                        <span>🎲</span>
-                        <span>Embaralhar Ordem das Cores</span>
-                      </button>
-
-                      {/* AJUSTES ADICIONAIS PARA CLUSTER DE CHÃO */}
-                      {itemSelecionado.shapeType === 'baloes_cluster_chao' && (
-                        <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #fde68a' }}>
-                          <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#92400e', marginBottom: '6px' }}>
-                            🫧 Densidade de Bexigas do Cluster
-                          </div>
-                          <div style={{ display: 'flex', gap: '4px' }}>
+                        {/* 🏷️ PLACA / SUPORTE DE FUNDO NO INSPECTOR */}
+                        <div style={{ marginBottom: '8px' }}>
+                          <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                            🏷️ Placa de Fundo:
+                          </label>
+                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
                             {[
-                              { id: 'suave', label: 'Suave' },
-                              { id: 'cheio', label: 'Cheio' },
-                              { id: 'luxo', label: 'Mega Luxo' }
-                            ].map(d => (
+                              { id: 'nenhuma', label: 'Nenhuma' },
+                              { id: 'acrilico_redondo', label: '🔘 Redonda' },
+                              { id: 'acrilico_arco', label: '🏛️ Arco' },
+                              { id: 'acrilico_retangular', label: '⬛ Retang.' },
+                              { id: 'flamula_tecido', label: '📜 Flâmula' },
+                              { id: 'cavalete_madeira', label: '🖼️ Cavalete' }
+                            ].map(p => (
                               <button
-                                key={d.id}
+                                key={p.id}
                                 type="button"
-                                className={`btn-tampo-type ${(itemSelecionado.densidadeCluster || 'cheio') === d.id ? 'active' : ''}`}
-                                onClick={() => atualizarItem(selecionadoId, { densidadeCluster: d.id })}
-                                style={{ flex: 1, padding: '5px', fontSize: '9.5px' }}
+                                className={`btn-mat-choice ${(itemSelecionado.placaFundo || 'nenhuma') === p.id ? 'active' : ''}`}
+                                onClick={() => atualizarItem(selecionadoId, { placaFundo: p.id })}
                               >
-                                {d.label}
+                                {p.label}
                               </button>
                             ))}
                           </div>
                         </div>
-                      )}
-                    </div>
-                  )}
 
-                  {/* 4. Ações Rápidas de Alinhamento & Camada */}
-                  <div className="inspector-section-title" style={{ marginTop: '10px' }}>Ações Rápidas</div>
-                  <div className="inspector-actions-grid">
-                    <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipH: !itemSelecionado.flipH })} title="Espelhar Horizontalmente">
-                      <Icons.Flip width={12} /> Flip H
-                    </button>
-                    <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipV: !itemSelecionado.flipV })} title="Espelhar Verticalmente">
-                      <Icons.Flip width={12} style={{ transform: 'rotate(90deg)' }} /> Flip V
-                    </button>
-                    <button type="button" className="btn-inspector-action" onClick={() => duplicarItem(selecionadoId)} title="Duplicar">
-                      <Icons.Copy width={12} /> Duplicar
-                    </button>
-                    <button type="button" className="btn-inspector-action" onClick={() => bringToFront(selecionadoId)} title="Trazer para Frente">
-                      <Icons.ArrowUp width={12} /> Trazer Frente
-                    </button>
-                    <button type="button" className="btn-inspector-action" onClick={() => sendToBack(selecionadoId)} title="Enviar para Trás">
-                      <Icons.ArrowDown width={12} /> Enviar Trás
-                    </button>
-                    <button 
-                      type="button" 
-                      className={`btn-inspector-action ${itemSelecionado.locked ? 'active' : ''}`} 
-                      onClick={() => toggleLock(selecionadoId)} 
-                      title={itemSelecionado.locked ? 'Desbloquear' : 'Bloquear'}
-                    >
-                      {itemSelecionado.locked ? <><Icons.Lock width={12} /> Bloqueado</> : <><Icons.Unlock width={12} /> Bloquear</>}
-                    </button>
-                    <button type="button" className="btn-inspector-action" style={{ gridColumn: '1 / -1', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={() => deleteItem(selecionadoId)} title="Excluir Elemento">
-                      <Icons.Trash width={12} /> Excluir Elemento
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <div className="empty-layers-box">
-                  <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Selecione um elemento na prancheta para ver e editar suas propriedades aqui.</p>
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* CONTEÚDO DA ABA BEXIGAS & BALÕES */}
-          {abaDireita === 'baloes' && (
-            <div className="right-panel-body">
-              <div className="balloon-calc-box">
-                <div className="balloon-calc-header">
-                  <h4>🎈 Produção de Bexigas</h4>
-                  <p>Planejamento de cores e pacotes para montagem dos arcos do projeto.</p>
-                </div>
-
-                {itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_')).length === 0 ? (
-                  <div className="empty-layers-box">
-                    <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhum arco de balões adicionado ao cenário.</p>
-                    <small style={{ color: '#94a3b8', marginTop: '4px' }}>Adicione um arco da Galeria para calcular as bexigas.</small>
-                  </div>
-                ) : (
-                  <div className="balloon-arches-list">
-                    {itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_')).map((arco, aIdx) => (
-                      <div key={aIdx} className="balloon-arch-item-card">
-                        <div className="arch-card-top">
-                          {arco.imagem && <img src={arco.imagem} alt="" className="arch-thumb-mini" />}
-                          <div>
-                            <strong>{arco.nome || 'Arco Orgânico'}</strong>
-                            <div style={{ fontSize: '10.5px', color: '#64748b' }}>Estimativa: ~180 a 250 bexigas</div>
+                        {/* Controle Avançado de Tamanho da Fonte */}
+                        <div className="slider-group" style={{ marginBottom: '8px', background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b' }}>🔤 Tamanho da Fonte</span>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <button
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { fontSize: Math.max(12, Number(itemSelecionado.fontSize || 48) - 4) })}
+                                style={{ width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                                title="Diminuir Fonte (-4px)"
+                              >
+                                -
+                              </button>
+                              <input
+                                type="number"
+                                min="12"
+                                max="250"
+                                value={itemSelecionado.fontSize || 48}
+                                onChange={e => atualizarItem(selecionadoId, { fontSize: Math.max(12, Math.min(250, Number(e.target.value) || 12)) })}
+                                style={{ width: '46px', height: '24px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0 2px' }}
+                              />
+                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>px</span>
+                              <button
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { fontSize: Math.min(250, Number(itemSelecionado.fontSize || 48) + 4) })}
+                                style={{ width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
+                                title="Aumentar Fonte (+4px)"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+                          <input
+                            type="range" min="12" max="220" value={itemSelecionado.fontSize || 48}
+                            onChange={e => atualizarItem(selecionadoId, { fontSize: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { fontSize: 48 })}
+                            style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                          />
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
+                            {[
+                              { label: 'P (32)', val: 32 },
+                              { label: 'M (48)', val: 48 },
+                              { label: 'G (68)', val: 68 },
+                              { label: 'GG (96)', val: 96 },
+                              { label: 'XG (130)', val: 130 }
+                            ].map(pill => (
+                              <button
+                                key={pill.val}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { fontSize: pill.val })}
+                                style={{
+                                  flex: 1, padding: '3px 0', fontSize: '9.5px', fontWeight: '700', borderRadius: '4px',
+                                  border: (itemSelecionado.fontSize === pill.val) ? '1px solid #c5a059' : '1px solid #e2e8f0',
+                                  background: (itemSelecionado.fontSize === pill.val) ? '#fef3c7' : '#f8fafc',
+                                  color: (itemSelecionado.fontSize === pill.val) ? '#92400e' : '#475569',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                {pill.label}
+                              </button>
+                            ))}
                           </div>
                         </div>
 
-                        <div className="arch-packages-hint">
-                          <strong>📦 Pacotes de Bexiga Sugeridos:</strong>
-                          <ul>
-                            <li>2x Pacotes 9" ou 10" (Base)</li>
-                            <li>2x Pacotes 5" (Acabamento)</li>
-                            <li>1x Pacote 12" ou 18" (Destaque)</li>
-                          </ul>
+                        {/* Slider de Letter Spacing */}
+                        <div className="slider-group" style={{ marginBottom: '8px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>Espaçamento de Letras</span>
+                            <span>{itemSelecionado.letterSpacing || 0}px</span>
+                          </div>
+                          <input
+                            type="range" min="-2" max="20" value={itemSelecionado.letterSpacing || 0}
+                            onChange={e => atualizarItem(selecionadoId, { letterSpacing: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { letterSpacing: 0 })}
+                          />
+                        </div>
+
+                        {/* Painel Neon LED */}
+                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                            <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '10.5px' }}>🌟 Neon LED</span>
+                            <button
+                              type="button"
+                              onClick={() => atualizarItem(selecionadoId, { neonGlow: (itemSelecionado.neonGlow > 0 ? 0 : 20) })}
+                              style={{
+                                fontSize: '9.5px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px',
+                                border: 'none', background: itemSelecionado.neonGlow > 0 ? '#22c55e' : '#334155', color: '#fff', cursor: 'pointer'
+                              }}
+                            >
+                              {itemSelecionado.neonGlow > 0 ? 'ON' : 'OFF'}
+                            </button>
+                          </div>
+                          <div className="neon-light-palette" style={{ marginTop: '4px' }}>
+                            {['#eab308', '#ec4899', '#38bdf8', '#fef08a', '#a855f7', '#22c55e', '#ef4444'].map(cor => (
+                              <button
+                                key={cor}
+                                type="button"
+                                className={`neon-dot-btn ${(itemSelecionado.neonColor || '#c5a059') === cor ? 'active' : ''}`}
+                                style={{ backgroundColor: cor, width: '18px', height: '18px' }}
+                                onClick={() => atualizarItem(selecionadoId, { neonColor: cor, neonGlow: Math.max(16, itemSelecionado.neonGlow || 20) })}
+                              />
+                            ))}
+                          </div>
                         </div>
                       </div>
-                    ))}
+                    )}
 
-                    <button 
-                      type="button" 
-                      className="btn-copy-balloon-shopping"
-                      onClick={() => {
-                        const arcos = itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_'));
-                        const txt = arcos.map(a => `• ${a.nome} (Sugerido: 4 a 6 pacotes de 50 un)`).join('\n');
-                        const msg = `🎈 *LISTA DE BEXIGAS PARA PRODUÇÃO*\n*Projeto:* ${nomeProjeto || 'Moodboard'}\n\n${txt}\n\nGerado via Celebre Sistema.`;
-                        navigator.clipboard.writeText(msg);
-                        alert("✓ Lista de Bexigas copiada para a Área de Transferência!");
-                      }}
-                    >
-                      📋 Copiar Lista de Bexigas (WhatsApp)
-                    </button>
+                    {/* 🌿 CONTROLES DO ENFEITE / APLIQUE DE FESTA NO INSPECTOR */}
+                    {itemSelecionado.type === 'ornament' && (
+                      <div className="inspector-group" style={{ marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px' }}>✨ Material & Acabamento</div>
+
+                        <div className="materials-selector-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', marginBottom: '8px' }}>
+                          {[
+                            { id: 'gold_mirror', label: '✨ Ouro Espelho' },
+                            { id: 'rose_gold', label: '🌸 Rose Gold' },
+                            { id: 'silver_mirror', label: '🥈 Prata' },
+                            { id: 'mdf_wood', label: '🪵 MDF Madeira' },
+                            { id: 'none', label: '🎨 Cor Própria' }
+                          ].map(mat => (
+                            <button
+                              key={mat.id}
+                              type="button"
+                              className={`btn-mat-choice ${(itemSelecionado.material || 'gold_mirror') === mat.id ? 'active' : ''}`}
+                              onClick={() => atualizarItem(selecionadoId, { material: mat.id })}
+                              style={{ padding: '6px', fontSize: '10px' }}
+                            >
+                              {mat.label}
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Cor personalizada se material for none */}
+                        {itemSelecionado.material === 'none' && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', padding: '4px 6px', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#334155' }}>Cor do Enfeite</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#c5a059'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
+                            />
+                          </div>
+                        )}
+
+                        {/* Slider de Tamanho */}
+                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>Tamanho</span>
+                            <span>{itemSelecionado.width || 100}px</span>
+                          </div>
+                          <input
+                            type="range" min="30" max="300"
+                            value={itemSelecionado.width || 100}
+                            onChange={e => {
+                              const sz = Number(e.target.value);
+                              atualizarItem(selecionadoId, { width: sz, height: sz });
+                            }}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { width: 100, height: 100 })}
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                        <span>Opacidade</span>
+                        <span>{itemSelecionado.opacity ?? 100}%</span>
+                      </div>
+                      <input
+                        type="range" min="0" max="100"
+                        value={itemSelecionado.opacity ?? 100}
+                        onChange={e => atualizarItem(selecionadoId, { opacity: Number(e.target.value) })}
+                        onDoubleClick={() => atualizarItem(selecionadoId, { opacity: 100 })}
+                      />
+                    </div>
+
+                    <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                        <span>Sombra 3D</span>
+                        <span>{itemSelecionado.shadow || 0}px</span>
+                      </div>
+                      <input
+                        type="range" min="0" max="50"
+                        value={itemSelecionado.shadow || 0}
+                        onChange={e => atualizarItem(selecionadoId, { shadow: Number(e.target.value) })}
+                        onDoubleClick={() => atualizarItem(selecionadoId, { shadow: 0 })}
+                      />
+                    </div>
+
+                    <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                        <span>Rotação</span>
+                        <span>{itemSelecionado.rotation || 0}°</span>
+                      </div>
+                      <input
+                        type="range" min="0" max="360"
+                        value={itemSelecionado.rotation || 0}
+                        onChange={e => atualizarItem(selecionadoId, { rotation: Number(e.target.value) })}
+                        onDoubleClick={() => atualizarItem(selecionadoId, { rotation: 0 })}
+                      />
+                    </div>
+
+                    {/* 🌈 Colorização dos Arcos Triplos (1 Cor ou 3 Camadas) */}
+                    {itemSelecionado.type === 'shape' && (itemSelecionado.shapeType === 'arco_romano_triplo' || itemSelecionado.shapeType === 'arco_organico_triplo') && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cores das 3 Camadas</span>
+                          <button
+                            type="button"
+                            className={`btn-tampo-type ${itemSelecionado.multiColor ? 'active' : ''}`}
+                            onClick={() => {
+                              const nextVal = !itemSelecionado.multiColor;
+                              atualizarItem(selecionadoId, {
+                                multiColor: nextVal,
+                                corCamada2: nextVal ? (itemSelecionado.corCamada2 || '#f1f5f9') : itemSelecionado.color,
+                                corCamada3: nextVal ? (itemSelecionado.corCamada3 || '#e2e8f0') : itemSelecionado.color
+                              });
+                            }}
+                            style={{ padding: '3px 8px', fontSize: '9.5px', borderRadius: '4px' }}
+                          >
+                            {itemSelecionado.multiColor ? '🌈 Modo 3 Cores' : '🎨 1 Cor (Tudo Igual)'}
+                          </button>
+                        </div>
+
+                        {!itemSelecionado.multiColor ? (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#334155' }}>Cor do Arco Completo</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value, corCamada2: e.target.value, corCamada3: e.target.value })}
+                              style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>1️⃣ Camada Externa (Fundo)</span>
+                              <input
+                                type="color"
+                                value={itemSelecionado.color || '#ffffff'}
+                                onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>2️⃣ Camada Meio (Intermediária)</span>
+                              <input
+                                type="color"
+                                value={itemSelecionado.corCamada2 || '#f1f5f9'}
+                                onChange={e => atualizarItem(selecionadoId, { corCamada2: e.target.value })}
+                                style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                              <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>3️⃣ Camada Interna (Portal)</span>
+                              <input
+                                type="color"
+                                value={itemSelecionado.corCamada3 || '#e2e8f0'}
+                                onChange={e => atualizarItem(selecionadoId, { corCamada3: e.target.value })}
+                                style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                              />
+                            </div>
+
+                            {/* Presets Rápidos de Degradê */}
+                            <div style={{ marginTop: '4px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Branco / Cinzas', c1: '#ffffff', c2: '#f1f5f9', c3: '#e2e8f0' },
+                                  { label: 'Nude Areia', c1: '#fdf6ee', c2: '#f5ebe0', c3: '#d7b899' },
+                                  { label: 'Rosa Bebê', c1: '#fff1f2', c2: '#fce7f3', c3: '#f472b6' },
+                                  { label: 'Azul Céu', c1: '#f0f9ff', c2: '#e0f2fe', c3: '#60a5fa' },
+                                  { label: 'Terracota', c1: '#ffedd5', c2: '#fdba74', c3: '#c2410c' },
+                                  { label: 'Ouro Real', c1: '#fef9c3', c2: '#facc15', c3: '#ca8a04' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.c1, corCamada2: p.c2, corCamada3: p.c3 })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: `linear-gradient(90deg, ${p.c1} 0%, ${p.c2} 50%, ${p.c3} 100%)`,
+                                      color: '#0f172a', cursor: 'pointer', textShadow: '0 0 2px rgba(255,255,255,0.8)'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 🦴 Colorização da Mesa Osso */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_osso' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Osso</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦴 Borda / Moldura Externa</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Miolo Central Rebaixado</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corCentro || itemSelecionado.color || '#f8fafc'}
+                              onChange={e => atualizarItem(selecionadoId, { corCentro: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo Superior da Mesa</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.tampoCor || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🚙 Colorização da Mesa Jeep Safari */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_jeep' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Jeep Safari</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚙 Carroceria do Jeep</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🛞 Pneus / Rodas Tratoradas</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPneus || '#334155'}
+                              onChange={e => atualizarItem(selecionadoId, { corPneus: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>💡 Faróis & Detalhes</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corDetalhes || '#facc15'}
+                              onChange={e => atualizarItem(selecionadoId, { corDetalhes: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo / Prateleira</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.tampoCor || itemSelecionado.color || '#f1f5f9'}
+                              onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🎨 Cor Geral da Estrutura (Para demais painéis e arcos simples) */}
+                    {itemSelecionado.type === 'shape' && !['arco_romano_triplo', 'arco_organico_triplo', 'mesa_osso', 'mesa_jeep', 'arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal', 'baloes_dinamico'].includes(itemSelecionado.shapeType) && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cor da Estrutura</span>
+                          <input
+                            type="color"
+                            value={itemSelecionado.color || '#c5a059'}
+                            onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                            style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                          />
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                          {['#ffffff', '#f8fafc', '#f5ebe0', '#e2e8f0', '#c5a059', '#b76e79', '#94a3b8', '#1e293b', '#fce7f3', '#e0f2fe', '#d1fae5'].map(c => (
+                            <div
+                              key={c}
+                              onClick={() => atualizarItem(selecionadoId, { color: c })}
+                              style={{
+                                width: '18px', height: '18px', borderRadius: '50%', backgroundColor: c,
+                                border: (itemSelecionado.color === c) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                cursor: 'pointer', flexShrink: 0
+                              }}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 3. Se for Estrutura / Cilindro / Mesa: Capa Sublimada, Tampo & Enquadramento */}
+                    {isEstruturaSelecionada && (
+                      <div className="inspector-capa-section" style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px' }}>🎨 Capa de Tecido Sublimado</div>
+
+                        <div style={{ display: 'flex', gap: '6px', marginBottom: itemSelecionado.capaUrl ? '8px' : '0' }}>
+                          <button
+                            type="button"
+                            className="btn-upload-capa"
+                            style={{ flex: 1, fontSize: '11px', padding: '7px 10px', margin: 0 }}
+                            onClick={() => handleUploadCapaEstrutura(selecionadoId)}
+                          >
+                            <Icons.Image width={13} height={13} /> {itemSelecionado.capaUrl ? '🔄 Trocar Imagem / Capa' : '📷 Inserir Foto / Capa'}
+                          </button>
+                          {itemSelecionado.capaUrl && (
+                            <button
+                              type="button"
+                              className="btn-secondary"
+                              style={{ padding: '7px 10px', fontSize: '11px', color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
+                              onClick={() => aplicarCapaNaEstrutura(selecionadoId, '')}
+                              title="Remover Capa"
+                            >
+                              ✕ Remover
+                            </button>
+                          )}
+                        </div>
+
+                        {/* 🔘 Acabamento e Cor do Tampo (Cilindros e Mesas) */}
+                        {(itemSelecionado.shapeType?.includes('cilindro') || itemSelecionado.shapeType?.includes('mesa')) && (
+                          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155' }}>🔘 Tampo Superior:</span>
+                              <span style={{ fontSize: '9.5px', color: '#64748b' }}>
+                                {itemSelecionado.tampoTipo === 'liso' ? 'Cor Fixa' : 'Contínuo com Capa'}
+                              </span>
+                            </div>
+
+                            <div className="tampo-type-toggle" style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                              <button
+                                type="button"
+                                className={`btn-tampo-type ${itemSelecionado.tampoTipo !== 'liso' ? 'active' : ''}`}
+                                onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'continua' })}
+                                style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                              >
+                                🔄 Estampa da Capa
+                              </button>
+                              <button
+                                type="button"
+                                className={`btn-tampo-type ${itemSelecionado.tampoTipo === 'liso' ? 'active' : ''}`}
+                                onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'liso', tampoCor: itemSelecionado.tampoCor || '#ffffff' })}
+                                style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                              >
+                                🎨 Cor do Tampo
+                              </button>
+                            </div>
+
+                            {/* Seletor de Cores do Tampo quando Liso/Fixo */}
+                            {itemSelecionado.tampoTipo === 'liso' && (
+                              <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '6px' }}>
+                                <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Escolha a Cor da Tampa:</div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                                  {[
+                                    { label: 'Branco', cor: '#ffffff' },
+                                    { label: 'Madeira Pinus', cor: '#d29b62' },
+                                    { label: 'Ouro', cor: '#c5a059' },
+                                    { label: 'Rose Gold', cor: '#b76e79' },
+                                    { label: 'Preto', cor: '#1e293b' },
+                                    { label: 'Off-White', cor: '#f8fafc' }
+                                  ].map(c => (
+                                    <div
+                                      key={c.cor}
+                                      onClick={() => atualizarItem(selecionadoId, { tampoCor: c.cor })}
+                                      title={`Tampo ${c.label}`}
+                                      style={{
+                                        width: '20px',
+                                        height: '20px',
+                                        borderRadius: '50%',
+                                        backgroundColor: c.cor,
+                                        border: (itemSelecionado.tampoCor === c.cor) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                        boxShadow: (itemSelecionado.tampoCor === c.cor) ? '0 0 0 2px #c5a059' : 'none',
+                                        cursor: 'pointer'
+                                      }}
+                                    />
+                                  ))}
+                                  <label title="Cor personalizada da tampa" style={{ position: 'relative', width: '20px', height: '20px', borderRadius: '50%', border: '1.5px dashed #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden' }}>
+                                    <span style={{ fontSize: '9px' }}>🎨</span>
+                                    <input
+                                      type="color"
+                                      value={itemSelecionado.tampoCor || '#ffffff'}
+                                      onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
+                                      style={{ position: 'absolute', top: '-10px', left: '-10px', width: '200%', height: '200%', opacity: 0, cursor: 'pointer' }}
+                                    />
+                                  </label>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 🖐️ MOVIMENTAÇÃO, ZOOM & ENQUADRAMENTO DA CAPA */}
+                        {itemSelecionado.capaUrl && (
+                          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                              <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>🖐️ Ajuste & Enquadramento da Imagem:</span>
+                              <button
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { capaPosX: 50, capaPosY: 50, capaScale: 1 })}
+                                style={{ fontSize: '9.5px', fontWeight: '700', color: '#c5a059', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                title="Restaurar posição original"
+                              >
+                                🎯 Centralizar
+                              </button>
+                            </div>
+
+                            {/* 1. Zoom / Escala da Capa */}
+                            <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar em 100%">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
+                                <span>🔍 Zoom da Capa</span>
+                                <span>{Math.round((itemSelecionado.capaScale || 1) * 100)}%</span>
+                              </div>
+                              <input
+                                type="range" min="50" max="300"
+                                value={Math.round((itemSelecionado.capaScale || 1) * 100)}
+                                onChange={e => atualizarItem(selecionadoId, { capaScale: Number(e.target.value) / 100 })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { capaScale: 1 })}
+                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                              />
+                            </div>
+
+                            {/* 2. Posição Horizontal X */}
+                            <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para centralizar">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
+                                <span>↔️ Mover Horizontal (X)</span>
+                                <span>{itemSelecionado.capaPosX ?? 50}%</span>
+                              </div>
+                              <input
+                                type="range" min="0" max="100"
+                                value={itemSelecionado.capaPosX ?? 50}
+                                onChange={e => atualizarItem(selecionadoId, { capaPosX: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { capaPosX: 50 })}
+                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                              />
+                            </div>
+
+                            {/* 3. Posição Vertical Y */}
+                            <div className="slider-group" style={{ marginBottom: '4px' }} title="Dê 2 cliques para centralizar">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
+                                <span>↕️ Mover Vertical (Y)</span>
+                                <span>{itemSelecionado.capaPosY ?? 50}%</span>
+                              </div>
+                              <input
+                                type="range" min="0" max="100"
+                                value={itemSelecionado.capaPosY ?? 50}
+                                onChange={e => atualizarItem(selecionadoId, { capaPosY: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { capaPosY: 50 })}
+                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 🎈 Se for Balão / Guirlanda: Cores e Paletas */}
+                    {isBalaoSelecionado && (
+                      <div className="inspector-balao-section" style={{ marginTop: '10px', padding: '10px', background: '#fdfbf7', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px', color: '#92400e' }}>
+                          🎈 Cores dos Balões da Guirlanda
+                        </div>
+
+                        {/* 5 Cores Individuais com Input Color */}
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '6px' }}>
+                          Personalizar Cores das Bexigas (1 a 5):
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
+                          {(itemSelecionado.coresBalao || paletaBalaoAtiva.cores).map((cor, idx) => (
+                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flex: 1 }}>
+                              <input
+                                type="color"
+                                value={cor}
+                                onChange={(e) => {
+                                  const novasCores = [...(itemSelecionado.coresBalao || paletaBalaoAtiva.cores)];
+                                  novasCores[idx] = e.target.value;
+                                  atualizarItem(selecionadoId, { coresBalao: novasCores });
+                                }}
+                                style={{ width: '100%', height: '26px', border: '1.5px solid #d97706', borderRadius: '4px', cursor: 'pointer', padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+                                title={`Cor da Bexiga #${idx + 1}`}
+                              />
+                              <span style={{ fontSize: '8.5px', fontWeight: '800', color: '#92400e' }}>#{idx + 1}</span>
+                            </div>
+                          ))}
+                        </div>
+
+                        {/* Paletas Prontas Rápidas */}
+                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '5px' }}>
+                          Trocar Paleta da Guirlanda:
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '130px', overflowY: 'auto' }}>
+                          {PALETAS_BALOES.map((pal, pIdx) => (
+                            <button
+                              key={pIdx}
+                              type="button"
+                              onClick={() => {
+                                setPaletaBalaoAtiva(pal);
+                                atualizarItem(selecionadoId, { coresBalao: pal.cores });
+                              }}
+                              style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                padding: '5px 8px',
+                                borderRadius: '6px',
+                                background: '#ffffff',
+                                border: '1px solid #fde68a',
+                                cursor: 'pointer',
+                                textAlign: 'left'
+                              }}
+                            >
+                              <span style={{ fontSize: '10px', fontWeight: '700', color: '#1e293b' }}>{pal.nome}</span>
+                              <div style={{ display: 'flex', gap: '3px' }}>
+                                {pal.cores.map((c, i) => (
+                                  <div key={i} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: '1px solid rgba(0,0,0,0.15)' }} />
+                                ))}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* 🎲 EMBARALHAR CORES DOS BALÕES */}
+                        <button
+                          type="button"
+                          className="btn-inspector-action"
+                          style={{ width: '100%', marginTop: '8px', padding: '7px', fontSize: '10.5px', fontWeight: '700', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                          onClick={() => atualizarItem(selecionadoId, { seed: (itemSelecionado.seed || 0) + 1 })}
+                          title="Embaralhar as cores nas bexigas"
+                        >
+                          <span>🎲</span>
+                          <span>Embaralhar Ordem das Cores</span>
+                        </button>
+
+                        {/* AJUSTES ADICIONAIS PARA CLUSTER DE CHÃO */}
+                        {itemSelecionado.shapeType === 'baloes_cluster_chao' && (
+                          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #fde68a' }}>
+                            <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#92400e', marginBottom: '6px' }}>
+                              🫧 Densidade de Bexigas do Cluster
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px' }}>
+                              {[
+                                { id: 'suave', label: 'Suave' },
+                                { id: 'cheio', label: 'Cheio' },
+                                { id: 'luxo', label: 'Mega Luxo' }
+                              ].map(d => (
+                                <button
+                                  key={d.id}
+                                  type="button"
+                                  className={`btn-tampo-type ${(itemSelecionado.densidadeCluster || 'cheio') === d.id ? 'active' : ''}`}
+                                  onClick={() => atualizarItem(selecionadoId, { densidadeCluster: d.id })}
+                                  style={{ flex: 1, padding: '5px', fontSize: '9.5px' }}
+                                >
+                                  {d.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {/* 4. Ações Rápidas de Alinhamento & Camada */}
+                    <div className="inspector-section-title" style={{ marginTop: '10px' }}>Ações Rápidas</div>
+                    <div className="inspector-actions-grid">
+                      <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipH: !itemSelecionado.flipH })} title="Espelhar Horizontalmente">
+                        <Icons.Flip width={12} /> Flip H
+                      </button>
+                      <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipV: !itemSelecionado.flipV })} title="Espelhar Verticalmente">
+                        <Icons.Flip width={12} style={{ transform: 'rotate(90deg)' }} /> Flip V
+                      </button>
+                      <button type="button" className="btn-inspector-action" onClick={() => duplicarItem(selecionadoId)} title="Duplicar">
+                        <Icons.Copy width={12} /> Duplicar
+                      </button>
+                      <button type="button" className="btn-inspector-action" onClick={() => bringToFront(selecionadoId)} title="Trazer para Frente">
+                        <Icons.ArrowUp width={12} /> Trazer Frente
+                      </button>
+                      <button type="button" className="btn-inspector-action" onClick={() => sendToBack(selecionadoId)} title="Enviar para Trás">
+                        <Icons.ArrowDown width={12} /> Enviar Trás
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-inspector-action ${itemSelecionado.locked ? 'active' : ''}`}
+                        onClick={() => toggleLock(selecionadoId)}
+                        title={itemSelecionado.locked ? 'Desbloquear' : 'Bloquear'}
+                      >
+                        {itemSelecionado.locked ? <><Icons.Lock width={12} /> Bloqueado</> : <><Icons.Unlock width={12} /> Bloquear</>}
+                      </button>
+                      <button type="button" className="btn-inspector-action" style={{ gridColumn: '1 / -1', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={() => deleteItem(selecionadoId)} title="Excluir Elemento">
+                        <Icons.Trash width={12} /> Excluir Elemento
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="empty-layers-box">
+                    <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Selecione um elemento na prancheta para ver e editar suas propriedades aqui.</p>
                   </div>
                 )}
               </div>
-            </div>
-          )}
-        </div>
+            )}
+
+            {/* CONTEÚDO DA ABA BEXIGAS & BALÕES */}
+            {abaDireita === 'baloes' && (
+              <div className="right-panel-body">
+                <div className="balloon-calc-box">
+                  <div className="balloon-calc-header">
+                    <h4>🎈 Produção de Bexigas</h4>
+                    <p>Planejamento de cores e pacotes para montagem dos arcos do projeto.</p>
+                  </div>
+
+                  {itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_')).length === 0 ? (
+                    <div className="empty-layers-box">
+                      <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhum arco de balões adicionado ao cenário.</p>
+                      <small style={{ color: '#94a3b8', marginTop: '4px' }}>Adicione um arco da Galeria para calcular as bexigas.</small>
+                    </div>
+                  ) : (
+                    <div className="balloon-arches-list">
+                      {itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_')).map((arco, aIdx) => (
+                        <div key={aIdx} className="balloon-arch-item-card">
+                          <div className="arch-card-top">
+                            {arco.imagem && <img src={arco.imagem} alt="" className="arch-thumb-mini" />}
+                            <div>
+                              <strong>{arco.nome || 'Arco Orgânico'}</strong>
+                              <div style={{ fontSize: '10.5px', color: '#64748b' }}>Estimativa: ~180 a 250 bexigas</div>
+                            </div>
+                          </div>
+
+                          <div className="arch-packages-hint">
+                            <strong>📦 Pacotes de Bexiga Sugeridos:</strong>
+                            <ul>
+                              <li>2x Pacotes 9" ou 10" (Base)</li>
+                              <li>2x Pacotes 5" (Acabamento)</li>
+                              <li>1x Pacote 12" ou 18" (Destaque)</li>
+                            </ul>
+                          </div>
+                        </div>
+                      ))}
+
+                      <button
+                        type="button"
+                        className="btn-copy-balloon-shopping"
+                        onClick={() => {
+                          const arcos = itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_'));
+                          const txt = arcos.map(a => `• ${a.nome} (Sugerido: 4 a 6 pacotes de 50 un)`).join('\n');
+                          const msg = `🎈 *LISTA DE BEXIGAS PARA PRODUÇÃO*\n*Projeto:* ${nomeProjeto || 'Moodboard'}\n\n${txt}\n\nGerado via Celebre Sistema.`;
+                          navigator.clipboard.writeText(msg);
+                          alert("✓ Lista de Bexigas copiada para a Área de Transferência!");
+                        }}
+                      >
+                        📋 Copiar Lista de Bexigas (WhatsApp)
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </>
       )}
 
@@ -7218,7 +8069,7 @@ const Moodboard = () => {
                 className="input-modal-luxury"
                 style={{ marginBottom: '14px' }}
               >
-                {['Baloes','Paineis','Flores','Moveis','Letreiros','Outros'].map(c => (
+                {['Baloes', 'Paineis', 'Flores', 'Moveis', 'Letreiros', 'Outros'].map(c => (
                   <option key={c} value={c}>{c}</option>
                 ))}
               </select>
@@ -7270,8 +8121,8 @@ const Moodboard = () => {
           <div className="modal-atalhos-card" onClick={e => e.stopPropagation()}>
             <div className="modal-atalhos-header">
               <h3>⌨️ Atalhos de Produtividade do Studio</h3>
-              <button 
-                type="button" 
+              <button
+                type="button"
                 onClick={() => setModalAtalhosAberto(false)}
                 style={{ background: 'transparent', border: 'none', color: '#94a3b8', fontSize: '18px', cursor: 'pointer' }}
               >
