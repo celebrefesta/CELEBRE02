@@ -74,18 +74,26 @@ const STATUS_MOODBOARD_FILTROS = [
   { id: 'sugestoes', label: '⭐ Sugestões de Clientes', icon: 'fas fa-star' }
 ];
 
+export const CATEGORIAS_MOODBOARD_PADRAO = [
+  { id: 'Flores', nome: 'Flores & Folhagens', icone: '🌸' },
+  { id: 'Moveis', nome: 'Móveis & Mesas', icone: '🛋️' },
+  { id: 'Pelucias', nome: 'Pelúcias & Bonecos', icone: '🧸' },
+  { id: 'Loucas', nome: 'Louças & Bandejas', icone: '🍽️' },
+  { id: 'Personagens', nome: 'Personagens & Temas', icone: '🦸' },
+  { id: 'Baloes', nome: 'Balões & Arcos', icone: '🎈' },
+  { id: 'Paineis', nome: 'Painéis & Estruturas', icone: '🏛️' },
+  { id: 'Letreiros', nome: 'LED & Letreiros', icone: '✨' },
+  { id: 'Doces', nome: 'Doces & Bolos Fake', icone: '🧁' },
+  { id: 'Lustres', nome: 'Lustres & Velas', icone: '🕯️' },
+  { id: 'Outros', nome: 'Outros Acessórios', icone: '📦' }
+];
+
 const CATEGORIAS_CENOGRAFIA = [
   { id: 'todas', label: '📁 Todas as Categorias' },
   { id: 'Parede', label: '🧱 Paredes' },
   { id: 'Piso', label: '🪵 Pisos & Tablados' },
   { id: 'Ambiente', label: '🏞️ Ambientes Inteiros / Salões' },
-  { id: 'Baloes', label: '🎈 Balões & Arcos' },
-  { id: 'Paineis', label: '🏛️ Painéis & Estruturas' },
-  { id: 'Texturas', label: '🪵 Texturas & Materiais' },
-  { id: 'Flores', label: '🌸 Flores & Folhagens' },
-  { id: 'Moveis', label: '🛋️ Móveis & Mesas' },
-  { id: 'Letreiros', label: '✨ LED & Letreiros' },
-  { id: 'Outros', label: '📦 Outros Acessórios' },
+  ...CATEGORIAS_MOODBOARD_PADRAO.map(c => ({ id: c.id, label: `${c.icone} ${c.nome}` }))
 ];
 
 // 🏷️ SUBTIPOS RÁPIDOS POR CATEGORIA
@@ -266,6 +274,14 @@ const ControleGeral = () => {
   const [modalEdicaoItemAberto, setModalEdicaoItemAberto] = useState(false);
   const [itemEmEdicao, setItemEmEdicao] = useState(null);
   const [salvandoEdicaoItem, setSalvandoEdicaoItem] = useState(false);
+
+  // 🏷️ Gestão de Categorias Dinâmicas do Moodboard (Super Admin)
+  const [categoriasMoodboard, setCategoriasMoodboard] = useState(CATEGORIAS_MOODBOARD_PADRAO);
+  const [modalCategoriasAberto, setModalCategoriasAberto] = useState(false);
+  const [salvandoCategorias, setSalvandoCategorias] = useState(false);
+  const [novaCatForm, setNovaCatForm] = useState({ nome: '', icone: '🌸' });
+  const [catEditandoId, setCatEditandoId] = useState(null);
+  const [catEditandoForm, setCatEditandoForm] = useState({ nome: '', icone: '' });
 
   // Controle de Modais de Edição/Exclusão de Clientes
   const [membroEdicao, setMembroEdicao] = useState(null);
@@ -574,11 +590,30 @@ const ControleGeral = () => {
   };
 
   // -------------------------------------------------------------
-  // 🎨 CONTROLE DO ACERVO GLOBAL DO MOODBOARD
+  // 🎨 CONTROLE DO ACERVO GLOBAL DO MOODBOARD & CATEGORIAS DINÂMICAS
   // -------------------------------------------------------------
+  const carregarCategoriasMoodboard = async () => {
+    try {
+      const snap = await getDoc(doc(db, "configuracoes_globais", "moodboard_categorias"));
+      if (snap.exists() && Array.isArray(snap.data()?.categorias) && snap.data().categorias.length > 0) {
+        setCategoriasMoodboard(snap.data().categorias);
+      } else {
+        // Se ainda não existir no Firestore, salva os padrões iniciais
+        await setDoc(doc(db, "configuracoes_globais", "moodboard_categorias"), {
+          categorias: CATEGORIAS_MOODBOARD_PADRAO,
+          criadoEm: new Date().toISOString()
+        }, { merge: true });
+        setCategoriasMoodboard(CATEGORIAS_MOODBOARD_PADRAO);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar categorias dinâmicas do moodboard:", err);
+    }
+  };
+
   const carregarItensMoodboard = async () => {
     setLoadingMoodboard(true);
     try {
+      await carregarCategoriasMoodboard();
       const snap = await getDocs(collection(db, "moodboard_elementos"));
       const lista = snap.docs.map(docSnap => ({
         id: docSnap.id,
@@ -589,6 +624,104 @@ const ControleGeral = () => {
       console.error("Erro ao carregar elementos do moodboard:", err);
     } finally {
       setLoadingMoodboard(false);
+    }
+  };
+
+  const handleAdicionarCategoria = async (e) => {
+    e.preventDefault();
+    if (!novaCatForm.nome.trim()) return alert("Por favor, digite o nome da categoria!");
+
+    const slug = novaCatForm.nome.trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .replace(/^_+|_+$/g, '');
+    const id = slug || `cat_${Date.now()}`;
+
+    if (categoriasMoodboard.some(c => c.id.toLowerCase() === id.toLowerCase() || c.nome.toLowerCase() === novaCatForm.nome.trim().toLowerCase())) {
+      return alert("Já existe uma categoria cadastrada com este nome ou identificador!");
+    }
+
+    const nova = {
+      id,
+      nome: novaCatForm.nome.trim(),
+      icone: (novaCatForm.icone || '🏷️').trim()
+    };
+
+    const atualizadas = [...categoriasMoodboard, nova];
+    setSalvandoCategorias(true);
+    try {
+      await setDoc(doc(db, "configuracoes_globais", "moodboard_categorias"), {
+        categorias: atualizadas,
+        atualizadoEm: new Date().toISOString()
+      }, { merge: true });
+      setCategoriasMoodboard(atualizadas);
+      setNovaCatForm({ nome: '', icone: '🌸' });
+      alert(`🎉 Categoria "${nova.nome}" criada com sucesso para todas as usuárias do Celebre!`);
+    } catch (err) {
+      console.error("Erro ao salvar categoria:", err);
+      alert("Erro ao salvar categoria.");
+    } finally {
+      setSalvandoCategorias(false);
+    }
+  };
+
+  const handleExcluirCategoria = async (catId) => {
+    const cat = categoriasMoodboard.find(c => c.id === catId);
+    if (!cat) return;
+    if (!window.confirm(`Tem certeza que deseja remover a categoria "${cat.nome}"? Os itens já cadastrados continuarão existindo, mas a categoria não aparecerá mais nos menus.`)) return;
+
+    const atualizadas = categoriasMoodboard.filter(c => c.id !== catId);
+    setSalvandoCategorias(true);
+    try {
+      await setDoc(doc(db, "configuracoes_globais", "moodboard_categorias"), {
+        categorias: atualizadas,
+        atualizadoEm: new Date().toISOString()
+      }, { merge: true });
+      setCategoriasMoodboard(atualizadas);
+      alert(`✓ Categoria "${cat.nome}" removida com sucesso!`);
+    } catch (err) {
+      console.error("Erro ao excluir categoria:", err);
+      alert("Erro ao remover categoria.");
+    } finally {
+      setSalvandoCategorias(false);
+    }
+  };
+
+  const handleSalvarEdicaoCategoria = async (catId) => {
+    if (!catEditandoForm.nome.trim()) return alert("Digite o nome da categoria!");
+    const atualizadas = categoriasMoodboard.map(c => c.id === catId ? { ...c, nome: catEditandoForm.nome.trim(), icone: (catEditandoForm.icone || '🏷️').trim() } : c);
+    setSalvandoCategorias(true);
+    try {
+      await setDoc(doc(db, "configuracoes_globais", "moodboard_categorias"), {
+        categorias: atualizadas,
+        atualizadoEm: new Date().toISOString()
+      }, { merge: true });
+      setCategoriasMoodboard(atualizadas);
+      setCatEditandoId(null);
+      alert("✓ Categoria atualizada com sucesso!");
+    } catch (err) {
+      console.error("Erro ao atualizar categoria:", err);
+      alert("Erro ao atualizar categoria.");
+    } finally {
+      setSalvandoCategorias(false);
+    }
+  };
+
+  const handleRestaurarCategoriasPadrao = async () => {
+    if (!window.confirm("Deseja restaurar a lista padrão oficial de categorias do Celebre?")) return;
+    setSalvandoCategorias(true);
+    try {
+      await setDoc(doc(db, "configuracoes_globais", "moodboard_categorias"), {
+        categorias: CATEGORIAS_MOODBOARD_PADRAO,
+        atualizadoEm: new Date().toISOString()
+      }, { merge: true });
+      setCategoriasMoodboard(CATEGORIAS_MOODBOARD_PADRAO);
+      alert("✓ Categorias padrão restauradas com sucesso!");
+    } catch (err) {
+      console.error("Erro ao restaurar categorias:", err);
+      alert("Erro ao restaurar categorias.");
+    } finally {
+      setSalvandoCategorias(false);
     }
   };
 
@@ -900,6 +1033,9 @@ const ControleGeral = () => {
             </div>
 
             <div className="cg-mb-stat-action">
+              <button className="cg-btn-manage-categories" onClick={() => setModalCategoriasAberto(true)} title="Gerenciar categorias de elementos do Moodboard">
+                <i className="fas fa-tags"></i> Gerenciar Categorias ({categoriasMoodboard.length})
+              </button>
               <button className="cg-btn-add-global-primary" onClick={() => setModalNovoItemAberto(true)}>
                 <i className="fas fa-plus-circle"></i> + Cadastrar Novo Item Oficial
               </button>
@@ -956,16 +1092,22 @@ const ControleGeral = () => {
                   setFiltroSubtipoMoodboard('todos');
                 }}
               >
-                {CATEGORIAS_CENOGRAFIA.map(cat => {
-                  const count = cat.id === 'todas'
-                    ? itensMoodboard.length
-                    : itensMoodboard.filter(i => i.categoria === cat.id).length;
-                  return (
-                    <option key={cat.id} value={cat.id}>
-                      {cat.label} ({count})
-                    </option>
-                  );
-                })}
+                <option value="todas">📁 Todas as Categorias ({itensMoodboard.length})</option>
+                <optgroup label="Cenários & Fundos">
+                  <option value="Parede">🧱 Paredes ({itensMoodboard.filter(i => i.categoria === 'Parede').length})</option>
+                  <option value="Piso">🪵 Pisos & Tablados ({itensMoodboard.filter(i => i.categoria === 'Piso').length})</option>
+                  <option value="Ambiente">🏞️ Ambientes Inteiros ({itensMoodboard.filter(i => i.categoria === 'Ambiente').length})</option>
+                </optgroup>
+                <optgroup label="Cenografia & Decoração">
+                  {categoriasMoodboard.map(cat => {
+                    const count = itensMoodboard.filter(i => i.categoria === cat.id).length;
+                    return (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.icone} {cat.nome} ({count})
+                      </option>
+                    );
+                  })}
+                </optgroup>
               </select>
             </div>
 
@@ -2025,16 +2167,16 @@ const ControleGeral = () => {
                         });
                       }}
                     >
-                      <option value="Parede">🧱 Fundo de Parede</option>
-                      <option value="Piso">🪵 Fundo de Piso / Chão</option>
-                      <option value="Ambiente">🏞️ Ambiente Inteiro / Salão Completo</option>
-                      <option value="Baloes">🎈 Balões & Arcos (PNG)</option>
-                      <option value="Paineis">🏛️ Painéis & Estruturas (PNG)</option>
-                      <option value="Flores">🌸 Flores & Folhagens (PNG)</option>
-                      <option value="Moveis">🛋️ Móveis & Mesas (PNG)</option>
-                      <option value="Letreiros">✨ LED & Letreiros (PNG)</option>
-                      <option value="Texturas">🪵 Texturas & Materiais</option>
-                      <option value="Outros">📦 Outros Acessórios</option>
+                      <optgroup label="Cenários & Fundos (Fotos/Texturas)">
+                        <option value="Parede">🧱 Fundo de Parede</option>
+                        <option value="Piso">🪵 Fundo de Piso / Chão</option>
+                        <option value="Ambiente">🏞️ Ambiente Inteiro / Salão Completo</option>
+                      </optgroup>
+                      <optgroup label="Cenografia & Decoração (PNGs)">
+                        {categoriasMoodboard.map(c => (
+                          <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
 
@@ -2239,16 +2381,16 @@ const ControleGeral = () => {
                       value={itemEmEdicao.categoria}
                       onChange={e => setItemEmEdicao({ ...itemEmEdicao, categoria: e.target.value })}
                     >
-                      <option value="Parede">🧱 Fundo de Parede</option>
-                      <option value="Piso">🪵 Fundo de Piso / Chão</option>
-                      <option value="Ambiente">🏞️ Ambiente Inteiro / Salão</option>
-                      <option value="Baloes">🎈 Balões & Arcos</option>
-                      <option value="Paineis">🏛️ Painéis & Estruturas</option>
-                      <option value="Flores">🌸 Flores & Folhagens</option>
-                      <option value="Moveis">🛋️ Móveis & Mesas</option>
-                      <option value="Letreiros">✨ LED & Letreiros</option>
-                      <option value="Texturas">🪵 Texturas & Materiais</option>
-                      <option value="Outros">📦 Outros Acessórios</option>
+                      <optgroup label="Cenários & Fundos">
+                        <option value="Parede">🧱 Fundo de Parede</option>
+                        <option value="Piso">🪵 Fundo de Piso / Chão</option>
+                        <option value="Ambiente">🏞️ Ambiente Inteiro / Salão</option>
+                      </optgroup>
+                      <optgroup label="Cenografia & Decoração">
+                        {categoriasMoodboard.map(c => (
+                          <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>
+                        ))}
+                      </optgroup>
                     </select>
                   </div>
 
@@ -2341,6 +2483,160 @@ const ControleGeral = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* 🏷️ MODAL: GERENCIAR CATEGORIAS DO MOODBOARD */}
+      {modalCategoriasAberto && (
+        <div className="cg-modal-overlay" onClick={() => setModalCategoriasAberto(false)}>
+          <div className="cg-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', width: '95%' }}>
+            <div className="cg-modal-header">
+              <h2><i className="fas fa-tags"></i> Gerenciar Categorias do Moodboard</h2>
+              <button className="cg-modal-close" onClick={() => setModalCategoriasAberto(false)}>✕</button>
+            </div>
+            <div className="cg-modal-body cg-cats-modal-wrap">
+              <p style={{ margin: '0 0 12px 0', fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                As categorias cadastradas aqui aparecem automaticamente nos filtros e no modal de Upload para todas as usuárias do Celebre em tempo real.
+              </p>
+
+              {/* Formulário: Nova Categoria */}
+              <form onSubmit={handleAdicionarCategoria} className="cg-new-cat-card">
+                <div className="cg-new-cat-title">
+                  <i className="fas fa-plus-circle"></i> Cadastrar Nova Categoria
+                </div>
+                <div className="cg-new-cat-inputs-row">
+                  <input
+                    type="text"
+                    className="cg-cat-emoji-input"
+                    value={novaCatForm.icone}
+                    onChange={e => setNovaCatForm({ ...novaCatForm, icone: e.target.value })}
+                    placeholder="🌸"
+                    maxLength={4}
+                    title="Emoji ou Ícone"
+                  />
+                  <input
+                    type="text"
+                    className="cg-cat-name-input"
+                    value={novaCatForm.nome}
+                    onChange={e => setNovaCatForm({ ...novaCatForm, nome: e.target.value })}
+                    placeholder="Ex: Doces Fake, Bolos Cenográficos, Velas..."
+                    required
+                  />
+                  <button type="submit" className="cg-btn-add-cat" disabled={salvandoCategorias}>
+                    {salvandoCategorias ? 'Salvando...' : '+ Adicionar'}
+                  </button>
+                </div>
+                {/* Sugestões de Emojis Rápidos */}
+                <div className="cg-quick-emojis-row">
+                  <span style={{ fontSize: '10.5px', color: '#94a3b8', marginRight: '4px' }}>Sugestões:</span>
+                  {['🌸', '🧸', '🍽️', '🦸', '🎈', '🏛️', '🛋️', '✨', '🧁', '🕯️', '🎂', '🎀', '🎪', '🪴', '🪑', '📦'].map(emoji => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      className="cg-quick-emoji-btn"
+                      onClick={() => setNovaCatForm({ ...novaCatForm, icone: emoji })}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </form>
+
+              {/* Lista de Categorias Ativas */}
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '4px' }}>
+                <strong style={{ fontSize: '12.5px', color: '#0f172a' }}>
+                  Categorias Ativas ({categoriasMoodboard.length})
+                </strong>
+                <button
+                  type="button"
+                  onClick={handleRestaurarCategoriasPadrao}
+                  style={{ background: 'transparent', border: 'none', color: '#c5a059', fontSize: '11px', fontWeight: '700', cursor: 'pointer' }}
+                  title="Restaurar lista original do Celebre"
+                >
+                  ↺ Restaurar Padrões
+                </button>
+              </div>
+
+              <div className="cg-cats-grid">
+                {categoriasMoodboard.map(cat => (
+                  <div key={cat.id} className="cg-cat-item-card">
+                    {catEditandoId === cat.id ? (
+                      <div style={{ display: 'flex', gap: '6px', width: '100%', alignItems: 'center' }}>
+                        <input
+                          type="text"
+                          className="cg-cat-emoji-input"
+                          style={{ width: '40px', height: '32px', fontSize: '14px' }}
+                          value={catEditandoForm.icone}
+                          onChange={e => setCatEditandoForm({ ...catEditandoForm, icone: e.target.value })}
+                        />
+                        <input
+                          type="text"
+                          className="cg-cat-name-input"
+                          style={{ height: '32px', fontSize: '12px' }}
+                          value={catEditandoForm.nome}
+                          onChange={e => setCatEditandoForm({ ...catEditandoForm, nome: e.target.value })}
+                        />
+                        <button
+                          type="button"
+                          className="cg-btn-cat-action"
+                          style={{ background: '#0f172a', color: '#c5a059' }}
+                          onClick={() => handleSalvarEdicaoCategoria(cat.id)}
+                          title="Salvar"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          className="cg-btn-cat-action"
+                          onClick={() => setCatEditandoId(null)}
+                          title="Cancelar"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <>
+                        <div className="cg-cat-item-info">
+                          <span className="cg-cat-item-icon">{cat.icone || '🏷️'}</span>
+                          <div>
+                            <div className="cg-cat-item-name">{cat.nome}</div>
+                            <span className="cg-cat-item-id">ID: {cat.id}</span>
+                          </div>
+                        </div>
+                        <div className="cg-cat-item-actions">
+                          <button
+                            type="button"
+                            className="cg-btn-cat-action"
+                            onClick={() => {
+                              setCatEditandoId(cat.id);
+                              setCatEditandoForm({ nome: cat.nome, icone: cat.icone || '🏷️' });
+                            }}
+                            title="Editar categoria"
+                          >
+                            <i className="fas fa-pencil-alt"></i>
+                          </button>
+                          <button
+                            type="button"
+                            className="cg-btn-cat-action danger"
+                            onClick={() => handleExcluirCategoria(cat.id)}
+                            title="Excluir categoria"
+                          >
+                            <i className="fas fa-trash-alt"></i>
+                          </button>
+                        </div>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="cg-modal-footer">
+              <button type="button" className="cg-btn-cancel" onClick={() => setModalCategoriasAberto(false)}>
+                Fechar
+              </button>
+            </div>
           </div>
         </div>
       )}

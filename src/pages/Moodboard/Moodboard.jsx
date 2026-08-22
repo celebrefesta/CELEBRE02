@@ -57,19 +57,24 @@ const Icons = {
   Maximize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" /></svg>,
   Minimize: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7" /></svg>,
   Eye: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>,
+  EyeOff: (props) => <svg {...props} width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>,
   Sliders: (props) => <svg {...props} width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="21" x2="4" y2="14"></line><line x1="4" y1="10" x2="4" y2="3"></line><line x1="12" y1="21" x2="12" y2="12"></line><line x1="12" y1="8" x2="12" y2="3"></line><line x1="20" y1="21" x2="20" y2="16"></line><line x1="20" y1="12" x2="20" y2="3"></line><line x1="1" y1="14" x2="7" y2="14"></line><line x1="9" y1="8" x2="15" y2="8"></line><line x1="17" y1="16" x2="23" y2="16"></line></svg>,
   Sun: (props) => <svg {...props} width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></svg>
 };
 
-// 🎈 Categorias da Galeria de Cenografia & Inspirações
-const CATEGORIAS_BIBLIOTECA_MOODBOARD = [
-  { id: 'todas', label: 'Todas', icon: 'fas fa-border-all' },
-  { id: 'Baloes', label: '🎈 Balões', icon: 'fas fa-circle' },
-  { id: 'Paineis', label: '🏛️ Painéis', icon: 'fas fa-archway' },
-  { id: 'Flores', label: '🌸 Flores', icon: 'fas fa-spa' },
-  { id: 'Moveis', label: '🛋️ Móveis', icon: 'fas fa-couch' },
-  { id: 'Letreiros', label: '✨ LED', icon: 'fas fa-bolt' },
-  { id: 'Outros', label: '📦 Outros', icon: 'fas fa-box' }
+// 🎈 Categorias da Galeria de Cenografia & Inspirações (Padrão inicial - atualizado dinamicamente via Firestore)
+export const CATEGORIAS_MOODBOARD_PADRAO = [
+  { id: 'Flores', nome: 'Flores & Folhagens', icone: '🌸' },
+  { id: 'Moveis', nome: 'Móveis & Mesas', icone: '🛋️' },
+  { id: 'Pelucias', nome: 'Pelúcias & Bonecos', icone: '🧸' },
+  { id: 'Loucas', nome: 'Louças & Bandejas', icone: '🍽️' },
+  { id: 'Personagens', nome: 'Personagens & Temas', icone: '🦸' },
+  { id: 'Baloes', nome: 'Balões & Arcos', icone: '🎈' },
+  { id: 'Paineis', nome: 'Painéis & Estruturas', icone: '🏛️' },
+  { id: 'Letreiros', nome: 'LED & Letreiros', icone: '✨' },
+  { id: 'Doces', nome: 'Doces & Bolos Fake', icone: '🧁' },
+  { id: 'Lustres', nome: 'Lustres & Velas', icone: '🕯️' },
+  { id: 'Outros', nome: 'Outros Acessórios', icone: '📦' }
 ];
 
 // 🎨 Paleta Especializada de Cores para Filtro Visual de Arcos e Peças
@@ -808,7 +813,7 @@ const MesaProvencal3D = ({ item }) => {
           <img src={capaUrl} alt="Capa" draggable="false" style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: `${posX}% ${posY}%`, transform: `scale(${scale})`, pointerEvents: 'none' }} />
         )}
       </div>
-      <svg width="100%" height="70%" viewBox="0 0 200 120" style={{ overflow: 'visible', pointerEvents: 'none' }}>
+      <svg width="100%" height="70%" viewBox="0 0 200 120" preserveAspectRatio="none" style={{ overflow: 'visible', pointerEvents: 'none' }}>
         <path d="M 10,0 Q 100,25 190,0 L 190,15 Q 100,35 10,15 Z" fill={cor} filter="drop-shadow(0 2px 3px rgba(0,0,0,0.15))" />
         <path d="M 15,10 C 5,40 30,70 12,120 L 22,120 C 42,70 20,40 28,10 Z" fill={cor} stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
         <path d="M 185,10 C 195,40 170,70 188,120 L 178,120 C 158,70 180,40 172,10 Z" fill={cor} stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
@@ -950,7 +955,7 @@ const ArcoDuplo3D = ({ item }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-      <svg width="100%" height="100%" viewBox="0 0 200 300" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+      <svg width="100%" height="100%" viewBox="0 0 200 300" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
         <defs>
           <clipPath id={clipId}>
             <path d="M 28,300 L 28,95 A 72,72 0 0,1 172,95 L 172,300 Z" />
@@ -1076,7 +1081,7 @@ const CarrinhoGourmet3D = ({ item }) => {
   const cor = item.color || '#c5a059';
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <svg width="100%" height="100%" viewBox="0 0 180 180" style={{ pointerEvents: 'none' }}>
+      <svg width="100%" height="100%" viewBox="0 0 180 180" preserveAspectRatio="none" style={{ pointerEvents: 'none' }}>
         {/* Bandeja Superior */}
         <rect x="25" y="30" width="130" height="14" rx="3" fill={cor} stroke="rgba(0,0,0,0.2)" strokeWidth="1" />
         {/* Bandeja Inferior */}
@@ -1099,7 +1104,7 @@ const CarrinhoGourmet3D = ({ item }) => {
   );
 };
 
-// 🏛️ Componente Arco Romano Triplo 3D em Camadas Escalonadas
+// 🏛️ Componente Portal Romano Triplo 3D em Camadas Escalonadas (Foto 3)
 const ArcoRomanoTriplo3D = ({ item }) => {
   const c1 = item.color || '#ffffff';
   const c2 = item.multiColor ? (item.corCamada2 || '#f1f5f9') : c1;
@@ -1109,61 +1114,57 @@ const ArcoRomanoTriplo3D = ({ item }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <svg width="100%" height="100%" viewBox="0 0 220 300" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+      <svg width="100%" height="100%" viewBox="0 0 240 270" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
         <defs>
-          <filter id={`shadow-step-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
-            <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.22" />
+          <filter id={`shadow-romano-1-${item.uniqueId || 'def'}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="6" stdDeviation="4.5" floodColor="#000000" floodOpacity="0.30" />
+          </filter>
+          <filter id={`shadow-romano-2-${item.uniqueId || 'def'}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="5" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.25" />
           </filter>
           <clipPath id={clipId}>
-            <path d="M 66,300 L 66,130 A 44,44 0 0,1 154,130 L 154,300 Z" />
+            <path d="M 86,242 L 86,110 A 34,34 0 0,1 154,110 L 154,242 Z" />
           </clipPath>
         </defs>
 
-        {/* Camada 1: Arco Externo (Fundo mais alto e mais largo) */}
-        <path
-          d="M 12,300 L 12,105 A 98,98 0 0,1 208,105 L 208,300 L 176,300 L 176,115 A 66,66 0 0,0 44,115 L 44,300 Z"
-          fill={c1}
-          stroke="rgba(0,0,0,0.12)"
-          strokeWidth="1.5"
-          filter={`url(#shadow-step-${item.uniqueId || 'def'})`}
-        />
-
-        {/* Camada 2: Arco Intermediário (Meio) */}
-        <path
-          d="M 38,300 L 38,118 A 72,72 0 0,1 182,118 L 182,300 L 154,300 L 154,128 A 44,44 0 0,0 66,128 L 66,300 Z"
-          fill={c2}
-          stroke="rgba(0,0,0,0.1)"
-          strokeWidth="1.5"
-          filter={`url(#shadow-step-${item.uniqueId || 'def'})`}
-        />
-
-        {/* Camada 3: Arco Interno (Portal Vazado ou com Capa) */}
-        <path
-          d="M 62,300 L 62,130 A 48,48 0 0,1 158,130 L 158,300 L 140,300 L 140,136 A 30,30 0 0,0 80,136 L 80,300 Z"
-          fill={c3}
-          stroke="rgba(0,0,0,0.12)"
-          strokeWidth="1.5"
-        />
-
-        {/* Degraus/Bases no chão dos 3 níveis */}
-        <rect x="10" y="292" width="36" height="8" rx="1" fill={c1} stroke="rgba(0,0,0,0.15)" />
-        <rect x="174" y="292" width="36" height="8" rx="1" fill={c1} stroke="rgba(0,0,0,0.15)" />
-
-        <rect x="36" y="294" width="32" height="6" rx="1" fill={c2} stroke="rgba(0,0,0,0.12)" />
-        <rect x="152" y="294" width="32" height="6" rx="1" fill={c2} stroke="rgba(0,0,0,0.12)" />
-
-        {/* Capa no fundo central se houver */}
+        {/* Capa no vão central se houver */}
         {capaUrl && (
           <g clipPath={`url(#${clipId})`}>
-            <image href={capaUrl} x="66" y="60" width="88" height="240" preserveAspectRatio="xMidYMid slice" />
+            <image href={capaUrl} x="86" y="74" width="68" height="170" preserveAspectRatio="xMidYMid slice" />
           </g>
         )}
+
+        {/* 3️⃣ Camada 3: Arco Interno / Fundo (Degrau mais alto na base y=242) */}
+        <path
+          d="M 62,242 L 62,110 A 58,58 0 0,1 178,110 L 178,242 L 154,242 L 154,110 A 34,34 0 0,0 86,110 L 86,242 Z"
+          fill={c3}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="1.2"
+        />
+
+        {/* 2️⃣ Camada 2: Arco Intermediário (Com sombra sobre a Camada 3, base y=250) */}
+        <path
+          d="M 38,250 L 38,110 A 82,82 0 0,1 202,110 L 202,250 L 178,250 L 178,110 A 58,58 0 0,0 62,110 L 62,250 Z"
+          fill={c2}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="1.2"
+          filter={`url(#shadow-romano-2-${item.uniqueId || 'def'})`}
+        />
+
+        {/* 1️⃣ Camada 1: Arco Externo / Frontal (Com sombra sobre a Camada 2, base no chão y=258) */}
+        <path
+          d="M 14,258 L 14,110 A 106,106 0 0,1 226,110 L 226,258 L 202,258 L 202,110 A 82,82 0 0,0 38,110 L 38,258 Z"
+          fill={c1}
+          stroke="rgba(0,0,0,0.14)"
+          strokeWidth="1.5"
+          filter={`url(#shadow-romano-1-${item.uniqueId || 'def'})`}
+        />
       </svg>
     </div>
   );
 };
 
-// 🌀 Componente Arco Orgânico Triplo 3D em Camadas Sinuosas
+// 🌀 Componente Portal / Arco Orgânico Triplo 3D em Camadas Fluidas (Foto 2)
 const ArcoOrganicoTriplo3D = ({ item }) => {
   const c1 = item.color || '#ffffff';
   const c2 = item.multiColor ? (item.corCamada2 || '#f1f5f9') : c1;
@@ -1173,52 +1174,99 @@ const ArcoOrganicoTriplo3D = ({ item }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <svg width="100%" height="100%" viewBox="0 0 240 320" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+      <svg width="100%" height="100%" viewBox="0 0 260 260" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
         <defs>
-          <filter id={`shadow-org-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
-            <feDropShadow dx="0" dy="4" stdDeviation="4" floodColor="#000000" floodOpacity="0.22" />
+          <filter id={`shadow-org-1-${item.uniqueId || 'def'}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000000" floodOpacity="0.25" />
+          </filter>
+          <filter id={`shadow-org-2-${item.uniqueId || 'def'}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.25" />
+          </filter>
+          <filter id={`shadow-org-3-${item.uniqueId || 'def'}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="3" floodColor="#000000" floodOpacity="0.22" />
           </filter>
           <clipPath id={clipId}>
-            <path d="M 75,315 C 65,280 62,230 72,170 C 78,135 70,110 85,92 C 100,75 115,85 120,85 C 125,85 140,75 155,92 C 170,110 162,135 168,170 C 178,230 175,280 165,315 Z" />
+            <path d="M 96,252 C 90,215 106,170 96,128 C 96,98 120,86 130,86 C 140,86 164,98 164,128 C 154,170 170,215 164,252 Z" />
           </clipPath>
         </defs>
 
-        {/* Camada 1: Externa (Mais ampla, curva mais expansiva) */}
+        {/* Camada 1: Externa (Base Mais Larga e Topo Sinuoso Fluido) */}
         <path
-          d="M 20,315 C 12,270 8,210 22,150 C 32,105 18,65 42,32 C 68,-2 102,28 120,28 C 138,28 172,-2 198,32 C 222,65 208,105 218,150 C 232,210 228,270 220,315 L 182,315 C 190,270 194,220 182,165 C 172,125 180,95 162,65 C 146,38 130,52 120,52 C 110,52 94,38 78,65 C 60,95 68,125 58,165 C 46,220 50,270 58,315 Z"
+          d="
+            M 18,252
+            C 10,210 32,165 20,120
+            C 8,68 35,20 68,18
+            C 98,16 112,38 130,38
+            C 148,38 162,16 192,18
+            C 225,20 252,68 240,120
+            C 228,165 250,210 242,252
+            L 204,252
+            C 212,212 192,170 202,130
+            C 210,88 190,52 168,52
+            C 152,52 142,66 130,66
+            C 118,66 108,52 92,52
+            C 70,52 50,88 58,130
+            C 68,170 48,212 56,252
+            Z
+          "
           fill={c1}
           stroke="rgba(0,0,0,0.12)"
           strokeWidth="1.5"
-          filter={`url(#shadow-org-${item.uniqueId || 'def'})`}
+          filter={`url(#shadow-org-1-${item.uniqueId || 'def'})`}
         />
 
-        {/* Camada 2: Intermediária */}
+        {/* Camada 2: Intermediária (Rebaixada com Sombra) */}
         <path
-          d="M 48,315 C 40,275 44,225 54,170 C 64,120 56,92 72,66 C 88,40 106,55 120,55 C 134,55 152,40 168,66 C 184,92 176,120 186,170 C 196,225 200,275 192,315 L 164,315 C 172,278 170,230 160,175 C 150,135 158,110 144,88 C 132,68 124,75 120,75 C 116,75 108,68 96,88 C 82,110 90,135 80,175 C 70,230 68,278 76,315 Z"
+          d="
+            M 48,252
+            C 40,212 60,170 52,130
+            C 44,92 64,56 86,56
+            C 104,56 116,70 130,70
+            C 144,70 156,56 174,56
+            C 196,56 216,92 208,130
+            C 200,170 220,212 212,252
+            L 182,252
+            C 188,214 172,172 180,135
+            C 186,102 170,72 152,72
+            C 142,72 136,84 130,84
+            C 124,84 118,72 108,72
+            C 90,72 74,102 80,135
+            C 88,172 72,214 78,252
+            Z
+          "
           fill={c2}
-          stroke="rgba(0,0,0,0.1)"
+          stroke="rgba(0,0,0,0.12)"
           strokeWidth="1.5"
-          filter={`url(#shadow-org-${item.uniqueId || 'def'})`}
+          filter={`url(#shadow-org-2-${item.uniqueId || 'def'})`}
         />
 
-        {/* Camada 3: Interna (Portal Central) */}
+        {/* Camada 3: Interna (Portal Aberto Central com Base Reta no Chão) */}
         <path
-          d="M 72,315 C 64,280 66,230 76,175 C 84,130 76,105 92,82 C 104,64 114,75 120,75 C 126,75 136,64 148,82 C 164,105 156,130 164,175 C 174,230 176,280 168,315 L 152,315 C 158,280 156,235 148,180 C 140,140 144,118 134,100 C 126,86 122,90 120,90 C 118,90 114,86 106,100 C 96,118 100,140 92,180 C 84,235 82,280 88,315 Z"
+          d="
+            M 72,252
+            C 66,215 82,172 74,136
+            C 68,104 84,76 102,76
+            C 114,76 122,86 130,86
+            C 138,86 146,76 158,76
+            C 176,76 192,104 186,136
+            C 178,172 194,215 188,252
+            L 164,252
+            C 170,215 154,170 164,128
+            C 164,98 140,86 130,86
+            C 120,86 96,98 96,128
+            C 106,170 90,215 96,252
+            Z
+          "
           fill={c3}
           stroke="rgba(0,0,0,0.12)"
           strokeWidth="1.5"
+          filter={`url(#shadow-org-3-${item.uniqueId || 'def'})`}
         />
-
-        {/* Bases / Pés escalonados */}
-        <ellipse cx="38" cy="316" rx="20" ry="4" fill={c1} opacity="0.9" />
-        <ellipse cx="202" cy="316" rx="20" ry="4" fill={c1} opacity="0.9" />
-        <ellipse cx="60" cy="317" rx="15" ry="3" fill={c2} opacity="0.9" />
-        <ellipse cx="180" cy="317" rx="15" ry="3" fill={c2} opacity="0.9" />
 
         {/* Capa no vão central se houver */}
         {capaUrl && (
           <g clipPath={`url(#${clipId})`}>
-            <image href={capaUrl} x="60" y="70" width="120" height="250" preserveAspectRatio="xMidYMid slice" />
+            <image href={capaUrl} x="96" y="86" width="68" height="166" preserveAspectRatio="xMidYMid slice" />
           </g>
         )}
       </svg>
@@ -1257,7 +1305,7 @@ const PainelNuvemGomos3D = ({ item }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <svg width="100%" height="100%" viewBox="0 0 180 350" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+      <svg width="100%" height="100%" viewBox="0 0 180 350" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
         <defs>
           <filter id={`shadow-nuvem-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
             <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#000000" floodOpacity="0.2" />
@@ -1337,7 +1385,7 @@ const MesaOsso3D = ({ item }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <svg width="100%" height="100%" viewBox="0 0 240 160" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+      <svg width="100%" height="100%" viewBox="0 0 240 160" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
         <defs>
           <filter id={`shadow-bone-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
             <feDropShadow dx="0" dy="6" stdDeviation="4" floodColor="#000000" floodOpacity="0.22" />
@@ -1388,7 +1436,7 @@ const MesaJeep3D = ({ item }) => {
 
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
-      <svg width="100%" height="100%" viewBox="0 0 220 260" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+      <svg width="100%" height="100%" viewBox="0 0 220 260" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
         <defs>
           <filter id={`shadow-jeep-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
             <feDropShadow dx="0" dy="6" stdDeviation="5" floodColor="#000000" floodOpacity="0.25" />
@@ -1463,6 +1511,776 @@ const MesaJeep3D = ({ item }) => {
         {/* PLACA DIANTEIRA */}
         <rect x="80" y="180" width="60" height="18" rx="2" fill="#ffffff" stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
         <text x="110" y="193" fontSize="8.5" fontWeight="bold" fill="#334155" textAnchor="middle" fontFamily="sans-serif">JEEP 4X4</text>
+      </svg>
+    </div>
+  );
+};
+
+// 🏠 Componente Painel Casinha / Torre Colonial com Janela em Arco 3D
+const PainelCasinhaColonial3D = ({ item }) => {
+  const corParede = item.color || '#ffffff';
+  const corTelhado = item.corTelhado || corParede;
+  const corJanela = item.corJanela || (item.multiColor ? (item.corDetalhes || '#ffffff') : corParede);
+  const corVidros = item.corVidros || (item.multiColor ? (item.corCentro || '#f1f5f9') : '#f8fafc');
+  const corPes = item.corPes || corParede;
+  const capaUrl = item.capaUrl;
+  const clipId = `casinha-clip-${item.uniqueId || 'def'}`;
+  const winClipId = `casinha-win-clip-${item.uniqueId || 'def'}`;
+
+  // Path da parede da casinha (corpo + triângulo do telhado)
+  const pathParede = `
+    M 80,24
+    L 144,136
+    L 144,366
+    L 16,366
+    L 16,136
+    Z
+  `;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 160 395" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-casinha-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+          <filter id={`shadow-janela-${item.uniqueId || 'def'}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="2" stdDeviation="2.5" floodColor="#000000" floodOpacity="0.25" />
+          </filter>
+          <clipPath id={clipId}>
+            <path d={pathParede} />
+          </clipPath>
+          <clipPath id={winClipId}>
+            <path d="M 57,192 L 57,166 A 23,23 0 0,1 103,166 L 103,222 L 57,222 Z" />
+          </clipPath>
+        </defs>
+
+        {/* Pés de Apoio da Casinha */}
+        <path
+          d="M 16,350 C 12,364 8,382 10,392 C 12,395 18,395 22,390 C 24,380 26,364 26,350 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+        <path
+          d="M 134,350 C 134,364 136,380 138,390 C 142,395 148,395 150,392 C 152,382 148,364 144,350 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+
+        {/* Corpo / Paredes Principais da Casinha */}
+        <path
+          d={pathParede}
+          fill={corParede}
+          stroke="rgba(0,0,0,0.12)"
+          strokeWidth="1.8"
+          filter={`url(#shadow-casinha-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Capa de Tecido / Imagem personalizada se houver */}
+        {capaUrl && (
+          <g clipPath={`url(#${clipId})`}>
+            <image href={capaUrl} x="16" y="24" width="128" height="342" preserveAspectRatio="xMidYMid slice" />
+          </g>
+        )}
+
+        {/* Beirais / Molduras Inclinadas do Telhado Triangular */}
+        <g filter={`url(#shadow-janela-${item.uniqueId || 'def'})`}>
+          <polygon
+            points="80,18 84,24 13,142 7,136"
+            fill={corTelhado}
+            stroke="rgba(0,0,0,0.15)"
+            strokeWidth="1.2"
+          />
+          <polygon
+            points="80,18 76,24 147,142 153,136"
+            fill={corTelhado}
+            stroke="rgba(0,0,0,0.15)"
+            strokeWidth="1.2"
+          />
+          <polygon points="76,24 80,16 84,24" fill={corTelhado} stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+        </g>
+
+        {/* 🪟 JANELA COLONIAL EM ARCO (8 Quadrículas em Relevo) */}
+        <g filter={`url(#shadow-janela-${item.uniqueId || 'def'})`}>
+          <path
+            d="M 54,166 A 26,26 0 0,1 106,166 L 106,225 L 54,225 Z"
+            fill={corVidros}
+            stroke="rgba(0,0,0,0.15)"
+            strokeWidth="1"
+          />
+          <path
+            d="M 52,166 A 28,28 0 0,1 108,166 L 108,227 L 52,227 Z M 57,166 A 23,23 0 0,1 103,166 L 103,222 L 57,222 Z"
+            fill={corJanela}
+            fillRule="evenodd"
+            stroke="rgba(0,0,0,0.15)"
+            strokeWidth="1.2"
+          />
+          <rect x="78" y="142" width="4" height="83" rx="1" fill={corJanela} stroke="rgba(0,0,0,0.12)" strokeWidth="0.8" clipPath={`url(#winClipId)`} />
+          <rect x="55" y="166" width="50" height="3.5" rx="1" fill={corJanela} stroke="rgba(0,0,0,0.12)" strokeWidth="0.8" />
+          <rect x="55" y="185" width="50" height="3.5" rx="1" fill={corJanela} stroke="rgba(0,0,0,0.12)" strokeWidth="0.8" />
+          <rect x="55" y="204" width="50" height="3.5" rx="1" fill={corJanela} stroke="rgba(0,0,0,0.12)" strokeWidth="0.8" />
+          <rect x="49" y="226" width="62" height="5" rx="1.5" fill={corJanela} stroke="rgba(0,0,0,0.18)" strokeWidth="1" />
+        </g>
+      </svg>
+    </div>
+  );
+};
+
+// 🦋 Componente Borboleta Vetorial Vazada em Alto Relevo
+const BorboletaVazada = ({ cx, cy, scale = 1, rotate = 0, corPrincipal, corAsas }) => {
+  return (
+    <g transform={`translate(${cx}, ${cy}) rotate(${rotate}) scale(${scale})`}>
+      <g stroke="rgba(0,0,0,0.15)" strokeWidth="1">
+        <path d="M -3,-6 C -12,-32 -38,-35 -48,-18 C -54,-6 -46,12 -12,4 Z" fill={corPrincipal} />
+        <path d="M 3,-6 C 12,-32 38,-35 48,-18 C 54,-6 46,12 12,4 Z" fill={corPrincipal} />
+        <path d="M -3,2 C -18,10 -36,22 -32,36 C -28,45 -14,42 -4,18 Z" fill={corPrincipal} />
+        <path d="M 3,2 C 18,10 36,22 32,36 C 28,45 14,42 4,18 Z" fill={corPrincipal} />
+
+        {/* Rasgos vazados das asas */}
+        <path d="M -16,-12 C -24,-24 -36,-24 -40,-14 C -36,-8 -24,-4 -14,-6 Z" fill={corAsas} />
+        <path d="M -12,-2 C -22,0 -34,0 -36,6 C -32,10 -22,8 -10,3 Z" fill={corAsas} />
+        <path d="M 16,-12 C 24,-24 36,-24 40,-14 C 36,-8 24,-4 14,-6 Z" fill={corAsas} />
+        <path d="M 12,-2 C 22,0 34,0 36,6 C 32,10 22,8 10,3 Z" fill={corAsas} />
+
+        <path d="M -8,10 C -18,18 -26,24 -22,30 C -18,32 -12,24 -6,14 Z" fill={corAsas} />
+        <path d="M -4,12 C -10,22 -16,30 -12,34 C -8,34 -4,24 -2,16 Z" fill={corAsas} />
+        <path d="M 8,10 C 18,18 26,24 22,30 C 18,32 12,24 6,14 Z" fill={corAsas} />
+        <path d="M 4,12 C 10,22 16,30 12,34 C 8,34 4,24 2,16 Z" fill={corAsas} />
+
+        {/* Corpo e Antenas */}
+        <ellipse cx="0" cy="4" rx="3.5" ry="18" fill={corPrincipal} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
+        <circle cx="0" cy="-14" r="3.2" fill={corPrincipal} stroke="rgba(0,0,0,0.18)" strokeWidth="0.8" />
+        <path d="M -1,-16 Q -6,-24 -10,-24" fill="none" stroke={corPrincipal} strokeWidth="1.2" strokeLinecap="round" />
+        <path d="M 1,-16 Q 6,-24 10,-24" fill="none" stroke={corPrincipal} strokeWidth="1.2" strokeLinecap="round" />
+      </g>
+    </g>
+  );
+};
+
+// 🦋 Componente Painel Arco Romano Vazado com Borboletas 3D
+const PainelArcoBorboletas3D = ({ item }) => {
+  const corArco = item.color || '#ffffff';
+  const corBorboletas = item.corBorboletas || (item.multiColor ? (item.corDetalhes || '#ffffff') : corArco);
+  const corAsas = item.corAsasDetalhes || (item.multiColor ? (item.corCentro || '#f1f5f9') : '#ffffff');
+  const corPes = item.corPes || corArco;
+
+  const pathArcoExterno = `
+    M 18,360
+    L 18,135
+    A 72,72 0 0,1 162,135
+    L 162,360
+    L 138,360
+    L 138,138
+    A 48,48 0 0,0 42,138
+    L 42,360
+    Z
+  `;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 180 395" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-arco-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="4" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+          <filter id={`shadow-butterfly-${item.uniqueId || 'def'}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="2" dy="4" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.28" />
+          </filter>
+        </defs>
+
+        {/* Pés de Apoio da Estrutura */}
+        <path
+          d="M 18,348 C 12,362 6,380 8,392 C 10,395 18,395 24,390 C 26,380 28,362 28,348 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+        <path
+          d="M 152,348 C 152,362 154,380 156,390 C 162,395 170,395 172,392 C 174,380 168,362 162,348 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+        <rect x="18" y="348" width="144" height="12" rx="2" fill={corArco} stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+
+        {/* Moldura do Arco Romano */}
+        <path
+          d={pathArcoExterno}
+          fill={corArco}
+          stroke="rgba(0,0,0,0.14)"
+          strokeWidth="1.8"
+          filter={`url(#shadow-arco-${item.uniqueId || 'def'})`}
+        />
+
+        {/* 🦋 4 BORBOLETAS 3D ESCALONADAS */}
+        <g filter={`url(#shadow-butterfly-${item.uniqueId || 'def'})`}>
+          <BorboletaVazada cx={90} cy={72} scale={0.72} rotate={-6} corPrincipal={corBorboletas} corAsas={corAsas} />
+          <BorboletaVazada cx={66} cy={140} scale={0.95} rotate={-14} corPrincipal={corBorboletas} corAsas={corAsas} />
+          <BorboletaVazada cx={102} cy={212} scale={0.82} rotate={12} corPrincipal={corBorboletas} corAsas={corAsas} />
+          <BorboletaVazada cx={74} cy={285} scale={1.05} rotate={-10} corPrincipal={corBorboletas} corAsas={corAsas} />
+        </g>
+      </svg>
+    </div>
+  );
+};
+
+// 🌾 Componente Painel Moinho / Celeiro Fazendinha com Pás Giratórias e Porta 'X' 3D
+const PainelMoinhoFazendinha3D = ({ item }) => {
+  const corCorpo = item.color || '#ffffff';
+  const corTelhado = item.corTelhado || (item.multiColor ? (item.corCamada2 || '#f8fafc') : corCorpo);
+  const corPas = item.corPasMoinho || (item.multiColor ? (item.corDetalhes || '#ffffff') : corCorpo);
+  const corPortaJanela = item.corPortaJanela || (item.multiColor ? (item.corCentro || '#ffffff') : corCorpo);
+  const corPes = item.corPes || corCorpo;
+  const capaUrl = item.capaUrl;
+  const clipId = `moinho-clip-${item.uniqueId || 'def'}`;
+
+  const pathCorpo = `
+    M 95,50
+    L 165,125
+    L 165,360
+    L 25,360
+    L 25,125
+    Z
+  `;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 190 395" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-moinho-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="4.5" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+          <filter id={`shadow-pas-${item.uniqueId || 'def'}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feDropShadow dx="0" dy="4" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.3" />
+          </filter>
+          <clipPath id={clipId}>
+            <path d={pathCorpo} />
+          </clipPath>
+        </defs>
+
+        {/* Pés de Apoio */}
+        <path
+          d="M 25,348 C 20,362 14,380 16,392 C 18,395 26,395 32,390 C 34,380 36,362 36,348 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+        <path
+          d="M 154,348 C 154,362 156,380 158,390 C 164,395 172,395 174,392 C 176,380 170,362 165,348 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+
+        {/* Corpo Principal */}
+        <path
+          d={pathCorpo}
+          fill={corCorpo}
+          stroke="rgba(0,0,0,0.14)"
+          strokeWidth="1.8"
+          filter={`url(#shadow-moinho-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Capa personalizada se houver */}
+        {capaUrl && (
+          <g clipPath={`url(#${clipId})`}>
+            <image href={capaUrl} x="25" y="50" width="140" height="310" preserveAspectRatio="xMidYMid slice" />
+          </g>
+        )}
+
+        {/* Linha divisória horizontal entre andares */}
+        <line x1="25" y1="205" x2="165" y2="205" stroke="rgba(0,0,0,0.12)" strokeWidth="1.5" />
+
+        {/* 🏠 TELHADO COM RIPAS / TELHAS DE MADEIRA SOBREPOSTAS */}
+        <g stroke="rgba(0,0,0,0.15)" strokeWidth="1">
+          {[0, 1, 2, 3, 4].map(i => {
+            const yStart = 45 + i * 16;
+            const xStart = 95 - i * 14;
+            return (
+              <polygon
+                key={`telha-esq-${i}`}
+                points={`${xStart},${yStart} ${xStart - 18},${yStart + 18} ${xStart - 12},${yStart + 22} ${xStart + 4},${yStart + 6}`}
+                fill={corTelhado}
+              />
+            );
+          })}
+          {[0, 1, 2, 3, 4].map(i => {
+            const yStart = 45 + i * 16;
+            const xStart = 95 + i * 14;
+            return (
+              <polygon
+                key={`telha-dir-${i}`}
+                points={`${xStart},${yStart} ${xStart + 18},${yStart + 18} ${xStart + 12},${yStart + 22} ${xStart - 4},${yStart + 6}`}
+                fill={corTelhado}
+              />
+            );
+          })}
+          <polygon points="90,52 95,42 100,52" fill={corTelhado} />
+        </g>
+
+        {/* 🪟 JANELA QUADRADA SUPERIOR */}
+        <g>
+          <rect x="76" y="140" width="38" height="38" rx="2" fill="rgba(0,0,0,0.04)" stroke="rgba(0,0,0,0.12)" strokeWidth="1" />
+          <rect x="74" y="138" width="42" height="42" rx="2" fill="none" stroke={corPortaJanela} strokeWidth="3" />
+          <line x1="95" y1="138" x2="95" y2="180" stroke={corPortaJanela} strokeWidth="2.5" />
+          <line x1="74" y1="159" x2="116" y2="159" stroke={corPortaJanela} strokeWidth="2.5" />
+        </g>
+
+        {/* 🚪 PORTA DE CELEIRO INFERIOR COM 'X' */}
+        <g>
+          <rect x="52" y="235" width="86" height="102" rx="2" fill="rgba(0,0,0,0.03)" stroke="rgba(0,0,0,0.12)" strokeWidth="1" />
+          <rect x="50" y="233" width="90" height="106" rx="2" fill="none" stroke={corPortaJanela} strokeWidth="4.5" />
+          <line x1="53" y1="236" x2="137" y2="336" stroke={corPortaJanela} strokeWidth="4.5" strokeLinecap="round" />
+          <line x1="137" y1="236" x2="53" y2="336" stroke={corPortaJanela} strokeWidth="4.5" strokeLinecap="round" />
+        </g>
+
+        {/* 🌀 PÁS GIRATÓRIAS DO MOINHO */}
+        <g transform="translate(95, 76)" filter={`url(#shadow-pas-${item.uniqueId || 'def'})`}>
+          {[25, 115, 205, 295].map((ang, idx) => (
+            <g key={idx} transform={`rotate(${ang})`}>
+              <rect x="-3" y="0" width="6" height="74" rx="2" fill={corPas} stroke="rgba(0,0,0,0.15)" strokeWidth="1" />
+              <rect x="3" y="16" width="22" height="54" rx="2" fill={corPas} stroke="rgba(0,0,0,0.18)" strokeWidth="1.2" />
+              {[0, 1, 2, 3].map(row => (
+                <React.Fragment key={row}>
+                  <rect x="6" y={20 + row * 12} width="7" height="8" rx="1" fill="#ffffff" opacity="0.9" />
+                  <rect x="15" y={20 + row * 12} width="7" height="8" rx="1" fill="#ffffff" opacity="0.9" />
+                </React.Fragment>
+              ))}
+            </g>
+          ))}
+          <circle cx="0" cy="0" r="9" fill={corPas} stroke="rgba(0,0,0,0.25)" strokeWidth="1.5" />
+          <circle cx="0" cy="0" r="4.5" fill="rgba(0,0,0,0.15)" />
+        </g>
+      </svg>
+    </div>
+  );
+};
+
+// 🌊 Componente Painel Totem Orgânico com Borda Ondulada / Wavy 3D (Foto 1)
+const PainelOrganicoWavy3D = ({ item }) => {
+  const corParede = item.color || '#ffffff';
+  const corBorda = item.corBorda || corParede;
+  const corPes = item.corPes || corParede;
+  const capaUrl = item.capaUrl;
+  const clipId = `wavy-totem-clip-${item.uniqueId || 'def'}`;
+
+  // Contorno orgânico simétrico de ondas suaves (Foto 1)
+  const pathD = `
+    M 24,35
+    C 28,18 42,18 50,30
+    C 58,16 72,16 85,28
+    C 98,16 112,16 120,30
+    C 128,18 142,18 146,35
+    C 162,55 162,75 146,95
+    C 162,115 162,135 146,155
+    C 162,175 162,195 146,215
+    C 162,235 162,255 146,275
+    C 162,295 162,315 146,335
+    C 158,350 152,362 144,364
+    L 26,364
+    C 18,362 12,350 24,335
+    C 8,315 8,295 24,275
+    C 8,255 8,235 24,215
+    C 8,195 8,175 24,155
+    C 8,135 8,115 24,95
+    C 8,75 8,55 24,35
+    Z
+  `;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 170 380" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-wavy-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="4.5" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+          <clipPath id={clipId}>
+            <path d={pathD} />
+          </clipPath>
+        </defs>
+
+        {/* Pés de Apoio da Estrutura */}
+        <path
+          d="M 22,348 C 16,362 10,374 12,378 C 14,380 22,380 26,376 C 28,368 30,358 30,348 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+        <path
+          d="M 140,348 C 140,358 142,368 144,376 C 148,380 156,380 158,378 C 160,374 154,362 148,348 Z"
+          fill={corPes}
+          stroke="rgba(0,0,0,0.15)"
+          strokeWidth="1.2"
+        />
+
+        {/* Corpo Ondulado Wavy */}
+        <path
+          d={pathD}
+          fill={corParede}
+          stroke={corBorda !== corParede ? corBorda : "rgba(0,0,0,0.13)"}
+          strokeWidth={corBorda !== corParede ? "2.5" : "1.8"}
+          filter={`url(#shadow-wavy-${item.uniqueId || 'def'})`}
+        />
+
+        {/* Emenda / Dobra sutil no meio do biombo */}
+        <line x1="12" y1="198" x2="158" y2="198" stroke="rgba(0,0,0,0.1)" strokeWidth="1.2" />
+
+        {/* Capa personalizada se houver */}
+        {capaUrl && (
+          <g clipPath={`url(#${clipId})`}>
+            <image href={capaUrl} x="8" y="16" width="154" height="350" preserveAspectRatio="xMidYMid slice" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+};
+
+// 🏰 Componente Painel Castelo de Princesas 3D
+const PainelCasteloPrincesas3D = ({ item }) => {
+  const corParede = item.color || '#ffffff';
+  const corTelhado = item.multiColor ? (item.corTelhados || '#fbcfe8') : corParede;
+  const corPortaJanela = item.multiColor ? (item.corPortaJanelas || '#ffffff') : corParede;
+  const corDetalhes = item.multiColor ? (item.corDetalhes || '#fef08a') : corParede;
+  const corPes = item.multiColor ? (item.corPes || corParede) : corParede;
+  const capaUrl = item.capaUrl;
+  const clipId = `castelo-clip-${item.uniqueId || 'def'}`;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 220 360" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-castelo-${item.uniqueId || 'def'}`} x="-10%" y="-10%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="4.5" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+          <clipPath id={clipId}>
+            <path d="M 52,70 L 168,70 L 168,348 L 52,348 Z" />
+          </clipPath>
+        </defs>
+
+        {/* 🦶 Pés de Apoio da Estrutura */}
+        <path d="M 28,338 C 22,350 16,360 18,363 C 20,365 28,365 32,360 C 34,354 36,346 36,338 Z" fill={corPes} stroke="rgba(0,0,0,0.15)" strokeWidth="1.2" />
+        <path d="M 184,338 C 184,346 186,354 188,360 C 192,365 200,365 202,363 C 204,360 198,350 192,338 Z" fill={corPes} stroke="rgba(0,0,0,0.15)" strokeWidth="1.2" />
+
+        {/* 🏰 CORPO DO CASTELO COM AMEIAS (Sombra Principal) */}
+        <g filter={`url(#shadow-castelo-${item.uniqueId || 'def'})`}>
+          {/* Parede Principal Central */}
+          <path
+            d="
+              M 52,348 L 52,78
+              L 64,78 L 64,68 L 76,68 L 76,78
+              L 88,78 L 88,68 L 100,68 L 100,78
+              L 120,78 L 120,68 L 132,68 L 132,78
+              L 144,78 L 144,68 L 156,68 L 156,78
+              L 168,78 L 168,348 Z
+            "
+            fill={corParede}
+            stroke="rgba(0,0,0,0.12)"
+            strokeWidth="1.5"
+          />
+
+          {/* Torre Esquerda com Ameias */}
+          <path
+            d="
+              M 16,348 L 16,118
+              L 26,118 L 26,108 L 34,108 L 34,118
+              L 44,118 L 44,108 L 52,108 L 52,348 Z
+            "
+            fill={corParede}
+            stroke="rgba(0,0,0,0.12)"
+            strokeWidth="1.5"
+          />
+
+          {/* Torre Direita com Ameias */}
+          <path
+            d="
+              M 168,348 L 168,108
+              L 176,108 L 176,118 L 186,118 L 186,108
+              L 194,108 L 194,118 L 204,118 L 204,348 Z
+            "
+            fill={corParede}
+            stroke="rgba(0,0,0,0.12)"
+            strokeWidth="1.5"
+          />
+        </g>
+
+        {/* 🧱 TIJOLINHOS ESCULPIDOS EM RELEVO */}
+        <g stroke="rgba(0,0,0,0.08)" strokeWidth="1" fill="none">
+          <rect x="74" y="94" width="16" height="7" rx="1" />
+          <rect x="130" y="94" width="16" height="7" rx="1" />
+          <rect x="100" y="106" width="20" height="7" rx="1" />
+          <rect x="64" y="180" width="18" height="7" rx="1" />
+          <rect x="138" y="180" width="18" height="7" rx="1" />
+          <rect x="24" y="140" width="16" height="6" rx="1" />
+          <rect x="180" y="140" width="16" height="6" rx="1" />
+          <rect x="24" y="220" width="16" height="6" rx="1" />
+          <rect x="180" y="220" width="16" height="6" rx="1" />
+        </g>
+
+        {/* 🎪 PINÁCULOS & TELHADOS CÔNICOS */}
+        {/* Telhado Central Grande */}
+        <polygon points="110,16 50,68 170,68" fill={corTelhado} stroke="rgba(0,0,0,0.14)" strokeWidth="1.5" />
+        <circle cx="110" cy="16" r="4.5" fill={corDetalhes} />
+        {/* Bandeirinha Central */}
+        <polygon points="110,8 110,16 128,12" fill={corDetalhes} />
+        <line x1="110" y1="6" x2="110" y2="16" stroke="#ca8a04" strokeWidth="1.5" />
+
+        {/* Telhado Torre Esquerda */}
+        <polygon points="34,55 12,108 56,108" fill={corTelhado} stroke="rgba(0,0,0,0.14)" strokeWidth="1.5" />
+        <circle cx="34" cy="55" r="3.5" fill={corDetalhes} />
+        <polygon points="34,48 34,55 48,51.5" fill={corDetalhes} />
+
+        {/* Telhado Torre Direita */}
+        <polygon points="186,55 164,108 208,108" fill={corTelhado} stroke="rgba(0,0,0,0.14)" strokeWidth="1.5" />
+        <circle cx="186" cy="55" r="3.5" fill={corDetalhes} />
+        <polygon points="186,48 186,55 200,51.5" fill={corDetalhes} />
+
+        {/* 🪟 JANELA GÓTICA SUPERIOR (ROSETA / ARCO) */}
+        <g>
+          <path d="M 92,165 L 92,132 A 18,18 0 0,1 128,132 L 128,165 Z" fill="#f8fafc" stroke={corPortaJanela} strokeWidth="3" />
+          <path d="M 96,165 L 96,134 A 14,14 0 0,1 124,134 L 124,165 Z" fill={corTelhado} opacity="0.25" />
+          <line x1="110" y1="114" x2="110" y2="165" stroke={corPortaJanela} strokeWidth="2" />
+          <line x1="92" y1="144" x2="128" y2="144" stroke={corPortaJanela} strokeWidth="2" />
+          {/* Janelas Torres Laterais */}
+          <path d="M 28,160 L 28,140 A 6,6 0 0,1 40,140 L 40,160 Z" fill="#f8fafc" stroke={corPortaJanela} strokeWidth="1.8" />
+          <path d="M 180,160 L 180,140 A 6,6 0 0,1 192,140 L 192,160 Z" fill="#f8fafc" stroke={corPortaJanela} strokeWidth="1.8" />
+        </g>
+
+        {/* 🚪 PORTÃO REAL DO CASTELO COM ARCO & ARABESCOS */}
+        <g>
+          <path d="M 72,348 L 72,240 A 38,38 0 0,1 148,240 L 148,348 Z" fill="rgba(0,0,0,0.04)" stroke="rgba(0,0,0,0.12)" strokeWidth="1" />
+          <path d="M 70,348 L 70,238 A 40,40 0 0,1 150,238 L 150,348 Z" fill="none" stroke={corPortaJanela} strokeWidth="4.5" />
+          <line x1="110" y1="198" x2="110" y2="348" stroke={corPortaJanela} strokeWidth="3" />
+          {/* Ripas de Madeira do Portão */}
+          <line x1="84" y1="250" x2="84" y2="348" stroke={corPortaJanela} strokeWidth="1.5" strokeDasharray="4,4" />
+          <line x1="97" y1="242" x2="97" y2="348" stroke={corPortaJanela} strokeWidth="1.5" strokeDasharray="4,4" />
+          <line x1="123" y1="242" x2="123" y2="348" stroke={corPortaJanela} strokeWidth="1.5" strokeDasharray="4,4" />
+          <line x1="136" y1="250" x2="136" y2="348" stroke={corPortaJanela} strokeWidth="1.5" strokeDasharray="4,4" />
+          {/* Argolas / Aldrabas Douradas */}
+          <circle cx="98" cy="290" r="4.5" fill="none" stroke={corDetalhes} strokeWidth="2" />
+          <circle cx="122" cy="290" r="4.5" fill="none" stroke={corDetalhes} strokeWidth="2" />
+        </g>
+
+        {/* Capa personalizada se houver */}
+        {capaUrl && (
+          <g clipPath={`url(#${clipId})`}>
+            <image href={capaUrl} x="52" y="70" width="116" height="278" preserveAspectRatio="xMidYMid slice" />
+          </g>
+        )}
+      </svg>
+    </div>
+  );
+};
+
+// ☁️ Componente Mesa Nuvem Cenográfica 3D
+const MesaNuvem3D = ({ item }) => {
+  const corTampo = item.color || '#ffffff';
+  const corBorda = item.multiColor ? (item.corBorda || '#f1f5f9') : corTampo;
+  const corPes = item.multiColor ? (item.corPes || '#d7b899') : '#d7b899';
+
+  // Caminho orgânico da nuvem macia
+  const pathNuvem = `
+    M 42,65
+    C 28,65 16,52 24,36
+    C 18,20 38,6 56,12
+    C 70,-4 102,-4 118,10
+    C 134,-2 166,-2 178,14
+    C 198,10 216,28 206,46
+    C 216,62 198,78 180,74
+    C 168,86 142,86 128,78
+    C 114,88 86,88 72,78
+    C 58,84 44,78 42,65
+    Z
+  `;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 220 150" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-mesa-nuvem-${item.uniqueId || 'def'}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="6" stdDeviation="4.5" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+        </defs>
+
+        {/* 🪑 PÉS PALITO RETRÔ DA MESA EM PERSPECTIVA */}
+        {/* Pés Traseiros */}
+        <line x1="65" y1="65" x2="48" y2="138" stroke={corPes} strokeWidth="6" strokeLinecap="round" opacity="0.85" />
+        <line x1="155" y1="65" x2="172" y2="138" stroke={corPes} strokeWidth="6" strokeLinecap="round" opacity="0.85" />
+        {/* Ponteiras Douradas Traseiras */}
+        <line x1="51" y1="126" x2="48" y2="138" stroke="#ca8a04" strokeWidth="6.5" strokeLinecap="round" />
+        <line x1="169" y1="126" x2="172" y2="138" stroke="#ca8a04" strokeWidth="6.5" strokeLinecap="round" />
+
+        {/* Pés Dianteiros */}
+        <line x1="85" y1="72" x2="68" y2="145" stroke={corPes} strokeWidth="7" strokeLinecap="round" />
+        <line x1="135" y1="72" x2="152" y2="145" stroke={corPes} strokeWidth="7" strokeLinecap="round" />
+        {/* Ponteiras Douradas Dianteiras */}
+        <line x1="71" y1="132" x2="68" y2="145" stroke="#ca8a04" strokeWidth="7.5" strokeLinecap="round" />
+        <line x1="149" y1="132" x2="152" y2="145" stroke="#ca8a04" strokeWidth="7.5" strokeLinecap="round" />
+
+        {/* Sombras dos Pés no Chão */}
+        <ellipse cx="48" cy="140" rx="7" ry="2.5" fill="rgba(0,0,0,0.18)" />
+        <ellipse cx="172" cy="140" rx="7" ry="2.5" fill="rgba(0,0,0,0.18)" />
+        <ellipse cx="68" cy="147" rx="8" ry="3" fill="rgba(0,0,0,0.22)" />
+        <ellipse cx="152" cy="147" rx="8" ry="3" fill="rgba(0,0,0,0.22)" />
+
+        {/* ☁️ TAMPO DA MESA NUVEM (BORDA 3D + SUPERFÍCIE) */}
+        {/* Borda Inferior / Espessura 3D */}
+        <g transform="translate(0, 6)">
+          <path d={pathNuvem} fill={corBorda} filter={`url(#shadow-mesa-nuvem-${item.uniqueId || 'def'})`} />
+        </g>
+        {/* Superfície Superior */}
+        <path d={pathNuvem} fill={corTampo} stroke="rgba(0,0,0,0.1)" strokeWidth="1.5" />
+      </svg>
+    </div>
+  );
+};
+
+// 👑 Componente Mesa Carruagem de Princesas 3D
+const MesaCarruagem3D = ({ item }) => {
+  const corCorpo = item.color || '#ffffff';
+  const corRodas = item.multiColor ? (item.corRodas || '#eab308') : '#eab308';
+  const corCoroa = item.multiColor ? (item.corCoroa || '#eab308') : '#eab308';
+  const corTampo = item.multiColor ? (item.corTampo || '#ffffff') : corCorpo;
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 240 190" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-carruagem-${item.uniqueId || 'def'}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="5" stdDeviation="4.5" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+        </defs>
+
+        {/* 👑 COROA REAL NO TOPO */}
+        <g transform="translate(120, 20)">
+          <path d="M -16,8 L -18,-4 L -8,2 L 0,-10 L 8,2 L 18,-4 L 16,8 Z" fill={corCoroa} stroke="#ca8a04" strokeWidth="1" />
+          <circle cx="0" cy="-10" r="2.5" fill={corCoroa} />
+          <circle cx="-18" cy="-4" r="2" fill={corCoroa} />
+          <circle cx="18" cy="-4" r="2" fill={corCoroa} />
+        </g>
+
+        {/* 🎂 TAMPO RETO DE APOIO PARA BOLO/DOCES */}
+        <rect x="36" y="28" width="168" height="9" rx="3" fill={corTampo} stroke="rgba(0,0,0,0.15)" strokeWidth="1.2" />
+
+        {/* 🎃 CORPO IMPERIAL DA CARRUAGEM */}
+        <g filter={`url(#shadow-carruagem-${item.uniqueId || 'def'})`}>
+          {/* Cabine Principal Arredondada */}
+          <path
+            d="
+              M 52,40
+              C 35,55 32,95 48,122
+              C 62,142 178,142 192,122
+              C 208,95 205,55 188,40
+              Z
+            "
+            fill={corCorpo}
+            stroke="rgba(0,0,0,0.12)"
+            strokeWidth="1.8"
+          />
+
+          {/* Janela Central em Arco Vazado */}
+          <path
+            d="
+              M 85,115 L 85,75
+              A 35,35 0 0,1 155,75
+              L 155,115 Z
+            "
+            fill="#f8fafc"
+            stroke={corCoroa}
+            strokeWidth="2.5"
+          />
+          <circle cx="120" cy="75" r="5" fill="none" stroke={corCoroa} strokeWidth="1.5" />
+          <line x1="120" y1="80" x2="120" y2="115" stroke={corCoroa} strokeWidth="1.8" />
+          <line x1="85" y1="95" x2="155" y2="95" stroke={corCoroa} strokeWidth="1.8" />
+
+          {/* Arabescos Laterais da Cabine */}
+          <path d="M 52,65 Q 40,85 58,105" fill="none" stroke={corCoroa} strokeWidth="2.5" strokeLinecap="round" />
+          <path d="M 188,65 Q 200,85 182,105" fill="none" stroke={corCoroa} strokeWidth="2.5" strokeLinecap="round" />
+        </g>
+
+        {/* 🛞 CHASSIS & RODAS IMPERIAIS DOURADAS */}
+        {/* Eixo de Conexão */}
+        <line x1="62" y1="140" x2="178" y2="140" stroke={corRodas} strokeWidth="4" strokeLinecap="round" />
+
+        {/* Roda Esquerda */}
+        <g transform="translate(62, 140)">
+          <ellipse cx="0" cy="42" rx="36" ry="4" fill="rgba(0,0,0,0.2)" />
+          <circle cx="0" cy="0" r="38" fill="none" stroke={corRodas} strokeWidth="5" />
+          <circle cx="0" cy="0" r="33" fill="none" stroke={corRodas} strokeWidth="1.5" strokeDasharray="3,3" />
+          {[0, 45, 90, 135].map(deg => (
+            <line key={deg} x1="-34" y1="0" x2="34" y2="0" stroke={corRodas} strokeWidth="2.5" transform={`rotate(${deg})`} />
+          ))}
+          <circle cx="0" cy="0" r="8" fill={corRodas} stroke="#ca8a04" strokeWidth="1" />
+          <circle cx="0" cy="0" r="3" fill="#ffffff" />
+        </g>
+
+        {/* Roda Direita */}
+        <g transform="translate(178, 140)">
+          <ellipse cx="0" cy="42" rx="36" ry="4" fill="rgba(0,0,0,0.2)" />
+          <circle cx="0" cy="0" r="38" fill="none" stroke={corRodas} strokeWidth="5" />
+          <circle cx="0" cy="0" r="33" fill="none" stroke={corRodas} strokeWidth="1.5" strokeDasharray="3,3" />
+          {[0, 45, 90, 135].map(deg => (
+            <line key={deg} x1="-34" y1="0" x2="34" y2="0" stroke={corRodas} strokeWidth="2.5" transform={`rotate(${deg})`} />
+          ))}
+          <circle cx="0" cy="0" r="8" fill={corRodas} stroke="#ca8a04" strokeWidth="1" />
+          <circle cx="0" cy="0" r="3" fill="#ffffff" />
+        </g>
+      </svg>
+    </div>
+  );
+};
+
+// 🪜 Componente Estante Escadinha de Lembrancinhas 3D
+const EstanteEscadinha3D = ({ item }) => {
+  const corLaterais = item.color || '#ffffff';
+  const corPrateleiras = item.multiColor ? (item.corPrateleiras || '#d7b899') : '#d7b899';
+
+  return (
+    <div style={{ width: '100%', height: '100%', position: 'relative' }}>
+      <svg width="100%" height="100%" viewBox="0 0 140 260" preserveAspectRatio="none" style={{ pointerEvents: 'none', overflow: 'visible' }}>
+        <defs>
+          <filter id={`shadow-escada-${item.uniqueId || 'def'}`} x="-15%" y="-15%" width="130%" height="130%">
+            <feDropShadow dx="0" dy="4" stdDeviation="3.5" floodColor="#000000" floodOpacity="0.22" />
+          </filter>
+        </defs>
+
+        {/* 🪜 HASTES TRASEIRAS EM 'A' */}
+        <line x1="38" y1="28" x2="22" y2="252" stroke={corLaterais} strokeWidth="7" strokeLinecap="round" opacity="0.8" />
+        <line x1="102" y1="28" x2="118" y2="252" stroke={corLaterais} strokeWidth="7" strokeLinecap="round" opacity="0.8" />
+
+        {/* 🪚 4 PRATELEIRAS ESCALONADAS EM PERSPECTIVA */}
+        {/* Prateleira 1 (Topo - Estreita) */}
+        <g filter={`url(#shadow-escada-${item.uniqueId || 'def'})`}>
+          <polygon points="38,58 102,58 98,66 42,66" fill={corPrateleiras} />
+          <rect x="42" y="66" width="56" height="7" rx="1" fill={corPrateleiras} stroke="rgba(0,0,0,0.15)" strokeWidth="0.8" />
+        </g>
+
+        {/* Prateleira 2 (Média Superior) */}
+        <g filter={`url(#shadow-escada-${item.uniqueId || 'def'})`}>
+          <polygon points="30,114 110,114 105,123 35,123" fill={corPrateleiras} />
+          <rect x="35" y="123" width="70" height="8" rx="1" fill={corPrateleiras} stroke="rgba(0,0,0,0.15)" strokeWidth="0.8" />
+        </g>
+
+        {/* Prateleira 3 (Média Inferior) */}
+        <g filter={`url(#shadow-escada-${item.uniqueId || 'def'})`}>
+          <polygon points="22,170 118,170 112,180 28,180" fill={corPrateleiras} />
+          <rect x="28" y="180" width="84" height="9" rx="1" fill={corPrateleiras} stroke="rgba(0,0,0,0.15)" strokeWidth="0.8" />
+        </g>
+
+        {/* Prateleira 4 (Base - Mais Larga) */}
+        <g filter={`url(#shadow-escada-${item.uniqueId || 'def'})`}>
+          <polygon points="12,226 128,226 120,237 20,237" fill={corPrateleiras} />
+          <rect x="20" y="237" width="100" height="10" rx="1" fill={corPrateleiras} stroke="rgba(0,0,0,0.15)" strokeWidth="0.8" />
+        </g>
+
+        {/* 🪜 HASTES DIANTEIRAS EM 'A' (Frente das Prateleiras) */}
+        <line x1="38" y1="24" x2="16" y2="256" stroke={corLaterais} strokeWidth="8" strokeLinecap="round" />
+        <line x1="102" y1="24" x2="124" y2="256" stroke={corLaterais} strokeWidth="8" strokeLinecap="round" />
+        <circle cx="38" cy="24" r="5" fill={corLaterais} />
+        <circle cx="102" cy="24" r="5" fill={corLaterais} />
+        <line x1="38" y1="24" x2="102" y2="24" stroke={corLaterais} strokeWidth="6" strokeLinecap="round" />
       </svg>
     </div>
   );
@@ -2067,8 +2885,10 @@ const Moodboard = () => {
   const [modalUploadRapidoAberto, setModalUploadRapidoAberto] = useState(false);
   const [imagemRapidaBase64, setImagemRapidaBase64] = useState('');
   const [imagemRapidaNome, setImagemRapidaNome] = useState('');
-  const [salvarNoPortfolio, setSalvarNoPortfolio] = useState(false);
+  const [salvarNoPortfolio, setSalvarNoPortfolio] = useState(true);
   const [categoriaImagemRapida, setCategoriaImagemRapida] = useState('Outros');
+  const [uploadOrigem, setUploadOrigem] = useState('geral');
+  const fileUploadInputRef = useRef(null);
 
   // 📱 MOBILE: Bottom Sheet State
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900);
@@ -2145,9 +2965,7 @@ const Moodboard = () => {
   const [categoriaBiblioteca, setCategoriaBiblioteca] = useState('todas'); // 'todas' | 'Baloes' | 'Paineis' | 'Flores' | 'Moveis' | 'Letreiros' | 'Outros'
   const [filtroCorBiblioteca, setFiltroCorBiblioteca] = useState('todas'); // cor id ou 'todas'
   const [loadingBiblioteca, setLoadingBiblioteca] = useState(false);
-  const [modalUploadElementoAberto, setModalUploadElementoAberto] = useState(false);
-  const [novoElementoForm, setNovoElementoForm] = useState({ nome: '', categoria: 'Baloes', tag: '', imagemUrl: '' });
-  const [salvandoNovoElemento, setSalvandoNovoElemento] = useState(false);
+  const [categoriasMoodboard, setCategoriasMoodboard] = useState(CATEGORIAS_MOODBOARD_PADRAO);
 
   // 🎈 Formas & Cenografia
   const [corEstrutura, setCorEstrutura] = useState('#ffffff');
@@ -2326,6 +3144,17 @@ const Moodboard = () => {
   const carregarElementosBiblioteca = useCallback(async () => {
     setLoadingBiblioteca(true);
     try {
+      // 1. Carrega categorias dinâmicas configuradas pelo Super Admin
+      try {
+        const catSnap = await getDoc(doc(db, "configuracoes_globais", "moodboard_categorias"));
+        if (catSnap.exists() && Array.isArray(catSnap.data()?.categorias) && catSnap.data().categorias.length > 0) {
+          setCategoriasMoodboard(catSnap.data().categorias);
+        }
+      } catch (catErr) {
+        console.warn("Categorias dinâmicas não encontradas, usando padrões:", catErr);
+      }
+
+      // 2. Carrega elementos do moodboard
       const snap = await getDocs(collection(db, "moodboard_elementos"));
       const lista = snap.docs.map(d => ({ id: d.id, ...d.data() }));
       setElementosCenografia(lista);
@@ -2340,38 +3169,6 @@ const Moodboard = () => {
     carregarElementosBiblioteca();
   }, [carregarElementosBiblioteca]);
 
-  // Subir recorte para Meu Portfólio
-  const handleSalvarMeuElemento = async (e) => {
-    e.preventDefault();
-    if (!novoElementoForm.nome.trim() || !novoElementoForm.imagemUrl) {
-      return alert("Por favor, preencha o nome e selecione a imagem PNG recortada!");
-    }
-    try {
-      setSalvandoNovoElemento(true);
-      const isSuperAdmin = usuarioLogado?.email === "celebrefesta25@gmail.com";
-      await addDoc(collection(db, "moodboard_elementos"), {
-        nome: novoElementoForm.nome.trim(),
-        categoria: novoElementoForm.categoria,
-        tag: novoElementoForm.tag.trim() || (isSuperAdmin ? 'Oficial' : 'Meu Acervo'),
-        imagemUrl: novoElementoForm.imagemUrl,
-        isGlobal: isSuperAdmin ? true : false,
-        sugeridoParaGlobal: false,
-        empresaId: tenantId,
-        criadoPorNome: usuarioLogado?.displayName || usuarioLogado?.email || "Minha Empresa",
-        criadoEm: new Date().toISOString()
-      });
-
-      alert(isSuperAdmin ? "🎉 Publicado como Oficial Global com sucesso!" : "🎉 Elemento salvo no seu Portfólio com sucesso!");
-      setModalUploadElementoAberto(false);
-      setNovoElementoForm({ nome: '', categoria: 'Baloes', tag: '', imagemUrl: '' });
-      carregarElementosBiblioteca();
-    } catch (err) {
-      console.error("Erro ao salvar elemento:", err);
-      alert("Erro ao salvar elemento.");
-    } finally {
-      setSalvandoNovoElemento(false);
-    }
-  };
 
   // Sugerir para o Sistema
   const handleSugerirParaGlobal = async (item) => {
@@ -2414,12 +3211,19 @@ const Moodboard = () => {
     }
   };
 
-  // 🎈 Elementos Filtrados (Global, Portfólio, Categoria e Cores)
+  // 🎈 Elementos Filtrados (Global, Portfólio, Categoria e Cores - Apenas Decoração/PNG, excluindo Cenário e Balões)
   const elementosFiltrados = useMemo(() => {
     const isSuperAdmin = usuarioLogado?.email === "celebrefesta25@gmail.com";
     const termo = (termoBusca || '').trim().toLowerCase();
 
     return elementosCenografia.filter(item => {
+      const catLower = (item.categoria || '').trim().toLowerCase();
+      
+      // 🚫 FILTRO RIGOROSO: NUNCA mostrar Cenário (Parede, Piso, Ambiente), Estruturas ou Balões no catálogo de PNGs do Acervo
+      if (['parede', 'piso', 'ambiente', 'salao', 'cenario', 'texturas', 'textura', 'baloes', 'balão', 'balao', 'balões', 'estrutura', 'estruturas', 'vetor'].includes(catLower)) {
+        return false;
+      }
+
       const isMeu = item.empresaId === tenantId || (isSuperAdmin && item.isGlobal);
       const isGlobal = item.isGlobal === true;
 
@@ -2453,6 +3257,23 @@ const Moodboard = () => {
       return true;
     });
   }, [elementosCenografia, abaAcervoFonte, filtroBiblioteca, categoriaBiblioteca, filtroCorBiblioteca, termoBusca, tenantId, usuarioLogado]);
+
+  // Contadores limpos para as abas de PNGs e Portfólio (sem misturar Cenário/Balões)
+  const pngsOficiaisValidos = useMemo(() => {
+    return (elementosCenografia || []).filter(i => {
+      if (!i.isGlobal) return false;
+      const cat = (i.categoria || '').trim().toLowerCase();
+      return !['parede', 'piso', 'ambiente', 'salao', 'cenario', 'texturas', 'textura', 'baloes', 'balão', 'balao', 'balões', 'estrutura', 'estruturas', 'vetor'].includes(cat);
+    });
+  }, [elementosCenografia]);
+
+  const pngsPortfolioValidos = useMemo(() => {
+    return (elementosCenografia || []).filter(i => {
+      if (i.isGlobal || i.empresaId !== tenantId) return false;
+      const cat = (i.categoria || '').trim().toLowerCase();
+      return !['parede', 'piso', 'ambiente', 'salao', 'cenario', 'texturas', 'textura', 'baloes', 'balão', 'balao', 'balões', 'estrutura', 'estruturas', 'vetor'].includes(cat);
+    });
+  }, [elementosCenografia, tenantId]);
 
   // 🎈 Elementos exclusivos para a Aba de Balões (apenas balões / arcos PNG)
   const elementosBaloesFiltrados = useMemo(() => {
@@ -2870,42 +3691,60 @@ const Moodboard = () => {
     atualizarItem(id, { imagem: item.imagemOriginal, imagemOriginal: null });
   };
 
-  // 📸 UPLOAD RÁPIDO DE IMAGEM — ADICIONA DIRETO NO CANVAS
-  const handleUploadImagemRapida = () => {
+  // 📸 PROCESSAR ARQUIVO DE IMAGEM
+  const processarArquivoUpload = (file, categoriaPadrao = null, salvarPortfolioPadrao = true, origem = 'geral') => {
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Por favor, selecione um arquivo de imagem válido (PNG, JPG, WEBP).');
+      return;
+    }
+    const nome = file.name.replace(/\.[^.]+$/, '').substring(0, 50);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX = 1400;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const base64 = canvas.toDataURL('image/png');
+        setImagemRapidaBase64(base64);
+        setImagemRapidaNome(nome);
+        if (categoriaPadrao) setCategoriaImagemRapida(categoriaPadrao);
+        setSalvarNoPortfolio(salvarPortfolioPadrao !== undefined ? salvarPortfolioPadrao : true);
+        setUploadOrigem(origem);
+        setModalUploadRapidoAberto(true);
+      };
+      img.src = event.target.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // 📸 UPLOAD RÁPIDO DE IMAGEM — ABRE SELETOR DE ARQUIVOS
+  const handleUploadImagemRapida = (categoriaPadrao = 'Outros', salvarPortfolioPadrao = true, origem = 'geral') => {
+    setCategoriaImagemRapida(categoriaPadrao || 'Outros');
+    setSalvarNoPortfolio(salvarPortfolioPadrao !== undefined ? salvarPortfolioPadrao : true);
+    setUploadOrigem(origem);
+
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = 'image/*';
     input.onchange = (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
-      const nome = file.name.replace(/\.[^.]+$/, '').substring(0, 50);
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          const canvas = document.createElement('canvas');
-          const MAX = 1400;
-          let w = img.width, h = img.height;
-          if (w > MAX || h > MAX) {
-            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
-            else { w = Math.round(w * MAX / h); h = MAX; }
-          }
-          canvas.width = w; canvas.height = h;
-          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-          const base64 = canvas.toDataURL('image/png');
-          setImagemRapidaBase64(base64);
-          setImagemRapidaNome(nome);
-          setModalUploadRapidoAberto(true);
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
+      const file = e.target.files?.[0];
+      if (file) {
+        processarArquivoUpload(file, categoriaPadrao, salvarPortfolioPadrao, origem);
+      }
     };
     input.click();
   };
 
   // ✅ CONFIRMAR UPLOAD RÁPIDO: ADICIONA AO CANVAS + OPCIONALMENTE SALVA NO PORTFÓLIO
-  const confirmarUploadRapido = async (comRemocaoDeFundo = false) => {
+  const confirmarUploadRapido = async (comRemocaoDeFundo = false, apenasSalvar = false) => {
     let imagemFinal = imagemRapidaBase64;
     if (comRemocaoDeFundo) {
       setRemovendoFundo(true);
@@ -2919,44 +3758,72 @@ const Moodboard = () => {
           reader.readAsDataURL(resultBlob);
         });
       } catch (err) {
-        alert('Erro na remoção de fundo. Adicionando sem remover.');
+        console.error('Erro na remoção de fundo:', err);
+        alert('Erro ao remover fundo com IA. Adicionando com a imagem original.');
       } finally {
         setRemovendoFundo(false);
       }
     }
 
-    // Adicionar ao canvas
-    adicionarAoCanvas({
-      nome: imagemRapidaNome || 'Minha Imagem',
-      imagem: imagemFinal,
-      isEstoqueProprio: false,
-      isItemExterno: true,
-      origem: 'upload_rapido',
-      categoria: categoriaImagemRapida
-    });
-
-    // Salvar no Portfólio se o usuário quiser
-    if (salvarNoPortfolio) {
-      try {
-        await addDoc(collection(db, 'moodboard_elementos'), {
+    // Se NÃO for apenas salvar na galeria, adiciona direto ao canvas
+    if (!apenasSalvar) {
+      const img = new Image();
+      img.onload = () => {
+        const defaultW = 180;
+        const calcH = Math.round((defaultW * (img.height || 180)) / (img.width || 180));
+        adicionarAoCanvas({
           nome: imagemRapidaNome || 'Minha Imagem',
+          imagem: imagemFinal,
+          width: defaultW,
+          height: calcH,
+          isEstoqueProprio: false,
+          isItemExterno: true,
+          origem: 'upload_rapido',
+          categoria: categoriaImagemRapida
+        });
+      };
+      img.onerror = () => {
+        adicionarAoCanvas({
+          nome: imagemRapidaNome || 'Minha Imagem',
+          imagem: imagemFinal,
+          width: 180,
+          height: 180,
+          isEstoqueProprio: false,
+          isItemExterno: true,
+          origem: 'upload_rapido',
+          categoria: categoriaImagemRapida
+        });
+      };
+      img.src = imagemFinal;
+    }
+
+    // Salvar no Portfólio se a opção estiver marcada ou se for apenasSalvar
+    if (salvarNoPortfolio || apenasSalvar) {
+      try {
+        const isSuperAdmin = usuarioLogado?.email === "celebrefesta25@gmail.com";
+        await addDoc(collection(db, 'moodboard_elementos'), {
+          nome: (imagemRapidaNome || 'Minha Imagem').trim(),
           categoria: categoriaImagemRapida,
-          tag: 'Meu Acervo',
+          tag: isSuperAdmin ? 'Oficial' : 'Meu Acervo',
           imagemUrl: imagemFinal,
-          isGlobal: false,
+          isGlobal: isSuperAdmin ? true : false,
           sugeridoParaGlobal: false,
           empresaId: tenantId,
           criadoPorNome: usuarioLogado?.displayName || usuarioLogado?.email || 'Minha Empresa',
           criadoEm: new Date().toISOString()
         });
         carregarElementosBiblioteca();
-      } catch (err) { console.error('Erro ao salvar no portfólio:', err); }
+        if (apenasSalvar) {
+          alert('🎉 Imagem salva no seu Portfólio de Uploads com sucesso!');
+        }
+      } catch (err) {
+        console.error('Erro ao salvar no portfólio:', err);
+      }
     }
 
     setModalUploadRapidoAberto(false);
     setImagemRapidaBase64('');
     setImagemRapidaNome('');
-    setSalvarNoPortfolio(false);
   };
 
   // 🚀 GERAR NOVA LOCAÇÃO DIRETO DO MOODBOARD
@@ -3266,7 +4133,7 @@ const Moodboard = () => {
       y: 130,
       width: 160,
       height: 260,
-      color: corEstrutura,
+      color: '#ffffff',
       tampoCor: '#ffffff',
       tampoTipo: 'continua',
       capaUrl: '',
@@ -3305,40 +4172,50 @@ const Moodboard = () => {
       novoItem.width = 260; novoItem.height = 160;
     } else if (tipoEstrutura === 'nicho_prateleira') {
       novoItem.width = 200; novoItem.height = 140;
-    } else if (tipoEstrutura === 'arco_organico') {
-      novoItem.width = 200; novoItem.height = 310; novoItem.color = '#c5a059';
     } else if (tipoEstrutura === 'arco_romano_triplo') {
-      novoItem.width = 220; novoItem.height = 300; novoItem.color = '#ffffff'; novoItem.corCamada2 = '#f1f5f9'; novoItem.corCamada3 = '#e2e8f0'; novoItem.multiColor = true;
+      novoItem.width = 220; novoItem.height = 250; novoItem.color = '#ffffff'; novoItem.corCamada2 = '#ffffff'; novoItem.corCamada3 = '#ffffff'; novoItem.multiColor = true;
     } else if (tipoEstrutura === 'arco_organico_triplo') {
-      novoItem.width = 240; novoItem.height = 320; novoItem.color = '#ffffff'; novoItem.corCamada2 = '#f1f5f9'; novoItem.corCamada3 = '#e2e8f0'; novoItem.multiColor = true;
-    } else if (tipoEstrutura === 'painel_ondulado') {
-      novoItem.width = 160; novoItem.height = 310; novoItem.color = '#c5a059';
-    } else if (tipoEstrutura === 'painel_borda_ondulada') {
-      novoItem.width = 190; novoItem.height = 310; novoItem.color = '#c5a059';
+      novoItem.width = 240; novoItem.height = 255; novoItem.color = '#ffffff'; novoItem.corCamada2 = '#ffffff'; novoItem.corCamada3 = '#ffffff'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'painel_organico_wavy') {
+      novoItem.width = 170; novoItem.height = 360; novoItem.color = '#ffffff'; novoItem.corBorda = '#ffffff'; novoItem.corPes = '#ffffff'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'painel_casinha_colonial') {
+      novoItem.width = 160; novoItem.height = 360; novoItem.color = '#ffffff'; novoItem.corTelhado = '#ffffff'; novoItem.corJanela = '#ffffff'; novoItem.corVidros = '#ffffff'; novoItem.corPes = '#ffffff'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'painel_arco_borboletas') {
+      novoItem.width = 180; novoItem.height = 360; novoItem.color = '#ffffff'; novoItem.corBorboletas = '#ffffff'; novoItem.corAsasDetalhes = '#ffffff'; novoItem.corPes = '#ffffff'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'painel_moinho_fazendinha') {
+      novoItem.width = 190; novoItem.height = 360; novoItem.color = '#ffffff'; novoItem.corTelhado = '#ffffff'; novoItem.corPasMoinho = '#ffffff'; novoItem.corPortaJanela = '#ffffff'; novoItem.corPes = '#ffffff'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'painel_castelo_princesas') {
+      novoItem.width = 220; novoItem.height = 360; novoItem.color = '#ffffff'; novoItem.corTelhados = '#ffffff'; novoItem.corPortaJanelas = '#ffffff'; novoItem.corDetalhes = '#ffffff'; novoItem.corPes = '#ffffff'; novoItem.multiColor = true;
     } else if (tipoEstrutura === 'painel_nuvem_gomos') {
       novoItem.width = 170; novoItem.height = 330; novoItem.color = '#ffffff';
     }
     // --- Mesas & Cilindros 3D ---
     else if (tipoEstrutura === 'cilindro_g') {
-      novoItem.width = 125; novoItem.height = 190;
+      novoItem.width = 125; novoItem.height = 190; novoItem.color = '#ffffff';
     } else if (tipoEstrutura === 'cilindro_m') {
-      novoItem.width = 110; novoItem.height = 160;
+      novoItem.width = 110; novoItem.height = 160; novoItem.color = '#ffffff';
     } else if (tipoEstrutura === 'cilindro_p') {
-      novoItem.width = 95; novoItem.height = 130;
+      novoItem.width = 95; novoItem.height = 130; novoItem.color = '#ffffff';
+    } else if (tipoEstrutura === 'mesa_nuvem') {
+      novoItem.width = 190; novoItem.height = 135; novoItem.color = '#ffffff'; novoItem.corBorda = '#ffffff'; novoItem.corPes = '#d7b899'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'mesa_carruagem') {
+      novoItem.width = 220; novoItem.height = 180; novoItem.color = '#ffffff'; novoItem.corRodas = '#ffffff'; novoItem.corCoroa = '#ffffff'; novoItem.corTampo = '#ffffff'; novoItem.multiColor = true;
+    } else if (tipoEstrutura === 'estante_escadinha') {
+      novoItem.width = 130; novoItem.height = 260; novoItem.color = '#ffffff'; novoItem.corPrateleiras = '#ffffff'; novoItem.multiColor = true;
     } else if (tipoEstrutura === 'mesa_osso') {
-      novoItem.width = 240; novoItem.height = 160; novoItem.color = '#ffffff'; novoItem.corCentro = '#f8fafc'; novoItem.tampoCor = '#ffffff'; novoItem.multiColor = true;
+      novoItem.width = 240; novoItem.height = 160; novoItem.color = '#ffffff'; novoItem.corCentro = '#ffffff'; novoItem.tampoCor = '#ffffff'; novoItem.multiColor = true;
     } else if (tipoEstrutura === 'mesa_jeep') {
-      novoItem.width = 220; novoItem.height = 260; novoItem.color = '#ffffff'; novoItem.corPneus = '#334155'; novoItem.corDetalhes = '#facc15'; novoItem.tampoCor = '#f1f5f9'; novoItem.multiColor = true;
+      novoItem.width = 220; novoItem.height = 260; novoItem.color = '#ffffff'; novoItem.corPneus = '#334155'; novoItem.corDetalhes = '#ffffff'; novoItem.tampoCor = '#ffffff'; novoItem.multiColor = true;
     } else if (tipoEstrutura === 'mesa_retangular') {
-      novoItem.width = 220; novoItem.height = 110; novoItem.color = '#8B6914'; novoItem.tampoCor = '#8B6914';
+      novoItem.width = 220; novoItem.height = 110; novoItem.color = '#ffffff'; novoItem.tampoCor = '#ffffff';
     } else if (tipoEstrutura === 'mesa_provencal') {
       novoItem.width = 220; novoItem.height = 120; novoItem.color = '#ffffff'; novoItem.tampoCor = '#ffffff';
     } else if (tipoEstrutura === 'mesa_cubo') {
-      novoItem.width = 120; novoItem.height = 145; novoItem.color = '#c5a059'; novoItem.tampoCor = '#ffffff';
+      novoItem.width = 120; novoItem.height = 145; novoItem.color = '#ffffff'; novoItem.tampoCor = '#ffffff';
     } else if (tipoEstrutura === 'comoda_vintage') {
       novoItem.width = 200; novoItem.height = 150; novoItem.color = '#ffffff';
     } else if (tipoEstrutura === 'carrinho_gourmet') {
-      novoItem.width = 180; novoItem.height = 180; novoItem.color = '#c5a059';
+      novoItem.width = 180; novoItem.height = 180; novoItem.color = '#ffffff';
     }
     // --- Balões Cenografia ---
     else if (tipoEstrutura === 'arco_classico_portal') {
@@ -3798,9 +4675,6 @@ const Moodboard = () => {
   };
 
   const handleCanvasClick = () => {
-    if (selecionadoId) {
-      setAbaAtiva('acervo');
-    }
     setSelecionadoId(null);
     setEditingTextId(null);
     setIsPanCapaMode(false);
@@ -3832,6 +4706,15 @@ const Moodboard = () => {
   const handleDropCanvas = (e) => {
     e.preventDefault();
     try {
+      // 1. Se o usuário arrastou um arquivo de imagem direto do computador para a prancheta
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        const file = e.dataTransfer.files[0];
+        if (file.type.startsWith('image/')) {
+          processarArquivoUpload(file, 'Outros', true, 'drop');
+          return;
+        }
+      }
+      // 2. Se arrastou um item do acervo
       const dataStr = e.dataTransfer.getData('text/plain');
       if (!dataStr) return;
       const item = JSON.parse(dataStr);
@@ -3845,7 +4728,7 @@ const Moodboard = () => {
   };
 
   const itemSelecionado = itensCanvas.find(i => i.uniqueId === selecionadoId);
-  const isEstruturaSelecionada = itemSelecionado?.type === 'shape' && ['arco_romano', 'arco_romano_triplo', 'arco_duplo', 'arco_organico', 'arco_organico_triplo', 'painel_redondo', 'painel_retangular', 'painel_hexagonal', 'painel_ondulado', 'painel_borda_ondulada', 'painel_nuvem_gomos', 'meia_lua', 'nicho_prateleira', 'cilindro_g', 'cilindro_m', 'cilindro_p', 'mesa_osso', 'mesa_jeep', 'mesa_retangular', 'mesa_provencal', 'mesa_cubo', 'comoda_vintage', 'carrinho_gourmet'].includes(itemSelecionado?.shapeType);
+  const isEstruturaSelecionada = itemSelecionado?.type === 'shape' && ['arco_romano', 'arco_romano_triplo', 'arco_duplo', 'arco_organico_triplo', 'painel_organico_wavy', 'painel_casinha_colonial', 'painel_arco_borboletas', 'painel_moinho_fazendinha', 'painel_castelo_princesas', 'painel_redondo', 'painel_retangular', 'painel_hexagonal', 'painel_nuvem_gomos', 'meia_lua', 'nicho_prateleira', 'cilindro_g', 'cilindro_m', 'cilindro_p', 'mesa_nuvem', 'mesa_carruagem', 'estante_escadinha', 'mesa_osso', 'mesa_jeep', 'mesa_retangular', 'mesa_provencal', 'mesa_cubo', 'comoda_vintage', 'carrinho_gourmet'].includes(itemSelecionado?.shapeType);
   const isBalaoSelecionado = itemSelecionado?.type === 'shape' && ['arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal'].includes(itemSelecionado?.shapeType);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -3912,6 +4795,192 @@ const Moodboard = () => {
     posicaoAmbienteX, posicaoAmbienteY, zoomAmbiente
   ]);
 
+  // ✨ RENDERIZADOR DO BLOCO DE ATMOSFERA & ILUMINAÇÃO DA CENA (PAINEL PRO / PROPRIEDADES)
+  const renderBlocoIluminacaoCena = () => (
+    <>
+      <div className="inspector-item-card" style={{ background: '#fdfbf7', borderColor: '#fde68a' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={{ fontSize: '18px' }}>✨</span>
+          <div>
+            <strong style={{ color: '#92400e', fontSize: '12px' }}>Atmosfera & Iluminação da Cena</strong>
+            <small style={{ color: '#b45309', display: 'block', fontSize: '10px' }}>Ajuste a luz, clima e pós-produção do projeto</small>
+          </div>
+        </div>
+      </div>
+
+      {/* 💡 LUMINOSIDADE */}
+      <div className="effect-control-group">
+        <div className="effect-control-header">
+          <span className="effect-control-label">☀️ Luminosidade da Cena</span>
+          <span className="effect-control-value">{luminosidadeGlobal}%</span>
+          {luminosidadeGlobal !== 100 && (
+            <button className="btn-link-reset" onClick={() => setLuminosidadeGlobal(100)} title="Resetar">↺</button>
+          )}
+        </div>
+        <input
+          type="range" min="30" max="200" step="1"
+          value={luminosidadeGlobal}
+          onChange={e => setLuminosidadeGlobal(Number(e.target.value))}
+          className="enquadramento-slider"
+          style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>
+          <span>Escuro</span><span>Normal (100%)</span><span>Brilhante</span>
+        </div>
+      </div>
+
+      {/* 🎛️ CONTRASTE */}
+      <div className="effect-control-group">
+        <div className="effect-control-header">
+          <span className="effect-control-label">🎨 Contraste da Cena</span>
+          <span className="effect-control-value">{contrasteGlobal}%</span>
+          {contrasteGlobal !== 100 && (
+            <button className="btn-link-reset" onClick={() => setContrasteGlobal(100)} title="Resetar">↺</button>
+          )}
+        </div>
+        <input
+          type="range" min="30" max="200" step="1"
+          value={contrasteGlobal}
+          onChange={e => setContrasteGlobal(Number(e.target.value))}
+          className="enquadramento-slider"
+          style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>
+          <span>Suave</span><span>Normal</span><span>Intenso</span>
+        </div>
+      </div>
+
+      {/* 🌈 SATURAÇÃO */}
+      <div className="effect-control-group">
+        <div className="effect-control-header">
+          <span className="effect-control-label">🌈 Saturação de Cores</span>
+          <span className="effect-control-value">{saturacaoGlobal}%</span>
+          {saturacaoGlobal !== 100 && (
+            <button className="btn-link-reset" onClick={() => setSaturacaoGlobal(100)} title="Resetar">↺</button>
+          )}
+        </div>
+        <input
+          type="range" min="0" max="250" step="1"
+          value={saturacaoGlobal}
+          onChange={e => setSaturacaoGlobal(Number(e.target.value))}
+          className="enquadramento-slider"
+          style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>
+          <span>P&B</span><span>Normal</span><span>Vívido</span>
+        </div>
+      </div>
+
+      {/* 🌫️ PROFUNDIDADE / DESFOQUE */}
+      <div className="effect-control-group">
+        <div className="effect-control-header">
+          <span className="effect-control-label">🌫️ Desfoque de Profundidade</span>
+          <span className="effect-control-value">{profundidadeFoco}px</span>
+          {profundidadeFoco !== 0 && (
+            <button className="btn-link-reset" onClick={() => setProfundidadeFoco(0)} title="Resetar">↺</button>
+          )}
+        </div>
+        <input
+          type="range" min="0" max="15" step="0.5"
+          value={profundidadeFoco}
+          onChange={e => setProfundidadeFoco(Number(e.target.value))}
+          className="enquadramento-slider"
+          style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+        />
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#64748b', marginTop: '2px' }}>
+          <span>Foco Total</span><span>Desfocado</span>
+        </div>
+      </div>
+
+      {/* 🌅 TONALIDADE DE COR & FILTROS DE ATMOSFERA */}
+      <div className="effect-control-group">
+        <div className="effect-control-header">
+          <span className="effect-control-label">🌅 Filtro de Tonalidade</span>
+          {tonalidadeCor && (
+            <button className="btn-link-reset" onClick={() => { setTonalidadeCor(''); setTonalidadeIntensidade(0); }} title="Remover Filtro">✕</button>
+          )}
+        </div>
+        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>Tons Claros & Quentes:</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginBottom: '8px' }}>
+          {['#ffedd5', '#fce7f3', '#e0f2fe', '#dcfce7', '#fef9c3', '#f3e8ff', '#fee2e2'].map(cor => (
+            <button
+              key={cor}
+              type="button"
+              title={cor}
+              onClick={() => { setTonalidadeCor(cor); if (tonalidadeIntensidade === 0) setTonalidadeIntensidade(25); }}
+              className={`effect-tone-swatch ${tonalidadeCor === cor ? 'active' : ''}`}
+              style={{ background: cor }}
+            />
+          ))}
+        </div>
+        <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '6px', fontWeight: '600' }}>Tons Escuros & Noturnos:</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px', marginBottom: '8px' }}>
+          {['#1e1b4b', '#0c1a2e', '#1a0a0a', '#022c22', '#1c1917', '#1f1427', '#ffffff'].map(cor => (
+            <button
+              key={cor}
+              type="button"
+              title={cor}
+              onClick={() => { setTonalidadeCor(cor); if (tonalidadeIntensidade === 0) setTonalidadeIntensidade(25); }}
+              className={`effect-tone-swatch ${tonalidadeCor === cor ? 'active' : ''}`}
+              style={{ background: cor }}
+            />
+          ))}
+        </div>
+        {tonalidadeCor && (
+          <div style={{ marginTop: '8px', paddingTop: '8px', borderTop: '1px dashed #e2e8f0' }}>
+            <div className="effect-control-header">
+              <span className="effect-control-label">Intensidade do Filtro</span>
+              <span className="effect-control-value">{tonalidadeIntensidade}%</span>
+            </div>
+            <input
+              type="range" min="0" max="80" step="1"
+              value={tonalidadeIntensidade}
+              onChange={e => setTonalidadeIntensidade(Number(e.target.value))}
+              className="enquadramento-slider"
+              style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* 🖤 VINHETA CINEMÁTICA */}
+      <div className="effect-control-group">
+        <div className="effect-control-header">
+          <span className="effect-control-label">🕸️ Vinheta Cinemática</span>
+          <span className="effect-control-value">{vignettaIntensidade}%</span>
+          {vignettaIntensidade !== 0 && (
+            <button className="btn-link-reset" onClick={() => setVignettaIntensidade(0)} title="Resetar">↺</button>
+          )}
+        </div>
+        <input
+          type="range" min="0" max="100" step="1"
+          value={vignettaIntensidade}
+          onChange={e => setVignettaIntensidade(Number(e.target.value))}
+          className="enquadramento-slider"
+          style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+        />
+        <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '3px' }}>Escurece elegantemente as bordas da cena</div>
+      </div>
+
+      {/* 🔄 RESETAR TUDO */}
+      <button
+        type="button"
+        className="btn-reset-all-effects"
+        onClick={() => {
+          setLuminosidadeGlobal(100);
+          setContrasteGlobal(100);
+          setSaturacaoGlobal(100);
+          setProfundidadeFoco(0);
+          setTonalidadeCor('');
+          setTonalidadeIntensidade(0);
+          setVignettaIntensidade(0);
+        }}
+      >
+        ↺ Resetar Todos os Efeitos da Cena
+      </button>
+    </>
+  );
+
   return (
     <div className={`studio-page ${modoApresentacao ? 'showroom-mode' : ''} ${isMobile ? 'is-mobile' : ''}`} onClick={handleCanvasClick}>
 
@@ -3952,17 +5021,7 @@ const Moodboard = () => {
             <span>Acervo</span>
           </div>
 
-          {/* 4. EFEITOS & ILUMINAÇÃO — atmosfera e luz do ambiente */}
-          <div
-            className={`tool-item ${abaAtiva === 'efeitos' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
-            onClick={() => abrirAbaMobile('efeitos')}
-            title="Luminosidade, contraste, saturação e efeitos do ambiente"
-          >
-            <Icons.Sun />
-            <span>Efeitos</span>
-          </div>
-
-          {/* 5. BEXIGAS & CENOGRAFIA — arcos orgânicos, guirlandas, balões */}
+          {/* 4. BEXIGAS & CENOGRAFIA — arcos orgânicos, guirlandas, balões */}
           <div
             className={`tool-item ${abaAtiva === 'baloes' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('baloes')}
@@ -3980,6 +5039,16 @@ const Moodboard = () => {
           >
             <Icons.Type />
             <span>Letreiros</span>
+          </div>
+
+          {/* 7. UPLOAD RÁPIDO COM IA — subir imagens/fotos do computador */}
+          <div
+            className="tool-item tool-item-upload"
+            onClick={() => handleUploadImagemRapida('Outros', true, 'toolbar')}
+            title="Upload Rápido: Enviar foto ou elemento do computador com remoção de fundo por IA"
+          >
+            <Icons.UploadCloud />
+            <span>Upload</span>
           </div>
         </div>
       )}
@@ -4022,28 +5091,28 @@ const Moodboard = () => {
                   type="button"
                   className={`source-seg-btn ${abaAcervoFonte === 'estoque' ? 'active' : ''}`}
                   onClick={() => { setAbaAcervoFonte('estoque'); setTermoBusca(''); }}
-                  title="Peças físicas do seu estoque próprio"
+                  title="Peças físicas cadastradas no seu estoque real"
                 >
                   <Icons.Couch width={13} height={13} />
-                  <span>Meu Estoque ({estoqueReal.length})</span>
+                  <span>Estoque ({estoqueReal.length})</span>
                 </button>
                 <button
                   type="button"
                   className={`source-seg-btn ${abaAcervoFonte === 'globais' ? 'active' : ''}`}
                   onClick={() => { setAbaAcervoFonte('globais'); setTermoBusca(''); }}
-                  title="Elementos PNG oficiais e flores"
+                  title="Elementos decorativos PNG (Flores, Móveis, Pelúcias...)"
                 >
                   <Icons.Crown width={13} height={13} />
-                  <span>Elementos PNG ({elementosCenografia.filter(i => i.isGlobal).length})</span>
+                  <span>PNGs ({pngsOficiaisValidos.length})</span>
                 </button>
                 <button
                   type="button"
                   className={`source-seg-btn ${abaAcervoFonte === 'portfolio' ? 'active' : ''}`}
                   onClick={() => { setAbaAcervoFonte('portfolio'); setTermoBusca(''); }}
-                  title="Recortes PNG que você subiu"
+                  title="Suas imagens e recortes PNG enviados"
                 >
                   <Icons.Image width={13} height={13} />
-                  <span>Meu Portfólio ({elementosCenografia.filter(i => i.empresaId === tenantId && !i.isGlobal).length})</span>
+                  <span>Uploads ({pngsPortfolioValidos.length})</span>
                 </button>
               </div>
 
@@ -4066,25 +5135,28 @@ const Moodboard = () => {
                     )}
                   </div>
 
-                  {/* Chips de Categorias do Estoque */}
-                  <div className="estoque-category-chips-row">
-                    <button
-                      type="button"
-                      className={`estoque-category-chip ${filtroCategoriaEstoque === 'todas' ? 'active' : ''}`}
-                      onClick={() => setFiltroCategoriaEstoque('todas')}
+                  {/* Seletor de Categoria do Estoque (Dropdown 1 Linha) */}
+                  <div className="mb-category-select-wrapper">
+                    <select
+                      className="mb-category-select-modern"
+                      value={filtroCategoriaEstoque}
+                      onChange={e => setFiltroCategoriaEstoque(e.target.value)}
                     >
-                      🏷️ Todas ({estoqueReal.length})
-                    </button>
-                    {categoriasDoEstoque.map(cat => (
-                      <button
-                        key={cat}
-                        type="button"
-                        className={`estoque-category-chip ${filtroCategoriaEstoque === cat ? 'active' : ''}`}
-                        onClick={() => setFiltroCategoriaEstoque(cat)}
-                      >
-                        {cat} ({estoqueReal.filter(i => (i.categoria || '').trim() === cat).length})
-                      </button>
-                    ))}
+                      <option value="todas">
+                        🏷️ Todas as Peças ({estoqueReal.length})
+                      </option>
+                      {categoriasDoEstoque.map(cat => {
+                        const count = estoqueReal.filter(i => (i.categoria || '').trim() === cat).length;
+                        return (
+                          <option key={cat} value={cat}>
+                            📦 {cat} ({count})
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <div className="mb-select-custom-arrow">
+                      <i className="fas fa-chevron-down"></i>
+                    </div>
                   </div>
 
                   <div className="acervo-list-scroll">
@@ -4135,17 +5207,18 @@ const Moodboard = () => {
                 </>
               )}
 
-              {/* 2. SE FOR ELEMENTOS OFICIAIS OU MEU PORTFÓLIO PNG */}
+              {/* 2. SE FOR ELEMENTOS OFICIAIS OU MEUS UPLOADS PNG */}
               {(abaAcervoFonte === 'globais' || abaAcervoFonte === 'portfolio') && (
                 <>
-                  {/* Botão de Upload para Portfólio */}
+                  {/* Botão de Upload */}
                   {abaAcervoFonte === 'portfolio' && (
                     <button
+                      type="button"
                       className="btn-upload-capa"
-                      style={{ background: '#0f172a', marginBottom: '6px', padding: '6px 12px', fontSize: '11px' }}
-                      onClick={() => setModalUploadElementoAberto(true)}
+                      style={{ background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', marginBottom: '8px', padding: '9px 12px', fontSize: '11.5px', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                      onClick={() => handleUploadImagemRapida(categoriaBiblioteca !== 'todas' ? categoriaBiblioteca : 'Outros', true, 'portfolio')}
                     >
-                      <Icons.Image width={14} height={14} /> 📷 + Subir Novo PNG p/ Portfólio
+                      <Icons.UploadCloud width={16} height={16} /> 📤 + Fazer Upload de Imagem PNG
                     </button>
                   )}
 
@@ -4154,7 +5227,7 @@ const Moodboard = () => {
                     <Icons.Search width={14} height={14} />
                     <input
                       type="text"
-                      placeholder={abaAcervoFonte === 'globais' ? "Buscar flores, pelúcias, recortes..." : "Buscar no seu portfólio..."}
+                      placeholder={abaAcervoFonte === 'globais' ? "Buscar flores, pelúcias, recortes..." : "Buscar nos seus uploads..."}
                       value={termoBusca}
                       onChange={e => setTermoBusca(e.target.value)}
                     />
@@ -4165,26 +5238,46 @@ const Moodboard = () => {
                     )}
                   </div>
 
-                  {/* Chips de Categorias */}
-                  <div className="mb-category-chips-row">
-                    {CATEGORIAS_BIBLIOTECA_MOODBOARD.map(cat => (
-                      <button
-                        key={cat.id}
-                        type="button"
-                        className={`mb-cat-chip ${categoriaBiblioteca === cat.id ? 'active' : ''}`}
-                        onClick={() => setCategoriaBiblioteca(cat.id)}
-                      >
-                        {cat.icone} {cat.nome}
-                      </button>
-                    ))}
+                  {/* Seletor de Categoria Elegante (Dropdown 1 Linha) */}
+                  <div className="mb-category-select-wrapper">
+                    <select
+                      className="mb-category-select-modern"
+                      value={categoriaBiblioteca}
+                      onChange={e => setCategoriaBiblioteca(e.target.value)}
+                    >
+                      <option value="todas">
+                        🏷️ Todas as Categorias ({elementosCenografia.filter(i => {
+                          if (abaAcervoFonte === 'globais' && !i.isGlobal) return false;
+                          if (abaAcervoFonte === 'portfolio' && (i.empresaId !== tenantId || i.isGlobal)) return false;
+                          return true;
+                        }).length})
+                      </option>
+                      {categoriasMoodboard.map(cat => {
+                        const count = elementosCenografia.filter(i => {
+                          if (abaAcervoFonte === 'globais' && !i.isGlobal) return false;
+                          if (abaAcervoFonte === 'portfolio' && (i.empresaId !== tenantId || i.isGlobal)) return false;
+                          return i.categoria === cat.id;
+                        }).length;
+                        return (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.icone} {cat.nome} ({count})
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <div className="mb-select-custom-arrow">
+                      <i className="fas fa-chevron-down"></i>
+                    </div>
                   </div>
 
                   {/* Grid de Elementos PNG */}
                   <div className="acervo-list-scroll">
                     {loadingBiblioteca ? (
-                      <div className="empty-search-state"><p>Carregando biblioteca...</p></div>
+                      <div className="empty-search-state"><p>Carregando galeria...</p></div>
                     ) : elementosFiltrados.length === 0 ? (
-                      <div className="empty-search-state"><p>Nenhum elemento PNG encontrado.</p></div>
+                      <div className="empty-search-state">
+                        <p>{abaAcervoFonte === 'portfolio' ? "Nenhum upload cadastrado ainda. Clique no botão acima para enviar suas imagens!" : "Nenhum elemento PNG encontrado."}</p>
+                      </div>
                     ) : (
                       <div className="acervo-grid">
                         {elementosFiltrados.map(elem => (
@@ -4211,7 +5304,7 @@ const Moodboard = () => {
                             <div className="card-thumb elem-preview-checkerboard">
                               <img src={elem.imagemUrl} alt={elem.nome} crossOrigin="anonymous" />
                               <span className="badge-card-stock" style={{ background: '#f8fafc', color: '#475569', borderColor: '#cbd5e1' }}>
-                                {elem.isGlobal ? '✨ Oficial' : '📁 Portfólio'}
+                                {elem.isGlobal ? '✨ Oficial' : '📤 Upload'}
                               </span>
                             </div>
                             <div className="card-info-box">
@@ -4232,134 +5325,189 @@ const Moodboard = () => {
           {abaAtiva === 'formas' && (
             <div className="panel-content">
               <h3 className="panel-title">ESTRUTURAS & PAINÉIS</h3>
-              <p className="hint-text" style={{ margin: '0 0 6px 0' }}>Clique para adicionar ao cenário. Personalize com cores e capas:</p>
-
-              {/* Seletor de Cor da Estrutura */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '10px', background: '#f8fafc', borderRadius: '8px', padding: '8px 12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '11px', fontWeight: '700', color: '#334155', flex: 1 }}>🎨 Cor Base da Estrutura:</span>
-                <input type="color" value={corEstrutura} onChange={e => setCorEstrutura(e.target.value)} style={{ width: '32px', height: '28px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }} />
-              </div>
+              <p className="hint-text" style={{ margin: '0 0 10px 0' }}>Clique para adicionar a estrutura branca ao cenário e personalizar as cores:</p>
 
               {/* 🏛️ PAINÉIS & ARCOS */}
               <div className="estruturas-section-label">🏛️ Painéis & Arcos</div>
               <div className="shapes-presets-grid">
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_romano')}>
-                  <div className="shape-preview arco-romano-preview" style={{ borderColor: corEstrutura, background: '#f8fafc' }}></div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_romano')} title="Arco Romano">
+                  <div className="shape-preview" style={{ width: '28px', height: '42px', border: '2.5px solid #0f172a', borderTopLeftRadius: '14px', borderTopRightRadius: '14px', borderBottom: 'none', background: '#ffffff' }}></div>
                   <span>Arco Romano</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_romano_triplo')}>
-                  <div className="shape-preview" style={{ width: '38px', height: '48px', position: 'relative' }}>
-                    <svg viewBox="0 0 38 48" width="38" height="48" style={{ position: 'absolute', inset: 0 }}>
-                      <path d="M 4,48 L 4,18 A 15,15 0 0,1 34,18 L 34,48 Z" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
-                      <path d="M 8,48 L 8,20 A 11,11 0 0,1 30,20 L 30,48 Z" fill="#f1f5f9" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
-                      <path d="M 12,48 L 12,22 A 7,7 0 0,1 26,22 L 26,48 Z" fill="#e2e8f0" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_romano_triplo')} title="Portal Romano 3D em 3 Camadas Arredondadas">
+                  <div className="shape-preview" style={{ width: '38px', height: '44px', position: 'relative' }}>
+                    <svg viewBox="0 0 38 44" width="38" height="44" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 4,44 L 4,18 A 15,15 0 0,1 34,18 L 34,44 L 30,44 L 30,18 A 11,11 0 0,0 8,18 L 8,44 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
+                      <path d="M 8,44 L 8,18 A 11,11 0 0,1 30,18 L 30,44 L 26,44 L 26,18 A 7,7 0 0,0 12,18 L 12,44 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.6" />
+                      <path d="M 12,44 L 12,18 A 7,7 0 0,1 26,18 L 26,44 L 23,44 L 23,18 A 4,4 0 0,0 15,18 L 15,44 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.4" />
                     </svg>
                   </div>
-                  <span>Romano 3C</span>
+                  <span>Romano 3D</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_duplo')}>
-                  <div className="shape-preview" style={{ width: '32px', height: '46px', border: `2px solid ${corEstrutura}`, borderTopLeftRadius: '20px', borderTopRightRadius: '20px', borderBottom: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    <div style={{ width: '18px', height: '32px', border: `1.5px dashed ${corEstrutura}`, borderTopLeftRadius: '12px', borderTopRightRadius: '12px', borderBottom: 'none' }} />
-                  </div>
-                  <span>Arco Duplo</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_organico')}>
-                  <div className="shape-preview" style={{ width: '38px', height: '50px', position: 'relative' }}>
-                    <svg viewBox="0 0 38 50" width="38" height="50" style={{ position: 'absolute', inset: 0 }}>
-                      <path d="M6 50 C6 50 4 40 4 32 C4 24 2 20 6 14 C10 8 14 4 19 4 C24 4 28 8 32 14 C36 20 34 24 34 32 C34 40 32 50 32 50" fill="none" stroke={corEstrutura || '#c5a059'} strokeWidth="3.5" strokeLinecap="round"/>
-                      <ellipse cx="7" cy="49" rx="5" ry="2" fill={corEstrutura || '#c5a059'} opacity="0.7"/>
-                      <ellipse cx="31" cy="49" rx="5" ry="2" fill={corEstrutura || '#c5a059'} opacity="0.7"/>
-                    </svg>
-                  </div>
-                  <span>Arco Org.</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_organico_triplo')}>
-                  <div className="shape-preview" style={{ width: '38px', height: '48px', position: 'relative' }}>
-                    <svg viewBox="0 0 38 48" width="38" height="48" style={{ position: 'absolute', inset: 0 }}>
-                      <path d="M 4,48 C 2,36 4,22 8,14 C 12,6 26,6 30,14 C 34,22 36,36 34,48 Z" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
-                      <path d="M 8,48 C 6,38 8,24 12,18 C 16,10 22,10 26,18 C 30,24 32,38 30,48 Z" fill="#f1f5f9" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
-                      <path d="M 12,48 C 10,40 12,28 15,22 C 18,16 20,16 23,22 C 26,28 28,40 26,48 Z" fill="#e2e8f0" stroke={corEstrutura || '#c5a059'} strokeWidth="1.2" />
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_organico_triplo')} title="Portal Orgânico 3D em 3 Camadas Fluidas">
+                  <div className="shape-preview" style={{ width: '40px', height: '44px', position: 'relative' }}>
+                    <svg viewBox="0 0 40 44" width="40" height="44" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 4,44 C 1,32 5,20 10,8 C 15,6 18,10 20,10 C 22,10 25,6 30,8 C 35,20 39,32 36,44 L 30,44 C 32,34 29,22 26,14 C 24,12 22,14 20,14 C 18,14 16,12 14,14 C 11,22 8,34 10,44 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
+                      <path d="M 8,44 C 6,34 9,23 13,14 C 16,12 18,14 20,14 C 22,14 24,12 27,14 C 30,23 33,34 31,44 L 27,44 C 28,35 26,25 24,17 C 22,16 21,17 20,17 C 19,17 18,16 16,17 C 14,25 12,35 13,44 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.5" />
                     </svg>
                   </div>
                   <span>Orgânico 3C</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_redondo')}>
-                  <div className="shape-preview painel-redondo-preview" style={{ backgroundColor: corEstrutura }}></div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_organico_wavy')} title="Painel Totem Orgânico com Borda Ondulada / Wavy">
+                  <div className="shape-preview" style={{ width: '32px', height: '48px', position: 'relative' }}>
+                    <svg viewBox="0 0 32 48" width="32" height="48" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 5,6 C 6,3 9,3 11,5 C 13,3 16,3 18,5 C 20,3 23,3 25,5 C 26,3 29,3 30,6 C 31,10 31,14 30,18 C 31,22 31,26 30,30 C 31,34 31,38 30,42 L 2,42 C 1,38 1,34 2,30 C 1,26 1,22 2,18 C 1,14 1,10 2,6 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="2" />
+                      <line x1="2" y1="24" x2="30" y2="24" stroke="#0f172a" strokeWidth="1.2" />
+                    </svg>
+                  </div>
+                  <span>P. Wavy</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_duplo')} title="Arco Duplo">
+                  <div className="shape-preview" style={{ width: '30px', height: '44px', border: '2.5px solid #0f172a', borderTopLeftRadius: '15px', borderTopRightRadius: '15px', borderBottom: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div style={{ width: '16px', height: '30px', border: '1.8px dashed #0f172a', borderTopLeftRadius: '9px', borderTopRightRadius: '9px', borderBottom: 'none' }} />
+                  </div>
+                  <span>Arco Duplo</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_redondo')} title="Painel Redondo">
+                  <div className="shape-preview" style={{ width: '36px', height: '36px', borderRadius: '50%', backgroundColor: '#0f172a' }}></div>
                   <span>Painel Redondo</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_retangular')}>
-                  <div className="shape-preview" style={{ width: '32px', height: '46px', backgroundColor: corEstrutura, borderRadius: '3px', border: '1px solid rgba(0,0,0,0.1)' }}></div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_retangular')} title="Painel Retangular">
+                  <div className="shape-preview" style={{ width: '28px', height: '42px', backgroundColor: '#0f172a', borderRadius: '2px' }}></div>
                   <span>Painel Ret.</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_hexagonal')}>
-                  <div className="shape-preview" style={{ width: '40px', height: '40px', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', backgroundColor: corEstrutura }}></div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_hexagonal')} title="Painel Hexagonal">
+                  <div className="shape-preview" style={{ width: '36px', height: '36px', clipPath: 'polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%)', backgroundColor: '#0f172a' }}></div>
                   <span>Hexagonal</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_nuvem_gomos')}>
-                  <div className="shape-preview" style={{ width: '30px', height: '50px', position: 'relative' }}>
-                    <svg viewBox="0 0 30 50" width="30" height="50" style={{ position: 'absolute', inset: 0 }}>
-                      <path d="M 6,10 A 9,9 0 0,1 24,10 A 4,4 0 0,1 26,16 A 4,4 0 0,1 26,22 A 4,4 0 0,1 26,28 A 4,4 0 0,1 26,34 A 4,4 0 0,1 26,40 A 4,4 0 0,1 26,46 L 4,46 A 4,4 0 0,1 4,40 A 4,4 0 0,1 4,34 A 4,4 0 0,1 4,28 A 4,4 0 0,1 4,22 A 4,4 0 0,1 4,16 A 4,4 0 0,1 6,10 Z" fill={corEstrutura || '#ffffff'} stroke="#94a3b8" strokeWidth="1.5" />
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_casinha_colonial')} title="Painel Casinha Colonial com Janela em Arco">
+                  <div className="shape-preview" style={{ width: '32px', height: '48px', position: 'relative' }}>
+                    <svg viewBox="0 0 32 48" width="32" height="48" style={{ position: 'absolute', inset: 0 }}>
+                      <polygon points="16,3 29,16 29,45 3,45 3,16" fill="#ffffff" stroke="#0f172a" strokeWidth="2" />
+                      <path d="M 11,22 A 5,5 0 0,1 21,22 L 21,33 L 11,33 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.5" />
+                      <line x1="16" y1="18" x2="16" y2="33" stroke="#0f172a" strokeWidth="1.2" />
+                      <line x1="11" y1="26" x2="21" y2="26" stroke="#0f172a" strokeWidth="1.2" />
+                    </svg>
+                  </div>
+                  <span>P. Casinha</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_arco_borboletas')} title="Painel Arco Romano com Borboletas 3D">
+                  <div className="shape-preview" style={{ width: '32px', height: '48px', position: 'relative' }}>
+                    <svg viewBox="0 0 32 48" width="32" height="48" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 4,45 L 4,16 A 12,12 0 0,1 28,16 L 28,45 L 23,45 L 23,17 A 7,7 0 0,0 9,17 L 9,45 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
+                      <path d="M 12,14 Q 16,10 18,13 Q 16,16 12,14 Z" fill="#0f172a" />
+                      <path d="M 17,24 Q 21,20 23,23 Q 21,26 17,24 Z" fill="#0f172a" />
+                      <path d="M 11,34 Q 15,30 17,33 Q 15,36 11,34 Z" fill="#0f172a" />
+                    </svg>
+                  </div>
+                  <span>P. Borboletas</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_moinho_fazendinha')} title="Painel Moinho Fazendinha 3D">
+                  <div className="shape-preview" style={{ width: '32px', height: '48px', position: 'relative' }}>
+                    <svg viewBox="0 0 32 48" width="32" height="48" style={{ position: 'absolute', inset: 0 }}>
+                      <polygon points="16,6 28,18 28,45 4,45 4,18" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
+                      <line x1="7" y1="8" x2="25" y2="20" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+                      <line x1="25" y1="8" x2="7" y2="20" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
+                      <circle cx="16" cy="14" r="3" fill="#0f172a" />
+                      <rect x="9" y="30" width="14" height="13" fill="none" stroke="#0f172a" strokeWidth="1.5" />
+                      <line x1="9" y1="30" x2="23" y2="43" stroke="#0f172a" strokeWidth="1.2" />
+                      <line x1="23" y1="30" x2="9" y2="43" stroke="#0f172a" strokeWidth="1.2" />
+                    </svg>
+                  </div>
+                  <span>P. Moinho</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_castelo_princesas')} title="Painel Castelo de Princesas 3D">
+                  <div className="shape-preview" style={{ width: '34px', height: '48px', position: 'relative' }}>
+                    <svg viewBox="0 0 34 48" width="34" height="48" style={{ position: 'absolute', inset: 0 }}>
+                      <polygon points="17,3 8,14 26,14" fill="#fbcfe8" stroke="#0f172a" strokeWidth="1.2" />
+                      <polygon points="4,9 0,17 8,17" fill="#fbcfe8" stroke="#0f172a" strokeWidth="1" />
+                      <polygon points="30,9 26,17 34,17" fill="#fbcfe8" stroke="#0f172a" strokeWidth="1" />
+                      <rect x="8" y="14" width="18" height="31" fill="#ffffff" stroke="#0f172a" strokeWidth="1.6" />
+                      <rect x="0" y="17" width="8" height="28" fill="#ffffff" stroke="#0f172a" strokeWidth="1.4" />
+                      <rect x="26" y="17" width="8" height="28" fill="#ffffff" stroke="#0f172a" strokeWidth="1.4" />
+                      <path d="M 12,45 L 12,32 A 5,5 0 0,1 22,32 L 22,45 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.4" />
+                    </svg>
+                  </div>
+                  <span>P. Castelo</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_nuvem_gomos')} title="Painel Nuvem Totem">
+                  <div className="shape-preview" style={{ width: '28px', height: '46px', position: 'relative' }}>
+                    <svg viewBox="0 0 30 50" width="28" height="46" style={{ position: 'absolute', inset: 0 }}>
+                      <path d="M 6,10 A 9,9 0 0,1 24,10 A 4,4 0 0,1 26,16 A 4,4 0 0,1 26,22 A 4,4 0 0,1 26,28 A 4,4 0 0,1 26,34 A 4,4 0 0,1 26,40 A 4,4 0 0,1 26,46 L 4,46 A 4,4 0 0,1 4,40 A 4,4 0 0,1 4,34 A 4,4 0 0,1 4,28 A 4,4 0 0,1 4,22 A 4,4 0 0,1 4,16 A 4,4 0 0,1 6,10 Z" fill="#0f172a" />
                     </svg>
                   </div>
                   <span>P. Nuvem</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_ondulado')}>
-                  <div className="shape-preview" style={{ width: '32px', height: '50px', position: 'relative' }}>
-                    <svg viewBox="0 0 32 50" width="32" height="50" style={{ position: 'absolute', inset: 0 }}>
-                      {[0,1,2,3,4,5,6].map(i => (
-                        <path key={i} d={`M${4+i*4} 2 C${4+i*4-2} 14 ${4+i*4+2} 26 ${4+i*4} 38 C${4+i*4-2} 44 ${4+i*4} 48 ${4+i*4} 48`}
-                          fill="none" stroke={corEstrutura || '#c5a059'} strokeWidth="2.5" strokeLinecap="round"/>
-                      ))}
-                      <line x1="8" y1="48" x2="12" y2="50" stroke={corEstrutura || '#c5a059'} strokeWidth="2"/>
-                      <line x1="20" y1="48" x2="24" y2="50" stroke={corEstrutura || '#c5a059'} strokeWidth="2"/>
-                    </svg>
-                  </div>
-                  <span>P. Ondulado</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('painel_borda_ondulada')}>
-                  <div className="shape-preview" style={{ width: '32px', height: '50px', position: 'relative' }}>
-                    <svg viewBox="0 0 32 50" width="32" height="50" style={{ position: 'absolute', inset: 0 }}>
-                      <path d="M4 4 Q6 2 8 4 Q10 6 12 4 Q14 2 16 4 Q18 6 20 4 Q22 2 24 4 Q26 6 28 4 L28 46 Q26 48 24 46 Q22 44 20 46 Q18 48 16 46 Q14 44 12 46 Q10 48 8 46 Q6 44 4 46 Z" fill={corEstrutura || '#c5a059'} opacity="0.85"/>
-                    </svg>
-                  </div>
-                  <span>P. Orgânico</span>
                 </div>
               </div>
 
               {/* 🪑 CILINDROS & MESAS TEMÁTICAS 3D */}
               <div className="estruturas-section-label">🪑 Cilindros & Mesas Temáticas 3D</div>
               <div className="shapes-presets-grid">
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('cilindro_g')}>
-                  <div className="shape-preview cilindro-g-preview"></div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('cilindro_g')} title="Cilindro Grande">
+                  <div className="shape-preview" style={{ width: '28px', height: '42px', backgroundColor: '#0f172a', borderRadius: '4px' }}></div>
                   <span>Cilindro (G)</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('cilindro_m')}>
-                  <div className="shape-preview cilindro-m-preview"></div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('cilindro_m')} title="Cilindro Médio">
+                  <div className="shape-preview" style={{ width: '24px', height: '34px', backgroundColor: '#0f172a', borderRadius: '4px' }}></div>
                   <span>Cilindro (M)</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('cilindro_p')}>
-                  <div className="shape-preview cilindro-p-preview"></div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('cilindro_p')} title="Cilindro Pequeno">
+                  <div className="shape-preview" style={{ width: '20px', height: '26px', backgroundColor: '#0f172a', borderRadius: '4px' }}></div>
                   <span>Cilindro (P)</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_osso')}>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_nuvem')} title="Mesa Nuvem Cenográfica 3D">
                   <div className="shape-preview" style={{ width: '42px', height: '32px', position: 'relative' }}>
                     <svg viewBox="0 0 42 32" width="42" height="32" style={{ position: 'absolute', inset: 0 }}>
-                      <polygon points="6,6 10,2 32,2 36,6" fill="#e2e8f0" stroke="#94a3b8" strokeWidth="1" />
-                      <path d="M 12,8 L 30,8 A 5,5 0 0,1 36,5 A 5,5 0 0,1 40,11 A 5,5 0 0,1 36,18 A 5,5 0 0,1 40,25 A 5,5 0 0,1 36,30 A 5,5 0 0,1 30,28 L 12,28 A 5,5 0 0,1 6,30 A 5,5 0 0,1 2,25 A 5,5 0 0,1 6,18 A 5,5 0 0,1 2,11 A 5,5 0 0,1 6,5 A 5,5 0 0,1 12,8 Z" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
+                      <line x1="12" y1="16" x2="8" y2="30" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1="30" y1="16" x2="34" y2="30" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <path d="M 8,14 C 4,14 2,10 6,6 C 8,2 14,2 18,5 C 22,1 28,1 32,5 C 36,2 40,6 38,10 C 42,14 36,18 32,16 C 28,19 22,19 18,16 C 14,19 8,18 8,14 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
+                    </svg>
+                  </div>
+                  <span>Mesa Nuvem</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_carruagem')} title="Mesa Carruagem de Princesas 3D">
+                  <div className="shape-preview" style={{ width: '42px', height: '34px', position: 'relative' }}>
+                    <svg viewBox="0 0 42 34" width="42" height="34" style={{ position: 'absolute', inset: 0 }}>
+                      <rect x="8" y="4" width="26" height="3" fill="#0f172a" rx="1" />
+                      <circle cx="21" cy="2" r="2" fill="#0f172a" />
+                      <path d="M 11,7 C 7,10 7,18 10,23 C 13,27 29,27 32,23 C 35,18 35,10 31,7 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
+                      <circle cx="12" cy="25" r="6" fill="#ffffff" stroke="#0f172a" strokeWidth="2" />
+                      <circle cx="30" cy="25" r="6" fill="#ffffff" stroke="#0f172a" strokeWidth="2" />
+                    </svg>
+                  </div>
+                  <span>Carruagem</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('estante_escadinha')} title="Estante Escadinha de Lembrancinhas 3D">
+                  <div className="shape-preview" style={{ width: '32px', height: '44px', position: 'relative' }}>
+                    <svg viewBox="0 0 32 44" width="32" height="44" style={{ position: 'absolute', inset: 0 }}>
+                      <line x1="8" y1="4" x2="2" y2="42" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1="24" y1="4" x2="30" y2="42" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1="7" y1="12" x2="25" y2="12" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1="5" y1="21" x2="27" y2="21" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1="4" y1="30" x2="28" y2="30" stroke="#0f172a" strokeWidth="2.5" strokeLinecap="round" />
+                      <line x1="2" y1="39" x2="30" y2="39" stroke="#0f172a" strokeWidth="3" strokeLinecap="round" />
+                    </svg>
+                  </div>
+                  <span>Escadinha</span>
+                </div>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_osso')} title="Mesa Osso">
+                  <div className="shape-preview" style={{ width: '42px', height: '32px', position: 'relative' }}>
+                    <svg viewBox="0 0 42 32" width="42" height="32" style={{ position: 'absolute', inset: 0 }}>
+                      <polygon points="6,6 10,2 32,2 36,6" fill="#0f172a" />
+                      <path d="M 12,8 L 30,8 A 5,5 0 0,1 36,5 A 5,5 0 0,1 40,11 A 5,5 0 0,1 36,18 A 5,5 0 0,1 40,25 A 5,5 0 0,1 36,30 A 5,5 0 0,1 30,28 L 12,28 A 5,5 0 0,1 6,30 A 5,5 0 0,1 2,25 A 5,5 0 0,1 6,18 A 5,5 0 0,1 2,11 A 5,5 0 0,1 6,5 A 5,5 0 0,1 12,8 Z" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
                     </svg>
                   </div>
                   <span>Mesa Osso</span>
                 </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_jeep')}>
+                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mesa_jeep')} title="Mesa Jeep Safari">
                   <div className="shape-preview" style={{ width: '38px', height: '42px', position: 'relative' }}>
                     <svg viewBox="0 0 38 42" width="38" height="42" style={{ position: 'absolute', inset: 0 }}>
-                      <rect x="8" y="2" width="22" height="14" rx="2" fill="#ffffff" stroke="#94a3b8" strokeWidth="1.2" />
-                      <rect x="10" y="4" width="18" height="10" fill="#e0f2fe" />
-                      <rect x="5" y="16" width="28" height="15" rx="2" fill="#ffffff" stroke={corEstrutura || '#c5a059'} strokeWidth="1.5" />
-                      <circle cx="8" cy="20" r="3" fill="#facc15" />
-                      <circle cx="30" cy="20" r="3" fill="#facc15" />
-                      <rect x="2" y="26" width="6" height="15" rx="1.5" fill="#334155" />
-                      <rect x="30" y="26" width="6" height="15" rx="1.5" fill="#334155" />
+                      <rect x="8" y="2" width="22" height="14" rx="2" fill="#ffffff" stroke="#0f172a" strokeWidth="1.5" />
+                      <rect x="5" y="16" width="28" height="15" rx="2" fill="#ffffff" stroke="#0f172a" strokeWidth="1.8" />
+                      <circle cx="9" cy="20" r="2.5" fill="#0f172a" />
+                      <circle cx="29" cy="20" r="2.5" fill="#0f172a" />
+                      <rect x="2" y="26" width="6" height="15" rx="1.5" fill="#0f172a" />
+                      <rect x="30" y="26" width="6" height="15" rx="1.5" fill="#0f172a" />
                     </svg>
                   </div>
                   <span>Mesa Jeep</span>
@@ -4480,11 +5628,12 @@ const Moodboard = () => {
 
                 {/* Botão de Adicionar Balão ao Portfólio */}
                 <button
+                  type="button"
                   className="btn-upload-capa"
-                  style={{ background: '#0f172a', marginBottom: '10px' }}
-                  onClick={() => setModalUploadElementoAberto(true)}
+                  style={{ background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
+                  onClick={() => handleUploadImagemRapida('Baloes', true, 'baloes')}
                 >
-                  <Icons.Image /> 📷 + Subir Novo Balão / Arco PNG
+                  <Icons.Balloon width={15} height={15} /> 📷 + Subir Novo Balão / Arco PNG
                 </button>
 
                 {/* Grid de Elementos Exclusivos de Balões */}
@@ -4497,7 +5646,7 @@ const Moodboard = () => {
                     <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px 0' }}>
                       {filtroBiblioteca === 'meu_portfolio' ? 'Você ainda não adicionou balões ao seu portfólio.' : 'Nenhum balão oficial cadastrado.'}
                     </p>
-                    <button className="btn-secondary" style={{ padding: '6px 10px', fontSize: '10px' }} onClick={() => setModalUploadElementoAberto(true)}>
+                    <button type="button" className="btn-secondary" style={{ padding: '6px 10px', fontSize: '10px', cursor: 'pointer' }} onClick={() => handleUploadImagemRapida('Baloes', true, 'baloes')}>
                       + Subir Balão / Arco PNG
                     </button>
                   </div>
@@ -4831,7 +5980,7 @@ const Moodboard = () => {
                 type="button"
                 className="btn-secondary"
                 style={{ width: '100%', padding: '10px', borderRadius: '8px', fontWeight: 'bold', marginTop: '12px' }}
-                onClick={() => { setSelecionadoId(null); setAbaAtiva('acervo'); }}
+                onClick={() => { setSelecionadoId(null); setAbaAtiva('estoque'); }}
               >
                 ← Voltar ao Catálogo de Peças
               </button>
@@ -5027,8 +6176,17 @@ const Moodboard = () => {
                   </div>
 
                   {/* Fundos e Texturas de Parede */}
-                  <div className="adm-header-flex" style={{ marginTop: '14px' }}>
+                  <div className="adm-header-flex" style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4>Fundos de Parede ({fundosParedeCompletos.length})</h4>
+                    <button
+                      type="button"
+                      className="btn-upload-capa"
+                      style={{ padding: '4px 8px', fontSize: '10px', background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', cursor: 'pointer', borderRadius: '6px' }}
+                      onClick={() => adicionarTextura('wall')}
+                      title="Subir foto de textura/parede do computador"
+                    >
+                      + Subir Parede
+                    </button>
                   </div>
 
                   {fundosParedeCompletos.length === 0 ? (
@@ -5231,8 +6389,17 @@ const Moodboard = () => {
                   </div>
 
                   {/* Fundos e Texturas de Piso */}
-                  <div className="adm-header-flex" style={{ marginTop: '14px' }}>
+                  <div className="adm-header-flex" style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <h4>Fundos de Piso ({fundosPisoCompletos.length})</h4>
+                    <button
+                      type="button"
+                      className="btn-upload-capa"
+                      style={{ padding: '4px 8px', fontSize: '10px', background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', cursor: 'pointer', borderRadius: '6px' }}
+                      onClick={() => adicionarTextura('floor')}
+                      title="Subir foto de piso do computador"
+                    >
+                      + Subir Piso
+                    </button>
                   </div>
 
                   {fundosPisoCompletos.length === 0 ? (
@@ -5280,7 +6447,7 @@ const Moodboard = () => {
                           onClick={() => { setPosicaoPisoY(50); setPosicaoPisoX(50); setZoomPiso(100); }}
                           title="Resetar posição"
                         >
-                        ↺ Centralizar
+                          ↺ Centralizar
                         </button>
                       </div>
                       <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
@@ -5468,172 +6635,6 @@ const Moodboard = () => {
               )}
             </div>
           )}
-
-          {/* ABA: EFEITOS & ILUMINAÇÃO DO AMBIENTE */}
-          {abaAtiva === 'efeitos' && (
-            <div className="panel-content">
-              <div className="panel-header-row" style={{ marginBottom: '10px' }}>
-                <h3 className="panel-title" style={{ margin: 0 }}>✨ EFEITOS & ILUMINAÇÃO</h3>
-              </div>
-
-              {/* 💡 LUMINOSIDADE */}
-              <div className="effect-control-group">
-                <div className="effect-control-header">
-                  <span className="effect-control-label">☀️ Luminosidade</span>
-                  <span className="effect-control-value">{luminosidadeGlobal}%</span>
-                  <button className="btn-link-reset" onClick={() => setLuminosidadeGlobal(100)} title="Resetar">↺</button>
-                </div>
-                <input
-                  type="range" min="30" max="200" step="1"
-                  value={luminosidadeGlobal}
-                  onChange={e => setLuminosidadeGlobal(Number(e.target.value))}
-                  className="enquadramento-slider"
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
-                  <span>Escuro</span><span>Normal</span><span>Brilhante</span>
-                </div>
-              </div>
-
-              {/* 🎛️ CONTRASTE */}
-              <div className="effect-control-group">
-                <div className="effect-control-header">
-                  <span className="effect-control-label">🎨 Contraste</span>
-                  <span className="effect-control-value">{contrasteGlobal}%</span>
-                  <button className="btn-link-reset" onClick={() => setContrasteGlobal(100)} title="Resetar">↺</button>
-                </div>
-                <input
-                  type="range" min="30" max="200" step="1"
-                  value={contrasteGlobal}
-                  onChange={e => setContrasteGlobal(Number(e.target.value))}
-                  className="enquadramento-slider"
-                />
-              </div>
-
-              {/* 🌈 SATURAÇÃO */}
-              <div className="effect-control-group">
-                <div className="effect-control-header">
-                  <span className="effect-control-label">🌈 Saturação</span>
-                  <span className="effect-control-value">{saturacaoGlobal}%</span>
-                  <button className="btn-link-reset" onClick={() => setSaturacaoGlobal(100)} title="Resetar">↺</button>
-                </div>
-                <input
-                  type="range" min="0" max="250" step="1"
-                  value={saturacaoGlobal}
-                  onChange={e => setSaturacaoGlobal(Number(e.target.value))}
-                  className="enquadramento-slider"
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
-                  <span>P&B</span><span>Normal</span><span>Vívido</span>
-                </div>
-              </div>
-
-              {/* 🌫️ DESFOQUE / PROFUNDIDADE */}
-              <div className="effect-control-group">
-                <div className="effect-control-header">
-                  <span className="effect-control-label">🌫️ Profundidade de Foco</span>
-                  <span className="effect-control-value">{profundidadeFoco}px</span>
-                  <button className="btn-link-reset" onClick={() => setProfundidadeFoco(0)} title="Resetar">↺</button>
-                </div>
-                <input
-                  type="range" min="0" max="15" step="0.5"
-                  value={profundidadeFoco}
-                  onChange={e => setProfundidadeFoco(Number(e.target.value))}
-                  className="enquadramento-slider"
-                />
-                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9px', color: '#64748b', marginTop: '2px' }}>
-                  <span>Foco total</span><span>Desfocado</span>
-                </div>
-              </div>
-
-              {/* 🔴 TONALIDADE DE COR (COLOR OVERLAY) */}
-              <div className="effect-control-group">
-                <div className="effect-control-header">
-                  <span className="effect-control-label">🌅 Tonalidade de Cor</span>
-                  {tonalidadeCor && <button className="btn-link-reset" onClick={() => { setTonalidadeCor(''); setTonalidadeIntensidade(0); }} title="Remover">✕</button>}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', margin: '6px 0' }}>
-                  {['#ffedd5', '#fce7f3', '#e0f2fe', '#dcfce7', '#fef9c3', '#f3e8ff', '#fee2e2'].map(cor => (
-                    <button
-                      key={cor}
-                      title={cor}
-                      onClick={() => { setTonalidadeCor(cor); if (tonalidadeIntensidade === 0) setTonalidadeIntensidade(20); }}
-                      style={{
-                        width: '28px', height: '28px', borderRadius: '50%',
-                        background: cor,
-                        border: tonalidadeCor === cor ? '2.5px solid #a855f7' : '2px solid #334155',
-                        cursor: 'pointer',
-                        transform: tonalidadeCor === cor ? 'scale(1.2)' : 'scale(1)',
-                        transition: 'transform 0.15s ease, border-color 0.15s ease'
-                      }}
-                    />
-                  ))}
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '5px', margin: '0 0 8px 0' }}>
-                  {['#1e1b4b', '#0c1a2e', '#1a0a0a', '#022c22', '#1c1917', '#1f1427', '#fafafa'].map(cor => (
-                    <button
-                      key={cor}
-                      title={cor}
-                      onClick={() => { setTonalidadeCor(cor); if (tonalidadeIntensidade === 0) setTonalidadeIntensidade(20); }}
-                      style={{
-                        width: '28px', height: '28px', borderRadius: '50%',
-                        background: cor,
-                        border: tonalidadeCor === cor ? '2.5px solid #a855f7' : '2px solid #334155',
-                        cursor: 'pointer',
-                        transform: tonalidadeCor === cor ? 'scale(1.2)' : 'scale(1)',
-                        transition: 'transform 0.15s ease, border-color 0.15s ease'
-                      }}
-                    />
-                  ))}
-                </div>
-                {tonalidadeCor && (
-                  <>
-                    <div className="effect-control-header" style={{ marginTop: '4px' }}>
-                      <span className="effect-control-label">Intensidade</span>
-                      <span className="effect-control-value">{tonalidadeIntensidade}%</span>
-                    </div>
-                    <input
-                      type="range" min="0" max="80" step="1"
-                      value={tonalidadeIntensidade}
-                      onChange={e => setTonalidadeIntensidade(Number(e.target.value))}
-                      className="enquadramento-slider"
-                    />
-                  </>
-                )}
-              </div>
-
-              {/* 🖤 VINHETA */}
-              <div className="effect-control-group">
-                <div className="effect-control-header">
-                  <span className="effect-control-label">🕸️ Vinheta</span>
-                  <span className="effect-control-value">{vignettaIntensidade}%</span>
-                  <button className="btn-link-reset" onClick={() => setVignettaIntensidade(0)} title="Resetar">↺</button>
-                </div>
-                <input
-                  type="range" min="0" max="100" step="1"
-                  value={vignettaIntensidade}
-                  onChange={e => setVignettaIntensidade(Number(e.target.value))}
-                  className="enquadramento-slider"
-                />
-                <div style={{ fontSize: '9.5px', color: '#64748b', marginTop: '3px' }}>Escurece as bordas da cena</div>
-              </div>
-
-              {/* 🔄 RESETAR TUDO */}
-              <button
-                className="btn-reset-all-effects"
-                onClick={() => {
-                  setLuminosidadeGlobal(100);
-                  setContrasteGlobal(100);
-                  setSaturacaoGlobal(100);
-                  setProfundidadeFoco(0);
-                  setTonalidadeCor('');
-                  setTonalidadeIntensidade(0);
-                  setVignettaIntensidade(0);
-                }}
-              >
-                ↺ Resetar Todos os Efeitos
-              </button>
-            </div>
-          )}
         </div>
       )}
 
@@ -5722,6 +6723,7 @@ const Moodboard = () => {
                 {/* Projetos */}
                 <button className="btn-header-action" onClick={handleAbrirListaProjetos} title="Meus Projetos"><Icons.Folder /> <span className="btn-text">PROJETOS</span></button>
                 <button className="btn-header-action" onClick={handleAbrirModalSalvar} title="Salvar Projeto"><Icons.Save /> <span className="btn-text">SALVAR</span></button>
+                <button className="btn-header-action luxury-gold" onClick={() => handleUploadImagemRapida('Outros', true, 'topbar')} title="Fazer Upload de Imagem PNG/Foto do Computador"><Icons.UploadCloud width={14} height={14} /> <span className="btn-text">UPLOAD</span></button>
 
                 <div className="header-divider"></div>
 
@@ -5864,6 +6866,9 @@ const Moodboard = () => {
             )}
 
             {itensCanvas.map((item, index) => {
+              const isHidden = item.hidden === true || item.opacity === 0 || item.visible === false;
+              if (isHidden) return null;
+
               const isSelected = selecionadoId === item.uniqueId && !modoApresentacao;
               const isAComprar = item.type === 'image' && item.isEstoqueProprio === false && !item.origem?.includes('upload');
 
@@ -6055,10 +7060,10 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'painel_hexagonal' && (
                     <div className="shape-render-element shape-painel_hexagonal" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <svg width="100%" height="100%" viewBox="0 0 200 230" style={{ pointerEvents: 'none' }}>
+                      <svg width="100%" height="100%" viewBox="0 0 200 230" preserveAspectRatio="none" style={{ pointerEvents: 'none' }}>
                         <polygon points="100,5 195,52 195,148 100,195 5,148 5,52" fill={item.capaUrl ? 'none' : (item.color || '#c5a059')} stroke={item.color || '#c5a059'} strokeWidth="4" />
                         {item.capaUrl && (
-                          <image href={item.capaUrl} x="5" y="5" width="190" height="190" clipPath="url(#hexClip)" preserveAspectRatio="xMidYMid slice" />
+                          <image href={item.capaUrl} x="5" y="5" width="190" height="190" clipPath="url(#hexClip)" preserveAspectRatio="none" />
                         )}
                         <defs><clipPath id="hexClip"><polygon points="100,5 195,52 195,148 100,195 5,148 5,52" /></clipPath></defs>
                       </svg>
@@ -6066,9 +7071,9 @@ const Moodboard = () => {
                   )}
                   {item.type === 'shape' && item.shapeType === 'meia_lua' && (
                     <div className="shape-render-element" style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-                      <svg width="100%" height="100%" viewBox="0 0 260 140" style={{ pointerEvents: 'none' }}>
+                      <svg width="100%" height="100%" viewBox="0 0 260 140" preserveAspectRatio="none" style={{ pointerEvents: 'none' }}>
                         <path d="M0,140 A130,130 0 0,1 260,140 Z" fill={item.color || '#e2e8f0'} />
-                        {item.capaUrl && <image href={item.capaUrl} x="0" y="0" width="260" height="140" clipPath="url(#meiaLuaClip)" preserveAspectRatio="xMidYMid slice" />}
+                        {item.capaUrl && <image href={item.capaUrl} x="0" y="0" width="260" height="140" clipPath="url(#meiaLuaClip)" preserveAspectRatio="none" />}
                         <defs><clipPath id="meiaLuaClip"><path d="M0,140 A130,130 0 0,1 260,140 Z" /></clipPath></defs>
                       </svg>
                     </div>
@@ -6106,48 +7111,56 @@ const Moodboard = () => {
                     </div>
                   )}
 
-                  {/* 🌀 ARCO ORGÂNICO SVG */}
-                  {item.type === 'shape' && item.shapeType === 'arco_organico' && (
-                    <svg viewBox="0 0 200 310" width="100%" height="100%" style={{ display: 'block', overflow: 'visible' }}>
-                      <path d="M30 305 C30 305 20 280 18 250 C16 220 10 200 14 170 C18 140 22 120 30 100 C38 80 46 65 55 55" fill="none" stroke={item.color || '#c5a059'} strokeWidth="24" strokeLinecap="round"/>
-                      <path d="M170 305 C170 305 180 280 182 250 C184 220 190 200 186 170 C182 140 178 120 170 100 C162 80 154 65 145 55" fill="none" stroke={item.color || '#c5a059'} strokeWidth="24" strokeLinecap="round"/>
-                      <path d="M55 55 C60 28 80 14 100 12 C120 14 140 28 145 55" fill="none" stroke={item.color || '#c5a059'} strokeWidth="24" strokeLinecap="round"/>
-                      <path d="M30 305 C30 305 20 280 18 250 C16 220 10 200 14 170 C18 140 22 120 30 100 C38 80 46 65 55 55 C60 28 80 14 100 12 C120 14 140 28 145 55 C154 65 162 80 170 100 C178 120 182 140 186 170 C190 200 184 220 182 250 C180 280 170 305 170 305" fill="none" stroke={`${item.color || '#c5a059'}40`} strokeWidth="12" strokeLinecap="round"/>
-                      <ellipse cx="30" cy="305" rx="20" ry="7" fill={item.color || '#c5a059'} opacity="0.75"/>
-                      <ellipse cx="170" cy="305" rx="20" ry="7" fill={item.color || '#c5a059'} opacity="0.75"/>
-                    </svg>
-                  )}
 
-                  {/* 🌊 PAINEL ONDULADO SVG (Ripas em S) */}
-                  {item.type === 'shape' && item.shapeType === 'painel_ondulado' && (
-                    <svg viewBox="0 0 160 310" width="100%" height="100%" style={{ display: 'block' }}>
-                      {[0,1,2,3,4,5,6,7,8].map(i => {
-                        const x = 8 + i * 17;
-                        return (
-                          <path key={i}
-                            d={`M${x} 8 C${x-10} 55 ${x+10} 100 ${x} 145 C${x-10} 190 ${x+10} 235 ${x} 278 C${x-6} 292 ${x} 298 ${x} 298`}
-                            fill="none"
-                            stroke={item.color || '#c5a059'}
-                            strokeWidth="11"
-                            strokeLinecap="round"
-                            opacity={i % 2 === 0 ? 1 : 0.75}
-                          />
-                        );
-                      })}
-                      <rect x="22" y="298" width="10" height="12" rx="2" fill={item.color || '#c5a059'}/>
-                      <rect x="74" y="298" width="10" height="12" rx="2" fill={item.color || '#c5a059'}/>
-                      <rect x="126" y="298" width="10" height="12" rx="2" fill={item.color || '#c5a059'}/>
-                    </svg>
-                  )}
 
                   {/* 🏛️ ARCO ROMANO TRIPLO 3D */}
                   {item.type === 'shape' && item.shapeType === 'arco_romano_triplo' && (
                     <ArcoRomanoTriplo3D item={item} />
                   )}
 
-                  {/* 🌀 ARCO ORGÂNICO TRIPLO 3D */}
+                  {/* 🌀 ARCO ORGÂNICO TRIPLO 3D (Foto 2) */}
                   {item.type === 'shape' && item.shapeType === 'arco_organico_triplo' && (
                     <ArcoOrganicoTriplo3D item={item} />
+                  )}
+
+                  {/* 🌊 PAINEL TOTEM ORGÂNICO WAVY 3D (Foto 1) */}
+                  {item.type === 'shape' && item.shapeType === 'painel_organico_wavy' && (
+                    <PainelOrganicoWavy3D item={item} />
+                  )}
+
+                  {/* 🏠 PAINEL CASINHA COLONIAL 3D */}
+                  {item.type === 'shape' && item.shapeType === 'painel_casinha_colonial' && (
+                    <PainelCasinhaColonial3D item={item} />
+                  )}
+
+                  {/* 🦋 PAINEL ARCO COM BORBOLETAS 3D */}
+                  {item.type === 'shape' && item.shapeType === 'painel_arco_borboletas' && (
+                    <PainelArcoBorboletas3D item={item} />
+                  )}
+
+                  {/* 🌾 PAINEL MOINHO FAZENDINHA 3D */}
+                  {item.type === 'shape' && item.shapeType === 'painel_moinho_fazendinha' && (
+                    <PainelMoinhoFazendinha3D item={item} />
+                  )}
+
+                  {/* 🏰 PAINEL CASTELO DE PRINCESAS 3D */}
+                  {item.type === 'shape' && item.shapeType === 'painel_castelo_princesas' && (
+                    <PainelCasteloPrincesas3D item={item} />
+                  )}
+
+                  {/* ☁️ MESA NUVEM CENOGRÁFICA 3D */}
+                  {item.type === 'shape' && item.shapeType === 'mesa_nuvem' && (
+                    <MesaNuvem3D item={item} />
+                  )}
+
+                  {/* 👑 MESA CARRUAGEM DE PRINCESAS 3D */}
+                  {item.type === 'shape' && item.shapeType === 'mesa_carruagem' && (
+                    <MesaCarruagem3D item={item} />
+                  )}
+
+                  {/* 🪜 ESTANTE ESCADINHA DE LEMBRANCINHAS 3D */}
+                  {item.type === 'shape' && item.shapeType === 'estante_escadinha' && (
+                    <EstanteEscadinha3D item={item} />
                   )}
 
                   {/* ☁️ PAINEL NUVEM GOMOS 3D */}
@@ -6165,29 +7178,7 @@ const Moodboard = () => {
                     <MesaJeep3D item={item} />
                   )}
 
-                  {/* 🏵️ PAINEL ORGÂNICO (Borda Ondulada) SVG */}
-                  {item.type === 'shape' && item.shapeType === 'painel_borda_ondulada' && (() => {
-                    const cor = item.color || '#c5a059';
-                    const uid = `onda-${item.uniqueId}`;
-                    const topWave = 'M8 14 Q20 0 32 14 Q44 28 56 14 Q68 0 80 14 Q92 28 104 14 Q116 0 128 14 Q140 28 152 14 Q164 0 176 14 Q188 28 192 14';
-                    const botWave = 'M8 296 Q20 310 32 296 Q44 282 56 296 Q68 310 80 296 Q92 282 104 296 Q116 310 128 296 Q140 282 152 296 Q164 310 176 296 Q188 282 192 296';
-                    const leftWave = 'M8 14 Q-4 30 8 46 Q20 62 8 78 Q-4 94 8 110 Q20 126 8 142 Q-4 158 8 174 Q20 190 8 206 Q-4 222 8 238 Q20 254 8 270 Q-4 286 8 296';
-                    const rightWave = 'M192 14 Q204 30 192 46 Q180 62 192 78 Q204 94 192 110 Q180 126 192 142 Q204 158 192 174 Q180 190 192 206 Q204 222 192 238 Q180 254 192 270 Q204 286 192 296';
-                    const clipD = `${topWave} ${rightWave.replace('M192 14', 'L192 14')} ${botWave.replace('M8 296', 'L192 296')} ${leftWave.replace('M8 14', 'L8 296')} Z`;
-                    return (
-                      <svg viewBox="0 0 200 310" width="100%" height="100%" style={{ display: 'block' }}>
-                        <defs>
-                          <clipPath id={uid}>
-                            <path d={clipD}/>
-                          </clipPath>
-                        </defs>
-                        <rect x="0" y="0" width="200" height="310" fill={cor} clipPath={`url(#${uid})`}/>
-                        {item.capaUrl && <image href={item.capaUrl} x="0" y="0" width="200" height="310" preserveAspectRatio="xMidYMid slice" clipPath={`url(#${uid})`}/>}
-                        <path d={topWave} fill="none" stroke={cor} strokeWidth="3" strokeLinecap="round"/>
-                        <path d={botWave} fill="none" stroke={cor} strokeWidth="3" strokeLinecap="round"/>
-                      </svg>
-                    );
-                  })()}
+
 
                   {/* 🕹️ CONTROLES INTERATIVOS DIRETOS (CANVA/FIGMA STYLE) */}
                   {isSelected && !item.locked && !editingTextId && (() => {
@@ -6197,11 +7188,15 @@ const Moodboard = () => {
 
                     return (
                       <>
-                        {/* 4 Alças de Redimensionamento nos Cantos */}
+                        {/* 8 Alças de Redimensionamento (4 Cantos + 4 Laterais estilo Figma/Canva) */}
                         <div className="resize-handle nw" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'nw')} />
                         <div className="resize-handle ne" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'ne')} />
                         <div className="resize-handle se" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'se')} />
                         <div className="resize-handle sw" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'sw')} />
+                        <div className="resize-handle n" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'n')} />
+                        <div className="resize-handle s" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 's')} />
+                        <div className="resize-handle e" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'e')} />
+                        <div className="resize-handle w" onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'w')} />
 
                         {/* Pino de Rotação Superior */}
                         <div className="rotate-handle-stem" />
@@ -6774,48 +7769,66 @@ const Moodboard = () => {
       </div>
 
       {/* 🎛️ PAINEL LATERAL DIREITO PRO (ESTILO PHOTOSHOP / FIGMA / CANVA) */}
-      {!modoApresentacao && painelDireitoAberto && (
+      {!modoApresentacao && (
         <>
-          <div className="studio-right-panel-backdrop" onClick={() => setPainelDireitoAberto(false)} />
-          <div className="studio-right-panel" onClick={e => e.stopPropagation()}>
-            {/* Cabeçalho do Painel Direito */}
-            <div className="right-panel-header">
-              <div className="right-panel-title">
-                <Icons.Sparkles width={14} height={14} />
-                <span>ESTÚDIO PRO</span>
-              </div>
-              <button className="btn-close-right-panel" onClick={() => setPainelDireitoAberto(false)} title="Recolher Painel">✕</button>
-            </div>
+          {painelDireitoAberto ? (
+            <>
+              <div className="studio-right-panel-backdrop" onClick={() => setPainelDireitoAberto(false)} />
+              <div className="studio-right-panel" onClick={e => e.stopPropagation()}>
+                {/* Cabeçalho do Painel Direito */}
+                <div className="right-panel-header">
+                  <div className="right-panel-title">
+                    <Icons.Sparkles width={14} height={14} />
+                    <span>ESTÚDIO PRO</span>
+                  </div>
+                  <button
+                    className="btn-close-right-panel"
+                    onClick={() => setPainelDireitoAberto(false)}
+                    title="Recolher Painel (Mostrar apenas ícones)"
+                  >
+                    <span>Recolher</span>
+                    <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
+                  </button>
+                </div>
 
-            {/* Abas do Painel Direito */}
-            <div className="right-panel-tabs">
-              <button
-                type="button"
-                className={`r-tab-btn ${abaDireita === 'camadas' ? 'active' : ''}`}
-                onClick={() => setAbaDireita('camadas')}
-                title="Gerenciar Camadas e Z-Index"
-              >
-                <Icons.Layers width={13} height={13} />
-                <span>Camadas ({itensCanvas.length})</span>
-              </button>
-              <button
-                type="button"
-                className={`r-tab-btn ${abaDireita === 'propriedades' ? 'active' : ''}`}
-                onClick={() => setAbaDireita('propriedades')}
-                title="Ajustes de Posição, Escala e Efeitos"
-              >
-                <Icons.Sliders width={13} height={13} />
-                <span>Propriedades</span>
-              </button>
-              <button
-                type="button"
-                className={`r-tab-btn ${abaDireita === 'baloes' ? 'active' : ''}`}
-                onClick={() => setAbaDireita('baloes')}
-                title="Bexigas & Balões para Produção"
-              >
-                <span>🎈 Bexigas</span>
-              </button>
-            </div>
+                {/* Abas do Painel Direito */}
+                <div className="right-panel-tabs">
+                  <button
+                    type="button"
+                    className={`r-tab-btn ${abaDireita === 'camadas' ? 'active' : ''}`}
+                    onClick={() => setAbaDireita('camadas')}
+                    title="Gerenciar Camadas e Z-Index"
+                  >
+                    <Icons.Layers width={12} height={12} />
+                    <span>Camadas{itensCanvas.length > 0 ? ` (${itensCanvas.length})` : ''}</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`r-tab-btn ${abaDireita === 'propriedades' ? 'active' : ''}`}
+                    onClick={() => setAbaDireita('propriedades')}
+                    title="Ajustes de Posição, Escala e Propriedades"
+                  >
+                    <Icons.Sliders width={12} height={12} />
+                    <span>Propriedades</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`r-tab-btn ${abaDireita === 'iluminacao' ? 'active' : ''}`}
+                    onClick={() => setAbaDireita('iluminacao')}
+                    title="Luminosidade, Contraste e Atmosfera da Cena"
+                  >
+                    <Icons.Sun width={12} height={12} />
+                    <span>Iluminação</span>
+                  </button>
+                  <button
+                    type="button"
+                    className={`r-tab-btn ${abaDireita === 'baloes' ? 'active' : ''}`}
+                    onClick={() => setAbaDireita('baloes')}
+                    title="Bexigas & Balões para Produção"
+                  >
+                    <span>🎈 Bexigas</span>
+                  </button>
+                </div>
 
             {/* CONTEÚDO DA ABA CAMADAS (LAYERS) */}
             {abaDireita === 'camadas' && (
@@ -6834,11 +7847,12 @@ const Moodboard = () => {
                   <div className="layers-list-scroll">
                     {[...itensCanvas].reverse().map((item, revIdx) => {
                       const isSelected = item.uniqueId === selecionadoId;
+                      const isHidden = item.hidden === true || item.opacity === 0 || item.visible === false;
                       const isBaloes = item.categoria === 'Baloes' || item.shapeType?.startsWith('baloes_') || (item.nome || '').toLowerCase().includes('arco');
                       return (
                         <div
                           key={item.uniqueId}
-                          className={`layer-row-item ${isSelected ? 'selected' : ''} ${item.locked ? 'locked' : ''}`}
+                          className={`layer-row-item ${isSelected ? 'selected' : ''} ${item.locked ? 'locked' : ''} ${isHidden ? 'layer-hidden' : ''}`}
                           onClick={() => { setSelecionadoId(item.uniqueId); }}
                         >
                           <div className="layer-thumb-mini">
@@ -6856,18 +7870,25 @@ const Moodboard = () => {
                               {item.type === 'text' ? `Texto: "${item.content || ''}"` : (item.nome || item.shapeType || 'Elemento')}
                             </span>
                             <span className="layer-type-tag">
-                              {isBaloes ? '🎈 Bexigas / Balão' : item.isEstoqueProprio ? '📦 Estoque' : '🛒 Fora do Estoque'}
+                              {isHidden ? '👁️‍🗨️ Camada Oculta' : (isBaloes ? '🎈 Bexigas / Balão' : item.isEstoqueProprio ? '📦 Estoque' : '🛒 Fora do Estoque')}
                             </span>
                           </div>
 
                           <div className="layer-actions-group" onClick={e => e.stopPropagation()}>
                             <button
                               type="button"
-                              className={`btn-layer-tool ${item.opacity === 0 ? 'muted' : ''}`}
-                              onClick={() => atualizarItem(item.uniqueId, { opacity: item.opacity === 0 ? 100 : 0 })}
-                              title={item.opacity === 0 ? 'Mostrar Camada' : 'Ocultar Camada'}
+                              className={`btn-layer-tool ${isHidden ? 'active-hidden' : ''}`}
+                              onClick={() => {
+                                const novoHidden = !isHidden;
+                                atualizarItem(item.uniqueId, {
+                                  hidden: novoHidden,
+                                  opacity: novoHidden ? 0 : 100,
+                                  visible: !novoHidden
+                                });
+                              }}
+                              title={isHidden ? 'Mostrar Camada (Reaparecer no Cenário)' : 'Ocultar Camada (Esconder do Cenário)'}
                             >
-                              <Icons.Eye width={11} height={11} />
+                              {isHidden ? <Icons.EyeOff width={13} height={13} /> : <Icons.Eye width={13} height={13} />}
                             </button>
                             <button
                               type="button"
@@ -7643,8 +8664,559 @@ const Moodboard = () => {
                       </div>
                     )}
 
+                    {/* 🏠 Colorização do Painel Casinha Colonial */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_casinha_colonial' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Casinha Colonial</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏠 Parede / Corpo Principal</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔺 Telhado & Beirais</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corTelhado || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corTelhado: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪟 Moldura da Janela em Arco</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corJanela || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corJanela: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Fundo / Vidros da Janela</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corVidros || '#f1f5f9'}
+                              onChange={e => atualizarItem(selecionadoId, { corVidros: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Branco Puro', parede: '#ffffff', telhado: '#ffffff', janela: '#ffffff', vidros: '#f1f5f9' },
+                              { label: 'Madeira Rústica', parede: '#d7b899', telhado: '#78350f', janela: '#ffffff', vidros: '#451a03' },
+                              { label: 'Rosa Bebê', parede: '#fdf2f8', telhado: '#fbcfe8', janela: '#ffffff', vidros: '#f472b6' },
+                              { label: 'Azul Céu', parede: '#f0f9ff', telhado: '#bae6fd', janela: '#ffffff', vidros: '#38bdf8' },
+                              { label: 'Dourado / Nude', parede: '#fdfaf5', telhado: '#eab308', janela: '#ffffff', vidros: '#ca8a04' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.parede, corTelhado: p.telhado, corJanela: p.janela, corVidros: p.vidros, corPes: p.parede })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🦋 Colorização do Arco com Borboletas 3D */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_arco_borboletas' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Arco com Borboletas</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏛️ Arco / Moldura Externa</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦋 Borboletas 3D (Corpo/Asas)</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corBorboletas || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corBorboletas: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Vazados / Detalhes das Asas</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corAsasDetalhes || '#f8fafc'}
+                              onChange={e => atualizarItem(selecionadoId, { corAsasDetalhes: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Branco Neve', arco: '#ffffff', borb: '#ffffff', asas: '#f1f5f9' },
+                              { label: 'Borboletas Douradas', arco: '#ffffff', borb: '#eab308', asas: '#fef08a' },
+                              { label: 'Jardim Rosa', arco: '#ffffff', borb: '#ec4899', asas: '#fbcfe8' },
+                              { label: 'Lilás / Lavanda', arco: '#ffffff', borb: '#a855f7', asas: '#e9d5ff' },
+                              { label: 'Tiffany Chic', arco: '#ffffff', borb: '#2dd4bf', asas: '#ccfbf1' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.arco, corBorboletas: p.borb, corAsasDetalhes: p.asas, corPes: p.arco })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🌾 Colorização do Moinho Fazendinha */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_moinho_fazendinha' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Moinho Fazendinha</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏠 Corpo / Paredes</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Telhado com Telhas</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corTelhado || '#f8fafc'}
+                              onChange={e => atualizarItem(selecionadoId, { corTelhado: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🌀 Pás do Moinho & Eixo</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPasMoinho || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corPasMoinho: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚪 Porta Celeiro 'X' & Janela</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPortaJanela || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corPortaJanela: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Branco Total', corpo: '#ffffff', telhado: '#f1f5f9', pas: '#ffffff', porta: '#ffffff' },
+                              { label: 'Fazendinha Vermelha', corpo: '#ef4444', telhado: '#78350f', pas: '#ffffff', porta: '#ffffff' },
+                              { label: 'Celeiro Rústico', corpo: '#d7b899', telhado: '#78350f', pas: '#92400e', porta: '#78350f' },
+                              { label: 'Fazendinha Menina', corpo: '#fdf2f8', telhado: '#fbcfe8', pas: '#ffffff', porta: '#f472b6' },
+                              { label: 'Fazendinha Amarela', corpo: '#fefce8', telhado: '#ca8a04', pas: '#ffffff', porta: '#eab308' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.corpo, corTelhado: p.telhado, corPasMoinho: p.pas, corPortaJanela: p.porta, corPes: p.corpo })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🌊 Colorização do Painel Orgânico Wavy (Foto 1) */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_organico_wavy' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Painel Orgânico Wavy</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🌊 Superfície Principal</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Contorno / Borda</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corBorda || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corBorda: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Branco Neve', cor: '#ffffff', borda: '#f1f5f9' },
+                              { label: 'Nude Areia', cor: '#fdf6ee', borda: '#d7b899' },
+                              { label: 'Rosa Bebê', cor: '#fdf2f8', borda: '#f472b6' },
+                              { label: 'Azul Céu', cor: '#f0f9ff', borda: '#38bdf8' },
+                              { label: 'Terracota', cor: '#ffedd5', borda: '#c2410c' },
+                              { label: 'Verde Menta', cor: '#ecfdf5', borda: '#34d399' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.cor, corBorda: p.borda, corPes: p.cor })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🏰 Colorização do Castelo de Princesas */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_castelo_princesas' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Castelo de Princesas</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏰 Paredes & Torres</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🎪 Telhados Cônicos & Bandeiras</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corTelhados || '#fbcfe8'}
+                              onChange={e => atualizarItem(selecionadoId, { corTelhados: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚪 Portão Real & Janelas</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPortaJanelas || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corPortaJanelas: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Detalhes Dourados / Aldrabas</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corDetalhes || '#fef08a'}
+                              onChange={e => atualizarItem(selecionadoId, { corDetalhes: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Rosa Princesa', parede: '#ffffff', telhado: '#fbcfe8', porta: '#ffffff', det: '#fef08a' },
+                              { label: 'Lilás Encantado', parede: '#ffffff', telhado: '#e9d5ff', porta: '#ffffff', det: '#fef08a' },
+                              { label: 'Reino Azul', parede: '#ffffff', telhado: '#bae6fd', porta: '#ffffff', det: '#facc15' },
+                              { label: 'Dourado Real', parede: '#fdfaf5', telhado: '#eab308', porta: '#ffffff', det: '#ca8a04' },
+                              { label: 'Tiffany Mágico', parede: '#ffffff', telhado: '#99f6e4', porta: '#ffffff', det: '#2dd4bf' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.parede, corTelhados: p.telhado, corPortaJanelas: p.porta, corDetalhes: p.det, corPes: p.parede })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* ☁️ Colorização da Mesa Nuvem */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_nuvem' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Nuvem</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>☁️ Tampo Superior</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Borda 3D do Tampo</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corBorda || '#f1f5f9'}
+                              onChange={e => atualizarItem(selecionadoId, { corBorda: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Pés Palito da Mesa</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPes || '#d7b899'}
+                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Branca / Pés Madeira', tampo: '#ffffff', borda: '#f1f5f9', pes: '#d7b899' },
+                              { label: 'Rosa Bebê', tampo: '#fdf2f8', borda: '#fbcfe8', pes: '#d7b899' },
+                              { label: 'Azul Céu', tampo: '#f0f9ff', borda: '#bae6fd', pes: '#d7b899' },
+                              { label: 'Amarelinha Doce', tampo: '#fefce8', borda: '#fef08a', pes: '#d7b899' },
+                              { label: 'Toda Branca', tampo: '#ffffff', borda: '#f1f5f9', pes: '#ffffff' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.tampo, corBorda: p.borda, corPes: p.pes })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 👑 Colorização da Mesa Carruagem */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_carruagem' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Carruagem</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>👑 Cabine / Estrutura</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🛞 Rodas & Arabescos</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corRodas || '#eab308'}
+                              onChange={e => atualizarItem(selecionadoId, { corRodas: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Coroa Real</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corCoroa || '#eab308'}
+                              onChange={e => atualizarItem(selecionadoId, { corCoroa: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🎂 Tampo de Apoio</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corTampo || itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { corTampo: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Branca & Dourada', corpo: '#ffffff', rodas: '#eab308', coroa: '#eab308' },
+                              { label: 'Rosa & Ouro', corpo: '#fdf2f8', rodas: '#eab308', coroa: '#eab308' },
+                              { label: 'Lilás Encantado', corpo: '#faf5ff', rodas: '#ca8a04', coroa: '#ca8a04' },
+                              { label: 'Tiffany & Dourado', corpo: '#f0fdfa', rodas: '#eab308', coroa: '#eab308' },
+                              { label: 'Prata & Branco', corpo: '#ffffff', rodas: '#94a3b8', coroa: '#cbd5e1' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.corpo, corRodas: p.rodas, corCoroa: p.coroa, corTampo: p.corpo })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* 🪜 Colorização da Estante Escadinha */}
+                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'estante_escadinha' && (
+                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Estante Escadinha</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪜 Laterais / Hastes em 'A'</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.color || '#ffffff'}
+                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Prateleiras / Degraus</span>
+                            <input
+                              type="color"
+                              value={itemSelecionado.corPrateleiras || '#d7b899'}
+                              onChange={e => atualizarItem(selecionadoId, { corPrateleiras: e.target.value, multiColor: true })}
+                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Presets Rápidos */}
+                        <div style={{ marginTop: '6px' }}>
+                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                            {[
+                              { label: 'Branca & Madeira', haste: '#ffffff', prat: '#d7b899' },
+                              { label: 'Toda Branca', haste: '#ffffff', prat: '#ffffff' },
+                              { label: 'Madeira Rústica', haste: '#8B6914', prat: '#d7b899' },
+                              { label: 'Rosa Candy', haste: '#fdf2f8', prat: '#fbcfe8' },
+                              { label: 'Pinus & Fendi', haste: '#f1f5f9', prat: '#c5a059' }
+                            ].map((p, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.haste, corPrateleiras: p.prat })}
+                                style={{
+                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                }}
+                              >
+                                {p.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     {/* 🎨 Cor Geral da Estrutura (Para demais painéis e arcos simples) */}
-                    {itemSelecionado.type === 'shape' && !['arco_romano_triplo', 'arco_organico_triplo', 'mesa_osso', 'mesa_jeep', 'arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal', 'baloes_dinamico'].includes(itemSelecionado.shapeType) && (
+                    {itemSelecionado.type === 'shape' && !['arco_romano_triplo', 'arco_organico_triplo', 'mesa_osso', 'mesa_jeep', 'painel_organico_wavy', 'painel_casinha_colonial', 'painel_arco_borboletas', 'painel_moinho_fazendinha', 'painel_castelo_princesas', 'mesa_nuvem', 'mesa_carruagem', 'estante_escadinha', 'arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal', 'baloes_dinamico'].includes(itemSelecionado.shapeType) && (
                       <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
                           <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cor da Estrutura</span>
@@ -7969,12 +9541,34 @@ const Moodboard = () => {
                         <Icons.Trash width={12} /> Excluir Elemento
                       </button>
                     </div>
+
+                    {/* Link rápido / Seção de Iluminação da Cena */}
+                    <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                      <button
+                        type="button"
+                        className="btn-inspector-action"
+                        style={{ width: '100%', background: '#f8fafc', color: '#0f172a', fontWeight: '700', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                        onClick={() => setAbaDireita('iluminacao')}
+                      >
+                        <span>✨</span>
+                        <span>Ajustar Iluminação & Atmosfera da Cena</span>
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="empty-layers-box">
-                    <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Selecione um elemento na prancheta para ver e editar suas propriedades aqui.</p>
+                  <div className="inspector-content">
+                    {renderBlocoIluminacaoCena()}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* CONTEÚDO DA ABA ILUMINAÇÃO & ATMOSFERA */}
+            {abaDireita === 'iluminacao' && (
+              <div className="right-panel-body">
+                <div className="inspector-content">
+                  {renderBlocoIluminacaoCena()}
+                </div>
               </div>
             )}
 
@@ -8035,79 +9629,210 @@ const Moodboard = () => {
             )}
           </div>
         </>
+      ) : (
+            /* 📌 BARRA LATERAL DIREITA RECOLHIDA (DOCK SLIM COM ÍCONES) */
+            <div className="studio-right-dock-collapsed" onClick={e => e.stopPropagation()}>
+              <button
+                type="button"
+                className="dock-toggle-btn"
+                onClick={() => setPainelDireitoAberto(true)}
+                title="Expandir Estúdio Pro"
+              >
+                <i className="fas fa-chevron-left"></i>
+              </button>
+
+              <div className="dock-icons-list">
+                <button
+                  type="button"
+                  className={`dock-icon-btn ${abaDireita === 'camadas' ? 'active' : ''}`}
+                  onClick={() => { setAbaDireita('camadas'); setPainelDireitoAberto(true); }}
+                  title={`Camadas (${itensCanvas.length} itens)`}
+                >
+                  <Icons.Layers width={16} height={16} />
+                  {itensCanvas.length > 0 && (
+                    <span className="dock-badge">{itensCanvas.length}</span>
+                  )}
+                  <span className="dock-label">Camadas</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`dock-icon-btn ${abaDireita === 'propriedades' ? 'active' : ''}`}
+                  onClick={() => { setAbaDireita('propriedades'); setPainelDireitoAberto(true); }}
+                  title="Propriedades do Elemento / Cena"
+                >
+                  <Icons.Sliders width={16} height={16} />
+                  <span className="dock-label">Props</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`dock-icon-btn ${abaDireita === 'iluminacao' ? 'active' : ''}`}
+                  onClick={() => { setAbaDireita('iluminacao'); setPainelDireitoAberto(true); }}
+                  title="Iluminação, Luminosidade & Efeitos"
+                >
+                  <Icons.Sun width={16} height={16} />
+                  <span className="dock-label">Luz</span>
+                </button>
+
+                <button
+                  type="button"
+                  className={`dock-icon-btn ${abaDireita === 'baloes' ? 'active' : ''}`}
+                  onClick={() => { setAbaDireita('baloes'); setPainelDireitoAberto(true); }}
+                  title="Produção de Bexigas & Balões"
+                >
+                  <span style={{ fontSize: '15px', lineHeight: 1 }}>🎈</span>
+                  <span className="dock-label">Bexigas</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </>
       )}
 
-      {/* 📸 MODAL: UPLOAD RÁPIDO DE IMAGEM — ADICIONA AO CANVAS + OPÇÃO DE PORTFÓLIO */}
-      {modalUploadRapidoAberto && imagemRapidaBase64 && (
-        <div className="overlay" style={{ zIndex: 99999 }} onClick={() => setModalUploadRapidoAberto(false)}>
-          <div className="modal-content luxury-modal upload-rapido-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
+      {/* 📸 MODAL: UPLOAD DE IMAGEM & CENOGRAFIA */}
+      {modalUploadRapidoAberto && (
+        <div className="overlay" style={{ zIndex: 99999 }} onClick={() => { if (!removendoFundo) setModalUploadRapidoAberto(false); }}>
+          <div className="modal-content luxury-modal upload-rapido-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '520px' }}>
             <div className="modal-header-luxury">
-              <h3>📸 Imagem Pronta para o Canvas</h3>
-              <p>Revise antes de adicionar ao cenário. Você pode remover o fundo automaticamente.</p>
+              <h3>📸 Upload de Imagem & Cenografia</h3>
+              <p>{imagemRapidaBase64 ? 'Revise os dados antes de adicionar. Você pode remover o fundo com IA.' : 'Selecione uma imagem do computador para usar no cenário ou salvar no seu portfólio.'}</p>
             </div>
             <div className="modal-body-luxury">
 
-              {/* Preview da Imagem */}
-              <div className="elem-preview-checkerboard" style={{ marginBottom: '14px', height: '180px' }}>
-                <img src={imagemRapidaBase64} alt="Preview" style={{ maxHeight: '160px', maxWidth: '100%', objectFit: 'contain' }} />
-              </div>
-
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>Nome:</label>
-              <input
-                type="text"
-                value={imagemRapidaNome}
-                onChange={e => setImagemRapidaNome(e.target.value)}
-                className="input-modal-luxury"
-                placeholder="Nome da imagem no cenário..."
-                style={{ marginBottom: '12px' }}
-              />
-
-              <label style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>Categoria:</label>
-              <select
-                value={categoriaImagemRapida}
-                onChange={e => setCategoriaImagemRapida(e.target.value)}
-                className="input-modal-luxury"
-                style={{ marginBottom: '14px' }}
-              >
-                {['Baloes', 'Paineis', 'Flores', 'Moveis', 'Letreiros', 'Outros'].map(c => (
-                  <option key={c} value={c}>{c}</option>
-                ))}
-              </select>
-
-              {/* Opção: salvar no portfólio */}
-              <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', marginBottom: '14px' }}>
-                <input type="checkbox" checked={salvarNoPortfolio} onChange={e => setSalvarNoPortfolio(e.target.checked)} style={{ width: '16px', height: '16px' }} />
-                <div>
-                  <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>💾 Salvar também no Meu Portfólio</div>
-                  <div style={{ fontSize: '10px', color: '#64748b' }}>Fica disponível para reusar em outros projetos</div>
+              {!imagemRapidaBase64 ? (
+                /* Dropzone quando nenhuma imagem foi selecionada */
+                <div
+                  className="upload-dropzone-box"
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.accept = 'image/*';
+                    input.onchange = (e) => {
+                      const file = e.target.files?.[0];
+                      if (file) processarArquivoUpload(file, categoriaImagemRapida, salvarNoPortfolio, uploadOrigem);
+                    };
+                    input.click();
+                  }}
+                  onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add('drag-over'); }}
+                  onDragLeave={(e) => { e.currentTarget.classList.remove('drag-over'); }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.classList.remove('drag-over');
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) processarArquivoUpload(file, categoriaImagemRapida, salvarNoPortfolio, uploadOrigem);
+                  }}
+                >
+                  <div className="upload-dropzone-icon">📁</div>
+                  <div className="upload-dropzone-title">Clique aqui ou arraste sua foto</div>
+                  <div className="upload-dropzone-sub">Suporta PNG transparente, JPG, JPEG e WEBP</div>
                 </div>
-              </label>
+              ) : (
+                /* Preview e Configurações quando a imagem foi carregada */
+                <>
+                  <div className="elem-preview-checkerboard" style={{ marginBottom: '10px', height: '170px', position: 'relative' }}>
+                    <img src={imagemRapidaBase64} alt="Preview" style={{ maxHeight: '150px', maxWidth: '100%', objectFit: 'contain' }} />
+                  </div>
+
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                    <button
+                      type="button"
+                      className="btn-link-reset"
+                      style={{ fontSize: '11px', color: '#c5a059', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
+                      onClick={() => handleUploadImagemRapida(categoriaImagemRapida, salvarNoPortfolio, uploadOrigem)}
+                    >
+                      🔄 Escolher outra imagem
+                    </button>
+                  </div>
+
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>Nome do Elemento:</label>
+                  <input
+                    type="text"
+                    value={imagemRapidaNome}
+                    onChange={e => setImagemRapidaNome(e.target.value)}
+                    className="input-modal-luxury"
+                    placeholder="Ex: Flor Girassol, Bolo Fake, Arco Dourado..."
+                    style={{ marginBottom: '12px' }}
+                  />
+
+                  <label style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a', display: 'block', marginBottom: '4px' }}>Categoria no Catálogo:</label>
+                  <select
+                    value={categoriaImagemRapida}
+                    onChange={e => setCategoriaImagemRapida(e.target.value)}
+                    className="input-modal-luxury"
+                    style={{ marginBottom: '14px' }}
+                  >
+                    {categoriasMoodboard.map(c => (
+                      <option key={c.id} value={c.id}>{c.icone} {c.nome}</option>
+                    ))}
+                  </select>
+
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0', cursor: 'pointer', marginBottom: '14px' }}>
+                    <input type="checkbox" checked={salvarNoPortfolio} onChange={e => setSalvarNoPortfolio(e.target.checked)} style={{ width: '16px', height: '16px' }} />
+                    <div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#0f172a' }}>💾 Salvar também nos Meus Uploads (Portfólio)</div>
+                      <div style={{ fontSize: '10px', color: '#64748b' }}>Ficará disponível na aba Acervo &gt; Uploads para todos os seus projetos</div>
+                    </div>
+                  </label>
+                </>
+              )}
             </div>
 
             <div className="modal-actions" style={{ flexDirection: 'column', gap: '8px' }}>
-              {/* Botão com Remoção de Fundo */}
+              {imagemRapidaBase64 ? (
+                <>
+                  {/* Botão com Remoção de Fundo */}
+                  <button
+                    type="button"
+                    className="btn-confirm-luxury"
+                    style={{ background: 'linear-gradient(135deg, #7c3aed, #c5a059)', gap: '8px', fontSize: '13px', cursor: 'pointer' }}
+                    onClick={() => confirmarUploadRapido(true, false)}
+                    disabled={removendoFundo}
+                  >
+                    {removendoFundo ? (
+                      <><i className="fas fa-spinner fa-spin" /> Removendo Fundo (IA)...</>
+                    ) : (
+                      <>🪄 Remover Fundo (IA) e Adicionar ao Cenário</>
+                    )}
+                  </button>
+
+                  {/* Botão Sem Remoção de Fundo */}
+                  <button
+                    type="button"
+                    className="btn-primary-action"
+                    style={{ marginBottom: 0, cursor: 'pointer' }}
+                    onClick={() => confirmarUploadRapido(false, false)}
+                    disabled={removendoFundo}
+                  >
+                    📸 Adicionar com Imagem Original
+                  </button>
+
+                  {/* Botão Apenas Salvar na Galeria */}
+                  {salvarNoPortfolio && (
+                    <button
+                      type="button"
+                      className="btn-secondary"
+                      style={{ padding: '8px', fontSize: '11.5px', cursor: 'pointer' }}
+                      onClick={() => confirmarUploadRapido(false, true)}
+                      disabled={removendoFundo}
+                    >
+                      💾 Apenas Salvar nos Meus Uploads (sem adicionar agora)
+                    </button>
+                  )}
+                </>
+              ) : null}
+
               <button
-                className="btn-confirm-luxury"
-                style={{ background: 'linear-gradient(135deg, #7c3aed, #c5a059)', gap: '8px', fontSize: '13px' }}
-                onClick={() => confirmarUploadRapido(true)}
+                type="button"
+                className="btn-cancel"
+                onClick={() => {
+                  setModalUploadRapidoAberto(false);
+                  setImagemRapidaBase64('');
+                  setImagemRapidaNome('');
+                }}
                 disabled={removendoFundo}
+                style={{ cursor: 'pointer' }}
               >
-                {removendoFundo ? (
-                  <><i className="fas fa-spinner fa-spin" /> Removendo Fundo (IA)...</>
-                ) : (
-                  <>🪄 Remover Fundo e Adicionar ao Cenário</>
-                )}
-              </button>
-              {/* Botão Sem Remoção de Fundo */}
-              <button
-                className="btn-primary-action"
-                style={{ marginBottom: 0 }}
-                onClick={() => confirmarUploadRapido(false)}
-                disabled={removendoFundo}
-              >
-                📸 Adicionar Sem Remover Fundo
-              </button>
-              <button className="btn-cancel" onClick={() => setModalUploadRapidoAberto(false)} disabled={removendoFundo}>
                 Cancelar
               </button>
             </div>
