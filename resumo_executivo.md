@@ -312,6 +312,30 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 22/08/2026 — 08h00 às 11h35 (BRT)
+- ✅ **📸 Upload Rápido de Imagem & Remoção de Fundo por IA WASM (`Moodboard.jsx`, `Moodboard.css`)**:
+  - Botão de upload dedicado na barra lateral esquerda com suporte a formatos `.png`, `.jpg`, `.webp`.
+  - Processamento em tempo real com `@imgly/background-removal` via WebAssembly (100% offline, sem custos de API).
+  - Opções para inserção imediata no palco ou salvamento no portfólio permanente da empresa.
+- ✅ **⚙️ Gerenciamento Dinâmico de Categorias do Moodboard no Controle Geral (`ControleGeral.jsx`, `ControleGeral.css`, `Moodboard.jsx`)**:
+  - Interface administrativa completa no Controle Geral para o Super Admin cadastrar, editar emojis, renomear e excluir categorias da galeria de cenografia.
+  - Sincronização em tempo real via Firestore integrada com fallback para categorias padrão.
+- ✅ **🏷️ Filtro de Categorias Compacto em Dropdown Select (`Moodboard.jsx`, `Moodboard.css`)**:
+  - Substituição de listas horizontais com quebras de layout por um Dropdown Select de 1 linha (`.mb-category-select-modern`).
+  - Exibição de ícones, nomes completos e contagem dinâmica de itens disponíveis tanto para o Catálogo PNG quanto para o Meu Estoque.
+- ✅ **✨ Reestruturação de Efeitos & Iluminação no Painel Direito (`Moodboard.jsx`, `Moodboard.css`)**:
+  - Remoção da aba de efeitos da barra lateral esquerda, mantendo a esquerda focada exclusivamente na criação/inserção de elementos.
+  - Integração da atmosfera de cena na aba `Propriedades` (quando nada estiver selecionado) e nova aba dedicada `✨ Iluminação` no topo do Estúdio Pro.
+  - Novo design Dark Luxury com sliders dourados (`#c5a059`), tipografia de alto contraste (`#0f172a`) e paletas circulares para atmosfera diurna e noturna.
+- ✅ **📌 Estúdio Pro com Dock Lateral Recolhido em Ícones Slim (`Moodboard.jsx`, `Moodboard.css`)**:
+  - Modo recolhido (`52px`) ativado pelo botão `Recolher ▶`, liberando 100% do espaço de tela para a prancheta.
+  - Ícones diretos com tooltips (`Camadas`, `Props`, `Luz`, `Bexigas`) que expandem o painel instantaneamente na ferramenta clicada.
+  - Ajuste harmonioso das 4 abas no cabeçalho expandido em 1 única linha sem vazamento ou cortes de texto.
+- ✅ **👁️ Correção e Aprimoramento do Botão Olhinho (Visibilidade de Camadas 👁️ / 👁️‍🗨️)**:
+  - Correção da lógica de ocultação de elementos no canvas (`hidden: true / false`), permitindo ocultar e reexibir itens instantaneamente com 1 clique para comparar o cenário.
+  - Feedback visual nítido na lista de camadas: ícone `EyeOff` em vermelho suave, card translúcido com borda tracejada e identificação de `👁️‍🗨️ Camada Oculta`.
+- ✅ **Build de Produção Verificado**: `npm run build` aprovado com **0 erros** (`built in 16.48s - 20.21s`).
+
 ### 🗓️ Sessão: 17/08/2026 — 13h00 às 14h45 (BRT)
 - ✅ **Motor de Interação e Arraste a 120 FPS (`Moodboard.jsx`)**:
   - Eliminação de delay e latência através de cálculo com coordenadas de origem absolutas (`startPointerPos` / `startItemPos`) e renderização sincronizada com a taxa do monitor via `requestAnimationFrame` (RAF).
@@ -456,5 +480,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 17/08/2026 — 14h45 (BRT)  
+> **⏱️ Última atualização:** 22/08/2026 — 11h40 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

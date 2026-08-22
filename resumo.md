@@ -447,4 +447,69 @@ Implementação da nova aba de efeitos visuais globais do ambiente, com controle
 
 ---
 
-*Manual técnico e Resumo Executivo atualizados em 20/08/2026 — Sistema Celebre v4.1*
+### 7.11. Celebre Studio — Upload Rápido de Imagem Direto na Prancheta & Catálogo
+
+**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
+
+- **📸 Upload Ágil de Imagem**:
+  - Botão dedicado de Upload na barra lateral esquerda permitindo subir arquivos `.png`, `.jpg`, `.webp` direto do computador.
+  - Pré-visualização instantânea no modal com remoção de fundo por IA WASM (`@imgly/background-removal`) 100% offline.
+  - Opção de salvar a peça no acervo permanente da empresa ou inseri-la de forma imediata na prancheta para agilizar a composição do cenário.
+
+---
+
+### 7.12. Módulo Controle Geral — Gerenciamento Dinâmico de Categorias do Moodboard
+
+**Data:** 22/08/2026 | **Arquivos:** `ControleGeral.jsx`, `ControleGeral.css`, `Moodboard.jsx`
+
+- **⚙️ Painel de Categorias para o Super Admin**:
+  - Nova seção no módulo **Controle Geral** (`/controle-geral`) para o Super Admin cadastrar, editar emojis/ícones, renomear e excluir categorias da galeria de cenografia.
+  - Sincronização em tempo real via Firestore com fallback para as categorias padrão do sistema (`CATEGORIAS_MOODBOARD_PADRAO`).
+
+---
+
+### 7.13. Celebre Studio — Filtro de Categorias Compacto em Dropdown Select
+
+**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
+
+- **🏷️ Dropdown Select Elegante (1 Linha)**:
+  - Substituição de fileiras de chips/pills que causavam cortes horizontais e rolagem desconfortável na barra lateral esquerda.
+  - Select estilizado no padrão Luxury (`.mb-category-select-modern`) exibindo o ícone, o nome completo da categoria e a contagem dinâmica de peças disponíveis (ex.: `🌸 Flores & Folhagens (8)`).
+  - Aplicado tanto na aba **Catálogo PNG (Oficiais + Uploads)** quanto na aba **Meu Estoque**.
+
+---
+
+### 7.14. Celebre Studio — Realocação de Efeitos & Iluminação para o Painel Direito
+
+**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
+
+- **✨ Separação Conceitual (Criação à Esquerda vs. Propriedades à Direita)**:
+  - Barra lateral esquerda mantida 100% limpa e dedicada exclusivamente à criação/adição de itens no cenário (*Cenário, Estruturas, Acervo, Bexigas, Letreiros e Upload*).
+  - Controles de iluminação e atmosfera da cena integrados ao **Painel de Propriedades (Lado Direito)** quando nenhum item está selecionado, e também acessíveis via aba dedicada `✨ Iluminação` no topo do Estúdio Pro.
+  - Novo design com tipografia escura nítida (`#0f172a`), sliders dourados (`#c5a059`), porcentagens tabulares em ouro e paletas circulares para atmosfera diurna e noturna.
+
+---
+
+### 7.15. Celebre Studio — Estúdio Pro com Dock Lateral Recolhido (Slim Icons Mode)
+
+**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
+
+- **📌 Dock Lateral Recolhido (52px)**:
+  - Opção de recolher o painel direito através do botão `Recolher ▶`, transformando-o em uma régua vertical compacta com ícones (`📚 Camadas`, `🎛️ Propriedades`, `☀️ Iluminação`, `🎈 Bexigas`).
+  - Ao clicar em qualquer ícone no dock recolhido, o painel se expande instantaneamente aberto na respectiva ferramenta.
+  - Ajuste nas 4 abas do topo do painel expandido (`Camadas`, `Propriedades`, `Iluminação`, `Bexigas`), acomodando todas em 1 única linha harmoniosa sem transbordar ou cortar textos.
+
+---
+
+### 7.16. Celebre Studio — Correção do Botão Olhinho (Visibilidade de Camada 👁️ / 👁️‍🗨️)
+
+**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
+
+- **👁️ Controle Instantâneo de Visibilidade**:
+  - Correção da lógica de ocultação de elementos no canvas (`hidden: true / false` e verificação no loop de renderização do canvas).
+  - Permite ocultar e reexibir itens instantaneamente com 1 clique para comparar o cenário com e sem a peça.
+  - Feedback visual no painel de camadas: ícone `EyeOff` com destaque em vermelho suave, card translúcido com borda pontilhada e nome do item riscado com a insígnia `👁️‍🗨️ Camada Oculta`.
+
+---
+
+*Manual técnico e Resumo Executivo atualizados em 22/08/2026 — Sistema Celebre v4.2*
