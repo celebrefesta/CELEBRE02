@@ -111,6 +111,10 @@ const Dashboard = () => {
   const [filtroPeriodo, setFiltroPeriodo] = useState('mes_atual');
   const [loading, setLoading] = useState(true);
 
+  // 🎨 PROJETOS DO MOODBOARD NO DASHBOARD
+  const [projetosMoodboard, setProjetosMoodboard] = useState([]);
+  const [moodboardStats, setMoodboardStats] = useState({ total: 0, aprovados: 0, emAnalise: 0, rascunhos: 0 });
+
   // 🎯 META DE FATURAMENTO MENSAL NO DASHBOARD
   const [metaMensal, setMetaMensal] = useState(() => {
     const saved = localStorage.getItem(`meta_fin_${tenantIdLocal}`);
@@ -235,6 +239,28 @@ const Dashboard = () => {
           }
           lancDocs = lancSnap.docs.map(d => ({ id: d.id, ...d.data() }));
         } catch (eLanc) {}
+
+        // BUSCA DE PROJETOS DO MOODBOARD
+        try {
+          let qMood = query(collection(db, "projetos_moodboard"), where("userId", "==", idDaEmpresaCorreta));
+          let moodSnap = await getDocs(qMood);
+          if (moodSnap.empty) {
+            const qMoodT = query(collection(db, "projetos_moodboard"), where("tenantId", "==", idDaEmpresaCorreta));
+            const moodSnapT = await getDocs(qMoodT);
+            if (!moodSnapT.empty) moodSnap = moodSnapT;
+          }
+          const moodList = moodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          moodList.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+          setProjetosMoodboard(moodList);
+          setMoodboardStats({
+            total: moodList.length,
+            aprovados: moodList.filter(m => m.status === 'aprovado').length,
+            emAnalise: moodList.filter(m => m.status === 'em_analise').length,
+            rascunhos: moodList.filter(m => (m.status || 'rascunho') === 'rascunho').length
+          });
+        } catch (eMood) {
+          console.warn("Erro ao buscar projetos moodboard no dashboard:", eMood);
+        }
 
 
 
@@ -838,6 +864,9 @@ const Dashboard = () => {
             <button onClick={() => navigate('/cadastro-estoque')} title="Novo Item">
               <i className="fas fa-box-open"></i> ITEM
             </button>
+            <button onClick={() => navigate('/moodboard')} title="Decorador Virtual / Moodboard Studio" style={{ background: 'linear-gradient(135deg, #c5a059, #dfba73)', color: '#0f172a' }}>
+              <i className="fas fa-palette"></i> STUDIO
+            </button>
           </div>
         </div>
       </header>
@@ -1279,6 +1308,98 @@ const Dashboard = () => {
 
         </div>
       </div>
+
+      {/* 🎨 MOODBOARDS & PROJETOS DECORATIVOS RECENTES */}
+      <section className="dash-card-wide" style={{ marginTop: '16px', marginBottom: '16px' }}>
+        <div className="dash-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+            <h3 style={{ margin: 0 }}>🎨 Projetos do Moodboard Studio</h3>
+            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+              <span className="birthday-count-pill" style={{ background: '#dcfce7', color: '#15803d' }}>
+                🟢 {moodboardStats.aprovados} Aprovados
+              </span>
+              <span className="birthday-count-pill" style={{ background: '#e0f2fe', color: '#0369a1' }}>
+                🔵 {moodboardStats.emAnalise} Em Análise
+              </span>
+              <span className="birthday-count-pill" style={{ background: '#fef3c7', color: '#92400e' }}>
+                🟡 {moodboardStats.rascunhos} Rascunhos
+              </span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => navigate('/moodboard')}
+            style={{ background: 'linear-gradient(135deg, #c5a059, #dfba73)', color: '#0f172a', border: 'none', padding: '6px 14px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: '850', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+          >
+            <span>👑 Criar Novo Moodboard</span>
+          </button>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px', marginTop: '12px' }}>
+          {projetosMoodboard.length === 0 ? (
+            <div className="empty-feed" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+              <p style={{ margin: 0, fontWeight: '700', color: '#475569' }}>
+                🎨 Nenhum projeto de design criado ainda. Clique no botão acima para abrir o Studio e criar seu primeiro cenário!
+              </p>
+            </div>
+          ) : (
+            projetosMoodboard.slice(0, 4).map(proj => {
+              const stColors = {
+                rascunho: { bg: '#fef3c7', text: '#92400e', label: '🟡 Rascunho' },
+                em_analise: { bg: '#e0f2fe', text: '#0369a1', label: '🔵 Em Análise' },
+                aprovado: { bg: '#dcfce7', text: '#15803d', label: '🟢 Aprovado' },
+                em_producao: { bg: '#f3e8ff', text: '#7e22ce', label: '🟣 Em Produção' },
+                concluido: { bg: '#f1f5f9', text: '#475569', label: '⚪ Concluído' }
+              };
+              const st = stColors[proj.status] || stColors.rascunho;
+              return (
+                <div
+                  key={proj.id}
+                  onClick={() => navigate('/moodboard')}
+                  style={{
+                    background: '#ffffff',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '10px',
+                    overflow: 'hidden',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}
+                >
+                  <div style={{ height: '110px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
+                    {proj.thumbnail ? (
+                      <img src={proj.thumbnail} alt={proj.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                    ) : (
+                      <i className="fas fa-crown" style={{ color: '#c5a059', fontSize: '24px' }}></i>
+                    )}
+                    <span style={{ position: 'absolute', top: '6px', right: '6px', fontSize: '9px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: st.bg, color: st.text, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
+                      {st.label}
+                    </span>
+                    {proj.versao && proj.versao > 1 && (
+                      <span style={{ position: 'absolute', top: '6px', left: '6px', background: '#0f172a', color: '#fef08a', fontSize: '8.5px', fontWeight: 'bold', padding: '2px 5px', borderRadius: '4px', border: '1px solid #c5a059' }}>
+                        v{proj.versao}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                    <strong style={{ display: 'block', fontSize: '11.5px', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {proj.nome}
+                    </strong>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#64748b' }}>
+                      <span>{proj.clienteNome || 'Cliente Geral'}</span>
+                      <strong style={{ color: '#0f172a', fontWeight: 'bold' }}>
+                        R$ {Number(proj.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </strong>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </section>
 
       {/* MODAL ANIVERSARIANTES */}
       {modalAniversariantesAberto && (

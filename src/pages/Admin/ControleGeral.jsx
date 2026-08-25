@@ -3,7 +3,24 @@ import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { ORNAMENTOS_FESTA } from '../Moodboard/Moodboard';
 import './ControleGeral.css';
+
+// 🌿 Função auxiliar para renderizar SVG com cor dourada nos cards de admin
+const renderAdminSvgWithFill = (element, fill) => {
+  if (!element || !React.isValidElement(element)) return element;
+  const props = { ...element.props };
+  if (props.fill === 'currentColor' || !props.fill) {
+    if (props.fill !== 'none') props.fill = fill;
+  }
+  if (props.stroke === 'currentColor') {
+    props.stroke = fill;
+  }
+  if (props.children) {
+    props.children = React.Children.map(props.children, child => renderAdminSvgWithFill(child, fill));
+  }
+  return React.cloneElement(element, props);
+};
 
 const GRUPOS_CORES = [
   { id: 'todos', label: 'Todas' },
@@ -282,6 +299,20 @@ const ControleGeral = () => {
   const [novaCatForm, setNovaCatForm] = useState({ nome: '', icone: '🌸' });
   const [catEditandoId, setCatEditandoId] = useState(null);
   const [catEditandoForm, setCatEditandoForm] = useState({ nome: '', icone: '' });
+
+  // 🌿 Gestão de Ícones & Apliques Vetoriais do Moodboard (Super Admin)
+  const [subAbaMoodboard, setSubAbaMoodboard] = useState('cenarios'); // 'cenarios' | 'ornamentos'
+  const [ornamentosCustom, setOrnamentosCustom] = useState({});
+  const [modalNovoOrnamentoAberto, setModalNovoOrnamentoAberto] = useState(false);
+  const [novoOrnamentoForm, setNovoOrnamentoForm] = useState({
+    nome: '',
+    emoji: '✨',
+    viewBox: '0 0 100 100',
+    d: '',
+    svgContent: ''
+  });
+  const [salvandoOrnamento, setSalvandoOrnamento] = useState(false);
+  const [buscaOrnamento, setBuscaOrnamento] = useState('');
 
   // Controle de Modais de Edição/Exclusão de Clientes
   const [membroEdicao, setMembroEdicao] = useState(null);
@@ -610,10 +641,22 @@ const ControleGeral = () => {
     }
   };
 
+  const carregarOrnamentosMoodboard = async () => {
+    try {
+      const snap = await getDoc(doc(db, "configuracoes_globais", "moodboard_ornamentos"));
+      if (snap.exists() && snap.data()?.ornamentos) {
+        setOrnamentosCustom(snap.data().ornamentos);
+      }
+    } catch (err) {
+      console.error("Erro ao carregar ornamentos do moodboard:", err);
+    }
+  };
+
   const carregarItensMoodboard = async () => {
     setLoadingMoodboard(true);
     try {
       await carregarCategoriasMoodboard();
+      await carregarOrnamentosMoodboard();
       const snap = await getDocs(collection(db, "moodboard_elementos"));
       const lista = snap.docs.map(docSnap => ({
         id: docSnap.id,
@@ -624,6 +667,87 @@ const ControleGeral = () => {
       console.error("Erro ao carregar elementos do moodboard:", err);
     } finally {
       setLoadingMoodboard(false);
+    }
+  };
+
+  const handleSalvarNovoOrnamento = async (e) => {
+    e.preventDefault();
+    if (!novoOrnamentoForm.nome.trim()) return alert("Por favor, digite o nome do ícone/aplique!");
+    if (!novoOrnamentoForm.d.trim() && !novoOrnamentoForm.svgContent.trim()) {
+      return alert("Por favor, cole o código SVG ou o caminho 'd' do vetor!");
+    }
+
+    const slug = novoOrnamentoForm.nome.trim()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+      .replace(/[^a-zA-Z0-9]/g, '_')
+      .toLowerCase();
+    const id = slug || `orn_${Date.now()}`;
+
+    let parsedViewBox = (novoOrnamentoForm.viewBox || '0 0 100 100').trim();
+    let pathD = novoOrnamentoForm.d.trim();
+    let svgRaw = novoOrnamentoForm.svgContent.trim();
+
+    // Se colou código SVG completo
+    if (svgRaw && svgRaw.includes('<svg')) {
+      const vbMatch = svgRaw.match(/viewBox=["']([^"']+)["']/i);
+      if (vbMatch && vbMatch[1]) {
+        parsedViewBox = vbMatch[1];
+      }
+      const dMatch = svgRaw.match(/<path[^>]*\sd=["']([^"']+)["']/i);
+      if (dMatch && dMatch[1]) {
+        pathD = dMatch[1];
+        svgRaw = '';
+      } else {
+        const innerMatch = svgRaw.match(/<svg[^>]*>([\s\S]*?)<\/svg>/i);
+        if (innerMatch && innerMatch[1]) {
+          svgRaw = innerMatch[1];
+        }
+      }
+    }
+
+    const novoOrnamento = {
+      id,
+      nome: novoOrnamentoForm.nome.trim(),
+      emoji: (novoOrnamentoForm.emoji || '✨').trim(),
+      viewBox: parsedViewBox,
+      d: pathD || undefined,
+      svgContent: svgRaw || undefined,
+      criadoEm: new Date().toISOString()
+    };
+
+    const atualizados = { ...ornamentosCustom, [id]: novoOrnamento };
+    setSalvandoOrnamento(true);
+    try {
+      await setDoc(doc(db, "configuracoes_globais", "moodboard_ornamentos"), {
+        ornamentos: atualizados,
+        atualizadoEm: new Date().toISOString()
+      }, { merge: true });
+      setOrnamentosCustom(atualizados);
+      setNovoOrnamentoForm({ nome: '', emoji: '✨', viewBox: '0 0 100 100', d: '', svgContent: '' });
+      setModalNovoOrnamentoAberto(false);
+      alert(`🎉 Ícone / Aplique "${novoOrnamento.nome}" adicionado com sucesso! Já está disponível para todas as decoradoras.`);
+    } catch (err) {
+      console.error("Erro ao salvar ornamento:", err);
+      alert("Erro ao salvar ornamento.");
+    } finally {
+      setSalvandoOrnamento(false);
+    }
+  };
+
+  const handleExcluirOrnamento = async (ornId, nome) => {
+    if (!window.confirm(`Tem certeza que deseja excluir o ícone/aplique "${nome}" do sistema?`)) return;
+    const copia = { ...ornamentosCustom };
+    delete copia[ornId];
+    try {
+      await setDoc(doc(db, "configuracoes_globais", "moodboard_ornamentos"), {
+        ornamentos: copia,
+        atualizadoEm: new Date().toISOString()
+      }, { merge: true });
+      setOrnamentosCustom(copia);
+      alert("Ícone excluído com sucesso!");
+    } catch (err) {
+      console.error("Erro ao excluir ornamento:", err);
+      alert("Erro ao excluir ornamento.");
     }
   };
 
@@ -996,18 +1120,272 @@ const ControleGeral = () => {
       {abaPrincipal === 'moodboard' ? (
         <div className="cg-moodboard-manager">
           
-          {/* 📊 KPI CARDS DO MOODBOARD */}
-          <div className="cg-mb-stats-row">
-            <div 
-              className={`cg-mb-stat-box ${filtroStatusMoodboard === 'globais' ? 'active-filter' : ''}`} 
-              onClick={() => setFiltroStatusMoodboard(filtroStatusMoodboard === 'globais' ? 'todos' : 'globais')}
+          {/* 🌟 NAVEGADOR DE SUB-MÓDULOS DO MOODBOARD */}
+          <div className="cg-moodboard-subtabs-nav" style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap' }}>
+            <button
+              type="button"
+              className={`cg-subtab-pill ${subAbaMoodboard === 'cenarios' ? 'active' : ''}`}
+              onClick={() => setSubAbaMoodboard('cenarios')}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '10px',
+                border: subAbaMoodboard === 'cenarios' ? '2px solid #c5a059' : '1px solid #e2e8f0',
+                background: subAbaMoodboard === 'cenarios' ? 'linear-gradient(135deg, #1e293b, #0f172a)' : '#ffffff',
+                color: subAbaMoodboard === 'cenarios' ? '#c5a059' : '#475569',
+                fontWeight: '700',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: subAbaMoodboard === 'cenarios' ? '0 4px 12px rgba(197, 160, 89, 0.2)' : 'none',
+                transition: 'all 0.2s ease'
+              }}
             >
-              <div className="cg-mb-stat-icon gold"><i className="fas fa-crown"></i></div>
-              <div className="cg-mb-stat-info">
-                <span className="cg-mb-stat-val">{oficiaisTotais}</span>
-                <span className="cg-mb-stat-lbl">Itens Oficiais Globais</span>
+              <i className="fas fa-layer-group"></i> 🖼️ Acervo de Cenários & Peças PNG
+              <span style={{
+                background: subAbaMoodboard === 'cenarios' ? 'rgba(197, 160, 89, 0.2)' : '#f1f5f9',
+                color: subAbaMoodboard === 'cenarios' ? '#c5a059' : '#64748b',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '11px',
+                fontWeight: 'bold'
+              }}>
+                {itensMoodboard.length}
+              </span>
+            </button>
+
+            <button
+              type="button"
+              className={`cg-subtab-pill ${subAbaMoodboard === 'ornamentos' ? 'active' : ''}`}
+              onClick={() => setSubAbaMoodboard('ornamentos')}
+              style={{
+                padding: '10px 20px',
+                borderRadius: '10px',
+                border: subAbaMoodboard === 'ornamentos' ? '2px solid #c5a059' : '1px solid #e2e8f0',
+                background: subAbaMoodboard === 'ornamentos' ? 'linear-gradient(135deg, #1e293b, #0f172a)' : '#ffffff',
+                color: subAbaMoodboard === 'ornamentos' ? '#c5a059' : '#475569',
+                fontWeight: '700',
+                fontSize: '13px',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                boxShadow: subAbaMoodboard === 'ornamentos' ? '0 4px 12px rgba(197, 160, 89, 0.2)' : 'none',
+                transition: 'all 0.2s ease'
+              }}
+            >
+              <i className="fas fa-crown"></i> 🌿 Ícones & Apliques Vetoriais (Letreiros)
+              <span style={{
+                background: subAbaMoodboard === 'ornamentos' ? 'rgba(197, 160, 89, 0.2)' : '#f1f5f9',
+                color: subAbaMoodboard === 'ornamentos' ? '#c5a059' : '#64748b',
+                padding: '2px 8px',
+                borderRadius: '12px',
+                fontSize: '11px',
+                fontWeight: 'bold'
+              }}>
+                {Object.keys(ORNAMENTOS_FESTA).length + Object.keys(ornamentosCustom).length}
+              </span>
+            </button>
+          </div>
+
+          {subAbaMoodboard === 'ornamentos' ? (
+            <div className="cg-ornaments-manager-section">
+              {/* KPI STATS ORNAMENTOS */}
+              <div className="cg-mb-stats-row">
+                <div className="cg-mb-stat-box">
+                  <div className="cg-mb-stat-icon gold"><i className="fas fa-crown"></i></div>
+                  <div className="cg-mb-stat-info">
+                    <span className="cg-mb-stat-val">{Object.keys(ORNAMENTOS_FESTA).length + Object.keys(ornamentosCustom).length}</span>
+                    <span className="cg-mb-stat-lbl">Total de Ícones Padrão</span>
+                  </div>
+                </div>
+
+                <div className="cg-mb-stat-box">
+                  <div className="cg-mb-stat-icon blue"><i className="fas fa-shapes"></i></div>
+                  <div className="cg-mb-stat-info">
+                    <span className="cg-mb-stat-val">{Object.keys(ORNAMENTOS_FESTA).length}</span>
+                    <span className="cg-mb-stat-lbl">Ícones Nativos do Sistema</span>
+                  </div>
+                </div>
+
+                <div className="cg-mb-stat-box">
+                  <div className="cg-mb-stat-icon orange"><i className="fas fa-plus-circle"></i></div>
+                  <div className="cg-mb-stat-info">
+                    <span className="cg-mb-stat-val">{Object.keys(ornamentosCustom).length}</span>
+                    <span className="cg-mb-stat-lbl">Novos Ícones Criados</span>
+                  </div>
+                </div>
+
+                <div className="cg-mb-stat-action">
+                  <button className="cg-btn-add-global-primary" onClick={() => setModalNovoOrnamentoAberto(true)}>
+                    <i className="fas fa-plus-circle"></i> + Cadastrar Novo Ícone / Aplique
+                  </button>
+                </div>
+              </div>
+
+              {/* BARRA DE BUSCA DE ÍCONES */}
+              <div className="cg-toolbar" style={{ marginTop: '16px', marginBottom: '16px' }}>
+                <div className="cg-search-box" style={{ maxWidth: '400px' }}>
+                  <i className="fas fa-search"></i>
+                  <input
+                    type="text"
+                    placeholder="Buscar ícone por nome..."
+                    value={buscaOrnamento}
+                    onChange={(e) => setBuscaOrnamento(e.target.value)}
+                  />
+                  {buscaOrnamento && (
+                    <button className="cg-search-clear" onClick={() => setBuscaOrnamento('')}>
+                      <i className="fas fa-times"></i>
+                    </button>
+                  )}
+                </div>
+                <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fas fa-info-circle" style={{ color: '#c5a059' }}></i>
+                  Todos os ícones cadastrados aqui ficam disponíveis instantaneamente para todas as usuárias no Moodboard na aba <strong>Texto & Letreiros → Ícones</strong>.
+                </div>
+              </div>
+
+              {/* GRID DE CARDS DE ÍCONES */}
+              <div className="cg-ornaments-grid" style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))',
+                gap: '16px',
+                marginTop: '16px'
+              }}>
+                {Object.entries({ ...ORNAMENTOS_FESTA, ...ornamentosCustom })
+                  .filter(([key, orn]) => {
+                    if (!buscaOrnamento) return true;
+                    return (orn.nome || '').toLowerCase().includes(buscaOrnamento.toLowerCase());
+                  })
+                  .map(([key, orn]) => {
+                    const isCustom = !!ornamentosCustom[key];
+                    return (
+                      <div
+                        key={key}
+                        className="cg-ornament-admin-card"
+                        style={{
+                          background: '#ffffff',
+                          borderRadius: '12px',
+                          border: '1px solid #e2e8f0',
+                          padding: '16px',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          position: 'relative',
+                          boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        {/* BADGE DE TIPO */}
+                        <span style={{
+                          position: 'absolute',
+                          top: '10px',
+                          left: '10px',
+                          fontSize: '10px',
+                          fontWeight: 'bold',
+                          padding: '2px 6px',
+                          borderRadius: '6px',
+                          background: isCustom ? '#fef3c7' : '#f1f5f9',
+                          color: isCustom ? '#b45309' : '#64748b'
+                        }}>
+                          {isCustom ? '⭐ Personalizado' : '🔒 Nativo'}
+                        </span>
+
+                        {/* PREVIEW DO VETOR DOURADO */}
+                        <div style={{
+                          width: '100px',
+                          height: '100px',
+                          marginTop: '20px',
+                          marginBottom: '12px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          background: '#f8fafc',
+                          borderRadius: '10px',
+                          padding: '10px'
+                        }}>
+                          <svg
+                            width="100%"
+                            height="100%"
+                            viewBox={orn.viewBox || "0 0 100 100"}
+                            style={{ filter: 'drop-shadow(1px 2px 2px rgba(0,0,0,0.25))' }}
+                          >
+                            <defs>
+                              <linearGradient id={`adm-gold-${key}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#bf953f" />
+                                <stop offset="50%" stopColor="#fcf6ba" />
+                                <stop offset="100%" stopColor="#aa771c" />
+                              </linearGradient>
+                            </defs>
+                            <g fill={`url(#adm-gold-${key})`}>
+                              {orn.path
+                                ? renderAdminSvgWithFill(orn.path, `url(#adm-gold-${key})`)
+                                : orn.d
+                                  ? <path d={orn.d} fill={`url(#adm-gold-${key})`} />
+                                  : orn.svgContent
+                                    ? <g dangerouslySetInnerHTML={{ __html: orn.svgContent.replace(/currentColor/g, `url(#adm-gold-${key})`) }} />
+                                    : null}
+                            </g>
+                          </svg>
+                        </div>
+
+                        {/* NOME E EMOJI */}
+                        <div style={{ textAlign: 'center', width: '100%', marginBottom: '10px' }}>
+                          <strong style={{ fontSize: '13px', color: '#1e293b', display: 'block' }}>
+                            {orn.emoji || '✨'} {orn.nome}
+                          </strong>
+                          <span style={{ fontSize: '11px', color: '#94a3b8' }}>ID: {key}</span>
+                        </div>
+
+                        {/* AÇÃO (EXCLUIR SE FOR CUSTOM) */}
+                        {isCustom ? (
+                          <button
+                            type="button"
+                            onClick={() => handleExcluirOrnamento(key, orn.nome)}
+                            style={{
+                              marginTop: 'auto',
+                              width: '100%',
+                              padding: '6px 12px',
+                              borderRadius: '6px',
+                              border: '1px solid #fee2e2',
+                              background: '#fef2f2',
+                              color: '#dc2626',
+                              fontSize: '11px',
+                              fontWeight: 'bold',
+                              cursor: 'pointer',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              gap: '6px'
+                            }}
+                          >
+                            <i className="fas fa-trash-alt"></i> Excluir Ícone
+                          </button>
+                        ) : (
+                          <div style={{ marginTop: 'auto', fontSize: '11px', color: '#94a3b8', padding: '6px 0' }}>
+                            <i className="fas fa-lock" style={{ fontSize: '9px' }}></i> Protegido pelo Sistema
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
               </div>
             </div>
+          ) : (
+            <>
+              {/* 📊 KPI CARDS DO MOODBOARD */}
+              <div className="cg-mb-stats-row">
+                <div 
+                  className={`cg-mb-stat-box ${filtroStatusMoodboard === 'globais' ? 'active-filter' : ''}`} 
+                  onClick={() => setFiltroStatusMoodboard(filtroStatusMoodboard === 'globais' ? 'todos' : 'globais')}
+                >
+                  <div className="cg-mb-stat-icon gold"><i className="fas fa-crown"></i></div>
+                  <div className="cg-mb-stat-info">
+                    <span className="cg-mb-stat-val">{oficiaisTotais}</span>
+                    <span className="cg-mb-stat-lbl">Itens Oficiais Globais</span>
+                  </div>
+                </div>
 
             <div 
               className={`cg-mb-stat-box ${sugestoesPendentes > 0 ? 'highlight-alert' : ''} ${filtroStatusMoodboard === 'sugestoes' ? 'active-filter' : ''}`}
@@ -1397,8 +1775,10 @@ const ControleGeral = () => {
               })}
             </div>
           )}
-        </div>
-      ) : (
+        </>
+      )}
+    </div>
+  ) : (
         <>
           {/* KPI CARDS (COM FILTRO DE VENCENDO) */}
           <div className="cg-kpi-row">
@@ -2637,6 +3017,158 @@ const ControleGeral = () => {
                 Fechar
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🌿 MODAL: CADASTRAR NOVO ÍCONE / APLIQUE VETORIAL */}
+      {modalNovoOrnamentoAberto && (
+        <div className="cg-modal-overlay" onClick={() => setModalNovoOrnamentoAberto(false)}>
+          <div className="cg-modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '680px', width: '95%' }}>
+            <div className="cg-modal-header">
+              <h2><i className="fas fa-crown"></i> Cadastrar Novo Ícone / Aplique Vetorial</h2>
+              <button className="cg-modal-close" onClick={() => setModalNovoOrnamentoAberto(false)}>✕</button>
+            </div>
+
+            <form onSubmit={handleSalvarNovoOrnamento}>
+              <div className="cg-modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <p style={{ margin: 0, fontSize: '12px', color: '#64748b', lineHeight: 1.4 }}>
+                  Adicione novos ícones e apliques para que fiquem disponíveis como padrão no catálogo de Letreiros & Ícones para todas as usuárias do Celebre.
+                </p>
+
+                {/* Linha 1: Nome + Emoji + ViewBox */}
+                <div style={{ display: 'grid', gridTemplateColumns: '80px 1fr 140px', gap: '12px' }}>
+                  <div className="cg-form-group">
+                    <label className="cg-form-label">Emoji:</label>
+                    <input
+                      type="text"
+                      className="cg-form-input"
+                      style={{ textAlign: 'center', fontSize: '16px' }}
+                      value={novoOrnamentoForm.emoji}
+                      onChange={e => setNovoOrnamentoForm({ ...novoOrnamentoForm, emoji: e.target.value })}
+                      placeholder="✨"
+                      maxLength={4}
+                    />
+                  </div>
+
+                  <div className="cg-form-group">
+                    <label className="cg-form-label">Nome do Ícone / Aplique:</label>
+                    <input
+                      type="text"
+                      className="cg-form-input"
+                      value={novoOrnamentoForm.nome}
+                      onChange={e => setNovoOrnamentoForm({ ...novoOrnamentoForm, nome: e.target.value })}
+                      placeholder="Ex: Ursinho Real, Borboleta 3D, Anjo..."
+                      required
+                    />
+                  </div>
+
+                  <div className="cg-form-group">
+                    <label className="cg-form-label">ViewBox SVG:</label>
+                    <input
+                      type="text"
+                      className="cg-form-input"
+                      value={novoOrnamentoForm.viewBox}
+                      onChange={e => setNovoOrnamentoForm({ ...novoOrnamentoForm, viewBox: e.target.value })}
+                      placeholder="0 0 100 100"
+                    />
+                  </div>
+                </div>
+
+                {/* Linha 2: Código SVG ou Caminho Path */}
+                <div className="cg-form-group">
+                  <label className="cg-form-label">
+                    Código SVG ou Caminho Vetorial (Path 'd'):
+                  </label>
+                  <textarea
+                    className="cg-form-textarea"
+                    style={{ fontFamily: 'monospace', fontSize: '12px', minHeight: '120px', width: '100%', resize: 'vertical' }}
+                    value={novoOrnamentoForm.d || novoOrnamentoForm.svgContent}
+                    onChange={e => {
+                      const val = e.target.value;
+                      if (val.includes('<svg') || val.includes('<g') || val.includes('<polygon') || val.includes('<circle')) {
+                        setNovoOrnamentoForm({ ...novoOrnamentoForm, svgContent: val, d: '' });
+                      } else {
+                        setNovoOrnamentoForm({ ...novoOrnamentoForm, d: val, svgContent: '' });
+                      }
+                    }}
+                    placeholder="Cole aqui o código SVG completo (<svg>...</svg>) OU a tag <path d='...' /> OU apenas o caminho d='M10,20 ...'"
+                    required
+                  />
+                  <small style={{ color: '#64748b', fontSize: '11px', marginTop: '4px' }}>
+                    💡 Dica: Você pode copiar o SVG do Canva, Figma, Freepik ou Flaticon e colar aqui diretamente.
+                  </small>
+                </div>
+
+                {/* Linha 3: Live Preview Instantâneo */}
+                <div style={{
+                  background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                  borderRadius: '10px',
+                  padding: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '20px'
+                }}>
+                  <div style={{
+                    width: '80px',
+                    height: '80px',
+                    background: 'rgba(255,255,255,0.05)',
+                    borderRadius: '8px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    border: '1px dashed rgba(197, 160, 89, 0.4)',
+                    flexShrink: 0
+                  }}>
+                    {novoOrnamentoForm.d || novoOrnamentoForm.svgContent ? (
+                      <svg width="60" height="60" viewBox={novoOrnamentoForm.viewBox || "0 0 100 100"}>
+                        <defs>
+                          <linearGradient id="modal-preview-gold" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" stopColor="#bf953f" />
+                            <stop offset="50%" stopColor="#fcf6ba" />
+                            <stop offset="100%" stopColor="#aa771c" />
+                          </linearGradient>
+                        </defs>
+                        {novoOrnamentoForm.d ? (
+                          <path d={novoOrnamentoForm.d} fill="url(#modal-preview-gold)" />
+                        ) : (
+                          <g dangerouslySetInnerHTML={{
+                            __html: (novoOrnamentoForm.svgContent || '')
+                              .replace(/<svg[^>]*>/i, '')
+                              .replace(/<\/svg>/i, '')
+                              .replace(/currentColor/g, 'url(#modal-preview-gold)')
+                              .replace(/fill="[^"]*"/g, 'fill="url(#modal-preview-gold)"')
+                          }} />
+                        )}
+                      </svg>
+                    ) : (
+                      <span style={{ color: 'rgba(255,255,255,0.4)', fontSize: '11px', textAlign: 'center' }}>
+                        Preview do Vetor
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ color: '#ffffff' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '14px', color: '#c5a059', marginBottom: '4px' }}>
+                      {novoOrnamentoForm.emoji || '✨'} {novoOrnamentoForm.nome || 'Nome do Ícone'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: '#94a3b8' }}>
+                      {novoOrnamentoForm.d || novoOrnamentoForm.svgContent
+                        ? '✨ Vetor reconhecido! Veja ao lado como ele será renderizado em Acrílico Dourado.'
+                        : 'Cole o código ou caminho do vetor acima para visualizar a prévia instantânea.'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="cg-modal-footer">
+                <button type="button" className="cg-btn-cancel" onClick={() => setModalNovoOrnamentoAberto(false)}>
+                  Cancelar
+                </button>
+                <button type="submit" className="cg-btn-save" disabled={salvandoOrnamento}>
+                  {salvandoOrnamento ? <><i className="fas fa-spinner fa-spin"></i> Salvando...</> : <><i className="fas fa-check"></i> Salvar Ícone no Sistema</>}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

@@ -121,14 +121,43 @@ const PRESETS_CHAO_PADRAO = [];
 // 🏞️ Presets Nativos de Ambientes Inteiros / Salões de Festa (100% de Fundo)
 const PRESETS_AMBIENTE_PADRAO = [];
 
-// 🎈 Paletas de Balões Profissionais para Decoração
+// 🎈 Paletas de Balões Profissionais para Decoração & Double Stuffed
 const PALETAS_BALOES = [
   { nome: 'Rose Gold & Nude Chic', cores: ['#b76e79', '#dfb6b2', '#f4e6d4', '#c5a059', '#ffffff'] },
+  { nome: 'Eucalipto & Sálvia (Double Stuffed)', cores: ['#3b4d3c', '#5e7153', '#8fa189', '#c4b59f', '#f2ede4'] },
+  { nome: 'Terracota & Areia Aveludado (Double Stuffed)', cores: ['#9c4a2f', '#c97a56', '#d69f7e', '#e3c4a8', '#f5eee6'] },
+  { nome: 'Mocha & Latte Boho (Double Stuffed)', cores: ['#4a3728', '#785942', '#a07855', '#cca582', '#ede1d1'] },
   { nome: 'Candy Macaron Pastel', cores: ['#ffb7b2', '#b5ead7', '#c7ceea', '#ffdac1', '#e2f0cb'] },
   { nome: 'Safari & Eucalipto', cores: ['#c86446', '#e09f67', '#6b8e23', '#435d43', '#f7f2e7'] },
   { nome: 'Navy Blue & Ouro Nobre', cores: ['#0f172a', '#1e3a8a', '#c5a059', '#94a3b8', '#ffffff'] },
   { nome: 'Black & Gold Luxury', cores: ['#090d16', '#262626', '#c5a059', '#f59e0b', '#ffffff'] },
-  { nome: 'Lavanda & Lilás Encantado', cores: ['#9d4edd', '#c77dff', '#e0aaff', '#d4af37', '#ffffff'] }
+  { nome: 'Lavanda & Lilás Imperial', cores: ['#54416d', '#8b68aa', '#ab92c2', '#d4c4b5', '#ffffff'] }
+];
+
+// 🎨 Paletas de Cores de Eventos & Festas para Criação de Identidade Visual
+export const PALETAS_EVENTO_PRESETS = [
+  { nome: 'Nude & Terracota', cores: ['#7c2d12', '#c2410c', '#f5ebe0', '#d7b899', '#ffffff'] },
+  { nome: 'Rose Gold Glam', cores: ['#c5a059', '#e2b1b8', '#fce7f3', '#ffffff', '#0f172a'] },
+  { nome: 'Bosque Safari', cores: ['#14532d', '#22c55e', '#bbf7d0', '#78350f', '#fef3c7'] },
+  { nome: 'Azul & Ouro Real', cores: ['#1e3a8a', '#3b82f6', '#c5a059', '#fef08a', '#ffffff'] },
+  { nome: 'Candy Colors', cores: ['#fbcfe8', '#bfdbfe', '#fef08a', '#bbf7d0', '#e9d5ff'] },
+  { nome: 'Preto & Ouro Luxo', cores: ['#0f172a', '#1e293b', '#c5a059', '#dfba73', '#ffffff'] },
+  { nome: 'Jardim Encantado', cores: ['#ec4899', '#a855f7', '#38bdf8', '#fef08a', '#ffffff'] },
+  { nome: 'Chá Revelação Suave', cores: ['#f472b6', '#38bdf8', '#ffffff', '#fef08a', '#e2e8f0'] }
+];
+
+// 💡 Sugestões Inteligentes de Temas de Festas & Palavras-chave do Acervo
+export const TEMAS_MOODBOARD_SUGESTOES = [
+  { tema: 'Safari', icon: '🦁', tags: ['safari', 'jeep', 'leao', 'girafa', 'folhagem', 'madeira', 'verde', 'selva'] },
+  { tema: 'Chá Revelação', icon: '🍼', tags: ['ursinho', 'revelacao', 'rosa', 'azul', 'arco', 'nuvem', 'balao'] },
+  { tema: 'Jardim', icon: '🌸', tags: ['flores', 'borboleta', 'jardim', 'verde', 'rosa', 'arco'] },
+  { tema: 'Circo', icon: '🎪', tags: ['circo', 'palhaco', 'tendinha', 'vermelho', 'amarelo', 'azul', 'listrado'] },
+  { tema: 'Casamento', icon: '💍', tags: ['romano', 'cilindro', 'dourado', 'branco', 'flores', 'acrilico'] },
+  { tema: '15 Anos', icon: '👑', tags: ['neon', 'shimmer', 'glamour', 'prata', 'dourado', 'portal'] },
+  { tema: 'Dinossauros', icon: '🦖', tags: ['dino', 'jurassic', 'folhas', 'tronco', 'verde', 'terracota'] },
+  { tema: 'Boteco', icon: '🍺', tags: ['barril', 'lousa', 'madeira', 'bar', 'chopp', 'boteco'] },
+  { tema: 'Sereia / Mar', icon: '🧜‍♀️', tags: ['concha', 'sereia', 'mar', 'lilas', 'azul', 'perola'] },
+  { tema: 'Batizado', icon: '🕊️', tags: ['anjo', 'branco', 'dourado', 'cruz', 'romano', 'pomba'] }
 ];
 
 // 🎈 Galeria de Arcos & Cenografia carregada dinamicamente do Firestore (moodboard_elementos)
@@ -147,7 +176,11 @@ const GuirlandaBaloesRealista = ({
   estiloPortal = 'espiral',
   coberturaAro = 'meio_aro',
   estiloColuna = 'organica',
-  densidadeCluster = 'cheio'
+  densidadeCluster = 'cheio',
+  espacamentoBaloes = 26,
+  calibreBalao = 18,
+  distanciaArcoDuplo = 40,
+  proporcaoMinis = 'medio'
 }) => {
 
   // 0. 🌊 GERADOR PROCEDURAL DINÂMICO & CUSTOMIZÁVEL DE GUIRLANDAS (Modelador Superior / Mesa)
@@ -161,7 +194,7 @@ const GuirlandaBaloesRealista = ({
     const curv = Number(curvatura ?? 30);
     const ond = Number(ondulacao ?? 25);
     const vol = volume || 'organico';
-    const tam = Number(tamanhoBalao || 24);
+    const tam = Number(calibreBalao || tamanhoBalao || 24);
     const currentSeed = Number(seed || 0);
 
     const pseudoRand = (i, offset = 0) => {
@@ -243,10 +276,9 @@ const GuirlandaBaloesRealista = ({
     return { baloes, viewBoxW: W, viewBoxH: H };
   };
 
-  // 1. 🏛️ ARCO PORTAL DE ENTRADA (Romano, Retangular, Circular 360°, Aberto)
+  // 1. 🏛️ ARCO PORTAL DE ENTRADA (Romano, Retangular, Em L, Duplo, S-Curve, Boho, 360°, Aberto)
   const gerarArcoClassicoPortal = () => {
     const baloes = [];
-    const rBalao = 18;
     const clusters = [];
     const fmt = formatoPortal || 'romano';
     const est = estiloPortal || 'espiral';
@@ -254,23 +286,111 @@ const GuirlandaBaloesRealista = ({
     const W = 360;
     const H = 340;
 
+    // Configurações Dinâmicas de Espaçamento e Calibre
+    const dens = Math.max(16, Math.min(42, Number(espacamentoBaloes) || 26));
+    const rBalao = Math.max(12, Math.min(32, Number(calibreBalao) || (est === 'organico' ? 22 : 18)));
+    const distDuplo = Math.max(20, Math.min(65, Number(distanciaArcoDuplo) || 40));
+
     if (fmt === 'retangular') {
-      // ⬛ PORTAL RETANGULAR / QUADRADO (Colunas Retas + Topo Reto 90°)
-      for (let i = 0; i < 9; i++) {
-        clusters.push({ x: 50, y: 310 - i * 28, clusterIdx: i });
+      // ⬛ PORTAL RETANGULAR / QUADRADO (Colunas Retas + Topo Reto 90° Totalmente Nivelados)
+      const numCol = Math.max(5, Math.round((310 - 55) / dens) + 1);
+      const numTop = Math.max(5, Math.round((310 - 50) / dens) + 1);
+
+      // Coluna Esquerda: sobe do piso (y=310) até o canto superior (y=55)
+      for (let i = 0; i < numCol; i++) {
+        const y = 310 - i * ((310 - 55) / (numCol - 1));
+        clusters.push({ x: 50, y: Math.round(y), clusterIdx: clusters.length });
       }
-      for (let i = 1; i <= 9; i++) {
-        clusters.push({ x: 50 + i * 26, y: 55, clusterIdx: 9 + i });
+      // Viga Superior: do canto esquerdo (x=50) até o canto direito (x=310)
+      for (let i = 1; i < numTop; i++) {
+        const x = 50 + i * ((310 - 50) / (numTop - 1));
+        clusters.push({ x: Math.round(x), y: 55, clusterIdx: clusters.length });
       }
-      for (let i = 1; i < 9; i++) {
-        clusters.push({ x: 310, y: 55 + i * 28, clusterIdx: 19 + i });
+      // Coluna Direita: desce do canto superior direito até o piso (y=310)
+      for (let i = 1; i < numCol; i++) {
+        const y = 55 + i * ((310 - 55) / (numCol - 1));
+        clusters.push({ x: 310, y: Math.round(y), clusterIdx: clusters.length });
+      }
+    } else if (fmt === 'em_l') {
+      // 🎀 ARCO EM "L" INVERTIDO (Abraçando Painéis - Coluna Lateral + Topo Orgânico)
+      const numCol = Math.max(5, Math.round((310 - 95) / dens) + 1);
+      const numCurve = Math.max(4, Math.round((Math.PI * 0.5 * 45) / dens));
+      const numTop = Math.max(4, Math.round((290 - 95) / dens));
+
+      // Sobe pela coluna esquerda de y=310 até y=95 em x=50
+      for (let i = 0; i < numCol; i++) {
+        const y = 310 - i * ((310 - 95) / (numCol - 1));
+        clusters.push({ x: 50, y: Math.round(y), clusterIdx: clusters.length });
+      }
+      // Curva de canto suave (de x=50, y=95 até x=95, y=50)
+      for (let i = 1; i <= numCurve; i++) {
+        const angle = Math.PI - (i / numCurve) * (Math.PI * 0.5);
+        clusters.push({
+          x: Math.round(95 + 45 * Math.cos(angle)),
+          y: Math.round(95 - 45 * Math.sin(angle)),
+          clusterIdx: clusters.length
+        });
+      }
+      // Travessa superior até x=290
+      for (let i = 1; i <= numTop; i++) {
+        const x = 95 + i * ((290 - 95) / numTop);
+        clusters.push({ x: Math.round(x), y: 50, clusterIdx: clusters.length });
+      }
+    } else if (fmt === 'duplo_paralelo') {
+      // ✨ ARCO DUPLO PARALELO (2 Camadas Concêntricas com Espaçamento Regulável)
+      const numCol = Math.max(4, Math.round((310 - 145) / dens));
+      const numCurve = Math.max(8, Math.round((Math.PI * 135) / dens));
+
+      // 1. Arco Externo
+      const extR = 135;
+      const extCenterY = 145;
+      for (let i = 0; i < numCol; i++) {
+        const y = 310 - i * ((310 - extCenterY) / numCol);
+        clusters.push({ x: 45, y: Math.round(y), clusterIdx: clusters.length });
+      }
+      for (let i = 0; i <= numCurve; i++) {
+        const angle = Math.PI - (i / numCurve) * Math.PI;
+        clusters.push({
+          x: Math.round(180 + extR * Math.cos(angle)),
+          y: Math.round(extCenterY - extR * Math.sin(angle)),
+          clusterIdx: clusters.length
+        });
+      }
+      for (let i = 1; i <= numCol; i++) {
+        const y = extCenterY + i * ((310 - extCenterY) / numCol);
+        clusters.push({ x: 315, y: Math.round(y), clusterIdx: clusters.length });
+      }
+
+      // 2. Arco Interno (Com distância regulável distDuplo)
+      const intR = Math.max(45, extR - distDuplo);
+      const intCenterY = extCenterY + distDuplo * 0.15;
+      const intLeftX = 45 + distDuplo;
+      const intRightX = 315 - distDuplo;
+      const numColInt = Math.max(3, Math.round((310 - intCenterY) / dens));
+      const numCurveInt = Math.max(6, Math.round((Math.PI * intR) / dens));
+
+      for (let i = 0; i < numColInt; i++) {
+        const y = 310 - i * ((310 - intCenterY) / numColInt);
+        clusters.push({ x: Math.round(intLeftX), y: Math.round(y), clusterIdx: clusters.length });
+      }
+      for (let i = 0; i <= numCurveInt; i++) {
+        const angle = Math.PI - (i / numCurveInt) * Math.PI;
+        clusters.push({
+          x: Math.round(180 + intR * Math.cos(angle)),
+          y: Math.round(intCenterY - intR * Math.sin(angle)),
+          clusterIdx: clusters.length
+        });
+      }
+      for (let i = 1; i <= numColInt; i++) {
+        const y = intCenterY + i * ((310 - intCenterY) / numColInt);
+        clusters.push({ x: Math.round(intRightX), y: Math.round(y), clusterIdx: clusters.length });
       }
     } else if (fmt === 'circular_fechado') {
       // ⭕ ARO / PORTAL CIRCULAR 360° FECHADO
       const centerX = 180;
       const centerY = 170;
       const radius = 135;
-      const total = 28;
+      const total = Math.max(16, Math.round((2 * Math.PI * radius) / dens));
       for (let i = 0; i < total; i++) {
         const angle = (i / total) * Math.PI * 2;
         clusters.push({
@@ -281,61 +401,92 @@ const GuirlandaBaloesRealista = ({
       }
     } else if (fmt === 'aberto_assimetrico') {
       // 🚪 PORTAL ABERTO / ASSIMÉTRICO (Passarela moderna)
-      for (let i = 0; i < 11; i++) {
-        clusters.push({ x: 50, y: 310 - i * 25, clusterIdx: i });
+      const numCol = Math.max(5, Math.round((310 - 60) / dens));
+      const numCurve = Math.max(6, Math.round((Math.PI * 0.7 * 120) / dens));
+
+      for (let i = 0; i < numCol; i++) {
+        const y = 310 - i * ((310 - 60) / numCol);
+        clusters.push({ x: 50, y: Math.round(y), clusterIdx: clusters.length });
       }
-      for (let i = 0; i <= 10; i++) {
-        const angle = Math.PI - (i / 10) * (Math.PI * 0.7);
+      for (let i = 0; i <= numCurve; i++) {
+        const angle = Math.PI - (i / numCurve) * (Math.PI * 0.7);
         clusters.push({
-          x: 170 + 120 * Math.cos(angle),
-          y: 120 - 75 * Math.sin(angle),
-          clusterIdx: 11 + i
+          x: Math.round(170 + 120 * Math.cos(angle)),
+          y: Math.round(120 - 75 * Math.sin(angle)),
+          clusterIdx: clusters.length
         });
       }
     } else {
-      // 🏛️ ARCO ROMANO CLÁSSICO (Semicírculo Superior + Colunas)
-      const numLeft = 6;
-      const numCurve = 16;
-      const numRight = 6;
-
-      for (let i = 0; i < numLeft; i++) {
-        clusters.push({ x: 50, y: 305 - i * 26, clusterIdx: i });
-      }
+      // 🏛️ ARCO ROMANO CLÁSSICO (Semicírculo Superior + Colunas Niveladas)
+      const numCol = Math.max(4, Math.round((310 - 145) / dens));
+      const numCurve = Math.max(8, Math.round((Math.PI * 130) / dens));
       const centerX = 180;
       const centerY = 145;
       const radius = 130;
+
+      for (let i = 0; i < numCol; i++) {
+        const y = 310 - i * ((310 - centerY) / numCol);
+        clusters.push({ x: 50, y: Math.round(y), clusterIdx: clusters.length });
+      }
       for (let i = 0; i <= numCurve; i++) {
         const angle = Math.PI - (i / numCurve) * Math.PI;
         clusters.push({
-          x: centerX + radius * Math.cos(angle),
-          y: centerY - radius * Math.sin(angle),
-          clusterIdx: numLeft + i
+          x: Math.round(centerX + radius * Math.cos(angle)),
+          y: Math.round(centerY - radius * Math.sin(angle)),
+          clusterIdx: clusters.length
         });
       }
-      for (let i = 0; i < numRight; i++) {
-        clusters.push({ x: 310, y: 175 + i * 26, clusterIdx: numLeft + numCurve + 1 + i });
+      for (let i = 1; i <= numCol; i++) {
+        const y = centerY + i * ((310 - centerY) / numCol);
+        clusters.push({ x: 310, y: Math.round(y), clusterIdx: clusters.length });
       }
     }
 
     if (est === 'organico') {
-      // Estilo Orgânico Desconstruído
+      // Estilo Orgânico Desconstruído (Com Escala de Calibre e Minis Configuráveis)
+      const rBase = rBalao * 1.12;
+      const pMinis = proporcaoMinis || 'medio';
+
       clusters.forEach((c, idx) => {
-        const rBig = 22 + ((idx + s) % 3) * 4;
-        baloes.push({ cx: Math.round(c.x), cy: Math.round(c.y), r: rBig, c: (idx + s) % cores.length });
-        const side = (idx + s) % 2 === 0 ? 12 : -12;
-        baloes.push({ cx: Math.round(c.x + side), cy: Math.round(c.y - 6), r: 16, c: (idx + 1 + s) % cores.length });
-        if (idx % 2 === 0) {
-          baloes.push({ cx: Math.round(c.x - side * 0.5), cy: Math.round(c.y + 8), r: 9, c: (idx + 2 + s) % cores.length });
+        const rBig = rBase + ((idx + s) % 3) * (rBase * 0.22);
+        // Balão Grande Fundo
+        baloes.push({ cx: Math.round(c.x), cy: Math.round(c.y), r: Math.round(rBig), c: (idx + s) % cores.length });
+
+        // Balão Médio Lateral
+        const side = (idx + s) % 2 === 0 ? Math.round(rBase * 0.55) : -Math.round(rBase * 0.55);
+        baloes.push({ cx: Math.round(c.x + side), cy: Math.round(c.y - 5), r: Math.round(rBase * 0.75), c: (idx + 1 + s) % cores.length });
+
+        // Minis 5" na Frente Conforme Proporção
+        if (pMinis !== 'nenhum') {
+          const deveColocarMini = pMinis === 'luxo' || (pMinis === 'medio' && idx % 2 === 0) || (pMinis === 'suave' && idx % 3 === 0);
+          if (deveColocarMini) {
+            baloes.push({
+              cx: Math.round(c.x - side * 0.45),
+              cy: Math.round(c.y + 7),
+              r: Math.max(5, Math.round(rBase * 0.42)),
+              c: (idx + 2 + s) % cores.length
+            });
+          }
+          if (pMinis === 'luxo') {
+            baloes.push({
+              cx: Math.round(c.x + side * 0.4),
+              cy: Math.round(c.y - 7),
+              r: Math.max(5, Math.round(rBase * 0.36)),
+              c: (idx + 3 + s) % cores.length
+            });
+          }
         }
       });
     } else {
-      // Estilo Espiral Clássico Tetra (Com suporte a Embaralhar Seed)
+      // Estilo Espiral Clássico Tetra (Com suporte a Calibre e Embaralhar Seed)
+      const offX = Math.round(rBalao * 0.55);
+      const offY = Math.round(rBalao * 0.45);
       clusters.forEach((c) => {
         const offsets = [
-          { dx: -10, dy: -8, r: rBalao, cOffset: 0 },
-          { dx: 10, dy: -8, r: rBalao, cOffset: 1 },
-          { dx: -10, dy: 8, r: rBalao, cOffset: 2 },
-          { dx: 10, dy: 8, r: rBalao, cOffset: 3 }
+          { dx: -offX, dy: -offY, r: rBalao, cOffset: 0 },
+          { dx: offX, dy: -offY, r: rBalao, cOffset: 1 },
+          { dx: -offX, dy: offY, r: rBalao, cOffset: 2 },
+          { dx: offX, dy: offY, r: rBalao, cOffset: 3 }
         ];
         offsets.forEach((off) => {
           baloes.push({
@@ -359,6 +510,8 @@ const GuirlandaBaloesRealista = ({
     const radius = 125;
     const cob = coberturaAro || 'meio_aro';
     const s = Number(seed || 0);
+    const dens = Math.max(16, Math.min(42, Number(espacamentoBaloes) || 26));
+    const rBalao = Math.max(12, Math.min(30, Number(calibreBalao) || 20));
 
     let startAngleDeg = 145;
     let spanDeg = 240;
@@ -377,7 +530,7 @@ const GuirlandaBaloesRealista = ({
       spanDeg = 260;
     }
 
-    const totalClusters = Math.max(12, Math.round((spanDeg / 360) * 32));
+    const totalClusters = Math.max(8, Math.round((spanDeg / 360) * (800 / dens)));
 
     for (let i = 0; i < totalClusters; i++) {
       const t = i / (totalClusters - 1);
@@ -388,16 +541,16 @@ const GuirlandaBaloesRealista = ({
       const colorIdx = (Math.floor(t * cores.length) + s) % cores.length;
 
       // Balão Fundo
-      const rBase = 26 + Math.sin(i * 1.8 + s) * 8;
-      baloes.push({ cx: Math.round(cx), cy: Math.round(cy), r: rBase, c: colorIdx });
+      const rBase = rBalao * 1.25 + Math.sin(i * 1.8 + s) * (rBalao * 0.35);
+      baloes.push({ cx: Math.round(cx), cy: Math.round(cy), r: Math.round(rBase), c: colorIdx });
 
       // Balões Médios Adjacentes
-      const rAdj = radius + (i % 2 === 0 ? 18 : -16);
+      const rAdj = radius + (i % 2 === 0 ? rBalao * 0.85 : -rBalao * 0.75);
       const angleOffset = angle + (i % 2 === 0 ? 0.08 : -0.08);
       baloes.push({
         cx: Math.round(centerX + rAdj * Math.cos(angleOffset)),
         cy: Math.round(centerY - rAdj * Math.sin(angleOffset)),
-        r: 20 + ((i + s) % 3) * 3,
+        r: Math.round(rBalao + ((i + s) % 3) * 3),
         c: (colorIdx + 1 + (i % 2)) % cores.length
       });
 
@@ -406,7 +559,7 @@ const GuirlandaBaloesRealista = ({
         baloes.push({
           cx: Math.round(cx + (i % 3 === 0 ? 6 : -6)),
           cy: Math.round(cy + (i % 2 === 0 ? -6 : 6)),
-          r: 12,
+          r: Math.max(5, Math.round(rBalao * 0.55)),
           c: (colorIdx + 2) % cores.length
         });
       }
@@ -418,46 +571,54 @@ const GuirlandaBaloesRealista = ({
   // 3. 🗼 COLUNA DE BALÕES (Espiral, Orgânica, com Big Balloon)
   const gerarColunaBaloes = () => {
     const baloes = [];
-    const W = 140;
+    const W = 160;
     const H = 380;
-    const numClusters = 14;
-    const centerX = 70;
+    const dens = Math.max(16, Math.min(38, Number(espacamentoBaloes) || 24));
+    const scaleCalibre = (Number(calibreBalao) || 18) / 18;
+    const rBase = 18 * scaleCalibre;
+    const numClusters = Math.max(6, Math.round((350 - 60) / dens));
+    const centerX = 80;
     const est = estiloColuna || 'organica';
     const s = Number(seed || 0);
 
     if (est === 'com_big_balloon') {
-      baloes.push({ cx: centerX, cy: 55, r: 48, c: s % cores.length });
+      const rBig = Math.round(48 * scaleCalibre);
+      baloes.push({ cx: centerX, cy: 55, r: rBig, c: s % cores.length });
       for (let j = 0; j < 4; j++) {
         const a = (j / 4) * Math.PI * 2;
-        baloes.push({ cx: centerX + 18 * Math.cos(a), cy: 100 + 8 * Math.sin(a), r: 10, c: (j + 1 + s) % cores.length });
+        baloes.push({ cx: Math.round(centerX + 18 * Math.cos(a)), cy: Math.round(55 + rBig * 0.9 + 8 * Math.sin(a)), r: Math.round(10 * scaleCalibre), c: (j + 1 + s) % cores.length });
       }
-      for (let i = 0; i < 9; i++) {
-        const y = 130 + i * 26;
-        baloes.push({ cx: centerX - 12, cy: y, r: 18, c: (i + 1 + s) % cores.length });
-        baloes.push({ cx: centerX + 12, cy: y, r: 18, c: (i + 2 + s) % cores.length });
+      const startY = Math.round(55 + rBig + 25);
+      const numSteps = Math.max(4, Math.round((350 - startY) / dens));
+      for (let i = 0; i < numSteps; i++) {
+        const y = startY + i * dens;
+        baloes.push({ cx: centerX - Math.round(12 * scaleCalibre), cy: Math.round(y), r: Math.round(rBase), c: (i + 1 + s) % cores.length });
+        baloes.push({ cx: centerX + Math.round(12 * scaleCalibre), cy: Math.round(y), r: Math.round(rBase), c: (i + 2 + s) % cores.length });
       }
     } else if (est === 'espiral') {
       for (let i = 0; i < numClusters; i++) {
-        const y = 350 - i * 24;
+        const y = 350 - i * dens;
+        const offX = Math.round(14 * scaleCalibre);
+        const offY = Math.round(6 * scaleCalibre);
         const offsets = [
-          { dx: -12, dy: -6, r: 18, cOffset: 0 },
-          { dx: 12, dy: -6, r: 18, cOffset: 1 },
-          { dx: -12, dy: 6, r: 18, cOffset: 2 },
-          { dx: 12, dy: 6, r: 18, cOffset: 3 }
+          { dx: -offX, dy: -offY, r: Math.round(rBase), cOffset: 0 },
+          { dx: offX, dy: -offY, r: Math.round(rBase), cOffset: 1 },
+          { dx: -offX, dy: offY, r: Math.round(rBase), cOffset: 2 },
+          { dx: offX, dy: offY, r: Math.round(rBase), cOffset: 3 }
         ];
         offsets.forEach(off => {
-          baloes.push({ cx: centerX + off.dx, cy: y + off.dy, r: off.r, c: (i + off.cOffset + s) % cores.length });
+          baloes.push({ cx: centerX + off.dx, cy: Math.round(y + off.dy), r: off.r, c: (i + off.cOffset + s) % cores.length });
         });
       }
     } else {
       for (let i = 0; i < numClusters; i++) {
-        const y = 350 - i * 24;
+        const y = 350 - i * dens;
         const side = (i % 2 === 0 ? 1 : -1);
-        const r = 22 + ((i + s) % 3) * 4;
-        baloes.push({ cx: centerX + side * 10, cy: y, r, c: (i + s) % cores.length });
-        baloes.push({ cx: centerX - side * 12, cy: y - 5, r: 16, c: (i + 1 + s) % cores.length });
+        const r = (rBase * 1.2) + ((i + s) % 3) * (rBase * 0.2);
+        baloes.push({ cx: centerX + side * Math.round(10 * scaleCalibre), cy: Math.round(y), r: Math.round(r), c: (i + s) % cores.length });
+        baloes.push({ cx: centerX - side * Math.round(12 * scaleCalibre), cy: Math.round(y - 5), r: Math.round(rBase * 0.85), c: (i + 1 + s) % cores.length });
         if (i % 2 === 0) {
-          baloes.push({ cx: centerX, cy: y + 8, r: 10, c: (i + 2 + s) % cores.length });
+          baloes.push({ cx: centerX, cy: Math.round(y + 8), r: Math.max(5, Math.round(rBase * 0.5)), c: (i + 2 + s) % cores.length });
         }
       }
     }
@@ -468,112 +629,121 @@ const GuirlandaBaloesRealista = ({
   // 4. 🫧 CLUSTER DE CHÃO ORGÂNICO 3D (Desconstruído & Realista de Festa)
   const gerarClusterChao = () => {
     const baloes = [];
-    const W = 320;
-    const H = 190;
+    const W = 340;
+    const H = 210;
     const dens = densidadeCluster || 'cheio';
     const s = Number(seed || 0);
+    const scaleCalibre = (Number(calibreBalao) || 18) / 18;
+    const scaleEspaco = (Number(espacamentoBaloes) || 26) / 26;
 
-    // 1. Camada Traseira (Profundidade & Apoio Amplo no Piso)
-    const camadaTraseira = [
-      { cx: 70, cy: 138, r: 38, c: 0 },
-      { cx: 130, cy: 130, r: 44, c: 1 },
-      { cx: 195, cy: 134, r: 42, c: 2 },
-      { cx: 255, cy: 142, r: 36, c: 3 },
-      { cx: 100, cy: 88, r: 35, c: 4 },
-      { cx: 162, cy: 80, r: 40, c: 0 },
-      { cx: 220, cy: 92, r: 34, c: 1 }
-    ];
+    // Fator de escala por densidade e calibre
+    const rBaseMax = (dens === 'luxo' ? 44 : dens === 'suave' ? 32 : 38) * scaleCalibre;
+    const spreadX = (W * 0.38) * scaleEspaco;
+    const centerX = W / 2;
+    const baseY = H - 35;
 
-    // 2. Camada Principal Frontal (Formato Orgânico Desconstruído Asimétrico)
-    const camadaPrincipal = [
-      { cx: 48, cy: 150, r: 32, c: 2 },
-      { cx: 105, cy: 144, r: 38, c: 3 },
-      { cx: 165, cy: 140, r: 40, c: 4 },
-      { cx: 226, cy: 146, r: 34, c: 0 },
-      { cx: 280, cy: 155, r: 26, c: 1 },
-      { cx: 135, cy: 98, r: 32, c: 2 },
-      { cx: 190, cy: 96, r: 30, c: 3 },
-      { cx: 152, cy: 54, r: 26, c: 4 }
-    ];
+    // 1. Camada Traseira (Grandes 18"/12" de Apoio no Piso)
+    const countTraseira = dens === 'luxo' ? 8 : dens === 'suave' ? 4 : 6;
+    for (let i = 0; i < countTraseira; i++) {
+      const t = (countTraseira === 1) ? 0 : (i / (countTraseira - 1)) - 0.5; // -0.5 a 0.5
+      const cx = centerX + t * spreadX * 2.2;
+      const cy = baseY - 22 - Math.abs(t) * 15 + ((i + s) % 3) * 6;
+      const r = rBaseMax * (0.88 + ((i + s) % 4) * 0.08);
+      const corIdx = (i + s) % cores.length;
+      baloes.push({ cx: Math.round(cx), cy: Math.round(cy), r: Math.round(r), c: corIdx });
+    }
 
-    // 3. Minis Orgânicos 5" nos Encaixes e Frentes (Riqueza e Textura de Festa)
-    const minis = [
-      { cx: 38, cy: 164, r: 14, c: 1 },
-      { cx: 78, cy: 158, r: 13, c: 0 },
-      { cx: 88, cy: 122, r: 15, c: 2 },
-      { cx: 128, cy: 158, r: 14, c: 4 },
-      { cx: 145, cy: 125, r: 16, c: 1 },
-      { cx: 178, cy: 154, r: 14, c: 3 },
-      { cx: 202, cy: 126, r: 15, c: 0 },
-      { cx: 212, cy: 72, r: 14, c: 2 },
-      { cx: 250, cy: 160, r: 13, c: 4 },
-      { cx: 168, cy: 68, r: 12, c: 3 },
-      { cx: 118, cy: 68, r: 13, c: 1 }
-    ];
+    // 2. Camada Principal Frontal (9"/10" Médios Desconstruídos)
+    const countFrontal = dens === 'luxo' ? 10 : dens === 'suave' ? 5 : 7;
+    for (let i = 0; i < countFrontal; i++) {
+      const t = (countFrontal === 1) ? 0 : (i / (countFrontal - 1)) - 0.5;
+      const cx = centerX + t * spreadX * 1.85 + (((i + s) % 2 === 0) ? 6 : -6);
+      const cy = baseY - 10 - Math.abs(t) * 24 + (((i + s) % 3 === 0) ? -12 : 4);
+      const r = rBaseMax * 0.74 * (0.9 + ((i + s) % 3) * 0.1);
+      const corIdx = (i + 2 + s) % cores.length;
+      baloes.push({ cx: Math.round(cx), cy: Math.round(cy), r: Math.round(r), c: corIdx });
+    }
 
-    const qtdMinis = dens === 'luxo' ? minis.length : dens === 'suave' ? 6 : 9;
-    const todos = [...camadaTraseira, ...camadaPrincipal, ...minis.slice(0, qtdMinis)];
+    // 3. Camada Topo / Crista (Pirâmide Orgânica)
+    if (dens !== 'suave') {
+      const countTopo = dens === 'luxo' ? 6 : 3;
+      for (let i = 0; i < countTopo; i++) {
+        const t = (countTopo === 1) ? 0 : (i / (countTopo - 1)) - 0.5;
+        const cx = centerX + t * spreadX * 0.95;
+        const cy = baseY - 58 - (1 - Math.abs(t)) * 26;
+        const r = rBaseMax * 0.68 * (0.9 + ((i + s) % 3) * 0.12);
+        const corIdx = (i + 3 + s) % cores.length;
+        baloes.push({ cx: Math.round(cx), cy: Math.round(cy), r: Math.round(r), c: corIdx });
+      }
+    }
 
-    todos.forEach(b => {
-      baloes.push({ cx: b.cx, cy: b.cy, r: b.r, c: (b.c + s) % cores.length });
-    });
+    // 4. Minis 5" Orgânicos nos Encaixes Frontais
+    const countMinis = dens === 'luxo' ? 18 : dens === 'suave' ? 6 : 11;
+    for (let i = 0; i < countMinis; i++) {
+      const t = (countMinis === 1) ? 0 : (i / (countMinis - 1)) - 0.5;
+      const offsetX = (((i * 7 + s) % 11) - 5) * 4 * scaleEspaco;
+      const offsetY = (((i * 5 + s) % 9) - 4) * 5;
+      const cx = centerX + t * spreadX * 1.95 + offsetX;
+      const cy = baseY - 26 - Math.abs(t) * 32 + offsetY;
+      const r = Math.max(7, Math.round(rBaseMax * 0.36 * (0.85 + ((i + s) % 3) * 0.15)));
+      const corIdx = (i + 1 + s) % cores.length;
+      baloes.push({ cx: Math.round(cx), cy: Math.round(cy), r, c: corIdx });
+    }
 
     return { baloes, viewBoxW: W, viewBoxH: H };
   };
 
-  // 5. 🎀 GUIRLANDA LATERAL EM L
-  const baloesL = [
-    { cx: 215, cy: 55, r: 38, c: 0 },
-    { cx: 175, cy: 45, r: 42, c: 1 },
-    { cx: 125, cy: 48, r: 44, c: 2 },
-    { cx: 75, cy: 55, r: 46, c: 3 },
-    { cx: 48, cy: 95, r: 48, c: 0 },
-    { cx: 65, cy: 145, r: 44, c: 4 },
-    { cx: 45, cy: 195, r: 46, c: 1 },
-    { cx: 62, cy: 245, r: 44, c: 2 },
-    { cx: 44, cy: 295, r: 48, c: 3 },
-    { cx: 58, cy: 338, r: 38, c: 0 },
-    { cx: 238, cy: 58, r: 24, c: 2 },
-    { cx: 198, cy: 30, r: 28, c: 3 },
-    { cx: 192, cy: 75, r: 26, c: 4 },
-    { cx: 152, cy: 26, r: 30, c: 0 },
-    { cx: 148, cy: 68, r: 28, c: 1 },
-    { cx: 105, cy: 25, r: 32, c: 2 },
-    { cx: 96, cy: 72, r: 30, c: 3 },
-    { cx: 56, cy: 34, r: 32, c: 4 },
-    { cx: 26, cy: 68, r: 34, c: 0 },
-    { cx: 76, cy: 92, r: 28, c: 1 },
-    { cx: 26, cy: 118, r: 32, c: 2 },
-    { cx: 68, cy: 125, r: 30, c: 3 },
-    { cx: 34, cy: 162, r: 34, c: 4 },
-    { cx: 78, cy: 172, r: 28, c: 0 },
-    { cx: 24, cy: 212, r: 32, c: 1 },
-    { cx: 66, cy: 218, r: 30, c: 2 },
-    { cx: 32, cy: 262, r: 34, c: 3 },
-    { cx: 76, cy: 268, r: 28, c: 4 },
-    { cx: 24, cy: 308, r: 32, c: 0 },
-    { cx: 68, cy: 312, r: 30, c: 1 },
-    { cx: 36, cy: 342, r: 26, c: 2 },
-    { cx: 214, cy: 46, r: 14, c: 1 },
-    { cx: 174, cy: 52, r: 15, c: 3 },
-    { cx: 184, cy: 36, r: 12, c: 0 },
-    { cx: 134, cy: 42, r: 15, c: 4 },
-    { cx: 124, cy: 58, r: 13, c: 2 },
-    { cx: 84, cy: 46, r: 16, c: 1 },
-    { cx: 72, cy: 64, r: 13, c: 0 },
-    { cx: 42, cy: 70, r: 17, c: 3 },
-    { cx: 52, cy: 84, r: 13, c: 2 },
-    { cx: 36, cy: 104, r: 14, c: 4 },
-    { cx: 48, cy: 134, r: 16, c: 0 },
-    { cx: 60, cy: 148, r: 12, c: 1 },
-    { cx: 30, cy: 178, r: 15, c: 2 },
-    { cx: 46, cy: 188, r: 13, c: 3 },
-    { cx: 50, cy: 228, r: 16, c: 0 },
-    { cx: 38, cy: 242, r: 12, c: 4 },
-    { cx: 48, cy: 278, r: 15, c: 1 },
-    { cx: 34, cy: 288, r: 12, c: 2 },
-    { cx: 54, cy: 322, r: 14, c: 3 }
-  ];
+  // 5. 🎀 GUIRLANDA LATERAL EM L (Totalmente Dinâmica e Sensível a Calibre & Espaçamento)
+  const gerarGuirlandaLateralL = () => {
+    const baloes = [];
+    const W = 280;
+    const H = 380;
+    const s = Number(seed || 0);
+    const scaleCalibre = (Number(calibreBalao) || 18) / 18;
+    const scaleEspaco = (Number(espacamentoBaloes) || 26) / 26;
+
+    const dens = Math.max(16, Math.min(42, Number(espacamentoBaloes) || 26));
+    const numCol = Math.max(4, Math.round((340 - 75) / dens) + 1);
+    const numTop = Math.max(3, Math.round((230 - 95) / dens) + 1);
+
+    const rBase = 24 * scaleCalibre;
+
+    // 1. Coluna Vertical
+    for (let i = 0; i < numCol; i++) {
+      const y = 340 - i * ((340 - 75) / (numCol - 1 || 1));
+      const x = 52 + (((i + s) % 2 === 0) ? 6 : -6);
+      const r = rBase * (1.1 + ((i + s) % 3) * 0.15);
+      const corIdx = (i + s) % cores.length;
+      baloes.push({ cx: Math.round(x), cy: Math.round(y), r: Math.round(r), c: corIdx });
+
+      // Balão adjacente lateral
+      baloes.push({ cx: Math.round(x + 22 * scaleEspaco), cy: Math.round(y - 4), r: Math.round(rBase * 0.78), c: (corIdx + 1) % cores.length });
+      if (i % 2 === 0) {
+        baloes.push({ cx: Math.round(x + 10), cy: Math.round(y + 8), r: Math.max(6, Math.round(rBase * 0.45)), c: (corIdx + 2) % cores.length });
+      }
+    }
+
+    // 2. Curva do Canto
+    baloes.push({ cx: 65, cy: 55, r: Math.round(rBase * 1.25), c: (s + 3) % cores.length });
+    baloes.push({ cx: 80, cy: 45, r: Math.round(rBase * 0.85), c: (s + 4) % cores.length });
+    baloes.push({ cx: 72, cy: 68, r: Math.max(6, Math.round(rBase * 0.45)), c: (s + 1) % cores.length });
+
+    // 3. Topo Horizontal
+    for (let i = 1; i < numTop; i++) {
+      const x = 95 + i * ((230 - 95) / (numTop - 1 || 1));
+      const y = 48 + (((i + s) % 2 === 0) ? 5 : -5);
+      const r = rBase * (1.05 + ((i + s) % 3) * 0.12);
+      const corIdx = (i + 1 + s) % cores.length;
+      baloes.push({ cx: Math.round(x), cy: Math.round(y), r: Math.round(r), c: corIdx });
+
+      baloes.push({ cx: Math.round(x - 4), cy: Math.round(y + 20 * scaleEspaco), r: Math.round(rBase * 0.75), c: (corIdx + 2) % cores.length });
+      if (i % 2 === 0) {
+        baloes.push({ cx: Math.round(x + 8), cy: Math.round(y + 8), r: Math.max(6, Math.round(rBase * 0.45)), c: (corIdx + 3) % cores.length });
+      }
+    }
+
+    return { baloes, viewBoxW: W, viewBoxH: H };
+  };
 
   let res = null;
 
@@ -588,9 +758,7 @@ const GuirlandaBaloesRealista = ({
   } else if (tipo === 'cluster_chao' || tipo === 'baloes_cluster_chao') {
     res = gerarClusterChao();
   } else {
-    const s = Number(seed || 0);
-    const baloesSeedL = baloesL.map(b => ({ ...b, c: (b.c + s) % cores.length }));
-    res = { baloes: baloesSeedL, viewBoxW: 260, viewBoxH: 360 };
+    res = gerarGuirlandaLateralL();
   }
 
   const listaBaloes = res.baloes || [];
@@ -655,6 +823,215 @@ const GuirlandaBaloesRealista = ({
           </g>
         );
       })}
+    </svg>
+  );
+};
+
+// 🎈 Componente Balão Unitário / Individual 3D com Acabamentos e Texturas Realistas
+const BalaoUnitario3D = ({ item }) => {
+  const cor = item.color || item.coresBalao?.[0] || '#c5a059';
+  const acabamento = item.acabamentoBalao || 'glossy'; // 'glossy' | 'double_stuffed' | 'matte' | 'chrome' | 'perolado'
+  const temFitilho = item.temFitilho ?? false;
+  const uniqueId = item.uniqueId || 'def';
+
+  const gradGlossyId = `grad-glossy-${uniqueId}`;
+  const gradMatteId = `grad-matte-${uniqueId}`;
+  const gradDoubleId = `grad-double-${uniqueId}`;
+  const gradChromeId = `grad-chrome-${uniqueId}`;
+  const gradPerolaId = `grad-perola-${uniqueId}`;
+
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 120 150"
+      style={{ overflow: 'visible', pointerEvents: 'none', background: 'transparent' }}
+    >
+      <defs>
+        {/* 1. ✨ GLOSSY (Látex Brilho Clássico) */}
+        <radialGradient id={gradGlossyId} cx="32%" cy="26%" r="76%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.85" />
+          <stop offset="22%" stopColor="#ffffff" stopOpacity="0.2" />
+          <stop offset="48%" stopColor={cor} stopOpacity="1" />
+          <stop offset="85%" stopColor={cor} stopOpacity="0.95" />
+          <stop offset="100%" stopColor="#000000" stopOpacity="0.4" />
+        </radialGradient>
+
+        {/* 2. 🌑 FOSCO MATTE (Látex Aveludado Opaco Sofisticado - Sem reflexos plásticos brancos) */}
+        <radialGradient id={gradMatteId} cx="36%" cy="30%" r="72%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.32" />
+          <stop offset="28%" stopColor={cor} stopOpacity="0.92" />
+          <stop offset="68%" stopColor={cor} stopOpacity="1" />
+          <stop offset="100%" stopColor="#1e293b" stopOpacity="0.35" />
+        </radialGradient>
+
+        {/* 3. 🪞 DOUBLE STUFFED (Bexiga Dupla / Nude Velvet) */}
+        <radialGradient id={gradDoubleId} cx="34%" cy="28%" r="74%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.48" />
+          <stop offset="20%" stopColor={cor} stopOpacity="0.88" />
+          <stop offset="62%" stopColor={cor} stopOpacity="1" />
+          <stop offset="100%" stopColor="#0f172a" stopOpacity="0.48" />
+        </radialGradient>
+
+        {/* 4. 🪞 CROMADO METALIZADO */}
+        <linearGradient id={gradChromeId} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.92" />
+          <stop offset="22%" stopColor={cor} />
+          <stop offset="48%" stopColor="#ffffff" stopOpacity="0.82" />
+          <stop offset="72%" stopColor={cor} />
+          <stop offset="100%" stopColor="#0f172a" />
+        </linearGradient>
+
+        {/* 5. 🐚 PEROLADO */}
+        <radialGradient id={gradPerolaId} cx="34%" cy="28%" r="70%">
+          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.95" />
+          <stop offset="35%" stopColor="#fdf4ff" stopOpacity="0.6" />
+          <stop offset="65%" stopColor={cor} stopOpacity="0.85" />
+          <stop offset="100%" stopColor="#4c1d95" stopOpacity="0.3" />
+        </radialGradient>
+      </defs>
+
+      {/* Fitilho / Cordinha Opcional */}
+      {temFitilho && (
+        <path
+          d="M 60,118 Q 55,130 65,140 T 58,155 T 62,170"
+          fill="none"
+          stroke={item.corFitilho || 'rgba(148, 163, 184, 0.8)'}
+          strokeWidth="1.5"
+          strokeDasharray={item.fitilhoTipo === 'pontilhado' ? '2,2' : 'none'}
+        />
+      )}
+
+      {/* Bico / Nó do Balão */}
+      <polygon
+        points="55,114 65,114 63,121 57,121"
+        fill={cor}
+        stroke="rgba(0,0,0,0.15)"
+        strokeWidth="0.5"
+      />
+      <circle cx="60" cy="120" r="3.2" fill={cor} stroke="rgba(0,0,0,0.2)" strokeWidth="0.5" />
+
+      {/* Corpo Principal Oval / Gota do Balão 3D */}
+      <path
+        d="M 60,8 C 88,8 108,30 108,62 C 108,95 82,115 60,116 C 38,115 12,95 12,62 C 12,30 32,8 60,8 Z"
+        fill={
+          acabamento === 'chrome' ? `url(#${gradChromeId})` :
+            acabamento === 'matte' ? `url(#${gradMatteId})` :
+              acabamento === 'double_stuffed' ? `url(#${gradDoubleId})` :
+                `url(#${gradGlossyId})`
+        }
+      />
+
+      {/* Camada Adicional Perolada se ativa */}
+      {acabamento === 'perolado' && (
+        <path
+          d="M 60,8 C 88,8 108,30 108,62 C 108,95 82,115 60,116 C 38,115 12,95 12,62 C 12,30 32,8 60,8 Z"
+          fill={`url(#${gradPerolaId})`}
+          opacity="0.75"
+        />
+      )}
+
+      {/* Reflexos / Brilhos Especulares (Apenas para Glossy, Chrome e Perolado - NUNCA para Matte/Fosco) */}
+      {acabamento !== 'matte' && (
+        <>
+          <ellipse
+            cx="40"
+            cy="36"
+            rx="12"
+            ry="7"
+            transform="rotate(-30 40 36)"
+            fill="#ffffff"
+            opacity={acabamento === 'chrome' ? '0.95' : acabamento === 'double_stuffed' ? '0.35' : '0.8'}
+          />
+          <circle cx="50" cy="24" r="3" fill="#ffffff" opacity={acabamento === 'double_stuffed' ? '0.4' : '0.9'} />
+          <ellipse
+            cx="80"
+            cy="85"
+            rx="6"
+            ry="2.5"
+            transform="rotate(60 80 85)"
+            fill="#ffffff"
+            opacity={acabamento === 'chrome' ? '0.6' : acabamento === 'double_stuffed' ? '0.1' : '0.22'}
+          />
+        </>
+      )}
+    </svg>
+  );
+};
+
+// 🫧 Componente Mini Cluster 3D de Balões (Trio ou Quarteto 5" para Acabamento Rápido)
+const MiniClusterBaloes3D = ({ item }) => {
+  const cores = item.coresBalao?.length ? item.coresBalao : ['#b76e79', '#dfb6b2', '#f4e6d4', '#c5a059'];
+  const qtd = item.qtdCluster || 3; // 3 ou 4 bexigas
+  const acabamento = item.acabamentoBalao || 'glossy';
+  const uniqueId = item.uniqueId || 'cluster';
+
+  const miniPositions = qtd === 4 ? [
+    { cx: 42, cy: 42, r: 24, c: 0 },
+    { cx: 78, cy: 38, r: 25, c: 1 },
+    { cx: 45, cy: 78, r: 25, c: 2 },
+    { cx: 76, cy: 76, r: 24, c: 3 }
+  ] : [
+    { cx: 60, cy: 36, r: 26, c: 0 },
+    { cx: 40, cy: 74, r: 26, c: 1 },
+    { cx: 80, cy: 74, r: 26, c: 2 }
+  ];
+
+  return (
+    <svg
+      width="100%"
+      height="100%"
+      viewBox="0 0 120 120"
+      style={{ overflow: 'visible', pointerEvents: 'none' }}
+    >
+      <defs>
+        {cores.map((c, i) => (
+          <radialGradient key={i} id={`grad-minicluster-${uniqueId}-${i}`} cx="30%" cy="26%" r="76%">
+            <stop offset="0%" stopColor="#ffffff" stopOpacity={acabamento === 'double_stuffed' ? '0.5' : '0.88'} />
+            <stop offset="22%" stopColor="#ffffff" stopOpacity={acabamento === 'double_stuffed' ? '0.1' : '0.22'} />
+            <stop offset="50%" stopColor={c} />
+            <stop offset="85%" stopColor={c} stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#000000" stopOpacity={acabamento === 'double_stuffed' ? '0.45' : '0.28'} />
+          </radialGradient>
+        ))}
+      </defs>
+
+      <circle cx="60" cy="60" r="16" fill="rgba(0,0,0,0.22)" filter="blur(3px)" />
+
+      {miniPositions.map((b, idx) => {
+        const corIndex = b.c % cores.length;
+        const baseColor = cores[corIndex];
+
+        return (
+          <g key={idx}>
+            <circle cx={b.cx} cy={b.cy} r={b.r} fill={baseColor} />
+            <circle cx={b.cx} cy={b.cy} r={b.r} fill={`url(#grad-minicluster-${uniqueId}-${corIndex})`} />
+
+            {acabamento !== 'matte' && (
+              <>
+                <ellipse
+                  cx={b.cx - b.r * 0.32}
+                  cy={b.cy - b.r * 0.35}
+                  rx={Math.max(1, b.r * 0.24)}
+                  ry={Math.max(1, b.r * 0.14)}
+                  transform={`rotate(-25 ${b.cx - b.r * 0.32} ${b.cy - b.r * 0.35})`}
+                  fill="#ffffff"
+                  opacity={acabamento === 'double_stuffed' ? '0.55' : '0.8'}
+                />
+                <circle
+                  cx={b.cx - b.r * 0.12}
+                  cy={b.cy - b.r * 0.46}
+                  r={Math.max(1, b.r * 0.08)}
+                  fill="#ffffff"
+                  opacity={acabamento === 'double_stuffed' ? '0.6' : '0.9'}
+                />
+              </>
+            )}
+          </g>
+        );
+      })}
+
+      <circle cx="60" cy="60" r="3.5" fill="rgba(0,0,0,0.4)" />
     </svg>
   );
 };
@@ -2287,30 +2664,13 @@ const EstanteEscadinha3D = ({ item }) => {
 };
 
 // 🌿 CATÁLOGO DE ÍCONES & ENFEITES DE FESTA VETORIAIS (PARA COMPOSIÇÃO MANUAL)
-const ORNAMENTOS_FESTA = {
-  ramo_esquerdo: {
-    nome: 'Ramo Esquerdo',
+export const ORNAMENTOS_FESTA = {
+  ramo_folhas: {
+    nome: 'Ramo de Folhas',
     emoji: '🌿',
     viewBox: '0 0 100 120',
     path: (
       <g>
-        <path d="M50,115 Q45,70 20,10" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
-        <path d="M20,10 Q12,18 20,28 Q32,22 20,10 Z" fill="currentColor" />
-        <path d="M28,32 Q15,36 24,48 Q38,42 28,32 Z" fill="currentColor" />
-        <path d="M36,54 Q22,60 30,72 Q46,65 36,54 Z" fill="currentColor" />
-        <path d="M43,76 Q30,82 38,94 Q54,86 43,76 Z" fill="currentColor" />
-        <path d="M32,25 Q46,28 38,40 Q26,34 32,25 Z" fill="currentColor" />
-        <path d="M40,48 Q54,52 46,64 Q34,58 40,48 Z" fill="currentColor" />
-        <path d="M47,70 Q61,74 53,86 Q41,80 47,70 Z" fill="currentColor" />
-      </g>
-    )
-  },
-  ramo_direito: {
-    nome: 'Ramo Direito',
-    emoji: '🌿',
-    viewBox: '0 0 100 120',
-    path: (
-      <g transform="translate(100, 0) scale(-1, 1)">
         <path d="M50,115 Q45,70 20,10" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" />
         <path d="M20,10 Q12,18 20,28 Q32,22 20,10 Z" fill="currentColor" />
         <path d="M28,32 Q15,36 24,48 Q38,42 28,32 Z" fill="currentColor" />
@@ -2411,14 +2771,16 @@ const ORNAMENTOS_FESTA = {
     )
   },
   pomba_paz: {
-    nome: 'Pomba Batizado',
+    nome: 'Pomba da Paz / Batizado',
     emoji: '🕊️',
-    viewBox: '0 0 100 90',
+    viewBox: '0 0 100 100',
     path: (
       <g>
-        <path d="M15,55 C25,45 45,45 55,30 C65,15 80,10 85,15 C75,25 65,40 70,55 C55,50 40,65 25,75 C20,78 12,65 15,55 Z" fill="currentColor" />
-        <path d="M55,30 C50,15 40,5 30,2 C40,12 45,25 48,38 Z" fill="currentColor" />
-        <path d="M85,15 Q92,12 95,8 M90,12 Q93,9 90,6" fill="none" stroke="currentColor" strokeWidth="2" />
+        <path d="M 46,55 C 38,58 26,62 12,58 C 8,57 6,61 10,64 C 20,72 35,74 48,68 C 58,63 68,60 76,55 C 84,50 92,42 94,34 C 95,30 92,28 88,30 C 82,33 76,38 72,42 C 68,36 62,30 54,26 C 48,23 44,25 44,28 C 44,30 46,33 48,36 C 42,42 44,50 46,55 Z" fill="currentColor" />
+        <path d="M 52,42 C 50,30 55,16 68,6 C 70,4 72,6 71,9 C 67,18 63,26 62,32 C 67,24 74,16 84,10 C 86,9 87,11 86,13 C 80,22 75,32 72,40 C 78,33 86,26 94,22 C 96,21 97,23 95,25 C 88,34 78,44 68,48 C 62,50 56,48 52,42 Z" fill="currentColor" />
+        <path d="M 94,34 Q 98,36 99,35" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M 98,33 Q 99,30 97,28 Q 95,30 98,33 Z" fill="currentColor" />
+        <path d="M 99,35 Q 100,38 98,40 Q 96,38 99,35 Z" fill="currentColor" />
       </g>
     )
   },
@@ -2509,24 +2871,59 @@ const ORNAMENTOS_FESTA = {
   }
 };
 
+// 🌿 Função auxiliar para injetar fill e stroke nos nós SVG dos ornamentos
+const renderSvgWithFill = (element, fill, stroke, mdfStroke) => {
+  if (!element || !React.isValidElement(element)) return element;
+  const props = { ...element.props };
+  if (props.fill === 'currentColor' || !props.fill) {
+    if (props.fill !== 'none') props.fill = fill;
+  }
+  if (props.stroke === 'currentColor') {
+    props.stroke = mdfStroke || stroke || fill;
+  }
+  if (mdfStroke && props.stroke && props.stroke !== 'none') {
+    props.stroke = mdfStroke;
+  }
+  if (props.children) {
+    props.children = React.Children.map(props.children, child => renderSvgWithFill(child, fill, stroke, mdfStroke));
+  }
+  return React.cloneElement(element, props);
+};
+
 // 🌿 Componente de Renderização de Enfeite / Ícone Vetorial
-const ElementoOrnamentoSVG = ({ item }) => {
-  const ornamentoData = ORNAMENTOS_FESTA[item.ornamentType] || ORNAMENTOS_FESTA.ramo_esquerdo;
+const ElementoOrnamentoSVG = ({ item, customOrnaments = {} }) => {
+  const allOrnaments = { ...ORNAMENTOS_FESTA, ...customOrnaments };
+  const ornamentoData = allOrnaments[item.ornamentType] || ORNAMENTOS_FESTA.ramo_folhas;
   const material = item.material || 'gold_mirror';
   const color = item.color || '#c5a059';
 
-  const fillStyle = material === 'gold_mirror'
-    ? `url(#grad-gold-orn-${item.uniqueId})`
-    : material === 'rose_gold'
-      ? `url(#grad-rose-orn-${item.uniqueId})`
-      : material === 'silver_mirror'
-        ? `url(#grad-silver-orn-${item.uniqueId})`
-        : material === 'mdf_wood'
-          ? `url(#pat-mdf-wood-orn)`
-          : color;
+  const fillStyle = (material === 'none' || material === 'custom_color')
+    ? color
+    : material === 'gold_mirror'
+      ? `url(#grad-gold-orn-${item.uniqueId})`
+      : material === 'rose_gold'
+        ? `url(#grad-rose-orn-${item.uniqueId})`
+        : material === 'silver_mirror'
+          ? `url(#grad-silver-orn-${item.uniqueId})`
+          : material === 'mdf_wood'
+            ? `url(#grad-mdf-wood-orn-${item.uniqueId})`
+            : color;
 
-  const mdfStroke = material === 'mdf_wood' ? '#5a3512' : undefined;
+  const mdfStroke = material === 'mdf_wood' ? '#6c4118' : undefined;
   const mdfStrokeW = material === 'mdf_wood' ? 1.2 : undefined;
+
+  const renderContent = () => {
+    if (ornamentoData.path) {
+      return renderSvgWithFill(ornamentoData.path, fillStyle, fillStyle, mdfStroke);
+    }
+    if (ornamentoData.d) {
+      return <path d={ornamentoData.d} fill={fillStyle} stroke={mdfStroke} strokeWidth={mdfStrokeW} />;
+    }
+    if (ornamentoData.svgContent) {
+      return <g dangerouslySetInnerHTML={{ __html: ornamentoData.svgContent.replace(/currentColor/g, fillStyle) }} />;
+    }
+    return null;
+  };
 
   return (
     <svg
@@ -2535,9 +2932,8 @@ const ElementoOrnamentoSVG = ({ item }) => {
       viewBox={ornamentoData.viewBox || "0 0 100 100"}
       style={{
         overflow: 'visible',
-        color: fillStyle,
         filter: material === 'mdf_wood'
-          ? 'drop-shadow(2px 3px 2px rgba(60,30,10,0.6))'
+          ? 'drop-shadow(2px 2px 0px #6c4118) drop-shadow(2px 3px 3px rgba(45,20,5,0.4))'
           : material === 'gold_mirror' || material === 'rose_gold' || material === 'silver_mirror'
             ? 'drop-shadow(1.5px 2px 2px rgba(0,0,0,0.35))'
             : (item.shadow > 0 ? `drop-shadow(2px 2px ${item.shadow}px rgba(0,0,0,0.4))` : undefined)
@@ -2565,17 +2961,15 @@ const ElementoOrnamentoSVG = ({ item }) => {
           <stop offset="75%" stopColor="#f5f5f5" />
           <stop offset="100%" stopColor="#737373" />
         </linearGradient>
-        <pattern id="pat-mdf-wood-orn" width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(25)">
-          <rect width="40" height="40" fill="#d29b62" />
-          <line x1="0" y1="5" x2="40" y2="5" stroke="#ba8249" strokeWidth="2.5" />
-          <line x1="0" y1="12" x2="40" y2="12" stroke="#e0b17e" strokeWidth="1.5" />
-          <line x1="0" y1="20" x2="40" y2="20" stroke="#a36e37" strokeWidth="3" opacity="0.85" />
-          <line x1="0" y1="28" x2="40" y2="28" stroke="#be8850" strokeWidth="2" />
-          <line x1="0" y1="36" x2="40" y2="36" stroke="#8e5a25" strokeWidth="1.5" opacity="0.75" />
-        </pattern>
+        <linearGradient id={`grad-mdf-wood-orn-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#e6be8a" />
+          <stop offset="30%" stopColor="#caa070" />
+          <stop offset="60%" stopColor="#dfb582" />
+          <stop offset="100%" stopColor="#b88652" />
+        </linearGradient>
       </defs>
       <g stroke={mdfStroke} strokeWidth={mdfStrokeW}>
-        {ornamentoData.path}
+        {renderContent()}
       </g>
     </svg>
   );
@@ -2606,31 +3000,33 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
 
   const isCustomTex = material === 'custom_texture' || !!textureUrl;
 
-  // 🌈 Renderizador de Texto Curvo SVG (Com Fórmula de Arco Circular Geométrica Precisa)
+  // 🌈 Renderizador de Texto Curvo SVG (Com Fórmula Bézier Precisa, Sem Inversão e Sem Espaço Vazio)
   const renderCurvedText = () => {
     const content = item.content || 'Texto';
-    const textLen = content.length || 5;
-    const textPixelWidth = textLen * fontSize * 0.7;
-    const span = Math.max(textPixelWidth + 80, 240);
-    const absCurve = Math.max(5, Math.abs(curvatura));
-    const sagitta = (absCurve / 100) * (span * 0.42);
-    const R = Math.round((sagitta * sagitta + (span / 2) * (span / 2)) / (2 * Math.max(1, sagitta)));
-    const svgW = span + 60;
-    const svgH = Math.round(Math.max(fontSize * 2.2 + sagitta + 35, 110));
+    const textLen = Math.max(content.length, 3);
+    const textPixelWidth = textLen * fontSize * 0.6;
+    const span = Math.max(textPixelWidth + 30, 160);
+    const absCurve = Math.max(2, Math.abs(curvatura));
+    const curveDepth = (absCurve / 100) * (span * 0.22);
+    const svgW = Math.round(span + 30);
+    const svgH = Math.round(Math.max(fontSize * 1.25 + curveDepth, 50));
     const pathId = `curve-path-${item.uniqueId}`;
 
-    const startX = 30;
-    const endX = svgW - 30;
-    let d = '';
+    const startX = 15;
+    const endX = svgW - 15;
+    const midX = svgW / 2;
 
+    let d = '';
     if (curvatura > 0) {
-      // Arco Convexo (topo)
-      const startY = svgH - 20;
-      d = `M ${startX},${startY} A ${R} ${R} 0 0 1 ${endX},${startY}`;
+      // Arco Convexo (sobe no meio)
+      const startY = Math.round(svgH - 6);
+      const midY = Math.round(startY - curveDepth * 1.9);
+      d = `M ${startX},${startY} Q ${midX},${midY} ${endX},${startY}`;
     } else {
-      // Arco Côncavo (base)
-      const startY = 20;
-      d = `M ${startX},${startY} A ${R} ${R} 0 0 0 ${endX},${startY}`;
+      // Arco Côncavo (desce no meio)
+      const startY = Math.round(fontSize * 0.85);
+      const midY = Math.round(startY + curveDepth * 1.9);
+      d = `M ${startX},${startY} Q ${midX},${midY} ${endX},${startY}`;
     }
 
     const fillStyle = isCustomTex && textureUrl
@@ -2642,13 +3038,13 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
           : material === 'silver_mirror'
             ? `url(#grad-silver-${item.uniqueId})`
             : material === 'mdf_wood'
-              ? `url(#pat-mdf-wood-${item.uniqueId})`
+              ? `url(#grad-mdf-wood-${item.uniqueId})`
               : material === 'glitter_gold'
                 ? `url(#pat-glitter-${item.uniqueId})`
                 : (item.color || '#c5a059');
 
-    const mdfStroke = (material === 'mdf_wood' && !isCustomTex) ? '#5a3512' : (strokeWidth > 0 ? strokeColor : undefined);
-    const mdfStrokeW = (material === 'mdf_wood' && !isCustomTex) ? 1.5 : (strokeWidth > 0 ? strokeWidth : undefined);
+    const mdfStroke = (material === 'mdf_wood' && !isCustomTex) ? '#6c4118' : (strokeWidth > 0 ? strokeColor : undefined);
+    const mdfStrokeW = (material === 'mdf_wood' && !isCustomTex) ? 1.0 : (strokeWidth > 0 ? strokeWidth : undefined);
     const patSize = Math.max(60, Math.round(fontSize * (textureScale / 60)));
 
     return (
@@ -2658,9 +3054,12 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
         viewBox={`0 0 ${svgW} ${svgH}`}
         style={{
           overflow: 'visible',
-          filter: (material === 'mdf_wood' || isCustomTex || material === 'gold_mirror' || material === 'glitter_gold')
-            ? 'drop-shadow(2px 3px 3px rgba(0,0,0,0.45))'
-            : undefined
+          display: 'block',
+          filter: (material === 'mdf_wood' && !isCustomTex)
+            ? 'drop-shadow(2px 2px 0px #543110) drop-shadow(3px 4px 4px rgba(45, 20, 5, 0.4))'
+            : (material === 'gold_mirror' || material === 'rose_gold' || material === 'silver_mirror' || material === 'glitter_gold')
+              ? 'drop-shadow(2px 3px 3px rgba(0,0,0,0.35))'
+              : undefined
         }}
       >
         <defs>
@@ -2691,14 +3090,12 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
             <stop offset="75%" stopColor="#f5f5f5" />
             <stop offset="100%" stopColor="#737373" />
           </linearGradient>
-          <pattern id={`pat-mdf-wood-${item.uniqueId}`} width="40" height="40" patternUnits="userSpaceOnUse" patternTransform="rotate(25)">
-            <rect width="40" height="40" fill="#d29b62" />
-            <line x1="0" y1="5" x2="40" y2="5" stroke="#ba8249" strokeWidth="2.5" />
-            <line x1="0" y1="12" x2="40" y2="12" stroke="#e0b17e" strokeWidth="1.5" />
-            <line x1="0" y1="20" x2="40" y2="20" stroke="#a36e37" strokeWidth="3" opacity="0.85" />
-            <line x1="0" y1="28" x2="40" y2="28" stroke="#be8850" strokeWidth="2" />
-            <line x1="0" y1="36" x2="40" y2="36" stroke="#8e5a25" strokeWidth="1.5" opacity="0.75" />
-          </pattern>
+          <linearGradient id={`grad-mdf-wood-${item.uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#e6be8a" />
+            <stop offset="30%" stopColor="#caa070" />
+            <stop offset="60%" stopColor="#dfb582" />
+            <stop offset="100%" stopColor="#b88652" />
+          </linearGradient>
           <pattern id={`pat-glitter-${item.uniqueId}`} width="20" height="20" patternUnits="userSpaceOnUse">
             <rect width="20" height="20" fill="#d4af37" />
             <circle cx="4" cy="4" r="2" fill="#fff7cc" />
@@ -2807,12 +3204,12 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
           fontStyle: item.fontStyle,
           textAlign: item.textAlign,
           letterSpacing: letterSpacing ? `${letterSpacing}px` : undefined,
-          WebkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px ${strokeColor}` : undefined,
+          WebkitTextStroke: strokeWidth > 0 ? `${strokeWidth}px ${strokeColor}` : '0px transparent',
           paintOrder: 'stroke fill',
           cursor: 'text',
           whiteSpace: 'pre-wrap',
-          padding: '5px 10px',
-          lineHeight: '1.2',
+          padding: '2px 4px',
+          lineHeight: '1.05',
           textShadow: (isCustomTex && textureUrl) ? 'none' : textShadow,
           ...customTexStyle
         }}
@@ -2834,6 +3231,73 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
   return renderTextBody();
 };
 
+// 🚶‍♀️ Componente de Silhueta Humana Vetorial para Escala Real
+const SilhuetaHumanaSVG = ({ tipo = 'mulher', heightPx = 204 }) => {
+  if (tipo === 'homem') {
+    return (
+      <svg width={heightPx * 0.42} height={heightPx} viewBox="0 0 100 240" fill="currentColor" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' }}>
+        {/* Cabeça */}
+        <circle cx="50" cy="20" r="13" />
+        {/* Pescoço */}
+        <rect x="46" y="32" width="8" height="8" rx="2" />
+        {/* Tronco / Blazer Masculino */}
+        <path d="M 28 42 C 34 38, 66 38, 72 42 C 77 46, 75 110, 72 125 C 68 127, 32 127, 28 125 C 25 110, 23 46, 28 42 Z" />
+        {/* Braço Esquerdo */}
+        <path d="M 27 45 C 20 52, 17 95, 20 120 C 22 126, 26 125, 26 118 C 24 95, 27 55, 30 48 Z" />
+        {/* Braço Direito */}
+        <path d="M 73 45 C 80 52, 83 95, 80 120 C 78 126, 74 125, 74 118 C 76 95, 73 55, 70 48 Z" />
+        {/* Pernas / Calça Social */}
+        <path d="M 33 125 L 30 225 C 30 232, 44 232, 45 225 L 48 140 L 52 140 L 55 225 C 56 232, 70 232, 70 225 L 67 125 Z" />
+        {/* Sapatos */}
+        <path d="M 28 226 C 24 227, 24 235, 43 235 C 45 235, 45 227, 43 226 Z" />
+        <path d="M 57 226 C 55 227, 55 235, 75 235 C 77 235, 77 227, 72 226 Z" />
+      </svg>
+    );
+  }
+
+  if (tipo === 'crianca') {
+    return (
+      <svg width={heightPx * 0.45} height={heightPx} viewBox="0 0 100 240" fill="currentColor" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' }}>
+        {/* Cabeça Proporcional Infantil */}
+        <circle cx="50" cy="28" r="18" />
+        {/* Tronco Infantil */}
+        <path d="M 32 50 C 38 46, 62 46, 68 50 C 72 55, 70 125, 68 135 C 64 137, 36 137, 32 135 C 30 125, 28 55, 32 50 Z" />
+        {/* Braços */}
+        <path d="M 30 52 C 22 60, 18 100, 22 120 C 25 125, 29 123, 29 116 C 26 98, 29 62, 33 55 Z" />
+        <path d="M 70 52 C 78 60, 82 100, 78 120 C 75 125, 71 123, 71 116 C 74 98, 71 62, 67 55 Z" />
+        {/* Pernas */}
+        <path d="M 35 135 L 32 225 C 32 232, 45 232, 46 225 L 48 150 L 52 150 L 54 225 C 55 232, 68 232, 68 225 L 65 135 Z" />
+        {/* Tênis */}
+        <ellipse cx="38" cy="230" rx="10" ry="5" />
+        <ellipse cx="62" cy="230" rx="10" ry="5" />
+      </svg>
+    );
+  }
+
+  // Mulher Adulta Padrão (1,65m) - Elegante / Vestido / Postura de Evento
+  return (
+    <svg width={heightPx * 0.38} height={heightPx} viewBox="0 0 100 240" fill="currentColor" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' }}>
+      {/* Cabelo & Cabeça com silhueta feminina */}
+      <circle cx="50" cy="19" r="12" />
+      <path d="M 43 14 C 40 8, 48 4, 55 8 C 62 12, 59 22, 58 26 C 53 23, 44 22, 43 14 Z" />
+      {/* Pescoço Elegante */}
+      <rect x="47" y="30" width="6" height="8" rx="2" />
+      {/* Tronco / Vestido Midi Elegante */}
+      <path d="M 35 40 C 40 37, 60 37, 65 40 C 69 45, 66 85, 62 98 C 58 100, 42 100, 38 98 C 34 85, 31 45, 35 40 Z" />
+      {/* Saia do Vestido com caimento fluido */}
+      <path d="M 38 98 C 42 99, 58 99, 62 98 C 69 115, 72 165, 70 178 C 64 182, 36 182, 30 178 C 28 165, 31 115, 38 98 Z" />
+      {/* Braço Elegante ao lado */}
+      <path d="M 34 43 C 27 50, 24 90, 28 115 C 30 120, 34 118, 34 112 C 31 92, 34 52, 37 46 Z" />
+      <path d="M 66 43 C 73 50, 76 90, 72 115 C 70 120, 66 118, 66 112 C 69 92, 66 52, 63 46 Z" />
+      {/* Pernas e Salto Alto */}
+      <path d="M 41 178 L 40 228 C 40 233, 47 233, 48 228 L 49 180 L 51 180 L 52 228 C 53 233, 60 233, 60 228 L 59 178 Z" />
+      {/* Sapatos de Salto */}
+      <path d="M 39 229 C 36 230, 37 236, 48 236 C 49 236, 49 230, 47 229 Z" />
+      <path d="M 53 229 C 51 230, 52 236, 63 236 C 64 236, 64 230, 61 229 Z" />
+    </svg>
+  );
+};
+
 const Moodboard = () => {
   const navigate = useNavigate();
 
@@ -2847,6 +3311,7 @@ const Moodboard = () => {
   const [itensCanvas, setItensCanvas] = useState([]);
   const [selecionadoId, setSelecionadoId] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('fundo');
+  const [painelEsquerdoAberto, setPainelEsquerdoAberto] = useState(true);
   const [editingTextId, setEditingTextId] = useState(null);
   const [subAbaTexto, setSubAbaTexto] = useState('texto'); // 'texto' | 'icones'
   const [cenarioAba, setCenarioAba] = useState('parede'); // 'parede' | 'piso' | 'ambiente'
@@ -2864,8 +3329,15 @@ const Moodboard = () => {
   const [expandedCats, setExpandedCats] = useState({});
 
   // 🧲 Alinhamento Magnético & Guias
-  const [snappingAtivo, setSnappingAtivo] = useState(true);
+  const [snappingAtivo, setSnappingAtivo] = useState(false);
   const [activeSnapGuides, setActiveSnapGuides] = useState([]);
+
+  // 🚶‍♀️ Silhueta de Proporção Humana & Escala Real (Altura)
+  const [escalaHumanaAtiva, setEscalaHumanaAtiva] = useState(false);
+  const [tipoSilhueta, setTipoSilhueta] = useState('mulher'); // 'mulher' | 'homem' | 'crianca'
+  const [silhuetaPosX, setSilhuetaPosX] = useState(160);
+  const [mostrarReguaMetrica, setMostrarReguaMetrica] = useState(true);
+  const [menuEscalaAberto, setMenuEscalaAberto] = useState(false);
 
   // ⌨️ Modal de Atalhos de Produtividade
   const [modalAtalhosAberto, setModalAtalhosAberto] = useState(false);
@@ -2884,6 +3356,9 @@ const Moodboard = () => {
   const [removendoFundo, setRemovendoFundo] = useState(false);
   const [modalUploadRapidoAberto, setModalUploadRapidoAberto] = useState(false);
   const [imagemRapidaBase64, setImagemRapidaBase64] = useState('');
+  const [imagemRapidaOriginal, setImagemRapidaOriginal] = useState('');
+  const [imagemRapidaRecortada, setImagemRapidaRecortada] = useState('');
+  const [fundoJaRemovidoModal, setFundoJaRemovidoModal] = useState(false);
   const [imagemRapidaNome, setImagemRapidaNome] = useState('');
   const [salvarNoPortfolio, setSalvarNoPortfolio] = useState(true);
   const [categoriaImagemRapida, setCategoriaImagemRapida] = useState('Outros');
@@ -2958,20 +3433,26 @@ const Moodboard = () => {
   const [painelDireitoAberto, setPainelDireitoAberto] = useState(() => typeof window !== 'undefined' && window.innerWidth > 900);
   const [abaDireita, setAbaDireita] = useState('camadas'); // 'camadas' | 'propriedades' | 'baloes'
 
+  // 🧮 CALCULADORA DE BALÕES & LISTA DE COMPRAS
+  const [modalCalculadoraBaloesAberto, setModalCalculadoraBaloesAberto] = useState(false);
+  const [precoMedioPacoteBalao, setPrecoMedioPacoteBalao] = useState(28);
+
   // 🎈 BIBLIOTECA & PORTFÓLIO DE CENOGRAFIA (FIRESTORE)
   const [elementosCenografia, setElementosCenografia] = useState([]);
   const [abaAcervoFonte, setAbaAcervoFonte] = useState('estoque'); // 'estoque' | 'globais' | 'portfolio'
+  const [abaBaloesFonte, setAbaBaloesFonte] = useState('modelador_3d'); // 'modelador_3d' | 'oficiais' | 'portfolio'
   const [filtroBiblioteca, setFiltroBiblioteca] = useState('oficiais'); // 'todos' | 'oficiais' | 'meu_portfolio'
   const [categoriaBiblioteca, setCategoriaBiblioteca] = useState('todas'); // 'todas' | 'Baloes' | 'Paineis' | 'Flores' | 'Moveis' | 'Letreiros' | 'Outros'
   const [filtroCorBiblioteca, setFiltroCorBiblioteca] = useState('todas'); // cor id ou 'todas'
   const [loadingBiblioteca, setLoadingBiblioteca] = useState(false);
   const [categoriasMoodboard, setCategoriasMoodboard] = useState(CATEGORIAS_MOODBOARD_PADRAO);
+  const [ornamentosCustom, setOrnamentosCustom] = useState({});
 
   // 🎈 Formas & Cenografia
   const [corEstrutura, setCorEstrutura] = useState('#ffffff');
   const [paletaBalaoAtiva, setPaletaBalaoAtiva] = useState(PALETAS_BALOES[0]);
 
-  // 📁 Modais
+  // 📁 Modais & Gestão de Projetos Integrada
   const [modalSalvarAberto, setModalSalvarAberto] = useState(false);
   const [modalAbrirAberto, setModalAbrirAberto] = useState(false);
   const [modalPecasAberto, setModalPecasAberto] = useState(false);
@@ -2980,6 +3461,19 @@ const Moodboard = () => {
   const [salvandoProjeto, setSalvandoProjeto] = useState(false);
   const [exportandoPDF, setExportandoPDF] = useState(false);
   const [avisoCopiadoCompras, setAvisoCopiadoCompras] = useState(false);
+
+  // 🌟 RECURSOS DE GESTÃO DO PROJETO DECORATIVO
+  const [paletaEvento, setPaletaEvento] = useState(['#c5a059', '#e2b1b8', '#ffffff', '#0f172a']);
+  const [observacoesProjeto, setObservacoesProjeto] = useState('');
+  const [statusProjeto, setStatusProjeto] = useState('rascunho'); // 'rascunho' | 'em_analise' | 'aprovado' | 'em_producao' | 'concluido'
+  const [clienteSelecionado, setClienteSelecionado] = useState(null); // { id, nome, telefone }
+  const [locacaoSelecionada, setLocacaoSelecionada] = useState(null); // { id, numeroPedido, dataRetirada, clienteNome }
+  const [versaoProjeto, setVersaoProjeto] = useState(1);
+  const [projetoIdAtual, setProjetoIdAtual] = useState(null);
+  const [listaClientes, setListaClientes] = useState([]);
+  const [listaLocacoes, setListaLocacoes] = useState([]);
+  const [filtroStatusGaleria, setFiltroStatusGaleria] = useState('todos');
+  const [temaSugestaoAtivo, setTemaSugestaoAtivo] = useState('');
 
   const boardRef = useRef(null);
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
@@ -3007,7 +3501,7 @@ const Moodboard = () => {
     if (dy > 50 && dt < 350) setPainelMobileAberto(false);
   }, []);
 
-  // 📱 ABRIR ABA + PAINEL MOBILE
+  // 📱 ABRIR / RECOLHER ABA LATERAL (DESKTOP & MOBILE)
   const abrirAbaMobile = useCallback((aba) => {
     if (isMobile) {
       if (painelMobileAberto && abaAtiva === aba) {
@@ -3017,9 +3511,14 @@ const Moodboard = () => {
         setPainelMobileAberto(true);
       }
     } else {
-      setAbaAtiva(aba);
+      if (painelEsquerdoAberto && abaAtiva === aba) {
+        setPainelEsquerdoAberto(false);
+      } else {
+        setAbaAtiva(aba);
+        setPainelEsquerdoAberto(true);
+      }
     }
-  }, [isMobile, painelMobileAberto, abaAtiva]);
+  }, [isMobile, painelMobileAberto, painelEsquerdoAberto, abaAtiva]);
 
   const fontesDisponiveis = [
     // Caligrafia & Script (Festas / Casamentos / 15 Anos)
@@ -3115,11 +3614,20 @@ const Moodboard = () => {
     return Array.from(setCats).sort();
   }, [estoqueReal]);
 
-  // 🔍 ACERVO FILTRADO POR BUSCA E CATEGORIA (ESTOQUE FÍSICO)
+  // 🔍 ACERVO FILTRADO POR BUSCA, CATEGORIA E TEMA (ESTOQUE FÍSICO)
   const estoqueFiltrado = useMemo(() => {
     let list = estoqueReal;
     if (filtroCategoriaEstoque !== 'todas') {
       list = list.filter(item => (item.categoria || '').toLowerCase() === filtroCategoriaEstoque.toLowerCase());
+    }
+    if (temaSugestaoAtivo) {
+      const temaObj = TEMAS_MOODBOARD_SUGESTOES.find(t => t.tema === temaSugestaoAtivo);
+      if (temaObj && Array.isArray(temaObj.tags)) {
+        list = list.filter(item => {
+          const txt = `${item.nome || ''} ${item.categoria || ''} ${item.descricao || ''} ${item.tags || ''}`.toLowerCase();
+          return temaObj.tags.some(tag => txt.includes(tag.toLowerCase()));
+        });
+      }
     }
     if (!termoBusca.trim()) return list;
     const t = termoBusca.toLowerCase();
@@ -3128,7 +3636,7 @@ const Moodboard = () => {
       (item.codigo && item.codigo.toLowerCase().includes(t)) ||
       (item.categoria && item.categoria.toLowerCase().includes(t))
     );
-  }, [estoqueReal, termoBusca, filtroCategoriaEstoque]);
+  }, [estoqueReal, termoBusca, filtroCategoriaEstoque, temaSugestaoAtivo]);
 
   const grouped = useMemo(() => {
     const mapa = {};
@@ -3152,6 +3660,16 @@ const Moodboard = () => {
         }
       } catch (catErr) {
         console.warn("Categorias dinâmicas não encontradas, usando padrões:", catErr);
+      }
+
+      // 1.1 Carrega ícones e apliques adicionados pelo Super Admin
+      try {
+        const ornSnap = await getDoc(doc(db, "configuracoes_globais", "moodboard_ornamentos"));
+        if (ornSnap.exists() && ornSnap.data()?.ornamentos) {
+          setOrnamentosCustom(ornSnap.data().ornamentos);
+        }
+      } catch (ornErr) {
+        console.warn("Ornamentos customizados não encontrados:", ornErr);
       }
 
       // 2. Carrega elementos do moodboard
@@ -3218,7 +3736,7 @@ const Moodboard = () => {
 
     return elementosCenografia.filter(item => {
       const catLower = (item.categoria || '').trim().toLowerCase();
-      
+
       // 🚫 FILTRO RIGOROSO: NUNCA mostrar Cenário (Parede, Piso, Ambiente), Estruturas ou Balões no catálogo de PNGs do Acervo
       if (['parede', 'piso', 'ambiente', 'salao', 'cenario', 'texturas', 'textura', 'baloes', 'balão', 'balao', 'balões', 'estrutura', 'estruturas', 'vetor'].includes(catLower)) {
         return false;
@@ -3282,8 +3800,9 @@ const Moodboard = () => {
       const isMeu = item.empresaId === tenantId || (isSuperAdmin && item.isGlobal);
       const isGlobal = item.isGlobal === true;
 
-      if (filtroBiblioteca === 'oficiais' && !isGlobal) return false;
-      if (filtroBiblioteca === 'meu_portfolio' && !isMeu) return false;
+      const filtro = abaBaloesFonte === 'portfolio' ? 'meu_portfolio' : abaBaloesFonte === 'oficiais' ? 'oficiais' : filtroBiblioteca;
+      if (filtro === 'oficiais' && !isGlobal) return false;
+      if (filtro === 'meu_portfolio' && !isMeu) return false;
 
       const cat = (item.categoria || '').toLowerCase();
       const nome = (item.nome || '').toLowerCase();
@@ -3293,7 +3812,26 @@ const Moodboard = () => {
         tag.includes('bal') || tag.includes('arco');
       return isBalao;
     });
-  }, [elementosCenografia, filtroBiblioteca, tenantId, usuarioLogado]);
+  }, [elementosCenografia, abaBaloesFonte, filtroBiblioteca, tenantId, usuarioLogado]);
+
+  const { baloesOficiaisCount, baloesPortfolioCount } = useMemo(() => {
+    const isSuperAdmin = usuarioLogado?.email === "celebrefesta25@gmail.com";
+    let oficiais = 0;
+    let portfolio = 0;
+    (elementosCenografia || []).forEach(item => {
+      const cat = (item.categoria || '').toLowerCase();
+      const nome = (item.nome || '').toLowerCase();
+      const tag = (item.tag || '').toLowerCase();
+      const isBalao = cat === 'baloes' || cat === 'balão' || cat === 'balao' || cat === 'balões' ||
+        nome.includes('bal') || nome.includes('arco') || nome.includes('guirlanda') ||
+        tag.includes('bal') || tag.includes('arco');
+      if (isBalao) {
+        if (item.isGlobal) oficiais++;
+        if (item.empresaId === tenantId || (isSuperAdmin && item.isGlobal)) portfolio++;
+      }
+    });
+    return { baloesOficiaisCount: oficiais, baloesPortfolioCount: portfolio };
+  }, [elementosCenografia, tenantId, usuarioLogado]);
 
   // 🧱 Fundos de Parede (Apenas Oficiais do SuperADM + Uploads)
   const fundosParedeCompletos = useMemo(() => {
@@ -3437,6 +3975,28 @@ const Moodboard = () => {
           setEmpresaConfig(data);
           if (data.texturasParede && data.texturasParede.length > 0) setTexturasParede(data.texturasParede);
           if (data.texturasChao && data.texturasChao.length > 0) setTexturasChao(data.texturasChao);
+        }
+
+        // 👥 Carregar Clientes para vinculação no Moodboard
+        try {
+          const qCli = query(collection(db, 'clientes'), where("userId", "==", tenantId));
+          const snapCli = await getDocs(qCli);
+          const listaCli = snapCli.docs.map(d => ({ id: d.id, ...d.data() }));
+          listaCli.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+          setListaClientes(listaCli);
+        } catch (eCli) {
+          console.warn("Erro ao carregar clientes para o Moodboard:", eCli);
+        }
+
+        // 📅 Carregar Locações ativas para vincular ao Moodboard
+        try {
+          const qLoc = query(collection(db, 'locacoes'), where("userId", "==", tenantId));
+          const snapLoc = await getDocs(qLoc);
+          const listaLoc = snapLoc.docs.map(d => ({ id: d.id, ...d.data() }));
+          listaLoc.sort((a, b) => (b.createdAt || '').localeCompare(a.createdAt || ''));
+          setListaLocacoes(listaLoc);
+        } catch (eLoc) {
+          console.warn("Erro ao carregar locações para o Moodboard:", eLoc);
         }
 
         const initialSnap = { itens: [], wall: '#f8fafc', floor: '#e2e8f0' };
@@ -3665,15 +4225,30 @@ const Moodboard = () => {
   const removerFundoImagem = async (id) => {
     const item = itensCanvas.find(i => i.uniqueId === id);
     if (!item || !item.imagem) return alert('Selecione um item com imagem para remover o fundo.');
+
+    // Se já tiver uma versão recortada em cache e o item estiver atualmente com a original:
+    if (item.imagemRecortada && item.imagem !== item.imagemRecortada) {
+      atualizarItem(id, {
+        imagem: item.imagemRecortada,
+        imagemOriginal: item.imagemOriginal || item.imagem
+      });
+      return;
+    }
+
     setRemovendoFundo(true);
     try {
       const lib = await carregarBgRemoval();
-      const blob = await fetch(item.imagem).then(r => r.blob());
+      const srcToCut = item.imagemOriginal || item.imagem;
+      const blob = await fetch(srcToCut).then(r => r.blob());
       const resultBlob = await lib.removeBackground(blob);
       const reader = new FileReader();
       reader.onload = (e) => {
         const imagemOriginal = item.imagemOriginal || item.imagem;
-        atualizarItem(id, { imagem: e.target.result, imagemOriginal });
+        atualizarItem(id, {
+          imagem: e.target.result,
+          imagemOriginal,
+          imagemRecortada: e.target.result
+        });
         setRemovendoFundo(false);
       };
       reader.readAsDataURL(resultBlob);
@@ -3688,7 +4263,10 @@ const Moodboard = () => {
   const restaurarImagemOriginal = (id) => {
     const item = itensCanvas.find(i => i.uniqueId === id);
     if (!item || !item.imagemOriginal) return;
-    atualizarItem(id, { imagem: item.imagemOriginal, imagemOriginal: null });
+    atualizarItem(id, {
+      imagem: item.imagemOriginal,
+      imagemRecortada: item.imagem !== item.imagemOriginal ? item.imagem : item.imagemRecortada
+    });
   };
 
   // 📸 PROCESSAR ARQUIVO DE IMAGEM
@@ -3713,7 +4291,10 @@ const Moodboard = () => {
         canvas.width = w; canvas.height = h;
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
         const base64 = canvas.toDataURL('image/png');
+        setImagemRapidaOriginal(base64);
         setImagemRapidaBase64(base64);
+        setImagemRapidaRecortada('');
+        setFundoJaRemovidoModal(false);
         setImagemRapidaNome(nome);
         if (categoriaPadrao) setCategoriaImagemRapida(categoriaPadrao);
         setSalvarNoPortfolio(salvarPortfolioPadrao !== undefined ? salvarPortfolioPadrao : true);
@@ -3723,6 +4304,42 @@ const Moodboard = () => {
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
+  };
+
+  // 🪄 TESTAR / APLICAR REMOÇÃO DE FUNDO NO MODAL (LIVE PREVIEW)
+  const processarRemocaoFundoModal = async () => {
+    if (imagemRapidaRecortada) {
+      setImagemRapidaBase64(imagemRapidaRecortada);
+      setFundoJaRemovidoModal(true);
+      return;
+    }
+    setRemovendoFundo(true);
+    try {
+      const lib = await carregarBgRemoval();
+      const blob = await fetch(imagemRapidaOriginal || imagemRapidaBase64).then(r => r.blob());
+      const resultBlob = await lib.removeBackground(blob);
+      const recortadaBase64 = await new Promise((res) => {
+        const reader = new FileReader();
+        reader.onload = e => res(e.target.result);
+        reader.readAsDataURL(resultBlob);
+      });
+      setImagemRapidaRecortada(recortadaBase64);
+      setImagemRapidaBase64(recortadaBase64);
+      setFundoJaRemovidoModal(true);
+    } catch (err) {
+      console.error('Erro na remoção de fundo:', err);
+      alert('Não foi possível remover o fundo com IA nesta imagem. Você ainda pode usar a imagem original.');
+    } finally {
+      setRemovendoFundo(false);
+    }
+  };
+
+  // ↺ RESTAURAR FUNDO ORIGINAL NO MODAL
+  const restaurarFundoOriginalModal = () => {
+    if (imagemRapidaOriginal) {
+      setImagemRapidaBase64(imagemRapidaOriginal);
+      setFundoJaRemovidoModal(false);
+    }
   };
 
   // 📸 UPLOAD RÁPIDO DE IMAGEM — ABRE SELETOR DE ARQUIVOS
@@ -3746,22 +4363,30 @@ const Moodboard = () => {
   // ✅ CONFIRMAR UPLOAD RÁPIDO: ADICIONA AO CANVAS + OPCIONALMENTE SALVA NO PORTFÓLIO
   const confirmarUploadRapido = async (comRemocaoDeFundo = false, apenasSalvar = false) => {
     let imagemFinal = imagemRapidaBase64;
-    if (comRemocaoDeFundo) {
-      setRemovendoFundo(true);
-      try {
-        const lib = await carregarBgRemoval();
-        const blob = await fetch(imagemRapidaBase64).then(r => r.blob());
-        const resultBlob = await lib.removeBackground(blob);
-        imagemFinal = await new Promise((res) => {
-          const reader = new FileReader();
-          reader.onload = e => res(e.target.result);
-          reader.readAsDataURL(resultBlob);
-        });
-      } catch (err) {
-        console.error('Erro na remoção de fundo:', err);
-        alert('Erro ao remover fundo com IA. Adicionando com a imagem original.');
-      } finally {
-        setRemovendoFundo(false);
+    const imagemOrig = imagemRapidaOriginal || imagemRapidaBase64;
+
+    // Se o usuário clicou no botão de remoção e ainda não processou na preview:
+    if (comRemocaoDeFundo && !fundoJaRemovidoModal) {
+      if (imagemRapidaRecortada) {
+        imagemFinal = imagemRapidaRecortada;
+      } else {
+        setRemovendoFundo(true);
+        try {
+          const lib = await carregarBgRemoval();
+          const blob = await fetch(imagemOrig).then(r => r.blob());
+          const resultBlob = await lib.removeBackground(blob);
+          imagemFinal = await new Promise((res) => {
+            const reader = new FileReader();
+            reader.onload = e => res(e.target.result);
+            reader.readAsDataURL(resultBlob);
+          });
+        } catch (err) {
+          console.error('Erro na remoção de fundo:', err);
+          alert('Erro ao remover fundo com IA. Adicionando com a imagem original.');
+          imagemFinal = imagemOrig;
+        } finally {
+          setRemovendoFundo(false);
+        }
       }
     }
 
@@ -3774,6 +4399,8 @@ const Moodboard = () => {
         adicionarAoCanvas({
           nome: imagemRapidaNome || 'Minha Imagem',
           imagem: imagemFinal,
+          imagemOriginal: imagemOrig,
+          imagemRecortada: (imagemFinal !== imagemOrig) ? imagemFinal : (imagemRapidaRecortada || null),
           width: defaultW,
           height: calcH,
           isEstoqueProprio: false,
@@ -3786,6 +4413,8 @@ const Moodboard = () => {
         adicionarAoCanvas({
           nome: imagemRapidaNome || 'Minha Imagem',
           imagem: imagemFinal,
+          imagemOriginal: imagemOrig,
+          imagemRecortada: (imagemFinal !== imagemOrig) ? imagemFinal : (imagemRapidaRecortada || null),
           width: 180,
           height: 180,
           isEstoqueProprio: false,
@@ -3806,6 +4435,7 @@ const Moodboard = () => {
           categoria: categoriaImagemRapida,
           tag: isSuperAdmin ? 'Oficial' : 'Meu Acervo',
           imagemUrl: imagemFinal,
+          imagemOriginalUrl: imagemOrig,
           isGlobal: isSuperAdmin ? true : false,
           sugeridoParaGlobal: false,
           empresaId: tenantId,
@@ -3823,6 +4453,9 @@ const Moodboard = () => {
 
     setModalUploadRapidoAberto(false);
     setImagemRapidaBase64('');
+    setImagemRapidaOriginal('');
+    setImagemRapidaRecortada('');
+    setFundoJaRemovidoModal(false);
     setImagemRapidaNome('');
   };
 
@@ -3853,7 +4486,7 @@ const Moodboard = () => {
   };
 
   // 📄 GERAR PROPOSTA EM PDF
-  const handleGerarPropostaPDF = async () => {
+  const handleGerarPropostaPDF = async (exibirValores = false) => {
     if (!boardRef.current) return;
     try {
       setExportandoPDF(true);
@@ -3874,10 +4507,16 @@ const Moodboard = () => {
         nomeProjeto: nomeProjeto || 'Decoração Personalizada Celebre',
         itens: resumoComercial.lista,
         valorTotal: resumoComercial.valorTotal,
-        empresa: empresaConfig
+        empresa: empresaConfig,
+        cliente: clienteSelecionado,
+        paletaEvento: paletaEvento || [],
+        observacoes: observacoesProjeto || '',
+        status: statusProjeto || 'rascunho',
+        versao: Number(versaoProjeto) || 1,
+        exibirValores: exibirValores
       });
 
-      await registrarLog("PROPOSTA PDF MOODBOARD", `Gerou proposta em PDF do projeto "${nomeProjeto || 'Decoração'}" com ${resumoComercial.totalPecas} peças.`);
+      await registrarLog("PROPOSTA PDF MOODBOARD", `Gerou proposta em PDF (${exibirValores ? 'com valores' : 'sem valores para cliente'}) do projeto "${nomeProjeto || 'Decoração'}" com ${resumoComercial.totalPecas} peças.`);
     } catch (err) {
       console.error("Erro ao gerar proposta PDF:", err);
       alert("Erro ao gerar PDF da proposta comercial.");
@@ -3964,7 +4603,7 @@ const Moodboard = () => {
     setModalSalvarAberto(true);
   };
 
-  const salvarProjeto = async () => {
+  const salvarProjeto = async (modo = 'salvar_ou_atualizar') => {
     if (!nomeProjeto.trim()) return alert("Digite um nome para o projeto!");
 
     try {
@@ -3982,23 +4621,56 @@ const Moodboard = () => {
         }
       }
 
-      await addDoc(collection(db, "projetos_moodboard"), {
-        nome: nomeProjeto.trim(),
+      const versaoCalculada = modo === 'nova_versao' ? Number(versaoProjeto || 1) + 1 : Number(versaoProjeto || 1);
+      const nomeFinal = modo === 'nova_versao' ? `${nomeProjeto.replace(/\s*\(v\d+\)$/i, '').trim()} (v${versaoCalculada})` : nomeProjeto.trim();
+
+      const payload = {
+        nome: nomeFinal,
         itens: itensCanvas,
         wallBackground,
         floorBackground,
         thumbnail: thumbnailBase64,
         valorTotal: resumoComercial.valorTotal,
         totalPecas: resumoComercial.totalPecas,
-        createdAt: new Date().toISOString(),
+        paletaEvento: paletaEvento || [],
+        observacoes: observacoesProjeto || '',
+        status: statusProjeto || 'rascunho',
+        clienteId: clienteSelecionado?.id || '',
+        clienteNome: clienteSelecionado?.nome || clienteSelecionado?.nomeFantasia || '',
+        clienteTelefone: clienteSelecionado?.telefone || clienteSelecionado?.celular || clienteSelecionado?.whatsapp || '',
+        cliente: clienteSelecionado ? {
+          id: clienteSelecionado.id || '',
+          nome: clienteSelecionado.nome || clienteSelecionado.nomeFantasia || '',
+          telefone: clienteSelecionado.telefone || clienteSelecionado.celular || clienteSelecionado.whatsapp || ''
+        } : null,
+        locacaoId: locacaoSelecionada?.id || '',
+        locacaoNumero: locacaoSelecionada?.numeroPedido || '',
+        dataEvento: locacaoSelecionada?.dataRetirada || locacaoSelecionada?.dataEvento || '',
+        versao: versaoCalculada,
+        updatedAt: new Date().toISOString(),
         userId: tenantId,
         empresaId: tenantId,
         funcionarioId: usuarioLogado.uid
-      });
+      };
 
-      await registrarLog("NOVO PROJETO MOODBOARD", `Salvou um novo projeto de design no Moodboard chamado "${nomeProjeto}".`);
+      if (modo === 'nova_versao' || !projetoIdAtual || modo === 'novo_projeto') {
+        payload.createdAt = new Date().toISOString();
+        if (modo === 'nova_versao') {
+          payload.projetoPaiId = projetoIdAtual || '';
+        }
+        const docRef = await addDoc(collection(db, "projetos_moodboard"), payload);
+        setProjetoIdAtual(docRef.id);
+        setNomeProjeto(payload.nome);
+        setVersaoProjeto(versaoCalculada);
+        await registrarLog("NOVO PROJETO MOODBOARD", `Salvou o projeto de design no Moodboard "${payload.nome}".`);
+        alert(modo === 'nova_versao' ? `✨ Nova versão "${payload.nome}" salva com sucesso!` : "✅ Projeto e miniatura salvos com sucesso!");
+      } else {
+        // Atualiza projeto existente
+        await updateDoc(doc(db, "projetos_moodboard", projetoIdAtual), payload);
+        await registrarLog("ATUALIZOU PROJETO MOODBOARD", `Atualizou o projeto "${payload.nome}".`);
+        alert("✅ Projeto atualizado com sucesso!");
+      }
 
-      alert("✅ Projeto e miniatura salvos com sucesso!");
       setModalSalvarAberto(false);
     } catch (error) {
       console.error("Erro ao salvar projeto:", error);
@@ -4014,7 +4686,7 @@ const Moodboard = () => {
       const snapshot = await getDocs(q);
 
       let lista = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-      lista.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      lista.sort((a, b) => new Date(b.createdAt || b.updatedAt || 0) - new Date(a.createdAt || a.updatedAt || 0));
       setProjetosSalvos(lista);
       setModalAbrirAberto(true);
     } catch (error) {
@@ -4029,9 +4701,77 @@ const Moodboard = () => {
       setWallBackground(projeto.wallBackground || '#f8fafc');
       setFloorBackground(projeto.floorBackground || '#e2e8f0');
       setNomeProjeto(projeto.nome || "");
+      setProjetoIdAtual(projeto.id || null);
+      setVersaoProjeto(Number(projeto.versao) || 1);
+      setStatusProjeto(projeto.status || 'rascunho');
+      setObservacoesProjeto(projeto.observacoes || '');
+      setPaletaEvento(Array.isArray(projeto.paletaEvento) && projeto.paletaEvento.length > 0 ? projeto.paletaEvento : ['#c5a059', '#e2b1b8', '#ffffff', '#0f172a']);
+      setClienteSelecionado(projeto.cliente || (projeto.clienteId ? { id: projeto.clienteId, nome: projeto.clienteNome, telefone: projeto.clienteTelefone } : null));
+      setLocacaoSelecionada(projeto.locacaoId ? { id: projeto.locacaoId, numeroPedido: projeto.locacaoNumero, dataRetirada: projeto.dataEvento } : null);
       setModalAbrirAberto(false);
       saveSnapshot(itensCarregados, projeto.wallBackground || '#f8fafc', projeto.floorBackground || '#e2e8f0');
     }
+  };
+
+  const alterarStatusProjetoGaleria = async (projId, novoStatus) => {
+    try {
+      await updateDoc(doc(db, "projetos_moodboard", projId), {
+        status: novoStatus,
+        updatedAt: new Date().toISOString()
+      });
+      setProjetosSalvos(prev => prev.map(p => p.id === projId ? { ...p, status: novoStatus } : p));
+    } catch (err) {
+      console.error("Erro ao alterar status do projeto:", err);
+      alert("Erro ao alterar status.");
+    }
+  };
+
+  const duplicarProjetoSalvo = async (projeto) => {
+    try {
+      const payload = {
+        ...projeto,
+        nome: `${projeto.nome.replace(/\s*\(Cópia\)$/i, '').trim()} (Cópia)`,
+        status: 'rascunho',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+      delete payload.id;
+      const docRef = await addDoc(collection(db, "projetos_moodboard"), payload);
+      setProjetosSalvos(prev => [{ id: docRef.id, ...payload }, ...prev]);
+      alert(`✅ Projeto "${payload.nome}" duplicado com sucesso!`);
+    } catch (err) {
+      console.error("Erro ao duplicar projeto:", err);
+      alert("Erro ao duplicar projeto.");
+    }
+  };
+
+  const handleCompartilharWhatsApp = (projeto = null) => {
+    const proj = projeto || {
+      nome: nomeProjeto || 'Decoração Moodboard',
+      valorTotal: resumoComercial.valorTotal,
+      cliente: clienteSelecionado,
+      observacoes: observacoesProjeto,
+      totalPecas: resumoComercial.totalPecas
+    };
+
+    const telefone = proj.cliente?.telefone || clienteSelecionado?.telefone || '';
+    const nomeCli = proj.cliente?.nome || clienteSelecionado?.nome || 'Cliente';
+    const telLimpo = String(telefone).replace(/\D/g, '');
+
+    let msg = `Olá, *${nomeCli}*! ✨ Tudo bem?\n\n`;
+    msg += `Aqui está a prévia do seu projeto de decoração exclusivo para o tema *${proj.nome}*!\n\n`;
+    msg += `📦 *Composição:* ${proj.totalPecas || resumoComercial.totalPecas} peças e estruturas decorativas\n`;
+    msg += `💰 *Valor Estimado:* R$ ${Number(proj.valorTotal || resumoComercial.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}\n`;
+    if (proj.observacoes || observacoesProjeto) {
+      msg += `📝 *Observações:* ${proj.observacoes || observacoesProjeto}\n`;
+    }
+    msg += `\nQualquer dúvida ou ajuste que queira fazer, estou à disposição! 🎈👑`;
+
+    const url = telLimpo 
+      ? `https://wa.me/55${telLimpo}?text=${encodeURIComponent(msg)}`
+      : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
+
+    window.open(url, '_blank');
   };
 
   const deletarProjetoSalvo = async (id, nomeProjetoApagado) => {
@@ -4222,30 +4962,45 @@ const Moodboard = () => {
       novoItem.width = 340; novoItem.height = 300;
       novoItem.coresBalao = paletaBalaoAtiva.cores; novoItem.x = 80; novoItem.y = 60;
       novoItem.formatoPortal = 'romano'; novoItem.estiloPortal = 'espiral';
+      novoItem.espacamentoBaloes = 26; novoItem.calibreBalao = 18; novoItem.distanciaArcoDuplo = 40; novoItem.proporcaoMinis = 'medio';
       novoItem.seed = 1;
     } else if (tipoEstrutura === 'baloes_aro_redondo') {
       novoItem.width = 280; novoItem.height = 280;
       novoItem.coresBalao = paletaBalaoAtiva.cores; novoItem.x = 110; novoItem.y = 80;
-      novoItem.coberturaAro = 'meio_aro';
+      novoItem.coberturaAro = 'meio_aro'; novoItem.espacamentoBaloes = 26; novoItem.calibreBalao = 20;
       novoItem.seed = 2;
     } else if (tipoEstrutura === 'baloes_lateral_l') {
       novoItem.width = 250; novoItem.height = 320;
       novoItem.coresBalao = paletaBalaoAtiva.cores; novoItem.x = 120; novoItem.y = 100;
+      novoItem.espacamentoBaloes = 26; novoItem.calibreBalao = 18;
       novoItem.seed = 3;
     } else if (tipoEstrutura === 'baloes_cluster_chao') {
       novoItem.width = 170; novoItem.height = 140;
       novoItem.coresBalao = paletaBalaoAtiva.cores; novoItem.x = 180; novoItem.y = 280;
-      novoItem.densidadeCluster = 'cheio';
+      novoItem.densidadeCluster = 'cheio'; novoItem.calibreBalao = 18;
       novoItem.seed = 4;
     } else if (tipoEstrutura === 'coluna_baloes') {
       novoItem.width = 110; novoItem.height = 380;
       novoItem.coresBalao = paletaBalaoAtiva.cores;
-      novoItem.estiloColuna = 'organica';
+      novoItem.estiloColuna = 'organica'; novoItem.espacamentoBaloes = 24; novoItem.calibreBalao = 18;
       novoItem.seed = 5;
     } else if (tipoEstrutura === 'guirlanda_horizontal') {
       novoItem.width = 400; novoItem.height = 160;
       novoItem.coresBalao = paletaBalaoAtiva.cores; novoItem.x = 50; novoItem.y = 60;
-      novoItem.curvatura = 30; novoItem.ondulacao = 30; novoItem.volumeBalao = 'organico'; novoItem.qtdBaloes = 20; novoItem.tamanhoBalao = 24; novoItem.seed = Math.floor(Math.random() * 50);
+      novoItem.curvatura = 30; novoItem.ondulacao = 30; novoItem.volumeBalao = 'organico'; novoItem.qtdBaloes = 20; novoItem.tamanhoBalao = 24; novoItem.calibreBalao = 24; novoItem.espacamentoBaloes = 26; novoItem.seed = Math.floor(Math.random() * 50);
+    } else if (tipoEstrutura === 'balao_unitario') {
+      novoItem.width = 65; novoItem.height = 80;
+      novoItem.color = paletaBalaoAtiva.cores[0] || '#c5a059';
+      novoItem.acabamentoBalao = 'glossy';
+      novoItem.tamanhoPolegadas = '12"';
+      novoItem.temFitilho = false;
+      novoItem.x = 180; novoItem.y = 130;
+    } else if (tipoEstrutura === 'mini_cluster_5') {
+      novoItem.width = 90; novoItem.height = 90;
+      novoItem.coresBalao = [paletaBalaoAtiva.cores[0] || '#c5a059', paletaBalaoAtiva.cores[1] || '#ffffff', paletaBalaoAtiva.cores[2] || '#dfb6b2'];
+      novoItem.qtdCluster = 3;
+      novoItem.acabamentoBalao = 'glossy';
+      novoItem.x = 180; novoItem.y = 120;
     }
 
     const updated = [...itensCanvas, novoItem];
@@ -4347,13 +5102,14 @@ const Moodboard = () => {
     input.click();
   };
 
-  const adicionarOrnamento = (tipoOrnamento = 'ramo_esquerdo', materialPadrao = 'gold_mirror') => {
+  const adicionarOrnamento = (tipoOrnamento = 'ramo_folhas', materialPadrao = 'gold_mirror') => {
     const idUnico = `orn_${Date.now()}`;
-    const ornInfo = ORNAMENTOS_FESTA[tipoOrnamento] || ORNAMENTOS_FESTA.ramo_esquerdo;
+    const allOrns = { ...ORNAMENTOS_FESTA, ...ornamentosCustom };
+    const ornInfo = allOrns[tipoOrnamento] || ORNAMENTOS_FESTA.ramo_folhas;
     const novoOrnamento = {
       type: 'ornament',
       ornamentType: tipoOrnamento,
-      nome: ornInfo.nome,
+      nome: ornInfo.nome || 'Ícone Decorativo',
       uniqueId: idUnico,
       x: 180,
       y: 120,
@@ -4387,20 +5143,53 @@ const Moodboard = () => {
     }
   };
 
-  const handleExportImage = async () => {
+  const handleExportImage = async (format = 'jpg') => {
     if (!boardRef.current) return;
     setSelecionadoId(null);
     setIsPanCapaMode(false);
 
     setTimeout(async () => {
-      const canvas = await html2canvas(boardRef.current, { useCORS: true, allowTaint: true, backgroundColor: null, scale: 2 });
-      const link = document.createElement('a');
-      link.download = `Projeto_${(nomeProjeto || 'Moodboard').replace(/\s+/g, '_')}.png`;
-      link.href = canvas.toDataURL();
-      link.click();
+      try {
+        const isJpg = format === 'jpg' || format === 'jpeg';
+        const canvas = await html2canvas(boardRef.current, {
+          useCORS: true,
+          allowTaint: true,
+          backgroundColor: isJpg ? '#ffffff' : null,
+          scale: 2
+        });
+        const mimeType = isJpg ? 'image/jpeg' : 'image/png';
+        const ext = isJpg ? 'jpg' : 'png';
+        const link = document.createElement('a');
+        link.download = `Projeto_${(nomeProjeto || 'Moodboard').replace(/\s+/g, '_')}.${ext}`;
+        link.href = canvas.toDataURL(mimeType, 0.95);
+        link.click();
 
-      await registrarLog("EXPORTAÇÃO DE MOODBOARD", `Fez o download do projeto "${nomeProjeto || 'Sem Nome'}" em alta resolução (PNG).`);
+        await registrarLog("EXPORTAÇÃO DE MOODBOARD", `Fez o download do projeto "${nomeProjeto || 'Sem Nome'}" em alta resolução (${ext.toUpperCase()}).`);
+      } catch (err) {
+        console.error("Erro ao exportar imagem:", err);
+        alert("Erro ao gerar imagem. Tente novamente.");
+      }
     }, 200);
+  };
+
+  // 🚶‍♀️ DRAG DA SILHUETA DE PROPORÇÃO HUMANA NO CHÃO
+  const handlePointerDownSilhueta = (e) => {
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startPosX = silhuetaPosX;
+
+    const handlePointerMove = (moveEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      setSilhuetaPosX(Math.max(20, Math.min(1300, startPosX + deltaX)));
+    };
+
+    const handlePointerUp = () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerup', handlePointerUp);
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerup', handlePointerUp);
   };
 
   // 🕹️ POINTER DOWN: DISPARADOR DE DRAG / RESIZE / ROTATE / PAN_CAPA (DIRETO NO DOM, 0ms LATÊNCIA, 120 FPS REAL)
@@ -4729,7 +5518,93 @@ const Moodboard = () => {
 
   const itemSelecionado = itensCanvas.find(i => i.uniqueId === selecionadoId);
   const isEstruturaSelecionada = itemSelecionado?.type === 'shape' && ['arco_romano', 'arco_romano_triplo', 'arco_duplo', 'arco_organico_triplo', 'painel_organico_wavy', 'painel_casinha_colonial', 'painel_arco_borboletas', 'painel_moinho_fazendinha', 'painel_castelo_princesas', 'painel_redondo', 'painel_retangular', 'painel_hexagonal', 'painel_nuvem_gomos', 'meia_lua', 'nicho_prateleira', 'cilindro_g', 'cilindro_m', 'cilindro_p', 'mesa_nuvem', 'mesa_carruagem', 'estante_escadinha', 'mesa_osso', 'mesa_jeep', 'mesa_retangular', 'mesa_provencal', 'mesa_cubo', 'comoda_vintage', 'carrinho_gourmet'].includes(itemSelecionado?.shapeType);
-  const isBalaoSelecionado = itemSelecionado?.type === 'shape' && ['arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal'].includes(itemSelecionado?.shapeType);
+  const isBalaoSelecionado = itemSelecionado?.type === 'shape' && ['arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal', 'balao_unitario', 'mini_cluster_5'].includes(itemSelecionado?.shapeType);
+
+  // 🧮 CÁLCULO INTELIGENTE DE BEXIGAS E LISTA DE COMPRAS
+  const estatisticasBaloesProjeto = useMemo(() => {
+    let totalBaloes = 0;
+    const coresContagem = {};
+    const itensBaloes = [];
+
+    itensCanvas.forEach(item => {
+      if (item.type !== 'shape') {
+        if (item.categoria === 'Baloes' || (item.nome || '').toLowerCase().includes('arco') || (item.nome || '').toLowerCase().includes('balao')) {
+          totalBaloes += 150;
+          itensBaloes.push({ nome: item.nome || 'Arco de Balões (PNG)', qtd: 150, cores: ['#c5a059'] });
+          coresContagem['#c5a059'] = (coresContagem['#c5a059'] || 0) + 150;
+        }
+        return;
+      }
+
+      let qtdItem = 0;
+      let nomeItem = 'Arco / Guirlanda';
+      let coresItem = item.coresBalao?.length ? item.coresBalao : item.color ? [item.color] : ['#c5a059'];
+
+      if (item.shapeType === 'arco_classico_portal') {
+        const dens = item.espacamentoBaloes || 26;
+        const base = item.formatoPortal === 'duplo_paralelo' ? 320 : item.formatoPortal === 'retangular' ? 240 : 200;
+        qtdItem = Math.round(base * (28 / Math.max(16, dens)));
+        nomeItem = `Arco Portal (${item.formatoPortal || 'Romano'})`;
+      } else if (item.shapeType === 'baloes_aro_redondo') {
+        const dens = item.espacamentoBaloes || 26;
+        const base = item.coberturaAro === '360' ? 220 : item.coberturaAro === '3_4' ? 170 : 130;
+        qtdItem = Math.round(base * (28 / Math.max(16, dens)));
+        nomeItem = `Aro Redondo (${item.coberturaAro || 'Orgânico'})`;
+      } else if (item.shapeType === 'baloes_lateral_l') {
+        const dens = item.espacamentoBaloes || 26;
+        qtdItem = Math.round(160 * (28 / Math.max(16, dens)));
+        nomeItem = 'Guirlanda em "L"';
+      } else if (item.shapeType === 'coluna_baloes') {
+        const dens = item.espacamentoBaloes || 24;
+        qtdItem = Math.round(80 * (24 / Math.max(16, dens)));
+        nomeItem = 'Coluna de Balões';
+      } else if (item.shapeType === 'guirlanda_horizontal') {
+        qtdItem = item.qtdBaloes || 20;
+        nomeItem = 'Guirlanda Orgânica';
+      } else if (item.shapeType === 'baloes_cluster_chao') {
+        qtdItem = item.densidadeCluster === 'luxo' ? 65 : item.densidadeCluster === 'suave' ? 32 : 48;
+        nomeItem = 'Cluster de Chão';
+      } else if (item.shapeType === 'mini_cluster_5') {
+        qtdItem = item.qtdCluster || 3;
+        nomeItem = 'Mini Cluster 5"';
+      } else if (item.shapeType === 'balao_unitario') {
+        qtdItem = 1;
+        nomeItem = `Balão Unitário ${item.tamanhoPolegadas || '12"'}`;
+      }
+
+      if (qtdItem > 0) {
+        totalBaloes += qtdItem;
+        itensBaloes.push({ nome: nomeItem, qtd: qtdItem, cores: coresItem });
+        const porCor = Math.max(1, Math.round(qtdItem / coresItem.length));
+        coresItem.forEach(cor => {
+          coresContagem[cor] = (coresContagem[cor] || 0) + porCor;
+        });
+      }
+    });
+
+    const totalMinis5 = Math.round(totalBaloes * 0.30);
+    const totalPadrao9 = Math.round(totalBaloes * 0.50);
+    const totalDestaque12_18 = Math.max(0, totalBaloes - totalMinis5 - totalPadrao9);
+
+    const pacotesPorCor = Object.entries(coresContagem).map(([cor, qtd]) => {
+      const pacotes = Math.max(1, Math.ceil(qtd / 50));
+      return { cor, qtd, pacotes, subtotal: pacotes * precoMedioPacoteBalao };
+    });
+
+    const totalPacotes = pacotesPorCor.reduce((acc, p) => acc + p.pacotes, 0);
+    const custoTotalEstimado = totalPacotes * precoMedioPacoteBalao;
+
+    return {
+      totalBaloes,
+      itensBaloes,
+      totalMinis5,
+      totalPadrao9,
+      totalDestaque12_18,
+      pacotesPorCor,
+      totalPacotes,
+      custoTotalEstimado
+    };
+  }, [itensCanvas, precoMedioPacoteBalao]);
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const getStyle = useCallback((valor, surface = 'wall') => {
@@ -4987,13 +5862,13 @@ const Moodboard = () => {
       {/* 👑 BARRA DE FERRAMENTAS (LATERAL NO DESKTOP / DOCK INFERIOR NO MOBILE) */}
       {!modoApresentacao && (
         <div className="studio-toolbar" onClick={e => e.stopPropagation()}>
-          <div className="tool-logo" title="CELEBRE Studio Pro" onClick={() => navigate('/dashboard')}>
+          <div className="tool-logo" title="Sair do Studio / Voltar ao Início" onClick={() => navigate('/dashboard')}>
             <Icons.Crown />
           </div>
 
           {/* 1. CENÁRIO & AMBIENTAÇÃO — sempre primeiro: define o palco */}
           <div
-            className={`tool-item ${abaAtiva === 'fundo' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            className={`tool-item ${abaAtiva === 'fundo' && (isMobile ? painelMobileAberto : painelEsquerdoAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('fundo')}
             title="Defina o cenário: parede, piso e ambiente"
           >
@@ -5003,7 +5878,7 @@ const Moodboard = () => {
 
           {/* 2. ESTRUTURAS & PAINÉIS — esqueleto da decoração */}
           <div
-            className={`tool-item ${abaAtiva === 'formas' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            className={`tool-item ${abaAtiva === 'formas' && (isMobile ? painelMobileAberto : painelEsquerdoAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('formas')}
             title="Painéis, arcos romanos, mesas e cilindros"
           >
@@ -5013,7 +5888,7 @@ const Moodboard = () => {
 
           {/* 3. ACERVO & UPLOAD — itens reais do estoque + PNG externos */}
           <div
-            className={`tool-item ${abaAtiva === 'estoque' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            className={`tool-item ${abaAtiva === 'estoque' && (isMobile ? painelMobileAberto : painelEsquerdoAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('estoque')}
             title="Seu acervo físico, catálogo e upload de imagens"
           >
@@ -5023,7 +5898,7 @@ const Moodboard = () => {
 
           {/* 4. BEXIGAS & CENOGRAFIA — arcos orgânicos, guirlandas, balões */}
           <div
-            className={`tool-item ${abaAtiva === 'baloes' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            className={`tool-item ${abaAtiva === 'baloes' && (isMobile ? painelMobileAberto : painelEsquerdoAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('baloes')}
             title="Arcos orgânicos, guirlandas e bexigas"
           >
@@ -5033,7 +5908,7 @@ const Moodboard = () => {
 
           {/* 6. LETREIROS & TEXTO — finalização com nomes, fontes e efeitos */}
           <div
-            className={`tool-item ${abaAtiva === 'texto' && (!isMobile || painelMobileAberto) ? 'active' : ''}`}
+            className={`tool-item ${abaAtiva === 'texto' && (isMobile ? painelMobileAberto : painelEsquerdoAberto) ? 'active' : ''}`}
             onClick={() => abrirAbaMobile('texto')}
             title="Letreiros, nomes, fontes e efeitos de texto"
           >
@@ -5053,13 +5928,25 @@ const Moodboard = () => {
         </div>
       )}
 
+      {/* 📌 BOTÃO FLUTUANTE PARA REABRIR O MENU LATERAL ESQUERDO QUANDO RECOLHIDO */}
+      {!modoApresentacao && !painelEsquerdoAberto && !isMobile && (
+        <button
+          type="button"
+          className="btn-expand-left-dock"
+          onClick={() => setPainelEsquerdoAberto(true)}
+          title={`Expandir Menu Lateral (${abaAtiva === 'fundo' ? 'Cenário' : abaAtiva === 'formas' ? 'Estruturas' : abaAtiva === 'estoque' ? 'Acervo' : abaAtiva === 'baloes' ? 'Bexigas' : 'Letreiros'})`}
+        >
+          <i className="fas fa-chevron-right"></i>
+        </button>
+      )}
+
       {/* 🎮 BACKDROP DO BOTTOM SHEET (MOBILE) */}
       {isMobile && painelMobileAberto && !modoApresentacao && (
         <div className="bottom-sheet-backdrop" onClick={() => setPainelMobileAberto(false)} />
       )}
 
       {/* 🎛️ PAINEL LATERAL (DESKTOP) / BOTTOM SHEET (MOBILE) */}
-      {!modoApresentacao && (
+      {!modoApresentacao && (isMobile ? painelMobileAberto : painelEsquerdoAberto) && (
         <div
           className={`studio-panel ${isMobile ? 'bottom-sheet-panel' : ''} ${isMobile && painelMobileAberto ? 'bottom-sheet-open' : ''}`}
           onClick={e => e.stopPropagation()}
@@ -5085,6 +5972,18 @@ const Moodboard = () => {
           {/* ABA 1: MEU ESTOQUE FÍSICO / ACERVO COMPLETO */}
           {abaAtiva === 'estoque' && (
             <div className="panel-content">
+              <div className="panel-header-row" style={{ marginBottom: '10px' }}>
+                <h3 className="panel-title" style={{ margin: 0 }}>ACERVO & UPLOAD</h3>
+                <button
+                  type="button"
+                  className="btn-close-left-panel"
+                  onClick={() => setPainelEsquerdoAberto(false)}
+                  title="Recolher Menu Esquerdo"
+                >
+                  <i className="fas fa-chevron-left" style={{ fontSize: '10px' }}></i>
+                  <span>Recolher</span>
+                </button>
+              </div>
               {/* 🔀 Seletor de Origem Unificado */}
               <div className="acervo-source-segmented-control" style={{ marginBottom: '10px' }}>
                 <button
@@ -5135,73 +6034,90 @@ const Moodboard = () => {
                     )}
                   </div>
 
-                  {/* Seletor de Categoria do Estoque (Dropdown 1 Linha) */}
-                  <div className="mb-category-select-wrapper">
-                    <select
-                      className="mb-category-select-modern"
-                      value={filtroCategoriaEstoque}
-                      onChange={e => setFiltroCategoriaEstoque(e.target.value)}
-                    >
-                      <option value="todas">
-                        🏷️ Todas as Peças ({estoqueReal.length})
-                      </option>
-                      {categoriasDoEstoque.map(cat => {
-                        const count = estoqueReal.filter(i => (i.categoria || '').trim() === cat).length;
-                        return (
-                          <option key={cat} value={cat}>
-                            📦 {cat} ({count})
+                  {/* Filtros em Menus Suspensos: Categoria e Tema */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
+                    <div className="mb-category-select-wrapper">
+                      <select
+                        className="mb-category-select-modern"
+                        value={filtroCategoriaEstoque}
+                        onChange={e => setFiltroCategoriaEstoque(e.target.value)}
+                      >
+                        <option value="todas">
+                          🏷️ Todas as Categorias ({estoqueReal.length})
+                        </option>
+                        {categoriasDoEstoque.map(cat => {
+                          const count = estoqueReal.filter(i => (i.categoria || '').trim() === cat).length;
+                          return (
+                            <option key={cat} value={cat}>
+                              📦 {cat} ({count})
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <div className="mb-select-custom-arrow">
+                        <i className="fas fa-chevron-down"></i>
+                      </div>
+                    </div>
+
+                    <div className="mb-category-select-wrapper">
+                      <select
+                        className="mb-category-select-modern"
+                        value={temaSugestaoAtivo}
+                        onChange={e => {
+                          setTemaSugestaoAtivo(e.target.value);
+                          setTermoBusca('');
+                        }}
+                      >
+                        <option value="">
+                          🎭 Todos os Temas / Geral
+                        </option>
+                        {TEMAS_MOODBOARD_SUGESTOES.map(t => (
+                          <option key={t.tema} value={t.tema}>
+                            {t.icon} Tema: {t.tema}
                           </option>
-                        );
-                      })}
-                    </select>
-                    <div className="mb-select-custom-arrow">
-                      <i className="fas fa-chevron-down"></i>
+                        ))}
+                      </select>
+                      <div className="mb-select-custom-arrow">
+                        <i className="fas fa-chevron-down"></i>
+                      </div>
                     </div>
                   </div>
 
+                  {/* Grid Direto de Peças do Estoque */}
                   <div className="acervo-list-scroll">
-                    {Object.keys(grouped).length === 0 ? (
+                    {estoqueFiltrado.length === 0 ? (
                       <div className="empty-search-state">
-                        <p>Nenhuma peça encontrada no seu estoque para "{termoBusca}".</p>
+                        <p>Nenhuma peça encontrada no seu estoque com os filtros aplicados.</p>
                       </div>
                     ) : (
-                      Object.keys(grouped).sort().map(cat => (
-                        <div key={cat} className="acervo-category">
-                          <div className={`acervo-category-header ${expandedCats[cat] || termoBusca || filtroCategoriaEstoque !== 'todas' ? 'expanded' : ''}`} onClick={() => toggleCategory(cat)}>
-                            <span className="cat-name">{cat}</span> <span className="count">{grouped[cat].length}</span>
-                          </div>
-                          {(expandedCats[cat] || termoBusca || filtroCategoriaEstoque !== 'todas') && (
-                            <div className="acervo-grid">
-                              {grouped[cat].map(item => (
-                                <div
-                                  key={item.id}
-                                  className="acervo-card"
-                                  draggable
-                                  onDragStart={(e) => handleDragStartAcervo(e, { ...item, isEstoqueProprio: true })}
-                                  onClick={() => adicionarAoCanvas({ ...item, isEstoqueProprio: true })}
-                                  title="Clique ou arraste para o cenário"
-                                >
-                                  <div className="card-thumb">
-                                    <img src={item.imagem || 'https://via.placeholder.com/120?text=Sem+Foto'} crossOrigin="anonymous" alt={item.nome} />
-                                    <span className="badge-card-stock">✓ No Estoque</span>
-                                    {typeof item.quantidadeDisponivel === 'number' && (
-                                      <span className={`badge-card-qty ${item.quantidadeDisponivel === 0 ? 'esgotado' : ''}`}>
-                                        {item.quantidadeDisponivel === 0 ? '⚠️ 0 disp.' : `${item.quantidadeDisponivel} disp.`}
-                                      </span>
-                                    )}
-                                  </div>
-                                  <div className="card-info-box">
-                                    <div className="card-name" title={item.nome}>{item.nome}</div>
-                                    <div className="card-price">
-                                      {item.valor > 0 ? `R$ ${item.valor.toFixed(2)}` : 'Sob Consulta'}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
+                      <div className="acervo-grid" style={{ padding: '2px' }}>
+                        {estoqueFiltrado.map(item => (
+                          <div
+                            key={item.id}
+                            className="acervo-card"
+                            draggable
+                            onDragStart={(e) => handleDragStartAcervo(e, { ...item, isEstoqueProprio: true })}
+                            onClick={() => adicionarAoCanvas({ ...item, isEstoqueProprio: true })}
+                            title="Clique ou arraste para o cenário"
+                          >
+                            <div className="card-thumb">
+                              <img src={item.imagem || 'https://via.placeholder.com/120?text=Sem+Foto'} crossOrigin="anonymous" alt={item.nome} />
+                              <span className="badge-card-stock">✓ No Estoque</span>
+                              {typeof item.quantidadeDisponivel === 'number' && (
+                                <span className={`badge-card-qty ${item.quantidadeDisponivel === 0 ? 'esgotado' : ''}`}>
+                                  {item.quantidadeDisponivel === 0 ? '⚠️ 0 disp.' : `${item.quantidadeDisponivel} disp.`}
+                                </span>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))
+                            <div className="card-info-box">
+                              <div className="card-name" title={item.nome}>{item.nome}</div>
+                              <div className="card-price">
+                                {item.valor > 0 ? `R$ ${item.valor.toFixed(2)}` : 'Sob Consulta'}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </div>
                 </>
@@ -5288,6 +6204,8 @@ const Moodboard = () => {
                             onDragStart={(e) => handleDragStartAcervo(e, {
                               nome: elem.nome,
                               imagem: elem.imagemUrl,
+                              imagemOriginal: elem.imagemOriginalUrl || elem.imagemUrl,
+                              imagemRecortada: elem.imagemUrl,
                               isEstoqueProprio: false,
                               isItemExterno: true,
                               origem: elem.isGlobal ? 'catalogo_global' : 'portfolio_proprio'
@@ -5295,6 +6213,8 @@ const Moodboard = () => {
                             onClick={() => adicionarAoCanvas({
                               nome: elem.nome,
                               imagem: elem.imagemUrl,
+                              imagemOriginal: elem.imagemOriginalUrl || elem.imagemUrl,
+                              imagemRecortada: elem.imagemUrl,
                               isEstoqueProprio: false,
                               isItemExterno: true,
                               origem: elem.isGlobal ? 'catalogo_global' : 'portfolio_proprio'
@@ -5324,8 +6244,81 @@ const Moodboard = () => {
           {/* ABA: ESTRUTURAS & PAINÉIS */}
           {abaAtiva === 'formas' && (
             <div className="panel-content">
-              <h3 className="panel-title">ESTRUTURAS & PAINÉIS</h3>
+              <div className="panel-header-row" style={{ marginBottom: '10px' }}>
+                <h3 className="panel-title" style={{ margin: 0 }}>ESTRUTURAS & PAINÉIS</h3>
+                <button
+                  type="button"
+                  className="btn-close-left-panel"
+                  onClick={() => setPainelEsquerdoAberto(false)}
+                  title="Recolher Menu Esquerdo"
+                >
+                  <i className="fas fa-chevron-left" style={{ fontSize: '10px' }}></i>
+                  <span>Recolher</span>
+                </button>
+              </div>
               <p className="hint-text" style={{ margin: '0 0 10px 0' }}>Clique para adicionar a estrutura branca ao cenário e personalizar as cores:</p>
+
+              {/* 🚶‍♀️ CARD DE PROPORÇÃO REAL & SILHUETAS */}
+              <div style={{
+                background: escalaHumanaAtiva ? 'linear-gradient(135deg, rgba(197, 160, 89, 0.15), rgba(15, 23, 42, 0.05))' : '#f8fafc',
+                border: escalaHumanaAtiva ? '1.5px solid #c5a059' : '1px solid #e2e8f0',
+                borderRadius: '8px', padding: '10px', marginBottom: '14px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: escalaHumanaAtiva ? '8px' : '0' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    🚶‍♀️ Silhueta de Altura & Proporção
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEscalaHumanaAtiva(!escalaHumanaAtiva)}
+                    style={{
+                      fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '12px',
+                      background: escalaHumanaAtiva ? '#c5a059' : '#e2e8f0',
+                      color: escalaHumanaAtiva ? '#0f172a' : '#64748b',
+                      border: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    {escalaHumanaAtiva ? 'ATIVA (ON)' : 'ATIVAR'}
+                  </button>
+                </div>
+
+                {escalaHumanaAtiva && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '6px' }}>
+                      {[
+                        { id: 'mulher', label: '👩 Mulher', m: '1,65m' },
+                        { id: 'homem', label: '👨 Homem', m: '1,75m' },
+                        { id: 'crianca', label: '👧 Criança', m: '1,10m' }
+                      ].map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setTipoSilhueta(s.id)}
+                          style={{
+                            padding: '5px 2px', fontSize: '9.5px', fontWeight: '700', borderRadius: '5px',
+                            background: tipoSilhueta === s.id ? '#0f172a' : '#ffffff',
+                            color: tipoSilhueta === s.id ? '#fef08a' : '#334155',
+                            border: tipoSilhueta === s.id ? '1px solid #c5a059' : '1px solid #cbd5e1',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <div>{s.label}</div>
+                          <div style={{ fontSize: '8.5px', opacity: 0.8 }}>{s.m}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#475569', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={mostrarReguaMetrica}
+                        onChange={e => setMostrarReguaMetrica(e.target.checked)}
+                        style={{ accentColor: '#c5a059' }}
+                      />
+                      <span>Mostrar Régua Métrica Lateral</span>
+                    </label>
+                  </>
+                )}
+              </div>
 
               {/* 🏛️ PAINÉIS & ARCOS */}
               <div className="estruturas-section-label">🏛️ Painéis & Arcos</div>
@@ -5519,212 +6512,237 @@ const Moodboard = () => {
           {/* ABA: BALÕES & ARCOS */}
           {abaAtiva === 'baloes' && (
             <div className="panel-content">
-              <p className="hint-text" style={{ margin: '0 0 8px 0' }}>Guirlandas orgânicas, arcos, colunas e biblioteca de balões PNG:</p>
-
-              {/* 🎨 SELETOR DE CORES & PALETA DE BEXIGAS */}
-              <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '10px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cores dos Balões:</span>
-                  <span style={{ fontSize: '9.5px', color: '#c5a059', fontWeight: '700' }}>{paletaBalaoAtiva.nome}</span>
-                </div>
-
-                {/* 5 Círculos de Cores Editáveis */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
-                  {paletaBalaoAtiva.cores.map((cor, cIdx) => (
-                    <div key={cIdx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flex: 1 }}>
-                      <input
-                        type="color"
-                        value={cor}
-                        onChange={(e) => {
-                          const novas = [...paletaBalaoAtiva.cores];
-                          novas[cIdx] = e.target.value;
-                          setPaletaBalaoAtiva(prev => ({ ...prev, cores: novas }));
-                          if (selecionadoId && isBalaoSelecionado) {
-                            atualizarItem(selecionadoId, { coresBalao: novas });
-                          }
-                        }}
-                        style={{ width: '100%', height: '24px', border: '1.5px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                        title={`Clique para alterar a Cor #${cIdx + 1}`}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {/* Dropdown de Paletas Prontas */}
-                <select
-                  value={paletaBalaoAtiva.nome}
-                  onChange={(e) => {
-                    const encontrada = PALETAS_BALOES.find(p => p.nome === e.target.value);
-                    if (encontrada) {
-                      setPaletaBalaoAtiva(encontrada);
-                      if (selecionadoId && isBalaoSelecionado) {
-                        atualizarItem(selecionadoId, { coresBalao: encontrada.cores });
-                      }
-                    }
-                  }}
-                  style={{ width: '100%', padding: '5px 8px', fontSize: '10.5px', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#fff', fontWeight: '600', color: '#334155' }}
-                >
-                  {PALETAS_BALOES.map((pal, idx) => (
-                    <option key={idx} value={pal.nome}>
-                      🎨 {pal.nome}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {/* 🎈 BALÕES & GUIRLANDAS */}
-              <div className="estruturas-section-label">🎈 Formatos de Balões & Guirlandas</div>
-              <div className="shapes-presets-grid">
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_classico_portal')}>
-                  <div className="shape-preview" style={{ width: '48px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🎪</div>
-                  <span>Arco Portal</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('baloes_aro_redondo')}>
-                  <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔵</div>
-                  <span>Aro Redondo</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('baloes_lateral_l')}>
-                  <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎈</div>
-                  <span>Guirlanda L</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('baloes_cluster_chao')}>
-                  <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🫧</div>
-                  <span>Cluster Chão</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('guirlanda_horizontal')}>
-                  <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>〰️</div>
-                  <span>Guirlanda H.</span>
-                </div>
-                <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('coluna_baloes')}>
-                  <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗼</div>
-                  <span>Coluna</span>
-                </div>
-              </div>
-
-              {/* SEÇÃO BIBLIOTECA & PORTFÓLIO EXCLUSIVA DE BALÕES */}
-              <div className="baloes-section">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <h4 style={{ fontSize: '13px', color: '#0f172a', fontWeight: '800', margin: 0 }}>
-                    🎈 Biblioteca de Balões & Arcos (PNG)
-                  </h4>
-                  <span style={{ fontSize: '10px', color: '#c5a059', fontWeight: 'bold' }}>Fundo Transparente</span>
-                </div>
-
-                {/* Filtro: Padrão Oficial vs Meu Portfólio */}
-                <div className="cenario-type-switcher" style={{ marginBottom: '8px' }}>
-                  <button
-                    className={`switch-btn ${filtroBiblioteca === 'oficiais' ? 'active' : ''}`}
-                    onClick={() => setFiltroBiblioteca('oficiais')}
-                  >
-                    👑 Oficiais Celebre
-                  </button>
-                  <button
-                    className={`switch-btn ${filtroBiblioteca === 'meu_portfolio' ? 'active' : ''}`}
-                    onClick={() => setFiltroBiblioteca('meu_portfolio')}
-                  >
-                    📁 Meu Portfólio
-                  </button>
-                </div>
-
-                {/* Botão de Adicionar Balão ao Portfólio */}
+              <div className="panel-header-row" style={{ marginBottom: '10px' }}>
+                <h3 className="panel-title" style={{ margin: 0 }}>BEXIGAS & CENOGRAFIA</h3>
                 <button
                   type="button"
-                  className="btn-upload-capa"
-                  style={{ background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer' }}
-                  onClick={() => handleUploadImagemRapida('Baloes', true, 'baloes')}
+                  className="btn-close-left-panel"
+                  onClick={() => setPainelEsquerdoAberto(false)}
+                  title="Recolher Menu Esquerdo"
                 >
-                  <Icons.Balloon width={15} height={15} /> 📷 + Subir Novo Balão / Arco PNG
+                  <i className="fas fa-chevron-left" style={{ fontSize: '10px' }}></i>
+                  <span>Recolher</span>
                 </button>
-
-                {/* Grid de Elementos Exclusivos de Balões */}
-                {loadingBiblioteca ? (
-                  <div style={{ textAlign: 'center', padding: '20px', fontSize: '11px', color: '#64748b' }}>
-                    Carregando balões...
-                  </div>
-                ) : elementosBaloesFiltrados.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '20px 10px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-                    <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px 0' }}>
-                      {filtroBiblioteca === 'meu_portfolio' ? 'Você ainda não adicionou balões ao seu portfólio.' : 'Nenhum balão oficial cadastrado.'}
-                    </p>
-                    <button type="button" className="btn-secondary" style={{ padding: '6px 10px', fontSize: '10px', cursor: 'pointer' }} onClick={() => handleUploadImagemRapida('Baloes', true, 'baloes')}>
-                      + Subir Balão / Arco PNG
-                    </button>
-                  </div>
-                ) : (
-                  <div className="presets-arcos-grid">
-                    {elementosBaloesFiltrados.map((item, idx) => (
-                      <div
-                        key={item.id || idx}
-                        className="preset-arco-card"
-                        onClick={() => {
-                          const img = new Image();
-                          img.onload = () => {
-                            const defaultW = 260;
-                            const calcH = Math.round((defaultW * (img.height || 260)) / (img.width || 260));
-                            adicionarAoCanvas({
-                              nome: item.nome,
-                              imagem: item.imagemUrl,
-                              width: defaultW,
-                              height: calcH,
-                              isEstoqueProprio: false,
-                              isItemExterno: true,
-                              origem: item.isGlobal ? 'global_celebre' : 'meu_portfolio',
-                              categoria: item.categoria || 'Cenografia'
-                            });
-                          };
-                          img.src = item.imagemUrl;
-                        }}
-                        title={`${item.nome} (Item Fora do Estoque - Clique para adicionar)`}
-                      >
-                        <div className="preset-arco-thumb-wrapper">
-                          <img src={item.imagemUrl} alt={item.nome} />
-                          <span className="badge-card-need-buy" title="Esta peça não está no seu estoque próprio">
-                            <Icons.ShoppingCart width={10} height={10} /> p/ Comprar
-                          </span>
-                        </div>
-                        <div className="preset-arco-info">
-                          <span className="preset-arco-title">{item.nome}</span>
-                          <span className="preset-arco-tag">{item.tag || (item.isGlobal ? '👑 Celebre Oficial' : '📁 Portfólio')}</span>
-                        </div>
-
-                        {/* Ações do item */}
-                        <div className="elem-card-actions" onClick={e => e.stopPropagation()}>
-                          {item.empresaId === tenantId && !item.isGlobal && (
-                            <button
-                              className={`btn-elem-action ${item.sugeridoParaGlobal ? 'suggested' : ''}`}
-                              onClick={() => handleSugerirParaGlobal(item)}
-                              title={item.sugeridoParaGlobal ? "Sugestão enviada para a Celebre" : "Sugerir para se tornar Padrão do Sistema"}
-                            >
-                              {item.sugeridoParaGlobal ? '⭐ Enviado' : '⭐ Sugerir Padrão'}
-                            </button>
-                          )}
-
-                          {usuarioLogado?.email === "celebrefesta25@gmail.com" && (
-                            <button
-                              className="btn-elem-action"
-                              style={{ color: '#c5a059' }}
-                              onClick={() => handleAlternarGlobalElemento(item)}
-                              title={item.isGlobal ? "Remover do Global" : "Tornar Global Oficial"}
-                            >
-                              {item.isGlobal ? '👑 Oficial' : '+ Tornar Oficial'}
-                            </button>
-                          )}
-
-                          {item.empresaId === tenantId && (
-                            <button
-                              className="btn-elem-del"
-                              onClick={() => handleExcluirMeuElemento(item.id)}
-                              title="Excluir do meu portfólio"
-                            >
-                              ✕
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
               </div>
+              {/* 🔀 Seletor de Origem de Balões Unificado (Estilo Acervo) */}
+              <div className="acervo-source-segmented-control" style={{ marginBottom: '12px' }}>
+                <button
+                  type="button"
+                  className={`source-seg-btn ${abaBaloesFonte === 'modelador_3d' ? 'active' : ''}`}
+                  onClick={() => setAbaBaloesFonte('modelador_3d')}
+                  title="Formatos e Modelagem de Balões 3D"
+                >
+                  <Icons.Balloon width={13} height={13} />
+                  <span>Modelagem 3D</span>
+                </button>
+                <button
+                  type="button"
+                  className={`source-seg-btn ${abaBaloesFonte === 'oficiais' ? 'active' : ''}`}
+                  onClick={() => { setAbaBaloesFonte('oficiais'); setFiltroBiblioteca('oficiais'); }}
+                  title="Galeria Oficial de Balões e Arcos PNG"
+                >
+                  <Icons.Crown width={13} height={13} />
+                  <span>Oficiais ({baloesOficiaisCount})</span>
+                </button>
+                <button
+                  type="button"
+                  className={`source-seg-btn ${abaBaloesFonte === 'portfolio' ? 'active' : ''}`}
+                  onClick={() => { setAbaBaloesFonte('portfolio'); setFiltroBiblioteca('meu_portfolio'); }}
+                  title="Meus arcos e balões PNG enviados"
+                >
+                  <Icons.Image width={13} height={13} />
+                  <span>Meu Portfólio ({baloesPortfolioCount})</span>
+                </button>
+              </div>
+
+              {/* 1. SE FOR MODELADOR 3D / FORMATOS */}
+              {abaBaloesFonte === 'modelador_3d' && (
+                <>
+                  {/* 🧮 BOTÃO DA CALCULADORA DE BALÕES & LISTA DE COMPRAS */}
+                  <button
+                    type="button"
+                    className="btn-open-balloon-calc"
+                    onClick={() => setModalCalculadoraBaloesAberto(true)}
+                    style={{
+                      width: '100%',
+                      padding: '9px 12px',
+                      marginBottom: '12px',
+                      background: 'linear-gradient(135deg, #0f172a, #1e293b)',
+                      color: '#c5a059',
+                      border: '1.5px solid #c5a059',
+                      borderRadius: '8px',
+                      fontSize: '11px',
+                      fontWeight: '800',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '7px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 6px rgba(0,0,0,0.12)'
+                    }}
+                    title="Calcular automaticamente a quantidade de balões e pacotes de compras para a festa"
+                  >
+                    <span>🧮</span>
+                    <span>Calculadora de Balões & Compras</span>
+                  </button>
+
+                  {/* 🎈 BALÕES & ESTRUTURAS 3D */}
+                  <div className="estruturas-section-label">🎈 Formatos & Modelagem de Balões 3D</div>
+                  <div className="shapes-presets-grid">
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('balao_unitario')} title="🎈 Balão Unitário 3D Avulso (Adicione bexigas individuais para personalizar o arco)">
+                      <div className="shape-preview" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎈</div>
+                      <span style={{ fontWeight: '800', color: '#c5a059' }}>Balão 3D</span>
+                    </div>
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('mini_cluster_5')} title="🫧 Mini Cluster 5 polegadas (Trio de bexigas para acabamento)">
+                      <div className="shape-preview" style={{ fontSize: '24px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🫧</div>
+                      <span style={{ fontWeight: '800', color: '#c5a059' }}>Mini Cluster</span>
+                    </div>
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('arco_classico_portal')}>
+                      <div className="shape-preview" style={{ width: '48px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>🎪</div>
+                      <span>Arco Portal</span>
+                    </div>
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('baloes_aro_redondo')}>
+                      <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🔵</div>
+                      <span>Aro Redondo</span>
+                    </div>
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('baloes_lateral_l')}>
+                      <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🎀</div>
+                      <span>Guirlanda L</span>
+                    </div>
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('baloes_cluster_chao')}>
+                      <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🫧</div>
+                      <span>Cluster Chão</span>
+                    </div>
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('guirlanda_horizontal')}>
+                      <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>〰️</div>
+                      <span>Guirlanda H.</span>
+                    </div>
+                    <div className="shape-card-item" onClick={() => adicionarFormaOuEstrutura('coluna_baloes')}>
+                      <div className="shape-preview" style={{ fontSize: '22px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>🗼</div>
+                      <span>Coluna</span>
+                    </div>
+                  </div>
+
+                  <div style={{ marginTop: '14px', padding: '9px 12px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1', fontSize: '10.5px', color: '#64748b', lineHeight: '1.4' }}>
+                    🎨 <strong style={{ color: '#0f172a' }}>Dica:</strong> Para trocar as cores, calibres, acabamentos (Fosco, Metálico, Cromado) ou o efeito <i>Double Stuffed</i>, selecione o arco/balão na tela e use o painel <strong>PROPRIEDADES</strong> à direita.
+                  </div>
+                </>
+              )}
+
+              {/* 2. SE FOR BIBLIOTECA PNG (OFICIAIS OU MEU PORTFÓLIO) */}
+              {(abaBaloesFonte === 'oficiais' || abaBaloesFonte === 'portfolio') && (
+                <div className="baloes-section" style={{ marginTop: 0 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <h4 style={{ fontSize: '12.5px', color: '#0f172a', fontWeight: '800', margin: 0 }}>
+                      {abaBaloesFonte === 'oficiais' ? '👑 Balões Oficiais Celebre' : '📁 Meu Portfólio de Balões PNG'}
+                    </h4>
+                    <span style={{ fontSize: '10px', color: '#c5a059', fontWeight: 'bold' }}>Fundo Transparente</span>
+                  </div>
+
+                  {/* Botão de Adicionar Balão ao Portfólio */}
+                  {abaBaloesFonte === 'portfolio' && (
+                    <button
+                      type="button"
+                      className="btn-upload-capa"
+                      style={{ background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', cursor: 'pointer', width: '100%' }}
+                      onClick={() => handleUploadImagemRapida('Baloes', true, 'baloes')}
+                    >
+                      <Icons.Balloon width={15} height={15} /> 📷 + Subir Novo Balão / Arco PNG
+                    </button>
+                  )}
+
+                  {/* Grid de Elementos Exclusivos de Balões */}
+                  {loadingBiblioteca ? (
+                    <div style={{ textAlign: 'center', padding: '20px', fontSize: '11px', color: '#64748b' }}>
+                      Carregando balões...
+                    </div>
+                  ) : elementosBaloesFiltrados.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '20px 10px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
+                      <p style={{ fontSize: '11px', color: '#64748b', margin: '0 0 8px 0' }}>
+                        {abaBaloesFonte === 'portfolio' ? 'Você ainda não adicionou balões ao seu portfólio.' : 'Nenhum balão oficial cadastrado.'}
+                      </p>
+                      {abaBaloesFonte === 'portfolio' && (
+                        <button type="button" className="btn-secondary" style={{ padding: '6px 10px', fontSize: '10px', cursor: 'pointer' }} onClick={() => handleUploadImagemRapida('Baloes', true, 'baloes')}>
+                          + Subir Balão / Arco PNG
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="presets-arcos-grid">
+                      {elementosBaloesFiltrados.map((item, idx) => (
+                        <div
+                          key={item.id || idx}
+                          className="preset-arco-card"
+                          onClick={() => {
+                            const img = new Image();
+                            img.onload = () => {
+                              const defaultW = 260;
+                              const calcH = Math.round((defaultW * (img.height || 260)) / (img.width || 260));
+                              adicionarAoCanvas({
+                                nome: item.nome,
+                                imagem: item.imagemUrl,
+                                width: defaultW,
+                                height: calcH,
+                                isEstoqueProprio: false,
+                                isItemExterno: true,
+                                origem: item.isGlobal ? 'global_celebre' : 'meu_portfolio',
+                                categoria: item.categoria || 'Cenografia'
+                              });
+                            };
+                            img.src = item.imagemUrl;
+                          }}
+                          title={`${item.nome} (Item Fora do Estoque - Clique para adicionar)`}
+                        >
+                          <div className="preset-arco-thumb-wrapper">
+                            <img src={item.imagemUrl} alt={item.nome} />
+                            <span className="badge-card-need-buy" title="Esta peça não está no seu estoque próprio">
+                              <Icons.ShoppingCart width={10} height={10} /> p/ Comprar
+                            </span>
+                          </div>
+                          <div className="preset-arco-info">
+                            <span className="preset-arco-title">{item.nome}</span>
+                            <span className="preset-arco-tag">{item.tag || (item.isGlobal ? '👑 Celebre Oficial' : '📁 Portfólio')}</span>
+                          </div>
+
+                          {/* Ações do item */}
+                          <div className="elem-card-actions" onClick={e => e.stopPropagation()}>
+                            {item.empresaId === tenantId && !item.isGlobal && (
+                              <button
+                                className={`btn-elem-action ${item.sugeridoParaGlobal ? 'suggested' : ''}`}
+                                onClick={() => handleSugerirParaGlobal(item)}
+                                title={item.sugeridoParaGlobal ? "Sugestão enviada para a Celebre" : "Sugerir para se tornar Padrão do Sistema"}
+                              >
+                                {item.sugeridoParaGlobal ? '⭐ Enviado' : '⭐ Sugerir Padrão'}
+                              </button>
+                            )}
+
+                            {usuarioLogado?.email === "celebrefesta25@gmail.com" && (
+                              <button
+                                className="btn-elem-action"
+                                style={{ color: '#c5a059' }}
+                                onClick={() => handleAlternarGlobalElemento(item)}
+                                title={item.isGlobal ? "Remover do Global" : "Tornar Global Oficial"}
+                              >
+                                {item.isGlobal ? '👑 Oficial' : '+ Tornar Oficial'}
+                              </button>
+                            )}
+
+                            {item.empresaId === tenantId && (
+                              <button
+                                className="btn-elem-del"
+                                onClick={() => handleExcluirMeuElemento(item.id)}
+                                title="Excluir do meu portfólio"
+                              >
+                                ✕
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
@@ -5732,7 +6750,18 @@ const Moodboard = () => {
           {/* ABA: TEXTO & ÍCONES / APLIQUES DE FESTA */}
           {abaAtiva === 'texto' && (
             <div className="panel-content">
-              <h3 className="panel-title">TEXTOS & ENFEITES</h3>
+              <div className="panel-header-row" style={{ marginBottom: '10px' }}>
+                <h3 className="panel-title" style={{ margin: 0 }}>TEXTOS & ENFEITES</h3>
+                <button
+                  type="button"
+                  className="btn-close-left-panel"
+                  onClick={() => setPainelEsquerdoAberto(false)}
+                  title="Recolher Menu Esquerdo"
+                >
+                  <i className="fas fa-chevron-left" style={{ fontSize: '10px' }}></i>
+                  <span>Recolher</span>
+                </button>
+              </div>
 
               {/* Sub-Aba Switcher: Títulos vs Ícones & Enfeites */}
               <div style={{ display: 'flex', gap: '4px', marginBottom: '14px', background: '#f1f5f9', padding: '4px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
@@ -5780,15 +6809,46 @@ const Moodboard = () => {
               {subAbaTexto === 'texto' && (
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
-                  {/* Indicador de Edição Ativa */}
-                  {itemSelecionado?.type === 'text' && (
-                    <div style={{ padding: '8px 10px', background: '#fef3c7', borderRadius: '8px', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span style={{ fontSize: '13px' }}>⚡</span>
-                      <span style={{ fontSize: '11px', fontWeight: '800', color: '#92400e' }}>Editando texto selecionado no cenário</span>
-                    </div>
-                  )}
+                  {/* Cabeçalho de Status / Adicionar Novo Texto */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '6px' }}>
+                    {itemSelecionado?.type === 'text' ? (
+                      <div style={{ padding: '6px 8px', background: '#fef3c7', borderRadius: '6px', border: '1px solid #fde68a', display: 'flex', alignItems: 'center', gap: '5px', flex: 1 }}>
+                        <span style={{ fontSize: '12px' }}>⚡</span>
+                        <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#92400e' }}>Editando texto no cenário</span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
+                        ✍️ Digite para criar no cenário:
+                      </span>
+                    )}
 
-                  {/* 1. Digitar Texto / Nome */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const novoId = adicionarTexto({ content: 'Novo Nome' });
+                        setTextoNovoInput('Novo Nome');
+                      }}
+                      style={{
+                        padding: '6px 10px',
+                        background: '#0f172a',
+                        color: '#fef08a',
+                        border: '1px solid #c5a059',
+                        borderRadius: '6px',
+                        fontSize: '11px',
+                        fontWeight: '800',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        whiteSpace: 'nowrap'
+                      }}
+                      title="Adicionar um novo texto separado no cenário"
+                    >
+                      <span>+</span> Novo Texto
+                    </button>
+                  </div>
+
+                  {/* 1. Digitar Texto / Nome em Tempo Real */}
                   <div>
                     <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
                       ✍️ Digite o Texto / Nome / Frase:
@@ -5796,12 +6856,14 @@ const Moodboard = () => {
                     <input
                       type="text"
                       className="text-input-direct"
-                      value={itemSelecionado?.type === 'text' ? (itemSelecionado.content || '') : textoNovoInput}
+                      value={itemSelecionado?.type === 'text' ? (itemSelecionado.content ?? '') : textoNovoInput}
                       onChange={(e) => {
                         const val = e.target.value;
                         setTextoNovoInput(val);
                         if (itemSelecionado?.type === 'text' && selecionadoId) {
                           atualizarItem(selecionadoId, { content: val });
+                        } else {
+                          adicionarTexto({ content: val });
                         }
                       }}
                       placeholder="Ex: Sophia 15 Anos, Bem-Vindos..."
@@ -5809,49 +6871,7 @@ const Moodboard = () => {
                     />
                   </div>
 
-                  {/* 2. Botão Principal: Inserir no Cenário */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const txt = (itemSelecionado?.type === 'text' ? itemSelecionado.content : textoNovoInput).trim() || 'Nome da Festa';
-                      let preset = {
-                        content: txt,
-                        fontFamily: fonteTextoAtiva,
-                        fontSize: 50,
-                      };
-                      if (efeitoTextoAtivo === 'neon') {
-                        preset = { ...preset, neon: true, neonColor: '#ec4899', color: '#ffffff', neonGlow: 22 };
-                      } else if (efeitoTextoAtivo === 'acrilico_redondo') {
-                        preset = { ...preset, placaFundo: 'acrilico_redondo', color: '#0f172a', letterSpacing: 2 };
-                      } else if (efeitoTextoAtivo === 'acrilico_retangular') {
-                        preset = { ...preset, placaFundo: 'acrilico_retangular', color: '#0f172a', letterSpacing: 2 };
-                      } else if (efeitoTextoAtivo !== 'none') {
-                        preset = { ...preset, material: efeitoTextoAtivo };
-                      }
-                      adicionarTexto(preset);
-                    }}
-                    style={{
-                      background: 'linear-gradient(135deg, #0f172a, #1e293b)',
-                      color: '#c5a059',
-                      border: '1.5px solid #c5a059',
-                      padding: '12px 14px',
-                      borderRadius: '10px',
-                      fontSize: '12px',
-                      fontWeight: '900',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-                      transition: 'all 0.2s ease'
-                    }}
-                  >
-                    <span>✍️</span>
-                    <span>+ Inserir Texto no Cenário</span>
-                  </button>
-
-                  {/* 3. Efeitos & Materiais de Acabamento */}
+                  {/* 2. Efeitos & Materiais de Acabamento */}
                   <div>
                     <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
                       🪞 Efeitos & Materiais de Acabamento:
@@ -5862,14 +6882,12 @@ const Moodboard = () => {
                         { id: 'gold_mirror', nome: 'Acrílico Ouro', tipo: 'grad', bg: 'linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #b38728 55%, #aa771c 100%)' },
                         { id: 'rose_gold', nome: 'Rose Gold', tipo: 'grad', bg: 'linear-gradient(135deg, #b76e79 0%, #ffd1dc 30%, #e0a9af 55%, #9c4f5a 100%)' },
                         { id: 'silver_mirror', nome: 'Prata Espelho', tipo: 'grad', bg: 'linear-gradient(135deg, #8a8a8a 0%, #ffffff 30%, #a6a6a6 55%, #737373 100%)' },
-                        { id: 'mdf_wood', nome: 'MDF 3D Laser', tipo: 'pat', bg: 'repeating-linear-gradient(45deg, #d29b62, #d29b62 6px, #ba8249 6px, #ba8249 12px)' },
+                        { id: 'mdf_wood', nome: 'MDF 3D Laser', tipo: 'grad', bg: 'linear-gradient(170deg, #e6be8a 0%, #caa070 30%, #dfb582 60%, #b88652 100%)' },
                         { id: 'glitter_gold', nome: 'Glitter Dourado', tipo: 'grad', bg: 'radial-gradient(circle at 50% 50%, #fff7cc 10%, #d4af37 40%, #996515 80%, #ffd700 100%)' },
-                        { id: 'neon', nome: 'Letreiro Neon LED', tipo: 'neon', bg: '#0f172a' },
-                        { id: 'acrilico_redondo', nome: 'Placa Redonda', tipo: 'placa', bg: '#e2e8f0' },
-                        { id: 'acrilico_retangular', nome: 'Placa Retangular', tipo: 'placa', bg: '#e2e8f0' },
+                        { id: 'neon', nome: 'Letreiro Neon LED', tipo: 'neon', bg: '#0f172a' }
                       ].map(efeito => {
                         const isAtivo = itemSelecionado?.type === 'text'
-                          ? (efeito.id === 'neon' ? itemSelecionado.neon : efeito.id.startsWith('acrilico_') ? itemSelecionado.placaFundo === efeito.id : (itemSelecionado.material || 'none') === efeito.id)
+                          ? (efeito.id === 'neon' ? itemSelecionado.neon : (itemSelecionado.material || 'none') === efeito.id)
                           : efeitoTextoAtivo === efeito.id;
 
                         return (
@@ -5880,15 +6898,11 @@ const Moodboard = () => {
                               setEfeitoTextoAtivo(efeito.id);
                               if (itemSelecionado?.type === 'text' && selecionadoId) {
                                 if (efeito.id === 'neon') {
-                                  atualizarItem(selecionadoId, { neon: true, neonColor: itemSelecionado.neonColor || '#ec4899', color: '#ffffff', material: 'none', placaFundo: 'nenhuma' });
-                                } else if (efeito.id === 'acrilico_redondo') {
-                                  atualizarItem(selecionadoId, { placaFundo: 'acrilico_redondo', neon: false });
-                                } else if (efeito.id === 'acrilico_retangular') {
-                                  atualizarItem(selecionadoId, { placaFundo: 'acrilico_retangular', neon: false });
+                                  atualizarItem(selecionadoId, { neon: true, neonColor: itemSelecionado.neonColor || '#ec4899', color: '#ffffff', material: 'none' });
                                 } else if (efeito.id === 'none') {
-                                  atualizarItem(selecionadoId, { material: 'none', neon: false, placaFundo: 'nenhuma' });
+                                  atualizarItem(selecionadoId, { material: 'none', neon: false });
                                 } else {
-                                  atualizarItem(selecionadoId, { material: efeito.id, neon: false, placaFundo: 'nenhuma' });
+                                  atualizarItem(selecionadoId, { material: efeito.id, neon: false });
                                 }
                               }
                             }}
@@ -5900,7 +6914,6 @@ const Moodboard = () => {
                             >
                               {efeito.tipo === 'cor' && <span style={{ fontSize: '11px', color: '#fff' }}>Aa</span>}
                               {efeito.tipo === 'neon' && <span style={{ fontSize: '12px', color: '#ec4899', textShadow: '0 0 6px #ec4899' }}>💡</span>}
-                              {efeito.tipo === 'placa' && <span style={{ fontSize: '12px' }}>🏷️</span>}
                             </div>
                             <span className="texture-swatch-name">{efeito.nome}</span>
                           </div>
@@ -5909,7 +6922,7 @@ const Moodboard = () => {
                     </div>
                   </div>
 
-                  {/* 4. Estilos de Fonte Rápidos */}
+                  {/* 4. Estilos de Fonte Rápidos & Formatação */}
                   <div>
                     <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
                       🔠 Família de Fonte / Tipografia:
@@ -5924,7 +6937,7 @@ const Moodboard = () => {
                           atualizarItem(selecionadoId, { fontFamily: f });
                         }
                       }}
-                      style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', boxSizing: 'border-box' }}
+                      style={{ width: '100%', padding: '9px 10px', fontSize: '12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', boxSizing: 'border-box', marginBottom: '8px' }}
                     >
                       {fontesDisponiveis.map(f => (
                         <option key={f.nome} value={f.valor} style={{ fontFamily: f.valor }}>
@@ -5932,6 +6945,60 @@ const Moodboard = () => {
                         </option>
                       ))}
                     </select>
+
+                    {/* Barra de Formatação (Negrito, Itálico e Cor) */}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', padding: '6px 8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (itemSelecionado?.type === 'text' && selecionadoId) {
+                            atualizarItem(selecionadoId, { fontWeight: itemSelecionado.fontWeight === 'bold' ? 'normal' : 'bold' });
+                          }
+                        }}
+                        style={{
+                          width: '28px', height: '28px', borderRadius: '6px',
+                          border: itemSelecionado?.fontWeight === 'bold' ? '1.5px solid #c5a059' : '1px solid #cbd5e1',
+                          background: itemSelecionado?.fontWeight === 'bold' ? '#0f172a' : '#fff',
+                          color: itemSelecionado?.fontWeight === 'bold' ? '#fef08a' : '#334155',
+                          fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+                        }}
+                        title="Negrito"
+                      >
+                        B
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (itemSelecionado?.type === 'text' && selecionadoId) {
+                            atualizarItem(selecionadoId, { fontStyle: itemSelecionado.fontStyle === 'italic' ? 'normal' : 'italic' });
+                          }
+                        }}
+                        style={{
+                          width: '28px', height: '28px', borderRadius: '6px',
+                          border: itemSelecionado?.fontStyle === 'italic' ? '1.5px solid #c5a059' : '1px solid #cbd5e1',
+                          background: itemSelecionado?.fontStyle === 'italic' ? '#0f172a' : '#fff',
+                          color: itemSelecionado?.fontStyle === 'italic' ? '#fef08a' : '#334155',
+                          fontStyle: 'italic', fontWeight: 'bold', fontSize: '13px', cursor: 'pointer'
+                        }}
+                        title="Itálico"
+                      >
+                        I
+                      </button>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px', marginLeft: 'auto' }}>
+                        <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#64748b' }}>Cor:</span>
+                        <input
+                          type="color"
+                          value={itemSelecionado?.type === 'text' ? (itemSelecionado.color || '#0f172a') : '#0f172a'}
+                          onChange={(e) => {
+                            if (itemSelecionado?.type === 'text' && selecionadoId) {
+                              atualizarItem(selecionadoId, { color: e.target.value });
+                            }
+                          }}
+                          style={{ width: '28px', height: '26px', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: 'pointer', padding: 0 }}
+                          title="Cor Sólida do Texto"
+                        />
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}
@@ -5947,7 +7014,7 @@ const Moodboard = () => {
                   </div>
 
                   <div className="ornament-gallery-grid">
-                    {Object.entries(ORNAMENTOS_FESTA).map(([key, orn]) => (
+                    {Object.entries({ ...ORNAMENTOS_FESTA, ...ornamentosCustom }).map(([key, orn]) => (
                       <div
                         key={key}
                         className="ornament-card-item"
@@ -5964,7 +7031,13 @@ const Moodboard = () => {
                               </linearGradient>
                             </defs>
                             <g fill={`url(#prev-gold-${key})`}>
-                              {orn.path}
+                              {orn.path
+                                ? renderSvgWithFill(orn.path, `url(#prev-gold-${key})`, `url(#prev-gold-${key})`)
+                                : orn.d
+                                  ? <path d={orn.d} fill={`url(#prev-gold-${key})`} />
+                                  : orn.svgContent
+                                    ? <g dangerouslySetInnerHTML={{ __html: orn.svgContent.replace(/currentColor/g, `url(#prev-gold-${key})`) }} />
+                                    : null}
                             </g>
                           </svg>
                         </div>
@@ -5975,15 +7048,6 @@ const Moodboard = () => {
                 </div>
               )}
 
-              {/* Botão Ver Peças */}
-              <button
-                type="button"
-                className="btn-secondary"
-                style={{ width: '100%', padding: '10px', borderRadius: '8px', fontWeight: 'bold', marginTop: '12px' }}
-                onClick={() => { setSelecionadoId(null); setAbaAtiva('estoque'); }}
-              >
-                ← Voltar ao Catálogo de Peças
-              </button>
             </div>
           )}
 
@@ -5992,15 +7056,23 @@ const Moodboard = () => {
             <div className="panel-content">
               <div className="panel-header-row" style={{ marginBottom: '10px' }}>
                 <h3 className="panel-title" style={{ margin: 0 }}>CENÁRIO & AMBIENTE</h3>
+                <button
+                  type="button"
+                  className="btn-close-left-panel"
+                  onClick={() => setPainelEsquerdoAberto(false)}
+                  title="Recolher Menu Esquerdo"
+                >
+                  <i className="fas fa-chevron-left" style={{ fontSize: '10px' }}></i>
+                  <span>Recolher</span>
+                </button>
               </div>
 
               {/* 🔀 3 Abas Diretas: Parede, Piso e Ambiente Inteiro */}
-              <div className="cenario-type-switcher" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '14px' }}>
+              <div className="cenario-type-switcher" style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '12px' }}>
                 <button
                   type="button"
                   className={`switch-btn ${cenarioAba === 'parede' ? 'active' : ''}`}
                   onClick={() => {
-                    // Se estava no modo AMBIENTE (unico), limpa wallBackground para não herdar foto de salão
                     if (modoCenario === 'unico') {
                       setWallBackground('#f8fafc');
                     }
@@ -6016,7 +7088,6 @@ const Moodboard = () => {
                   type="button"
                   className={`switch-btn ${cenarioAba === 'piso' ? 'active' : ''}`}
                   onClick={() => {
-                    // Se estava no modo AMBIENTE (unico), limpa wallBackground para não herdar foto de salão
                     if (modoCenario === 'unico') {
                       setWallBackground('#f8fafc');
                     }
@@ -6032,7 +7103,6 @@ const Moodboard = () => {
                   type="button"
                   className={`switch-btn ${cenarioAba === 'ambiente' ? 'active' : ''}`}
                   onClick={() => {
-                    // Se estava no modo DUPLO (parede+piso), limpa floorBackground para não aparecer piso sobreposto
                     if (modoCenario === 'duplo') {
                       setFloorBackground('#e2e8f0');
                     }
@@ -6043,6 +7113,110 @@ const Moodboard = () => {
                 >
                   🏞️ Ambiente
                 </button>
+              </div>
+
+              {/* 🎨 PALETA DE CORES DO EVENTO (IDENTIDADE VISUAL) */}
+              <div style={{
+                background: '#ffffff',
+                border: '1.5px solid #c5a059',
+                borderRadius: '8px',
+                padding: '10px',
+                marginBottom: '14px',
+                boxShadow: '0 2px 8px rgba(197, 160, 89, 0.12)'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    🎨 Paleta do Evento ({paletaEvento.length} cores)
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (paletaEvento.length < 6) {
+                        setPaletaEvento(prev => [...prev, '#ffffff']);
+                      }
+                    }}
+                    style={{ fontSize: '9.5px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                    title="Adicionar mais uma cor à paleta"
+                  >
+                    + Cor
+                  </button>
+                </div>
+
+                {/* Círculos de cores da paleta editáveis */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
+                  {paletaEvento.map((corHex, idx) => (
+                    <div key={idx} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                      <label
+                        style={{
+                          width: '28px',
+                          height: '28px',
+                          borderRadius: '50%',
+                          backgroundColor: corHex,
+                          border: '2px solid #0f172a',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
+                          cursor: 'pointer',
+                          display: 'block'
+                        }}
+                        title={`Cor ${idx + 1}: ${corHex} (Clique para alterar ou aplicar na peça selecionada)`}
+                        onClick={() => {
+                          if (selecionadoId && itemSelecionado) {
+                            if (itemSelecionado.type === 'shape') {
+                              atualizarItem(selecionadoId, { color: corHex });
+                            } else if (itemSelecionado.type === 'text') {
+                              atualizarItem(selecionadoId, { color: corHex, material: 'none' });
+                            } else if (itemSelecionado.type === 'ornament') {
+                              atualizarItem(selecionadoId, { color: corHex, material: 'none' });
+                            }
+                          }
+                        }}
+                      >
+                        <input
+                          type="color"
+                          value={corHex}
+                          onChange={(e) => {
+                            const novaCor = e.target.value;
+                            setPaletaEvento(prev => prev.map((c, i) => i === idx ? novaCor : c));
+                          }}
+                          style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
+                        />
+                      </label>
+                      {paletaEvento.length > 2 && (
+                        <button
+                          type="button"
+                          onClick={() => setPaletaEvento(prev => prev.filter((_, i) => i !== idx))}
+                          style={{ border: 'none', background: 'none', color: '#ef4444', fontSize: '9px', cursor: 'pointer', padding: 0, marginTop: '2px' }}
+                          title="Remover cor"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                {/* Presets Rápidos de Paleta */}
+                <div>
+                  <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Paletas Prontas de Festa:</div>
+                  <select
+                    className="input-modal-luxury"
+                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', background: '#ffffff', cursor: 'pointer', borderRadius: '6px' }}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val) {
+                        const p = PALETAS_EVENTO_PRESETS.find(item => item.nome === val);
+                        if (p) setPaletaEvento(p.cores);
+                      }
+                    }}
+                    defaultValue=""
+                  >
+                    <option value="" disabled>✨ Escolha uma combinação pronta...</option>
+                    {PALETAS_EVENTO_PRESETS.map((p, idx) => (
+                      <option key={idx} value={p.nome}>
+                        🎨 {p.nome}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {/* 1. ABA: PAREDE */}
@@ -6633,6 +7807,68 @@ const Moodboard = () => {
                   </div>
                 </>
               )}
+
+              {/* 🚶‍♀️ CARD DE PROPORÇÃO REAL & SILHUETAS */}
+              <div style={{
+                background: escalaHumanaAtiva ? 'linear-gradient(135deg, rgba(197, 160, 89, 0.15), rgba(15, 23, 42, 0.05))' : '#f8fafc',
+                border: escalaHumanaAtiva ? '1.5px solid #c5a059' : '1px solid #e2e8f0',
+                borderRadius: '8px', padding: '10px', marginTop: '16px'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: escalaHumanaAtiva ? '8px' : '0' }}>
+                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                    🚶‍♀️ Silhueta de Altura & Proporção
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setEscalaHumanaAtiva(!escalaHumanaAtiva)}
+                    style={{
+                      fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '12px',
+                      background: escalaHumanaAtiva ? '#c5a059' : '#e2e8f0',
+                      color: escalaHumanaAtiva ? '#0f172a' : '#64748b',
+                      border: 'none', cursor: 'pointer'
+                    }}
+                  >
+                    {escalaHumanaAtiva ? 'ATIVA (ON)' : 'ATIVAR'}
+                  </button>
+                </div>
+
+                {escalaHumanaAtiva && (
+                  <>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '6px' }}>
+                      {[
+                        { id: 'mulher', label: '👩 Mulher', m: '1,65m' },
+                        { id: 'homem', label: '👨 Homem', m: '1,75m' },
+                        { id: 'crianca', label: '👧 Criança', m: '1,10m' }
+                      ].map(s => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setTipoSilhueta(s.id)}
+                          style={{
+                            padding: '5px 2px', fontSize: '9.5px', fontWeight: '700', borderRadius: '5px',
+                            background: tipoSilhueta === s.id ? '#0f172a' : '#ffffff',
+                            color: tipoSilhueta === s.id ? '#fef08a' : '#334155',
+                            border: tipoSilhueta === s.id ? '1px solid #c5a059' : '1px solid #cbd5e1',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <div>{s.label}</div>
+                          <div style={{ fontSize: '8.5px', opacity: 0.8 }}>{s.m}</div>
+                        </button>
+                      ))}
+                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#475569', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={mostrarReguaMetrica}
+                        onChange={e => setMostrarReguaMetrica(e.target.checked)}
+                        style={{ accentColor: '#c5a059' }}
+                      />
+                      <span>Mostrar Régua Métrica Lateral</span>
+                    </label>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -6649,13 +7885,6 @@ const Moodboard = () => {
         {/* 🌟 BARRA SUPERIOR DARK LUXURY */}
         <div className="canvas-header-overlay" onClick={e => e.stopPropagation()}>
           <div className="header-actions-group">
-
-            {/* Botão Sair / Voltar ao Início */}
-            <button className="btn-header-action danger-exit" onClick={() => navigate('/dashboard')} title="Voltar ao Painel Principal">
-              <Icons.Crown width={14} height={14} /> <span className="btn-text">INÍCIO</span>
-            </button>
-
-            <div className="header-divider"></div>
 
             {/* Controles de Histórico */}
             {!modoApresentacao && (
@@ -6698,16 +7927,6 @@ const Moodboard = () => {
               <>
                 <div className="header-divider"></div>
 
-                {/* 🧲 Alinhamento Magnético */}
-                <button
-                  className={`btn-header-action ${snappingAtivo ? 'luxury-gold' : ''}`}
-                  onClick={() => setSnappingAtivo(!snappingAtivo)}
-                  title={snappingAtivo ? "Alinhamento Magnético Ativado (Clique para desativar)" : "Alinhamento Magnético Desativado (Clique para ativar)"}
-                >
-                  <span style={{ fontSize: '13px' }}>🧲</span>
-                  <span className="btn-text">{snappingAtivo ? 'MAGNET: ON' : 'MAGNET: OFF'}</span>
-                </button>
-
                 {/* ⌨️ Atalhos de Produtividade */}
                 <button
                   className="btn-header-action"
@@ -6722,8 +7941,8 @@ const Moodboard = () => {
 
                 {/* Projetos */}
                 <button className="btn-header-action" onClick={handleAbrirListaProjetos} title="Meus Projetos"><Icons.Folder /> <span className="btn-text">PROJETOS</span></button>
-                <button className="btn-header-action" onClick={handleAbrirModalSalvar} title="Salvar Projeto"><Icons.Save /> <span className="btn-text">SALVAR</span></button>
-                <button className="btn-header-action luxury-gold" onClick={() => handleUploadImagemRapida('Outros', true, 'topbar')} title="Fazer Upload de Imagem PNG/Foto do Computador"><Icons.UploadCloud width={14} height={14} /> <span className="btn-text">UPLOAD</span></button>
+                <button className="btn-header-action luxury-gold" onClick={handleAbrirModalSalvar} title="Salvar Projeto no Sistema, Baixar em JPG/PNG ou Gerar Proposta PDF"><Icons.Save /> <span className="btn-text">SALVAR</span></button>
+                <button className="btn-header-action" onClick={() => handleUploadImagemRapida('Outros', true, 'topbar')} title="Fazer Upload de Imagem PNG/Foto do Computador"><Icons.UploadCloud width={14} height={14} /> <span className="btn-text">UPLOAD</span></button>
 
                 <div className="header-divider"></div>
 
@@ -6735,14 +7954,6 @@ const Moodboard = () => {
                 >
                   <Icons.Sliders width={14} height={14} />
                   <span className="btn-text">PAINEL PRO</span>
-                </button>
-
-                <div className="header-divider"></div>
-
-                {/* Ações de Exportação */}
-                <button className="btn-header-action primary" onClick={handleExportImage} title="Baixar Imagem PNG"><Icons.Download /> <span className="btn-text">PNG</span></button>
-                <button className="btn-header-action luxury-gold" onClick={handleGerarPropostaPDF} disabled={exportandoPDF} title="Gerar Proposta Comercial PDF">
-                  <Icons.FileText /> <span className="btn-text">{exportandoPDF ? '...' : 'PDF'}</span>
                 </button>
               </>
             )}
@@ -6865,6 +8076,68 @@ const Moodboard = () => {
               />
             )}
 
+            {/* 📏 RÉGUA MÉTRICA LATERAL DE ALTURA REAL */}
+            {escalaHumanaAtiva && mostrarReguaMetrica && !modoApresentacao && (
+              <div className="regua-metrica-lateral">
+                {[
+                  { m: '2.50m', hPx: 2.50 * 123.8, label: '2,50m' },
+                  { m: '2.00m', hPx: 2.00 * 123.8, label: '2,00m (Painel)' },
+                  { m: '1.50m', hPx: 1.50 * 123.8, label: '1,50m' },
+                  { m: '1.00m', hPx: 1.00 * 123.8, label: '1,00m (Mesa/Cilindro)' },
+                  { m: '0.50m', hPx: 0.50 * 123.8, label: '0,50m' },
+                  { m: '0.00m', hPx: 0, label: '0,00m (Piso)' }
+                ].map((mark, i) => (
+                  <div
+                    key={i}
+                    className="regua-marca-altura"
+                    style={{
+                      bottom: `calc(${alturaChao}% + ${mark.hPx}px)`
+                    }}
+                  >
+                    <span className="regua-badge-label">{mark.label}</span>
+                    <div className="regua-tick-linha" />
+                    <div className="regua-linha-guia-extensao" />
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* 🚶‍♀️ SILHUETA HUMANA INTERATIVA (ESCALA REAL) */}
+            {escalaHumanaAtiva && (
+              <div
+                className="silhueta-humana-container"
+                style={{
+                  left: `${silhuetaPosX}px`,
+                  bottom: `calc(${alturaChao}% - 6px)`,
+                  color: '#1e293b'
+                }}
+                onPointerDown={handlePointerDownSilhueta}
+                title="Clique e arraste para comparar a altura com as peças do cenário"
+              >
+                {/* Tag de Altura com Escala */}
+                <div className="silhueta-tag-altura">
+                  <span>🚶‍♀️</span>
+                  <span>{tipoSilhueta === 'homem' ? 'Homem: 1,75m' : tipoSilhueta === 'crianca' ? 'Criança: 1,10m' : 'Mulher: 1,65m'}</span>
+                </div>
+
+                {/* Sombra de Contato com o Chão */}
+                <div className="silhueta-contact-shadow" />
+
+                {/* Silhueta Vetorial */}
+                <SilhuetaHumanaSVG
+                  tipo={tipoSilhueta}
+                  heightPx={tipoSilhueta === 'homem' ? 217 : tipoSilhueta === 'crianca' ? 136 : 204}
+                />
+
+                {/* Alça de Arrastar */}
+                {!modoApresentacao && (
+                  <div className="silhueta-drag-handle">
+                    ⇹ Arraste para comparar
+                  </div>
+                )}
+              </div>
+            )}
+
             {itensCanvas.map((item, index) => {
               const isHidden = item.hidden === true || item.opacity === 0 || item.visible === false;
               if (isHidden) return null;
@@ -6884,7 +8157,7 @@ const Moodboard = () => {
                     zIndex: index + 10,
                     transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1}) scaleY(${item.flipV ? -1 : 1})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    filter: (item.shadow > 0 || (item.brightness && item.brightness !== 100) || (item.contrast && item.contrast !== 100) || (item.saturate && item.saturate !== 100))
+                    filter: (item.type !== 'text' && (item.shadow > 0 || (item.brightness && item.brightness !== 100) || (item.contrast && item.contrast !== 100) || (item.saturate && item.saturate !== 100)))
                       ? `brightness(${item.brightness || 100}%) contrast(${item.contrast || 100}%) saturate(${item.saturate || 100}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`
                       : undefined,
                     opacity: (item.opacity || 100) / 100,
@@ -6920,18 +8193,12 @@ const Moodboard = () => {
 
                   {/* 🌿 ENFEITES, RAMOS, COROAS & APLIQUES VETORIAIS */}
                   {item.type === 'ornament' && (
-                    <ElementoOrnamentoSVG item={item} />
+                    <ElementoOrnamentoSVG item={item} customOrnaments={ornamentosCustom} />
                   )}
 
                   {/* IMAGEM DO ACERVO */}
                   {item.type === 'image' && item.imagem && (
-                    <>
-                      <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} crossOrigin="anonymous" alt="" />
-                      {/* Badge A Comprar Pulsante */}
-                      {isAComprar && !modoApresentacao && (
-                        <div className="badge-acomprar-canvas">🛒 Comprar</div>
-                      )}
-                    </>
+                    <img src={item.imagem} draggable="false" style={{ width: '100%', height: '100%', objectFit: 'contain', pointerEvents: 'none' }} crossOrigin="anonymous" alt="" />
                   )}
 
                   {/* 🏛️ MESAS CILINDRO 3D REALISTAS */}
@@ -6978,6 +8245,10 @@ const Moodboard = () => {
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         formatoPortal={item.formatoPortal || 'romano'}
                         estiloPortal={item.estiloPortal || 'espiral'}
+                        espacamentoBaloes={item.espacamentoBaloes}
+                        calibreBalao={item.calibreBalao}
+                        distanciaArcoDuplo={item.distanciaArcoDuplo}
+                        proporcaoMinis={item.proporcaoMinis}
                         seed={item.seed}
                       />
                     </div>
@@ -6988,6 +8259,8 @@ const Moodboard = () => {
                         tipo="baloes_aro_redondo"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         coberturaAro={item.coberturaAro || 'meio_aro'}
+                        espacamentoBaloes={item.espacamentoBaloes}
+                        calibreBalao={item.calibreBalao}
                         seed={item.seed}
                       />
                     </div>
@@ -6997,6 +8270,8 @@ const Moodboard = () => {
                       <GuirlandaBaloesRealista
                         tipo="lateral_l"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
+                        espacamentoBaloes={item.espacamentoBaloes}
+                        calibreBalao={item.calibreBalao}
                         seed={item.seed}
                       />
                     </div>
@@ -7007,6 +8282,8 @@ const Moodboard = () => {
                         tipo="cluster_chao"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         densidadeCluster={item.densidadeCluster || 'cheio'}
+                        calibreBalao={item.calibreBalao}
+                        espacamentoBaloes={item.espacamentoBaloes}
                         seed={item.seed}
                       />
                     </div>
@@ -7017,6 +8294,8 @@ const Moodboard = () => {
                         tipo="coluna_baloes"
                         cores={item.coresBalao || paletaBalaoAtiva.cores}
                         estiloColuna={item.estiloColuna || 'organica'}
+                        espacamentoBaloes={item.espacamentoBaloes}
+                        calibreBalao={item.calibreBalao}
                         seed={item.seed}
                       />
                     </div>
@@ -7030,9 +8309,20 @@ const Moodboard = () => {
                         ondulacao={item.ondulacao}
                         volume={item.volumeBalao}
                         qtdBaloes={item.qtdBaloes}
-                        tamanhoBalao={item.tamanhoBalao}
+                        tamanhoBalao={item.tamanhoBalao || item.calibreBalao}
+                        calibreBalao={item.calibreBalao}
                         seed={item.seed}
                       />
+                    </div>
+                  )}
+                  {item.type === 'shape' && item.shapeType === 'balao_unitario' && (
+                    <div className="shape-render-element shape-balao_unitario" style={{ width: '100%', height: '100%', background: 'transparent', boxShadow: 'none', overflow: 'visible' }}>
+                      <BalaoUnitario3D item={item} />
+                    </div>
+                  )}
+                  {item.type === 'shape' && item.shapeType === 'mini_cluster_5' && (
+                    <div className="shape-render-element shape-mini_cluster_5" style={{ width: '100%', height: '100%', background: 'transparent', boxShadow: 'none', overflow: 'visible' }}>
+                      <MiniClusterBaloes3D item={item} />
                     </div>
                   )}
                   {/* 🏛️ ESTRUTURAS, MOBILIÁRIO 3D & PAINÉIS */}
@@ -7248,7 +8538,7 @@ const Moodboard = () => {
                               type="button"
                               className={`btn-handle-mini ${(item.formatoPortal || 'romano') === 'romano' ? 'active' : ''}`}
                               onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'romano' })}
-                              title="Formato Romano (Arredondado)"
+                              title="Formato Romano (Arredondado Clássico)"
                             >
                               🏛️ Romano
                             </button>
@@ -7259,6 +8549,22 @@ const Moodboard = () => {
                               title="Formato Retangular (Quadrado 90°)"
                             >
                               ⬛ Retangular
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.formatoPortal === 'em_l' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'em_l' })}
+                              title="Formato em L (Abraçando Painéis)"
+                            >
+                              🎀 Em "L"
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${item.formatoPortal === 'duplo_paralelo' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { formatoPortal: 'duplo_paralelo' })}
+                              title="Arco Duplo Paralelo (Espaçamento Regulável)"
+                            >
+                              ✨ Duplo
                             </button>
                             <button
                               type="button"
@@ -7284,6 +8590,61 @@ const Moodboard = () => {
                               title="Alternar entre Clássico Espiral e Orgânico Desconstruído"
                             >
                               {item.estiloPortal === 'organico' ? '✨ Orgânico' : '🌀 Espiral'}
+                            </button>
+                          </div>
+                        )}
+
+                        {/* 🎈 Modificador Rápido no Topo do Balão Unitário 3D */}
+                        {item.shapeType === 'balao_unitario' && (
+                          <div className="floating-balloon-format-bar" style={unflipBar} onClick={e => e.stopPropagation()}>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.tamanhoPolegadas || '12"') === '5"' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { tamanhoPolegadas: '5"', width: 38, height: 46 })}
+                              title="5 Polegadas (Mini acabamento)"
+                            >
+                              5"
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.tamanhoPolegadas || '12"') === '9"' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { tamanhoPolegadas: '9"', width: 54, height: 66 })}
+                              title="9 Polegadas (Padrão)"
+                            >
+                              9"
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.tamanhoPolegadas || '12"') === '12"' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { tamanhoPolegadas: '12"', width: 68, height: 82 })}
+                              title="12 Polegadas (Médio)"
+                            >
+                              12"
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.tamanhoPolegadas || '12"') === '18"' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { tamanhoPolegadas: '18"', width: 96, height: 116 })}
+                              title="18 Polegadas (Grande)"
+                            >
+                              18"
+                            </button>
+                            <button
+                              type="button"
+                              className={`btn-handle-mini ${(item.tamanhoPolegadas || '12"') === '36"' ? 'active' : ''}`}
+                              onClick={() => atualizarItem(item.uniqueId, { tamanhoPolegadas: '36"', width: 140, height: 168 })}
+                              title="36 Polegadas (Big Balloon)"
+                            >
+                              36"
+                            </button>
+                            <button
+                              type="button"
+                              className="btn-handle-mini"
+                              style={{ borderLeft: '1px solid rgba(255,255,255,0.2)', marginLeft: '2px' }}
+                              onClick={() => duplicarItem(item.uniqueId)}
+                              title="Duplicar balão avulso para espalhar"
+                            >
+                              📋 +1
                             </button>
                           </div>
                         )}
@@ -7453,92 +8814,506 @@ const Moodboard = () => {
           </div>
         )}
 
-        {/* 💾 MODAL: SALVAR PROJETO */}
+        {/* 💾 MODAL: SALVAR & EXPORTAR PROJETO */}
         {modalSalvarAberto && (
-          <div className="overlay">
-            <div className="modal-content luxury-modal">
+          <div className="overlay" onClick={() => { if (!salvandoProjeto && !exportandoPDF) setModalSalvarAberto(false); }}>
+            <div className="modal-content luxury-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto' }}>
               <div className="modal-header-luxury">
-                <h3>Salvar Projeto Decorativo</h3>
-                <p>Gera miniatura visual e salva no cofre da sua empresa</p>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <h3 style={{ margin: 0 }}>💾 Salvar & Exportar Projeto</h3>
+                    <p style={{ margin: '3px 0 0 0', fontSize: '11.5px', color: '#64748b' }}>
+                      Gerencie a proposta visual, vincule a clientes e exporte em alta resolução
+                    </p>
+                  </div>
+                  {versaoProjeto > 1 && (
+                    <span style={{ background: 'linear-gradient(135deg, #c5a059, #dfba73)', color: '#0f172a', fontWeight: '800', fontSize: '11px', padding: '3px 8px', borderRadius: '12px' }}>
+                      Versão {versaoProjeto}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div className="modal-body-luxury">
-                <label style={{ fontSize: '13px', fontWeight: 'bold', color: '#0f172a', display: 'block', marginBottom: '6px' }}>Nome do Projeto / Tema:</label>
-                <input
-                  type="text"
-                  placeholder="Ex: Chá Revelação Ursinho Príncipe"
-                  value={nomeProjeto}
-                  onChange={(e) => setNomeProjeto(e.target.value)}
-                  autoFocus
-                  className="input-modal-luxury"
-                />
 
-                <div className="save-summary-badge">
+              <div className="modal-body-luxury" style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {/* 1. Nome do Projeto & Tema */}
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                    🏷️ Nome do Projeto / Tema da Decoração: *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ex: Chá Revelação Ursinho Príncipe"
+                    value={nomeProjeto}
+                    onChange={(e) => setNomeProjeto(e.target.value)}
+                    autoFocus
+                    className="input-modal-luxury"
+                  />
+                </div>
+
+                {/* 2. Grid de Vínculo: Cliente & Status */}
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                      👤 Vincular a Cliente:
+                    </label>
+                    <select
+                      className="input-modal-luxury"
+                      value={clienteSelecionado?.id || ''}
+                      onChange={(e) => {
+                        const cid = e.target.value;
+                        if (!cid) {
+                          setClienteSelecionado(null);
+                        } else {
+                          const cli = listaClientes.find(c => c.id === cid);
+                          setClienteSelecionado(cli || null);
+                        }
+                      }}
+                      style={{ fontSize: '12px', padding: '8px 10px' }}
+                    >
+                      <option value="">(Sem cliente vinculado / Geral)</option>
+                      {listaClientes.map(cli => (
+                        <option key={cli.id} value={cli.id}>
+                          {cli.nome || cli.nomeFantasia} {cli.telefone ? `(${cli.telefone})` : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                      📌 Status do Projeto:
+                    </label>
+                    <select
+                      className="input-modal-luxury"
+                      value={statusProjeto}
+                      onChange={(e) => setStatusProjeto(e.target.value)}
+                      style={{ fontSize: '12px', padding: '8px 10px', fontWeight: 'bold' }}
+                    >
+                      <option value="rascunho">🟡 Rascunho / Em Criação</option>
+                      <option value="em_analise">🔵 Em Análise / Enviado ao Cliente</option>
+                      <option value="aprovado">🟢 Aprovado pelo Cliente</option>
+                      <option value="em_producao">🟣 Em Produção / Montagem</option>
+                      <option value="concluido">⚪ Concluído / Realizado</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* 3. Vínculo a Locação Existente (Opcional) */}
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                    📅 Vincular a um Pedido de Locação Existente (Opcional):
+                  </label>
+                  <select
+                    className="input-modal-luxury"
+                    value={locacaoSelecionada?.id || ''}
+                    onChange={(e) => {
+                      const lid = e.target.value;
+                      if (!lid) {
+                        setLocacaoSelecionada(null);
+                      } else {
+                        const loc = listaLocacoes.find(l => l.id === lid);
+                        setLocacaoSelecionada(loc || null);
+                      }
+                    }}
+                    style={{ fontSize: '12px', padding: '8px 10px' }}
+                  >
+                    <option value="">(Nenhuma locação vinculada)</option>
+                    {listaLocacoes.map(loc => (
+                      <option key={loc.id} value={loc.id}>
+                        Pedido #{loc.numeroPedido || loc.id.slice(0, 6)} - {loc.clienteNome || loc.cliente?.nome || 'Cliente'} {loc.dataRetirada ? `(Evento: ${loc.dataRetirada.split('-').reverse().join('/')})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* 4. Anotações & Observações do Projeto */}
+                <div>
+                  <label style={{ fontSize: '11.5px', fontWeight: '800', color: '#0f172a', display: 'block', marginBottom: '4px' }}>
+                    📝 Observações & Instruções do Projeto (Aparece no PDF):
+                  </label>
+                  <textarea
+                    className="input-modal-luxury"
+                    rows={2}
+                    placeholder="Ex: Cliente prefere tons terrosos, salão possui tomada 220v no fundo, montagem às 14h..."
+                    value={observacoesProjeto}
+                    onChange={(e) => setObservacoesProjeto(e.target.value)}
+                    style={{ resize: 'vertical', fontSize: '12px', lineHeight: '1.4' }}
+                  />
+                </div>
+
+                {/* 5. Paleta do Evento Prévia */}
+                <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '11px', fontWeight: '800', color: '#334155' }}>🎨 Paleta do Evento:</span>
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {paletaEvento.map((c, i) => (
+                        <span key={i} style={{ width: '16px', height: '16px', borderRadius: '50%', backgroundColor: c, border: '1px solid #0f172a', display: 'inline-block' }} title={c} />
+                      ))}
+                    </div>
+                  </div>
+                  <small style={{ fontSize: '10px', color: '#64748b' }}>Defina as cores na aba Cenário</small>
+                </div>
+
+                {/* Resumo de Peças e Valor */}
+                <div className="save-summary-badge" style={{ margin: 0 }}>
                   <span>Total de Peças: <strong>{resumoComercial.totalPecas} un.</strong></span>
                   <span>Valor Estimado: <strong>R$ {resumoComercial.valorTotal.toFixed(2)}</strong></span>
                 </div>
+
+                {/* 6. Opções de Salvamento e Exportação */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '2px' }}>
+
+                  {/* OPÇÃO 1: SALVAR NO SISTEMA (COM SUPORTE A VERSÕES) */}
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>💾</span> <span>Salvar no Sistema Celebre</span>
+                        </div>
+                        <div style={{ fontSize: '11px', color: '#64748b', marginTop: '2px' }}>
+                          {projetoIdAtual ? 'Este projeto já está cadastrado. Escolha como deseja salvar:' : 'Salva na nuvem com miniatura visual para abrir e editar quando quiser.'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      {projetoIdAtual ? (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-confirm-luxury"
+                            style={{ flex: 1, padding: '8px 12px', fontSize: '11.5px', whiteSpace: 'nowrap', cursor: 'pointer', margin: 0 }}
+                            onClick={() => salvarProjeto('salvar_ou_atualizar')}
+                            disabled={salvandoProjeto}
+                          >
+                            {salvandoProjeto ? 'Salvando...' : '🔄 Atualizar Atual'}
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-primary-action"
+                            style={{ flex: 1, padding: '8px 12px', fontSize: '11.5px', background: '#7c3aed', color: '#ffffff', border: 'none', whiteSpace: 'nowrap', cursor: 'pointer', margin: 0 }}
+                            onClick={() => salvarProjeto('nova_versao')}
+                            disabled={salvandoProjeto}
+                            title="Salva uma nova versão (ex: v2) mantendo a anterior intacta"
+                          >
+                            ✨ Salvar Nova Versão (v{Number(versaoProjeto || 1) + 1})
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-secondary"
+                            style={{ padding: '8px 10px', fontSize: '11px', fontWeight: 'bold', background: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', cursor: 'pointer', margin: 0 }}
+                            onClick={() => salvarProjeto('novo_projeto')}
+                            disabled={salvandoProjeto}
+                            title="Salva como um novo projeto separado"
+                          >
+                            📑 Novo Projeto
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          type="button"
+                          className="btn-confirm-luxury"
+                          style={{ width: '100%', padding: '9px 16px', fontSize: '12.5px', whiteSpace: 'nowrap', cursor: 'pointer', margin: 0 }}
+                          onClick={() => salvarProjeto('novo_projeto')}
+                          disabled={salvandoProjeto}
+                        >
+                          {salvandoProjeto ? 'Salvando...' : '💾 Salvar Projeto no Sistema'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* OPÇÃO 2: SALVAR COMO IMAGEM (JPG / PNG) */}
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '10px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    gap: '12px'
+                  }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span>🖼️</span> <span>Salvar em Imagem</span>
+                      </div>
+                      <div style={{ fontSize: '10.5px', color: '#64748b' }}>
+                        Alta resolução para redes sociais ou visualização rápida.
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '11px', fontWeight: '800', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        onClick={() => { handleExportImage('jpg'); setModalSalvarAberto(false); }}
+                      >
+                        📸 JPG
+                      </button>
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ padding: '6px 12px', fontSize: '11px', fontWeight: '800', background: '#0f172a', color: '#ffffff', border: '1px solid #0f172a', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                        onClick={() => { handleExportImage('png'); setModalSalvarAberto(false); }}
+                      >
+                        🖼️ PNG
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* OPÇÃO 3: PDF & WHATSAPP */}
+                  <div style={{
+                    background: '#f8fafc',
+                    border: '1.5px solid #e2e8f0',
+                    borderRadius: '10px',
+                    padding: '12px 14px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '8px'
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <div style={{ fontSize: '12.5px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                          <span>📄</span> <span>Proposta em PDF & WhatsApp</span>
+                        </div>
+                        <div style={{ fontSize: '10.5px', color: '#64748b', marginTop: '1px' }}>
+                          Escolha o modelo de PDF para baixar ou envie mensagem personalizada:
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+                      <button
+                        type="button"
+                        className="btn-primary-action"
+                        style={{ flex: 1.2, padding: '8px 10px', fontSize: '11px', background: 'linear-gradient(135deg, #c5a059, #dfba73)', color: '#0f172a', border: 'none', whiteSpace: 'nowrap', cursor: 'pointer', margin: 0, fontWeight: '800' }}
+                        onClick={() => { handleGerarPropostaPDF(false); setModalSalvarAberto(false); }}
+                        disabled={exportandoPDF}
+                        title="Gera PDF sem preços nem valores (ideal para enviar ao cliente)"
+                      >
+                        {exportandoPDF ? 'Gerando...' : '📄 PDF Cliente (Sem Preços)'}
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-secondary"
+                        style={{ flex: 1, padding: '8px 10px', fontSize: '11px', background: '#ffffff', color: '#0f172a', border: '1px solid #cbd5e1', whiteSpace: 'nowrap', cursor: 'pointer', margin: 0, fontWeight: '700' }}
+                        onClick={() => { handleGerarPropostaPDF(true); setModalSalvarAberto(false); }}
+                        disabled={exportandoPDF}
+                        title="Gera PDF com lista de preços unitários e valor total (para controle interno)"
+                      >
+                        📋 PDF com Preços (Interno)
+                      </button>
+
+                      <button
+                        type="button"
+                        className="btn-primary-action"
+                        style={{ padding: '8px 12px', fontSize: '11px', background: '#22c55e', color: '#ffffff', border: 'none', whiteSpace: 'nowrap', cursor: 'pointer', margin: 0, display: 'flex', alignItems: 'center', gap: '4px', fontWeight: 'bold' }}
+                        onClick={() => handleCompartilharWhatsApp()}
+                        title="Enviar proposta formatada no WhatsApp da cliente"
+                      >
+                        <span>📱</span> <span>WhatsApp</span>
+                      </button>
+                    </div>
+                  </div>
+
+                </div>
               </div>
-              <div className="modal-actions">
-                <button className="btn-cancel" onClick={() => setModalSalvarAberto(false)} disabled={salvandoProjeto}>Cancelar</button>
-                <button className="btn-confirm-luxury" onClick={salvarProjeto} disabled={salvandoProjeto}>
-                  {salvandoProjeto ? 'Salvando...' : 'Salvar Projeto'}
+
+              <div className="modal-actions" style={{ marginTop: '10px' }}>
+                <button className="btn-cancel" onClick={() => setModalSalvarAberto(false)} disabled={salvandoProjeto || exportandoPDF}>
+                  Fechar
                 </button>
               </div>
             </div>
           </div>
         )}
 
-        {/* 📂 MODAL: ABRIR PROJETOS (GALERIA VISUAL COM THUMBNAILS) */}
+        {/* 📂 MODAL: ABRIR PROJETOS (GALERIA VISUAL COM THUMBNAILS, STATUS & FILTROS) */}
         {modalAbrirAberto && (
-          <div className="overlay">
-            <div className="modal-content large luxury-modal">
+          <div className="overlay" onClick={() => setModalAbrirAberto(false)}>
+            <div className="modal-content large luxury-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '900px', maxHeight: '90vh', display: 'flex', flexDirection: 'column' }}>
               <div className="modal-header-luxury">
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                    <h3>Galeria de Projetos Salvos</h3>
-                    <p>Escolha um projeto salvo para abrir ou gerenciar</p>
+                    <h3 style={{ margin: 0 }}>🎨 Galeria de Projetos Salvos</h3>
+                    <p style={{ margin: '3px 0 0 0', fontSize: '11.5px', color: '#64748b' }}>
+                      Gerencie propostas decorativas, filtre por status e envie pelo WhatsApp
+                    </p>
                   </div>
                   <span className="panel-badge-count">{projetosSalvos.length} projetos</span>
                 </div>
+
+                {/* 🔀 Filtros por Status na Galeria */}
+                <div style={{ display: 'flex', gap: '6px', marginTop: '12px', overflowX: 'auto', paddingBottom: '4px' }}>
+                  {[
+                    { id: 'todos', label: `Todos (${projetosSalvos.length})` },
+                    { id: 'rascunho', label: `🟡 Rascunho (${projetosSalvos.filter(p => (p.status || 'rascunho') === 'rascunho').length})` },
+                    { id: 'em_analise', label: `🔵 Em Análise (${projetosSalvos.filter(p => p.status === 'em_analise').length})` },
+                    { id: 'aprovado', label: `🟢 Aprovado (${projetosSalvos.filter(p => p.status === 'aprovado').length})` },
+                    { id: 'em_producao', label: `🟣 Em Produção (${projetosSalvos.filter(p => p.status === 'em_producao').length})` },
+                    { id: 'concluido', label: `⚪ Concluído (${projetosSalvos.filter(p => p.status === 'concluido').length})` }
+                  ].map(f => (
+                    <button
+                      key={f.id}
+                      type="button"
+                      onClick={() => setFiltroStatusGaleria(f.id)}
+                      style={{
+                        padding: '4px 10px',
+                        borderRadius: '20px',
+                        fontSize: '10.5px',
+                        fontWeight: '700',
+                        whiteSpace: 'nowrap',
+                        background: filtroStatusGaleria === f.id ? '#0f172a' : '#f1f5f9',
+                        color: filtroStatusGaleria === f.id ? '#fef08a' : '#475569',
+                        border: filtroStatusGaleria === f.id ? '1px solid #c5a059' : '1px solid #e2e8f0',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
-              <div className="projects-grid-cards">
-                {projetosSalvos.length === 0 ? (
+              <div className="projects-grid-cards" style={{ flex: 1, overflowY: 'auto', maxHeight: '60vh', padding: '14px' }}>
+                {projetosSalvos.filter(p => filtroStatusGaleria === 'todos' || (p.status || 'rascunho') === filtroStatusGaleria).length === 0 ? (
                   <div className="empty-projects-state">
                     <Icons.Folder width={40} height={40} style={{ opacity: 0.3 }} />
-                    <p>Nenhum projeto salvo no momento.</p>
+                    <p>Nenhum projeto encontrado nesta categoria.</p>
                   </div>
                 ) : (
-                  projetosSalvos.map(proj => (
-                    <div key={proj.id} className="project-card-luxury">
-                      <div className="proj-thumb" onClick={() => carregarProjeto(proj)}>
-                        {proj.thumbnail ? (
-                          <img src={proj.thumbnail} alt={proj.nome} />
-                        ) : (
-                          <div className="proj-thumb-placeholder">
-                            <Icons.Crown width={32} height={32} />
+                  projetosSalvos
+                    .filter(p => filtroStatusGaleria === 'todos' || (p.status || 'rascunho') === filtroStatusGaleria)
+                    .map(proj => {
+                      const st = proj.status || 'rascunho';
+                      const stColors = {
+                        rascunho: { bg: '#fef3c7', text: '#92400e', label: '🟡 Rascunho' },
+                        em_analise: { bg: '#e0f2fe', text: '#0369a1', label: '🔵 Em Análise' },
+                        aprovado: { bg: '#dcfce7', text: '#15803d', label: '🟢 Aprovado' },
+                        em_producao: { bg: '#f3e8ff', text: '#7e22ce', label: '🟣 Em Produção' },
+                        concluido: { bg: '#f1f5f9', text: '#475569', label: '⚪ Concluído' }
+                      };
+                      const stBadge = stColors[st] || stColors.rascunho;
+
+                      return (
+                        <div key={proj.id} className="project-card-luxury" style={{ display: 'flex', flexDirection: 'column', position: 'relative' }}>
+                          <div className="proj-thumb" onClick={() => carregarProjeto(proj)}>
+                            {proj.thumbnail ? (
+                              <img src={proj.thumbnail} alt={proj.nome} />
+                            ) : (
+                              <div className="proj-thumb-placeholder">
+                                <Icons.Crown width={32} height={32} />
+                              </div>
+                            )}
+                            <div className="proj-hover-overlay">
+                              <span>Abrir no Studio</span>
+                            </div>
+
+                            {/* Badge de Versão */}
+                            {proj.versao && proj.versao > 1 && (
+                              <span style={{ position: 'absolute', top: '8px', left: '8px', background: '#0f172a', color: '#fef08a', fontSize: '9px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', border: '1px solid #c5a059' }}>
+                                v{proj.versao}
+                              </span>
+                            )}
                           </div>
-                        )}
-                        <div className="proj-hover-overlay">
-                          <span>Abrir Projeto</span>
+
+                          <div className="proj-info-bottom" style={{ padding: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                            <div className="proj-title-row" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                              <div>
+                                <h4 title={proj.nome} style={{ margin: 0, fontSize: '12px', fontWeight: '800' }}>{proj.nome}</h4>
+                                {proj.clienteNome && (
+                                  <div style={{ fontSize: '10.5px', color: '#0369a1', fontWeight: 'bold', marginTop: '2px' }}>
+                                    👤 {proj.clienteNome}
+                                  </div>
+                                )}
+                              </div>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); deletarProjetoSalvo(proj.id, proj.nome); }}
+                                className="btn-del-proj-icon"
+                                title="Excluir Projeto"
+                                style={{ background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', padding: '2px' }}
+                              >
+                                <Icons.Trash width={13} height={13} />
+                              </button>
+                            </div>
+
+                            {/* Seletor Rápido de Status */}
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '2px' }}>
+                              <select
+                                value={st}
+                                onClick={e => e.stopPropagation()}
+                                onChange={e => { e.stopPropagation(); alterarStatusProjetoGaleria(proj.id, e.target.value); }}
+                                style={{
+                                  fontSize: '10px',
+                                  fontWeight: '800',
+                                  padding: '2px 6px',
+                                  borderRadius: '6px',
+                                  backgroundColor: stBadge.bg,
+                                  color: stBadge.text,
+                                  border: '1px solid rgba(0,0,0,0.1)',
+                                  cursor: 'pointer'
+                                }}
+                              >
+                                <option value="rascunho">🟡 Rascunho</option>
+                                <option value="em_analise">🔵 Em Análise</option>
+                                <option value="aprovado">🟢 Aprovado</option>
+                                <option value="em_producao">🟣 Em Produção</option>
+                                <option value="concluido">⚪ Concluído</option>
+                              </select>
+
+                              <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>
+                                R$ {Number(proj.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              </span>
+                            </div>
+
+                            <div className="proj-meta-row" style={{ display: 'flex', justifyContent: 'space-between', fontSize: '9.5px', color: '#64748b', borderTop: '1px solid #f1f5f9', paddingTop: '6px', marginTop: '2px' }}>
+                              <span>{proj.itens?.length || 0} peças</span>
+                              <span>{proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('pt-BR') : ''}</span>
+                            </div>
+
+                            {/* Botões de Ação Rápida */}
+                            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                              <button
+                                type="button"
+                                onClick={() => carregarProjeto(proj)}
+                                style={{ flex: 1, padding: '5px', fontSize: '10px', fontWeight: '800', background: '#0f172a', color: '#ffffff', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+                              >
+                                Abrir
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleCompartilharWhatsApp(proj)}
+                                style={{ padding: '5px 8px', fontSize: '10px', background: '#22c55e', color: '#fff', borderRadius: '4px', border: 'none', cursor: 'pointer' }}
+                                title="Enviar no WhatsApp"
+                              >
+                                📱
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => duplicarProjetoSalvo(proj)}
+                                style={{ padding: '5px 8px', fontSize: '10px', background: '#f1f5f9', color: '#475569', borderRadius: '4px', border: '1px solid #cbd5e1', cursor: 'pointer' }}
+                                title="Duplicar Projeto"
+                              >
+                                📑
+                              </button>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="proj-info-bottom">
-                        <div className="proj-title-row">
-                          <h4 title={proj.nome}>{proj.nome}</h4>
-                          <button onClick={(e) => { e.stopPropagation(); deletarProjetoSalvo(proj.id, proj.nome); }} className="btn-del-proj-icon" title="Excluir Projeto">
-                            <Icons.Trash />
-                          </button>
-                        </div>
-                        <div className="proj-meta-row">
-                          <span>{proj.itens?.length || 0} itens</span>
-                          <span>{proj.createdAt ? new Date(proj.createdAt).toLocaleDateString('pt-BR') : ''}</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))
+                      );
+                    })
                 )}
               </div>
-              <div className="modal-footer-row">
+              <div className="modal-footer-row" style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
                 <button className="btn-cancel" onClick={() => setModalAbrirAberto(false)}>Fechar Galeria</button>
               </div>
             </div>
@@ -7830,747 +9605,804 @@ const Moodboard = () => {
                   </button>
                 </div>
 
-            {/* CONTEÚDO DA ABA CAMADAS (LAYERS) */}
-            {abaDireita === 'camadas' && (
-              <div className="right-panel-body">
-                <div className="layers-header-row">
-                  <span>ORDEM DE PROFUNDIDADE (Z-INDEX)</span>
-                  <small>Topo para Base</small>
-                </div>
+                {/* CONTEÚDO DA ABA CAMADAS (LAYERS) */}
+                {abaDireita === 'camadas' && (
+                  <div className="right-panel-body">
+                    <div className="layers-header-row">
+                      <span>ORDEM DE PROFUNDIDADE (Z-INDEX)</span>
+                      <small>Topo para Base</small>
+                    </div>
 
-                {itensCanvas.length === 0 ? (
-                  <div className="empty-layers-box">
-                    <Icons.Layers width={28} height={28} style={{ opacity: 0.3, marginBottom: '6px' }} />
-                    <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhuma peça adicionada ao cenário.</p>
-                  </div>
-                ) : (
-                  <div className="layers-list-scroll">
-                    {[...itensCanvas].reverse().map((item, revIdx) => {
-                      const isSelected = item.uniqueId === selecionadoId;
-                      const isHidden = item.hidden === true || item.opacity === 0 || item.visible === false;
-                      const isBaloes = item.categoria === 'Baloes' || item.shapeType?.startsWith('baloes_') || (item.nome || '').toLowerCase().includes('arco');
-                      return (
-                        <div
-                          key={item.uniqueId}
-                          className={`layer-row-item ${isSelected ? 'selected' : ''} ${item.locked ? 'locked' : ''} ${isHidden ? 'layer-hidden' : ''}`}
-                          onClick={() => { setSelecionadoId(item.uniqueId); }}
-                        >
-                          <div className="layer-thumb-mini">
-                            {item.type === 'text' ? (
-                              <span className="layer-text-icon">T</span>
-                            ) : item.imagem ? (
-                              <img src={item.imagem} alt="" />
-                            ) : (
-                              <span className="layer-shape-icon">🏛️</span>
-                            )}
-                          </div>
+                    {itensCanvas.length === 0 ? (
+                      <div className="empty-layers-box">
+                        <Icons.Layers width={28} height={28} style={{ opacity: 0.3, marginBottom: '6px' }} />
+                        <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhuma peça adicionada ao cenário.</p>
+                      </div>
+                    ) : (
+                      <div className="layers-list-scroll">
+                        {[...itensCanvas].reverse().map((item, revIdx) => {
+                          const isSelected = item.uniqueId === selecionadoId;
+                          const isHidden = item.hidden === true || item.opacity === 0 || item.visible === false;
+                          const isBaloes = item.categoria === 'Baloes' || item.shapeType?.startsWith('baloes_') || (item.nome || '').toLowerCase().includes('arco');
+                          return (
+                            <div
+                              key={item.uniqueId}
+                              className={`layer-row-item ${isSelected ? 'selected' : ''} ${item.locked ? 'locked' : ''} ${isHidden ? 'layer-hidden' : ''}`}
+                              onClick={() => { setSelecionadoId(item.uniqueId); }}
+                            >
+                              <div className="layer-thumb-mini">
+                                {item.type === 'text' ? (
+                                  <span className="layer-text-icon">T</span>
+                                ) : item.imagem ? (
+                                  <img src={item.imagem} alt="" />
+                                ) : (
+                                  <span className="layer-shape-icon">🏛️</span>
+                                )}
+                              </div>
 
-                          <div className="layer-name-col">
-                            <span className="layer-name-txt" title={item.nome || item.content || 'Item'}>
-                              {item.type === 'text' ? `Texto: "${item.content || ''}"` : (item.nome || item.shapeType || 'Elemento')}
-                            </span>
-                            <span className="layer-type-tag">
-                              {isHidden ? '👁️‍🗨️ Camada Oculta' : (isBaloes ? '🎈 Bexigas / Balão' : item.isEstoqueProprio ? '📦 Estoque' : '🛒 Fora do Estoque')}
-                            </span>
-                          </div>
+                              <div className="layer-name-col">
+                                <span className="layer-name-txt" title={item.nome || item.content || 'Item'}>
+                                  {item.type === 'text' ? `Texto: "${item.content || ''}"` : (item.nome || item.shapeType || 'Elemento')}
+                                </span>
+                                <span className="layer-type-tag">
+                                  {isHidden ? '👁️‍🗨️ Camada Oculta' : (isBaloes ? '🎈 Bexigas / Balão' : item.isEstoqueProprio ? '📦 Estoque' : '🛒 Fora do Estoque')}
+                                </span>
+                              </div>
 
-                          <div className="layer-actions-group" onClick={e => e.stopPropagation()}>
-                            <button
-                              type="button"
-                              className={`btn-layer-tool ${isHidden ? 'active-hidden' : ''}`}
-                              onClick={() => {
-                                const novoHidden = !isHidden;
-                                atualizarItem(item.uniqueId, {
-                                  hidden: novoHidden,
-                                  opacity: novoHidden ? 0 : 100,
-                                  visible: !novoHidden
-                                });
-                              }}
-                              title={isHidden ? 'Mostrar Camada (Reaparecer no Cenário)' : 'Ocultar Camada (Esconder do Cenário)'}
-                            >
-                              {isHidden ? <Icons.EyeOff width={13} height={13} /> : <Icons.Eye width={13} height={13} />}
-                            </button>
-                            <button
-                              type="button"
-                              className={`btn-layer-tool ${item.locked ? 'active' : ''}`}
-                              onClick={() => toggleLock(item.uniqueId)}
-                              title={item.locked ? 'Desbloquear' : 'Bloquear'}
-                            >
-                              <Icons.Lock width={11} height={11} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-layer-tool"
-                              onClick={() => bringToFront(item.uniqueId)}
-                              title="Subir Camada"
-                            >
-                              <Icons.ArrowUp width={11} height={11} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-layer-tool"
-                              onClick={() => sendToBack(item.uniqueId)}
-                              title="Descer Camada"
-                            >
-                              <Icons.ArrowDown width={11} height={11} />
-                            </button>
-                            <button
-                              type="button"
-                              className="btn-layer-tool danger"
-                              onClick={() => deleteItem(item.uniqueId)}
-                              title="Excluir Camada"
-                            >
-                              <Icons.Trash width={11} height={11} />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
+                              <div className="layer-actions-group" onClick={e => e.stopPropagation()}>
+                                <button
+                                  type="button"
+                                  className={`btn-layer-tool ${isHidden ? 'active-hidden' : ''}`}
+                                  onClick={() => {
+                                    const novoHidden = !isHidden;
+                                    atualizarItem(item.uniqueId, {
+                                      hidden: novoHidden,
+                                      opacity: novoHidden ? 0 : 100,
+                                      visible: !novoHidden
+                                    });
+                                  }}
+                                  title={isHidden ? 'Mostrar Camada (Reaparecer no Cenário)' : 'Ocultar Camada (Esconder do Cenário)'}
+                                >
+                                  {isHidden ? <Icons.EyeOff width={13} height={13} /> : <Icons.Eye width={13} height={13} />}
+                                </button>
+                                <button
+                                  type="button"
+                                  className={`btn-layer-tool ${item.locked ? 'active' : ''}`}
+                                  onClick={() => toggleLock(item.uniqueId)}
+                                  title={item.locked ? 'Desbloquear' : 'Bloquear'}
+                                >
+                                  <Icons.Lock width={11} height={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-layer-tool"
+                                  onClick={() => bringToFront(item.uniqueId)}
+                                  title="Subir Camada"
+                                >
+                                  <Icons.ArrowUp width={11} height={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-layer-tool"
+                                  onClick={() => sendToBack(item.uniqueId)}
+                                  title="Descer Camada"
+                                >
+                                  <Icons.ArrowDown width={11} height={11} />
+                                </button>
+                                <button
+                                  type="button"
+                                  className="btn-layer-tool danger"
+                                  onClick={() => deleteItem(item.uniqueId)}
+                                  title="Excluir Camada"
+                                >
+                                  <Icons.Trash width={11} height={11} />
+                                </button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 )}
-              </div>
-            )}
 
-            {/* CONTEÚDO DA ABA PROPRIEDADES (INSPECTOR COMPLETO) */}
-            {abaDireita === 'propriedades' && (
-              <div className="right-panel-body">
-                {itemSelecionado ? (
-                  <div className="inspector-content">
-                    {/* Card do Item Selecionado */}
-                    <div className="inspector-item-card">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div className="layer-thumb-mini" style={{ width: '28px', height: '28px' }}>
-                          {itemSelecionado.type === 'text' ? 'T' : (itemSelecionado.imagem ? <img src={itemSelecionado.imagem} alt="" /> : '🏛️')}
-                        </div>
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <strong style={{ display: 'block', fontSize: '11.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                            {itemSelecionado.nome || (itemSelecionado.type === 'text' ? `Texto: "${itemSelecionado.content || ''}"` : 'Elemento')}
-                          </strong>
-                          <small style={{ fontSize: '9.5px', color: '#64748b' }}>
-                            {itemSelecionado.isEstoqueProprio ? '📦 Peça do Estoque' : '🛒 Fora do Estoque'}
-                          </small>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 1. Posicionamento & Dimensões */}
-                    <div className="inspector-section-title">Posicionamento & Dimensões</div>
-                    <div className="inspector-2col-grid">
-                      <div className="inspector-field">
-                        <label>Largura (W)</label>
-                        <input
-                          type="number"
-                          value={Math.round(itemSelecionado.width || 100)}
-                          onChange={e => atualizarItem(selecionadoId, { width: Math.max(20, Number(e.target.value)) })}
-                        />
-                      </div>
-                      <div className="inspector-field">
-                        <label>Altura (H)</label>
-                        <input
-                          type="number"
-                          value={Math.round(itemSelecionado.height || 100)}
-                          onChange={e => atualizarItem(selecionadoId, { height: Math.max(20, Number(e.target.value)) })}
-                        />
-                      </div>
-                      <div className="inspector-field">
-                        <label>Posição X</label>
-                        <input
-                          type="number"
-                          value={Math.round(itemSelecionado.x || 0)}
-                          onChange={e => atualizarItem(selecionadoId, { x: Number(e.target.value) })}
-                        />
-                      </div>
-                      <div className="inspector-field">
-                        <label>Posição Y</label>
-                        <input
-                          type="number"
-                          value={Math.round(itemSelecionado.y || 0)}
-                          onChange={e => atualizarItem(selecionadoId, { y: Number(e.target.value) })}
-                        />
-                      </div>
-                    </div>
-
-                    {/* 2. Ajustes Visuais, Filtros & Efeitos */}
-                    <div className="inspector-section-title" style={{ marginTop: '10px' }}>Filtros & Efeitos Visuais</div>
-
-                    {(itemSelecionado.type === 'image' || itemSelecionado.capaUrl) && (
-                      <>
-                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                            <span>Brilho</span>
-                            <span>{itemSelecionado.brightness || 100}%</span>
+                {/* CONTEÚDO DA ABA PROPRIEDADES (INSPECTOR COMPLETO) */}
+                {abaDireita === 'propriedades' && (
+                  <div className="right-panel-body">
+                    {itemSelecionado ? (
+                      <div className="inspector-content">
+                        {/* Card do Item Selecionado */}
+                        <div className="inspector-item-card">
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div className="layer-thumb-mini" style={{ width: '28px', height: '28px' }}>
+                              {itemSelecionado.type === 'text' ? 'T' : (itemSelecionado.imagem ? <img src={itemSelecionado.imagem} alt="" /> : '🏛️')}
+                            </div>
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <strong style={{ display: 'block', fontSize: '11.5px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                {itemSelecionado.nome || (itemSelecionado.type === 'text' ? `Texto: "${itemSelecionado.content || ''}"` : 'Elemento')}
+                              </strong>
+                              <small style={{ fontSize: '9.5px', color: '#64748b' }}>
+                                {itemSelecionado.isEstoqueProprio ? '📦 Peça do Estoque' : '🛒 Fora do Estoque'}
+                              </small>
+                            </div>
                           </div>
-                          <input type="range" min="0" max="200" value={itemSelecionado.brightness || 100}
-                            onChange={e => atualizarItem(selecionadoId, { brightness: Number(e.target.value) })}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { brightness: 100 })} />
                         </div>
 
-                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                            <span>Contraste</span>
-                            <span>{itemSelecionado.contrast || 100}%</span>
-                          </div>
-                          <input type="range" min="0" max="200" value={itemSelecionado.contrast || 100}
-                            onChange={e => atualizarItem(selecionadoId, { contrast: Number(e.target.value) })}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { contrast: 100 })} />
-                        </div>
-
-                        {/* 🌈 SATURAÇÃO (NOVA) */}
-                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                            <span>Saturação</span>
-                            <span>{itemSelecionado.saturate || 100}%</span>
-                          </div>
-                          <input type="range" min="0" max="300" value={itemSelecionado.saturate || 100}
-                            onChange={e => atualizarItem(selecionadoId, { saturate: Number(e.target.value) })}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { saturate: 100 })} />
-                        </div>
-
-                        {/* 🪄 REMOVER FUNDO (IA WASM) */}
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: '4px' }}>
-                          <button
-                            type="button"
-                            className="btn-remove-bg-ia"
-                            style={{ flex: 1, margin: 0 }}
-                            onClick={() => removerFundoImagem(selecionadoId)}
-                            disabled={removendoFundo}
-                            title="Remove o fundo da imagem usando IA (WASM, sem custo)"
-                          >
-                            {removendoFundo ? (
-                              <><i className="fas fa-spinner fa-spin" style={{ marginRight: '6px' }} />Processando IA...</>
-                            ) : (
-                              <>🪄 IA: Remover Fundo</>
-                            )}
-                          </button>
-                          {itemSelecionado.imagemOriginal && (
-                            <button
-                              type="button"
-                              className="btn-secondary"
-                              style={{ padding: '6px 10px', fontSize: '10.5px', color: '#0f172a', fontWeight: 'bold', background: '#fff' }}
-                              onClick={() => restaurarImagemOriginal(selecionadoId)}
-                              title="Restaurar foto original anterior à remoção de fundo"
-                            >
-                              ↩️ Restaurar
-                            </button>
-                          )}
-                        </div>
-                        <p style={{ fontSize: '9.5px', color: '#94a3b8', margin: '0 0 8px 0', lineHeight: 1.4 }}>
-                          {itemSelecionado.imagemOriginal
-                            ? '✅ Recorte aplicado. Clique em "Restaurar" se quiser desfazer.'
-                            : 'Funciona offline. Na 1ª vez baixa modelo (~60MB). Pode desfazer com Ctrl+Z.'}
-                        </p>
-                      </>
-                    )}
-
-                    {/* ✍️ SEÇÃO DE EDIÇÃO DE TEXTO & LETREIRO NEON NO INSPECTOR */}
-                    {itemSelecionado.type === 'text' && (
-                      <div style={{ marginTop: '10px', marginBottom: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1.5px solid #c5a059' }}>
-                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px', color: '#c5a059' }}>
-                          ✍️ Conteúdo & Tipografia
-                        </div>
-
-                        {/* Input de Texto */}
-                        <input
-                          type="text"
-                          className="text-input-direct"
-                          value={itemSelecionado.content || ''}
-                          onChange={e => atualizarItem(selecionadoId, { content: e.target.value })}
-                          placeholder="Digite o texto..."
-                          style={{ marginBottom: '8px' }}
-                        />
-
-                        {/* Seletor de Fonte */}
-                        <div style={{ marginBottom: '8px' }}>
-                          <select className="font-selector" value={itemSelecionado.fontFamily} onChange={e => atualizarItem(selecionadoId, { fontFamily: e.target.value })}>
-                            {fontesDisponiveis.map(f => (
-                              <option key={f.nome} value={f.valor} style={{ fontFamily: f.valor }}>
-                                {f.nome}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-
-                        {/* Barra de Formatação (B, I, Alinhamento, Cor) */}
-                        <div className="style-controls-row" style={{ marginBottom: '8px' }}>
-                          <button
-                            type="button"
-                            className={`btn-style ${itemSelecionado.fontWeight === 'bold' ? 'active' : ''}`}
-                            onClick={() => atualizarItem(selecionadoId, { fontWeight: itemSelecionado.fontWeight === 'bold' ? 'normal' : 'bold' })}
-                            title="Negrito"
-                          >
-                            <Icons.Bold />
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn-style ${itemSelecionado.fontStyle === 'italic' ? 'active' : ''}`}
-                            onClick={() => atualizarItem(selecionadoId, { fontStyle: itemSelecionado.fontStyle === 'italic' ? 'normal' : 'italic' })}
-                            title="Itálico"
-                          >
-                            <Icons.Italic />
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'left' ? 'active' : ''}`}
-                            onClick={() => atualizarItem(selecionadoId, { textAlign: 'left' })}
-                          >
-                            <i className="fas fa-align-left" />
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'center' ? 'active' : ''}`}
-                            onClick={() => atualizarItem(selecionadoId, { textAlign: 'center' })}
-                          >
-                            <i className="fas fa-align-center" />
-                          </button>
-                          <button
-                            type="button"
-                            className={`btn-style ${(itemSelecionado.textAlign || 'center') === 'right' ? 'active' : ''}`}
-                            onClick={() => atualizarItem(selecionadoId, { textAlign: 'right' })}
-                          >
-                            <i className="fas fa-align-right" />
-                          </button>
-                          <div className="divider-v" />
-                          <label className="color-picker-wrapper" title="Cor do Texto">
-                            <input type="color" className="color-input-mini" value={itemSelecionado.color || '#c5a059'} onChange={e => atualizarItem(selecionadoId, { color: e.target.value })} />
-                          </label>
-                        </div>
-
-                        {/* ✨ MATERIAIS, TEXTURAS REAIS & UPLOAD NO INSPECTOR */}
-                        <div style={{ marginBottom: '10px', background: '#f8fafc', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155', textTransform: 'uppercase', margin: 0 }}>
-                              🪞 Textura / Material da Letra:
-                            </label>
-                          </div>
-
-                          {/* Botão Upload de Textura para o Texto */}
-                          <button
-                            type="button"
-                            onClick={() => handleUploadTexturaTexto(selecionadoId)}
-                            style={{
-                              width: '100%',
-                              padding: '6px 8px',
-                              background: '#0f172a',
-                              color: '#fef08a',
-                              border: '1px solid rgba(234, 179, 8, 0.4)',
-                              borderRadius: '6px',
-                              fontSize: '10.5px',
-                              fontWeight: 'bold',
-                              cursor: 'pointer',
-                              display: 'flex',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              gap: '5px',
-                              marginBottom: '8px'
-                            }}
-                          >
-                            <span>📤</span>
-                            <span>Upload de Foto/Textura no Texto</span>
-                          </button>
-
-                          {/* Swatches Visuais de Materiais de Festa */}
-                          <div className="texture-swatches-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)' }}>
-                            {[
-                              { id: 'none', nome: 'Cor Sólida', tipo: 'cor', thumb: null, bg: itemSelecionado.color || '#c5a059' },
-                              { id: 'gold_mirror', nome: 'Ouro Espelho', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #b38728 55%, #aa771c 100%)' },
-                              { id: 'rose_gold', nome: 'Rose Gold', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #b76e79 0%, #ffd1dc 30%, #e0a9af 55%, #9c4f5a 100%)' },
-                              { id: 'silver_mirror', nome: 'Prata Espelho', tipo: 'grad', thumb: null, bg: 'linear-gradient(135deg, #8a8a8a 0%, #ffffff 30%, #a6a6a6 55%, #737373 100%)' },
-                              { id: 'mdf_wood', nome: 'MDF Madeira', tipo: 'pat', thumb: null, bg: 'repeating-linear-gradient(45deg, #d29b62, #d29b62 6px, #ba8249 6px, #ba8249 12px)' },
-                              { id: 'glitter_gold', nome: 'Glitter Dourado', tipo: 'grad', thumb: null, bg: 'radial-gradient(circle at 50% 50%, #fff7cc 10%, #d4af37 40%, #996515 80%, #ffd700 100%)' },
-                              { id: 'backlight_halo', nome: 'Letreiro Neon', tipo: 'neon', thumb: null, bg: '#0f172a' },
-                              ...(elementosCenografia || [])
-                                .filter(e => e.categoria === 'Texturas' && (e.isGlobal || e.empresaId === tenantId))
-                                .map(e => ({ id: `admin_${e.id}`, nome: e.nome, url: e.imagemUrl, thumb: e.imagemUrl }))
-                            ].map(mat => {
-                              const isMatActive = mat.url
-                                ? (itemSelecionado.textureUrl === mat.url)
-                                : ((itemSelecionado.material || 'none') === mat.id && !itemSelecionado.textureUrl);
-
-                              return (
-                                <div
-                                  key={mat.id}
-                                  className={`texture-swatch-card ${isMatActive ? 'active' : ''}`}
-                                  onClick={() => {
-                                    if (mat.url) {
-                                      atualizarItem(selecionadoId, { material: 'custom_texture', textureUrl: mat.url, textureScale: itemSelecionado.textureScale || 100 });
-                                    } else {
-                                      atualizarItem(selecionadoId, { material: mat.id, textureUrl: '' });
-                                    }
-                                  }}
-                                  title={mat.nome}
-                                >
-                                  <div
-                                    className="texture-swatch-thumb"
-                                    style={mat.thumb ? { backgroundImage: `url("${mat.thumb}")` } : { background: mat.bg }}
-                                  >
-                                    {mat.tipo === 'cor' && <span style={{ fontSize: '11px' }}>🎨</span>}
-                                    {mat.tipo === 'neon' && <span style={{ fontSize: '12px', filter: 'drop-shadow(0 0 4px #ec4899)' }}>💡</span>}
-                                    {isMatActive && (
-                                      <div style={{ position: 'absolute', top: '2px', right: '2px', background: '#c5a059', color: '#fff', borderRadius: '50%', width: '13px', height: '13px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '8.5px', fontWeight: 'bold', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }}>
-                                        ✓
-                                      </div>
-                                    )}
+                        {/* 1. Dimensões / Tamanho do Elemento */}
+                        {itemSelecionado.type !== 'ornament' && (
+                          <>
+                            <div className="inspector-section-title">
+                              {itemSelecionado.type === 'text' ? 'Escala & Tamanho do Letreiro' : 'Posicionamento & Dimensões'}
+                            </div>
+                            {itemSelecionado.type === 'text' ? (
+                              <div>
+                                {/* Tamanho Geral do Letreiro / Placa */}
+                                <div className="slider-group" style={{ marginBottom: '6px', background: '#ffffff', padding: '10px 8px', borderRadius: '8px', border: '1.5px solid #c5a059' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                                    <span style={{ fontSize: '11.5px', fontWeight: '900', color: '#1e293b' }}>🔤 Escala / Tamanho do Letreiro</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                      <button
+                                        type="button"
+                                        onClick={() => atualizarItem(selecionadoId, { fontSize: Math.max(12, Number(itemSelecionado.fontSize || 48) - 6) })}
+                                        style={{ width: '26px', height: '26px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
+                                        title="Diminuir (-6px)"
+                                      >
+                                        -
+                                      </button>
+                                      <input
+                                        type="number"
+                                        min="12"
+                                        max="600"
+                                        value={itemSelecionado.fontSize || 48}
+                                        onChange={e => atualizarItem(selecionadoId, { fontSize: Math.max(12, Math.min(600, Number(e.target.value) || 12)) })}
+                                        style={{ width: '52px', height: '26px', textAlign: 'center', fontSize: '12px', fontWeight: '900', border: '1.5px solid #c5a059', borderRadius: '4px', padding: '0 2px', background: '#fffbeb' }}
+                                      />
+                                      <span style={{ fontSize: '10.5px', color: '#64748b', fontWeight: 'bold' }}>px</span>
+                                      <button
+                                        type="button"
+                                        onClick={() => atualizarItem(selecionadoId, { fontSize: Math.min(600, Number(itemSelecionado.fontSize || 48) + 6) })}
+                                        style={{ width: '26px', height: '26px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '14px', cursor: 'pointer' }}
+                                        title="Aumentar (+6px)"
+                                      >
+                                        +
+                                      </button>
+                                    </div>
                                   </div>
-                                  <span className="texture-swatch-name">{mat.nome}</span>
+                                  <input
+                                    type="range" min="12" max="500" value={itemSelecionado.fontSize || 48}
+                                    onChange={e => atualizarItem(selecionadoId, { fontSize: Number(e.target.value) })}
+                                    onDoubleClick={() => atualizarItem(selecionadoId, { fontSize: 60 })}
+                                    style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                                  />
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '8px', gap: '3px' }}>
+                                    {[
+                                      { label: 'P (32)', val: 32 },
+                                      { label: 'M (60)', val: 60 },
+                                      { label: 'G (96)', val: 96 },
+                                      { label: 'GG (160)', val: 160 },
+                                      { label: 'XG (250)', val: 250 },
+                                      { label: 'MAX (400)', val: 400 }
+                                    ].map(pill => (
+                                      <button
+                                        key={pill.val}
+                                        type="button"
+                                        className={`btn-size-pill ${(itemSelecionado.fontSize || 48) === pill.val ? 'active' : ''}`}
+                                        onClick={() => atualizarItem(selecionadoId, { fontSize: pill.val })}
+                                        style={{
+                                          flex: 1, padding: '4px 1px', fontSize: '9px', fontWeight: '800', borderRadius: '4px',
+                                          border: (itemSelecionado.fontSize === pill.val) ? '1.5px solid #c5a059' : '1px solid #e2e8f0',
+                                          background: (itemSelecionado.fontSize === pill.val) ? '#fef3c7' : '#f8fafc',
+                                          color: (itemSelecionado.fontSize === pill.val) ? '#92400e' : '#475569',
+                                          cursor: 'pointer'
+                                        }}
+                                      >
+                                        {pill.label}
+                                      </button>
+                                    ))}
+                                  </div>
                                 </div>
-                              );
-                            })}
-                          </div>
+                              </div>
+                            ) : (
+                              <div className="inspector-2col-grid">
+                                <div className="inspector-field">
+                                  <label>Largura (W)</label>
+                                  <input
+                                    type="number"
+                                    value={Math.round(itemSelecionado.width || 100)}
+                                    onChange={e => atualizarItem(selecionadoId, { width: Math.max(20, Number(e.target.value)) })}
+                                  />
+                                </div>
+                                <div className="inspector-field">
+                                  <label>Altura (H)</label>
+                                  <input
+                                    type="number"
+                                    value={Math.round(itemSelecionado.height || 100)}
+                                    onChange={e => atualizarItem(selecionadoId, { height: Math.max(20, Number(e.target.value)) })}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </>
+                        )}
 
-                          {/* Slider de Escala da Textura (quando houver textura ativa) */}
-                          {(itemSelecionado.material === 'custom_texture' || !!itemSelecionado.textureUrl) && (
-                            <div className="slider-group" style={{ marginTop: '8px', paddingTop: '6px', borderTop: '1px dashed #cbd5e1' }}>
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                                <span>🔍 Zoom da Textura no Texto</span>
-                                <span>{itemSelecionado.textureScale || 100}%</span>
+                        {/* 2. Ajustes Visuais, Filtros & Efeitos */}
+                        <div className="inspector-section-title" style={{ marginTop: '10px' }}>Filtros & Efeitos Visuais</div>
+
+                        {(itemSelecionado.type === 'image' || itemSelecionado.capaUrl) && (
+                          <>
+                            <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                                <span>Brilho</span>
+                                <span>{itemSelecionado.brightness || 100}%</span>
+                              </div>
+                              <input type="range" min="0" max="200" value={itemSelecionado.brightness || 100}
+                                onChange={e => atualizarItem(selecionadoId, { brightness: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { brightness: 100 })} />
+                            </div>
+
+                            <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                                <span>Contraste</span>
+                                <span>{itemSelecionado.contrast || 100}%</span>
+                              </div>
+                              <input type="range" min="0" max="200" value={itemSelecionado.contrast || 100}
+                                onChange={e => atualizarItem(selecionadoId, { contrast: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { contrast: 100 })} />
+                            </div>
+
+                            {/* 🌈 SATURAÇÃO (NOVA) */}
+                            <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                                <span>Saturação</span>
+                                <span>{itemSelecionado.saturate || 100}%</span>
+                              </div>
+                              <input type="range" min="0" max="300" value={itemSelecionado.saturate || 100}
+                                onChange={e => atualizarItem(selecionadoId, { saturate: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { saturate: 100 })} />
+                            </div>
+
+                            {/* 🪄 REMOVER FUNDO / RESTAURAR FUNDO (IA) */}
+                            <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: '1px solid #e2e8f0', marginBottom: '8px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>🪄 Fundo da Foto (IA)</span>
+                                {itemSelecionado.imagemOriginal && itemSelecionado.imagem !== itemSelecionado.imagemOriginal && (
+                                  <span style={{ fontSize: '9px', fontWeight: '800', background: '#dcfce7', color: '#166534', padding: '2px 6px', borderRadius: '4px' }}>
+                                    ✨ Sem Fundo
+                                  </span>
+                                )}
+                              </div>
+
+                              <div style={{ display: 'flex', gap: '6px' }}>
+                                {itemSelecionado.imagemOriginal && itemSelecionado.imagem !== itemSelecionado.imagemOriginal ? (
+                                  <button
+                                    type="button"
+                                    className="btn-secondary"
+                                    style={{ flex: 1, padding: '7px 10px', fontSize: '11px', color: '#dc2626', fontWeight: 'bold', background: '#ffffff', border: '1.5px solid #fecaca', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                                    onClick={() => restaurarImagemOriginal(selecionadoId)}
+                                    title="Restaurar foto original com fundo intacto"
+                                  >
+                                    <span>↺</span>
+                                    <span>Restaurar Fundo Original</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    className="btn-remove-bg-ia"
+                                    style={{ flex: 1, margin: 0 }}
+                                    onClick={() => removerFundoImagem(selecionadoId)}
+                                    disabled={removendoFundo}
+                                    title="Remove o fundo da imagem usando IA (WASM, gratuito)"
+                                  >
+                                    {removendoFundo ? (
+                                      <><i className="fas fa-spinner fa-spin" style={{ marginRight: '6px' }} />Processando IA...</>
+                                    ) : (
+                                      <>🪄 Remover Fundo com IA</>
+                                    )}
+                                  </button>
+                                )}
+
+                                {/* Se o item foi restaurado mas já tem uma versão recortada em cache */}
+                                {itemSelecionado.imagemRecortada && itemSelecionado.imagem === itemSelecionado.imagemOriginal && (
+                                  <button
+                                    type="button"
+                                    className="btn-primary-action"
+                                    style={{ padding: '6px 10px', fontSize: '10.5px', margin: 0, cursor: 'pointer', background: '#7c3aed' }}
+                                    onClick={() => removerFundoImagem(selecionadoId)}
+                                    title="Reaplicar o recorte sem fundo"
+                                  >
+                                    🪄 Sem Fundo
+                                  </button>
+                                )}
+                              </div>
+                              <p style={{ fontSize: '9.5px', color: '#94a3b8', margin: '6px 0 0 0', lineHeight: 1.3 }}>
+                                {itemSelecionado.imagemOriginal && itemSelecionado.imagem !== itemSelecionado.imagemOriginal
+                                  ? '✅ Fundo removido. Você pode restaurar o fundo original a qualquer momento.'
+                                  : 'Remova o fundo automaticamente com IA para compor a peça no cenário.'}
+                              </p>
+                            </div>
+                          </>
+                        )}
+
+                        {/* ✍️ SEÇÃO DE AJUSTES ADICIONAIS DE TEXTO / LETREIRO NO INSPECTOR */}
+                        {itemSelecionado.type === 'text' && (
+                          <div style={{ marginTop: '10px', marginBottom: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1.5px solid #c5a059' }}>
+                            <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '8px', color: '#c5a059' }}>
+                              ✍️ Efeitos & Acabamento do Letreiro
+                            </div>
+
+                            {/* 🌈 TEXTO CURVADO / ARQUEADO NO INSPECTOR */}
+                            <div className="slider-group" style={{ marginBottom: '8px' }} title="Dê 2 cliques para resetar">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                                <span>🌈 Curvatura do Arco</span>
+                                <span>{itemSelecionado.curvatura || 0}%</span>
                               </div>
                               <input
-                                type="range" min="30" max="300" value={itemSelecionado.textureScale || 100}
-                                onChange={e => atualizarItem(selecionadoId, { textureScale: Number(e.target.value) })}
-                                onDoubleClick={() => atualizarItem(selecionadoId, { textureScale: 100 })}
+                                type="range" min="-100" max="100" value={itemSelecionado.curvatura || 0}
+                                onChange={e => atualizarItem(selecionadoId, { curvatura: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { curvatura: 0 })}
                                 style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
                               />
                             </div>
-                          )}
-                        </div>
 
-                        {/* 🌈 TEXTO CURVADO / ARQUEADO NO INSPECTOR */}
-                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                            <span>🌈 Curvatura do Arco</span>
-                            <span>{itemSelecionado.curvatura || 0}%</span>
-                          </div>
-                          <input
-                            type="range" min="-100" max="100" value={itemSelecionado.curvatura || 0}
-                            onChange={e => atualizarItem(selecionadoId, { curvatura: Number(e.target.value) })}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { curvatura: 0 })}
-                          />
-                        </div>
-
-                        {/* 🎨 CONTORNO / BORDA EXTERNA NO INSPECTOR */}
-                        <div style={{ background: '#f1f5f9', padding: '6px 8px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#334155' }}>🎨 Contorno / Borda</span>
-                            <input type="color" className="color-input-mini" style={{ width: '18px', height: '18px' }} value={itemSelecionado.strokeColor || '#ffffff'} onChange={e => atualizarItem(selecionadoId, { strokeColor: e.target.value })} />
-                          </div>
-                          <input
-                            type="range" min="0" max="12" value={itemSelecionado.strokeWidth || 0}
-                            onChange={e => atualizarItem(selecionadoId, { strokeWidth: Number(e.target.value) })}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { strokeWidth: 0 })}
-                          />
-                        </div>
-
-                        {/* 🏷️ PLACA / SUPORTE DE FUNDO NO INSPECTOR */}
-                        <div style={{ marginBottom: '8px' }}>
-                          <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                            🏷️ Placa de Fundo:
-                          </label>
-                          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px' }}>
-                            {[
-                              { id: 'nenhuma', label: 'Nenhuma' },
-                              { id: 'acrilico_redondo', label: '🔘 Redonda' },
-                              { id: 'acrilico_arco', label: '🏛️ Arco' },
-                              { id: 'acrilico_retangular', label: '⬛ Retang.' },
-                              { id: 'flamula_tecido', label: '📜 Flâmula' },
-                              { id: 'cavalete_madeira', label: '🖼️ Cavalete' }
-                            ].map(p => (
-                              <button
-                                key={p.id}
-                                type="button"
-                                className={`btn-mat-choice ${(itemSelecionado.placaFundo || 'nenhuma') === p.id ? 'active' : ''}`}
-                                onClick={() => atualizarItem(selecionadoId, { placaFundo: p.id })}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* Controle Avançado de Tamanho da Fonte */}
-                        <div className="slider-group" style={{ marginBottom: '8px', background: '#ffffff', padding: '8px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: '800', color: '#1e293b' }}>🔤 Tamanho da Fonte</span>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              <button
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { fontSize: Math.max(12, Number(itemSelecionado.fontSize || 48) - 4) })}
-                                style={{ width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
-                                title="Diminuir Fonte (-4px)"
-                              >
-                                -
-                              </button>
+                            {/* 🎨 CONTORNO / BORDA EXTERNA NO INSPECTOR */}
+                            <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: '6px', marginBottom: '8px', border: '1px solid #e2e8f0' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#334155' }}>🎨 Contorno / Borda</span>
+                                <input type="color" className="color-input-mini" style={{ width: '18px', height: '18px' }} value={itemSelecionado.strokeColor || '#ffffff'} onChange={e => atualizarItem(selecionadoId, { strokeColor: e.target.value })} />
+                              </div>
                               <input
-                                type="number"
-                                min="12"
-                                max="250"
-                                value={itemSelecionado.fontSize || 48}
-                                onChange={e => atualizarItem(selecionadoId, { fontSize: Math.max(12, Math.min(250, Number(e.target.value) || 12)) })}
-                                style={{ width: '46px', height: '24px', textAlign: 'center', fontSize: '11px', fontWeight: 'bold', border: '1px solid #cbd5e1', borderRadius: '4px', padding: '0 2px' }}
+                                type="range" min="0" max="12" value={itemSelecionado.strokeWidth || 0}
+                                onChange={e => atualizarItem(selecionadoId, { strokeWidth: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { strokeWidth: 0 })}
+                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
                               />
-                              <span style={{ fontSize: '10px', color: '#64748b', fontWeight: 'bold' }}>px</span>
-                              <button
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { fontSize: Math.min(250, Number(itemSelecionado.fontSize || 48) + 4) })}
-                                style={{ width: '24px', height: '24px', borderRadius: '4px', border: '1px solid #cbd5e1', background: '#f8fafc', fontWeight: 'bold', fontSize: '12px', cursor: 'pointer' }}
-                                title="Aumentar Fonte (+4px)"
-                              >
-                                +
-                              </button>
                             </div>
-                          </div>
-                          <input
-                            type="range" min="12" max="220" value={itemSelecionado.fontSize || 48}
-                            onChange={e => atualizarItem(selecionadoId, { fontSize: Number(e.target.value) })}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { fontSize: 48 })}
-                            style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                          />
-                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '6px', gap: '4px' }}>
-                            {[
-                              { label: 'P (32)', val: 32 },
-                              { label: 'M (48)', val: 48 },
-                              { label: 'G (68)', val: 68 },
-                              { label: 'GG (96)', val: 96 },
-                              { label: 'XG (130)', val: 130 }
-                            ].map(pill => (
-                              <button
-                                key={pill.val}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { fontSize: pill.val })}
-                                style={{
-                                  flex: 1, padding: '3px 0', fontSize: '9.5px', fontWeight: '700', borderRadius: '4px',
-                                  border: (itemSelecionado.fontSize === pill.val) ? '1px solid #c5a059' : '1px solid #e2e8f0',
-                                  background: (itemSelecionado.fontSize === pill.val) ? '#fef3c7' : '#f8fafc',
-                                  color: (itemSelecionado.fontSize === pill.val) ? '#92400e' : '#475569',
-                                  cursor: 'pointer'
-                                }}
-                              >
-                                {pill.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
 
-                        {/* Slider de Letter Spacing */}
-                        <div className="slider-group" style={{ marginBottom: '8px' }} title="Dê 2 cliques para resetar">
-                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                            <span>Espaçamento de Letras</span>
-                            <span>{itemSelecionado.letterSpacing || 0}px</span>
-                          </div>
-                          <input
-                            type="range" min="-2" max="20" value={itemSelecionado.letterSpacing || 0}
-                            onChange={e => atualizarItem(selecionadoId, { letterSpacing: Number(e.target.value) })}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { letterSpacing: 0 })}
-                          />
-                        </div>
+                            {/* 🏷️ PLACA / SUPORTE DE FUNDO NO INSPECTOR */}
+                            <div style={{ marginBottom: '8px' }}>
+                              <label style={{ fontSize: '10.5px', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                🏷️ Placa de Fundo:
+                              </label>
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '4px' }}>
+                                {[
+                                  { id: 'nenhuma', label: 'Nenhuma' },
+                                  { id: 'acrilico_redondo', label: '🔘 Redonda' },
+                                  { id: 'acrilico_arco', label: '🏛️ Arco' },
+                                  { id: 'acrilico_retangular', label: '⬛ Retang.' }
+                                ].map(p => (
+                                  <button
+                                    key={p.id}
+                                    type="button"
+                                    className={`btn-mat-choice ${(itemSelecionado.placaFundo || 'nenhuma') === p.id ? 'active' : ''}`}
+                                    onClick={() => atualizarItem(selecionadoId, { placaFundo: p.id })}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
 
-                        {/* Painel Neon LED */}
-                        <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '10.5px' }}>🌟 Neon LED</span>
-                            <button
-                              type="button"
-                              onClick={() => atualizarItem(selecionadoId, { neonGlow: (itemSelecionado.neonGlow > 0 ? 0 : 20) })}
-                              style={{
-                                fontSize: '9.5px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px',
-                                border: 'none', background: itemSelecionado.neonGlow > 0 ? '#22c55e' : '#334155', color: '#fff', cursor: 'pointer'
-                              }}
-                            >
-                              {itemSelecionado.neonGlow > 0 ? 'ON' : 'OFF'}
-                            </button>
-                          </div>
-                          <div className="neon-light-palette" style={{ marginTop: '4px' }}>
-                            {['#eab308', '#ec4899', '#38bdf8', '#fef08a', '#a855f7', '#22c55e', '#ef4444'].map(cor => (
-                              <button
-                                key={cor}
-                                type="button"
-                                className={`neon-dot-btn ${(itemSelecionado.neonColor || '#c5a059') === cor ? 'active' : ''}`}
-                                style={{ backgroundColor: cor, width: '18px', height: '18px' }}
-                                onClick={() => atualizarItem(selecionadoId, { neonColor: cor, neonGlow: Math.max(16, itemSelecionado.neonGlow || 20) })}
+
+
+                            {/* Slider de Letter Spacing */}
+                            <div className="slider-group" style={{ marginBottom: '8px' }} title="Dê 2 cliques para resetar">
+                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                                <span>Espaçamento de Letras</span>
+                                <span>{itemSelecionado.letterSpacing || 0}px</span>
+                              </div>
+                              <input
+                                type="range" min="-2" max="20" value={itemSelecionado.letterSpacing || 0}
+                                onChange={e => atualizarItem(selecionadoId, { letterSpacing: Number(e.target.value) })}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { letterSpacing: 0 })}
                               />
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                            </div>
 
-                    {/* 🌿 CONTROLES DO ENFEITE / APLIQUE DE FESTA NO INSPECTOR */}
-                    {itemSelecionado.type === 'ornament' && (
-                      <div className="inspector-group" style={{ marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px' }}>✨ Material & Acabamento</div>
-
-                        <div className="materials-selector-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px', marginBottom: '8px' }}>
-                          {[
-                            { id: 'gold_mirror', label: '✨ Ouro Espelho' },
-                            { id: 'rose_gold', label: '🌸 Rose Gold' },
-                            { id: 'silver_mirror', label: '🥈 Prata' },
-                            { id: 'mdf_wood', label: '🪵 MDF Madeira' },
-                            { id: 'none', label: '🎨 Cor Própria' }
-                          ].map(mat => (
-                            <button
-                              key={mat.id}
-                              type="button"
-                              className={`btn-mat-choice ${(itemSelecionado.material || 'gold_mirror') === mat.id ? 'active' : ''}`}
-                              onClick={() => atualizarItem(selecionadoId, { material: mat.id })}
-                              style={{ padding: '6px', fontSize: '10px' }}
-                            >
-                              {mat.label}
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* Cor personalizada se material for none */}
-                        {itemSelecionado.material === 'none' && (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px', padding: '4px 6px', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10.5px', fontWeight: 'bold', color: '#334155' }}>Cor do Enfeite</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#c5a059'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', cursor: 'pointer', borderRadius: '4px' }}
-                            />
+                            {/* Painel Neon LED */}
+                            <div style={{ background: '#0f172a', padding: '8px 10px', borderRadius: '6px', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                <span style={{ color: '#c5a059', fontWeight: 'bold', fontSize: '10.5px' }}>🌟 Neon LED</span>
+                                <button
+                                  type="button"
+                                  onClick={() => atualizarItem(selecionadoId, { neonGlow: (itemSelecionado.neonGlow > 0 ? 0 : 20) })}
+                                  style={{
+                                    fontSize: '9.5px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px',
+                                    border: 'none', background: itemSelecionado.neonGlow > 0 ? '#22c55e' : '#334155', color: '#fff', cursor: 'pointer'
+                                  }}
+                                >
+                                  {itemSelecionado.neonGlow > 0 ? 'ON' : 'OFF'}
+                                </button>
+                              </div>
+                              <div className="neon-light-palette" style={{ marginTop: '4px' }}>
+                                {['#eab308', '#ec4899', '#38bdf8', '#fef08a', '#a855f7', '#22c55e', '#ef4444'].map(cor => (
+                                  <button
+                                    key={cor}
+                                    type="button"
+                                    className={`neon-dot-btn ${(itemSelecionado.neonColor || '#c5a059') === cor ? 'active' : ''}`}
+                                    style={{ backgroundColor: cor, width: '18px', height: '18px' }}
+                                    onClick={() => atualizarItem(selecionadoId, { neonColor: cor, neonGlow: Math.max(16, itemSelecionado.neonGlow || 20) })}
+                                  />
+                                ))}
+                              </div>
+                            </div>
                           </div>
                         )}
 
-                        {/* Slider de Tamanho */}
+                        {/* 🌿 CONTROLES DO ENFEITE / APLIQUE DE FESTA NO INSPECTOR */}
+                        {itemSelecionado.type === 'ornament' && (
+                          <div className="inspector-group" style={{ marginBottom: '12px', background: '#f8fafc', padding: '10px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '8px' }}>✨ Material & Acabamento do Ícone</div>
+
+                            <div className="materials-selector-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '6px', marginBottom: '10px' }}>
+                              {[
+                                { id: 'gold_mirror', label: '✨ Ouro Espelho' },
+                                { id: 'rose_gold', label: '🌸 Rose Gold' },
+                                { id: 'silver_mirror', label: '🥈 Prata' },
+                                { id: 'mdf_wood', label: '🪵 MDF Laser' },
+                                { id: 'none', label: '🎨 Cor Personalizada', fullWidth: true }
+                              ].map(mat => (
+                                <button
+                                  key={mat.id}
+                                  type="button"
+                                  className={`btn-mat-choice ${(itemSelecionado.material || 'gold_mirror') === mat.id ? 'active' : ''}`}
+                                  onClick={() => atualizarItem(selecionadoId, { material: mat.id })}
+                                  style={{
+                                    padding: '7px 4px',
+                                    fontSize: '10.5px',
+                                    fontWeight: '700',
+                                    gridColumn: mat.fullWidth ? '1 / -1' : undefined
+                                  }}
+                                >
+                                  {mat.label}
+                                </button>
+                              ))}
+                            </div>
+
+                            {/* Paleta e Seletor de Cor do Ícone */}
+                            <div style={{ marginBottom: '10px', padding: '8px', background: '#ffffff', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                                <span style={{ fontSize: '11px', fontWeight: '800', color: '#334155' }}>🎨 Cor do Ícone:</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#c5a059'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value, material: 'none' })}
+                                  style={{ width: '36px', height: '26px', border: '1px solid #cbd5e1', cursor: 'pointer', borderRadius: '4px', padding: 0 }}
+                                  title="Clique para escolher qualquer cor"
+                                />
+                              </div>
+                              {/* Cores Rápidas de Festa */}
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { hex: '#c5a059', nome: 'Dourado' },
+                                  { hex: '#e2b1b8', nome: 'Rose' },
+                                  { hex: '#cbd5e1', nome: 'Prata' },
+                                  { hex: '#ffffff', nome: 'Branco' },
+                                  { hex: '#0f172a', nome: 'Preto' },
+                                  { hex: '#f472b6', nome: 'Rosa' },
+                                  { hex: '#38bdf8', nome: 'Azul' },
+                                  { hex: '#a855f7', nome: 'Lilás' },
+                                  { hex: '#ef4444', nome: 'Vermelho' },
+                                  { hex: '#22c55e', nome: 'Verde' }
+                                ].map(c => (
+                                  <button
+                                    key={c.hex}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { color: c.hex, material: 'none' })}
+                                    style={{
+                                      width: '20px', height: '20px', borderRadius: '50%',
+                                      background: c.hex, border: (itemSelecionado.color === c.hex && itemSelecionado.material === 'none') ? '2px solid #c5a059' : '1px solid #cbd5e1',
+                                      cursor: 'pointer',
+                                      boxShadow: (itemSelecionado.color === c.hex && itemSelecionado.material === 'none') ? '0 0 0 2px #fff inset' : 'none'
+                                    }}
+                                    title={c.nome}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Slider de Tamanho com botões - e + */}
+                            <div className="slider-group" style={{ marginBottom: '6px' }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px', fontSize: '11px', fontWeight: '800' }}>
+                                <span>Tamanho do Ícone</span>
+                                <span>{itemSelecionado.width || 100}px</span>
+                              </div>
+                              <input
+                                type="range" min="30" max="500"
+                                value={itemSelecionado.width || 100}
+                                onChange={e => {
+                                  const sz = Number(e.target.value);
+                                  atualizarItem(selecionadoId, { width: sz, height: sz });
+                                }}
+                                onDoubleClick={() => atualizarItem(selecionadoId, { width: 100, height: 100 })}
+                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                              />
+                            </div>
+                          </div>
+                        )}
+
                         <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                            <span>Tamanho</span>
-                            <span>{itemSelecionado.width || 100}px</span>
+                            <span>Opacidade</span>
+                            <span>{itemSelecionado.opacity ?? 100}%</span>
                           </div>
                           <input
-                            type="range" min="30" max="300"
-                            value={itemSelecionado.width || 100}
-                            onChange={e => {
-                              const sz = Number(e.target.value);
-                              atualizarItem(selecionadoId, { width: sz, height: sz });
-                            }}
-                            onDoubleClick={() => atualizarItem(selecionadoId, { width: 100, height: 100 })}
+                            type="range" min="0" max="100"
+                            value={itemSelecionado.opacity ?? 100}
+                            onChange={e => atualizarItem(selecionadoId, { opacity: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { opacity: 100 })}
                           />
                         </div>
-                      </div>
-                    )}
 
-                    <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                        <span>Opacidade</span>
-                        <span>{itemSelecionado.opacity ?? 100}%</span>
-                      </div>
-                      <input
-                        type="range" min="0" max="100"
-                        value={itemSelecionado.opacity ?? 100}
-                        onChange={e => atualizarItem(selecionadoId, { opacity: Number(e.target.value) })}
-                        onDoubleClick={() => atualizarItem(selecionadoId, { opacity: 100 })}
-                      />
-                    </div>
-
-                    <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                        <span>Sombra 3D</span>
-                        <span>{itemSelecionado.shadow || 0}px</span>
-                      </div>
-                      <input
-                        type="range" min="0" max="50"
-                        value={itemSelecionado.shadow || 0}
-                        onChange={e => atualizarItem(selecionadoId, { shadow: Number(e.target.value) })}
-                        onDoubleClick={() => atualizarItem(selecionadoId, { shadow: 0 })}
-                      />
-                    </div>
-
-                    <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
-                        <span>Rotação</span>
-                        <span>{itemSelecionado.rotation || 0}°</span>
-                      </div>
-                      <input
-                        type="range" min="0" max="360"
-                        value={itemSelecionado.rotation || 0}
-                        onChange={e => atualizarItem(selecionadoId, { rotation: Number(e.target.value) })}
-                        onDoubleClick={() => atualizarItem(selecionadoId, { rotation: 0 })}
-                      />
-                    </div>
-
-                    {/* 🌈 Colorização dos Arcos Triplos (1 Cor ou 3 Camadas) */}
-                    {itemSelecionado.type === 'shape' && (itemSelecionado.shapeType === 'arco_romano_triplo' || itemSelecionado.shapeType === 'arco_organico_triplo') && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cores das 3 Camadas</span>
-                          <button
-                            type="button"
-                            className={`btn-tampo-type ${itemSelecionado.multiColor ? 'active' : ''}`}
-                            onClick={() => {
-                              const nextVal = !itemSelecionado.multiColor;
-                              atualizarItem(selecionadoId, {
-                                multiColor: nextVal,
-                                corCamada2: nextVal ? (itemSelecionado.corCamada2 || '#f1f5f9') : itemSelecionado.color,
-                                corCamada3: nextVal ? (itemSelecionado.corCamada3 || '#e2e8f0') : itemSelecionado.color
-                              });
-                            }}
-                            style={{ padding: '3px 8px', fontSize: '9.5px', borderRadius: '4px' }}
-                          >
-                            {itemSelecionado.multiColor ? '🌈 Modo 3 Cores' : '🎨 1 Cor (Tudo Igual)'}
-                          </button>
+                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>Sombra 3D</span>
+                            <span>{itemSelecionado.shadow || 0}px</span>
+                          </div>
+                          <input
+                            type="range" min="0" max="50"
+                            value={itemSelecionado.shadow || 0}
+                            onChange={e => atualizarItem(selecionadoId, { shadow: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { shadow: 0 })}
+                          />
                         </div>
 
-                        {!itemSelecionado.multiColor ? (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#334155' }}>Cor do Arco Completo</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value, corCamada2: e.target.value, corCamada3: e.target.value })}
-                              style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
+                        <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10.5px', fontWeight: 'bold' }}>
+                            <span>Rotação</span>
+                            <span>{itemSelecionado.rotation || 0}°</span>
                           </div>
-                        ) : (
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                              <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>1️⃣ Camada Externa (Fundo)</span>
-                              <input
-                                type="color"
-                                value={itemSelecionado.color || '#ffffff'}
-                                onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                                style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                              />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                              <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>2️⃣ Camada Meio (Intermediária)</span>
-                              <input
-                                type="color"
-                                value={itemSelecionado.corCamada2 || '#f1f5f9'}
-                                onChange={e => atualizarItem(selecionadoId, { corCamada2: e.target.value })}
-                                style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                              />
-                            </div>
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                              <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>3️⃣ Camada Interna (Portal)</span>
-                              <input
-                                type="color"
-                                value={itemSelecionado.corCamada3 || '#e2e8f0'}
-                                onChange={e => atualizarItem(selecionadoId, { corCamada3: e.target.value })}
-                                style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                              />
+                          <input
+                            type="range" min="0" max="360"
+                            value={itemSelecionado.rotation || 0}
+                            onChange={e => atualizarItem(selecionadoId, { rotation: Number(e.target.value) })}
+                            onDoubleClick={() => atualizarItem(selecionadoId, { rotation: 0 })}
+                          />
+                        </div>
+
+                        {/* 🌈 Colorização dos Arcos Triplos (1 Cor ou 3 Camadas) */}
+                        {itemSelecionado.type === 'shape' && (itemSelecionado.shapeType === 'arco_romano_triplo' || itemSelecionado.shapeType === 'arco_organico_triplo') && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cores das 3 Camadas</span>
+                              <button
+                                type="button"
+                                className={`btn-tampo-type ${itemSelecionado.multiColor ? 'active' : ''}`}
+                                onClick={() => {
+                                  const nextVal = !itemSelecionado.multiColor;
+                                  atualizarItem(selecionadoId, {
+                                    multiColor: nextVal,
+                                    corCamada2: nextVal ? (itemSelecionado.corCamada2 || '#f1f5f9') : itemSelecionado.color,
+                                    corCamada3: nextVal ? (itemSelecionado.corCamada3 || '#e2e8f0') : itemSelecionado.color
+                                  });
+                                }}
+                                style={{ padding: '3px 8px', fontSize: '9.5px', borderRadius: '4px' }}
+                              >
+                                {itemSelecionado.multiColor ? '🌈 Modo 3 Cores' : '🎨 1 Cor (Tudo Igual)'}
+                              </button>
                             </div>
 
-                            {/* Presets Rápidos de Degradê */}
-                            <div style={{ marginTop: '4px' }}>
+                            {!itemSelecionado.multiColor ? (
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#334155' }}>Cor do Arco Completo</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value, corCamada2: e.target.value, corCamada3: e.target.value })}
+                                  style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            ) : (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>1️⃣ Camada Externa (Fundo)</span>
+                                  <input
+                                    type="color"
+                                    value={itemSelecionado.color || '#ffffff'}
+                                    onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                    style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>2️⃣ Camada Meio (Intermediária)</span>
+                                  <input
+                                    type="color"
+                                    value={itemSelecionado.corCamada2 || '#f1f5f9'}
+                                    onChange={e => atualizarItem(selecionadoId, { corCamada2: e.target.value })}
+                                    style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>3️⃣ Camada Interna (Portal)</span>
+                                  <input
+                                    type="color"
+                                    value={itemSelecionado.corCamada3 || '#e2e8f0'}
+                                    onChange={e => atualizarItem(selecionadoId, { corCamada3: e.target.value })}
+                                    style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  />
+                                </div>
+
+                                {/* Presets Rápidos de Degradê */}
+                                <div style={{ marginTop: '4px' }}>
+                                  <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    {[
+                                      { label: 'Branco / Cinzas', c1: '#ffffff', c2: '#f1f5f9', c3: '#e2e8f0' },
+                                      { label: 'Nude Areia', c1: '#fdf6ee', c2: '#f5ebe0', c3: '#d7b899' },
+                                      { label: 'Rosa Bebê', c1: '#fff1f2', c2: '#fce7f3', c3: '#f472b6' },
+                                      { label: 'Azul Céu', c1: '#f0f9ff', c2: '#e0f2fe', c3: '#60a5fa' },
+                                      { label: 'Terracota', c1: '#ffedd5', c2: '#fdba74', c3: '#c2410c' },
+                                      { label: 'Ouro Real', c1: '#fef9c3', c2: '#facc15', c3: '#ca8a04' }
+                                    ].map((p, idx) => (
+                                      <button
+                                        key={idx}
+                                        type="button"
+                                        onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.c1, corCamada2: p.c2, corCamada3: p.c3 })}
+                                        style={{
+                                          padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                          border: '1px solid #cbd5e1', background: `linear-gradient(90deg, ${p.c1} 0%, ${p.c2} 50%, ${p.c3} 100%)`,
+                                          color: '#0f172a', cursor: 'pointer', textShadow: '0 0 2px rgba(255,255,255,0.8)'
+                                        }}
+                                      >
+                                        {p.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* 🦴 Colorização da Mesa Osso */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_osso' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Osso</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦴 Borda / Moldura Externa</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Miolo Central Rebaixado</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corCentro || itemSelecionado.color || '#f8fafc'}
+                                  onChange={e => atualizarItem(selecionadoId, { corCentro: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo Superior da Mesa</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.tampoCor || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🚙 Colorização da Mesa Jeep Safari */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_jeep' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Jeep Safari</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚙 Carroceria do Jeep</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🛞 Pneus / Rodas Tratoradas</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPneus || '#334155'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPneus: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>💡 Faróis & Detalhes</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corDetalhes || '#facc15'}
+                                  onChange={e => atualizarItem(selecionadoId, { corDetalhes: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo / Prateleira</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.tampoCor || itemSelecionado.color || '#f1f5f9'}
+                                  onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🏠 Colorização do Painel Casinha Colonial */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_casinha_colonial' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Casinha Colonial</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏠 Parede / Corpo Principal</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔺 Telhado & Beirais</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corTelhado || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corTelhado: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪟 Moldura da Janela em Arco</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corJanela || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corJanela: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Fundo / Vidros da Janela</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corVidros || '#f1f5f9'}
+                                  onChange={e => atualizarItem(selecionadoId, { corVidros: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
                               <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
                               <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
                                 {[
-                                  { label: 'Branco / Cinzas', c1: '#ffffff', c2: '#f1f5f9', c3: '#e2e8f0' },
-                                  { label: 'Nude Areia', c1: '#fdf6ee', c2: '#f5ebe0', c3: '#d7b899' },
-                                  { label: 'Rosa Bebê', c1: '#fff1f2', c2: '#fce7f3', c3: '#f472b6' },
-                                  { label: 'Azul Céu', c1: '#f0f9ff', c2: '#e0f2fe', c3: '#60a5fa' },
-                                  { label: 'Terracota', c1: '#ffedd5', c2: '#fdba74', c3: '#c2410c' },
-                                  { label: 'Ouro Real', c1: '#fef9c3', c2: '#facc15', c3: '#ca8a04' }
+                                  { label: 'Branco Puro', parede: '#ffffff', telhado: '#ffffff', janela: '#ffffff', vidros: '#f1f5f9' },
+                                  { label: 'Madeira Rústica', parede: '#d7b899', telhado: '#78350f', janela: '#ffffff', vidros: '#451a03' },
+                                  { label: 'Rosa Bebê', parede: '#fdf2f8', telhado: '#fbcfe8', janela: '#ffffff', vidros: '#f472b6' },
+                                  { label: 'Azul Céu', parede: '#f0f9ff', telhado: '#bae6fd', janela: '#ffffff', vidros: '#38bdf8' },
+                                  { label: 'Dourado / Nude', parede: '#fdfaf5', telhado: '#eab308', janela: '#ffffff', vidros: '#ca8a04' }
                                 ].map((p, idx) => (
                                   <button
                                     key={idx}
                                     type="button"
-                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.c1, corCamada2: p.c2, corCamada3: p.c3 })}
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.parede, corTelhado: p.telhado, corJanela: p.janela, corVidros: p.vidros, corPes: p.parede })}
                                     style={{
                                       padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                      border: '1px solid #cbd5e1', background: `linear-gradient(90deg, ${p.c1} 0%, ${p.c2} 50%, ${p.c3} 100%)`,
-                                      color: '#0f172a', cursor: 'pointer', textShadow: '0 0 2px rgba(255,255,255,0.8)'
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
                                     }}
                                   >
                                     {p.label}
@@ -8580,1056 +10412,1334 @@ const Moodboard = () => {
                             </div>
                           </div>
                         )}
-                      </div>
-                    )}
 
-                    {/* 🦴 Colorização da Mesa Osso */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_osso' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Osso</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦴 Borda / Moldura Externa</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Miolo Central Rebaixado</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corCentro || itemSelecionado.color || '#f8fafc'}
-                              onChange={e => atualizarItem(selecionadoId, { corCentro: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo Superior da Mesa</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.tampoCor || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🚙 Colorização da Mesa Jeep Safari */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_jeep' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Jeep Safari</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚙 Carroceria do Jeep</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🛞 Pneus / Rodas Tratoradas</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPneus || '#334155'}
-                              onChange={e => atualizarItem(selecionadoId, { corPneus: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>💡 Faróis & Detalhes</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corDetalhes || '#facc15'}
-                              onChange={e => atualizarItem(selecionadoId, { corDetalhes: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo / Prateleira</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.tampoCor || itemSelecionado.color || '#f1f5f9'}
-                              onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🏠 Colorização do Painel Casinha Colonial */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_casinha_colonial' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Casinha Colonial</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏠 Parede / Corpo Principal</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔺 Telhado & Beirais</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corTelhado || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corTelhado: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪟 Moldura da Janela em Arco</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corJanela || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corJanela: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Fundo / Vidros da Janela</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corVidros || '#f1f5f9'}
-                              onChange={e => atualizarItem(selecionadoId, { corVidros: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Branco Puro', parede: '#ffffff', telhado: '#ffffff', janela: '#ffffff', vidros: '#f1f5f9' },
-                              { label: 'Madeira Rústica', parede: '#d7b899', telhado: '#78350f', janela: '#ffffff', vidros: '#451a03' },
-                              { label: 'Rosa Bebê', parede: '#fdf2f8', telhado: '#fbcfe8', janela: '#ffffff', vidros: '#f472b6' },
-                              { label: 'Azul Céu', parede: '#f0f9ff', telhado: '#bae6fd', janela: '#ffffff', vidros: '#38bdf8' },
-                              { label: 'Dourado / Nude', parede: '#fdfaf5', telhado: '#eab308', janela: '#ffffff', vidros: '#ca8a04' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.parede, corTelhado: p.telhado, corJanela: p.janela, corVidros: p.vidros, corPes: p.parede })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🦋 Colorização do Arco com Borboletas 3D */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_arco_borboletas' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Arco com Borboletas</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏛️ Arco / Moldura Externa</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦋 Borboletas 3D (Corpo/Asas)</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corBorboletas || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corBorboletas: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Vazados / Detalhes das Asas</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corAsasDetalhes || '#f8fafc'}
-                              onChange={e => atualizarItem(selecionadoId, { corAsasDetalhes: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Branco Neve', arco: '#ffffff', borb: '#ffffff', asas: '#f1f5f9' },
-                              { label: 'Borboletas Douradas', arco: '#ffffff', borb: '#eab308', asas: '#fef08a' },
-                              { label: 'Jardim Rosa', arco: '#ffffff', borb: '#ec4899', asas: '#fbcfe8' },
-                              { label: 'Lilás / Lavanda', arco: '#ffffff', borb: '#a855f7', asas: '#e9d5ff' },
-                              { label: 'Tiffany Chic', arco: '#ffffff', borb: '#2dd4bf', asas: '#ccfbf1' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.arco, corBorboletas: p.borb, corAsasDetalhes: p.asas, corPes: p.arco })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🌾 Colorização do Moinho Fazendinha */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_moinho_fazendinha' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Moinho Fazendinha</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏠 Corpo / Paredes</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Telhado com Telhas</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corTelhado || '#f8fafc'}
-                              onChange={e => atualizarItem(selecionadoId, { corTelhado: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🌀 Pás do Moinho & Eixo</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPasMoinho || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corPasMoinho: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚪 Porta Celeiro 'X' & Janela</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPortaJanela || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corPortaJanela: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Branco Total', corpo: '#ffffff', telhado: '#f1f5f9', pas: '#ffffff', porta: '#ffffff' },
-                              { label: 'Fazendinha Vermelha', corpo: '#ef4444', telhado: '#78350f', pas: '#ffffff', porta: '#ffffff' },
-                              { label: 'Celeiro Rústico', corpo: '#d7b899', telhado: '#78350f', pas: '#92400e', porta: '#78350f' },
-                              { label: 'Fazendinha Menina', corpo: '#fdf2f8', telhado: '#fbcfe8', pas: '#ffffff', porta: '#f472b6' },
-                              { label: 'Fazendinha Amarela', corpo: '#fefce8', telhado: '#ca8a04', pas: '#ffffff', porta: '#eab308' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.corpo, corTelhado: p.telhado, corPasMoinho: p.pas, corPortaJanela: p.porta, corPes: p.corpo })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🌊 Colorização do Painel Orgânico Wavy (Foto 1) */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_organico_wavy' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Painel Orgânico Wavy</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🌊 Superfície Principal</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Contorno / Borda</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corBorda || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corBorda: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Branco Neve', cor: '#ffffff', borda: '#f1f5f9' },
-                              { label: 'Nude Areia', cor: '#fdf6ee', borda: '#d7b899' },
-                              { label: 'Rosa Bebê', cor: '#fdf2f8', borda: '#f472b6' },
-                              { label: 'Azul Céu', cor: '#f0f9ff', borda: '#38bdf8' },
-                              { label: 'Terracota', cor: '#ffedd5', borda: '#c2410c' },
-                              { label: 'Verde Menta', cor: '#ecfdf5', borda: '#34d399' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.cor, corBorda: p.borda, corPes: p.cor })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🏰 Colorização do Castelo de Princesas */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_castelo_princesas' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Castelo de Princesas</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏰 Paredes & Torres</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🎪 Telhados Cônicos & Bandeiras</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corTelhados || '#fbcfe8'}
-                              onChange={e => atualizarItem(selecionadoId, { corTelhados: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚪 Portão Real & Janelas</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPortaJanelas || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corPortaJanelas: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Detalhes Dourados / Aldrabas</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corDetalhes || '#fef08a'}
-                              onChange={e => atualizarItem(selecionadoId, { corDetalhes: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Rosa Princesa', parede: '#ffffff', telhado: '#fbcfe8', porta: '#ffffff', det: '#fef08a' },
-                              { label: 'Lilás Encantado', parede: '#ffffff', telhado: '#e9d5ff', porta: '#ffffff', det: '#fef08a' },
-                              { label: 'Reino Azul', parede: '#ffffff', telhado: '#bae6fd', porta: '#ffffff', det: '#facc15' },
-                              { label: 'Dourado Real', parede: '#fdfaf5', telhado: '#eab308', porta: '#ffffff', det: '#ca8a04' },
-                              { label: 'Tiffany Mágico', parede: '#ffffff', telhado: '#99f6e4', porta: '#ffffff', det: '#2dd4bf' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.parede, corTelhados: p.telhado, corPortaJanelas: p.porta, corDetalhes: p.det, corPes: p.parede })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* ☁️ Colorização da Mesa Nuvem */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_nuvem' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Nuvem</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>☁️ Tampo Superior</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Borda 3D do Tampo</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corBorda || '#f1f5f9'}
-                              onChange={e => atualizarItem(selecionadoId, { corBorda: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Pés Palito da Mesa</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPes || '#d7b899'}
-                              onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Branca / Pés Madeira', tampo: '#ffffff', borda: '#f1f5f9', pes: '#d7b899' },
-                              { label: 'Rosa Bebê', tampo: '#fdf2f8', borda: '#fbcfe8', pes: '#d7b899' },
-                              { label: 'Azul Céu', tampo: '#f0f9ff', borda: '#bae6fd', pes: '#d7b899' },
-                              { label: 'Amarelinha Doce', tampo: '#fefce8', borda: '#fef08a', pes: '#d7b899' },
-                              { label: 'Toda Branca', tampo: '#ffffff', borda: '#f1f5f9', pes: '#ffffff' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.tampo, corBorda: p.borda, corPes: p.pes })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 👑 Colorização da Mesa Carruagem */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_carruagem' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Carruagem</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>👑 Cabine / Estrutura</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🛞 Rodas & Arabescos</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corRodas || '#eab308'}
-                              onChange={e => atualizarItem(selecionadoId, { corRodas: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Coroa Real</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corCoroa || '#eab308'}
-                              onChange={e => atualizarItem(selecionadoId, { corCoroa: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🎂 Tampo de Apoio</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corTampo || itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { corTampo: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Branca & Dourada', corpo: '#ffffff', rodas: '#eab308', coroa: '#eab308' },
-                              { label: 'Rosa & Ouro', corpo: '#fdf2f8', rodas: '#eab308', coroa: '#eab308' },
-                              { label: 'Lilás Encantado', corpo: '#faf5ff', rodas: '#ca8a04', coroa: '#ca8a04' },
-                              { label: 'Tiffany & Dourado', corpo: '#f0fdfa', rodas: '#eab308', coroa: '#eab308' },
-                              { label: 'Prata & Branco', corpo: '#ffffff', rodas: '#94a3b8', coroa: '#cbd5e1' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.corpo, corRodas: p.rodas, corCoroa: p.coroa, corTampo: p.corpo })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🪜 Colorização da Estante Escadinha */}
-                    {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'estante_escadinha' && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Estante Escadinha</div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪜 Laterais / Hastes em 'A'</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.color || '#ffffff'}
-                              onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                            <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Prateleiras / Degraus</span>
-                            <input
-                              type="color"
-                              value={itemSelecionado.corPrateleiras || '#d7b899'}
-                              onChange={e => atualizarItem(selecionadoId, { corPrateleiras: e.target.value, multiColor: true })}
-                              style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Presets Rápidos */}
-                        <div style={{ marginTop: '6px' }}>
-                          <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
-                          <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                            {[
-                              { label: 'Branca & Madeira', haste: '#ffffff', prat: '#d7b899' },
-                              { label: 'Toda Branca', haste: '#ffffff', prat: '#ffffff' },
-                              { label: 'Madeira Rústica', haste: '#8B6914', prat: '#d7b899' },
-                              { label: 'Rosa Candy', haste: '#fdf2f8', prat: '#fbcfe8' },
-                              { label: 'Pinus & Fendi', haste: '#f1f5f9', prat: '#c5a059' }
-                            ].map((p, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.haste, corPrateleiras: p.prat })}
-                                style={{
-                                  padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
-                                  border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
-                                }}
-                              >
-                                {p.label}
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 🎨 Cor Geral da Estrutura (Para demais painéis e arcos simples) */}
-                    {itemSelecionado.type === 'shape' && !['arco_romano_triplo', 'arco_organico_triplo', 'mesa_osso', 'mesa_jeep', 'painel_organico_wavy', 'painel_casinha_colonial', 'painel_arco_borboletas', 'painel_moinho_fazendinha', 'painel_castelo_princesas', 'mesa_nuvem', 'mesa_carruagem', 'estante_escadinha', 'arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal', 'baloes_dinamico'].includes(itemSelecionado.shapeType) && (
-                      <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                          <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cor da Estrutura</span>
-                          <input
-                            type="color"
-                            value={itemSelecionado.color || '#c5a059'}
-                            onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                            style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                          />
-                        </div>
-                        <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-                          {['#ffffff', '#f8fafc', '#f5ebe0', '#e2e8f0', '#c5a059', '#b76e79', '#94a3b8', '#1e293b', '#fce7f3', '#e0f2fe', '#d1fae5'].map(c => (
-                            <div
-                              key={c}
-                              onClick={() => atualizarItem(selecionadoId, { color: c })}
-                              style={{
-                                width: '18px', height: '18px', borderRadius: '50%', backgroundColor: c,
-                                border: (itemSelecionado.color === c) ? '2px solid #0f172a' : '1px solid #cbd5e1',
-                                cursor: 'pointer', flexShrink: 0
-                              }}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* 3. Se for Estrutura / Cilindro / Mesa: Capa Sublimada, Tampo & Enquadramento */}
-                    {isEstruturaSelecionada && (
-                      <div className="inspector-capa-section" style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
-                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px' }}>🎨 Capa de Tecido Sublimado</div>
-
-                        <div style={{ display: 'flex', gap: '6px', marginBottom: itemSelecionado.capaUrl ? '8px' : '0' }}>
-                          <button
-                            type="button"
-                            className="btn-upload-capa"
-                            style={{ flex: 1, fontSize: '11px', padding: '7px 10px', margin: 0 }}
-                            onClick={() => handleUploadCapaEstrutura(selecionadoId)}
-                          >
-                            <Icons.Image width={13} height={13} /> {itemSelecionado.capaUrl ? '🔄 Trocar Imagem / Capa' : '📷 Inserir Foto / Capa'}
-                          </button>
-                          {itemSelecionado.capaUrl && (
-                            <button
-                              type="button"
-                              className="btn-secondary"
-                              style={{ padding: '7px 10px', fontSize: '11px', color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
-                              onClick={() => aplicarCapaNaEstrutura(selecionadoId, '')}
-                              title="Remover Capa"
-                            >
-                              ✕ Remover
-                            </button>
-                          )}
-                        </div>
-
-                        {/* 🔘 Acabamento e Cor do Tampo (Cilindros e Mesas) */}
-                        {(itemSelecionado.shapeType?.includes('cilindro') || itemSelecionado.shapeType?.includes('mesa')) && (
-                          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                              <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155' }}>🔘 Tampo Superior:</span>
-                              <span style={{ fontSize: '9.5px', color: '#64748b' }}>
-                                {itemSelecionado.tampoTipo === 'liso' ? 'Cor Fixa' : 'Contínuo com Capa'}
-                              </span>
+                        {/* 🦋 Colorização do Arco com Borboletas 3D */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_arco_borboletas' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Arco com Borboletas</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏛️ Arco / Moldura Externa</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦋 Borboletas 3D (Corpo/Asas)</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corBorboletas || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corBorboletas: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Vazados / Detalhes das Asas</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corAsasDetalhes || '#f8fafc'}
+                                  onChange={e => atualizarItem(selecionadoId, { corAsasDetalhes: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
                             </div>
 
-                            <div className="tampo-type-toggle" style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
-                              <button
-                                type="button"
-                                className={`btn-tampo-type ${itemSelecionado.tampoTipo !== 'liso' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'continua' })}
-                                style={{ flex: 1, padding: '5px', fontSize: '10px' }}
-                              >
-                                🔄 Estampa da Capa
-                              </button>
-                              <button
-                                type="button"
-                                className={`btn-tampo-type ${itemSelecionado.tampoTipo === 'liso' ? 'active' : ''}`}
-                                onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'liso', tampoCor: itemSelecionado.tampoCor || '#ffffff' })}
-                                style={{ flex: 1, padding: '5px', fontSize: '10px' }}
-                              >
-                                🎨 Cor do Tampo
-                              </button>
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Branco Neve', arco: '#ffffff', borb: '#ffffff', asas: '#f1f5f9' },
+                                  { label: 'Borboletas Douradas', arco: '#ffffff', borb: '#eab308', asas: '#fef08a' },
+                                  { label: 'Jardim Rosa', arco: '#ffffff', borb: '#ec4899', asas: '#fbcfe8' },
+                                  { label: 'Lilás / Lavanda', arco: '#ffffff', borb: '#a855f7', asas: '#e9d5ff' },
+                                  { label: 'Tiffany Chic', arco: '#ffffff', borb: '#2dd4bf', asas: '#ccfbf1' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.arco, corBorboletas: p.borb, corAsasDetalhes: p.asas, corPes: p.arco })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🌾 Colorização do Moinho Fazendinha */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_moinho_fazendinha' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Moinho Fazendinha</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏠 Corpo / Paredes</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Telhado com Telhas</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corTelhado || '#f8fafc'}
+                                  onChange={e => atualizarItem(selecionadoId, { corTelhado: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🌀 Pás do Moinho & Eixo</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPasMoinho || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPasMoinho: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚪 Porta Celeiro 'X' & Janela</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPortaJanela || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPortaJanela: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
                             </div>
 
-                            {/* Seletor de Cores do Tampo quando Liso/Fixo */}
-                            {itemSelecionado.tampoTipo === 'liso' && (
-                              <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '6px' }}>
-                                <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Escolha a Cor da Tampa:</div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
-                                  {[
-                                    { label: 'Branco', cor: '#ffffff' },
-                                    { label: 'Madeira Pinus', cor: '#d29b62' },
-                                    { label: 'Ouro', cor: '#c5a059' },
-                                    { label: 'Rose Gold', cor: '#b76e79' },
-                                    { label: 'Preto', cor: '#1e293b' },
-                                    { label: 'Off-White', cor: '#f8fafc' }
-                                  ].map(c => (
-                                    <div
-                                      key={c.cor}
-                                      onClick={() => atualizarItem(selecionadoId, { tampoCor: c.cor })}
-                                      title={`Tampo ${c.label}`}
-                                      style={{
-                                        width: '20px',
-                                        height: '20px',
-                                        borderRadius: '50%',
-                                        backgroundColor: c.cor,
-                                        border: (itemSelecionado.tampoCor === c.cor) ? '2px solid #0f172a' : '1px solid #cbd5e1',
-                                        boxShadow: (itemSelecionado.tampoCor === c.cor) ? '0 0 0 2px #c5a059' : 'none',
-                                        cursor: 'pointer'
-                                      }}
-                                    />
-                                  ))}
-                                  <label title="Cor personalizada da tampa" style={{ position: 'relative', width: '20px', height: '20px', borderRadius: '50%', border: '1.5px dashed #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden' }}>
-                                    <span style={{ fontSize: '9px' }}>🎨</span>
-                                    <input
-                                      type="color"
-                                      value={itemSelecionado.tampoCor || '#ffffff'}
-                                      onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
-                                      style={{ position: 'absolute', top: '-10px', left: '-10px', width: '200%', height: '200%', opacity: 0, cursor: 'pointer' }}
-                                    />
-                                  </label>
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Branco Total', corpo: '#ffffff', telhado: '#f1f5f9', pas: '#ffffff', porta: '#ffffff' },
+                                  { label: 'Fazendinha Vermelha', corpo: '#ef4444', telhado: '#78350f', pas: '#ffffff', porta: '#ffffff' },
+                                  { label: 'Celeiro Rústico', corpo: '#d7b899', telhado: '#78350f', pas: '#92400e', porta: '#78350f' },
+                                  { label: 'Fazendinha Menina', corpo: '#fdf2f8', telhado: '#fbcfe8', pas: '#ffffff', porta: '#f472b6' },
+                                  { label: 'Fazendinha Amarela', corpo: '#fefce8', telhado: '#ca8a04', pas: '#ffffff', porta: '#eab308' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.corpo, corTelhado: p.telhado, corPasMoinho: p.pas, corPortaJanela: p.porta, corPes: p.corpo })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🌊 Colorização do Painel Orgânico Wavy (Foto 1) */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_organico_wavy' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Painel Orgânico Wavy</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🌊 Superfície Principal</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Contorno / Borda</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corBorda || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corBorda: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦶 Pés de Apoio</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPes || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Branco Neve', cor: '#ffffff', borda: '#f1f5f9' },
+                                  { label: 'Nude Areia', cor: '#fdf6ee', borda: '#d7b899' },
+                                  { label: 'Rosa Bebê', cor: '#fdf2f8', borda: '#f472b6' },
+                                  { label: 'Azul Céu', cor: '#f0f9ff', borda: '#38bdf8' },
+                                  { label: 'Terracota', cor: '#ffedd5', borda: '#c2410c' },
+                                  { label: 'Verde Menta', cor: '#ecfdf5', borda: '#34d399' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.cor, corBorda: p.borda, corPes: p.cor })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🏰 Colorização do Castelo de Princesas */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'painel_castelo_princesas' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores do Castelo de Princesas</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🏰 Paredes & Torres</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🎪 Telhados Cônicos & Bandeiras</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corTelhados || '#fbcfe8'}
+                                  onChange={e => atualizarItem(selecionadoId, { corTelhados: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚪 Portão Real & Janelas</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPortaJanelas || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPortaJanelas: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Detalhes Dourados / Aldrabas</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corDetalhes || '#fef08a'}
+                                  onChange={e => atualizarItem(selecionadoId, { corDetalhes: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Rosa Princesa', parede: '#ffffff', telhado: '#fbcfe8', porta: '#ffffff', det: '#fef08a' },
+                                  { label: 'Lilás Encantado', parede: '#ffffff', telhado: '#e9d5ff', porta: '#ffffff', det: '#fef08a' },
+                                  { label: 'Reino Azul', parede: '#ffffff', telhado: '#bae6fd', porta: '#ffffff', det: '#facc15' },
+                                  { label: 'Dourado Real', parede: '#fdfaf5', telhado: '#eab308', porta: '#ffffff', det: '#ca8a04' },
+                                  { label: 'Tiffany Mágico', parede: '#ffffff', telhado: '#99f6e4', porta: '#ffffff', det: '#2dd4bf' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.parede, corTelhados: p.telhado, corPortaJanelas: p.porta, corDetalhes: p.det, corPes: p.parede })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* ☁️ Colorização da Mesa Nuvem */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_nuvem' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Nuvem</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>☁️ Tampo Superior</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Borda 3D do Tampo</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corBorda || '#f1f5f9'}
+                                  onChange={e => atualizarItem(selecionadoId, { corBorda: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Pés Palito da Mesa</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPes || '#d7b899'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPes: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Branca / Pés Madeira', tampo: '#ffffff', borda: '#f1f5f9', pes: '#d7b899' },
+                                  { label: 'Rosa Bebê', tampo: '#fdf2f8', borda: '#fbcfe8', pes: '#d7b899' },
+                                  { label: 'Azul Céu', tampo: '#f0f9ff', borda: '#bae6fd', pes: '#d7b899' },
+                                  { label: 'Amarelinha Doce', tampo: '#fefce8', borda: '#fef08a', pes: '#d7b899' },
+                                  { label: 'Toda Branca', tampo: '#ffffff', borda: '#f1f5f9', pes: '#ffffff' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.tampo, corBorda: p.borda, corPes: p.pes })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 👑 Colorização da Mesa Carruagem */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'mesa_carruagem' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Mesa Carruagem</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>👑 Cabine / Estrutura</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🛞 Rodas & Arabescos</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corRodas || '#eab308'}
+                                  onChange={e => atualizarItem(selecionadoId, { corRodas: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Coroa Real</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corCoroa || '#eab308'}
+                                  onChange={e => atualizarItem(selecionadoId, { corCoroa: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🎂 Tampo de Apoio</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corTampo || itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { corTampo: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Branca & Dourada', corpo: '#ffffff', rodas: '#eab308', coroa: '#eab308' },
+                                  { label: 'Rosa & Ouro', corpo: '#fdf2f8', rodas: '#eab308', coroa: '#eab308' },
+                                  { label: 'Lilás Encantado', corpo: '#faf5ff', rodas: '#ca8a04', coroa: '#ca8a04' },
+                                  { label: 'Tiffany & Dourado', corpo: '#f0fdfa', rodas: '#eab308', coroa: '#eab308' },
+                                  { label: 'Prata & Branco', corpo: '#ffffff', rodas: '#94a3b8', coroa: '#cbd5e1' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.corpo, corRodas: p.rodas, corCoroa: p.coroa, corTampo: p.corpo })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🪜 Colorização da Estante Escadinha */}
+                        {itemSelecionado.type === 'shape' && itemSelecionado.shapeType === 'estante_escadinha' && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', marginBottom: '8px' }}>🎨 Cores da Estante Escadinha</div>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪜 Laterais / Hastes em 'A'</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.color || '#ffffff'}
+                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🪵 Prateleiras / Degraus</span>
+                                <input
+                                  type="color"
+                                  value={itemSelecionado.corPrateleiras || '#d7b899'}
+                                  onChange={e => atualizarItem(selecionadoId, { corPrateleiras: e.target.value, multiColor: true })}
+                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Presets Rápidos */}
+                            <div style={{ marginTop: '6px' }}>
+                              <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Combinações Rápidas:</div>
+                              <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                {[
+                                  { label: 'Branca & Madeira', haste: '#ffffff', prat: '#d7b899' },
+                                  { label: 'Toda Branca', haste: '#ffffff', prat: '#ffffff' },
+                                  { label: 'Madeira Rústica', haste: '#8B6914', prat: '#d7b899' },
+                                  { label: 'Rosa Candy', haste: '#fdf2f8', prat: '#fbcfe8' },
+                                  { label: 'Pinus & Fendi', haste: '#f1f5f9', prat: '#c5a059' }
+                                ].map((p, idx) => (
+                                  <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { multiColor: true, color: p.haste, corPrateleiras: p.prat })}
+                                    style={{
+                                      padding: '3px 6px', fontSize: '9px', fontWeight: 'bold', borderRadius: '4px',
+                                      border: '1px solid #cbd5e1', background: '#fff', color: '#0f172a', cursor: 'pointer'
+                                    }}
+                                  >
+                                    {p.label}
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 🎨 Cor Geral da Estrutura (Para demais painéis e arcos simples) */}
+                        {itemSelecionado.type === 'shape' && !['arco_romano_triplo', 'arco_organico_triplo', 'mesa_osso', 'mesa_jeep', 'painel_organico_wavy', 'painel_casinha_colonial', 'painel_arco_borboletas', 'painel_moinho_fazendinha', 'painel_castelo_princesas', 'mesa_nuvem', 'mesa_carruagem', 'estante_escadinha', 'arco_classico_portal', 'baloes_aro_redondo', 'baloes_lateral_l', 'baloes_cluster_chao', 'coluna_baloes', 'guirlanda_horizontal', 'baloes_dinamico'].includes(itemSelecionado.shapeType) && (
+                          <div style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                              <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cor da Estrutura</span>
+                              <input
+                                type="color"
+                                value={itemSelecionado.color || '#c5a059'}
+                                onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                              />
+                            </div>
+                            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                              {['#ffffff', '#f8fafc', '#f5ebe0', '#e2e8f0', '#c5a059', '#b76e79', '#94a3b8', '#1e293b', '#fce7f3', '#e0f2fe', '#d1fae5'].map(c => (
+                                <div
+                                  key={c}
+                                  onClick={() => atualizarItem(selecionadoId, { color: c })}
+                                  style={{
+                                    width: '18px', height: '18px', borderRadius: '50%', backgroundColor: c,
+                                    border: (itemSelecionado.color === c) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                    cursor: 'pointer', flexShrink: 0
+                                  }}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* 3. Se for Estrutura / Cilindro / Mesa: Capa Sublimada, Tampo & Enquadramento */}
+                        {isEstruturaSelecionada && (
+                          <div className="inspector-capa-section" style={{ marginTop: '10px', padding: '10px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                            <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px' }}>🎨 Capa de Tecido Sublimado</div>
+
+                            <div style={{ display: 'flex', gap: '6px', marginBottom: itemSelecionado.capaUrl ? '8px' : '0' }}>
+                              <button
+                                type="button"
+                                className="btn-upload-capa"
+                                style={{ flex: 1, fontSize: '11px', padding: '7px 10px', margin: 0 }}
+                                onClick={() => handleUploadCapaEstrutura(selecionadoId)}
+                              >
+                                <Icons.Image width={13} height={13} /> {itemSelecionado.capaUrl ? '🔄 Trocar Imagem / Capa' : '📷 Inserir Foto / Capa'}
+                              </button>
+                              {itemSelecionado.capaUrl && (
+                                <button
+                                  type="button"
+                                  className="btn-secondary"
+                                  style={{ padding: '7px 10px', fontSize: '11px', color: '#dc2626', borderColor: '#fca5a5', background: '#fff' }}
+                                  onClick={() => aplicarCapaNaEstrutura(selecionadoId, '')}
+                                  title="Remover Capa"
+                                >
+                                  ✕ Remover
+                                </button>
+                              )}
+                            </div>
+
+                            {/* 🔘 Acabamento e Cor do Tampo (Cilindros e Mesas) */}
+                            {(itemSelecionado.shapeType?.includes('cilindro') || itemSelecionado.shapeType?.includes('mesa')) && (
+                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155' }}>🔘 Tampo Superior:</span>
+                                  <span style={{ fontSize: '9.5px', color: '#64748b' }}>
+                                    {itemSelecionado.tampoTipo === 'liso' ? 'Cor Fixa' : 'Contínuo com Capa'}
+                                  </span>
+                                </div>
+
+                                <div className="tampo-type-toggle" style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                                  <button
+                                    type="button"
+                                    className={`btn-tampo-type ${itemSelecionado.tampoTipo !== 'liso' ? 'active' : ''}`}
+                                    onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'continua' })}
+                                    style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                                  >
+                                    🔄 Estampa da Capa
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={`btn-tampo-type ${itemSelecionado.tampoTipo === 'liso' ? 'active' : ''}`}
+                                    onClick={() => atualizarItem(selecionadoId, { tampoTipo: 'liso', tampoCor: itemSelecionado.tampoCor || '#ffffff' })}
+                                    style={{ flex: 1, padding: '5px', fontSize: '10px' }}
+                                  >
+                                    🎨 Cor do Tampo
+                                  </button>
+                                </div>
+
+                                {/* Seletor de Cores do Tampo quando Liso/Fixo */}
+                                {itemSelecionado.tampoTipo === 'liso' && (
+                                  <div style={{ background: '#ffffff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #e2e8f0', marginBottom: '6px' }}>
+                                    <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>Escolha a Cor da Tampa:</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '5px', flexWrap: 'wrap' }}>
+                                      {[
+                                        { label: 'Branco', cor: '#ffffff' },
+                                        { label: 'Madeira Pinus', cor: '#d29b62' },
+                                        { label: 'Ouro', cor: '#c5a059' },
+                                        { label: 'Rose Gold', cor: '#b76e79' },
+                                        { label: 'Preto', cor: '#1e293b' },
+                                        { label: 'Off-White', cor: '#f8fafc' }
+                                      ].map(c => (
+                                        <div
+                                          key={c.cor}
+                                          onClick={() => atualizarItem(selecionadoId, { tampoCor: c.cor })}
+                                          title={`Tampo ${c.label}`}
+                                          style={{
+                                            width: '20px',
+                                            height: '20px',
+                                            borderRadius: '50%',
+                                            backgroundColor: c.cor,
+                                            border: (itemSelecionado.tampoCor === c.cor) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                            boxShadow: (itemSelecionado.tampoCor === c.cor) ? '0 0 0 2px #c5a059' : 'none',
+                                            cursor: 'pointer'
+                                          }}
+                                        />
+                                      ))}
+                                      <label title="Cor personalizada da tampa" style={{ position: 'relative', width: '20px', height: '20px', borderRadius: '50%', border: '1.5px dashed #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', overflow: 'hidden' }}>
+                                        <span style={{ fontSize: '9px' }}>🎨</span>
+                                        <input
+                                          type="color"
+                                          value={itemSelecionado.tampoCor || '#ffffff'}
+                                          onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
+                                          style={{ position: 'absolute', top: '-10px', left: '-10px', width: '200%', height: '200%', opacity: 0, cursor: 'pointer' }}
+                                        />
+                                      </label>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+
+                            {/* 🖐️ MOVIMENTAÇÃO, ZOOM & ENQUADRAMENTO DA CAPA */}
+                            {itemSelecionado.capaUrl && (
+                              <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                  <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>🖐️ Ajuste & Enquadramento da Imagem:</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => atualizarItem(selecionadoId, { capaPosX: 50, capaPosY: 50, capaScale: 1 })}
+                                    style={{ fontSize: '9.5px', fontWeight: '700', color: '#c5a059', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                                    title="Restaurar posição original"
+                                  >
+                                    🎯 Centralizar
+                                  </button>
+                                </div>
+
+                                {/* 1. Zoom / Escala da Capa */}
+                                <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar em 100%">
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
+                                    <span>🔍 Zoom da Capa</span>
+                                    <span>{Math.round((itemSelecionado.capaScale || 1) * 100)}%</span>
+                                  </div>
+                                  <input
+                                    type="range" min="50" max="300"
+                                    value={Math.round((itemSelecionado.capaScale || 1) * 100)}
+                                    onChange={e => atualizarItem(selecionadoId, { capaScale: Number(e.target.value) / 100 })}
+                                    onDoubleClick={() => atualizarItem(selecionadoId, { capaScale: 1 })}
+                                    style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                                  />
+                                </div>
+
+                                {/* 2. Posição Horizontal X */}
+                                <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para centralizar">
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
+                                    <span>↔️ Mover Horizontal (X)</span>
+                                    <span>{itemSelecionado.capaPosX ?? 50}%</span>
+                                  </div>
+                                  <input
+                                    type="range" min="0" max="100"
+                                    value={itemSelecionado.capaPosX ?? 50}
+                                    onChange={e => atualizarItem(selecionadoId, { capaPosX: Number(e.target.value) })}
+                                    onDoubleClick={() => atualizarItem(selecionadoId, { capaPosX: 50 })}
+                                    style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                                  />
+                                </div>
+
+                                {/* 3. Posição Vertical Y */}
+                                <div className="slider-group" style={{ marginBottom: '4px' }} title="Dê 2 cliques para centralizar">
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
+                                    <span>↕️ Mover Vertical (Y)</span>
+                                    <span>{itemSelecionado.capaPosY ?? 50}%</span>
+                                  </div>
+                                  <input
+                                    type="range" min="0" max="100"
+                                    value={itemSelecionado.capaPosY ?? 50}
+                                    onChange={e => atualizarItem(selecionadoId, { capaPosY: Number(e.target.value) })}
+                                    onDoubleClick={() => atualizarItem(selecionadoId, { capaPosY: 50 })}
+                                    style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
+                                  />
                                 </div>
                               </div>
                             )}
                           </div>
                         )}
 
-                        {/* 🖐️ MOVIMENTAÇÃO, ZOOM & ENQUADRAMENTO DA CAPA */}
-                        {itemSelecionado.capaUrl && (
-                          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #cbd5e1' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                              <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>🖐️ Ajuste & Enquadramento da Imagem:</span>
+                        {/* 🎈 MODELAGEM AVANÇADA, ESPAÇAMENTO & FORMATOS DE BALÕES */}
+                        {isBalaoSelecionado && (
+                          <div className="inspector-balao-section" style={{ marginTop: '10px', padding: '10px', background: '#fdfbf7', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                            <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '8px', color: '#92400e', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>{itemSelecionado.shapeType === 'balao_unitario' ? '🎈 Balão Individual 3D' : itemSelecionado.shapeType === 'mini_cluster_5' ? '🫧 Mini Cluster 5"' : '🎈 Modelagem & Espaçamento do Arco'}</span>
+                            </div>
+
+                            {/* 🎈 CASO 1: SELECIONADO UM BALÃO UNITÁRIO 3D INDIVIDUAL */}
+                            {itemSelecionado.shapeType === 'balao_unitario' ? (
+                              <div>
+                                {/* 1. SELETOR DE TAMANHO / POLEGADAS */}
+                                <div style={{ marginBottom: '10px' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '5px' }}>
+                                    Tamanho / Calibre da Bexiga:
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '3px' }}>
+                                    {[
+                                      { id: '5"', label: '5" Mini', w: 38, h: 46, desc: 'Mini 5" de acabamento' },
+                                      { id: '9"', label: '9" Padrão', w: 54, h: 66, desc: 'Padrão 9"' },
+                                      { id: '12"', label: '12" Médio', w: 68, h: 82, desc: 'Clássico 12"' },
+                                      { id: '18"', label: '18" Grande', w: 96, h: 116, desc: 'Destaque 18"' },
+                                      { id: '36"', label: '36" Big', w: 140, h: 168, desc: 'Big Balloon 36"' }
+                                    ].map(t => (
+                                      <button
+                                        key={t.id}
+                                        type="button"
+                                        className={`btn-tampo-type ${(itemSelecionado.tamanhoPolegadas || '12"') === t.id ? 'active' : ''}`}
+                                        onClick={() => atualizarItem(selecionadoId, { tamanhoPolegadas: t.id, width: t.w, height: t.h })}
+                                        style={{ padding: '5px 2px', fontSize: '9px', textAlign: 'center', fontWeight: '700' }}
+                                        title={t.desc}
+                                      >
+                                        {t.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* 2. SELETOR DE ACABAMENTO / TEXTURA (Sem Cristal, com Fosco Aveludado Aperfeiçoado) */}
+                                <div style={{ marginBottom: '10px' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '5px' }}>
+                                    Acabamento & Brilho:
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px', marginBottom: '3px' }}>
+                                    {[
+                                      { id: 'glossy', label: '✨ Glossy' },
+                                      { id: 'double_stuffed', label: '🪞 Double Stuffed' },
+                                      { id: 'matte', label: '🌑 Fosco' },
+                                      { id: 'chrome', label: '🪞 Cromado' },
+                                      { id: 'perolado', label: '🐚 Perolado' }
+                                    ].map(ac => (
+                                      <button
+                                        key={ac.id}
+                                        type="button"
+                                        className={`btn-tampo-type ${(itemSelecionado.acabamentoBalao || 'glossy') === ac.id ? 'active' : ''}`}
+                                        onClick={() => atualizarItem(selecionadoId, { acabamentoBalao: ac.id })}
+                                        style={{ padding: '5px 2px', fontSize: '9px', textAlign: 'center' }}
+                                      >
+                                        {ac.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* 3. COR DO BALÃO UNITÁRIO */}
+                                <div style={{ marginBottom: '10px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#78350f' }}>🎨 Cor do Balão:</span>
+                                    <span style={{ fontSize: '9px', color: '#92400e', fontWeight: 'bold' }}>{itemSelecionado.color || '#c5a059'}</span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <input
+                                      type="color"
+                                      value={itemSelecionado.color || '#c5a059'}
+                                      onChange={(e) => atualizarItem(selecionadoId, { color: e.target.value })}
+                                      style={{ width: '38px', height: '28px', border: '1.5px solid #d97706', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                      title="Selecione a cor do balão"
+                                    />
+                                    <div style={{ display: 'flex', gap: '3px', flex: 1 }}>
+                                      {paletaBalaoAtiva.cores.map((c, i) => (
+                                        <button
+                                          key={i}
+                                          type="button"
+                                          onClick={() => atualizarItem(selecionadoId, { color: c })}
+                                          style={{
+                                            flex: 1, height: '28px', borderRadius: '4px', background: c,
+                                            border: itemSelecionado.color === c ? '2px solid #92400e' : '1px solid rgba(0,0,0,0.15)',
+                                            cursor: 'pointer', transform: itemSelecionado.color === c ? 'scale(1.08)' : 'none',
+                                            boxShadow: itemSelecionado.color === c ? '0 0 0 2px #fde68a' : 'none'
+                                          }}
+                                          title={`Aplicar cor da paleta #${i + 1}`}
+                                        />
+                                      ))}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                {/* 4. OPÇÃO DE FITILHO / CORDINHA */}
+                                <div style={{ marginBottom: '10px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fffbeb', padding: '6px 8px', borderRadius: '6px', border: '1px dashed #fde68a' }}>
+                                  <span style={{ fontSize: '10px', fontWeight: '700', color: '#78350f' }}>
+                                    🧵 Fitilho / Cordinha:
+                                  </span>
+                                  <button
+                                    type="button"
+                                    className={`btn-tampo-type ${itemSelecionado.temFitilho ? 'active' : ''}`}
+                                    onClick={() => atualizarItem(selecionadoId, { temFitilho: !itemSelecionado.temFitilho })}
+                                    style={{ padding: '3px 8px', fontSize: '9.5px', fontWeight: '700' }}
+                                  >
+                                    {itemSelecionado.temFitilho ? '✓ Com Fitilho' : '✕ Sem Fitilho'}
+                                  </button>
+                                </div>
+
+                                {/* 5. SUPER BOTÃO: DUPLICAR E ESPALHAR */}
+                                <button
+                                  type="button"
+                                  className="btn-inspector-action"
+                                  style={{ width: '100%', padding: '8px', fontSize: '11px', fontWeight: '800', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#78350f', border: '1.5px solid #d97706', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}
+                                  onClick={() => duplicarItem(selecionadoId)}
+                                  title="Duplica e cria outro balão ao lado para você espalhar pelo cenário!"
+                                >
+                                  <span>🎈 + Duplicar Balão para Espalhar</span>
+                                </button>
+                              </div>
+                            ) : itemSelecionado.shapeType === 'mini_cluster_5' ? (
+                              <div>
+                                {/* 🫧 PROPRIEDADES DO MINI CLUSTER 5" */}
+                                <div style={{ marginBottom: '10px' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '4px' }}>
+                                    Tamanho do Cluster:
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '4px' }}>
+                                    {[
+                                      { id: 3, label: '🫧 Trio (3 Bexigas)' },
+                                      { id: 4, label: '🫧 Quarteto (4 Bexigas)' }
+                                    ].map(q => (
+                                      <button
+                                        key={q.id}
+                                        type="button"
+                                        className={`btn-tampo-type ${(itemSelecionado.qtdCluster || 3) === q.id ? 'active' : ''}`}
+                                        onClick={() => atualizarItem(selecionadoId, { qtdCluster: q.id })}
+                                        style={{ flex: 1, padding: '5px', fontSize: '9.5px', fontWeight: '700' }}
+                                      >
+                                        {q.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Acabamento Mini Cluster */}
+                                <div style={{ marginBottom: '10px' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '4px' }}>
+                                    Acabamento:
+                                  </div>
+                                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '3px' }}>
+                                    {[
+                                      { id: 'glossy', label: '✨ Glossy' },
+                                      { id: 'double_stuffed', label: '🪞 Double Stuffed' },
+                                      { id: 'matte', label: '🌑 Fosco' }
+                                    ].map(ac => (
+                                      <button
+                                        key={ac.id}
+                                        type="button"
+                                        className={`btn-tampo-type ${(itemSelecionado.acabamentoBalao || 'glossy') === ac.id ? 'active' : ''}`}
+                                        onClick={() => atualizarItem(selecionadoId, { acabamentoBalao: ac.id })}
+                                        style={{ padding: '5px 2px', fontSize: '9px', textAlign: 'center' }}
+                                      >
+                                        {ac.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Cores do Mini Cluster */}
+                                <div style={{ marginBottom: '10px' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '5px' }}>
+                                    🎨 Cores das Bexigas do Trio:
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '5px', marginBottom: '6px' }}>
+                                    {(itemSelecionado.coresBalao || ['#c5a059', '#ffffff', '#dfb6b2']).slice(0, itemSelecionado.qtdCluster || 3).map((c, idx) => (
+                                      <div key={idx} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px' }}>
+                                        <input
+                                          type="color"
+                                          value={c}
+                                          onChange={e => {
+                                            const nc = [...(itemSelecionado.coresBalao || ['#c5a059', '#ffffff', '#dfb6b2'])];
+                                            nc[idx] = e.target.value;
+                                            atualizarItem(selecionadoId, { coresBalao: nc });
+                                          }}
+                                          style={{ width: '100%', height: '26px', border: '1.5px solid #d97706', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                          title={`Cor #${idx + 1}`}
+                                        />
+                                        <span style={{ fontSize: '8.5px', fontWeight: '800', color: '#92400e' }}>#{idx + 1}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Botão Duplicar Mini Cluster */}
+                                <button
+                                  type="button"
+                                  className="btn-inspector-action"
+                                  style={{ width: '100%', padding: '8px', fontSize: '11px', fontWeight: '800', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', color: '#78350f', border: '1.5px solid #d97706', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', boxShadow: '0 2px 4px rgba(0,0,0,0.06)' }}
+                                  onClick={() => duplicarItem(selecionadoId)}
+                                  title="Duplicar mini cluster para espalhar pelo arco"
+                                >
+                                  <span>🫧 + Duplicar Mini Cluster</span>
+                                </button>
+                              </div>
+                            ) : (
+                              <div>
+                                {/* 1. ESTILO DE MONTAGEM: ESPIRAL VS ORGÂNICO */}
+                                {(itemSelecionado.shapeType === 'arco_classico_portal' || itemSelecionado.shapeType === 'coluna_baloes') && (
+                                  <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '4px' }}>
+                                      Estilo de Montagem dos Balões:
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      <button
+                                        type="button"
+                                        className={`btn-tampo-type ${(itemSelecionado.estiloPortal || itemSelecionado.estiloColuna || 'espiral') === 'espiral' ? 'active' : ''}`}
+                                        onClick={() => atualizarItem(selecionadoId, { estiloPortal: 'espiral', estiloColuna: 'espiral' })}
+                                        style={{ flex: 1, padding: '5px', fontSize: '10px', fontWeight: '700' }}
+                                      >
+                                        🌀 Espiral Clássico
+                                      </button>
+                                      <button
+                                        type="button"
+                                        className={`btn-tampo-type ${(itemSelecionado.estiloPortal || itemSelecionado.estiloColuna) === 'organico' ? 'active' : ''}`}
+                                        onClick={() => atualizarItem(selecionadoId, { estiloPortal: 'organico', estiloColuna: 'organica' })}
+                                        style={{ flex: 1, padding: '5px', fontSize: '10px', fontWeight: '700' }}
+                                      >
+                                        ✨ Orgânico Desconstruído
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 2. SELETOR DE COBERTURA DO ARO REDONDO */}
+                                {itemSelecionado.shapeType === 'baloes_aro_redondo' && (
+                                  <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '4px' }}>
+                                      Cobertura do Aro Circular:
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '4px' }}>
+                                      {[
+                                        { id: 'meio_aro', label: '🌓 Meio Aro (180°)' },
+                                        { id: 'tres_quartos', label: '🌔 3/4 Aro (270°)' },
+                                        { id: 'completo', label: '🌕 Completo (360°)' },
+                                        { id: 'topo', label: '☁️ Topo (120°)' }
+                                      ].map(cb => (
+                                        <button
+                                          key={cb.id}
+                                          type="button"
+                                          className={`btn-tampo-type ${(itemSelecionado.coberturaAro || 'meio_aro') === cb.id ? 'active' : ''}`}
+                                          onClick={() => atualizarItem(selecionadoId, { coberturaAro: cb.id })}
+                                          style={{ padding: '5px', fontSize: '9.5px', fontWeight: '700' }}
+                                        >
+                                          {cb.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 3. CONTROLES ESPECÍFICOS DE GUIRLANDA HORIZONTAL */}
+                                {itemSelecionado.shapeType === 'guirlanda_horizontal' && (
+                                  <div style={{ marginBottom: '10px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '4px' }}>
+                                      Volume da Guirlanda:
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '4px', marginBottom: '8px' }}>
+                                      {[
+                                        { id: 'organico', label: '🎈 Orgânico' },
+                                        { id: 'mega_luxo', label: '✨ Mega Luxo' },
+                                        { id: 'linear', label: '〰️ Simples' }
+                                      ].map(v => (
+                                        <button
+                                          key={v.id}
+                                          type="button"
+                                          className={`btn-tampo-type ${(itemSelecionado.volumeBalao || 'organico') === v.id ? 'active' : ''}`}
+                                          onClick={() => atualizarItem(selecionadoId, { volumeBalao: v.id })}
+                                          style={{ flex: 1, padding: '5px', fontSize: '9.5px', fontWeight: '700' }}
+                                        >
+                                          {v.label}
+                                        </button>
+                                      ))}
+                                    </div>
+
+                                    <div className="slider-group" style={{ marginBottom: '6px' }}>
+                                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#78350f', marginBottom: '2px' }}>
+                                        <span>〰️ Curvatura do Arco</span>
+                                        <span style={{ color: '#b45309' }}>{itemSelecionado.curvatura ?? 30}°</span>
+                                      </div>
+                                      <input
+                                        type="range" min="-70" max="70"
+                                        value={itemSelecionado.curvatura ?? 30}
+                                        onChange={e => atualizarItem(selecionadoId, { curvatura: Number(e.target.value) })}
+                                        onDoubleClick={() => atualizarItem(selecionadoId, { curvatura: 30 })}
+                                        style={{ width: '100%', accentColor: '#d97706', cursor: 'pointer' }}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 4. AJUSTES ADICIONAIS PARA CLUSTER DE CHÃO */}
+                                {itemSelecionado.shapeType === 'baloes_cluster_chao' && (
+                                  <div style={{ marginBottom: '10px', background: '#fffbeb', padding: '8px', borderRadius: '8px', border: '1px solid #fde68a' }}>
+                                    <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#78350f', marginBottom: '5px' }}>
+                                      🫧 Densidade de Bexigas do Cluster:
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '4px' }}>
+                                      {[
+                                        { id: 'suave', label: 'Suave' },
+                                        { id: 'cheio', label: 'Cheio' },
+                                        { id: 'luxo', label: 'Mega Luxo' }
+                                      ].map(d => (
+                                        <button
+                                          key={d.id}
+                                          type="button"
+                                          className={`btn-tampo-type ${(itemSelecionado.densidadeCluster || 'cheio') === d.id ? 'active' : ''}`}
+                                          onClick={() => atualizarItem(selecionadoId, { densidadeCluster: d.id })}
+                                          style={{ flex: 1, padding: '6px', fontSize: '10px', fontWeight: '800' }}
+                                        >
+                                          {d.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 5. SLIDER DE ESPAÇAMENTO / DENSIDADE ENTRE OS BALÕES */}
+                                <div className="slider-group" style={{ marginBottom: '8px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#78350f', marginBottom: '2px' }}>
+                                    <span>📏 Espaçamento entre os Balões</span>
+                                    <span style={{ color: '#92400e', background: '#fef3c7', padding: '1px 5px', borderRadius: '4px', fontSize: '9px' }}>
+                                      {(itemSelecionado.espacamentoBaloes || 26) <= 22 ? 'Mega Encorpado / Denso' : (itemSelecionado.espacamentoBaloes || 26) >= 32 ? 'Espaçado / Fluido' : 'Padrão Profissional'}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range" min="16" max="42"
+                                    value={itemSelecionado.espacamentoBaloes ?? 26}
+                                    onChange={e => atualizarItem(selecionadoId, { espacamentoBaloes: Number(e.target.value) })}
+                                    onDoubleClick={() => atualizarItem(selecionadoId, { espacamentoBaloes: 26 })}
+                                    style={{ width: '100%', accentColor: '#d97706', cursor: 'pointer' }}
+                                    title="Arraste para aproximar ou afastar os balões. Dê 2 cliques para restaurar."
+                                  />
+                                </div>
+
+                                {/* 6. SLIDER DE CALIBRE / TAMANHO MÉDIO DOS BALÕES */}
+                                <div className="slider-group" style={{ marginBottom: '8px' }}>
+                                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#78350f', marginBottom: '2px' }}>
+                                    <span>🎈 Calibre / Tamanho das Bexigas</span>
+                                    <span style={{ color: '#92400e', background: '#fef3c7', padding: '1px 5px', borderRadius: '4px', fontSize: '9px' }}>
+                                      {itemSelecionado.calibreBalao ?? 18}px {(itemSelecionado.calibreBalao || 18) >= 24 ? '(Big Balloons)' : '(9"/10" Clássico)'}
+                                    </span>
+                                  </div>
+                                  <input
+                                    type="range" min="12" max="30"
+                                    value={itemSelecionado.calibreBalao ?? 18}
+                                    onChange={e => atualizarItem(selecionadoId, { calibreBalao: Number(e.target.value) })}
+                                    onDoubleClick={() => atualizarItem(selecionadoId, { calibreBalao: 18 })}
+                                    style={{ width: '100%', accentColor: '#d97706', cursor: 'pointer' }}
+                                    title="Arraste para aumentar ou diminuir o volume dos balões. Dê 2 cliques para restaurar."
+                                  />
+                                </div>
+
+                                {/* 7. SE FOR ARCO DUPLO: DISTÂNCIA / ESPAÇAMENTO ENTRE AS 2 CAMADAS */}
+                                {itemSelecionado.shapeType === 'arco_classico_portal' && itemSelecionado.formatoPortal === 'duplo_paralelo' && (
+                                  <div className="slider-group" style={{ marginBottom: '8px', background: '#fffbeb', padding: '6px', borderRadius: '6px', border: '1px dashed #f59e0b' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold', color: '#78350f', marginBottom: '2px' }}>
+                                      <span>✨ Distância entre os 2 Arcos</span>
+                                      <span style={{ color: '#b45309', fontWeight: '800' }}>{itemSelecionado.distanciaArcoDuplo ?? 40}px</span>
+                                    </div>
+                                    <input
+                                      type="range" min="20" max="65"
+                                      value={itemSelecionado.distanciaArcoDuplo ?? 40}
+                                      onChange={e => atualizarItem(selecionadoId, { distanciaArcoDuplo: Number(e.target.value) })}
+                                      onDoubleClick={() => atualizarItem(selecionadoId, { distanciaArcoDuplo: 40 })}
+                                      style={{ width: '100%', accentColor: '#d97706', cursor: 'pointer' }}
+                                      title="Regula a distância entre o arco externo e o arco interno."
+                                    />
+                                  </div>
+                                )}
+
+                                {/* 8. PROPORÇÃO DE MINIS 5" DE ACABAMENTO (Quando estilo for Orgânico) */}
+                                {itemSelecionado.estiloPortal === 'organico' && (
+                                  <div style={{ marginBottom: '8px' }}>
+                                    <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '4px' }}>
+                                      Minis 5" de Acabamento Frontal:
+                                    </div>
+                                    <div style={{ display: 'flex', gap: '3px' }}>
+                                      {[
+                                        { id: 'nenhum', label: 'Nenhum' },
+                                        { id: 'suave', label: 'Suave' },
+                                        { id: 'medio', label: 'Médio' },
+                                        { id: 'luxo', label: 'Mega Luxo' }
+                                      ].map(m => (
+                                        <button
+                                          key={m.id}
+                                          type="button"
+                                          className={`btn-tampo-type ${(itemSelecionado.proporcaoMinis || 'medio') === m.id ? 'active' : ''}`}
+                                          onClick={() => atualizarItem(selecionadoId, { proporcaoMinis: m.id })}
+                                          style={{ flex: 1, padding: '4px', fontSize: '9px' }}
+                                        >
+                                          {m.label}
+                                        </button>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* 🎨 SEÇÃO DE CORES & PALETAS */}
+                                <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #fde68a' }}>
+                                  <div style={{ fontSize: '10px', fontWeight: '800', color: '#78350f', marginBottom: '6px' }}>
+                                    🎨 Cores Individuais das Bexigas (1 a 5):
+                                  </div>
+                                  {/* 5 Cores Individuais com Input Color */}
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px' }}>
+                                    {(itemSelecionado.coresBalao || paletaBalaoAtiva.cores).map((cor, idx) => (
+                                      <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flex: 1 }}>
+                                        <input
+                                          type="color"
+                                          value={cor}
+                                          onChange={(e) => {
+                                            const novasCores = [...(itemSelecionado.coresBalao || paletaBalaoAtiva.cores)];
+                                            novasCores[idx] = e.target.value;
+                                            atualizarItem(selecionadoId, { coresBalao: novasCores });
+                                          }}
+                                          style={{ width: '100%', height: '26px', border: '1.5px solid #d97706', borderRadius: '4px', cursor: 'pointer', padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
+                                          title={`Cor da Bexiga #${idx + 1}`}
+                                        />
+                                        <span style={{ fontSize: '8.5px', fontWeight: '800', color: '#92400e' }}>#{idx + 1}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+
+                                  {/* Paletas Prontas Rápidas */}
+                                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '5px' }}>
+                                    Trocar Paleta da Guirlanda:
+                                  </div>
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '120px', overflowY: 'auto' }}>
+                                    {PALETAS_BALOES.map((pal, pIdx) => (
+                                      <button
+                                        key={pIdx}
+                                        type="button"
+                                        onClick={() => {
+                                          setPaletaBalaoAtiva(pal);
+                                          atualizarItem(selecionadoId, { coresBalao: pal.cores });
+                                        }}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          justifyContent: 'space-between',
+                                          padding: '5px 8px',
+                                          borderRadius: '6px',
+                                          background: '#ffffff',
+                                          border: '1px solid #fde68a',
+                                          cursor: 'pointer',
+                                          textAlign: 'left'
+                                        }}
+                                      >
+                                        <span style={{ fontSize: '10px', fontWeight: '700', color: '#1e293b' }}>{pal.nome}</span>
+                                        <div style={{ display: 'flex', gap: '3px' }}>
+                                          {pal.cores.map((c, i) => (
+                                            <div key={i} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: '1px solid rgba(0,0,0,0.15)' }} />
+                                          ))}
+                                        </div>
+                                      </button>
+                                    ))}
+                                  </div>
+
+                                  {/* 🎲 EMBARALHAR CORES DOS BALÕES */}
+                                  <button
+                                    type="button"
+                                    className="btn-inspector-action"
+                                    style={{ width: '100%', marginTop: '8px', padding: '7px', fontSize: '10.5px', fontWeight: '700', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
+                                    onClick={() => atualizarItem(selecionadoId, { seed: (itemSelecionado.seed || 0) + 1 })}
+                                    title="Embaralhar as cores nas bexigas"
+                                  >
+                                    <span>🎲</span>
+                                    <span>Embaralhar Ordem das Cores</span>
+                                  </button>
+                                </div>
+                              </div>
+                            )}
+
+                            {/* 🧮 BOTÃO DIRETO: ABRIR CALCULADORA & LISTA DE COMPRAS */}
+                            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px dashed #d97706' }}>
                               <button
                                 type="button"
-                                onClick={() => atualizarItem(selecionadoId, { capaPosX: 50, capaPosY: 50, capaScale: 1 })}
-                                style={{ fontSize: '9.5px', fontWeight: '700', color: '#c5a059', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                                title="Restaurar posição original"
+                                className="btn-inspector-action"
+                                style={{
+                                  width: '100%',
+                                  padding: '8px 10px',
+                                  fontSize: '11px',
+                                  fontWeight: '800',
+                                  background: 'linear-gradient(135deg, #1e293b, #0f172a)',
+                                  color: '#c5a059',
+                                  border: '1.5px solid #c5a059',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  gap: '6px',
+                                  boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                                }}
+                                onClick={() => setModalCalculadoraBaloesAberto(true)}
+                                title="Calcular lista de compras de bexigas do projeto inteiro"
                               >
-                                🎯 Centralizar
+                                <span>🧮</span>
+                                <span>Calculadora de Balões da Festa</span>
                               </button>
-                            </div>
-
-                            {/* 1. Zoom / Escala da Capa */}
-                            <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para resetar em 100%">
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                                <span>🔍 Zoom da Capa</span>
-                                <span>{Math.round((itemSelecionado.capaScale || 1) * 100)}%</span>
-                              </div>
-                              <input
-                                type="range" min="50" max="300"
-                                value={Math.round((itemSelecionado.capaScale || 1) * 100)}
-                                onChange={e => atualizarItem(selecionadoId, { capaScale: Number(e.target.value) / 100 })}
-                                onDoubleClick={() => atualizarItem(selecionadoId, { capaScale: 1 })}
-                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                              />
-                            </div>
-
-                            {/* 2. Posição Horizontal X */}
-                            <div className="slider-group" style={{ marginBottom: '6px' }} title="Dê 2 cliques para centralizar">
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                                <span>↔️ Mover Horizontal (X)</span>
-                                <span>{itemSelecionado.capaPosX ?? 50}%</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="100"
-                                value={itemSelecionado.capaPosX ?? 50}
-                                onChange={e => atualizarItem(selecionadoId, { capaPosX: Number(e.target.value) })}
-                                onDoubleClick={() => atualizarItem(selecionadoId, { capaPosX: 50 })}
-                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                              />
-                            </div>
-
-                            {/* 3. Posição Vertical Y */}
-                            <div className="slider-group" style={{ marginBottom: '4px' }} title="Dê 2 cliques para centralizar">
-                              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', fontWeight: 'bold' }}>
-                                <span>↕️ Mover Vertical (Y)</span>
-                                <span>{itemSelecionado.capaPosY ?? 50}%</span>
-                              </div>
-                              <input
-                                type="range" min="0" max="100"
-                                value={itemSelecionado.capaPosY ?? 50}
-                                onChange={e => atualizarItem(selecionadoId, { capaPosY: Number(e.target.value) })}
-                                onDoubleClick={() => atualizarItem(selecionadoId, { capaPosY: 50 })}
-                                style={{ width: '100%', accentColor: '#c5a059', cursor: 'pointer' }}
-                              />
                             </div>
                           </div>
                         )}
+
+                        {/* 4. Ações Rápidas de Alinhamento & Camada */}
+                        <div className="inspector-section-title" style={{ marginTop: '10px' }}>Ações Rápidas</div>
+                        <div className="inspector-actions-grid">
+                          <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipH: !itemSelecionado.flipH })} title="Espelhar Horizontalmente">
+                            <Icons.Flip width={12} /> Flip H
+                          </button>
+                          <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipV: !itemSelecionado.flipV })} title="Espelhar Verticalmente">
+                            <Icons.Flip width={12} style={{ transform: 'rotate(90deg)' }} /> Flip V
+                          </button>
+                          <button type="button" className="btn-inspector-action" onClick={() => duplicarItem(selecionadoId)} title="Duplicar">
+                            <Icons.Copy width={12} /> Duplicar
+                          </button>
+                          <button type="button" className="btn-inspector-action" onClick={() => bringToFront(selecionadoId)} title="Trazer para Frente">
+                            <Icons.ArrowUp width={12} /> Trazer Frente
+                          </button>
+                          <button type="button" className="btn-inspector-action" onClick={() => sendToBack(selecionadoId)} title="Enviar para Trás">
+                            <Icons.ArrowDown width={12} /> Enviar Trás
+                          </button>
+                          <button
+                            type="button"
+                            className={`btn-inspector-action ${itemSelecionado.locked ? 'active' : ''}`}
+                            onClick={() => toggleLock(selecionadoId)}
+                            title={itemSelecionado.locked ? 'Desbloquear' : 'Bloquear'}
+                          >
+                            {itemSelecionado.locked ? <><Icons.Lock width={12} /> Bloqueado</> : <><Icons.Unlock width={12} /> Bloquear</>}
+                          </button>
+                          <button type="button" className="btn-inspector-action" style={{ gridColumn: '1 / -1', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={() => deleteItem(selecionadoId)} title="Excluir Elemento">
+                            <Icons.Trash width={12} /> Excluir Elemento
+                          </button>
+                        </div>
+
+                        {/* Link rápido / Seção de Iluminação da Cena */}
+                        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
+                          <button
+                            type="button"
+                            className="btn-inspector-action"
+                            style={{ width: '100%', background: '#f8fafc', color: '#0f172a', fontWeight: '700', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            onClick={() => setAbaDireita('iluminacao')}
+                          >
+                            <span>✨</span>
+                            <span>Ajustar Iluminação & Atmosfera da Cena</span>
+                          </button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="inspector-content">
+                        {renderBlocoIluminacaoCena()}
                       </div>
                     )}
+                  </div>
+                )}
 
-                    {/* 🎈 Se for Balão / Guirlanda: Cores e Paletas */}
-                    {isBalaoSelecionado && (
-                      <div className="inspector-balao-section" style={{ marginTop: '10px', padding: '10px', background: '#fdfbf7', borderRadius: '8px', border: '1px solid #fde68a' }}>
-                        <div className="inspector-section-title" style={{ marginTop: 0, marginBottom: '6px', color: '#92400e' }}>
-                          🎈 Cores dos Balões da Guirlanda
-                        </div>
+                {/* CONTEÚDO DA ABA ILUMINAÇÃO & ATMOSFERA */}
+                {abaDireita === 'iluminacao' && (
+                  <div className="right-panel-body">
+                    <div className="inspector-content">
+                      {renderBlocoIluminacaoCena()}
+                    </div>
+                  </div>
+                )}
 
-                        {/* 5 Cores Individuais com Input Color */}
-                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '6px' }}>
-                          Personalizar Cores das Bexigas (1 a 5):
+                {/* CONTEÚDO DA ABA BEXIGAS & BALÕES */}
+                {abaDireita === 'baloes' && (
+                  <div className="right-panel-body">
+                    <div className="balloon-calc-box">
+                      <div className="balloon-calc-header">
+                        <h4>🎈 Produção & Compras de Bexigas</h4>
+                        <p>Cálculo em tempo real de bexigas e pacotes para montagem do cenário.</p>
+                      </div>
+
+                      {estatisticasBaloesProjeto.totalBaloes === 0 ? (
+                        <div className="empty-layers-box">
+                          <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhum arco ou balão no cenário.</p>
+                          <small style={{ color: '#94a3b8', marginTop: '4px' }}>Adicione um arco ou balão 3D para calcular.</small>
                         </div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '10px' }}>
-                          {(itemSelecionado.coresBalao || paletaBalaoAtiva.cores).map((cor, idx) => (
-                            <div key={idx} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '2px', flex: 1 }}>
-                              <input
-                                type="color"
-                                value={cor}
-                                onChange={(e) => {
-                                  const novasCores = [...(itemSelecionado.coresBalao || paletaBalaoAtiva.cores)];
-                                  novasCores[idx] = e.target.value;
-                                  atualizarItem(selecionadoId, { coresBalao: novasCores });
-                                }}
-                                style={{ width: '100%', height: '26px', border: '1.5px solid #d97706', borderRadius: '4px', cursor: 'pointer', padding: 0, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
-                                title={`Cor da Bexiga #${idx + 1}`}
-                              />
-                              <span style={{ fontSize: '8.5px', fontWeight: '800', color: '#92400e' }}>#{idx + 1}</span>
+                      ) : (
+                        <div className="balloon-arches-list">
+                          {/* KPIs Rápidos */}
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', marginBottom: '10px' }}>
+                            <div style={{ background: '#eff6ff', padding: '8px', borderRadius: '6px', textAlign: 'center', border: '1px solid #bfdbfe' }}>
+                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase' }}>Total Balões</span>
+                              <div style={{ fontSize: '16px', fontWeight: '900', color: '#1e3a8a' }}>~{estatisticasBaloesProjeto.totalBaloes} un</div>
                             </div>
-                          ))}
-                        </div>
-
-                        {/* Paletas Prontas Rápidas */}
-                        <div style={{ fontSize: '10px', fontWeight: '700', color: '#78350f', marginBottom: '5px' }}>
-                          Trocar Paleta da Guirlanda:
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '130px', overflowY: 'auto' }}>
-                          {PALETAS_BALOES.map((pal, pIdx) => (
-                            <button
-                              key={pIdx}
-                              type="button"
-                              onClick={() => {
-                                setPaletaBalaoAtiva(pal);
-                                atualizarItem(selecionadoId, { coresBalao: pal.cores });
-                              }}
-                              style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                padding: '5px 8px',
-                                borderRadius: '6px',
-                                background: '#ffffff',
-                                border: '1px solid #fde68a',
-                                cursor: 'pointer',
-                                textAlign: 'left'
-                              }}
-                            >
-                              <span style={{ fontSize: '10px', fontWeight: '700', color: '#1e293b' }}>{pal.nome}</span>
-                              <div style={{ display: 'flex', gap: '3px' }}>
-                                {pal.cores.map((c, i) => (
-                                  <div key={i} style={{ width: '12px', height: '12px', borderRadius: '50%', background: c, border: '1px solid rgba(0,0,0,0.15)' }} />
-                                ))}
-                              </div>
-                            </button>
-                          ))}
-                        </div>
-
-                        {/* 🎲 EMBARALHAR CORES DOS BALÕES */}
-                        <button
-                          type="button"
-                          className="btn-inspector-action"
-                          style={{ width: '100%', marginTop: '8px', padding: '7px', fontSize: '10.5px', fontWeight: '700', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px' }}
-                          onClick={() => atualizarItem(selecionadoId, { seed: (itemSelecionado.seed || 0) + 1 })}
-                          title="Embaralhar as cores nas bexigas"
-                        >
-                          <span>🎲</span>
-                          <span>Embaralhar Ordem das Cores</span>
-                        </button>
-
-                        {/* AJUSTES ADICIONAIS PARA CLUSTER DE CHÃO */}
-                        {itemSelecionado.shapeType === 'baloes_cluster_chao' && (
-                          <div style={{ marginTop: '10px', paddingTop: '8px', borderTop: '1px dashed #fde68a' }}>
-                            <div style={{ fontSize: '10.5px', fontWeight: '800', color: '#92400e', marginBottom: '6px' }}>
-                              🫧 Densidade de Bexigas do Cluster
+                            <div style={{ background: '#fef3c7', padding: '8px', borderRadius: '6px', textAlign: 'center', border: '1px solid #fcd34d' }}>
+                              <span style={{ fontSize: '9px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase' }}>Pacotes (50 un)</span>
+                              <div style={{ fontSize: '16px', fontWeight: '900', color: '#78350f' }}>{estatisticasBaloesProjeto.totalPacotes} pcts</div>
                             </div>
-                            <div style={{ display: 'flex', gap: '4px' }}>
-                              {[
-                                { id: 'suave', label: 'Suave' },
-                                { id: 'cheio', label: 'Cheio' },
-                                { id: 'luxo', label: 'Mega Luxo' }
-                              ].map(d => (
-                                <button
-                                  key={d.id}
-                                  type="button"
-                                  className={`btn-tampo-type ${(itemSelecionado.densidadeCluster || 'cheio') === d.id ? 'active' : ''}`}
-                                  onClick={() => atualizarItem(selecionadoId, { densidadeCluster: d.id })}
-                                  style={{ flex: 1, padding: '5px', fontSize: '9.5px' }}
-                                >
-                                  {d.label}
-                                </button>
+                          </div>
+
+                          {/* Lista de Peças e Quantidades */}
+                          <div className="arch-packages-hint" style={{ marginBottom: '10px' }}>
+                            <strong>📐 Detalhamento por Estrutura:</strong>
+                            <ul style={{ margin: '4px 0 0', paddingLeft: '16px', fontSize: '10.5px' }}>
+                              {estatisticasBaloesProjeto.itensBaloes.map((it, idx) => (
+                                <li key={idx} style={{ marginBottom: '2px' }}>
+                                  {it.nome}: <strong>~{it.qtd} bexigas</strong>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+
+                          {/* Lista de Pacotes por Cor */}
+                          <div className="arch-packages-hint" style={{ marginBottom: '10px' }}>
+                            <strong>📦 Pacotes por Cor:</strong>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '6px' }}>
+                              {estatisticasBaloesProjeto.pacotesPorCor.map((p, pIdx) => (
+                                <div key={pIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '4px 6px', borderRadius: '4px', border: '1px solid #e2e8f0' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                    <div style={{ width: '14px', height: '14px', borderRadius: '50%', background: p.cor, border: '1px solid rgba(0,0,0,0.15)' }} />
+                                    <span style={{ fontSize: '10px', color: '#334155', fontWeight: '700' }}>{p.cor}</span>
+                                  </div>
+                                  <span style={{ fontSize: '10px', fontWeight: '800', color: '#b45309' }}>{p.pacotes} pct ({p.qtd} un)</span>
+                                </div>
                               ))}
                             </div>
                           </div>
-                        )}
-                      </div>
-                    )}
 
-                    {/* 4. Ações Rápidas de Alinhamento & Camada */}
-                    <div className="inspector-section-title" style={{ marginTop: '10px' }}>Ações Rápidas</div>
-                    <div className="inspector-actions-grid">
-                      <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipH: !itemSelecionado.flipH })} title="Espelhar Horizontalmente">
-                        <Icons.Flip width={12} /> Flip H
-                      </button>
-                      <button type="button" className="btn-inspector-action" onClick={() => atualizarItem(selecionadoId, { flipV: !itemSelecionado.flipV })} title="Espelhar Verticalmente">
-                        <Icons.Flip width={12} style={{ transform: 'rotate(90deg)' }} /> Flip V
-                      </button>
-                      <button type="button" className="btn-inspector-action" onClick={() => duplicarItem(selecionadoId)} title="Duplicar">
-                        <Icons.Copy width={12} /> Duplicar
-                      </button>
-                      <button type="button" className="btn-inspector-action" onClick={() => bringToFront(selecionadoId)} title="Trazer para Frente">
-                        <Icons.ArrowUp width={12} /> Trazer Frente
-                      </button>
-                      <button type="button" className="btn-inspector-action" onClick={() => sendToBack(selecionadoId)} title="Enviar para Trás">
-                        <Icons.ArrowDown width={12} /> Enviar Trás
-                      </button>
-                      <button
-                        type="button"
-                        className={`btn-inspector-action ${itemSelecionado.locked ? 'active' : ''}`}
-                        onClick={() => toggleLock(selecionadoId)}
-                        title={itemSelecionado.locked ? 'Desbloquear' : 'Bloquear'}
-                      >
-                        {itemSelecionado.locked ? <><Icons.Lock width={12} /> Bloqueado</> : <><Icons.Unlock width={12} /> Bloquear</>}
-                      </button>
-                      <button type="button" className="btn-inspector-action" style={{ gridColumn: '1 / -1', color: '#dc2626', borderColor: '#fca5a5', background: '#fef2f2' }} onClick={() => deleteItem(selecionadoId)} title="Excluir Elemento">
-                        <Icons.Trash width={12} /> Excluir Elemento
-                      </button>
-                    </div>
+                          {/* Botão Abrir Modal Completo da Calculadora */}
+                          <button
+                            type="button"
+                            className="btn-inspector-action"
+                            style={{ width: '100%', marginBottom: '6px', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', fontWeight: '800', fontSize: '11px', padding: '8px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                            onClick={() => setModalCalculadoraBaloesAberto(true)}
+                          >
+                            <span>🧮</span>
+                            <span>Ver Relatório de Compras & Preços</span>
+                          </button>
 
-                    {/* Link rápido / Seção de Iluminação da Cena */}
-                    <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                      <button
-                        type="button"
-                        className="btn-inspector-action"
-                        style={{ width: '100%', background: '#f8fafc', color: '#0f172a', fontWeight: '700', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                        onClick={() => setAbaDireita('iluminacao')}
-                      >
-                        <span>✨</span>
-                        <span>Ajustar Iluminação & Atmosfera da Cena</span>
-                      </button>
+                          {/* Botão Copiar para WhatsApp */}
+                          <button
+                            type="button"
+                            className="btn-copy-balloon-shopping"
+                            onClick={() => {
+                              const txtCores = estatisticasBaloesProjeto.pacotesPorCor.map(p => `  • Cor ${p.cor}: ${p.pacotes} pacote(s) (~${p.qtd} bexigas)`).join('\n');
+                              const msg = `🎈 *LISTA DE COMPRAS DE BALÕES - CELEBRE*\n*Projeto:* ${nomeProjeto || 'Decoração de Evento'}\n\n*Total Estimado:* ~${estatisticasBaloesProjeto.totalBaloes} bexigas (${estatisticasBaloesProjeto.totalPacotes} pacotes de 50 un)\n*Custo Médio de Insumos:* R$ ${estatisticasBaloesProjeto.custoTotalEstimado.toFixed(2)}\n\n*Proporção Sugerida:*\n  • 5" (Acabamento): ~${estatisticasBaloesProjeto.totalMinis5} un\n  • 9"/10" (Base): ~${estatisticasBaloesProjeto.totalPadrao9} un\n  • 12"/18" (Destaque): ~${estatisticasBaloesProjeto.totalDestaque12_18} un\n\n*Pacotes por Cor:*\n${txtCores}\n\n_Gerado automaticamente pelo Sistema Celebre._`;
+                              navigator.clipboard.writeText(msg);
+                              alert("✓ Lista de Bexigas copiada para a Área de Transferência!");
+                            }}
+                          >
+                            📋 Copiar Lista de Bexigas (WhatsApp)
+                          </button>
+                        </div>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div className="inspector-content">
-                    {renderBlocoIluminacaoCena()}
                   </div>
                 )}
               </div>
-            )}
-
-            {/* CONTEÚDO DA ABA ILUMINAÇÃO & ATMOSFERA */}
-            {abaDireita === 'iluminacao' && (
-              <div className="right-panel-body">
-                <div className="inspector-content">
-                  {renderBlocoIluminacaoCena()}
-                </div>
-              </div>
-            )}
-
-            {/* CONTEÚDO DA ABA BEXIGAS & BALÕES */}
-            {abaDireita === 'baloes' && (
-              <div className="right-panel-body">
-                <div className="balloon-calc-box">
-                  <div className="balloon-calc-header">
-                    <h4>🎈 Produção de Bexigas</h4>
-                    <p>Planejamento de cores e pacotes para montagem dos arcos do projeto.</p>
-                  </div>
-
-                  {itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_')).length === 0 ? (
-                    <div className="empty-layers-box">
-                      <p style={{ margin: 0, fontSize: '11.5px', color: '#64748b' }}>Nenhum arco de balões adicionado ao cenário.</p>
-                      <small style={{ color: '#94a3b8', marginTop: '4px' }}>Adicione um arco da Galeria para calcular as bexigas.</small>
-                    </div>
-                  ) : (
-                    <div className="balloon-arches-list">
-                      {itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_')).map((arco, aIdx) => (
-                        <div key={aIdx} className="balloon-arch-item-card">
-                          <div className="arch-card-top">
-                            {arco.imagem && <img src={arco.imagem} alt="" className="arch-thumb-mini" />}
-                            <div>
-                              <strong>{arco.nome || 'Arco Orgânico'}</strong>
-                              <div style={{ fontSize: '10.5px', color: '#64748b' }}>Estimativa: ~180 a 250 bexigas</div>
-                            </div>
-                          </div>
-
-                          <div className="arch-packages-hint">
-                            <strong>📦 Pacotes de Bexiga Sugeridos:</strong>
-                            <ul>
-                              <li>2x Pacotes 9" ou 10" (Base)</li>
-                              <li>2x Pacotes 5" (Acabamento)</li>
-                              <li>1x Pacote 12" ou 18" (Destaque)</li>
-                            </ul>
-                          </div>
-                        </div>
-                      ))}
-
-                      <button
-                        type="button"
-                        className="btn-copy-balloon-shopping"
-                        onClick={() => {
-                          const arcos = itensCanvas.filter(i => i.categoria === 'Baloes' || (i.nome || '').toLowerCase().includes('arco') || i.shapeType?.startsWith('baloes_'));
-                          const txt = arcos.map(a => `• ${a.nome} (Sugerido: 4 a 6 pacotes de 50 un)`).join('\n');
-                          const msg = `🎈 *LISTA DE BEXIGAS PARA PRODUÇÃO*\n*Projeto:* ${nomeProjeto || 'Moodboard'}\n\n${txt}\n\nGerado via Celebre Sistema.`;
-                          navigator.clipboard.writeText(msg);
-                          alert("✓ Lista de Bexigas copiada para a Área de Transferência!");
-                        }}
-                      >
-                        📋 Copiar Lista de Bexigas (WhatsApp)
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
+            </>
+          ) : (
             /* 📌 BARRA LATERAL DIREITA RECOLHIDA (DOCK SLIM COM ÍCONES) */
             <div className="studio-right-dock-collapsed" onClick={e => e.stopPropagation()}>
               <button
@@ -9730,18 +11840,65 @@ const Moodboard = () => {
               ) : (
                 /* Preview e Configurações quando a imagem foi carregada */
                 <>
-                  <div className="elem-preview-checkerboard" style={{ marginBottom: '10px', height: '170px', position: 'relative' }}>
+                  <div className="elem-preview-checkerboard" style={{ marginBottom: '8px', height: '170px', position: 'relative' }}>
                     <img src={imagemRapidaBase64} alt="Preview" style={{ maxHeight: '150px', maxWidth: '100%', objectFit: 'contain' }} />
+                    {fundoJaRemovidoModal && (
+                      <span style={{
+                        position: 'absolute', top: '8px', right: '8px',
+                        background: '#dcfce7', color: '#166534', border: '1px solid #86efac',
+                        fontSize: '9.5px', fontWeight: '800', padding: '3px 8px', borderRadius: '12px'
+                      }}>
+                        ✨ Fundo Removido (IA)
+                      </span>
+                    )}
                   </div>
 
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: '12px' }}>
+                  {/* Barra de Ações de Fundo (Remover / Restaurar / Trocar Foto) */}
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '14px', gap: '8px' }}>
+                    {fundoJaRemovidoModal ? (
+                      <button
+                        type="button"
+                        onClick={restaurarFundoOriginalModal}
+                        style={{
+                          fontSize: '11px', fontWeight: '700', color: '#dc2626',
+                          background: '#fef2f2', border: '1.5px solid #fecaca',
+                          borderRadius: '6px', padding: '6px 12px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', gap: '5px'
+                        }}
+                        title="Restaurar a foto original com fundo intacto"
+                      >
+                        <span>↺</span>
+                        <span>Restaurar Fundo Original</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={processarRemocaoFundoModal}
+                        disabled={removendoFundo}
+                        style={{
+                          fontSize: '11.5px', fontWeight: '800',
+                          background: 'linear-gradient(135deg, #7c3aed, #c5a059)',
+                          color: '#ffffff', border: 'none', borderRadius: '6px', padding: '7px 14px',
+                          cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px',
+                          boxShadow: '0 2px 8px rgba(124, 58, 237, 0.25)'
+                        }}
+                        title="Remove o fundo da foto com IA"
+                      >
+                        {removendoFundo ? (
+                          <><i className="fas fa-spinner fa-spin" /> Removendo Fundo (IA)...</>
+                        ) : (
+                          <>🪄 Remover Fundo com IA</>
+                        )}
+                      </button>
+                    )}
+
                     <button
                       type="button"
                       className="btn-link-reset"
                       style={{ fontSize: '11px', color: '#c5a059', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '4px' }}
                       onClick={() => handleUploadImagemRapida(categoriaImagemRapida, salvarNoPortfolio, uploadOrigem)}
                     >
-                      🔄 Escolher outra imagem
+                      🔄 Trocar foto
                     </button>
                   </div>
 
@@ -9781,30 +11938,24 @@ const Moodboard = () => {
             <div className="modal-actions" style={{ flexDirection: 'column', gap: '8px' }}>
               {imagemRapidaBase64 ? (
                 <>
-                  {/* Botão com Remoção de Fundo */}
+                  {/* Botão Principal de Inserção */}
                   <button
                     type="button"
                     className="btn-confirm-luxury"
-                    style={{ background: 'linear-gradient(135deg, #7c3aed, #c5a059)', gap: '8px', fontSize: '13px', cursor: 'pointer' }}
-                    onClick={() => confirmarUploadRapido(true, false)}
-                    disabled={removendoFundo}
-                  >
-                    {removendoFundo ? (
-                      <><i className="fas fa-spinner fa-spin" /> Removendo Fundo (IA)...</>
-                    ) : (
-                      <>🪄 Remover Fundo (IA) e Adicionar ao Cenário</>
-                    )}
-                  </button>
-
-                  {/* Botão Sem Remoção de Fundo */}
-                  <button
-                    type="button"
-                    className="btn-primary-action"
-                    style={{ marginBottom: 0, cursor: 'pointer' }}
+                    style={{
+                      background: fundoJaRemovidoModal
+                        ? 'linear-gradient(135deg, #10b981, #059669)'
+                        : 'linear-gradient(135deg, #0f172a, #334155)',
+                      gap: '8px',
+                      fontSize: '13px',
+                      cursor: 'pointer'
+                    }}
                     onClick={() => confirmarUploadRapido(false, false)}
                     disabled={removendoFundo}
                   >
-                    📸 Adicionar com Imagem Original
+                    {fundoJaRemovidoModal
+                      ? '✨ Adicionar Imagem Recortada ao Cenário'
+                      : '🖼️ Adicionar Imagem ao Cenário'}
                   </button>
 
                   {/* Botão Apenas Salvar na Galeria */}
@@ -9828,6 +11979,9 @@ const Moodboard = () => {
                 onClick={() => {
                   setModalUploadRapidoAberto(false);
                   setImagemRapidaBase64('');
+                  setImagemRapidaOriginal('');
+                  setImagemRapidaRecortada('');
+                  setFundoJaRemovidoModal(false);
                   setImagemRapidaNome('');
                 }}
                 disabled={removendoFundo}
@@ -9967,6 +12121,187 @@ const Moodboard = () => {
             <div style={{ marginTop: '16px', textAlign: 'center', fontSize: '11px', color: '#94a3b8' }}>
               💡 <strong>Dica Pro:</strong> Dê duplo clique em qualquer painel com capa ou cilindro para ajustar o enquadramento do tecido com o mouse!
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* 🧮 MODAL: CALCULADORA DE BALÕES & LISTA DE COMPRAS PARA O ORÇAMENTO */}
+      {modalCalculadoraBaloesAberto && (
+        <div className="modal-atalhos-backdrop" onClick={() => setModalCalculadoraBaloesAberto(false)} style={{ zIndex: 99999 }}>
+          <div
+            className="modal-atalhos-card"
+            onClick={e => e.stopPropagation()}
+            style={{ maxWidth: '640px', maxHeight: '90vh', overflowY: 'auto', background: '#ffffff', borderRadius: '16px', padding: '24px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)', border: '1px solid #fde68a' }}
+          >
+            {/* Header da Calculadora */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '1.5px solid #f1f5f9', paddingBottom: '16px', marginBottom: '18px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <div style={{ width: '44px', height: '44px', borderRadius: '12px', background: 'linear-gradient(135deg, #fef3c7, #fde68a)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', border: '1px solid #d97706' }}>
+                  🧮
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: '18px', fontWeight: '900', color: '#0f172a' }}>Calculadora de Balões & Compras</h3>
+                  <p style={{ margin: '2px 0 0', fontSize: '12px', color: '#64748b' }}>Estimativa profissional de insumos para os arcos e balões do cenário.</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setModalCalculadoraBaloesAberto(false)}
+                style={{ background: '#f1f5f9', border: 'none', color: '#64748b', width: '32px', height: '32px', borderRadius: '8px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {estatisticasBaloesProjeto.totalBaloes === 0 ? (
+              <div style={{ textAlign: 'center', padding: '36px 16px', background: '#f8fafc', borderRadius: '12px', border: '1.5px dashed #cbd5e1' }}>
+                <div style={{ fontSize: '36px', marginBottom: '8px' }}>🎈</div>
+                <h4 style={{ margin: '0 0 6px', color: '#0f172a', fontSize: '15px' }}>Nenhum arco ou balão encontrado na tela</h4>
+                <p style={{ margin: 0, color: '#64748b', fontSize: '12px' }}>Adicione um Arco Portal, Aro Redondo, Guirlanda ou Balão 3D para calcular a quantidade necessária.</p>
+              </div>
+            ) : (
+              <div>
+                {/* 3 CARDS DE KPI DE TOPO */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px', marginBottom: '18px' }}>
+                  <div style={{ background: 'linear-gradient(135deg, #eff6ff, #dbeafe)', border: '1px solid #bfdbfe', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Total de Bexigas</div>
+                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e3a8a', marginTop: '2px' }}>{estatisticasBaloesProjeto.totalBaloes} <span style={{ fontSize: '12px', fontWeight: 'normal' }}>un</span></div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, #fef3c7, #fde68a)', border: '1px solid #fcd34d', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#92400e', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pacotes Sugeridos</div>
+                    <div style={{ fontSize: '24px', fontWeight: '900', color: '#78350f', marginTop: '2px' }}>{estatisticasBaloesProjeto.totalPacotes} <span style={{ fontSize: '12px', fontWeight: 'normal' }}>pcts (50 un)</span></div>
+                  </div>
+                  <div style={{ background: 'linear-gradient(135deg, #f0fdf4, #dcfce7)', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px', textAlign: 'center' }}>
+                    <div style={{ fontSize: '10px', fontWeight: '800', color: '#166534', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Custo Estimado</div>
+                    <div style={{ fontSize: '22px', fontWeight: '900', color: '#14532d', marginTop: '2px' }}>R$ {estatisticasBaloesProjeto.custoTotalEstimado.toFixed(2)}</div>
+                  </div>
+                </div>
+
+                {/* CAMPO DE VALOR MÉDIO POR PACOTE */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px', marginBottom: '16px' }}>
+                  <span style={{ fontSize: '11.5px', fontWeight: '700', color: '#334155' }}>💰 Preço Médio por Pacote (50 un):</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span style={{ fontSize: '12px', fontWeight: 'bold', color: '#64748b' }}>R$</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max="300"
+                      value={precoMedioPacoteBalao}
+                      onChange={e => setPrecoMedioPacoteBalao(Number(e.target.value) || 28)}
+                      style={{ width: '65px', padding: '4px 6px', fontSize: '13px', fontWeight: 'bold', textAlign: 'center', border: '1px solid #cbd5e1', borderRadius: '6px' }}
+                    />
+                  </div>
+                </div>
+
+                {/* 📏 DISTRIBUIÇÃO POR POLEGADAS */}
+                <div style={{ marginBottom: '18px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>📏</span> Proporção Ideal por Polegadas:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '8px' }}>
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>5" Minis</div>
+                      <div style={{ fontSize: '10px', color: '#64748b' }}>Acabamento (~30%)</div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#c5a059', marginTop: '4px' }}>~{estatisticasBaloesProjeto.totalMinis5} un</div>
+                    </div>
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>9" / 10" Padrão</div>
+                      <div style={{ fontSize: '10px', color: '#64748b' }}>Corpo Base (~50%)</div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#c5a059', marginTop: '4px' }}>~{estatisticasBaloesProjeto.totalPadrao9} un</div>
+                    </div>
+                    <div style={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px', textAlign: 'center' }}>
+                      <div style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>12" a 18" Big</div>
+                      <div style={{ fontSize: '10px', color: '#64748b' }}>Destaque (~20%)</div>
+                      <div style={{ fontSize: '15px', fontWeight: '900', color: '#c5a059', marginTop: '4px' }}>~{estatisticasBaloesProjeto.totalDestaque12_18} un</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 🎨 LISTA DE PACOTES POR COR */}
+                <div style={{ marginBottom: '18px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#0f172a', marginBottom: '8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <span>🎨</span> Lista de Pacotes de Bexiga por Cor:
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
+                    {estatisticasBaloesProjeto.pacotesPorCor.map((p, idx) => (
+                      <div
+                        key={idx}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          background: '#f8fafc',
+                          border: '1px solid #e2e8f0',
+                          borderRadius: '8px',
+                          padding: '8px 12px'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                          <div style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: p.cor, border: '1.5px solid rgba(0,0,0,0.15)', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }} />
+                          <div>
+                            <div style={{ fontSize: '12px', fontWeight: '800', color: '#1e293b' }}>Cor {p.cor}</div>
+                            <div style={{ fontSize: '10.5px', color: '#64748b' }}>Estimado: {p.qtd} bexigas</div>
+                          </div>
+                        </div>
+                        <div style={{ textAlign: 'right' }}>
+                          <span style={{ background: '#fef3c7', color: '#92400e', fontWeight: '900', fontSize: '11.5px', padding: '3px 8px', borderRadius: '6px', border: '1px solid #fde68a' }}>
+                            {p.pacotes} {p.pacotes === 1 ? 'pacote' : 'pacotes'}
+                          </span>
+                          <div style={{ fontSize: '10px', color: '#64748b', marginTop: '2px' }}>R$ {p.subtotal.toFixed(2)}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* BOTÕES DE AÇÃO: COPIAR E FECHAR */}
+                <div style={{ display: 'flex', gap: '8px', paddingTop: '10px', borderTop: '1.5px solid #f1f5f9' }}>
+                  <button
+                    type="button"
+                    style={{
+                      flex: 1,
+                      padding: '11px',
+                      borderRadius: '8px',
+                      background: 'linear-gradient(135deg, #059669, #10b981)',
+                      color: '#ffffff',
+                      fontSize: '13px',
+                      fontWeight: '800',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)'
+                    }}
+                    onClick={() => {
+                      const txtCores = estatisticasBaloesProjeto.pacotesPorCor.map(p => `  • Cor ${p.cor}: ${p.pacotes} pacote(s) (~${p.qtd} bexigas)`).join('\n');
+                      const msg = `🎈 *LISTA DE COMPRAS DE BALÕES - CELEBRE*\n*Projeto:* ${nomeProjeto || 'Decoração de Evento'}\n\n*Total Estimado:* ~${estatisticasBaloesProjeto.totalBaloes} bexigas (${estatisticasBaloesProjeto.totalPacotes} pacotes de 50 un)\n*Custo Médio de Insumos:* R$ ${estatisticasBaloesProjeto.custoTotalEstimado.toFixed(2)}\n\n*Proporção Sugerida:*\n  • 5" (Acabamento): ~${estatisticasBaloesProjeto.totalMinis5} un\n  • 9"/10" (Base): ~${estatisticasBaloesProjeto.totalPadrao9} un\n  • 12"/18" (Destaque): ~${estatisticasBaloesProjeto.totalDestaque12_18} un\n\n*Pacotes por Cor:*\n${txtCores}\n\n_Gerado automaticamente pelo Sistema Celebre._`;
+                      navigator.clipboard.writeText(msg);
+                      alert("✓ Lista de compras de balões copiada com sucesso! Cole no WhatsApp ou no seu orçamento.");
+                    }}
+                  >
+                    <span>📋 Copiar Lista para WhatsApp</span>
+                  </button>
+                  <button
+                    type="button"
+                    style={{
+                      padding: '11px 18px',
+                      borderRadius: '8px',
+                      background: '#f1f5f9',
+                      color: '#475569',
+                      fontSize: '13px',
+                      fontWeight: '700',
+                      border: '1px solid #cbd5e1',
+                      cursor: 'pointer'
+                    }}
+                    onClick={() => setModalCalculadoraBaloesAberto(false)}
+                  >
+                    Fechar
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

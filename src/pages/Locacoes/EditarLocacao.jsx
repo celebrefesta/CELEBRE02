@@ -866,6 +866,9 @@ const EditarLocacao = () => {
             </span>
         </div>
         <div className="header-actions" style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+          <button type="button" className="btn-primary-outline" onClick={() => navigate('/moodboard')} title="Abrir projeto decorativo no Studio" style={{ borderColor: 'var(--dourado)', color: 'var(--dourado)' }}>
+            🎨 Moodboard Studio
+          </button>
           <button type="button" className="btn-secundario-alerta" onClick={() => setModalCalendarioAberto(true)}>
             📅 Disponibilidade
           </button>

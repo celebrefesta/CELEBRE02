@@ -2260,3 +2260,15 @@
   .cg-mcard-btn-icon { width: 30px; height: 30px; border-radius: 6px; border: 1px solid #fecaca; background: #fee2e2; color: #ef4444; cursor: pointer; }
   .cg-btn-whatsapp-mcard { padding: 6px 10px; border-radius: 6px; background: #dcfce7; color: #16a34a; border: 1px solid #bbf7d0; font-size: 11px; font-weight: 700; display: flex; align-items: center; gap: 4px; }
 }
+
+/* 🌿 ÍCONES E APLIQUES VETORIAIS (SUPER ADMIN) */
+.cg-ornament-admin-card:hover {
+  transform: translateY(-2px);
+  border-color: #c5a059 !important;
+  box-shadow: 0 8px 20px rgba(197, 160, 89, 0.15) !important;
+}
+
+.cg-subtab-pill:hover {
+  border-color: #c5a059 !important;
+}
+
