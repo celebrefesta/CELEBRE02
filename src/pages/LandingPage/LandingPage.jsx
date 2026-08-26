@@ -12,6 +12,30 @@ const LandingPage = () => {
   const [modalContatoAberto, setModalContatoAberto] = useState(false);
   const [planos, setPlanos] = useState([]);
   const [loadingPlanos, setLoadingPlanos] = useState(true);
+  const [planoAtivoIndex, setPlanoAtivoIndex] = useState(1);
+  const pricingCardsRef = React.useRef(null);
+
+  const handleMudarPlano = (novoIdx) => {
+    setPlanoAtivoIndex(novoIdx);
+    if (pricingCardsRef.current && pricingCardsRef.current.children[novoIdx]) {
+      pricingCardsRef.current.children[novoIdx].scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest'
+      });
+    }
+  };
+
+  const handlePricingScroll = (e) => {
+    const scrollLeft = e.target.scrollLeft;
+    const item = e.target.children[0];
+    if (!item) return;
+    const cardWidth = item.offsetWidth + 14;
+    const newIndex = Math.round(scrollLeft / cardWidth);
+    if (newIndex >= 0 && newIndex < planos.length && newIndex !== planoAtivoIndex) {
+      setPlanoAtivoIndex(newIndex);
+    }
+  };
   
   // Estado que guarda as empresas. Começa com parceiros padrões de demonstração!
   const [empresasParceiras, setEmpresasParceiras] = useState([
@@ -182,14 +206,18 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* 🔥 MARCAS PARCEIRAS DINÂMICAS (INVISÍVEL SE NÃO TIVER NENHUMA) 🔥 */}
+      {/* 🔥 MARCAS PARCEIRAS DINÂMICAS (LETREIRO DELICADO EM 1 SÓ LINHA) 🔥 */}
       {empresasParceiras.length > 0 && (
         <section className="brands-banner">
-          <p>EMPRESAS QUE CONFIAM NO NOSSO TRABALHO</p>
-          <div className="brands-row">
-              {empresasParceiras.map((empresa, index) => (
-                 <span key={index}>{empresa}</span>
+          <p className="brands-title">EMPRESAS QUE CONFIAM NO CELEBRE</p>
+          <div className="brands-marquee-container">
+            <div className="brands-marquee-track">
+              {empresasParceiras.concat(empresasParceiras).concat(empresasParceiras).map((empresa, index) => (
+                <span key={index} className="brand-item">
+                  <span className="brand-dot">✦</span> {empresa}
+                </span>
               ))}
+            </div>
           </div>
         </section>
       )}
@@ -239,26 +267,28 @@ const LandingPage = () => {
         </div>
       </section>
 
-      {/* PROVA SOCIAL / DEPOIMENTOS */}
+      {/* PROVA SOCIAL / DEPOIMENTOS INTERATIVOS */}
       <section className="testimonials-section">
         <div className="social-header">
           <h2>Quem vive de festa, usa Celebre.</h2>
           <p>Conheça as decoradoras que já transformaram sua operação com o nosso sistema.</p>
         </div>
-        <div className="testimonials-grid">
-          {depoimentos.map((dep) => (
-            <div key={dep.id} className="testimonial-card">
-              <div className="quote-icon">"</div>
-              <p className="testimonial-text">{dep.texto}</p>
-              <div className="testimonial-author">
-                <img src={dep.foto} alt={dep.nome} className="testimonial-avatar" />
-                <div className="author-info">
-                  <h4>{dep.nome}</h4>
-                  <span>{dep.empresa}</span>
+        <div className="testimonials-marquee-container">
+          <div className="testimonials-marquee-track">
+            {depoimentos.concat(depoimentos).concat(depoimentos).map((dep, index) => (
+              <div key={`${dep.id}-${index}`} className="testimonial-card">
+                <div className="testimonial-stars">★★★★★</div>
+                <p className="testimonial-text">"{dep.texto}"</p>
+                <div className="testimonial-author">
+                  <img src={dep.foto} alt={dep.nome} className="testimonial-avatar" />
+                  <div className="author-info">
+                    <h4>{dep.nome}</h4>
+                    <span>{dep.empresa}</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
       </section>
 
@@ -272,58 +302,98 @@ const LandingPage = () => {
         {loadingPlanos ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#cbd5e1' }}>Carregando planos...</div>
         ) : (
-          <div className="pricing-cards">
-            {planos.map((p) => {
-               const isDestaque = String(p.destaque) === "true";
-               
-               let nomePlanoFormatado = p.nome;
-               if(nomePlanoFormatado.toLowerCase().includes('plus')) nomePlanoFormatado = 'Pro';
+          <div className="pricing-wrapper">
+            {/* Controles de Navegação por Flechas no Mobile */}
+            <div className="mobile-plan-controls">
+              <button 
+                type="button" 
+                className="plan-nav-arrow" 
+                onClick={() => handleMudarPlano(planoAtivoIndex > 0 ? planoAtivoIndex - 1 : planos.length - 1)}
+                aria-label="Plano anterior"
+              >
+                ‹
+              </button>
+              
+              <div className="plan-dots">
+                {planos.map((p, idx) => (
+                  <button 
+                    key={p.id || idx} 
+                    type="button" 
+                    className={`plan-dot ${planoAtivoIndex === idx ? 'active' : ''}`}
+                    onClick={() => handleMudarPlano(idx)}
+                    aria-label={`Ver plano ${p.nome}`}
+                  />
+                ))}
+              </div>
 
-               const isBasico = nomePlanoFormatado.toLowerCase().includes('básico') || nomePlanoFormatado.toLowerCase().includes('basico');
-               const isPremium = nomePlanoFormatado.toLowerCase().includes('premium');
-               
-               return (
-                 <div key={p.id} className={`pricing-card ${isDestaque ? 'popular' : ''}`}>
-                   {isDestaque && <div className="popular-badge">Mais Escolhido</div>}
-                   <div className="card-header">
-                     <h3>{nomePlanoFormatado}</h3>
-                     <p className="pricing-desc">
-                        {isBasico ? 'O essencial para organizar seu acervo.' : 
-                         isPremium ? 'Para quem já precisa controlar o financeiro.' : 
-                         'Poder absoluto para locadoras de grande porte.'}
-                     </p>
-                   </div>
-                   <div className="price">
-                     <span>R$</span> {p.preco} <span>/mês</span>
-                   </div>
-                   
-                   <ul className="pricing-features">
-                     <li><span className="check-icon">✓</span> Gestão de Clientes</li>
-                     <li><span className="check-icon">✓</span> Gestão de Estoque</li>
-                     <li><span className="check-icon">✓</span> Gestão de Pedidos/Orçamentos</li>
-                     <li><span className="check-icon">✓</span> Gestão de Logística</li>
-                     <li><span className="check-icon">✓</span> Gestão de Fornecedores</li>
-                     <li><span className="check-icon">✓</span> Agenda</li>
+              <button 
+                type="button" 
+                className="plan-nav-arrow" 
+                onClick={() => handleMudarPlano(planoAtivoIndex < planos.length - 1 ? planoAtivoIndex + 1 : 0)}
+                aria-label="Próximo plano"
+              >
+                ›
+              </button>
+            </div>
+
+            <div 
+              className="pricing-cards" 
+              ref={pricingCardsRef}
+              onScroll={handlePricingScroll}
+            >
+              {planos.map((p, idx) => {
+                 const isDestaque = String(p.destaque) === "true";
+                 const isSelectedMobile = planoAtivoIndex === idx;
+                 
+                 let nomePlanoFormatado = p.nome;
+                 if(nomePlanoFormatado.toLowerCase().includes('plus')) nomePlanoFormatado = 'Pro';
+
+                 const isBasico = nomePlanoFormatado.toLowerCase().includes('básico') || nomePlanoFormatado.toLowerCase().includes('basico');
+                 const isPremium = nomePlanoFormatado.toLowerCase().includes('premium');
+                 
+                 return (
+                   <div key={p.id} className={`pricing-card ${isDestaque ? 'popular' : ''} ${isSelectedMobile ? 'mobile-selected' : ''}`}>
+                     {isDestaque && <div className="popular-badge">Mais Escolhido</div>}
+                     <div className="card-header">
+                       <h3>{nomePlanoFormatado}</h3>
+                       <p className="pricing-desc">
+                          {isBasico ? 'O essencial para organizar seu acervo.' : 
+                           isPremium ? 'Para quem já precisa controlar o financeiro.' : 
+                           'Poder absoluto para locadoras de grande porte.'}
+                       </p>
+                     </div>
+                     <div className="price">
+                       <span>R$</span> {p.preco} <span>/mês</span>
+                     </div>
                      
-                     {isBasico ? (
-                        <li style={{ color: '#94a3b8', textDecoration: 'line-through' }}>
-                          <span style={{ color: '#ef4444', fontWeight: 'bold', marginRight: '5px' }}>✕</span> Gestão Financeira
-                        </li>
-                     ) : (
-                        <li><span className="check-icon">✓</span> Gestão Financeira</li>
-                     )}
+                     <ul className="pricing-features">
+                       <li><span className="check-icon">✓</span> Gestão de Clientes</li>
+                       <li><span className="check-icon">✓</span> Gestão de Estoque</li>
+                       <li><span className="check-icon">✓</span> Gestão de Pedidos/Orçamentos</li>
+                       <li><span className="check-icon">✓</span> Gestão de Logística</li>
+                       <li><span className="check-icon">✓</span> Gestão de Fornecedores</li>
+                       <li><span className="check-icon">✓</span> Agenda</li>
+                       
+                       {isBasico ? (
+                          <li style={{ color: '#94a3b8', textDecoration: 'line-through' }}>
+                            <span style={{ color: '#ef4444', fontWeight: 'bold', marginRight: '5px' }}>✕</span> Gestão Financeira
+                          </li>
+                       ) : (
+                          <li><span className="check-icon">✓</span> Gestão Financeira</li>
+                       )}
 
-                     <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : '5+'}</strong> Usuário(s)</li>
-                     <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : 'Múltiplos'}</strong> Modelo(s) de Contrato</li>
-                     <li><span className="check-icon">✓</span> <strong>{isBasico ? '1.000' : isPremium ? '5.000' : '10.000'}</strong> Produtos no Acervo</li>
-                   </ul>
-                   
-                   <Link to={`/cadastro?plano=${p.id}`} className={isDestaque ? 'btn-pricing-solid' : 'btn-pricing-outline'}>
-                     Começar Agora
-                   </Link>
-                 </div>
-               )
-            })}
+                       <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : '5+'}</strong> Usuário(s)</li>
+                       <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : 'Múltiplos'}</strong> Modelo(s) de Contrato</li>
+                       <li><span className="check-icon">✓</span> <strong>{isBasico ? '1.000' : isPremium ? '5.000' : '10.000'}</strong> Produtos no Acervo</li>
+                     </ul>
+                     
+                     <Link to={`/cadastro?plano=${p.id}`} className={isDestaque ? 'btn-pricing-solid' : 'btn-pricing-outline'}>
+                       Começar Agora
+                     </Link>
+                   </div>
+                 )
+              })}
+            </div>
           </div>
         )}
       </section>

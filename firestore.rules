@@ -199,6 +199,31 @@ service cloud.firestore {
       allow update, delete: if isSuperAdmin() || (logado() && resource.data.empresaId == request.auth.uid) || (logado() && souDonoOuFuncionario(resource.data.empresaId));
     }
 
+    // projetos_moodboard/{docId}
+    match /projetos_moodboard/{docId} {
+      allow read: if isSuperAdmin() 
+                  || (logado() && resource.data.userId == request.auth.uid)
+                  || (logado() && resource.data.tenantId == request.auth.uid)
+                  || (logado() && souDonoOuFuncionario(resource.data.userId))
+                  || (logado() && souDonoOuFuncionario(resource.data.tenantId));
+      allow create: if isSuperAdmin() 
+                    || (logado() && request.resource.data.userId == request.auth.uid)
+                    || (logado() && request.resource.data.tenantId == request.auth.uid)
+                    || (logado() && souDonoOuFuncionario(request.resource.data.userId))
+                    || (logado() && souDonoOuFuncionario(request.resource.data.tenantId));
+      allow update, delete: if isSuperAdmin() 
+                            || (logado() && resource.data.userId == request.auth.uid)
+                            || (logado() && resource.data.tenantId == request.auth.uid)
+                            || (logado() && souDonoOuFuncionario(resource.data.userId))
+                            || (logado() && souDonoOuFuncionario(resource.data.tenantId));
+    }
+
+    // configuracoes_globais/{docId} (Categorias, Ornamentos e Configurações Globais do Moodboard)
+    match /configuracoes_globais/{docId} {
+      allow read: if logado();
+      allow write: if isSuperAdmin();
+    }
+
     // Bloqueio padrão para qualquer outra coleção
     match /{document=**} {
       allow read, write: if false;

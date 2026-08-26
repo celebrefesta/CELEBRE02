@@ -1,17 +1,90 @@
 {
+  "id": "br.com.celebre.app",
+  "name": "Celebre - Gestão de Locação & Festas",
   "short_name": "Celebre",
-  "name": "Celebre - Gestão de Festas",
-  "description": "Sistema de gestão para decoradoras de festas",
+  "description": "Sistema completo e inteligente de gestão para decoradoras, locadoras de acervo e cenografia de eventos.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "window-controls-overlay"],
+  "orientation": "any",
+  "theme_color": "#0f172a",
+  "background_color": "#0f172a",
+  "categories": ["business", "productivity", "utilities", "lifestyle"],
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "related_applications": [],
   "icons": [
     {
-      "src": "favicon.ico",
-      "sizes": "16x16 32x32 48x48 64x64",
-      "type": "image/x-icon"
+      "src": "/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "start_url": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#0f172a",
-  "background_color": "#ffffff"
+  "screenshots": [
+    {
+      "src": "/screenshot-desktop.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Celebre - Painel de Controle e Gestão de Festas"
+    },
+    {
+      "src": "/screenshot-mobile.png",
+      "sizes": "750x1334",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Celebre - Catálogo Online e Conferência de Acervo"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova Locação",
+      "short_name": "Nova Locação",
+      "description": "Iniciar um novo pedido de locação",
+      "url": "/nova-locacao",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Locações & Devoluções",
+      "short_name": "Locações",
+      "description": "Gerenciar conferências, entregas e devoluções",
+      "url": "/locacoes",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Estoque & Acervo",
+      "short_name": "Estoque",
+      "description": "Consultar peças, decorações e disponibilidade",
+      "url": "/estoque",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Controle Financeiro",
+      "short_name": "Financeiro",
+      "description": "Fluxo de caixa, recebimentos e despesas",
+      "url": "/financeiro",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    }
+  ]
 }

@@ -1,17 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
+import html2canvas from 'html2canvas';
 import './Catalago.css';
-
-const ESTRUTURA_TEMAS = {
-  "Infantil": ["Princesas", "Homem Aranha", "Heróis", "Safari", "Fazendinha", "Mickey / Minnie", "Outros Infantil"],
-  "Casamento e Noivado": ["Rústico", "Moderno", "Minimalista", "Clássico", "Outros Casamento"],
-  "Adulto": ["Feminino", "Masculino", "Tardezinha / Boteco", "Neon / Balada", "Outros Adulto"],
-  "Times": ["Santos", "São Paulo", "Palmeiras", "Corinthians", "Flamengo", "Outros Times"],
-  "Batizado": ["Menino", "Menina", "Neutro / Clássico"]
-};
 
 const Catalogo = () => {
   const navigate = useNavigate();
@@ -23,27 +16,56 @@ const Catalogo = () => {
   const tenantId = idEmpresa || (usuarioLogado ? usuarioLogado.uid : null);
 
   const [estoque, setEstoque] = useState([]);
+  const [locacoes, setLocacoes] = useState([]);
   const [empresa, setEmpresa] = useState({ 
-    nome: 'CELEBRE', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '' 
+    nome: 'CELEBRE FESTAS', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '', capa: '' 
   });
 
   const [loading, setLoading] = useState(true);
   const [lojaInvalida, setLojaInvalida] = useState(false);
   
+  // Filtros de Navegação
   const [filtroModalidade, setFiltroModalidade] = useState('Todas');
-  const [filtroMenu, setFiltroMenu] = useState('Todos');
-
+  const [filtroCategoria, setFiltroCategoria] = useState('Todas');
+  const [filtroTema, setFiltroTema] = useState('Todos');
   const [busca, setBusca] = useState('');
-  const [carrinho, setCarrinho] = useState([]);
-  
-  const [modalFinalizar, setModalFinalizar] = useState(false);
+  const [dataEventoFiltro, setDataEventoFiltro] = useState('');
+  const [ordenacao, setOrdenacao] = useState('destaques');
+  const [verApenasFavoritos, setVerApenasFavoritos] = useState(false);
 
+  // ❤️ Favoritos / Pasta de Inspiração (LocalStorage)
+  const [favoritos, setFavoritos] = useState(() => {
+    try {
+      const salvas = localStorage.getItem(`celebre_favs_${tenantId || 'global'}`);
+      return salvas ? JSON.parse(salvas) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  // Carrinho & Drawer
+  const [carrinho, setCarrinho] = useState([]);
+  const [cartDrawerAberto, setCartDrawerAberto] = useState(false);
+
+  // 🎨 Mini Simulador de Combinações (Painel de Harmonia)
+  const [simuladorAberto, setSimuladorAberto] = useState(false);
+  const painelSimuladorRef = useRef(null);
+  const [gerandoImagemPainel, setGerandoImagemPainel] = useState(false);
+
+  // Formulário do Cliente
   const [dadosCliente, setDadosCliente] = useState({ nome: '', whats: '', dataEvento: '' });
   const [tipoFluxo, setTipoFluxo] = useState('orcamento');
 
+  // Menu Mobile Drawer & Detalhe
   const [menuMobileAberto, setMenuMobileAberto] = useState(false);
-
   const [produtoDetalhe, setProdutoDetalhe] = useState(null);
+
+  // Salvar favoritos no storage local
+  useEffect(() => {
+    if (tenantId) {
+      localStorage.setItem(`celebre_favs_${tenantId}`, JSON.stringify(favoritos));
+    }
+  }, [favoritos, tenantId]);
 
   // 🔥 SISTEMA DE AUDITORIA (ESPIÃO DO CATÁLOGO)
   const registrarLog = async (acao, detalhes) => {
@@ -63,7 +85,6 @@ const Catalogo = () => {
         dataHora: new Date().toISOString(),
         criadoEm: serverTimestamp()
       });
-
     } catch (error) {
       console.error("Erro ao gravar log do catálogo:", error);
     }
@@ -72,9 +93,9 @@ const Catalogo = () => {
   useEffect(() => {
     const inicializar = async () => {
       if (!tenantId) {
-          setLojaInvalida(true);
-          setLoading(false);
-          return;
+        setLojaInvalida(true);
+        setLoading(false);
+        return;
       }
 
       try {
@@ -84,20 +105,32 @@ const Catalogo = () => {
         if (docSnap.exists()) {
           const d = docSnap.data();
           setEmpresa({
-            nome: d.nomeEmpresa || d.nome || 'CELEBRE',
+            nome: d.nomeEmpresa || d.nome || 'CELEBRE FESTAS',
             logo: d.logoUrl || d.logo || d.logotipo || '',
             whats: d.whatsapp || d.telefone || '',
             endereco: d.endereco || '',
             insta: d.instagram || '',
+            capa: d.bannerUrl || d.capaUrl || '',
             pixelFacebook: d.pixelFacebook || d.pixel || '' 
           });
         }
 
+        // Carrega Estoque (Incluindo todas as peças, inclusive em reparo)
         const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
-        const snap = await getDocs(qEstoque);
-        const itens = snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(i => i.status !== 'manutencao'); 
-   
+        const snapEstoque = await getDocs(qEstoque);
+        const itens = snapEstoque.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(i => i.status !== 'inativo'); 
         setEstoque(itens);
+
+        // Carrega Locações Ativas para Checagem de Disponibilidade Real
+        const qLoc = query(collection(db, "locacoes"), where("userId", "==", tenantId));
+        const snapLoc = await getDocs(qLoc);
+        const listaLoc = snapLoc.docs
+          .map(d => ({ id: d.id, ...d.data() }))
+          .filter(l => l.status !== 'cancelada' && l.status !== 'devolvido');
+        setLocacoes(listaLoc);
+
       } catch (e) { 
         console.error(e);
       } finally { 
@@ -107,6 +140,7 @@ const Catalogo = () => {
     inicializar();
   }, [tenantId]);
 
+  // Pixel Facebook
   useEffect(() => {
     if (empresa.pixelFacebook) {
       !function(f,b,e,v,n,t,s)
@@ -129,71 +163,280 @@ const Catalogo = () => {
     }
   };
 
-  const categoriasDinamicas = [...new Set(estoque.map(i => i.categoria ? String(i.categoria) : "").filter(c => c !== ""))].sort();
+  // 🏷️ Categorias Dinâmicas (Direto do Estoque)
+  const categoriasDinamicas = useMemo(() => {
+    return [...new Set(estoque.map(i => i.categoria ? String(i.categoria).trim() : "").filter(Boolean))].sort();
+  }, [estoque]);
 
+  // 🎭 Temas Dinâmicos (Direto do Estoque Real)
+  const temasDinamicos = useMemo(() => {
+    const temasSet = new Set();
+    estoque.forEach(item => {
+      const t = item.tema ? String(item.tema).trim() : '';
+      if (t && t.toLowerCase() !== 'geral' && t.toLowerCase() !== 'outros' && t.toLowerCase() !== 'sem tema') {
+        temasSet.add(t);
+      }
+    });
+    return Array.from(temasSet).sort();
+  }, [estoque]);
+
+  // Contagens para as Abas de Formato
+  const qtdPegueMonte = useMemo(() => {
+    return estoque.filter(i => String(i.modalidade || '').toLowerCase().includes('pegue')).length;
+  }, [estoque]);
+
+  const qtdDecoracao = useMemo(() => {
+    return estoque.filter(i => String(i.modalidade || '').toLowerCase().includes('decor') || i.especificacoes?.isDecoracao).length;
+  }, [estoque]);
+
+  // 📅 Normalizador de Datas ISO (YYYY-MM-DD)
+  const formatarDataISO = (dStr) => {
+    if (!dStr || typeof dStr !== 'string') return '';
+    const limpo = dStr.split('T')[0].trim();
+    if (limpo.includes('/')) {
+      const p = limpo.split('/');
+      if (p.length === 3) {
+        if (p[0].length === 4) return `${p[0]}-${String(p[1]).padStart(2, '0')}-${String(p[2]).padStart(2, '0')}`;
+        return `${p[2]}-${String(p[1]).padStart(2, '0')}-${String(p[0]).padStart(2, '0')}`;
+      }
+    }
+    return limpo;
+  };
+
+  // 📅 1. CHECAGEM DE DISPONIBILIDADE REAL POR DATA
+  const calcularDisponibilidadeItem = (item) => {
+    const isManutencao = item.status === 'manutencao' || item.status === 'reparo';
+
+    if (!dataEventoFiltro) {
+      if (isManutencao) {
+        return { 
+          checado: true, 
+          disponivel: true, 
+          qtdLivre: 0, 
+          status: 'manutencao', 
+          label: item.dataPrevisaoRetorno 
+            ? `🛠️ Reparo até ${item.dataPrevisaoRetorno.split('-').reverse().join('/')}` 
+            : '🛠️ Em Reparo' 
+        };
+      }
+      return { checado: false, disponivel: true, qtdLivre: Number(item.quantidade || 1), status: 'neutro' };
+    }
+
+    const dataAlvo = formatarDataISO(dataEventoFiltro);
+    const qtdTotal = Number(item.quantidade || 1);
+    let qtdReservada = 0;
+
+    // Se estiver em manutenção com data de previsão de retorno
+    if (isManutencao && item.dataPrevisaoRetorno) {
+      const dataRetorno = formatarDataISO(item.dataPrevisaoRetorno);
+      if (dataRetorno && dataAlvo < dataRetorno) {
+        return { 
+          checado: true, 
+          disponivel: false, 
+          qtdLivre: 0, 
+          status: 'manutencao', 
+          label: `🛠️ Em reparo até ${item.dataPrevisaoRetorno.split('-').reverse().join('/')}` 
+        };
+      }
+    }
+
+    locacoes.forEach(loc => {
+      const inicio = formatarDataISO(loc.dataRetirada || loc.dataEvento || loc.dataFesta);
+      const fim = formatarDataISO(loc.dataDevolucao || loc.dataRetirada || loc.dataEvento || loc.dataFesta);
+
+      const estaNoPeriodo = inicio && fim 
+        ? (dataAlvo >= inicio && dataAlvo <= fim)
+        : (inicio === dataAlvo);
+
+      if (estaNoPeriodo && Array.isArray(loc.itens)) {
+        loc.itens.forEach(p => {
+          if (p.id === item.id || p.nome === item.nome) {
+            qtdReservada += Number(p.qtd || 1);
+          }
+        });
+      }
+    });
+
+    const qtdLivre = Math.max(0, qtdTotal - qtdReservada);
+
+    if (qtdLivre <= 0) {
+      return { checado: true, disponivel: false, qtdLivre: 0, status: 'esgotado', label: 'Esgotado nesta data' };
+    }
+    if (qtdLivre === 1) {
+      return { checado: true, disponivel: true, qtdLivre: 1, status: 'urgencia', label: '⚡ Última unidade!' };
+    }
+    return { checado: true, disponivel: true, qtdLivre: qtdLivre, status: 'disponivel', label: `✓ ${qtdLivre} disponíveis` };
+  };
+
+  // ❤️ 2. GERENCIAMENTO DE FAVORITOS
+  const toggleFavorito = (itemId, e) => {
+    if (e) e.stopPropagation();
+    if (favoritos.includes(itemId)) {
+      setFavoritos(favoritos.filter(id => id !== itemId));
+    } else {
+      setFavoritos([...favoritos, itemId]);
+      dispararPixel('AddToWishlist', { content_ids: [itemId] });
+    }
+  };
+
+  const isFavorito = (itemId) => favoritos.includes(itemId);
+
+  // Formatação de Dimensões
   const formatarDimensoes = (dim) => {
     if (!dim) return null;
     if (typeof dim === 'string') return dim;
-
     if (typeof dim === 'object') {
       let partes = [];
-      if (dim.altura) partes.push(`A:${dim.altura}`);
-      if (dim.largura) partes.push(`L:${dim.largura}`);
-      if (dim.comprimento) partes.push(`C:${dim.comprimento}`);
-      return partes.join(' x ');
+      if (dim.altura) partes.push(`A:${dim.altura}cm`);
+      if (dim.largura) partes.push(`L:${dim.largura}cm`);
+      if (dim.comprimento) partes.push(`C:${dim.comprimento}cm`);
+      if (dim.diametro) partes.push(`Ø:${dim.diametro}cm`);
+      return partes.length > 0 ? partes.join(' × ') : null;
     }
     return null;
   };
 
   const formatarDimensoesDetalhe = (esp) => {
-      if (!esp) return null;
-      let partes = [];
-
-      if (Number(esp.largura) > 0) partes.push(`Largura: ${esp.largura}cm`);
-      if (Number(esp.altura) > 0) partes.push(`Altura: ${esp.altura}cm`);
-      if (Number(esp.diametro) > 0) partes.push(`Diâmetro: ${esp.diametro}cm`);
-      if (Number(esp.comprimento) > 0) partes.push(`Comp.: ${esp.comprimento}cm`);
-      return partes.length > 0 ? partes.join(' | ') : null;
+    if (!esp) return null;
+    let partes = [];
+    if (Number(esp.largura) > 0) partes.push(`Largura: ${esp.largura}cm`);
+    if (Number(esp.altura) > 0) partes.push(`Altura: ${esp.altura}cm`);
+    if (Number(esp.diametro) > 0) partes.push(`Diâmetro: ${esp.diametro}cm`);
+    if (Number(esp.comprimento) > 0) partes.push(`Comprimento: ${esp.comprimento}cm`);
+    return partes.length > 0 ? partes.join(' • ') : null;
   };
 
+  // 🛒 Controle de Carrinho
   const toggleNoCarrinho = (item) => {
-    const existe = carrinho.find(i => i.id === item.id);
+    const disp = calcularDisponibilidadeItem(item);
+    if (disp.checado && !disp.disponivel) {
+      alert(`⚠️ A peça "${item.nome}" já está totalmente reservada para a data selecionada (${dataEventoFiltro}).`);
+      return;
+    }
 
+    const existe = carrinho.find(i => i.id === item.id);
     if (existe) {
       setCarrinho(carrinho.filter(i => i.id !== item.id));
     } else {
       setCarrinho([...carrinho, { ...item, qtd: 1 }]);
-
       dispararPixel('AddToCart', { 
-          content_name: item.nome, 
-          value: Number(item.financeiro?.valorAluguel || 0), 
-          currency: 'BRL' 
+        content_name: item.nome, 
+        value: Number(item.financeiro?.valorAluguel || 0), 
+        currency: 'BRL' 
       });
     }
   };
 
-  const isNoCarrinho = (id) => carrinho.some(i => i.id === id);
-
-  const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * i.qtd), 0);
-
-  const abrirCarrinho = () => {
-      setModalFinalizar(true);
-      dispararPixel('InitiateCheckout', { value: calcularTotal(), currency: 'BRL' });
+  const alterarQtd = (id, delta) => {
+    setCarrinho(prev => prev.map(item => {
+      if (item.id === id) {
+        const novaQtd = (item.qtd || 1) + delta;
+        return novaQtd > 0 ? { ...item, qtd: novaQtd } : null;
+      }
+      return item;
+    }).filter(Boolean));
   };
 
+  const removerDoCarrinho = (id) => {
+    setCarrinho(prev => prev.filter(item => item.id !== id));
+  };
+
+  const isNoCarrinho = (id) => carrinho.some(i => i.id === id);
+
+  const getQtdNoCarrinho = (id) => {
+    const item = carrinho.find(i => i.id === id);
+    return item ? (item.qtd || 1) : 0;
+  };
+
+  const calcularTotal = () => carrinho.reduce((acc, i) => acc + (Number(i.financeiro?.valorAluguel || 0) * (i.qtd || 1)), 0);
+
+  const calcularTotalEconomia = () => {
+    let economia = 0;
+    carrinho.forEach(item => {
+      const { desconto } = calcularAncoragemKit(item);
+      if (desconto > 0) {
+        economia += desconto * (item.qtd || 1);
+      }
+    });
+    return economia;
+  };
+
+  const abrirCarrinho = () => {
+    setCartDrawerAberto(true);
+    dispararPixel('InitiateCheckout', { value: calcularTotal(), currency: 'BRL' });
+  };
+
+  // Ancoragem de Kit vs Peças Avulsas
+  const calcularAncoragemKit = (item) => {
+    const precoAtual = Number(item.financeiro?.valorAluguel || 0);
+    let precoSomaAvulso = 0;
+    if (item.especificacoes?.isDecoracao && item.especificacoes?.itensDecoracao) {
+      precoSomaAvulso = item.especificacoes.itensDecoracao.reduce((acc, peca) => acc + (Number(peca.precoOriginal || 0) * (peca.qtd || 1)), 0);
+    }
+    const desconto = precoSomaAvulso - precoAtual;
+    return { precoAtual, precoSomaAvulso, desconto, isVantajoso: desconto > 0 };
+  };
+
+  // 🎨 3. BAIXAR OU COMPARTILHAR O SIMULADOR DE HARMONIA
+  const exportarPainelSimulador = async (compartilharWhatsApp = false) => {
+    if (!painelSimuladorRef.current) return;
+    setGerandoImagemPainel(true);
+    try {
+      const canvas = await html2canvas(painelSimuladorRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#0f172a'
+      });
+      const dataUrl = canvas.toDataURL('image/png');
+
+      if (compartilharWhatsApp) {
+        const link = document.createElement('a');
+        link.download = `painel-harmonia-${empresa.nome.toLowerCase().replace(/\s+/g, '-')}.png`;
+        link.href = dataUrl;
+        link.click();
+
+        const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : '';
+        const msg = `Olá! Montei um painel de harmonia com essas peças no catálogo online e gostaria de verificar o orçamento! ✨`;
+        window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(msg)}`, '_blank');
+      } else {
+        const link = document.createElement('a');
+        link.download = `painel-decoracao-${empresa.nome.toLowerCase().replace(/\s+/g, '-')}.png`;
+        link.href = dataUrl;
+        link.click();
+      }
+    } catch (err) {
+      console.error("Erro ao gerar imagem do painel:", err);
+      alert("Não foi possível gerar a imagem no momento.");
+    } finally {
+      setGerandoImagemPainel(false);
+    }
+  };
+
+  // 📤 Envio de Orçamento para o WhatsApp
   const enviarOrcamento = async (e) => {
-    e.preventDefault();
-    if (carrinho.length === 0) return alert("Seu carrinho está vazio!");
+    if (e) e.preventDefault();
+    if (carrinho.length === 0) return alert("Sua lista está vazia! Adicione peças ao carrinho.");
+
+    const nome = dadosCliente.nome.trim();
+    const whats = dadosCliente.whats.trim();
+    const dataFesta = dadosCliente.dataEvento || dataEventoFiltro;
+
+    if (!dataFesta) {
+      return alert("📅 Por favor, informe a Data da sua Festa para verificarmos a disponibilidade das peças!");
+    }
+    if (!nome) return alert("Por favor, preencha o seu nome.");
+    if (!whats) return alert("Por favor, preencha o seu WhatsApp.");
 
     const total = calcularTotal();
-    const resumoItens = carrinho.map(i => `- ${i.qtd}x ${i.nome} (R$ ${Number(i.financeiro?.valorAluguel || 0).toFixed(2)})`).join('\n');
+    const resumoItens = carrinho.map(i => `• ${i.qtd || 1}x *${i.nome}* - R$ ${(Number(i.financeiro?.valorAluguel || 0) * (i.qtd || 1)).toFixed(2)}`).join('\n');
+    const economiaTotal = calcularTotalEconomia();
 
     try {
       await addDoc(collection(db, "locacoes"), {
-        clienteNome: dadosCliente.nome,
-        clienteWhats: dadosCliente.whats,
+        clienteNome: nome,
+        clienteWhats: whats,
         temaFesta: `Catálogo: Orçamento Web`,
-        dataRetirada: dadosCliente.dataEvento,
+        dataRetirada: dataFesta,
         itens: carrinho,
         valorTotal: total,
         status: 'orcamento',
@@ -202,426 +445,1120 @@ const Catalogo = () => {
         userId: tenantId 
       });
 
-      // 🔥 REGISTRA NO ESPIÃO
-      await registrarLog("NOVO ORÇAMENTO WEB", `O cliente "${dadosCliente.nome}" gerou um orçamento público via Catálogo no valor de R$ ${total.toFixed(2)}.`);
+      await registrarLog("NOVO ORÇAMENTO WEB", `O cliente "${nome}" gerou um orçamento público via Catálogo no valor de R$ ${total.toFixed(2)} com ${carrinho.length} itens para a data ${dataFesta}.`);
 
       dispararPixel('Lead', { value: total, currency: 'BRL' });
-      const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : "5519999999999";
 
-      const texto = `🌟 *NOVO ORÇAMENTO* 🌟\n\n*Cliente:* ${dadosCliente.nome}\n*Data do Evento:* ${dadosCliente.dataEvento}\n\n*Itens Escolhidos:*\n${resumoItens}\n\n*Total Estimado:* R$ ${total.toFixed(2)}\n\nOlá!\nVim pelo catálogo e gostaria de verificar a disponibilidade destas peças!`;
+      const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : "5519999999999";
       
+      let texto = `🌟 *SOLICITAÇÃO DE ORÇAMENTO - ${empresa.nome.toUpperCase()}* 🌟\n\n`;
+      texto += `👤 *Cliente:* ${nome}\n`;
+      texto += `📱 *WhatsApp:* ${whats}\n`;
+      texto += `📅 *Data da Festa:* ${dataFesta.split('-').reverse().join('/')}\n`;
+      texto += `\n🛍️ *Peças Selecionadas (${carrinho.length}):*\n${resumoItens}\n\n`;
+      texto += `💰 *Valor Total Estimado:* R$ ${total.toFixed(2)}\n`;
+      if (economiaTotal > 0) {
+        texto += `🎁 *Economia em Pacotes:* R$ ${economiaTotal.toFixed(2)}\n`;
+      }
+      texto += `\nOlá! Vi essas peças no catálogo online e gostaria de verificar a disponibilidade para minha festa nesta data e fechar a locação! ✨`;
+
       window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(texto)}`, '_blank');
-      setCarrinho([]);
-      setModalFinalizar(false);
+      setCartDrawerAberto(false);
 
     } catch (err) { 
-        console.error(err);
-        alert("Erro ao processar o orçamento. Tente novamente.");
+      console.error("Erro ao enviar orçamento:", err);
+      alert("Erro ao processar o orçamento. Tente novamente.");
     }
   };
 
-  const itensFiltrados = estoque.filter(i => {
-    const tBusca = String(busca || '').toLowerCase();
-    const nomeI = String(i.nome || '').toLowerCase();
-    const catI = String(i.categoria || '').toLowerCase();
-    const temaI = String(i.tema || i.tags || '').toLowerCase(); 
-    return (!busca || nomeI.includes(tBusca) || catI.includes(tBusca) || temaI.includes(tBusca)) &&
-           (filtroMenu === 'Todos' || catI.includes(String(filtroMenu).toLowerCase()) || temaI.includes(String(filtroMenu).toLowerCase())) &&
-           (filtroModalidade === 'Todas' || String(i.modalidade || '').toLowerCase().includes(String(filtroModalidade).toLowerCase()));
-  });
+  // 🔍 4. FILTRAGEM E ORDENAÇÃO INTELIGENTE DOS PRODUTOS
+  const itensFiltrados = useMemo(() => {
+    let resultado = estoque.filter(item => {
+      // Favoritos
+      if (verApenasFavoritos && !favoritos.includes(item.id)) return false;
+
+      // Busca por texto
+      if (busca) {
+        const t = busca.toLowerCase();
+        const nome = String(item.nome || '').toLowerCase();
+        const cat = String(item.categoria || '').toLowerCase();
+        const tema = String(item.tema || '').toLowerCase();
+        const tags = String(item.tags || '').toLowerCase();
+        const desc = String(item.observacoes || '').toLowerCase();
+        const match = nome.includes(t) || cat.includes(t) || tema.includes(t) || tags.includes(t) || desc.includes(t);
+        if (!match) return false;
+      }
+
+      // Modalidade / Formato
+      if (filtroModalidade !== 'Todas') {
+        const mod = String(item.modalidade || '').toLowerCase();
+        const isDecor = Boolean(item.especificacoes?.isDecoracao);
+        if (filtroModalidade === 'Pegue e Monte' && !mod.includes('pegue')) return false;
+        if (filtroModalidade === 'Decoração Completa' && !mod.includes('decor') && !isDecor) return false;
+      }
+
+      // Categoria
+      if (filtroCategoria !== 'Todas') {
+        const cat = String(item.categoria || '').toLowerCase();
+        if (!cat.includes(filtroCategoria.toLowerCase())) return false;
+      }
+
+      // Tema
+      if (filtroTema !== 'Todos') {
+        const tema = String(item.tema || '').toLowerCase();
+        if (tema !== filtroTema.toLowerCase()) return false;
+      }
+
+      return true;
+    });
+
+    // 🔀 Ordenação
+    if (ordenacao === 'preco-asc') {
+      resultado.sort((a, b) => Number(a.financeiro?.valorAluguel || 0) - Number(b.financeiro?.valorAluguel || 0));
+    } else if (ordenacao === 'preco-desc') {
+      resultado.sort((a, b) => Number(b.financeiro?.valorAluguel || 0) - Number(a.financeiro?.valorAluguel || 0));
+    } else if (ordenacao === 'nome-asc') {
+      resultado.sort((a, b) => String(a.nome || '').localeCompare(String(b.nome || '')));
+    } else if (ordenacao === 'kits') {
+      resultado.sort((a, b) => (b.especificacoes?.isDecoracao ? 1 : 0) - (a.especificacoes?.isDecoracao ? 1 : 0));
+    }
+
+    return resultado;
+  }, [estoque, busca, filtroModalidade, filtroCategoria, filtroTema, ordenacao, verApenasFavoritos, favoritos]);
+
+  // Compartilhar Peça
+  const compartilharPeca = (item) => {
+    const whatsDestino = empresa.whats ? empresa.whats.replace(/\D/g, '') : '';
+    const link = window.location.href;
+    const msg = `Olha essa peça linda que encontrei na ${empresa.nome}:\n*${item.nome}* por apenas R$ ${Number(item.financeiro?.valorAluguel || 0).toFixed(2)}\n\nVeja no catálogo: ${link}`;
+    window.open(`https://wa.me/?text=${encodeURIComponent(msg)}`, '_blank');
+  };
 
   const selecionarFiltro = (tipo, valor) => {
-    if (tipo === 'modalidade') setFiltroModalidade(valor);
-    if (tipo === 'menu') setFiltroMenu(valor);
-
-    setMenuMobileAberto(false); 
+    if (tipo === 'categoria') {
+      setFiltroCategoria(valor);
+      setFiltroTema('Todos');
+    }
+    if (tipo === 'tema') {
+      setFiltroTema(valor);
+      setFiltroCategoria('Todas');
+    }
+    setMenuMobileAberto(false);
   };
 
-  const calcularAncoragemKit = (item) => {
-      const precoAtual = Number(item.financeiro?.valorAluguel || 0);
-
-      let precoSomaAvulso = 0;
-      
-      if (item.especificacoes?.isDecoracao && item.especificacoes?.itensDecoracao) {
-          precoSomaAvulso = item.especificacoes.itensDecoracao.reduce((acc, peca) => acc + (Number(peca.precoOriginal) * (peca.qtd || 1)), 0);
-      }
-      
-      const desconto = precoSomaAvulso - precoAtual;
-
-      return { precoAtual, precoSomaAvulso, desconto, isVantajoso: desconto > 0 };
+  const limparTodosFiltros = () => {
+    setFiltroCategoria('Todas');
+    setFiltroModalidade('Todas');
+    setFiltroTema('Todos');
+    setBusca('');
+    setVerApenasFavoritos(false);
+    setOrdenacao('destaques');
   };
 
-  if (loading) return <div className="loader-catalogo">Carregando Acervo...</div>;
-
-  if (lojaInvalida) return (
-      <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', fontFamily: 'sans-serif', textAlign: 'center', padding: '20px'}}>
-          <h1 style={{fontSize: '40px', marginBottom: '10px'}}>🏪</h1>
-          <h2>Loja não encontrada</h2>
-          <p style={{color: '#64748b'}}>Por favor, solicite o link correto à decoradora para aceder ao catálogo de produtos.</p>
+  if (loading) {
+    return (
+      <div className="loader-catalogo-container">
+        <div className="loader-catalogo-spinner"></div>
+        <h2 className="loader-catalogo-title">Carregando Acervo Exclusivo...</h2>
+        <p className="loader-catalogo-sub">Preparando a vitrine com as melhores peças para sua festa</p>
       </div>
-  );
+    );
+  }
+
+  if (lojaInvalida) {
+    return (
+      <div className="loja-invalida-screen">
+        <div className="loja-invalida-card">
+          <span className="loja-invalida-icon">🏪</span>
+          <h2>Catálogo não encontrado</h2>
+          <p>Por favor, solicite o link oficial à decoradora para ter acesso ao acervo de peças e decorações.</p>
+          <button className="btn-voltar-home" onClick={() => navigate('/')}>Ir para Página Inicial</button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="catalogo-publico" style={{ backgroundColor: '#fff' }}>
-      <header className="cat-header">
-        <div className="cat-header-content">
-          <h1 className="cat-logo">{empresa.nome}</h1>
-          <div className="header-info-subtitle">
-            <p className="cat-subtitle">Vitrine Online de Locação</p>
-            <div className="header-contact-links">
-              {empresa.endereco && <span>📍 {empresa.endereco}</span>}
-              {empresa.insta && <span>📸 @{empresa.insta.replace('@','')}</span>}
+    <div className="catalogo-luxury-page">
+
+      {/* 🌟 1. HERO HEADER DARK LUXURY */}
+      <header className="cat-hero-header">
+        <div className="cat-hero-overlay"></div>
+        
+        <div className="cat-header-top-bar">
+          <div className="cat-header-brand">
+            {empresa.logo ? (
+              <img src={empresa.logo} alt={empresa.nome} className="cat-brand-logo" />
+            ) : (
+              <div className="cat-brand-avatar">👑</div>
+            )}
+            <div className="cat-brand-info">
+              <h1 className="cat-brand-title">{empresa.nome}</h1>
+              <span className="cat-brand-tagline">✨ Vitrine Online de Locação & Cenografia</span>
             </div>
           </div>
+
+          <div className="cat-header-actions">
+            {/* ❤️ Botão Topo Favoritos */}
+            <button 
+              type="button" 
+              className={`btn-header-fav-pill ${verApenasFavoritos ? 'active' : ''}`}
+              onClick={() => setVerApenasFavoritos(!verApenasFavoritos)}
+              title="Ver minha pasta de inspiração salva"
+            >
+              <span>❤️</span>
+              <span className="fav-label">Inspirações ({favoritos.length})</span>
+            </button>
+
+            {empresa.whats && (
+              <a 
+                href={`https://wa.me/${empresa.whats.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${empresa.nome}! Gostaria de tirar uma dúvida sobre a locação de peças.`)}`} 
+                target="_blank" 
+                rel="noreferrer"
+                className="btn-header-zap"
+                title="Atendimento Rápido no WhatsApp"
+              >
+                <span>💬 WhatsApp</span>
+              </a>
+            )}
+
+            <button 
+              className="btn-header-admin-login" 
+              onClick={() => navigate(usuarioLogado ? '/dashboard' : '/login')}
+              title="Área Administrativa do Sistema"
+            >
+              🔒 Acesso Restrito
+            </button>
+          </div>
         </div>
-        <button className="btn-admin-login" onClick={() => navigate(usuarioLogado ? '/dashboard' : '/login')}>🔒 Restrito</button>
+
+        {/* Informações de Contato */}
+        <div className="cat-header-meta-row">
+          {empresa.endereco && (
+            <span className="meta-item">
+              <span className="meta-icon">📍</span> {empresa.endereco}
+            </span>
+          )}
+          {empresa.insta && (
+            <a 
+              href={`https://instagram.com/${empresa.insta.replace('@', '')}`} 
+              target="_blank" 
+              rel="noreferrer" 
+              className="meta-item meta-link"
+            >
+              <span className="meta-icon">📸</span> @{empresa.insta.replace('@', '')}
+            </a>
+          )}
+        </div>
       </header>
 
+      {/* 🏛️ 2. LAYOUT PRINCIPAL: SIDEBAR PURA DE CATEGORIAS + VITRINE AMPLA */}
       <div className="cat-container-main">
-        
-        {menuMobileAberto && <div className="sidebar-overlay" onClick={() => setMenuMobileAberto(false)}></div>}
 
+        {/* Overlay Mobile */}
+        {menuMobileAberto && (
+          <div className="cat-sidebar-overlay" onClick={() => setMenuMobileAberto(false)} />
+        )}
+
+        {/* 📌 MENU LATERAL: FOCADO 100% NO ACERVO & TEMAS DO ESTOQUE */}
         <aside className={`cat-sidebar ${menuMobileAberto ? 'open' : ''}`}>
+          
           <div className="sidebar-mobile-header">
-             <h3>Filtros</h3>
-             <button className="btn-fechar-menu" onClick={() => setMenuMobileAberto(false)}>✕</button>
+            <h3>🧭 Categorias</h3>
+            <button className="btn-fechar-sidebar" onClick={() => setMenuMobileAberto(false)}>✕</button>
           </div>
 
-          {empresa.logo && <img src={empresa.logo} className="sidebar-logo-img" alt="Logo" />}
-          
+          {/* Seção: Categorias do Acervo Real */}
           <div className="sidebar-section">
-            <h3 className="sidebar-title">Acervo</h3>
+            <h3 className="sidebar-title">Acervo de Peças</h3>
             <ul className="sidebar-list">
-              <li className={filtroMenu === 'Todos' ? 'active destak' : 'destak'} onClick={() => selecionarFiltro('menu', 'Todos')}>🌟 Ver Tudo</li>
-              {categoriasDinamicas.map(cat => (
-                <li key={cat} className={filtroMenu === cat ? 'active' : ''} onClick={() => selecionarFiltro('menu', cat)}>{cat}</li>
-              ))}
+              <li
+                className={filtroCategoria === 'Todas' && filtroTema === 'Todos' && !verApenasFavoritos ? 'active destak' : 'destak'}
+                onClick={() => {
+                  setVerApenasFavoritos(false);
+                  selecionarFiltro('categoria', 'Todas');
+                }}
+              >
+                <span>🌟 Todas as Categorias</span>
+                <span className="sidebar-count">{estoque.length}</span>
+              </li>
+              {categoriasDinamicas.map(cat => {
+                const count = estoque.filter(i => String(i.categoria || '').trim() === cat).length;
+                return (
+                  <li
+                    key={cat}
+                    className={filtroCategoria === cat && !verApenasFavoritos ? 'active' : ''}
+                    onClick={() => {
+                      setVerApenasFavoritos(false);
+                      selecionarFiltro('categoria', cat);
+                    }}
+                  >
+                    <span>{cat}</span>
+                    <span className="sidebar-count">{count}</span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
-          
-          <div className="sidebar-divider"></div>
 
-          <div className="sidebar-section">
-            <h3 className="sidebar-title">Temas</h3>
-            {Object.entries(ESTRUTURA_TEMAS).map(([grupo, temas]) => (
-              <div key={grupo} className="sidebar-tema-grupo">
-                <h4 className="sidebar-grupo-title">{grupo}</h4>
+          {/* Seção: Temas (Apenas se houver temas reais no estoque) */}
+          {temasDinamicos.length > 0 && (
+            <>
+              <div className="sidebar-divider"></div>
+              <div className="sidebar-section">
+                <h3 className="sidebar-title">Temas Cadastrados</h3>
                 <ul className="sidebar-list">
-                  {temas.map(t => <li key={t} className={filtroMenu === t ? 'active' : ''} onClick={() => selecionarFiltro('menu', t)}>{t}</li>)}
+                  {temasDinamicos.map(tema => {
+                    const count = estoque.filter(i => String(i.tema || '').trim().toLowerCase() === tema.toLowerCase()).length;
+                    return (
+                      <li
+                        key={tema}
+                        className={filtroTema === tema && !verApenasFavoritos ? 'active' : ''}
+                        onClick={() => {
+                          setVerApenasFavoritos(false);
+                          selecionarFiltro('tema', tema);
+                        }}
+                      >
+                        <span>{tema}</span>
+                        <span className="sidebar-count">{count}</span>
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
-            ))}
-          </div>
-        </aside>
-
-        <main className="cat-content">
-          <div style={{ display: 'flex', gap: '10px', marginBottom: '20px', flexWrap: 'wrap', justifyContent: 'center', width: '100%', padding: '0 10px' }}>
-             <button 
-                onClick={() => selecionarFiltro('modalidade', 'Todas')}
-                style={{ padding: '10px 20px', borderRadius: '25px', border: filtroModalidade === 'Todas' ? '1px solid var(--dourado)' : '1px solid #cbd5e1', background: filtroModalidade === 'Todas' ? 'var(--dourado)' : '#fff', color: filtroModalidade === 'Todas' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)', display: 'flex', alignItems: 'center', gap: '5px' }}
-             >
-               {filtroModalidade === 'Todas' && <span>✓</span>} Todas
-             </button>
-
-             <button 
-                onClick={() => selecionarFiltro('modalidade', 'Pegue e Monte')}
-                style={{ padding: '10px 20px', borderRadius: '25px', border: filtroModalidade === 'Pegue e Monte' ? '1px solid var(--dourado)' : '1px solid #cbd5e1', background: filtroModalidade === 'Pegue e Monte' ? 'var(--dourado)' : '#fff', color: filtroModalidade === 'Pegue e Monte' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
-             >
-                📦 Pegue e Monte
-             </button>
-
-             <button 
-                onClick={() => selecionarFiltro('modalidade', 'Decoração Completa')}
-                style={{ padding: '10px 20px', borderRadius: '25px', border: filtroModalidade === 'Decoração Completa' ? '1px solid var(--dourado)' : '1px solid #cbd5e1', background: filtroModalidade === 'Decoração Completa' ? 'var(--dourado)' : '#fff', color: filtroModalidade === 'Decoração Completa' ? '#fff' : '#475569', fontWeight: 'bold', cursor: 'pointer', transition: '0.3s ease', fontSize: '14px', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}
-             >
-                ✨ Decoração
-             </button>
-          </div>
-
-          <div className="cat-top-controls">
-            <div className="cat-search-bar">
-                <input type="text" placeholder="O que você procura para sua festa?" value={busca} onChange={e => setBusca(e.target.value)} />
-              </div>
-          </div>
-
-          {window.innerWidth <= 900 && (filtroMenu !== 'Todos' || filtroModalidade !== 'Todas') && (
-              <div className="active-filters-mobile">
-                  Mostrando: <strong>{filtroModalidade}</strong> • <strong>{filtroMenu}</strong>
-                  <button onClick={() => { setFiltroModalidade('Todas'); setFiltroMenu('Todos'); }}>Limpar</button>
-              </div>
+            </>
           )}
 
-          <div className="cat-grid">
-            {itensFiltrados.map(item => {
-              const isSelected = isNoCarrinho(item.id);
-              return (
-                <div key={item.id} className="cat-card">
-                  <div style={{cursor: 'pointer'}} onClick={() => setProdutoDetalhe(item)}>
-                      <div className="cat-img-wrapper">
-                        {item.foto ? <img src={item.foto} alt="" /> : <div className="no-img">📷</div>}
-                        {isSelected && <div className="cat-badge-selected">Na Lista</div>}
-                      </div>
-                      <div className="cat-info" style={{paddingBottom: '5px'}}>
-                        <h4 className="cat-title-text">{item.nome}</h4>
-                        <p className="cat-medida">{formatarDimensoes(item.dimensoes)}</p>
-                        <div className="cat-price">R$ {Number(item.financeiro?.valorAluguel || 0).toFixed(2)}</div>
-                      </div>
-                  </div>
-                  <div style={{padding: '0 15px 15px 15px'}}>
-                      <button className={`btn-add-lista ${isSelected ? 'added' : ''}`} onClick={() => toggleNoCarrinho(item)}>
-                        {isSelected ? 'Remover da Lista' : 'Adicionar'}
-                      </button>
-                  </div>
-                </div>
-              );
-            })}
+        </aside>
+
+        {/* 🛍️ CONTEÚDO PRINCIPAL (ÁREA DA VITRINE AMPLA) */}
+        <main className="cat-content">
+
+          {/* 🌟 ABAS SEGMENTADAS NO TOPO (ESTILO BOUTIQUE) */}
+          <div className="cat-modalidades-tabs-bar">
+            <button 
+              type="button"
+              className={`modalidade-tab-btn ${filtroModalidade === 'Todas' && !verApenasFavoritos ? 'active' : ''}`}
+              onClick={() => {
+                setVerApenasFavoritos(false);
+                setFiltroModalidade('Todas');
+              }}
+            >
+              <span className="tab-icon">🌟</span>
+              <span className="tab-label">Todo o Acervo</span>
+              <span className="tab-badge">{estoque.length}</span>
+            </button>
+
+            <button 
+              type="button"
+              className={`modalidade-tab-btn ${filtroModalidade === 'Pegue e Monte' && !verApenasFavoritos ? 'active' : ''}`}
+              onClick={() => {
+                setVerApenasFavoritos(false);
+                setFiltroModalidade('Pegue e Monte');
+              }}
+            >
+              <span className="tab-icon">📦</span>
+              <span className="tab-label">Pegue & Monte</span>
+              <span className="tab-badge">{qtdPegueMonte}</span>
+            </button>
+
+            <button 
+              type="button"
+              className={`modalidade-tab-btn ${filtroModalidade === 'Decoração Completa' && !verApenasFavoritos ? 'active' : ''}`}
+              onClick={() => {
+                setVerApenasFavoritos(false);
+                setFiltroModalidade('Decoração Completa');
+              }}
+            >
+              <span className="tab-icon">✨</span>
+              <span className="tab-label">Decorações Completas</span>
+              <span className="tab-badge">{qtdDecoracao}</span>
+            </button>
           </div>
+          
+          {/* 🔍 BARRA DE CONTROLES: BUSCA, DATA DISPONIBILIDADE E ORDENAÇÃO */}
+          <div className="cat-top-bar-controls">
+            
+            {/* Campo de Busca */}
+            <div className="cat-search-input-wrap">
+              <span className="search-icon">🔍</span>
+              <input 
+                type="text" 
+                placeholder="O que procura? (Ex: Cilindros, Vasos, Painel...)" 
+                value={busca} 
+                onChange={e => setBusca(e.target.value)}
+                className="cat-search-field"
+              />
+              {busca && (
+                <button className="btn-clear-search" onClick={() => setBusca('')}>✕</button>
+              )}
+            </div>
+
+            {/* 📅 1. Campo de Data com Feedback de Disponibilidade */}
+            <div className="cat-date-picker-wrap">
+              <span className="date-icon">📅</span>
+              <input 
+                type="date" 
+                value={dataEventoFiltro} 
+                onChange={e => {
+                  setDataEventoFiltro(e.target.value);
+                  setDadosCliente(prev => ({ ...prev, dataEvento: e.target.value }));
+                }}
+                className="cat-date-field"
+                title="Data prevista do evento (checa disponibilidade instantânea)"
+              />
+            </div>
+
+            {/* 🔀 4. Seletor de Ordenação Rápida */}
+            <div className="cat-sort-select-wrap">
+              <span className="sort-icon">🔀</span>
+              <select 
+                value={ordenacao} 
+                onChange={e => setOrdenacao(e.target.value)}
+                className="cat-sort-select"
+                title="Ordenar produtos"
+              >
+                <option value="destaques">🌟 Mais Populares</option>
+                <option value="preco-asc">💲 Menor Preço</option>
+                <option value="preco-desc">💎 Maior Preço</option>
+                <option value="nome-asc">🔤 Nome (A-Z)</option>
+                <option value="kits">✨ Kits e Pacotes Primeiro</option>
+              </select>
+            </div>
+
+          </div>
+
+          {/* Feedback de Filtros Ativos & Urgência de Data */}
+          <div className="cat-active-filters-bar">
+            <div className="active-filters-info">
+              Exibindo <strong>{itensFiltrados.length}</strong> peças
+              
+              {dataEventoFiltro && (
+                <span className="date-availability-status-tag">
+                  📅 Disponibilidade em tempo real ativa para: <strong>{dataEventoFiltro.split('-').reverse().join('/')}</strong>
+                </span>
+              )}
+
+              {verApenasFavoritos && (
+                <span className="filter-pill-active fav-active-pill">❤️ Minha Pasta de Inspirações</span>
+              )}
+
+              {(filtroCategoria !== 'Todas' || filtroModalidade !== 'Todas' || filtroTema !== 'Todos' || busca) && (
+                <span className="active-filters-labels">
+                  • 
+                  {filtroModalidade !== 'Todas' && <span className="filter-pill-active">{filtroModalidade}</span>}
+                  {filtroCategoria !== 'Todas' && <span className="filter-pill-active">{filtroCategoria}</span>}
+                  {filtroTema !== 'Todos' && <span className="filter-pill-active">Tema: {filtroTema}</span>}
+                </span>
+              )}
+            </div>
+
+            {(filtroCategoria !== 'Todas' || filtroModalidade !== 'Todas' || filtroTema !== 'Todos' || busca || verApenasFavoritos || dataEventoFiltro) && (
+              <button className="btn-reset-active-filters" onClick={limparTodosFiltros}>
+                ✕ Limpar Filtros
+              </button>
+            )}
+          </div>
+
+          {/* Grid de Cards */}
+          {itensFiltrados.length === 0 ? (
+            <div className="cat-empty-results">
+              <span className="empty-icon">{verApenasFavoritos ? '❤️' : '🔍'}</span>
+              <h3>
+                {verApenasFavoritos 
+                  ? 'Você ainda não salvou nenhuma peça como favorita' 
+                  : 'Nenhuma peça encontrada com esses filtros'}
+              </h3>
+              <p>
+                {verApenasFavoritos 
+                  ? 'Clique no coraçãozinho das peças para salvar suas ideias preferidas nesta pasta.'
+                  : 'Tente buscar por outro termo ou limpar os filtros de busca.'}
+              </p>
+              <button className="btn-reset-filters" onClick={limparTodosFiltros}>
+                Ver Todo o Acervo
+              </button>
+            </div>
+          ) : (
+            <div className="cat-grid">
+              {itensFiltrados.map(item => {
+                const isSelected = isNoCarrinho(item.id);
+                const qtd = getQtdNoCarrinho(item.id);
+                const preco = Number(item.financeiro?.valorAluguel || 0);
+                const { isVantajoso, desconto } = calcularAncoragemKit(item);
+                const isDecoracao = Boolean(item.especificacoes?.isDecoracao);
+                const fav = isFavorito(item.id);
+                const disp = calcularDisponibilidadeItem(item);
+
+                return (
+                  <div key={item.id} className={`cat-card ${isSelected ? 'in-cart' : ''} ${disp.checado && !disp.disponivel ? 'card-esgotado' : ''}`}>
+                    
+                    {/* Imagem & Badges */}
+                    <div className="cat-img-wrapper" onClick={() => setProdutoDetalhe(item)}>
+                      {item.foto ? (
+                        <img 
+                          src={item.foto} 
+                          alt={item.nome} 
+                          className="cat-card-img" 
+                          loading="lazy" 
+                          crossOrigin="anonymous"
+                        />
+                      ) : (
+                        <div className="no-img">
+                          <span>📷</span>
+                          <small>Sem Foto</small>
+                        </div>
+                      )}
+
+                      {/* ❤️ Botão de Favoritar no Canto do Card */}
+                      <button 
+                        type="button"
+                        className={`btn-fav-card-corner ${fav ? 'favorited' : ''}`}
+                        onClick={(e) => toggleFavorito(item.id, e)}
+                        title={fav ? "Remover dos favoritos" : "Salvar na minha pasta de inspiração"}
+                      >
+                        {fav ? '❤️' : '🤍'}
+                      </button>
+
+                      {/* Badges Flutuantes */}
+                      <div className="product-badges-corner">
+                        {isDecoracao && (
+                          <span className="badge-luxury badge-decor">✨ Kit Completo</span>
+                        )}
+                        {item.modalidade === 'Pegue e Monte' && !isDecoracao && (
+                          <span className="badge-luxury badge-pegue">📦 Pegue & Monte</span>
+                        )}
+                        {isVantajoso && (
+                          <span className="badge-luxury badge-discount">Economize R$ {desconto.toFixed(0)}</span>
+                        )}
+
+                        {/* 📅 Badge de Disponibilidade em Tempo Real */}
+                        {disp.checado && (
+                          <span className={`badge-disp-real badge-disp-${disp.status}`}>
+                            {disp.label}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Overlay Hover */}
+                      <div className="product-overlay-action">
+                        <span>🔍 Ver Detalhes</span>
+                      </div>
+                    </div>
+
+                    {/* Informações da Peça */}
+                    <div className="cat-info">
+                      <h4 className="cat-title-text" onClick={() => setProdutoDetalhe(item)} title={item.nome}>
+                        {item.nome}
+                      </h4>
+
+                      {formatarDimensoes(item.dimensoes) && (
+                        <p className="cat-medida">
+                          📏 {formatarDimensoes(item.dimensoes)}
+                        </p>
+                      )}
+
+                      <div className="product-card-pricing-row">
+                        <div className="pricing-box">
+                          <span className="price-label">Locação:</span>
+                          <div className="cat-price">R$ {preco.toFixed(2)}</div>
+                        </div>
+
+                        {/* Botão Adicionar ao Carrinho */}
+                        {isSelected ? (
+                          <div className="cart-qty-inline-ctrl">
+                            <button 
+                              type="button" 
+                              className="btn-qty-mini" 
+                              onClick={() => alterarQtd(item.id, -1)}
+                              title="Diminuir"
+                            >
+                              -
+                            </button>
+                            <span className="qty-number">{qtd}</span>
+                            <button 
+                              type="button" 
+                              className="btn-qty-mini" 
+                              onClick={() => alterarQtd(item.id, 1)}
+                              title="Aumentar"
+                            >
+                              +
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            className={`btn-add-lista ${disp.checado && !disp.disponivel ? 'btn-disabled' : ''}`}
+                            onClick={() => toggleNoCarrinho(item)}
+                            disabled={disp.checado && !disp.disponivel}
+                            title={disp.checado && !disp.disponivel ? "Indisponível nesta data" : "Adicionar à lista de orçamento"}
+                          >
+                            {disp.checado && !disp.disponivel ? 'Indisponível' : '+ Adicionar'}
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
         </main>
       </div>
 
-      <footer className="cat-footer">
-        <div className="footer-content">
-          <h3>{empresa.nome}</h3>
-          {empresa.endereco && <p>📍 {empresa.endereco}</p>}
-          {empresa.whats && <p>💬 WhatsApp: {empresa.whats}</p>}
-          <p className="footer-copy">© {new Date().getFullYear()} - Todos os direitos reservados</p>
-        </div>
-      </footer>
+      {/* 📱 BOTÃO FLUTUANTE DE FILTROS NO CELULAR */}
+      <button 
+        type="button"
+        className="btn-mobile-filtros-fab" 
+        onClick={() => setMenuMobileAberto(!menuMobileAberto)}
+        title="Abrir Filtros"
+      >
+        {menuMobileAberto ? '✕' : '☰ Filtros'}
+      </button>
 
-      {window.innerWidth <= 900 && (
-          <button 
-            className="btn-mobile-filtros-fab" 
-            onClick={() => setMenuMobileAberto(!menuMobileAberto)}
-            style={{ zIndex: 999999, position: 'fixed' }}
-          >
-             {menuMobileAberto ? '✕' : '☰'}
-          </button>
-      )}
-
-      {carrinho.length > 0 && (
-        <div className="cat-floating-bar" onClick={abrirCarrinho}>
-          <span>🛍️ {carrinho.length} itens - <strong>R$ {calcularTotal().toFixed(2)}</strong></span>
-          <button>VER CARRINHO ➔</button>
-        </div>
-      )}
-
-      {produtoDetalhe && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(5px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 999999, padding: '20px', boxSizing: 'border-box', opacity: 1, animation: 'fadeIn 0.2s ease-out' }} onClick={() => setProdutoDetalhe(null)}>
-          <div style={{ backgroundColor: '#fff', borderRadius: '16px', width: '100%', maxWidth: '950px', maxHeight: '90vh', overflowY: 'auto', display: 'flex', flexDirection: window.innerWidth < 768 ? 'column' : 'row', position: 'relative', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }} onClick={e => e.stopPropagation()}>
+      {/* 🛍️ 3. CART DRAWER LATERAL */}
+      {cartDrawerAberto && (
+        <div className="cat-cart-drawer-backdrop" onClick={() => setCartDrawerAberto(false)}>
+          <div className="cat-cart-drawer" onClick={e => e.stopPropagation()}>
             
-            <button onClick={() => setProdutoDetalhe(null)} style={{ position: 'absolute', top: '15px', right: '15px', background: '#f1f5f9', border: 'none', width: '36px', height: '36px', borderRadius: '50%', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', zIndex: 10, color: '#475569', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
-
-            <div style={{ width: window.innerWidth < 768 ? '100%' : '50%', backgroundColor: '#f8fafc', padding: '30px', display: 'flex', flexDirection: 'column', alignItems: 'center', borderRight: window.innerWidth < 768 ? 'none' : '1px solid #e2e8f0', borderBottom: window.innerWidth < 768 ? '1px solid #e2e8f0' : 'none' }}>
-               <div style={{ width: '100%', height: '350px', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#fff', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-                   {produtoDetalhe.foto ? <img src={produtoDetalhe.foto} style={{ width: '100%', height: '100%', objectFit: 'contain' }} alt={produtoDetalhe.nome}/> : <span style={{fontSize:'50px'}}>📷</span>}
-               </div>
-
-               {produtoDetalhe.especificacoes?.isDecoracao && produtoDetalhe.especificacoes?.itensDecoracao?.length > 0 && (
-                   <div style={{ width: '100%', marginTop: '30px', borderTop: '2px dashed #cbd5e1', paddingTop: '20px' }}>
-                       <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '15px'}}>
-                           <span style={{fontSize: '20px'}}>✨</span>
-                           <span style={{ fontSize: '13px', color: '#c5a059', fontWeight: '900', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                               Peças inclusas nesta decoração:
-                           </span>
-                       </div>
-                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '15px', justifyContent: 'flex-start' }}>
-                           {produtoDetalhe.especificacoes.itensDecoracao.map((peca, idx) => (
-                               <div key={idx} style={{ width: 'calc(33.33% - 10px)', minWidth: '80px', flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                                   <div style={{ width: '100px', height: '100px', borderRadius: '12px', overflow: 'hidden', border: '1px solid #cbd5e1', position: 'relative', marginBottom: '8px', background: '#fff', boxShadow: '0 4px 10px rgba(0,0,0,0.03)' }} title={`${peca.qtd}x ${peca.nome}`}>
-                                       {peca.foto ? <img src={peca.foto} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt=""/> : <div style={{width:'100%', height:'100%', background:'#f1f5f9', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'16px'}}>📷</div>}
-                                       <div style={{ position: 'absolute', bottom: 0, right: 0, background: '#0f172a', color: 'white', fontSize: '11px', fontWeight: 'bold', padding: '3px 7px', borderTopLeftRadius: '8px' }}>{peca.qtd}x</div>
-                                   </div>
-                                   <strong style={{ fontSize: '12px', color: '#0f172a', lineHeight: '1.3', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{peca.nome}</strong>
-                               </div>
-                           ))}
-                       </div>
-                   </div>
-               )}
-            </div>
-
-            <div style={{ width: window.innerWidth < 768 ? '100%' : '50%', padding: '30px', display: 'flex', flexDirection: 'column' }}>
-               <div style={{ marginBottom: '5px' }}>
-                   <span style={{ background: '#fef3c7', color: '#d97706', padding: '4px 10px', borderRadius: '4px', fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '1px' }}>
-                       {produtoDetalhe.especificacoes?.isDecoracao ? 'Pacote Completo' : produtoDetalhe.categoria}
-                   </span>
-               </div>
-               
-               <h2 style={{ fontSize: '26px', color: '#0f172a', margin: '10px 0', lineHeight: '1.2' }}>{produtoDetalhe.nome}</h2>
-               
-               <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '20px', marginTop: '20px', marginBottom: '20px' }}>
-                   <strong style={{ fontSize: '12px', color: '#475569', display: 'block', marginBottom: '15px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>📋 Ficha Técnica</strong>
-                   
-                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                       {produtoDetalhe.categoria && (
-                           <div>
-                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Categoria:</span>
-                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.categoria}</strong>
-                           </div>
-                       )}
-                       {produtoDetalhe.tema && (
-                           <div>
-                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Tema Sugerido:</span>
-                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.tema}</strong>
-                           </div>
-                       )}
-                       {produtoDetalhe.especificacoes?.cor && (
-                           <div>
-                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Cor principal:</span>
-                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.especificacoes.cor}</strong>
-                           </div>
-                       )}
-                       {produtoDetalhe.especificacoes?.tamanho && (
-                           <div>
-                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block'}}>Porte/Tamanho:</span>
-                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{produtoDetalhe.especificacoes.tamanho}</strong>
-                           </div>
-                       )}
-                       {formatarDimensoesDetalhe(produtoDetalhe.especificacoes) && (
-                           <div style={{gridColumn: '1 / -1', background: '#fff', padding: '10px', borderRadius: '6px', border: '1px solid #e2e8f0'}}>
-                               <span style={{fontSize: '11px', color: '#94a3b8', display: 'block', marginBottom: '2px'}}>Medidas Oficiais:</span>
-                               <strong style={{fontSize: '14px', color: '#0f172a'}}>{formatarDimensoesDetalhe(produtoDetalhe.especificacoes)}</strong>
-                           </div>
-                       )}
-                   </div>
-               </div>
-
-               {produtoDetalhe.observacoes && (
-                   <div style={{ marginBottom: '20px' }}>
-                       <strong style={{ fontSize: '12px', color: '#475569', display: 'block', marginBottom: '5px' }}>Dicas e Detalhes:</strong>
-                       <p style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.5', margin: 0 }}>{produtoDetalhe.observacoes}</p>
-                   </div>
-               )}
-
-               <div style={{ flexGrow: 1 }}></div>
-
-               <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '20px', marginTop: '10px' }}>
-                   {(() => {
-                       const { precoAtual, precoSomaAvulso, desconto, isVantajoso } = calcularAncoragemKit(produtoDetalhe);
-
-                       if (isVantajoso) {
-                           return (
-                               <div style={{ marginBottom: '20px', background: '#f0fdf4', border: '1px solid #bbf7d0', padding: '15px', borderRadius: '10px' }}>
-                                   <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginBottom: '10px' }}>
-                                       <span style={{ fontSize: '13px', color: '#64748b' }}>
-                                           Alugando as peças individuais ficaria: <strong style={{ textDecoration: 'line-through', color: '#ef4444' }}>R$ {precoSomaAvulso.toFixed(2)}</strong>
-                                       </span>
-                                       <span style={{ fontSize: '15px', color: '#0f172a', marginTop: '5px' }}>
-                                           A decoração completa fica por: <strong style={{ fontSize: '32px', color: '#10b981', fontWeight: '900', display: 'block', marginTop: '2px' }}>R$ {precoAtual.toFixed(2)}</strong>
-                                       </span>
-                                   </div>
-                                   <div style={{ background: '#10b981', color: 'white', padding: '8px 12px', borderRadius: '6px', fontSize: '13px', fontWeight: 'bold', display: 'inline-block', width: '100%', textAlign: 'center' }}>
-                                       Viu como compensa?
-                                       Você economiza R$ {desconto.toFixed(2)}! 😉
-                                   </div>
-                               </div>
-                           );
-                       } else {
-                           return (
-                               <div style={{ marginBottom: '15px' }}>
-                                   <strong style={{ fontSize: '36px', color: '#0f172a', fontWeight: '900' }}>R$ {precoAtual.toFixed(2)}</strong>
-                                   <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Valor do aluguel</span>
-                               </div>
-                           );
-                       }
-                   })()}
-
-                   <button 
-                       onClick={() => {
-                           toggleNoCarrinho(produtoDetalhe);
-                           setProdutoDetalhe(null); 
-                       }} 
-                       style={{ 
-                           width: '100%', padding: '16px', borderRadius: '10px', fontSize: '16px', fontWeight: 'bold', cursor: 'pointer', border: 'none', transition: '0.2s',
-                           background: isNoCarrinho(produtoDetalhe.id) ? '#fef2f2' : '#c5a059',
-                           color: isNoCarrinho(produtoDetalhe.id) ? '#ef4444' : '#fff',
-                           boxShadow: isNoCarrinho(produtoDetalhe.id) ? 'none' : '0 8px 20px rgba(197, 160, 89, 0.4)'
-                       }}
-                   >
-                       {isNoCarrinho(produtoDetalhe.id) ? 'Remover da Lista' : 'Adicionar à Minha Festa'}
-                   </button>
-               </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {modalFinalizar && (
-        <div className="modal-overlay-catalogo" onClick={() => setModalFinalizar(false)}>
-          <div className="modal-content-catalogo" onClick={e => e.stopPropagation()}>
-            <div className="modal-header-catalogo">
-              <h2>Sua Lista de Peças</h2>
-              <button className="btn-close-modal" onClick={() => setModalFinalizar(false)}>✕</button>
-            </div>
-            
-            <div className="modal-body-catalogo">
-              <div className="resumo-carrinho">
-                <h3>Itens Selecionados ({carrinho.length})</h3>
-                <ul>
-                  {carrinho.map(item => (
-                    <li key={item.id}>
-                      <span>{item.qtd}x {item.nome}</span>
-                      <span>R$ {(Number(item.financeiro?.valorAluguel || 0) * item.qtd).toFixed(2)}</span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="resumo-total">
-                  <span>Total Estimado:</span>
-                  <strong>R$ {calcularTotal().toFixed(2)}</strong>
+            {/* Header do Drawer */}
+            <div className="cart-drawer-header">
+              <div className="cart-drawer-title-group">
+                <span className="cart-icon">🛍️</span>
+                <div>
+                  <h3>Minha Lista de Peças</h3>
+                  <small>{carrinho.length} {carrinho.length === 1 ? 'item selecionado' : 'itens selecionados'}</small>
                 </div>
               </div>
+              <button 
+                type="button" 
+                className="btn-close-cart-drawer" 
+                onClick={() => setCartDrawerAberto(false)}
+                title="Fechar Carrinho"
+              >
+                ✕
+              </button>
+            </div>
 
-              <div className="tipo-pedido-toggle">
-                 <button 
-                   className={tipoFluxo === 'orcamento' ? 'active' : ''} 
-                   onClick={() => setTipoFluxo('orcamento')}
-                   type="button"
-                 >
-                   Apenas Orçamento
-                 </button>
-                 <button 
-                   className={tipoFluxo === 'cadastro' ? 'active' : ''} 
-                   onClick={() => setTipoFluxo('cadastro')}
-                   type="button"
-                 >
-                   Virar Cliente 🌟
-                 </button>
-               </div>
-
-              {tipoFluxo === 'orcamento' ? (
-                  <form onSubmit={enviarOrcamento} className="form-orcamento">
-                    <h3>Orçamento Rápido</h3>
-                    <label>Seu Nome</label>
-                    <input type="text" placeholder="Como podemos te chamar?" required 
-                       value={dadosCliente.nome} onChange={e => setDadosCliente({...dadosCliente, nome: e.target.value})}
-                    />
-                    <label>Seu WhatsApp</label>
-                    <input type="text" placeholder="(11) 99999-9999" required 
-                       value={dadosCliente.whats} onChange={e => setDadosCliente({...dadosCliente, whats: e.target.value})}
-                    />
-                    <label>Data da Festa / Evento</label>
-                    <input type="date" required 
-                      value={dadosCliente.dataEvento} onChange={e => setDadosCliente({...dadosCliente, dataEvento: e.target.value})}
-                    />
-                    <button type="submit" className="btn-enviar-zap">
-                      <span>🟢</span> Enviar no WhatsApp
-                    </button>
-                  </form>
+            {/* Corpo do Drawer */}
+            <div className="cart-drawer-body">
+              {carrinho.length === 0 ? (
+                <div className="cart-empty-state">
+                  <span className="empty-cart-icon">🛒</span>
+                  <h4>Sua lista está vazia</h4>
+                  <p>Explore nosso acervo e adicione as peças e decorações que você quer na sua festa!</p>
+                  <button 
+                    type="button" 
+                    className="btn-start-shopping"
+                    onClick={() => setCartDrawerAberto(false)}
+                  >
+                    Ver Todo o Acervo
+                  </button>
+                </div>
               ) : (
-                  <div className="form-cadastro-call">
-                    <p>Faça o seu cadastro oficial para agilizar sua locação, ter acesso ao histórico de pedidos e aprovações mais rápidas!</p>
-                    <button 
-                        type="button" 
-                         className="btn-ir-cadastro" 
-                        onClick={() => navigate(`/autocadastro/${tenantId}`, { state: { carrinhoCatalogo: carrinho, empresaConfig: empresa, empresaId: tenantId } })} 
-                     >
-                        Ir para Tela de Cadastro ➔
-                     </button>
+                <>
+                  {/* 📅 CHECADOR DE DATA OBRIGATÓRIO NO TOPO DO CARRINHO */}
+                  <div className={`cart-date-checker-card ${(dadosCliente.dataEvento || dataEventoFiltro) ? 'date-selected' : 'date-needed'}`}>
+                    <div className="checker-header-row">
+                      <span className="checker-icon">📅</span>
+                      <div className="checker-text-info">
+                        <strong>Para qual data é a sua festa? *</strong>
+                        <small>Informe para checar a disponibilidade imediata das peças</small>
+                      </div>
+                    </div>
+
+                    <div className="checker-input-row">
+                      <input 
+                        type="date"
+                        required
+                        value={dadosCliente.dataEvento || dataEventoFiltro}
+                        onChange={e => {
+                          setDataEventoFiltro(e.target.value);
+                          setDadosCliente(prev => ({ ...prev, dataEvento: e.target.value }));
+                        }}
+                        className="cart-date-input-highlight"
+                        min={new Date().toISOString().split('T')[0]}
+                      />
+                    </div>
+
+                    {/* Feedback Geral de Disponibilidade do Carrinho */}
+                    {(dadosCliente.dataEvento || dataEventoFiltro) ? (
+                      <div className="cart-disp-feedback-box disp-ok">
+                        <span>✨ Checagem ativa para {(dadosCliente.dataEvento || dataEventoFiltro).split('-').reverse().join('/')}</span>
+                      </div>
+                    ) : (
+                      <div className="cart-disp-feedback-box disp-pending">
+                        <span>👆 Selecione o dia do evento acima para validar a reserva</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* 🎨 3. BOTÃO DE ABRIR SIMULADOR VISUAL DE COMBINAÇÕES */}
+                  <div className="cart-simulador-callout">
+                    <button 
+                      type="button" 
+                      className="btn-open-simulador-harmonia"
+                      onClick={() => setSimuladorAberto(true)}
+                    >
+                      <span>🎨</span> Ver Combinação Visual das Peças (Harmonia)
+                    </button>
+                  </div>
+
+                  {/* Lista de Itens */}
+                  <div className="cart-items-scroll">
+                    {carrinho.map(item => {
+                      const precoUnit = Number(item.financeiro?.valorAluguel || 0);
+                      const subtotalItem = precoUnit * (item.qtd || 1);
+                      const disp = calcularDisponibilidadeItem(item);
+
+                      return (
+                        <div key={item.id} className="cart-item-row">
+                          <div className="cart-item-img-wrap">
+                            {item.foto ? (
+                              <img src={item.foto} alt={item.nome} crossOrigin="anonymous" />
+                            ) : (
+                              <span>📷</span>
+                            )}
+                          </div>
+
+                          <div className="cart-item-info">
+                            <h4 className="cart-item-name">{item.nome}</h4>
+                            
+                            <div className="cart-item-meta-row">
+                              <span className="cart-item-unit-price">R$ {precoUnit.toFixed(2)} / un</span>
+                              {disp.checado && (
+                                <span className={`cart-item-disp-badge badge-disp-${disp.status}`}>
+                                  {disp.label}
+                                </span>
+                              )}
+                            </div>
+                            
+                            <div className="cart-item-controls">
+                              <div className="cart-qty-stepper">
+                                <button type="button" onClick={() => alterarQtd(item.id, -1)}>-</button>
+                                <span>{item.qtd || 1}</span>
+                                <button type="button" onClick={() => alterarQtd(item.id, 1)}>+</button>
+                              </div>
+
+                              <span className="cart-item-subtotal">R$ {subtotalItem.toFixed(2)}</span>
+
+                              <button 
+                                type="button" 
+                                className="btn-remove-item"
+                                onClick={() => removerDoCarrinho(item.id)}
+                                title="Remover item da lista"
+                              >
+                                🗑️
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Resumo Financeiro */}
+                  <div className="cart-summary-box">
+                    <div className="summary-row">
+                      <span>Subtotal das Peças:</span>
+                      <strong>R$ {calcularTotal().toFixed(2)}</strong>
+                    </div>
+
+                    {calcularTotalEconomia() > 0 && (
+                      <div className="summary-row discount-row">
+                        <span>🎁 Economia em Pacotes:</span>
+                        <strong className="discount-text">- R$ {calcularTotalEconomia().toFixed(2)}</strong>
+                      </div>
+                    )}
+
+                    <div className="summary-row total-row">
+                      <span>Total Estimado:</span>
+                      <strong className="total-highlight">R$ {calcularTotal().toFixed(2)}</strong>
+                    </div>
+                  </div>
+
+                  {/* Alternador de Fluxo */}
+                  <div className="cart-flow-toggle">
+                    <button 
+                      type="button"
+                      className={`flow-btn ${tipoFluxo === 'orcamento' ? 'active' : ''}`}
+                      onClick={() => setTipoFluxo('orcamento')}
+                    >
+                      💬 Orçamento Rápido
+                    </button>
+                    <button 
+                      type="button"
+                      className={`flow-btn ${tipoFluxo === 'cadastro' ? 'active' : ''}`}
+                      onClick={() => setTipoFluxo('cadastro')}
+                    >
+                      🌟 Virar Cliente Oficial
+                    </button>
+                  </div>
+
+                  {/* Formulário de Orçamento WhatsApp */}
+                  {tipoFluxo === 'orcamento' ? (
+                    <form className="cart-checkout-form" onSubmit={enviarOrcamento}>
+                      <div className="form-group-mini">
+                        <label>Seu Nome Completo *</label>
+                        <input 
+                          type="text" 
+                          placeholder="Como podemos te chamar?" 
+                          required 
+                          value={dadosCliente.nome}
+                          onChange={e => setDadosCliente({ ...dadosCliente, nome: e.target.value })}
+                        />
+                      </div>
+
+                      <div className="form-group-mini">
+                        <label>Seu WhatsApp com DDD *</label>
+                        <input 
+                          type="tel" 
+                          placeholder="(11) 99999-9999" 
+                          required 
+                          value={dadosCliente.whats}
+                          onChange={e => setDadosCliente({ ...dadosCliente, whats: e.target.value })}
+                        />
+                      </div>
+
+                      <button type="submit" className="btn-send-whatsapp-checkout">
+                        <span>🟢</span> Enviar Orçamento no WhatsApp
+                      </button>
+                      <small className="checkout-disclaimer">
+                        🔒 Sem compromisso. Enviaremos a confirmação de disponibilidade imediatamente!
+                      </small>
+                    </form>
+                  ) : (
+                    <div className="cart-autocadastro-box">
+                      <h4>Faça seu Cadastro Oficial 🌟</h4>
+                      <p>Agilize seu contrato, ganhe prioridade na reserva de datas e acompanhe o status da sua locação online!</p>
+                      <button 
+                        type="button" 
+                        className="btn-ir-autocadastro"
+                        onClick={() => navigate(`/autocadastro/${tenantId}`, { 
+                          state: { 
+                            carrinhoCatalogo: carrinho, 
+                            empresaConfig: empresa, 
+                            empresaId: tenantId 
+                          } 
+                        })}
+                      >
+                        Ir para Cadastro Oficial ➔
+                      </button>
+                    </div>
+                  )}
+                </>
               )}
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 🎨 3. MODAL SIMULADOR VISUAL DE COMBINAÇÕES (MOODBOARD DE HARMONIA) */}
+      {simuladorAberto && (
+        <div className="product-modal-backdrop" onClick={() => setSimuladorAberto(false)}>
+          <div className="product-modal-card simulador-modal-card" onClick={e => e.stopPropagation()}>
+            <button className="btn-close-modal-x" onClick={() => setSimuladorAberto(false)}>✕</button>
+
+            <div className="simulador-header">
+              <div className="simulador-title-grp">
+                <span className="sim-badge">✨ Harmonia do Seu Evento</span>
+                <h2>Painel Visual das Peças Escolhidas</h2>
+                <p>Veja como as peças e cores que você selecionou combinam entre si na decoração:</p>
+              </div>
+            </div>
+
+            {/* Painel que será capturado como imagem */}
+            <div className="simulador-canvas-board" ref={painelSimuladorRef}>
+              <div className="simulador-brand-watermark">
+                <strong>{empresa.nome}</strong>
+                <small>Proposta de Composição • {carrinho.length} itens</small>
+              </div>
+
+              <div className="simulador-pieces-collage">
+                {carrinho.map(peca => (
+                  <div key={peca.id} className="sim-collage-item">
+                    <div className="sim-item-thumb">
+                      {peca.foto ? (
+                        <img src={peca.foto} alt={peca.nome} crossOrigin="anonymous" />
+                      ) : (
+                        <span className="no-img-icon">📷</span>
+                      )}
+                      <span className="sim-qty-badge">{peca.qtd || 1}x</span>
+                    </div>
+                    <span className="sim-item-title">{peca.nome}</span>
+                  </div>
+                ))}
+              </div>
+
+              <div className="simulador-footer-bar">
+                <span>Total Estimado: <strong>R$ {calcularTotal().toFixed(2)}</strong></span>
+                {dataEventoFiltro && <span>Data Prevista: <strong>{dataEventoFiltro.split('-').reverse().join('/')}</strong></span>}
+              </div>
+            </div>
+
+            {/* Ações do Simulador */}
+            <div className="simulador-actions-bar">
+              <button 
+                type="button" 
+                className="btn-download-painel"
+                onClick={() => exportarPainelSimulador(false)}
+                disabled={gerandoImagemPainel}
+              >
+                💾 {gerandoImagemPainel ? 'Gerando Imagem...' : 'Baixar Imagem do Painel'}
+              </button>
+
+              <button 
+                type="button" 
+                className="btn-share-painel-zap"
+                onClick={() => exportarPainelSimulador(true)}
+                disabled={gerandoImagemPainel}
+              >
+                📲 Enviar Painel no WhatsApp
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      {/* 🖼️ 4. MODAL DE DETALHES DO PRODUTO */}
+      {produtoDetalhe && (
+        <div className="product-modal-backdrop" onClick={() => setProdutoDetalhe(null)}>
+          <div className="product-modal-card" onClick={e => e.stopPropagation()}>
+            <button className="btn-close-modal-x" onClick={() => setProdutoDetalhe(null)}>✕</button>
+
+            <div className="modal-content-grid">
+              
+              {/* Lado Esquerdo: Foto Principal & Peças Inclusas */}
+              <div className="modal-left-gallery">
+                <div className="modal-main-image-wrap">
+                  {produtoDetalhe.foto ? (
+                    <img src={produtoDetalhe.foto} alt={produtoDetalhe.nome} crossOrigin="anonymous" />
+                  ) : (
+                    <div className="modal-no-img">📷 Sem Foto Disponível</div>
+                  )}
+                </div>
+
+                {/* Se for Decoração Completa, exibe as peças do kit */}
+                {produtoDetalhe.especificacoes?.isDecoracao && produtoDetalhe.especificacoes?.itensDecoracao?.length > 0 && (
+                  <div className="modal-kit-breakdown">
+                    <div className="kit-breakdown-title">
+                      <span>✨</span>
+                      <strong>Peças inclusas neste pacote:</strong>
+                    </div>
+                    <div className="kit-pieces-grid">
+                      {produtoDetalhe.especificacoes.itensDecoracao.map((peca, idx) => (
+                        <div key={idx} className="kit-piece-chip">
+                          <div className="kit-piece-thumb">
+                            {peca.foto ? <img src={peca.foto} alt="" /> : <span>📷</span>}
+                            <span className="kit-piece-qty">{peca.qtd}x</span>
+                          </div>
+                          <span className="kit-piece-name">{peca.nome}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Lado Direito: Ficha Técnica & Ação */}
+              <div className="modal-right-info">
+                <div className="modal-cat-badge">
+                  {produtoDetalhe.especificacoes?.isDecoracao ? '✨ Pacote Completo' : (produtoDetalhe.categoria || 'Acervo')}
+                </div>
+
+                <h2 className="modal-product-title">{produtoDetalhe.nome}</h2>
+
+                {/* Ficha Técnica */}
+                <div className="modal-tech-specs-box">
+                  <h4 className="tech-specs-title">📋 Especificações Técnicas</h4>
+                  <div className="tech-specs-grid">
+                    {produtoDetalhe.categoria && (
+                      <div className="spec-field">
+                        <small>Categoria:</small>
+                        <strong>{produtoDetalhe.categoria}</strong>
+                      </div>
+                    )}
+                    {produtoDetalhe.tema && (
+                      <div className="spec-field">
+                        <small>Tema Sugerido:</small>
+                        <strong>{produtoDetalhe.tema}</strong>
+                      </div>
+                    )}
+                    {produtoDetalhe.especificacoes?.cor && (
+                      <div className="spec-field">
+                        <small>Cor Principal:</small>
+                        <strong>{produtoDetalhe.especificacoes.cor}</strong>
+                      </div>
+                    )}
+                    {produtoDetalhe.especificacoes?.tamanho && (
+                      <div className="spec-field">
+                        <small>Porte / Tamanho:</small>
+                        <strong>{produtoDetalhe.especificacoes.tamanho}</strong>
+                      </div>
+                    )}
+                    {formatarDimensoesDetalhe(produtoDetalhe.especificacoes) && (
+                      <div className="spec-field full-width">
+                        <small>Medidas Oficiais:</small>
+                        <strong>{formatarDimensoesDetalhe(produtoDetalhe.especificacoes)}</strong>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Observações / Dicas */}
+                {produtoDetalhe.observacoes && (
+                  <div className="modal-notes-box">
+                    <strong>💡 Dicas & Recomendações:</strong>
+                    <p>{produtoDetalhe.observacoes}</p>
+                  </div>
+                )}
+
+                {/* Ancoragem de Preço ou Economia de Kit */}
+                <div className="modal-pricing-section">
+                  {(() => {
+                    const { precoAtual, precoSomaAvulso, desconto, isVantajoso } = calcularAncoragemKit(produtoDetalhe);
+
+                    if (isVantajoso) {
+                      return (
+                        <div className="kit-savings-card">
+                          <div className="savings-comparison">
+                            <span>Alugando avulso: <s className="strike-price">R$ {precoSomaAvulso.toFixed(2)}</s></span>
+                            <span className="current-package-price">Pacote Completo: <strong>R$ {precoAtual.toFixed(2)}</strong></span>
+                          </div>
+                          <div className="savings-highlight-badge">
+                            🎉 Viu como compensa? Você economiza R$ {desconto.toFixed(2)}!
+                          </div>
+                        </div>
+                      );
+                    } else {
+                      return (
+                        <div className="simple-pricing-box">
+                          <span className="simple-price-label">Valor da Locação:</span>
+                          <strong className="simple-price-val">R$ {precoAtual.toFixed(2)}</strong>
+                        </div>
+                      );
+                    }
+                  })()}
+
+                  {/* Botões de Ação do Modal */}
+                  <div className="modal-actions-row">
+                    <button
+                      type="button"
+                      className={`btn-modal-add-cart ${isNoCarrinho(produtoDetalhe.id) ? 'already-added' : ''}`}
+                      onClick={() => {
+                        toggleNoCarrinho(produtoDetalhe);
+                        setProdutoDetalhe(null);
+                        setCartDrawerAberto(true);
+                      }}
+                    >
+                      {isNoCarrinho(produtoDetalhe.id) ? '✓ Peça na Minha Lista (Ver Carrinho)' : '+ Adicionar à Minha Lista'}
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn-modal-share"
+                      onClick={() => compartilharPeca(produtoDetalhe)}
+                      title="Compartilhar no WhatsApp"
+                    >
+                      📲 Compartilhar
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
             </div>
           </div>
         </div>
       )}
+
+      {/* 🛍️ 5. BARRA FLUTUANTE INFERIOR DO CARRINHO */}
+      {carrinho.length > 0 && (
+        <div className="cat-floating-cart-pill" onClick={abrirCarrinho}>
+          <div className="floating-cart-info">
+            <span className="floating-cart-bag">🛍️</span>
+            <div>
+              <strong>{carrinho.reduce((a, b) => a + (b.qtd || 1), 0)} itens selecionados</strong>
+              <small>Total: R$ {calcularTotal().toFixed(2)}</small>
+            </div>
+          </div>
+
+          <button className="btn-floating-view-cart">
+            VER LISTA & ORÇAMENTO ➔
+          </button>
+        </div>
+      )}
+
+      {/* 🌟 6. SEÇÃO: COMO FUNCIONA A LOCAÇÃO & CTA SLIM */}
+      <footer className="cat-how-it-works-section">
+        <div className="cat-how-it-works-container">
+          
+          <div className="how-it-works-header">
+            <span className="how-it-works-badge">✨ Simples & Rápido</span>
+            <h3 className="how-it-works-title">Como Funciona a Locação na {empresa.nome}?</h3>
+            <p className="how-it-works-subtitle">Veja como é fácil transformar a sua festa em um momento inesquecível em apenas 3 passos:</p>
+          </div>
+
+          <div className="how-it-works-steps-grid">
+            <div className="step-card">
+              <div className="step-icon-wrap">🛍️</div>
+              <span className="step-number">Passo 01</span>
+              <h4>Monte sua Lista</h4>
+              <p>Explore nosso acervo, selecione as peças ou o kit completo e adicione ao carrinho.</p>
+            </div>
+
+            <div className="step-arrow-divider">➔</div>
+
+            <div className="step-card">
+              <div className="step-icon-wrap">💬</div>
+              <span className="step-number">Passo 02</span>
+              <h4>Envie seu Orçamento</h4>
+              <p>Envie sua lista com 1 clique para nosso WhatsApp com a data prevista do seu evento.</p>
+            </div>
+
+            <div className="step-arrow-divider">➔</div>
+
+            <div className="step-card">
+              <div className="step-icon-wrap">🎉</div>
+              <span className="step-number">Passo 03</span>
+              <h4>Celebre seu Momento</h4>
+              <p>Retire no modelo <strong>Pegue & Monte</strong> ou combine a entrega e montagem no local da festa!</p>
+            </div>
+          </div>
+
+          {/* CTA para Atendimento Personalizado */}
+          <div className="cat-custom-help-cta-box">
+            <div className="cta-help-content">
+              <span className="cta-help-icon">💡</span>
+              <div className="cta-help-texts">
+                <h4>Precisa de um tema personalizado ou tem alguma dúvida?</h4>
+                <p>Nossa equipe de decoração está pronta para te atender e montar uma proposta sob medida.</p>
+              </div>
+            </div>
+
+            {empresa.whats && (
+              <a 
+                href={`https://wa.me/${empresa.whats.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${empresa.nome}! Gostaria de tirar dúvidas ou solicitar uma decoração personalizada para minha festa.`)}`}
+                target="_blank"
+                rel="noreferrer"
+                className="btn-cta-help-zap"
+              >
+                <span>💬 Falar no WhatsApp</span>
+              </a>
+            )}
+          </div>
+
+          {/* Barra de Copyright */}
+          <div className="cat-bottom-credits-bar">
+            <span>© {new Date().getFullYear()} {empresa.nome}. Todos os direitos reservados.</span>
+            <span className="powered-text">Powered by <strong>Celebre Festas</strong></span>
+          </div>
+
+        </div>
+      </footer>
 
     </div>
   );

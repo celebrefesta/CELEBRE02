@@ -1,0 +1,22 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "br.com.celebre.app",
+      "sha256_cert_fingerprints": [
+        "0C:20:6B:AC:A7:B8:36:B4:AF:4D:37:41:2B:D4:9F:9D:93:C4:16:A7:5F:23:DB:0F:81:FA:5F:53:D7:73:28:37"
+      ]
+    }
+  },
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "app.web.celebre_9f5c9.twa",
+      "sha256_cert_fingerprints": [
+        "0C:20:6B:AC:A7:B8:36:B4:AF:4D:37:41:2B:D4:9F:9D:93:C4:16:A7:5F:23:DB:0F:81:FA:5F:53:D7:73:28:37"
+      ]
+    }
+  }
+]

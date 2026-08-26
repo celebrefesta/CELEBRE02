@@ -927,6 +927,14 @@
   --largura-menu: 0px !important;
 }
 
+.App.no-navbar main,
+.App.no-navbar .main-content,
+.App.no-navbar .page-layout {
+  margin-left: 0 !important;
+  width: 100% !important;
+  padding: 0 !important;
+}
+
 /* =====================================================
    🌎 BASE GLOBAL (ESCALA CORRIGIDA)
 ===================================================== */
@@ -1141,6 +1149,15 @@ main,
     width: 100% !important;
     padding: 6px !important;
     padding-top: 75px !important; /* 🔥 IMPEDE O CONTEÚDO DE SUMIR ATRÁS DO BOTÃO HAMBÚRGUER */
+  }
+
+  .App.no-navbar main,
+  .App.no-navbar .main-content,
+  .App.no-navbar .page-layout {
+    padding: 0 !important;
+    padding-top: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
   }
 
   .dashboard-header {

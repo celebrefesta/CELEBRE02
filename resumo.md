@@ -1,515 +1,77 @@
-# 👑 SISTEMA CELEBRE — MANUAL TÉCNICO & RESUMO EXECUTIVO DO SISTEMA
+# 📊 RESUMO EXECUTIVO DO SISTEMA CELEBRE
 
-> **Celebre - Sistema Especializado em Gestão de Festas, Eventos e Locação de Acervo**  
-> *Documento técnico e operacional definitivo cobrindo 100% dos módulos, páginas, abas, fluxos e componentes do sistema.*
-
----
-
-## 📑 SUMÁRIO EXECUTIVO
-
-1. [Visão Geral e Arquitetura Tecnológica](#1-visão-geral-e-arquitetura-tecnológica)
-2. [Modelagem de Dados & Coleções Firestore](#2-modelagem-de-dados--coleções-firestore)
-3. [Navegação e Layout Base](#3-navegação-e-layout-base)
-4. [Detalhamento de Módulos e Páginas](#4-detalhamento-de-módulos-e-páginas)
-   - [4.1 Dashboard Principal (`/dashboard`)](#41-dashboard-principal-dashboard)
-   - [4.2 Gestão de Locações (`/locacoes`)](#42-gestão-de-locações-locacoes)
-   - [4.3 Gestão de Clientes (`/clientes`)](#43-gestão-de-clientes-clientes)
-   - [4.4 Estoque e Acervo (`/estoque`)](#44-estoque-e-acervo-estoque)
-   - [4.5 Financeiro & Fluxo de Caixa (`/financeiro`)](#45-financeiro--fluxo-de-caixa-financeiro)
-   - [4.6 Compras e Reposições (`/compras`)](#46-compras-e-reposições-compras)
-   - [4.7 Fornecedores (`/fornecedores`)](#47-fornecedores-fornecedores)
-   - [4.8 Agenda de Eventos (`/agenda`)](#48-agenda-de-eventos-agenda)
-   - [4.9 Logística, Galpão & Vistoria de Campo (`/logistica`)](#49-logística-roteiro-de-galpão--vistoria-de-campo-logistica)
-   - [4.10 Contratos Digitais & Assinatura (`/contratos`)](#410-contratos-digitais--assinatura-contratos)
-   - [4.11 Celebre Studio 4.0 — Moodboard & Cenografia Interativa (`/moodboard`)](#411-celebre-studio-40--moodboard--cenografia-interativa-moodboard)
-   - [4.12 Catálogo Virtual & Vitrine (`/catalogo`)](#412-catálogo-virtual--vitrine-catalogo)
-   - [4.13 Relatórios & Inteligência de Negócio (`/relatorios`)](#413-relatórios--inteligência-de-negócio-relatorios)
-   - [4.14 Configurações do Sistema (`/configuracoes`)](#414-configurações-do-sistema-configuracoes)
-   - [4.15 Central de Notificações (`/notificacoes`)](#415-central-de-notificações-notificacoes)
-   - [4.16 Equipe & Controle ASO (`/Usuarios`)](#416-equipe--controle-aso-usuarios)
-   - [4.17 Planos, Assinaturas & Painel Master Super Admin (`/planos` / `/admin`)](#417-planos-assinaturas--painel-master-super-admin-planos--admin)
-5. [Workflows Operacionais Integrados](#5-workflows-operacionais-integrados)
-6. [Regramento de Blindagem de Layout & UI/UX](#6-regramento-de-blindagem-de-layout--uiux)
-7. [Resumo Executivo de Atualizações & Modernizações Recentes](#7-resumo-executivo-de-atualizações--modernizações-recentes)
+## 📅 Data: 26 de Agosto de 2026
+## 🌐 Domínio Oficial: `https://celebrefesta.com.br`
+## 📱 App Google Play ID: `br.com.celebre.app`
+## 🏢 Conta de Desenvolvedor: `Celebre - Gestão de Festas` (ID: `8578569816294401739`)
 
 ---
 
-## 1. VISÃO GERAL E ARQUITETURA TECNOLÓGICA
+## 🎯 1. Principais Conquistas Deste Ciclo
 
-O **Sistema Celebre** foi desenvolvido para resolver as dores operacionais diárias de decoradoras de festas, galpões de locação de acervos e empresas do segmento "Pegue e Monte".
-
-### 🛠️ Stack Tecnológica:
-- **Core Frontend**: React 18+ impulsionado por **Vite** para compilação ultrarrápida.
-- **Roteamento**: `react-router-dom` v6 com rotas dinâmicas, controle de estado de navegação e guardas de segurança.
-- **Backend as a Service (BaaS)**: **Firebase**
-  - *Firestore Database*: Banco de dados NoSQL em tempo real.
-  - *Firebase Authentication*: Autenticação via e-mail/senha.
-  - *Firebase Storage*: Armazenamento de imagens de produtos, fotos de avarias, comprovantes e contratos.
-- **Inteligência Artificial no Navegador (Edge AI)**: `@imgly/background-removal` via WebAssembly (WASM) para remoção automática de fundo de fotos de peças e decorações, com processamento 100% local e sem custos de APIs externas.
-- **Visualização de Dados**: `recharts` (Gráficos de Área, Barras e Donut responsivos).
-- **Estilização**: Vanilla CSS 3 modularizado com CSS Variables (Design System Dark Luxury Enterprise com suporte nativo a responsividade mobile e dark/light tokens).
-- **Geração de Documentos**: HTML5 Canvas, `html2canvas` e `jspdf` para exportação de orçamentos, propostas com imagem, contratos, comprovantes e romaneios.
-
-### 🛡️ Arquitetura de Segurança & Multitenancy:
-- **Isolamento de Dados (Multitenancy)**: Todos os documentos gravados nas coleções contêm a chave `tenantId`. Consultas Firestore utilizam obrigatoriamente `where('tenantId', '==', tenantId)`, garantindo isolamento total entre diferentes empresas.
-- **Guardiões de Rota (`App.jsx`)**:
-  - `RotaPrivada`: Exige autenticação de usuário ativo.
-  - `RotaAdmin`: Restringe acesso a funções exclusivas do Super Admin (`celebrefesta25@gmail.com`).
-  - `TravaSeguranca`: Componente de validação dupla que checa permissões por módulo (`Financeiro`, `Relatorios`, `Equipe`, `Moodboard`) para perfis de funcionários.
+### 🌐 1.1. Conexão do Domínio Personalizado (Hostinger + Firebase)
+* **Domínio Ativo:** `celebrefesta.com.br` integrado com sucesso ao **Firebase Hosting**.
+* **Apontamento DNS:**
+  * Registro **`A`**: `@` ➔ `199.36.158.100` (Propagado globalmente).
+  * Registro **`TXT`**: `@` ➔ `hosting-site=celebre-9f5c9` (Validado pelo Google).
+  * Registro `ALIAS` antigo conflitante removido da Hostinger.
+* **Segurança & SSL:** Certificado HTTPS emitido e autenticação OAuth autorizada para `celebrefesta.com.br`.
 
 ---
 
-## 2. MODELAGEM DE DADOS & COLEÇÕES FIRESTORE
-
-O sistema opera sobre um ecossistema NoSQL organizado nas seguintes coleções principais:
-
-1. `locacoes`: Armazena dados de contratos, orçamentos, cliente associado, intervalo de datas (retirada, evento, devolução), tipo de serviço (Pegue e Monte vs. Decoração), lista de itens locados, valores (frete, desconto, sinal, caução, total), status e controle de devolução/avarias.
-2. `clientes`: Registro de clientes com nome, CPF/CNPJ, WhatsApp, e-mail, endereço completo com CEP e notas de relacionamento.
-3. `estoque`: Catálogo do acervo. Guarda SKU, nome, categoria, quantidade total, quantidade disponível, valor de locação, valor de reposição, dimensões, cor, estado e galeria de fotos.
-4. `financeiro`: Registros de entradas (locações, vendas) e saídas (aluguel do galpão, pessoal, manutenção, compras), data de vencimento, data de pagamento, categoria, forma de pagamento e anexo.
-5. `financeiro_recorrentes`: Cadastro de despesas fixas e salários mensais recorrentes (descrição, categoria, valor estimado, dia de vencimento, forma de pagamento, observações).
-6. `compras`: Aquisições de peças de acervo e insumos (balões, fitas, embalagens) com vinculação a fornecedores e rastreio de prazos de entrega.
-7. `fornecedores`: Parceiros comerciais, e-commerces (Mercado Livre, Shopee), artesãos, marceneiros e freteiros.
-8. `contratos`: Minutas de contratos e instâncias de contratos assinados digitalmente.
-9. `moodboard_elementos`: Biblioteca oficial e portfólio customizado de recortes PNG, arcos desconstruídos, painéis temáticos, texturas de parede, pisos e ambientes inteiros para o Moodboard Studio, gerenciados pelo Super Admin.
-10. `projetos_moodboard`: Projetos e maquetes 2D/3D salvas com array de objetos do canvas, texturas de parede e piso, configurações de luz, desfoque óptico e proposta comercial.
-11. `equipe`: Cadastro de colaboradores da empresa, seus cargos e mapa de permissões granulares por módulo.
-12. `configuracoes`: Parâmetros da empresa (logo, chave PIX, endereço, dados da frota, margem de bloqueio de estoque).
-13. `notificacoes`: Alertas do sistema referentes a atrasos e tarefas do dia.
+### 📱 1.2. Criação da Conta & Pacote Google Play Store
+* **Conta de Desenvolvedor Ativada:** Taxa única de USD 25 liquidada e conta configurada com sucesso.
+* **Pacote Android (.AAB) Gerado:**
+  * Arquivo: `Celebre.aab` (Tamanho ultra-leve: **2.1 MB**).
+  * Package ID: `br.com.celebre.app`.
+  * Chave de Assinatura: `signing.keystore` gerada e salva.
+  * Digital Asset Links: `public/.well-known/assetlinks.json` configurado com a chave SHA-256 para navegação nativa em tela cheia (sem barra de URL).
+* **Verificação de Identidade:** Documentos enviados e em análise automática pelo Google Play.
 
 ---
 
-## 3. NAVEGAÇÃO E LAYOUT BASE
-
-O layout é composto por estruturas globais e isolamento de telas de estúdio:
-
-- **`Navbar.jsx` (Menu Lateral / Drawer Mobile)**:
-  - Navegação expansível com ícones para todos os módulos.
-  - Exibição do plano ativo da empresa.
-  - Badges de notificações em tempo real.
-- **`Topbar.jsx` (Barra Superior Global)**:
-  - Identificação da empresa e do usuário logado.
-  - Atalho rápido de busca e central de notificações (`SininhoNotificacoes.jsx`).
-  - Seletor de tema claro/escuro e logout.
-- **Modo Estúdio Imersivo (`rotasSemMenu`)**:
-  - A rota `/moodboard` opera em modo *Tela Cheia Dedicada*, ocultando Navbar e Topbar globais para fornecer 100% de área visual ao Canvas de criação, com botão próprio de retorno ao Início.
+### ⚡ 1.3. PWA (Progressive Web App) & Modo Offline
+* **Instalação Nativa:** Banner inteligente e responsivo para Android, iOS e Computador.
+* **Persistência de Fechamento:** O banner salva a preferência do usuário em `sessionStorage` e não é intrusivo.
+* **Service Worker Otimizado (`sw.js`):** Cache estático com estratégia Network-First e blindagem contra extensões do navegador (`chrome-extension://`).
+* **Firestore Multi-Abas:** Atualizado para `initializeFirestore` com `persistentLocalCache` e `persistentMultipleTabManager` (Zero erros ou avisos de depreciação no console).
 
 ---
 
-## 4. DETALHAMENTO DE MÓDULOS E PÁGINAS
+### 🎨 1.4. Refinamento Visual & Responsividade Mobile da Landing Page
+1. **Blindagem de Idioma:**
+   * Script legado de tradução automática removido do `index.html` e adicionada meta tag `<meta name="google" content="notranslate">`, corrigindo erros de tradução ("por", "Teste fora", "não.").
+2. **Eliminação do Espaço Superior no Mobile:**
+   * Ajustada a classe `.App.no-navbar .main-content` para zerar o recuo de 75px em telas públicas no celular.
+3. **Hero Section (Cartaz Dinâmico):**
+   * Tipografia proporcional, chips de benefícios elegantes e botão de ação compacto, aproximando a prévia do painel.
+4. **Empresas Parceiras (Letreiro Contínuo):**
+   * Transformado em um letreiro deslizante (*marquee*) em **1 única linha horizontal**, suave e com gradientes nas bordas.
+5. **Cards de Recursos (Grid 2 Colunas no Celular):**
+   * Fim dos cards gigantes empilhados; agora dispostos em **2 colunas compactas** com ícones e fontes proporcionais.
+6. **Depoimentos & Avaliações (Carrossel Deslizante):**
+   * Depoimentos em formato de carrossel contínuo com **5 estrelas douradas**, foto, nome e empresa.
+7. **Planos & Preços (Slider com Flechinhas `‹` e `›`):**
+   * Navegação lateral intuitiva no celular com botões de flechas, bolinhas indicadoras (`● ○ ○`) e suporte a arrastar com o dedo.
+   * Valores reduzidos de 3.5rem para 1.85rem com acabamento premium.
 
 ---
 
-### 4.1 Dashboard Principal (`/dashboard`)
-Página central de inteligência e controle de fluxo do negócio.
-- **Cards KPI**: Total de locações ativas, faturamento do mês, devoluções pendentes e itens em manutenção.
-- **Próximos Eventos & Saídas**: Lista cronológica de retiradas e entregas programadas.
-- **Gráficos de Desempenho**: Faturamento por período e itens mais locados do acervo.
+## 📋 2. Tabela de Status dos Módulos
+
+| Módulo / Recurso | Status | Observação |
+| :--- | :---: | :--- |
+| **Domínio celebrefesta.com.br** | 🟢 No Ar | Conectado, seguro (SSL) e autorizado no Firebase Auth |
+| **Conta Google Play Console** | 🟡 Verificação | Em análise de identidade pelo Google |
+| **Pacote Celebre.aab** | 🟢 Pronto | Salvo em Downloads e pronto para upload |
+| **PWA & Modo Offline** | 🟢 Ativo | Service Worker e cache multi-abas operacionais |
+| **Landing Page Responsiva** | 🟢 Perfeita | Header limpo, letreiro contínuo, carrossel de planos |
+| **Módulos do Sistema** | 🟢 Blindados | `.clientes-stats-grid` em 1 linha no desktop e 2 no mobile |
 
 ---
 
-### 4.2 Gestão de Locações (`/locacoes`)
-- **Lista de Locações (`Locacoes.jsx`)**:
-  - Tabela responsiva com busca por cliente, número de contrato, intervalo de datas e status.
-  - Filtro por abas de status: *Orçamentos*, *Confirmados*, *Em Separação*, *Entregues*, *Concluídos*, *Cancelados*.
-  - Ações em massa e atalhos de alteração de status.
-- **Nova Locação / Edição (`NovaLocacao.jsx`)**:
-  - Simulador de disponibilidade em tempo real por intervalo de datas.
-  - Seleção visual de acervos com leitor de SKU e filtros de categoria.
-  - Cálculo automático de frete dinâmico por geolocalização e consumo veicular.
-  - Cálculo automático de desconto, valor de sinal e caução.
-- **Visualizador de Contrato (`VisualizarLocacao.jsx`)**:
-  - Emissão de contrato com minuta dinâmica, espelho do pedido e botão para envio via WhatsApp ou PDF.
-- **Romaneio & Expedição (`RomaneioModal.jsx`)**:
-  - Lista de separação de peças para equipe de galpão com caixas de checagem.
-
----
-
-### 4.3 Gestão de Clientes (`/clientes`)
-- **Painel de Clientes (`Clientes.jsx`)**:
-  - Lista completa de clientes cadastrados com estatísticas de locação.
-- **Novo Cliente / Edição (`NovoCliente.jsx`)**:
-  - Formulário completo com consulta de CEP automática, CPF/CNPJ, WhatsApp formatado e campo de observações comportamentais.
-
----
-
-### 4.4 Estoque e Acervo (`/estoque`)
-- **Catálogo de Estoque (`Estoque.jsx`)**:
-  - Visualização em Grid de Cards ou Tabela com foto, SKU, categoria, peças totais, disponíveis e quebradas.
-  - Filtro por disponibilidade em data específica.
-- **Cadastro de Item (`CadastroEstoque.jsx`)**:
-  - Upload de fotos para o Firebase Storage.
-  - Cadastro de SKU, dimensões, cor, valor de locação e valor de reposição (para cobrança de avarias).
-  - Definição de formato: *Peça Avulsa* vs *Kit / Conjunto*.
-
----
-
-### 4.5 Financeiro & Fluxo de Caixa (`/financeiro`)
-Página unificada com arquitetura de 3 abas sem descontinuidade visual ou quebra de layout:
-- **Aba 1: 📊 Fluxo de Caixa (`lancamentos`)**:
-  - 4 Cards KPI protegidos (Faturamento Bruto, Total Saídas, Saldo Operacional, Saldo Líquido com Estimativa de Fechamento).
-  - Barra de formas de pagamento em chips com ícones (`⚡ Pix`, `💳 Cartão`, `💵 Dinheiro`, `📄 Boleto`).
-  - Tabela dinâmica de lançamentos com status de quitação, visualização de anexos e filtros por período e categoria.
-  - Widget de Distribuição por Categoria com gráfico de rosca Donut + barras de progresso visual.
-  - Exportação de dados em CSV / Excel (`📥 Exportar (.CSV)`).
-- **Aba 2: 📎 Comprovantes (`comprovantes`)**:
-  - Central de auditoria com galeria de comprovantes de pagamento e recebimento anexados.
-  - Modal de ampliação em alta definição via React Portal (`document.body`) com suporte a imagens e visualizador de PDF, download e impressão.
-- **Aba 3: 🏢 Contas Fixas & Despesas Recorrentes (`contas-fixas`)**:
-  - Gestão de folha salarial e despesas estruturais (Aluguel, Energia, Internet, Pró-labore, Diárias).
-  - 4 Cards KPI dedicados: *Custo Fixo Total Estimado*, *Equipe & Pessoal*, *Infra & Despesas Fixas* e *Status em Mês Vigente*.
-  - **Modal Celebre VIP de Cadastro/Edição**: Renderizado no `document.body` via React Portal com `backdrop-filter: blur(14px)`, layout 2x2 otimizado, máscara monetária em tempo real e foco inteligente.
-  - **Lançamento Automático em 1 Clique**: Botão `⚡ Lançar no Caixa` que cria a despesa no fluxo de caixa e atualiza o status de lançamento no mês alvo.
-
----
-
-### 4.6 Compras e Reposições (`/compras`)
-- **Gestão de Compras (`Compras.jsx`)**:
-  - Registro de compras de reposição de acervo avariado, investimento em novos temas e aquisição de descartáveis/insumos.
-  - Exportação e envio de lista de compras para WhatsApp ou PDF.
-- **Nova Compra com Redesign SaaS Premium (`NovaCompra.jsx`)**:
-  - Dark Hero Header com gradiente dourado (`#0f172a` a `#1e293b`).
-  - Stepper Workflow em 3 passos lógicos.
-  - Segmentação inteligente (*Reposição de Acervo* vs *Pedido Específico vinculado a evento*).
-  - Campos financeiros lado a lado em 2 colunas (`.nc-grid-2`).
-  - Modal de busca inteligente de fornecedores com atalhos para marketplaces (*Mercado Livre*, *Shopee*).
-
----
-
-### 4.7 Fornecedores (`/fornecedores`)
-- **Painel de Fornecedores (`Fornecedores.jsx`)**:
-  - Cadastro de parceiros, e-commerces, marceneiros, pintores, freteiros e lojas de insumos.
-- **Novo Fornecedor (`NovoFornecedor.jsx`)**:
-  - Formulário com razão social, contato do vendedor, WhatsApp, chave PIX e categoria de fornecimento.
-
----
-
-### 4.8 Agenda de Eventos (`/agenda`)
-- **Calendário da Decora (`Agenda.jsx`)**:
-  - Calendário interativo com modos Mês, Semana e Dia.
-  - Marcadores coloridos diferenciando:
-    - 🚚 *Data de Retirada/Entrega*
-    - 🎉 *Data da Festa/Evento*
-    - 📦 *Data de Devolução/Recolhe*
-
----
-
-### 4.9 Logística, Roteiro de Galpão & Vistoria de Campo (`/logistica`)
-- **Esteira Kanban de Galpão em 4 Etapas (`Logistica.jsx`, `Logistica.css`)**:
-  - `1. A Separar`: Pedidos confirmados e aprovados aguardando início da separação de galpão.
-  - `2. Em Separação`: Separação ativa no acervo com checklist de itens, leitor de código de barras e controle de caixas.
-  - `3. Na Rua / Evento`: Pedidos em trânsito, montados no buffet/residência ou em realização do evento.
-  - `4. Devolvidos`: Retorno do material ao galpão para vistoria de devolução, baixa de estoque e lançamento de avarias.
-- **Sistema de Vistoria de Devolução & Saída (`ModalCheckinLocacao.jsx`, `ModalCheckinLocacao.css`)**:
-  - Modal flutuante luxury com 2 colunas no Desktop (980px) e card flutuante responsivo no celular (`border-radius: 16px`).
-  - Steppers fracionados de conferência `[-] 0 [+] [Max]` para cada peça e botões de status (`🟢 OK`, `🛠️ Avaria`, `❌ Falta`).
-  - Câmera ao vivo para bipagem de QR Code e Código de Barras dos caixotes/peças.
-  - Máscara monetária BRL automática em tempo real para registro de custos de reposição/avaria.
-  - Lançamento financeiro automático da cobrança de avarias direto no Fluxo de Caixa.
-  - Anexo de fotos de vistoria e Canvas de Assinatura Digital Touch (`touch-action: none`) sem rolagem da tela.
-- **Gestão de Transporte, Motorista & Embalagens Retornáveis (`ModalDesignarMotorista.jsx`)**:
-  - Atribuição rápida de motorista/equipe e veículo designado.
-  - Controle e contagem de embalagens retornáveis de galpão (Caixas Plásticas, Sacolas e Capas de Painel).
-  - Campo de instruções de rota para motorista com impressão direta na Folha de Campo.
-- **Ecossistema de Documentos & Relatórios em PDF da Logística**:
-  - `gerarRomaneioPDF.js`: Romaneio de Carga & Rota do Motorista com lista de entregas, coletas e saldo a receber.
-  - `gerarFolhaSeparacaoGalpaoPDF.js`: Mapa Geral de Separação de Peças consolidado por período.
-  - `gerarComprovanteCheckinPDF.js`: Comprovante oficial de vistoria e conferência de devolução/saída com dados do responsável e assinatura.
-  - `gerarEtiquetasCaixotePDF.js`: Etiquetas de expedição para colar nos caixotes antes da saída do galpão.
-
----
-
-### 4.10 Contratos Digitais & Assinatura (`/contratos`)
-- **Gerenciador de Contratos (`Contratos.jsx`)**:
-  - Painel de contratos gerados, assinados e pendentes.
-- **Assinatura Digital (`AssinaturaContrato.jsx`)**:
-  - Interface para o cliente assinar o contrato digitalmente pelo celular.
-
----
-
-### 4.11 Celebre Studio 4.0 — Moodboard & Cenografia Interativa (`/moodboard`)
-O estúdio criativo do sistema é uma ferramenta profissional especializada no mercado de festas:
-
-- **1. Cenografia Oficial Exclusiva Super Admin**:
-  - Todos os presets estáticos de imagens externas foram removidos.
-  - Exibição de paredes, pisos e ambientes inteiros carregados dinamicamente do Firestore e cadastrados exclusivamente pelo Super Admin.
-- **2. Enquadramento, Movimentação & Zoom de Cenário (Pan & Zoom)**:
-  - **↕️ Posição Vertical (0% a 100%)**: Move a imagem para cima e para baixo para enquadrar a melhor área fotográfica.
-  - **↔️ Posição Horizontal (0% a 100%)**: Move a imagem para a esquerda ou direita.
-  - **🔍 Zoom / Escala (80% a 250%)**: Ajusta o tamanho da textura de tijolos, piso ou foto do salão.
-  - **↺ Centralizar**: Botão de 1 clique para resetar os eixos.
-- **3. Foco Óptico & Profundidade 3D (Bokeh)**:
-  - Slider `📷 Profundidade de Tela / Desfoque (0 a 10px)` que aplica desfoque suave de profundidade de campo (*bokeh* óptico) no fundo, destacando as peças em primeiro plano com visual cinematográfico.
-- **4. Cenários Modulares (Parede + Piso) vs. Fotos de Salão (Ambiente Inteiro)**:
-  - *Ambiente Inteiro*: Ao selecionar foto de salão/jardim, ativa o **Modo Fundo Único**, cobrindo 100% da prancheta sem chão artificial sobreposto.
-  - *Parede + Piso*: Ativa o **Modo Duplo**, com ciclorama 3D, sombra de oclusão de contato (`0% a 60%`), altura da linha do chão (`15% a 55%`) e opção de rodapé de estúdio.
-- **5. Remoção Automática de Fundo com IA Local (WASM)**:
-  - Integração do modelo `@imgly/background-removal` rodando 100% no navegador do usuário, recortando fotos instantaneamente.
-- **6. Catálogo com 12 Estruturas Vetoriais Cenográficas**:
-  - Painéis romanos, redondos, retangulares, hexagonais, nichos, meia-lua, mesas, cilindros, arcos orgânicos de balões, guirlandas e tipografia metálica (Gold Mirror, Rose Gold, Silver, MDF Wood e Glitter).
-- **7. Indicador Comercial "A Comprar"**:
-  - Badge pulsante para peças não disponíveis no estoque físico da decoradora e botão **`👑 GERAR LOCAÇÃO`** para converter a maquete visual em pedido formal.
-- **8. Arquitetura Mobile-First Bottom Sheet**:
-  - Canvas em tela cheia, dock inferior e drawer com gesto de deslizar (*swipe down*).
-
----
-
-### 4.12 Catálogo Virtual & Vitrine (`/catalogo`)
-- **Vitrine Virtual (`Catalago.jsx`)**:
-  - Galeria de acervos e temas prontos organizada para enviar a clientes via WhatsApp.
-
----
-
-### 4.13 Relatórios & Inteligência de Negócio (`/relatorios`)
-Dividido em 4 abas analíticas avançadas:
-1. **Pedidos (`PedidosTab.jsx`)**: Taxa de conversão, ticket médio e volume contratado.
-2. **Estoque (`EstoqueTab.jsx`)**: Curva ABC, valoração de acervo físico e peças ociosas.
-3. **Financeiro (`FinanceiroTab.jsx`)**: DRE Gerencial, Livro Caixa auditado e indicadores de margem.
-4. **Clientes (`ClientesTab.jsx`)**: Recompra, LTV e ranking de cidades com mais festas.
-
----
-
-### 4.14 Configurações do Sistema (`/configuracoes`)
-- Gestão de dados da empresa, chave PIX, logomarca, frota de veículos, permissões de equipe, margem de bloqueio de estoque e cópia de segurança (Backup).
-
----
-
-### 4.15 Central de Notificações (`/notificacoes`)
-- Alertas em tempo real sobre devoluções pendentes, cobranças e tarefas logísticas do dia.
-
----
-
-### 4.16 Equipe & Controle ASO (`/Usuarios`)
-- Gerenciamento de acessos da equipe de galpão e atendimento, logs de auditoria e controle de ASO.
-
----
-
-### 4.17 Planos, Assinaturas & Painel Master Super Admin (`/planos` / `/admin`)
-- **Painel Master / Controle Geral (`ControleGeral.jsx`, `ControleGeral.css`)**:
-  - Acesso restrito ao Super Admin (`celebrefesta25@gmail.com`).
-  - Largura padronizada a 100% da tela (`.cg-wrapper.fade-in`).
-  - Dropdown compacto de categorias e pílulas de status sem barra de rolagem horizontal extensa.
-  - Subchips contextuais inteligentes no cadastro de cenários (Paredes: *Cor Lisa, Ripado, Tijolo, Janela*; Pisos: *Madeira, Porcelanato, Grama*; Ambientes: *Salão Nobre, Jardim, Rústico*).
-  - Gestão e liberação global de elementos para todos os clientes da plataforma SaaS.
-
----
-
-## 5. WORKFLOWS OPERACIONAIS INTEGRADOS
-
-```mermaid
-graph TD
-    A[Atendimento Inicial / Catálogo Virtual / Moodboard Studio] --> B[Geração de Orçamento em Nova Locação]
-    B --> C[Checagem Automática de Disponibilidade de Estoque]
-    C --> D[Envio da Proposta Comercial com Projeto Visual via WhatsApp/PDF]
-    D --> E[Aprovação do Cliente & Assinatura do Contrato Digital]
-    E --> F[Locação Confirmada & Reserva de Estoque Efetuada]
-    F --> G[Geração do Romaneio e Mapa de Separação de Galpão]
-    G --> H[Checkout / Registro de Saída das Peças com Bipagem]
-    H --> I[Realização do Evento]
-    I --> J[Checkin / Conferência de Retorno das Peças e Vistoria de Avarias]
-    J -->|Sem Avarias| K[Devolução de Caução & Finalização]
-    J -->|Com Avarias| L[Cobrança de Reposição & Lançamento Automático no Caixa]
-```
-
----
-
-## 6. REGRAMENTO DE BLINDAGEM DE LAYOUT & UI/UX
-
-### 🔒 Regra de Ouro 1: Layout dos Cards KPI no Desktop (1 Única Linha)
-- A classe `.clientes-stats-grid` em **TODAS** as páginas (`Locacoes`, `Clientes`, `Estoque`, `Compras`, `Financeiro`) **DEVE PERMANECER OBRIGATORIAMENTE EM 1 SÓ LINHA HORIZONTAL (`flex-wrap: nowrap !important; display: flex !important;`)** no desktop (`> 900px`).
-- **NUNCA** permitir que os cards dobrem para 2 linhas no desktop. Todos os cards ajustam-se proporcionalmente lado a lado.
-
-### 🔒 Regra de Ouro 2: Layout dos Cards KPI no Celular (2 Colunas)
-- A classe `.clientes-stats-grid` em **TODAS** as páginas **DEVE PERMANECER OBRIGATORIAMENTE EM 2 COLUNAS** no celular/telas menores (`<= 900px`).
-- A regra global em `src/App.css` e nas páginas específicas utiliza `grid-template-columns: repeat(2, 1fr) !important;`.
-
-### 🔒 Regra de Ouro 3: Preservação de CSS e Estilos Visuais
-- Arquivos de estilização CSS (`Locacoes.css`, `Clientes.css`, `Estoque.css`, `Compras.css`, `ModalCalendarioDisponibilidade.css`) estão **BLINDADOS**.
-- Não alterar classes globais de grid sem verificar o impacto em todas as telas da aplicação.
-
----
-
-## 7. RESUMO EXECUTIVO DE ATUALIZAÇÕES & MODERNIZAÇÕES RECENTES
-
-### 7.1. Celebre Studio 4.0 — Moodboard, Cenografia & Profundidade 3D
-- **Exclusividade de Cenários do Super Admin**: Remoção de presets estáticos genéricos; liberação das coleções oficiais de Paredes, Pisos e Ambientes Inteiros alimentadas via Firestore.
-- **Movimentação Livre, Pan & Zoom**: Sliders de posição vertical (Y), horizontal (X) e zoom (80% a 250%) com botão de reset de 1 clique.
-- **Foco Óptico / Bokeh**: Controle de profundidade e desfoque suave de fundo (0 a 10px).
-- **Modo Único vs Duplo**: Fotos inteiras cobrem 100% da tela contínua; estúdios modulares aplicam ciclorama 3D com sombra de oclusão de contato e ajuste de linha do chão.
-- **Expansão de Espaço Vertical**: Grid de texturas sem barra de rolagem reduzida, utilizando toda a área do painel lateral.
-- **Blindagem de Compatibilidade CSS**: Inclusão de `background-clip: text` em todos os materiais e letreiros realistas.
-
-### 7.2. Painel Master Super Admin (`ControleGeral.jsx` & `ControleGeral.css`)
-- **Largura 100% Padronizada**: Alinhamento visual pleno com as páginas principais do sistema.
-- **Toolbar Compacta**: Eliminação da fita horizontal com dropdown ágil de categorias e subfiltros contextuais.
-- **Cadastro Inteligente de Cenários**: Ocultação da paleta pesada de balões e exibição de chips de subtipos específicos de acordo com a categoria selecionada.
-
-### 7.3. Página de Financeiro (`Financeiro.jsx` & `Financeiro.css`)
-- **Arquitetura Unificada de 3 Abas**: `Fluxo de Caixa`, `Comprovantes` e `Contas Fixas` integradas com cards KPI protegidos e exportação CSV.
-- **Módulo de Contas Fixas VIP**: 4 Cards KPI, lançamento de despesa em 1 clique e modal de cadastro via React Portal.
-
-### 7.4. Logística, Galpão & Vistorias de Campo
-- **Esteira Kanban de 4 Etapas**, vistoria touch com bipagem e assinatura digital, e ecossistema de PDFs (Romaneio, Folha de Separação, Comprovante de Check-in e Etiquetas de Caixote).
-
-### 7.5. Inteligência de Frete & Lucro Real da Festa
-- **Cálculo de Frete por GPS/CEP e tipo de veículo**, com apuração do lucro real abatendo custos operacionais e de transporte.
-
-
-### 7.6. Celebre Studio 4.0 — Reorganização do Fluxo de Trabalho da Toolbar
-
-**Data:** 19/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
-
-A ordem da barra lateral (toolbar) foi completamente reorganizada para seguir o fluxo lógico e natural de uma decoradora profissional — do palco às peças, até os detalhes finais:
-
-| Posição | Aba | Finalidade |
-|---------|-----|------------|
-| 1ª | 🏞️ **Cenário** | Define o palco — parede, piso 3D ou salão inteiro |
-| 2ª | 🏛️ **Estruturas** | Arcos romanos, painéis temáticos, cilindros, mesas |
-| 3ª | 📦 **Acervo** | Estoque próprio + elementos PNG globais + upload rápido |
-| 4ª | ✨ **Efeitos** | Efeitos visuais e atmosfera do ambiente (ver 7.7) |
-| 5ª | 🎈 **Bexigas** | Arcos orgânicos, guirlandas, balões cluster e colunas |
-| 6ª | ✍️ **Letreiros** | Texto, fontes artísticas, materiais realistas e apliques |
-
-**Mudanças adicionais:**
-- Estado inicial da aba ao abrir o Moodboard alterado para `'fundo'` (Cenário) — o usuário começa pelo palco.
-- Labels do Bottom Sheet mobile atualizados para refletir a nova nomenclatura.
-- Ícone `Sun` adicionado ao objeto `Icons` para a aba Efeitos.
-
----
-
-### 7.7. Celebre Studio 4.0 — Nova Aba ✨ Efeitos & Iluminação
-
-**Data:** 19/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
-
-Implementação da nova aba de efeitos visuais globais do ambiente, com controles em tempo real:
-
-#### Controles CSS Globais (aplicados via `filter` no `canvas-layers`):
-- **☀️ Luminosidade** (30–200%): Ajusta o brilho geral da cena — de estúdio escuro a ambiente externo.
-- **🎨 Contraste** (30–200%): Define a dramaticidade visual — de suave a cinematográfico.
-- **🌈 Saturação** (0–250%): De preto e branco total a cores super-vívidas e festivas.
-- **🌫️ Profundidade de Foco** (0–15px): Desfoque bokeh do cenário de fundo (movido do painel Cenário).
-
-#### Overlays Visuais (camadas renderizadas no artboard):
-- **🌅 Tonalidade de Cor**: Paleta de 14 tons (claros e escuros) com `mix-blend-mode: color` e intensidade ajustável (0–80%) — permite tingir a cena com tons dourados, azulados, rosados ou dramáticos.
-- **🕸️ Vinheta** (0–100%): Gradiente radial que escurece as bordas da cena, criando foco visual no centro.
-- **🔄 Resetar Tudo**: Botão que zera todos os efeitos de uma só vez.
-
-#### Arquitetura técnica:
-- Estados: `luminosidadeGlobal`, `contrasteGlobal`, `saturacaoGlobal`, `tonalidadeCor`, `tonalidadeIntensidade`, `vignettaIntensidade`.
-- Filtros compostos com `Array.filter(Boolean).join(' ')` para eficiência.
-- Overlays com `position: absolute; inset: 0; pointer-events: none` para não interferir na interação.
-
-### 7.8. Celebre Studio — Gradiente de Parede & Padronização de Cenário
-
-**Data:** 20/08/2026 | **Arquivos:** `Moodboard.jsx`
-
-- **🌈 Gradiente de Parede Personalizável**:
-  - Checkbox para ativação/desativação rápida do gradiente na aba Cenário (Parede).
-  - 6 Presets visuais clicáveis (*Neve → Cinza*, *Rosa Suave*, *Dourado*, *Crepúsculo*, *Noturno*, *Menta*).
-  - Seletores independentes de **Cor 1** e **Cor 2** com `input type="color"`.
-  - 4 Direções de degradê: `↓ Vertical`, `→ Horizontal`, `↘ Diagonal`, `↗ Anti-Diagonal`.
-  - Desativação automática e inteligente ao selecionar cores sólidas ou texturas fotográficas.
-- **🧱 Modo Mosaico (Tiling) para Texturas de Parede**:
-  - Modo `repeat` para texturas flat (tijolinho, mármore, azulejos), evitando esticamento de imagem.
-- **🪵 Padronização do Piso em Modo Cover**:
-  - Eliminação de repetições verticais em imagens perspectivadas de piso, garantindo preenchimento integral com controle de enquadramento vertical e horizontal.
-
----
-
-### 7.9. Celebre Studio — Limpeza de Acervo & Nova Coleção de Estruturas Vetoriais 3D
-
-**Data:** 20/08/2026 | **Arquivos:** `Moodboard.jsx`
-
-- **Limpeza do Catálogo**: Remoção de modelos obsoletos do menu de seleção (*Mesa Rústica, Provençal, Mesa Cubo, Cômoda, Carrinho, Shimmer, Biombo 3F, Meia Lua e Nichos*), mantendo retrocompatibilidade com projetos antigos.
-- **Inclusão de 5 Novas Peças de Tendência em SVG 3D**:
-  1. 🏛️ **Arco Romano 3 Camadas (`Romano 3C`)**: Três molduras concêntricas escalonadas em relevo com degraus de chão.
-  2. 🌀 **Arco Orgânico 3 Camadas (`Orgânico 3C`)**: Portal com curvas sinuosas em 3 níveis de profundidade com pés escalonados.
-  3. ☁️ **Painel Nuvem Totem (`P. Nuvem`)**: Totem vertical com gomos arredondados contínuos nas laterais e pezinhos estilo cavalete MDF.
-  4. 🦴 **Mesa Osso Pet / Infantil (`Mesa Osso`)**: Frente recortada com moldura externa e miolo rebaixado + tampo superior isométrico para apoio de doces.
-  5. 🚙 **Mesa Jeep Safari / Carro Infantil (`Mesa Jeep`)**: Frente completa de Jeep com para-brisa vazado, volante, retrovisores, prateleira de apoio, grade de 7 aletas, faróis redondos, para-choque com placa "JEEP 4X4" e pneus tratorados.
-
----
-
-### 7.10. Celebre Studio — Sistema de Colorização Multi-Camadas & Inspector Inteligente
-
-**Data:** 20/08/2026 | **Arquivos:** `Moodboard.jsx`
-
-- **🌈 Colorização Multi-Camadas dos Arcos Triplos**:
-  - Alternador: **🎨 1 Cor (Tudo Igual)** vs **🌈 Modo 3 Cores (Degradê)**.
-  - Seletores independentes para *Camada 1 (Externa/Fundo)*, *Camada 2 (Intermediária)* e *Camada 3 (Interna/Portal)*.
-  - 6 Presets rápidos de degradê: *Branco / Cinzas*, *Nude Areia*, *Rosa Bebê*, *Azul Céu*, *Terracota* e *Ouro Real*.
-- **🦴 Colorização da Mesa Osso**:
-  - Seletores individuais para *Borda/Moldura Externa*, *Miolo Central Rebaixado* e *Tampo Superior*.
-- **🚙 Colorização da Mesa Jeep Safari**:
-  - Seletores individuais para *Carroceria*, *Pneus/Rodas Tratoradas*, *Faróis/Detalhes* e *Tampo Superior*.
-- **🎨 Paleta Rápida para Estruturas Simples**:
-  - Seletor de cor universal e chips de tons clássicos para arcos e painéis no painel de propriedades.
-
----
-
-### 7.11. Celebre Studio — Upload Rápido de Imagem Direto na Prancheta & Catálogo
-
-**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
-
-- **📸 Upload Ágil de Imagem**:
-  - Botão dedicado de Upload na barra lateral esquerda permitindo subir arquivos `.png`, `.jpg`, `.webp` direto do computador.
-  - Pré-visualização instantânea no modal com remoção de fundo por IA WASM (`@imgly/background-removal`) 100% offline.
-  - Opção de salvar a peça no acervo permanente da empresa ou inseri-la de forma imediata na prancheta para agilizar a composição do cenário.
-
----
-
-### 7.12. Módulo Controle Geral — Gerenciamento Dinâmico de Categorias do Moodboard
-
-**Data:** 22/08/2026 | **Arquivos:** `ControleGeral.jsx`, `ControleGeral.css`, `Moodboard.jsx`
-
-- **⚙️ Painel de Categorias para o Super Admin**:
-  - Nova seção no módulo **Controle Geral** (`/controle-geral`) para o Super Admin cadastrar, editar emojis/ícones, renomear e excluir categorias da galeria de cenografia.
-  - Sincronização em tempo real via Firestore com fallback para as categorias padrão do sistema (`CATEGORIAS_MOODBOARD_PADRAO`).
-
----
-
-### 7.13. Celebre Studio — Filtro de Categorias Compacto em Dropdown Select
-
-**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
-
-- **🏷️ Dropdown Select Elegante (1 Linha)**:
-  - Substituição de fileiras de chips/pills que causavam cortes horizontais e rolagem desconfortável na barra lateral esquerda.
-  - Select estilizado no padrão Luxury (`.mb-category-select-modern`) exibindo o ícone, o nome completo da categoria e a contagem dinâmica de peças disponíveis (ex.: `🌸 Flores & Folhagens (8)`).
-  - Aplicado tanto na aba **Catálogo PNG (Oficiais + Uploads)** quanto na aba **Meu Estoque**.
-
----
-
-### 7.14. Celebre Studio — Realocação de Efeitos & Iluminação para o Painel Direito
-
-**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
-
-- **✨ Separação Conceitual (Criação à Esquerda vs. Propriedades à Direita)**:
-  - Barra lateral esquerda mantida 100% limpa e dedicada exclusivamente à criação/adição de itens no cenário (*Cenário, Estruturas, Acervo, Bexigas, Letreiros e Upload*).
-  - Controles de iluminação e atmosfera da cena integrados ao **Painel de Propriedades (Lado Direito)** quando nenhum item está selecionado, e também acessíveis via aba dedicada `✨ Iluminação` no topo do Estúdio Pro.
-  - Novo design com tipografia escura nítida (`#0f172a`), sliders dourados (`#c5a059`), porcentagens tabulares em ouro e paletas circulares para atmosfera diurna e noturna.
-
----
-
-### 7.15. Celebre Studio — Estúdio Pro com Dock Lateral Recolhido (Slim Icons Mode)
-
-**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
-
-- **📌 Dock Lateral Recolhido (52px)**:
-  - Opção de recolher o painel direito através do botão `Recolher ▶`, transformando-o em uma régua vertical compacta com ícones (`📚 Camadas`, `🎛️ Propriedades`, `☀️ Iluminação`, `🎈 Bexigas`).
-  - Ao clicar em qualquer ícone no dock recolhido, o painel se expande instantaneamente aberto na respectiva ferramenta.
-  - Ajuste nas 4 abas do topo do painel expandido (`Camadas`, `Propriedades`, `Iluminação`, `Bexigas`), acomodando todas em 1 única linha harmoniosa sem transbordar ou cortar textos.
-
----
-
-### 7.16. Celebre Studio — Correção do Botão Olhinho (Visibilidade de Camada 👁️ / 👁️‍🗨️)
-
-**Data:** 22/08/2026 | **Arquivos:** `Moodboard.jsx`, `Moodboard.css`
-
-- **👁️ Controle Instantâneo de Visibilidade**:
-  - Correção da lógica de ocultação de elementos no canvas (`hidden: true / false` e verificação no loop de renderização do canvas).
-  - Permite ocultar e reexibir itens instantaneamente com 1 clique para comparar o cenário com e sem a peça.
-  - Feedback visual no painel de camadas: ícone `EyeOff` com destaque em vermelho suave, card translúcido com borda pontilhada e nome do item riscado com a insígnia `👁️‍🗨️ Camada Oculta`.
-
----
-
-*Manual técnico e Resumo Executivo atualizados em 22/08/2026 — Sistema Celebre v4.2*
+## 🚀 3. Próximos Passos (Checklist)
+
+1. [ ] **Google Play Console:** Aguardar o e-mail de confirmação da identidade do Google.
+2. [ ] **Upload do App:** Assim que a verificação for concluída, criar o lançamento de Produção e subir o arquivo `Celebre.aab`.
+3. [ ] **Preenchimento da Ficha da Loja:** Inserir descrição curta, descrição completa, ícone `512x512` e prints do sistema.

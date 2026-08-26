@@ -1,0 +1,221 @@
+/* =====================================================
+   📱 CELEBRE PWA INSTALL PROMPT (BANNER & MODAL IOS)
+   ===================================================== */
+
+.celebre-pwa-install-banner {
+  position: fixed;
+  top: 14px;
+  right: 18px;
+  background: linear-gradient(135deg, #0b0f19 0%, #1e293b 100%);
+  border: 1.5px solid rgba(197, 160, 89, 0.45);
+  border-radius: 14px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.35), 0 0 15px rgba(197, 160, 89, 0.2);
+  z-index: 99999;
+  animation: pwaSlideDown 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  max-width: 440px;
+  box-sizing: border-box;
+}
+
+@keyframes pwaSlideDown {
+  from {
+    transform: translateY(-30px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.pwa-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pwa-app-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.25) 0%, rgba(15, 23, 42, 0.8) 100%);
+  border: 1px solid #c5a059;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.15rem;
+  flex-shrink: 0;
+}
+
+.pwa-banner-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.pwa-banner-texts strong {
+  font-size: 0.84rem;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.pwa-banner-texts small {
+  font-size: 0.7rem;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+
+.pwa-banner-actions {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.btn-pwa-install {
+  background: linear-gradient(135deg, #c5a059 0%, #dfba73 100%);
+  color: #0f172a;
+  border: none;
+  padding: 8px 14px;
+  border-radius: 20px;
+  font-size: 0.78rem;
+  font-weight: 800;
+  cursor: pointer;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.3);
+  transition: all 0.2s ease;
+}
+
+.btn-pwa-install:hover {
+  transform: scale(1.04);
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.45);
+}
+
+.btn-pwa-dismiss {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #94a3b8;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  font-size: 11px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-pwa-dismiss:hover {
+  background: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+/* Modal de Ajuda para iOS */
+.pwa-ios-modal-backdrop {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  z-index: 999999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.pwa-ios-modal-card {
+  background: #ffffff;
+  border-radius: 18px;
+  padding: 22px;
+  max-width: 380px;
+  width: 100%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.pwa-ios-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+.pwa-ios-icon {
+  font-size: 1.5rem;
+}
+
+.pwa-ios-header h3 {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
+}
+
+.btn-close-ios-tip {
+  position: absolute;
+  right: 0;
+  top: 0;
+  background: #f1f5f9;
+  border: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.pwa-ios-steps {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.8rem;
+  color: #334155;
+}
+
+.pwa-ios-steps strong {
+  color: #0f172a;
+}
+
+.pwa-ios-sub {
+  font-size: 0.74rem;
+  color: #64748b;
+  margin: 4px 0 0 0;
+}
+
+.btn-pwa-ios-ok {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  padding: 10px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 800;
+  cursor: pointer;
+  margin-top: 4px;
+}
+
+@media (max-width: 768px) {
+  .celebre-pwa-install-banner {
+    top: auto;
+    bottom: 12px;
+    left: 10px;
+    right: 10px;
+    max-width: calc(100% - 20px);
+    border-radius: 12px;
+    padding: 8px 12px;
+  }
+  .pwa-banner-texts small {
+    display: none;
+  }
+  .btn-pwa-install {
+    padding: 6px 12px;
+    font-size: 0.74rem;
+  }
+}
