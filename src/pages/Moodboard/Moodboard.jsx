@@ -4767,7 +4767,7 @@ const Moodboard = () => {
     }
     msg += `\nQualquer dúvida ou ajuste que queira fazer, estou à disposição! 🎈👑`;
 
-    const url = telLimpo 
+    const url = telLimpo
       ? `https://wa.me/55${telLimpo}?text=${encodeURIComponent(msg)}`
       : `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
 
