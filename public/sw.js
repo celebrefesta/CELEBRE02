@@ -1,12 +1,13 @@
 // Celebre Service Worker - PWA & Offline Support
-const CACHE_NAME = 'celebre-cache-v1';
+const CACHE_NAME = 'celebre-cache-v3';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
   '/manifest.json',
   '/icon-192.png',
   '/icon-512.png',
-  '/favicon.ico'
+  '/favicon.ico',
+  '/LOGO_CELEBRE.png'
 ];
 
 // Instalação do Service Worker
@@ -33,23 +34,50 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// Interceptação de requisições com estratégia Network-First e fallback para Cache
+// Interceptação de requisições com estratégia Network-First resiliente
 self.addEventListener('fetch', (event) => {
-  // Ignora requisições que não sejam GET ou que sejam de extensões do navegador (ex: chrome-extension://)
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) return;
-  
+
   const url = new URL(event.request.url);
 
-  // Não intercepta chamadas de Firestore em tempo real ou APIs externas
-  if (url.origin.includes('firestore.googleapis.com') || url.origin.includes('firebaseio.com') || url.origin.includes('googleapis.com')) {
+  // Ignorar APIs externas, Firebase, Google, Mercado Pago, etc.
+  if (
+    url.origin !== self.location.origin ||
+    url.pathname.startsWith('/api') ||
+    url.origin.includes('googleapis.com') ||
+    url.origin.includes('firebaseio.com') ||
+    url.origin.includes('google.com') ||
+    url.origin.includes('gstatic.com') ||
+    url.origin.includes('mercadopago.com')
+  ) {
     return;
   }
 
+  // Para navegações SPA (ex: /agenda, /dashboard, /locacoes, /clientes, etc.)
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => {
+          return caches.match('/index.html').then((cached) => {
+            if (cached) return cached;
+            return caches.match('/').then((rootCached) => {
+              if (rootCached) return rootCached;
+              return new Response(
+                '<!DOCTYPE html><html><head><title>Celebre - Offline</title><meta charset="utf-8"/></head><body style="font-family:sans-serif;text-align:center;padding:40px;"><h2>Modo Offline</h2><p>Você está sem conexão com a internet. Reconecte-se para continuar.</p></body></html>',
+                { status: 200, headers: { 'Content-Type': 'text/html; charset=utf-8' } }
+              );
+            });
+          });
+        })
+    );
+    return;
+  }
+
+  // Para recursos estáticos (CSS, JS, Imagens, Fontes)
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
-        // Se a resposta for válida, armazena no cache para acesso offline
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -58,18 +86,13 @@ self.addEventListener('fetch', (event) => {
         }
         return networkResponse;
       })
-      .catch(() => {
-        // Se estiver sem internet, tenta carregar do cache local
-        return caches.match(event.request).then((cachedResponse) => {
-          if (cachedResponse) {
-            return cachedResponse;
-          }
-          // Se for navegação de página e falhar, retorna index.html do cache
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html');
-          }
-          return new Response('Offline', { status: 503, statusText: 'Offline' });
-        });
+      .catch(async () => {
+        const cachedResponse = await caches.match(event.request);
+        if (cachedResponse) {
+          return cachedResponse;
+        }
+        // Fallback seguro: NUNCA retorna undefined para evitar TypeError no Service Worker
+        return new Response(null, { status: 404, statusText: 'Resource not found in cache' });
       })
   );
 });

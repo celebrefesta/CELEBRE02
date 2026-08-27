@@ -4,12 +4,13 @@ const cors = require("cors")({ origin: true });
 const { MercadoPagoConfig, PreApproval, Payment } = require("mercadopago");
 
 const { onSchedule } = require("firebase-functions/v2/scheduler");
-const admin = require("firebase-admin");
+const { initializeApp, getApps } = require("firebase-admin/app");
+const { getFirestore } = require("firebase-admin/firestore");
 
-if (admin.apps.length === 0) {
-    admin.initializeApp();
+if (getApps().length === 0) {
+    initializeApp();
 }
-const db = admin.firestore();
+const db = getFirestore();
 
 const client = new MercadoPagoConfig({ 
   accessToken: "APP_USR-3626101868283261-041714-787f6d6687f899ca426df63ee41ec903-3201169000" 

@@ -16,6 +16,8 @@ import RotaAdmin from './components/RotaAdmin';
 
 // --- AUTENTICAÇÃO E VITRINE (Code-Splitting via React.lazy) ---
 const LandingPage = lazy(() => import('./pages/LandingPage/LandingPage')); 
+const TermosDeUso = lazy(() => import('./pages/Institucional/TermosDeUso'));
+const PoliticaPrivacidade = lazy(() => import('./pages/Institucional/PoliticaPrivacidade'));
 const Login = lazy(() => import('./pages/Auth/Login'));
 const Cadastro = lazy(() => import('./pages/Auth/Cadastro'));
 const RedefinirSenha = lazy(() => import('./pages/Auth/RedefinirSenha'));
@@ -418,7 +420,7 @@ const AppContent = () => {
     };
   }, []);
 
-  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard'];
+  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade'];
 
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
@@ -442,6 +444,8 @@ const AppContent = () => {
         }>
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/termos" element={<TermosDeUso />} />
+            <Route path="/privacidade" element={<PoliticaPrivacidade />} />
 
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />

@@ -1,0 +1,566 @@
+/* =========================================
+   ESTILOS INSTITUCIONAIS (TERMOS & PRIVACIDADE)
+   ========================================= */
+
+.institucional-page {
+  min-height: 100vh;
+  background-color: #f8fafc;
+  color: #1e293b;
+  font-family: 'Outfit', -apple-system, BlinkMacSystemFont, sans-serif;
+  display: flex;
+  flex-direction: column;
+  overflow-x: hidden;
+  width: 100%;
+}
+
+/* NAVBAR SUPERIOR */
+.institucional-navbar {
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.95);
+  width: 100%;
+}
+
+.institucional-nav-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-sizing: border-box;
+}
+
+.institucional-logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-decoration: none;
+  font-size: 1.4rem;
+  font-weight: 800;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+
+.institucional-logo img {
+  height: 36px;
+  width: auto;
+  object-fit: contain;
+}
+
+.institucional-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.nav-btn-text-mobile {
+  display: none;
+}
+
+.btn-institucional-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  color: #0f172a;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+  border: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.btn-institucional-back:hover {
+  background: #e2e8f0;
+  transform: translateX(-2px);
+}
+
+.btn-institucional-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%);
+  color: #0f172a;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 800;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.25);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-institucional-cta:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(197, 160, 89, 0.35);
+}
+
+/* CONTEÚDO PRINCIPAL */
+.institucional-main {
+  flex: 1;
+  max-width: 960px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+  box-sizing: border-box;
+}
+
+/* HEADER DO DOCUMENTO */
+.doc-header-card {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  padding: 40px 36px;
+  border-radius: 20px;
+  margin-bottom: 30px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.2);
+  box-sizing: border-box;
+}
+
+.doc-header-card::after {
+  content: '';
+  position: absolute;
+  top: -50px;
+  right: -50px;
+  width: 200px;
+  height: 200px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(197, 160, 89, 0.2) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.doc-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(197, 160, 89, 0.18);
+  border: 1px solid rgba(197, 160, 89, 0.4);
+  color: #dfb76c;
+  font-size: 0.8rem;
+  font-weight: 700;
+  margin-bottom: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doc-header-card h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  line-height: 1.25;
+  margin-bottom: 12px;
+  color: #ffffff;
+  word-break: break-word;
+}
+
+.doc-header-card p {
+  color: #94a3b8;
+  font-size: 1.05rem;
+  line-height: 1.6;
+  max-width: 700px;
+  margin-bottom: 20px;
+}
+
+.doc-meta-info {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  font-size: 0.82rem;
+  color: #64748b;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 18px;
+  flex-wrap: wrap;
+}
+
+.doc-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #cbd5e1;
+}
+
+.doc-meta-item i {
+  color: #c5a059;
+}
+
+/* CORPO DO DOCUMENTO */
+.doc-body-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 45px 40px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 25px rgba(0, 0, 0, 0.03);
+  box-sizing: border-box;
+}
+
+.doc-intro-box {
+  background: #f8fafc;
+  border-left: 4px solid #c5a059;
+  padding: 18px 22px;
+  border-radius: 0 12px 12px 0;
+  margin-bottom: 35px;
+  font-size: 0.95rem;
+  color: #334155;
+  line-height: 1.65;
+}
+
+.doc-section {
+  margin-bottom: 40px;
+}
+
+.doc-section:last-child {
+  margin-bottom: 0;
+}
+
+.doc-section-title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 1.28rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid #f1f5f9;
+  word-break: break-word;
+}
+
+.doc-section-number {
+  background: #0f172a;
+  color: #c5a059;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.88rem;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.doc-section p {
+  color: #475569;
+  font-size: 0.96rem;
+  line-height: 1.7;
+  margin-bottom: 14px;
+}
+
+.doc-section ul {
+  margin: 12px 0 16px 20px;
+  padding: 0;
+  color: #475569;
+  font-size: 0.95rem;
+  line-height: 1.7;
+}
+
+.doc-section li {
+  margin-bottom: 8px;
+}
+
+.doc-highlight-card {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin: 16px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.92rem;
+  color: #166534;
+  line-height: 1.55;
+  box-sizing: border-box;
+}
+
+.doc-highlight-card i {
+  color: #16a34a;
+  font-size: 1.15rem;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.doc-warning-card {
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+  padding: 16px 20px;
+  border-radius: 12px;
+  margin: 16px 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 0.92rem;
+  color: #92400e;
+  line-height: 1.55;
+  box-sizing: border-box;
+}
+
+.doc-warning-card i {
+  color: #d97706;
+  font-size: 1.15rem;
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+/* RODAPÉ DO DOCUMENTO */
+.doc-contact-footer {
+  margin-top: 50px;
+  padding-top: 30px;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.doc-contact-text h4 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.doc-contact-text p {
+  color: #64748b;
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.doc-contact-buttons {
+  display: flex;
+  gap: 10px;
+}
+
+.btn-doc-whatsapp {
+  background: #25d366;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-doc-whatsapp:hover {
+  background: #1ebd57;
+  transform: translateY(-2px);
+}
+
+.btn-doc-email {
+  background: #0f172a;
+  color: #ffffff;
+  padding: 10px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 0.88rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-doc-email:hover {
+  background: #1e293b;
+  transform: translateY(-2px);
+}
+
+/* =========================================
+   RESPONSIVIDADE MOBILE IMPECÁVEL
+   ========================================= */
+@media (max-width: 768px) {
+  .institucional-page {
+    overflow-x: hidden;
+    width: 100%;
+  }
+
+  .institucional-nav-container {
+    padding: 10px 12px;
+    gap: 8px;
+  }
+
+  .institucional-logo {
+    font-size: 1.15rem;
+    gap: 6px;
+  }
+
+  .institucional-logo img {
+    height: 26px;
+  }
+
+  .institucional-nav-actions {
+    gap: 6px;
+  }
+
+  .nav-btn-text {
+    display: none;
+  }
+
+  .nav-btn-text-mobile {
+    display: inline;
+  }
+
+  .btn-institucional-back {
+    padding: 6px 10px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  .btn-institucional-cta {
+    padding: 6px 12px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  .institucional-main {
+    padding: 16px 12px 50px;
+    width: 100%;
+  }
+
+  .doc-header-card {
+    padding: 22px 16px 18px;
+    border-radius: 14px;
+    margin-bottom: 18px;
+  }
+
+  .doc-badge {
+    font-size: 0.72rem;
+    padding: 3px 8px;
+    margin-bottom: 12px;
+  }
+
+  .doc-header-card h1 {
+    font-size: 1.35rem;
+    line-height: 1.25;
+    margin-bottom: 8px;
+  }
+
+  .doc-header-card p {
+    font-size: 0.82rem;
+    line-height: 1.45;
+    margin-bottom: 14px;
+  }
+
+  .doc-meta-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    padding-top: 12px;
+    font-size: 0.74rem;
+  }
+
+  .doc-meta-item {
+    font-size: 0.74rem;
+    gap: 5px;
+  }
+
+  .doc-body-card {
+    padding: 20px 14px;
+    border-radius: 14px;
+  }
+
+  .doc-intro-box {
+    padding: 12px 14px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin-bottom: 22px;
+  }
+
+  .doc-section {
+    margin-bottom: 24px;
+  }
+
+  .doc-section-title {
+    font-size: 1.02rem;
+    gap: 8px;
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    line-height: 1.3;
+  }
+
+  .doc-section-number {
+    width: 22px;
+    height: 22px;
+    font-size: 0.72rem;
+    border-radius: 6px;
+  }
+
+  .doc-section p {
+    font-size: 0.84rem;
+    line-height: 1.55;
+    margin-bottom: 10px;
+  }
+
+  .doc-section ul {
+    margin: 8px 0 10px 16px;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+
+  .doc-section li {
+    margin-bottom: 6px;
+  }
+
+  .doc-highlight-card, 
+  .doc-warning-card {
+    padding: 12px 14px;
+    font-size: 0.8rem;
+    line-height: 1.45;
+    border-radius: 10px;
+    margin: 12px 0;
+    gap: 8px;
+  }
+
+  .doc-highlight-card i, 
+  .doc-warning-card i {
+    font-size: 0.95rem;
+  }
+
+  .doc-contact-footer {
+    margin-top: 30px;
+    padding-top: 20px;
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+    gap: 14px;
+  }
+
+  .doc-contact-text h4 {
+    font-size: 0.95rem;
+  }
+
+  .doc-contact-text p {
+    font-size: 0.78rem;
+  }
+
+  .doc-contact-buttons {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .btn-doc-whatsapp, 
+  .btn-doc-email {
+    justify-content: center;
+    padding: 9px 14px;
+    font-size: 0.82rem;
+  }
+}

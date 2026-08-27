@@ -13,7 +13,31 @@ const LandingPage = () => {
   const [planos, setPlanos] = useState([]);
   const [loadingPlanos, setLoadingPlanos] = useState(true);
   const [planoAtivoIndex, setPlanoAtivoIndex] = useState(1);
+  const [faqAberto, setFaqAberto] = useState(null);
   const pricingCardsRef = React.useRef(null);
+
+  const toggleFaq = (index) => {
+    setFaqAberto(prev => prev === index ? null : index);
+  };
+
+  const duvidasFrequentes = [
+    {
+      pergunta: "O Celebre cobra comissão por locação?",
+      resposta: "Não! Você paga apenas a mensalidade fixa do seu plano. Todo o valor das locações é 100% da sua empresa."
+    },
+    {
+      pergunta: "Posso cancelar a qualquer momento?",
+      resposta: "Sim, não temos fidelidade. Você pode cancelar sua assinatura quando quiser diretamente no painel."
+    },
+    {
+      pergunta: "Como funciona o catálogo online?",
+      resposta: "O sistema gera um link exclusivo com o seu acervo. Sua cliente acessa, escolhe as peças e o orçamento cai direto no sistema Celebre."
+    },
+    {
+      pergunta: "Preciso de cartão de crédito para testar?",
+      resposta: "Não. Os 7 dias de teste são totalmente gratuitos e não exigem cadastro de cartão ou compromisso."
+    }
+  ];
 
   const handleMudarPlano = (novoIdx) => {
     setPlanoAtivoIndex(novoIdx);
@@ -303,17 +327,8 @@ const LandingPage = () => {
           <div style={{ textAlign: 'center', padding: '40px', color: '#cbd5e1' }}>Carregando planos...</div>
         ) : (
           <div className="pricing-wrapper">
-            {/* Controles de Navegação por Flechas no Mobile */}
+            {/* Indicador de Pontos Superior */}
             <div className="mobile-plan-controls">
-              <button 
-                type="button" 
-                className="plan-nav-arrow" 
-                onClick={() => handleMudarPlano(planoAtivoIndex > 0 ? planoAtivoIndex - 1 : planos.length - 1)}
-                aria-label="Plano anterior"
-              >
-                ‹
-              </button>
-              
               <div className="plan-dots">
                 {planos.map((p, idx) => (
                   <button 
@@ -325,106 +340,134 @@ const LandingPage = () => {
                   />
                 ))}
               </div>
+            </div>
+
+            {/* Container do Carrossel com Flechas Laterais Flutuantes */}
+            <div className="pricing-carousel-container">
+              <button 
+                type="button"
+                className="carousel-floating-arrow prev-arrow"
+                onClick={() => handleMudarPlano(planoAtivoIndex > 0 ? planoAtivoIndex - 1 : planos.length - 1)}
+                aria-label="Ver plano anterior"
+                title="Plano anterior"
+              >
+                <i className="fa-solid fa-chevron-left"></i>
+              </button>
+
+              <div 
+                className="pricing-cards" 
+                ref={pricingCardsRef}
+                onScroll={handlePricingScroll}
+              >
+                {planos.map((p, idx) => {
+                   const isDestaque = String(p.destaque) === "true";
+                   const isSelectedMobile = planoAtivoIndex === idx;
+                   
+                   let nomePlanoFormatado = p.nome;
+                   if(nomePlanoFormatado.toLowerCase().includes('plus')) nomePlanoFormatado = 'Pro';
+
+                   const isBasico = nomePlanoFormatado.toLowerCase().includes('básico') || nomePlanoFormatado.toLowerCase().includes('basico');
+                   const isPremium = nomePlanoFormatado.toLowerCase().includes('premium');
+                   
+                   return (
+                     <div key={p.id} className={`pricing-card ${isDestaque ? 'popular' : ''} ${isSelectedMobile ? 'mobile-selected' : ''}`}>
+                       {isDestaque && <div className="popular-badge">Mais Escolhido</div>}
+                       <div className="card-header">
+                         <h3>{nomePlanoFormatado}</h3>
+                         <p className="pricing-desc">
+                            {isBasico ? 'O essencial para organizar seu acervo.' : 
+                             isPremium ? 'Para quem já precisa controlar o financeiro.' : 
+                             'Poder absoluto para locadoras de grande porte.'}
+                         </p>
+                       </div>
+                       <div className="price">
+                         <span>R$</span> {p.preco} <span>/mês</span>
+                       </div>
+                       
+                       <ul className="pricing-features">
+                         <li><span className="check-icon">✓</span> Gestão de Clientes</li>
+                         <li><span className="check-icon">✓</span> Gestão de Estoque</li>
+                         <li><span className="check-icon">✓</span> Gestão de Pedidos/Orçamentos</li>
+                         <li><span className="check-icon">✓</span> Gestão de Logística</li>
+                         <li><span className="check-icon">✓</span> Gestão de Fornecedores</li>
+                         <li><span className="check-icon">✓</span> Agenda</li>
+                         
+                         {isBasico ? (
+                            <li style={{ color: '#94a3b8', textDecoration: 'line-through' }}>
+                              <span style={{ color: '#ef4444', fontWeight: 'bold', marginRight: '5px' }}>✕</span> Gestão Financeira
+                            </li>
+                         ) : (
+                            <li><span className="check-icon">✓</span> Gestão Financeira</li>
+                         )}
+
+                         <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : '5+'}</strong> Usuário(s)</li>
+                         <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : 'Múltiplos'}</strong> Modelo(s) de Contrato</li>
+                         <li><span className="check-icon">✓</span> <strong>{isBasico ? '1.000' : isPremium ? '5.000' : '10.000'}</strong> Produtos no Acervo</li>
+                       </ul>
+                       
+                       <Link to={`/cadastro?plano=${p.id}`} className={isDestaque ? 'btn-pricing-solid' : 'btn-pricing-outline'}>
+                         Começar Agora
+                       </Link>
+                     </div>
+                   )
+                })}
+              </div>
 
               <button 
-                type="button" 
-                className="plan-nav-arrow" 
+                type="button"
+                className="carousel-floating-arrow next-arrow"
                 onClick={() => handleMudarPlano(planoAtivoIndex < planos.length - 1 ? planoAtivoIndex + 1 : 0)}
-                aria-label="Próximo plano"
+                aria-label="Ver próximo plano"
+                title="Próximo plano"
               >
-                ›
+                <i className="fa-solid fa-chevron-right"></i>
               </button>
             </div>
 
-            <div 
-              className="pricing-cards" 
-              ref={pricingCardsRef}
-              onScroll={handlePricingScroll}
-            >
-              {planos.map((p, idx) => {
-                 const isDestaque = String(p.destaque) === "true";
-                 const isSelectedMobile = planoAtivoIndex === idx;
-                 
-                 let nomePlanoFormatado = p.nome;
-                 if(nomePlanoFormatado.toLowerCase().includes('plus')) nomePlanoFormatado = 'Pro';
-
-                 const isBasico = nomePlanoFormatado.toLowerCase().includes('básico') || nomePlanoFormatado.toLowerCase().includes('basico');
-                 const isPremium = nomePlanoFormatado.toLowerCase().includes('premium');
-                 
-                 return (
-                   <div key={p.id} className={`pricing-card ${isDestaque ? 'popular' : ''} ${isSelectedMobile ? 'mobile-selected' : ''}`}>
-                     {isDestaque && <div className="popular-badge">Mais Escolhido</div>}
-                     <div className="card-header">
-                       <h3>{nomePlanoFormatado}</h3>
-                       <p className="pricing-desc">
-                          {isBasico ? 'O essencial para organizar seu acervo.' : 
-                           isPremium ? 'Para quem já precisa controlar o financeiro.' : 
-                           'Poder absoluto para locadoras de grande porte.'}
-                       </p>
-                     </div>
-                     <div className="price">
-                       <span>R$</span> {p.preco} <span>/mês</span>
-                     </div>
-                     
-                     <ul className="pricing-features">
-                       <li><span className="check-icon">✓</span> Gestão de Clientes</li>
-                       <li><span className="check-icon">✓</span> Gestão de Estoque</li>
-                       <li><span className="check-icon">✓</span> Gestão de Pedidos/Orçamentos</li>
-                       <li><span className="check-icon">✓</span> Gestão de Logística</li>
-                       <li><span className="check-icon">✓</span> Gestão de Fornecedores</li>
-                       <li><span className="check-icon">✓</span> Agenda</li>
-                       
-                       {isBasico ? (
-                          <li style={{ color: '#94a3b8', textDecoration: 'line-through' }}>
-                            <span style={{ color: '#ef4444', fontWeight: 'bold', marginRight: '5px' }}>✕</span> Gestão Financeira
-                          </li>
-                       ) : (
-                          <li><span className="check-icon">✓</span> Gestão Financeira</li>
-                       )}
-
-                       <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : '5+'}</strong> Usuário(s)</li>
-                       <li><span className="check-icon">✓</span> <strong>{isBasico ? '1' : isPremium ? '3' : 'Múltiplos'}</strong> Modelo(s) de Contrato</li>
-                       <li><span className="check-icon">✓</span> <strong>{isBasico ? '1.000' : isPremium ? '5.000' : '10.000'}</strong> Produtos no Acervo</li>
-                     </ul>
-                     
-                     <Link to={`/cadastro?plano=${p.id}`} className={isDestaque ? 'btn-pricing-solid' : 'btn-pricing-outline'}>
-                       Começar Agora
-                     </Link>
-                   </div>
-                 )
-              })}
+            {/* Dica visual de navegação no celular */}
+            <div className="mobile-plan-swipe-hint">
+              <i className="fa-solid fa-arrows-left-right"></i>
+              <span>Deslize ou clique nas flechas para ver todos os planos</span>
             </div>
           </div>
         )}
       </section>
 
-      {/* DÚVIDAS FREQUENTES */}
+      {/* DÚVIDAS FREQUENTES (BLOCO ÚNICO COMPACTO) */}
       <section id="faq" className="faq-section">
         <div className="faq-header">
           <h2>Dúvidas Frequentes</h2>
           <p>Tudo o que você precisa saber antes de começar.</p>
         </div>
-        <div className="faq-grid">
-          <div className="faq-item">
-            <h4>O Celebre cobra comissão por locação?</h4>
-            <p>Não! Você paga apenas a mensalidade fixa do seu plano. Todo o valor das locações é 100% da sua empresa.</p>
-          </div>
-          <div className="faq-item">
-            <h4>Posso cancelar a qualquer momento?</h4>
-            <p>Sim, não temos fidelidade. Você pode cancelar sua assinatura quando quiser diretamente no painel.</p>
-          </div>
-          <div className="faq-item">
-            <h4>Como funciona o catálogo online?</h4>
-            <p>O sistema gera um link exclusivo com o seu acervo. Sua cliente acessa, escolhe as peças e o orçamento cai direto no sistema Celebre.</p>
-          </div>
-          <div className="faq-item">
-            <h4>Preciso de cartão de crédito para testar?</h4>
-            <p>Não. Os 7 dias de teste são totalmente gratuitos e não exigem cadastro de cartão ou compromisso.</p>
-          </div>
+        <div className="faq-single-box">
+          {duvidasFrequentes.map((item, idx) => {
+            const isOpen = faqAberto === idx;
+            return (
+              <div 
+                key={idx} 
+                className={`faq-row-item ${isOpen ? 'active' : ''}`}
+              >
+                <button 
+                  type="button" 
+                  className="faq-row-trigger"
+                  onClick={() => toggleFaq(idx)}
+                  aria-expanded={isOpen}
+                >
+                  <span className="faq-pergunta-texto">{item.pergunta}</span>
+                  <i className={`fa-solid fa-chevron-down faq-chevron ${isOpen ? 'rotated' : ''}`}></i>
+                </button>
+                <div className={`faq-row-content ${isOpen ? 'open' : ''}`}>
+                  <div className="faq-row-body">
+                    <p>{item.resposta}</p>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      {/* FOOTER */}
+      {/* FOOTER COMPACTO */}
       <footer className="landing-footer">
         <div className="footer-content">
           <div className="footer-col brand-col">
@@ -432,49 +475,110 @@ const LandingPage = () => {
               <img src={logoImage} alt="Logotipo Celebre" className="footer-logo-img" />
               <span>Celebre</span>
             </div>
-            <p>O software definitivo para locadoras de artigos de festa e decoradoras que desejam escalar suas vendas com organização.</p>
-            <div className="footer-corp-info">
-              <span>Celebre Tecnologia e Sistemas LTDA.</span>
-              <span>CNPJ: 54.839.293/0001-42</span>
-              <span>São Paulo - SP</span>
+            <p className="footer-brand-desc">Gestão inteligente e completa para locadoras de festas e acervos.</p>
+          </div>
+          
+          <div className="footer-links-group">
+            <div className="footer-col-compact">
+              <h4>Produto</h4>
+              <a href="#recursos" className="footer-link">Recursos</a>
+              <a href="#planos" className="footer-link">Planos</a>
+              <Link to="/cadastro" className="footer-link">Teste Grátis</Link>
+            </div>
+            
+            <div className="footer-col-compact">
+              <h4>Empresa</h4>
+              <button className="footer-link footer-link-btn" onClick={() => setModalContatoAberto(true)}>Fale Conosco</button>
+              <Link to="/termos" className="footer-link">Termos</Link>
+              <Link to="/privacidade" className="footer-link">Privacidade</Link>
+            </div>
+
+            <div className="footer-col-compact">
+              <h4>Redes & Contato</h4>
+              <a href="https://www.instagram.com/celebre2026/" target="_blank" rel="noreferrer" className="footer-link social-link"><i className="fab fa-instagram"></i> Instagram</a>
+              <a href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20falar%20com%20o%20Celebre!" target="_blank" rel="noreferrer" className="footer-link social-link"><i className="fab fa-whatsapp"></i> WhatsApp</a>
             </div>
           </div>
-          
-          <div className="footer-col">
-            <h4>Produto</h4>
-            <a href="#recursos" className="footer-link">Recursos</a>
-            <a href="#planos" className="footer-link">Planos e Preços</a>
-            <Link to="/cadastro" className="footer-link">Teste Grátis</Link>
-          </div>
-          
-          <div className="footer-col">
-            <h4>Empresa</h4>
-            <button className="footer-link footer-link-btn" onClick={() => setModalContatoAberto(true)}>Fale Conosco</button>
-            <a href="#termos" className="footer-link">Termos de Uso</a>
-            <a href="#privacidade" className="footer-link">Privacidade</a>
-          </div>
-
-          <div className="footer-col">
-            <h4>Redes Sociais</h4>
-            <a href="https://www.instagram.com/celebre2026/" target="_blank" rel="noreferrer" className="footer-link social-link"><i className="fab fa-instagram"></i> Instagram</a>
-            <button className="footer-link footer-link-btn social-link" onClick={() => setModalContatoAberto(true)}><i className="fas fa-headset"></i> Suporte</button>
-          </div>
         </div>
+
         <div className="footer-bottom">
-          <p>© 2026 Celebre Sistemas. Todos os direitos reservados.</p>
+          <div className="footer-corp-inline">
+            <span>Celebre Tecnologia e Sistemas LTDA.</span>
+            <span className="corp-divider">•</span>
+            <span>CNPJ: 54.839.293/0001-42</span>
+            <span className="corp-divider">•</span>
+            <span>São Paulo - SP</span>
+          </div>
+          <p className="footer-copy">© 2026 Celebre Sistemas. Todos os direitos reservados.</p>
         </div>
       </footer>
 
-      {/* MODAL DE CONTATO */}
+      {/* MODAL DE CONTATO PROFISSIONAL */}
       {modalContatoAberto && (
         <div className="modal-overlay" onClick={() => setModalContatoAberto(false)}>
-          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="close-modal" onClick={() => setModalContatoAberto(false)}>×</button>
-            <h3>Como prefere falar com a equipe?</h3>
-            <p>Escolha o canal de sua preferência. Nossa equipe comercial está pronta para ajudar sua locadora!</p>
-            <div className="modal-buttons">
-              <a href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Celebre!" target="_blank" rel="noreferrer" className="btn-whatsapp"><i className="fab fa-whatsapp"></i> Chamar no WhatsApp</a>
-              <a href="mailto:celebrefesta25@gmail.com" className="btn-email">✉️ Enviar E-mail</a>
+          <div className="modal-content-pro" onClick={(e) => e.stopPropagation()}>
+            <button 
+              type="button" 
+              className="modal-close-btn-pro" 
+              onClick={() => setModalContatoAberto(false)}
+              aria-label="Fechar modal"
+            >
+              <i className="fa-solid fa-xmark"></i>
+            </button>
+
+            <div className="modal-header-pro">
+              <div className="modal-icon-badge">
+                <i className="fa-solid fa-headset"></i>
+                <span className="online-indicator-dot"></span>
+              </div>
+              <h3>Fale com nossos especialistas</h3>
+              <p>Escolha o canal de sua preferência para atendimento rápido e personalizado.</p>
+            </div>
+
+            <div className="modal-channel-list">
+              <a 
+                href="https://wa.me/5519998564109?text=Olá,%20gostaria%20de%20saber%20mais%20sobre%20o%20Celebre!" 
+                target="_blank" 
+                rel="noreferrer" 
+                className="modal-channel-card whatsapp-channel"
+              >
+                <div className="channel-icon-circle whatsapp-icon-bg">
+                  <i className="fab fa-whatsapp"></i>
+                </div>
+                <div className="channel-text-col">
+                  <div className="channel-title-row">
+                    <span className="channel-title">WhatsApp Oficial</span>
+                    <span className="channel-badge-online">Online</span>
+                  </div>
+                  <span className="channel-desc">Atendimento ágil em tempo real com especialista</span>
+                </div>
+                <div className="channel-arrow">
+                  <i className="fa-solid fa-chevron-right"></i>
+                </div>
+              </a>
+
+              <a 
+                href="mailto:celebrefesta25@gmail.com" 
+                className="modal-channel-card email-channel"
+              >
+                <div className="channel-icon-circle email-icon-bg">
+                  <i className="fa-solid fa-envelope"></i>
+                </div>
+                <div className="channel-text-col">
+                  <div className="channel-title-row">
+                    <span className="channel-title">E-mail Comercial</span>
+                  </div>
+                  <span className="channel-desc">celebrefesta25@gmail.com</span>
+                </div>
+                <div className="channel-arrow">
+                  <i className="fa-solid fa-chevron-right"></i>
+                </div>
+              </a>
+            </div>
+
+            <div className="modal-footer-trust">
+              <i className="fa-solid fa-shield-halved"></i>
+              <span>Atendimento humanizado • Segunda a Sexta</span>
             </div>
           </div>
         </div>

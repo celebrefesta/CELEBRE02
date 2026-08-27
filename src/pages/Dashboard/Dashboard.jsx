@@ -864,9 +864,6 @@ const Dashboard = () => {
             <button onClick={() => navigate('/cadastro-estoque')} title="Novo Item">
               <i className="fas fa-box-open"></i> ITEM
             </button>
-            <button onClick={() => navigate('/moodboard')} title="Decorador Virtual / Moodboard Studio" style={{ background: 'linear-gradient(135deg, #c5a059, #dfba73)', color: '#0f172a' }}>
-              <i className="fas fa-palette"></i> STUDIO
-            </button>
           </div>
         </div>
       </header>
@@ -983,7 +980,7 @@ const Dashboard = () => {
         <div className="dash-column">
 
           {/* 📊 GRÁFICO FATURAMENTO VS GASTOS */}
-          <section className="dash-card-wide chart-card" style={{ flex: '1.5' }}>
+          <section className="dash-card-wide chart-card" style={{ minHeight: '240px', paddingBottom: '14px' }}>
             <div className="dash-section-header">
               <div>
                 <h3 style={{ margin: 0 }}>📊 Faturamento vs Gastos</h3>
@@ -996,12 +993,12 @@ const Dashboard = () => {
               </span>
             </div>
 
-            <div style={{ width: '100%', flex: 1, minHeight: '160px', display: 'flex', flexDirection: 'column' }}>
-              <ResponsiveContainer width="100%" height="99%" minWidth={0} minHeight={160} initialDimension={{ width: 320, height: 180 }}>
-                <BarChart data={dataFaturamentoBar} margin={{ top: 12, right: 8, left: -16, bottom: 0 }}>
+            <div style={{ width: '100%', height: '160px', marginTop: '8px' }}>
+              <ResponsiveContainer width="100%" height={160}>
+                <BarChart data={dataFaturamentoBar} margin={{ top: 8, right: 8, left: -10, bottom: 2 }}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--borda, #e2e8f0)" />
-                  <XAxis dataKey="semana" tick={{ fontSize: 9, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} />
-                  <YAxis tick={{ fontSize: 9, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`} />
+                  <XAxis dataKey="semana" tick={{ fontSize: 9.5, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} dy={2} />
+                  <YAxis tick={{ fontSize: 9.5, fill: 'var(--texto-secundario, #64748b)' }} axisLine={false} tickLine={false} tickFormatter={(val) => `R$${val >= 1000 ? (val/1000).toFixed(0) + 'k' : val}`} />
                   <Tooltip content={<CustomTooltipFat />} />
                   <Bar dataKey="faturamento" name="Faturamento" fill="#2563eb" radius={[3, 3, 0, 0]} barSize={12} />
                   <Bar dataKey="gastos" name="Gastos" fill="#ef4444" radius={[3, 3, 0, 0]} barSize={12} />
@@ -1011,9 +1008,9 @@ const Dashboard = () => {
           </section>
 
           {/* 🎯 CONVERSÃO & STATUS */}
-          <section className="dash-card-wide dash-card-column" style={{ flex: '1' }}>
+          <section className="dash-card-wide dash-card-column" style={{ minHeight: '215px' }}>
             <div className="dash-section-header">
-              <h3>🎯 Conversão &amp; Status</h3>
+              <h3 style={{ margin: 0 }}>🎯 Conversão &amp; Status</h3>
               <span className="dash-count-pill">
                 {statusChart.total} {filtroPeriodo === 'hoje' ? 'HOJE' : 'NO PERÍODO'}
               </span>
@@ -1021,12 +1018,12 @@ const Dashboard = () => {
 
             <div className="status-donut-container-horizontal">
               <div className="status-donut-left">
-                <div style={{ width: '75px', height: '75px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <ResponsiveContainer width="100%" height={75}>
+                <div style={{ width: '90px', height: '90px', position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <ResponsiveContainer width="100%" height={90}>
                     <PieChart margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
                       <Pie
                         data={dataStatusDonut.length > 0 ? dataStatusDonut : [{ name: 'Sem Pedidos', value: 1, color: '#e2e8f0' }]}
-                        innerRadius={20} outerRadius={32} cx="50%" cy="50%"
+                        innerRadius={26} outerRadius={42} cx="50%" cy="50%"
                         paddingAngle={dataStatusDonut.length > 1 ? 3 : 0} dataKey="value"
                       >
                         {(dataStatusDonut.length > 0 ? dataStatusDonut : [{ color: '#e2e8f0' }]).map((entry, index) => (
@@ -1037,11 +1034,11 @@ const Dashboard = () => {
                     </PieChart>
                   </ResponsiveContainer>
                   <div style={{ position: 'absolute', textAlign: 'center', pointerEvents: 'none' }}>
-                    <strong style={{ fontSize: '0.75rem', color: 'var(--texto-principal, #0f172a)', fontWeight: 900, display: 'block', lineHeight: 1 }}>
+                    <strong style={{ fontSize: '0.92rem', color: 'var(--texto-principal, #0f172a)', fontWeight: 900, display: 'block', lineHeight: 1 }}>
                       {statusChart.total > 0 ? `${pctConfirmados}%` : '0%'}
                     </strong>
-                    <span style={{ fontSize: '0.42rem', color: 'var(--texto-secundario, #64748b)', fontWeight: 700, textTransform: 'uppercase' }}>
-                      {statusChart.total > 0 ? 'Fechados' : 'Sem'}
+                    <span style={{ fontSize: '0.52rem', color: 'var(--texto-secundario, #64748b)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.3px', marginTop: '2px', display: 'block' }}>
+                      {statusChart.total > 0 ? 'Fechados' : 'Sem dados'}
                     </span>
                   </div>
                 </div>
@@ -1308,98 +1305,6 @@ const Dashboard = () => {
 
         </div>
       </div>
-
-      {/* 🎨 MOODBOARDS & PROJETOS DECORATIVOS RECENTES */}
-      <section className="dash-card-wide" style={{ marginTop: '16px', marginBottom: '16px' }}>
-        <div className="dash-section-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-            <h3 style={{ margin: 0 }}>🎨 Projetos do Moodboard Studio</h3>
-            <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
-              <span className="birthday-count-pill" style={{ background: '#dcfce7', color: '#15803d' }}>
-                🟢 {moodboardStats.aprovados} Aprovados
-              </span>
-              <span className="birthday-count-pill" style={{ background: '#e0f2fe', color: '#0369a1' }}>
-                🔵 {moodboardStats.emAnalise} Em Análise
-              </span>
-              <span className="birthday-count-pill" style={{ background: '#fef3c7', color: '#92400e' }}>
-                🟡 {moodboardStats.rascunhos} Rascunhos
-              </span>
-            </div>
-          </div>
-          <button
-            type="button"
-            onClick={() => navigate('/moodboard')}
-            style={{ background: 'linear-gradient(135deg, #c5a059, #dfba73)', color: '#0f172a', border: 'none', padding: '6px 14px', borderRadius: '10px', fontSize: '0.72rem', fontWeight: '850', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-          >
-            <span>👑 Criar Novo Moodboard</span>
-          </button>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: '12px', marginTop: '12px' }}>
-          {projetosMoodboard.length === 0 ? (
-            <div className="empty-feed" style={{ gridColumn: '1 / -1', textAlign: 'center', padding: '24px', background: '#f8fafc', borderRadius: '8px', border: '1px dashed #cbd5e1' }}>
-              <p style={{ margin: 0, fontWeight: '700', color: '#475569' }}>
-                🎨 Nenhum projeto de design criado ainda. Clique no botão acima para abrir o Studio e criar seu primeiro cenário!
-              </p>
-            </div>
-          ) : (
-            projetosMoodboard.slice(0, 4).map(proj => {
-              const stColors = {
-                rascunho: { bg: '#fef3c7', text: '#92400e', label: '🟡 Rascunho' },
-                em_analise: { bg: '#e0f2fe', text: '#0369a1', label: '🔵 Em Análise' },
-                aprovado: { bg: '#dcfce7', text: '#15803d', label: '🟢 Aprovado' },
-                em_producao: { bg: '#f3e8ff', text: '#7e22ce', label: '🟣 Em Produção' },
-                concluido: { bg: '#f1f5f9', text: '#475569', label: '⚪ Concluído' }
-              };
-              const st = stColors[proj.status] || stColors.rascunho;
-              return (
-                <div
-                  key={proj.id}
-                  onClick={() => navigate('/moodboard')}
-                  style={{
-                    background: '#ffffff',
-                    border: '1px solid #e2e8f0',
-                    borderRadius: '10px',
-                    overflow: 'hidden',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s',
-                    boxShadow: '0 2px 6px rgba(0,0,0,0.04)',
-                    display: 'flex',
-                    flexDirection: 'column'
-                  }}
-                >
-                  <div style={{ height: '110px', background: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', position: 'relative', overflow: 'hidden' }}>
-                    {proj.thumbnail ? (
-                      <img src={proj.thumbnail} alt={proj.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                    ) : (
-                      <i className="fas fa-crown" style={{ color: '#c5a059', fontSize: '24px' }}></i>
-                    )}
-                    <span style={{ position: 'absolute', top: '6px', right: '6px', fontSize: '9px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', backgroundColor: st.bg, color: st.text, boxShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>
-                      {st.label}
-                    </span>
-                    {proj.versao && proj.versao > 1 && (
-                      <span style={{ position: 'absolute', top: '6px', left: '6px', background: '#0f172a', color: '#fef08a', fontSize: '8.5px', fontWeight: 'bold', padding: '2px 5px', borderRadius: '4px', border: '1px solid #c5a059' }}>
-                        v{proj.versao}
-                      </span>
-                    )}
-                  </div>
-                  <div style={{ padding: '8px 10px', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                    <strong style={{ display: 'block', fontSize: '11.5px', color: '#0f172a', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {proj.nome}
-                    </strong>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '10px', color: '#64748b' }}>
-                      <span>{proj.clienteNome || 'Cliente Geral'}</span>
-                      <strong style={{ color: '#0f172a', fontWeight: 'bold' }}>
-                        R$ {Number(proj.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                      </strong>
-                    </div>
-                  </div>
-                </div>
-              );
-            })
-          )}
-        </div>
-      </section>
 
       {/* MODAL ANIVERSARIANTES */}
       {modalAniversariantesAberto && (

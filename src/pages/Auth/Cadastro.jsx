@@ -299,6 +299,12 @@ const Cadastro = () => {
             <button type="submit" disabled={loading || !isSenhaForte} className="btn-auth">
               {loading ? 'Criando conta...' : 'Começar meu Teste Grátis'}
             </button>
+
+            <p className="auth-terms-note" style={{ fontSize: '0.78rem', color: '#64748b', textAlign: 'center', margin: '14px 0 0', lineHeight: '1.4' }}>
+              Ao criar sua conta, você concorda com nossos{' '}
+              <Link to="/termos" target="_blank" style={{ color: 'var(--dourado)', fontWeight: '600' }}>Termos de Uso</Link> e{' '}
+              <Link to="/privacidade" target="_blank" style={{ color: 'var(--dourado)', fontWeight: '600' }}>Política de Privacidade</Link>.
+            </p>
           </form>
           
           <p className="auth-link">

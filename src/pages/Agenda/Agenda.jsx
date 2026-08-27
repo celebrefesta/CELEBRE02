@@ -947,138 +947,157 @@ const Agenda = () => {
             </div>
           ) : (
             <form onSubmit={salvarEvento} className="modal-form">
-              
-              <div className="form-section">
-                  <div className="form-row">
-                    <div className="form-group">
-                        <label>📅 Data *</label>
-                        <input type="date" value={formData.dataISO} onChange={e => setFormData({ ...formData, dataISO: e.target.value })} required disabled={salvando}/>
-                    </div>
-                    <div className="form-group">
-                        <label>⏰ Horário <span className="label-hint">(Opcional)</span></label>
-                        <input type="time" value={formData.horario} onChange={e => setFormData({ ...formData, horario: e.target.value })} disabled={salvando}/>
-                    </div>
-                  </div>
-                  
-                  <div className="form-group">
-                    <label>📌 Título do Compromisso *</label>
-                    <input autoFocus type="text" value={formData.titulo} onChange={e => setFormData({ ...formData, titulo: e.target.value })} placeholder="Ex: Visita técnica no salão" required disabled={salvando}/>
-                  </div>
+              {/* LINHA 1: DATA E HORÁRIO */}
+              <div className="form-row-2col">
+                <div className="form-group">
+                  <label className="form-label-clean">📅 DATA *</label>
+                  <input 
+                    type="date" 
+                    value={formData.dataISO} 
+                    onChange={e => setFormData({ ...formData, dataISO: e.target.value })} 
+                    required 
+                    disabled={salvando}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label-clean">⏰ HORÁRIO <span className="label-hint-inline">(opcional)</span></label>
+                  <input 
+                    type="time" 
+                    value={formData.horario} 
+                    onChange={e => setFormData({ ...formData, horario: e.target.value })} 
+                    disabled={salvando}
+                  />
+                </div>
               </div>
               
-              <div className="form-section">
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>💼 Tipo de Tarefa</label>
-                      <select value={formData.tipo} onChange={e => setFormData({ ...formData, tipo: e.target.value })} disabled={salvando}>
-                        <option value="reuniao">🤝 Reunião com Cliente</option>
-                        <option value="visita">📍 Visita Técnica / Local</option>
-                        <option value="pagamento">💰 Lembrete Financeiro</option>
-                        <option value="tarefa">📌 Tarefa Administrativa</option>
-                        <option value="bloqueio">🚫 Bloqueio de Data</option>
-                      </select>
-                    </div>
-             
-                    {!eventoSelecionado ? (
-                      <div className="form-group">
-                        <label>🔄 Repetir Lembrete</label>
-                        <select value={formData.recorrencia} onChange={e => setFormData({ ...formData, recorrencia: e.target.value })} disabled={salvando}>
-                          <option value="nenhuma">Apenas nesta data</option>
-                          <option value="semanal">Semanalmente (3x)</option>
-                          <option value="mensal">Mensalmente (3x)</option>
-                        </select>
-                      </div>
-                    ) : (
-                      <div className="form-group">
-                        <label>📋 Status</label>
-                        <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} disabled={salvando}>
-                          <option value="pendente">⏳ Pendente</option>
-                          <option value="concluido">✅ Concluído</option>
-                          <option value="cancelado">❌ Cancelado</option>
-                        </select>
-                      </div>
-                    )}
-                  </div>
-                
-                  <div className="form-group">
-                    <label>👤 Vincular Cliente <span className="label-hint">(Opcional)</span></label>
-                    <div className="custom-autocomplete-container">
-                      <input
-                        type="text"
-                        placeholder="Pesquisar nome do cliente..."
-                        value={buscaClienteModal}
-                        onFocus={() => setMostrarDropdownModal(true)}
-                        onChange={(e) => {
-                          setBuscaClienteModal(e.target.value);
-                          if (e.target.value === '') setFormData({...formData, clienteId: ''});
-                        }}
-                        disabled={salvando}
-                      />
-                      {mostrarDropdownModal && buscaClienteModal.length > 0 && (
-                        <ul className="autocomplete-results" style={{maxHeight: '150px'}}>
-                          {clientes
-                            .filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase()))
-                            .sort((a, b) => (a.nome || a.nomeFantasia || '').localeCompare(b.nome || b.nomeFantasia || ''))
-                            .map(c => (
-                              <li key={c.id} onClick={() => {
-                                setFormData({...formData, clienteId: c.id});
-                                setBuscaClienteModal(c.nome || c.nomeFantasia);
-                                setMostrarDropdownModal(false);
-                              }}>
-                                {c.nome || c.nomeFantasia}
-                              </li>
-                            ))}
-                           {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
-                              <li style={{ color: 'var(--texto-secundario)', cursor: 'default' }}>Usar nome avulso: "{buscaClienteModal}"</li>
-                            )}
-                        </ul>
-                      )}
-                      {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
-                    </div>
-                  </div>
-
-                  <div className="form-group">
-                    <label>📍 Local / Endereço</label>
-                    <div style={{ display: 'flex', gap: '6px' }}>
-                        <input 
-                            type="text" 
-                            value={formData.local} 
-                            onChange={e => setFormData({ ...formData, local: e.target.value })} 
-                            placeholder="Ex: Espaço Vida - Rua X, 123" 
-                            disabled={salvando}
-                            style={{ flex: 1 }}
-                        />
-                        {formData.local && (
-                            <button 
-                                type="button" 
-                                className="btn-maps" 
-                                title="Pesquisar no Google Maps"
-                                onClick={() => abrirGoogleMaps(formData.local)}
-                            >
-                                📍 Abrir Maps
-                            </button>
-                        )}
-                      </div>
-                  </div>
+              {/* LINHA 2: TÍTULO DO COMPROMISSO */}
+              <div className="form-group">
+                <label className="form-label-clean">📌 TÍTULO DO COMPROMISSO *</label>
+                <input 
+                  autoFocus 
+                  type="text" 
+                  value={formData.titulo} 
+                  onChange={e => setFormData({ ...formData, titulo: e.target.value })} 
+                  placeholder="Ex: Visita técnica no salão" 
+                  required 
+                  disabled={salvando}
+                />
               </div>
 
-              <div className="form-section" style={{marginBottom: 0}}>
+              {/* LINHA 3: TIPO DE TAREFA E REPETIR LEMBRETE */}
+              <div className="form-row-2col">
+                <div className="form-group">
+                  <label className="form-label-clean">💼 TIPO DE TAREFA</label>
+                  <select value={formData.tipo} onChange={e => setFormData({ ...formData, tipo: e.target.value })} disabled={salvando}>
+                    <option value="reuniao">🤝 Reunião com Cliente</option>
+                    <option value="visita">📍 Visita Técnica / Local</option>
+                    <option value="pagamento">💰 Lembrete Financeiro</option>
+                    <option value="tarefa">📌 Tarefa Administrativa</option>
+                    <option value="bloqueio">🚫 Bloqueio de Data</option>
+                  </select>
+                </div>
+         
+                {!eventoSelecionado ? (
                   <div className="form-group">
-                    <label>📝 Observações Extra</label>
-                    <textarea 
-                      value={formData.observacoes} 
-                      onChange={e => setFormData({ ...formData, observacoes: e.target.value })} 
-                      placeholder="Links, referências de peças ou notas importantes..." 
-                      rows={2} 
+                    <label className="form-label-clean">🔄 REPETIR LEMBRETE</label>
+                    <select value={formData.recorrencia} onChange={e => setFormData({ ...formData, recorrencia: e.target.value })} disabled={salvando}>
+                      <option value="nenhuma">Apenas nesta data</option>
+                      <option value="semanal">Semanalmente (3x)</option>
+                      <option value="mensal">Mensalmente (3x)</option>
+                    </select>
+                  </div>
+                ) : (
+                  <div className="form-group">
+                    <label className="form-label-clean">📋 STATUS</label>
+                    <select value={formData.status} onChange={e => setFormData({ ...formData, status: e.target.value })} disabled={salvando}>
+                      <option value="pendente">⏳ Pendente</option>
+                      <option value="concluido">✅ Concluído</option>
+                      <option value="cancelado">❌ Cancelado</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {/* LINHA 4: CLIENTE E LOCAL */}
+              <div className="form-row-2col">
+                <div className="form-group">
+                  <label className="form-label-clean">👤 CLIENTE <span className="label-hint-inline">(opcional)</span></label>
+                  <div className="custom-autocomplete-container">
+                    <input
+                      type="text"
+                      placeholder="Buscar cliente..."
+                      value={buscaClienteModal}
+                      onFocus={() => setMostrarDropdownModal(true)}
+                      onChange={(e) => {
+                        setBuscaClienteModal(e.target.value);
+                        if (e.target.value === '') setFormData({...formData, clienteId: ''});
+                      }}
                       disabled={salvando}
                     />
+                    {mostrarDropdownModal && buscaClienteModal.length > 0 && (
+                      <ul className="autocomplete-results" style={{maxHeight: '150px'}}>
+                        {clientes
+                          .filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase()))
+                          .sort((a, b) => (a.nome || a.nomeFantasia || '').localeCompare(b.nome || b.nomeFantasia || ''))
+                          .map(c => (
+                            <li key={c.id} onClick={() => {
+                              setFormData({...formData, clienteId: c.id});
+                              setBuscaClienteModal(c.nome || c.nomeFantasia);
+                              setMostrarDropdownModal(false);
+                            }}>
+                              {c.nome || c.nomeFantasia}
+                            </li>
+                          ))}
+                         {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
+                            <li style={{ color: 'var(--texto-secundario)', cursor: 'default' }}>Usar nome avulso: "{buscaClienteModal}"</li>
+                          )}
+                      </ul>
+                    )}
+                    {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
                   </div>
-               </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label-clean">📍 LOCAL / ENDEREÇO</label>
+                  <div style={{ display: 'flex', gap: '4px' }}>
+                    <input 
+                      type="text" 
+                      value={formData.local} 
+                      onChange={e => setFormData({ ...formData, local: e.target.value })} 
+                      placeholder="Ex: Espaço Vida" 
+                      disabled={salvando}
+                      style={{ flex: 1 }}
+                    />
+                    {formData.local && (
+                      <button 
+                        type="button" 
+                        className="btn-maps" 
+                        title="Pesquisar no Google Maps"
+                        onClick={() => abrirGoogleMaps(formData.local)}
+                      >
+                        📍 Maps
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* LINHA 5: OBSERVAÇÕES */}
+              <div className="form-group">
+                <label className="form-label-clean">📝 OBSERVAÇÕES EXTRA</label>
+                <textarea 
+                  value={formData.observacoes} 
+                  onChange={e => setFormData({ ...formData, observacoes: e.target.value })} 
+                  placeholder="Links, referências de peças ou notas..." 
+                  rows={2} 
+                  disabled={salvando}
+                />
+              </div>
               
               <div className="modal-actions">
-                {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar Compromisso</button>}
+                {eventoSelecionado && <button type="button" className="btn-excluir-modal" onClick={excluirEvento} disabled={salvando}>Apagar</button>}
                 <button type="button" className="btn-cancelar-modal" onClick={() => setModalFormAberto(false)} disabled={salvando}>Cancelar</button>
-                <button type="submit" className="btn-salvar-modal" disabled={salvando}>{salvando ? 'Salvando...' : 'Salvar Compromisso'}</button>
+                <button type="submit" className="btn-salvar-modal" disabled={salvando}>{salvando ? 'Salvando...' : (eventoSelecionado ? 'Atualizar' : 'Salvar Compromisso')}</button>
               </div>
             </form>
           )}

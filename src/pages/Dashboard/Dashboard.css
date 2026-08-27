@@ -5,13 +5,14 @@
 ========================================= */
 
 .dash-wide-container {
-  padding: 10px 20px 10px 20px;
+  padding: 16px 24px 32px 24px;
   background: #f8fafc;
-  height: calc(100vh - 65px);
+  min-height: calc(100vh - 65px);
+  height: auto;
   display: flex;
   flex-direction: column;
   font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
-  overflow: hidden;
+  overflow-y: auto;
   box-sizing: border-box;
 }
 
@@ -23,14 +24,15 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
+  gap: 16px;
+  margin-bottom: 12px;
   flex-shrink: 0;
+  flex-wrap: wrap;
 }
 
 .header-titles h1 {
   color: #0f172a;
-  font-size: 18px;
+  font-size: 20px;
   margin: 0;
   font-weight: 900;
   letter-spacing: -0.5px;
@@ -38,8 +40,8 @@
 
 .header-titles p {
   color: #64748b;
-  margin-top: 1px;
-  font-size: 12px;
+  margin-top: 2px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -49,6 +51,7 @@
   display: flex; 
   align-items: center; 
   gap: 10px; 
+  flex-wrap: nowrap;
 }
 
 .select-periodo-dash {
@@ -72,7 +75,8 @@
 }
 
 .dash-quick-actions-grid {
-  display: flex;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(95px, 1fr));
   align-items: center;
   gap: 8px;
 }
@@ -81,10 +85,10 @@
   background: var(--dourado, linear-gradient(135deg, #c5a059 0%, #b48c48 100%)) !important;
   color: #ffffff !important;
   border: none !important;
-  padding: 9px 14px;
+  padding: 9px 12px;
   border-radius: 12px;
   font-weight: 800;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   cursor: pointer;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -92,8 +96,11 @@
   box-shadow: 0 4px 12px rgba(197, 160, 89, 0.22) !important;
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
   white-space: nowrap;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .dash-quick-actions-grid button:hover { 
@@ -302,32 +309,31 @@
 .dash-main-grid-wide {
   display: grid;
   grid-template-columns: 5fr 7fr;
-  gap: 10px;
+  gap: 14px;
   flex: 1;
   min-height: 0;
-  overflow: hidden;
+  margin-top: 4px;
 }
 
 .dash-column {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 14px;
   min-height: 0;
-  overflow: hidden;
 }
 
 /* 🔥 CARTÃO REDESIGN COMPACTO */
 .dash-card-wide {
   background: var(--fundo-card, #ffffff);
-  padding: 10px 14px;
-  border-radius: 14px;
+  padding: 14px 18px;
+  border-radius: 16px;
   border: 1px solid var(--borda, #e2e8f0);
   box-shadow: 0 4px 14px -4px rgba(197, 160, 89, 0.1);
   display: flex;
   flex-direction: column;
   min-height: 0;
-  overflow: hidden;
   transition: all 0.25s ease;
+  box-sizing: border-box;
 }
 
 .dash-card-column { display: flex; flex-direction: column; }
@@ -942,14 +948,15 @@
    ESTILO DO GRÁFICO CONVERSÃO & STATUS HORIZONTAL
 ========================================= */
 /* =========================================
+/* =========================================
    ESTILO DO GRÁFICO CONVERSÃO & STATUS HORIZONTAL
 ========================================= */
 .status-donut-container-horizontal {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  margin: auto 0;
+  gap: 18px;
+  margin: 8px 0 0 0;
   width: 100%;
   flex: 1;
 }
@@ -960,38 +967,44 @@
   align-items: center;
   justify-content: center;
   flex: 1;
-  height: 100%;
 }
 
 .status-info-right {
-  flex: 1.2;
+  flex: 1.3;
   min-width: 0;
 }
 
 .status-list-grid {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
 }
 
 .status-item-row {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  font-size: 0.7rem;
-  color: var(--texto-secundario, #64748b);
+  font-size: 0.74rem;
+  color: var(--texto-secundario, #475569);
   background: var(--fundo, #f8fafc);
-  padding: 2px 8px;
-  border-radius: 6px;
+  padding: 3.5px 10px;
+  border-radius: 8px;
   border: 1px solid var(--borda, #e2e8f0);
+  transition: all 0.2s ease;
+}
+
+.status-item-row:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
 }
 
 .status-item-row .dot {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  margin-right: 6px;
+  margin-right: 8px;
   display: inline-block;
+  flex-shrink: 0;
 }
 
 .status-item-row strong {
@@ -1197,18 +1210,19 @@
   .dash-quick-actions-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
+    gap: 8px;
     width: 100%;
   }
 
   .dash-quick-actions-grid button {
-    height: 38px;
-    padding: 0 4px;
-    font-size: 0.64rem;
+    height: 40px;
+    padding: 0 8px;
+    font-size: 0.7rem;
     border-radius: 10px;
     justify-content: center;
     letter-spacing: 0.2px;
     box-shadow: 0 3px 10px rgba(197, 160, 89, 0.2) !important;
+    width: 100%;
   }
 
   .stats-wide-row {
@@ -1601,34 +1615,6 @@
   align-items: center;
   gap: 8px;
   flex-shrink: 0;
-}
-
-.dash-quick-actions-grid {
-  display: flex;
-  gap: 5px;
-}
-
-.dash-quick-actions-grid button {
-  background: linear-gradient(135deg, #c5a059 0%, #b48c48 100%);
-  color: #ffffff;
-  border: none;
-  padding: 6px 10px;
-  border-radius: 10px;
-  font-weight: 800;
-  font-size: 0.68rem;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  letter-spacing: 0.2px;
-}
-
-.dash-quick-actions-grid button:hover {
-  background: linear-gradient(135deg, #b48c48 0%, #a07840 100%);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.35);
 }
 
 /* =========================================

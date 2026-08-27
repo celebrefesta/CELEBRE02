@@ -121,8 +121,24 @@ const Login = () => {
     setErro('');
     setLoading(true);
 
+    const emailLimpo = email ? email.trim().toLowerCase() : '';
+    const senhaOriginal = senha || '';
+
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email.trim(), senha);
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, emailLimpo, senhaOriginal);
+      } catch (authErr) {
+        // Se falhou por senha incorreta e a senha tinha espaços acidentais no celular
+        if (
+          (authErr.code === 'auth/wrong-password' || authErr.code === 'auth/invalid-credential') &&
+          senhaOriginal !== senhaOriginal.trim()
+        ) {
+          userCredential = await signInWithEmailAndPassword(auth, emailLimpo, senhaOriginal.trim());
+        } else {
+          throw authErr;
+        }
+      }
       await finalizarLogin(userCredential.user);
     } catch (error) {
       console.error("Erro no login:", error);
@@ -132,9 +148,11 @@ const Login = () => {
       } else if (code === 'auth/invalid-email') {
         setErro('Formato de e-mail inválido.');
       } else if (code === 'auth/too-many-requests') {
-        setErro('Muitas tentativas sem sucesso. Tente novamente em alguns instantes.');
+        setErro('Muitas tentativas sem sucesso. Aguarde alguns instantes e tente novamente.');
       } else if (code === 'auth/user-disabled') {
         setErro('Esta conta de usuário foi desativada.');
+      } else if (code === 'auth/network-request-failed') {
+        setErro('Falha de conexão com a internet. Verifique sua rede e tente novamente.');
       } else {
         setErro('Erro ao entrar. Verifique seus dados e tente novamente.');
       }
@@ -151,32 +169,31 @@ const Login = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
-      
+
+      // 🔍 Busca tenantId existente para o usuário
+      let tenantIdParaSalvar = user.uid;
+
+      try {
+        const qEquipe = query(collection(db, "equipe"), where("email", "==", user.email));
+        const snapEquipe = await getDocs(qEquipe);
+        if (!snapEquipe.empty) {
+          tenantIdParaSalvar = snapEquipe.docs[0].data().empresaId;
+        }
+      } catch (errBusca) {
+        console.error("Erro ao verificar vínculo com equipe:", errBusca);
+      }
+
       const userDocRef = doc(db, 'usuarios', user.uid);
       const userDocSnap = await getDoc(userDocRef);
-      
+
       if (!userDocSnap.exists()) {
-        const dataAtual = new Date();
-        const dataFimTeste = new Date(dataAtual);
-        dataFimTeste.setDate(dataFimTeste.getDate() + 7);
-
         await setDoc(userDocRef, {
-          uid: user.uid,
-          nomeCompleto: user.displayName,
-          nomeExibicao: user.displayName,
-          tipoPessoa: 'fisica',
-          documento: '',
           email: user.email,
-          dataCadastro: dataAtual.toISOString(),
-          dataFimTeste: dataFimTeste.toISOString(), 
+          nomeCompleto: user.displayName || 'Usuário Google',
           role: 'owner',
-          planoId: 'plano_basico' 
-        });
-
-        await setDoc(doc(db, "configuracoes_empresa", user.uid), {
-          nomeEmpresa: user.displayName,
-          documentoEmpresa: '',
-          emailContato: user.email,
+          tenantId: tenantIdParaSalvar,
+          dataCadastro: new Date().toISOString().split('T')[0],
+          assinaturaAtiva: false,
           criadoEm: serverTimestamp()
         });
       }
@@ -219,18 +236,29 @@ const Login = () => {
                 placeholder="nome@exemplo.com" 
                 value={email} 
                 onChange={handleEmailChange} 
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck="false"
                 required 
               />
             </div>
             
             <div className="input-group">
-              <label>SENHA</label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                <label style={{ margin: 0 }}>SENHA</label>
+                <Link to="/redefinir-senha" style={{ fontSize: '0.78rem', color: 'var(--dourado)', fontWeight: '600', textDecoration: 'none' }}>
+                  Esqueceu a senha?
+                </Link>
+              </div>
               <div className="input-with-icon">
                   <input 
                       type={mostrarSenha ? "text" : "password"} 
                       placeholder="••••••••" 
                       value={senha} 
                       onChange={handleSenhaChange} 
+                      autoCapitalize="none"
+                      autoCorrect="off"
+                      spellCheck="false"
                       required 
                   />
                   <button 

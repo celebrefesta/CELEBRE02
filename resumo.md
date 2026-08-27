@@ -1,77 +1,60 @@
-# 📊 RESUMO EXECUTIVO DO SISTEMA CELEBRE
-
-## 📅 Data: 26 de Agosto de 2026
-## 🌐 Domínio Oficial: `https://celebrefesta.com.br`
-## 📱 App Google Play ID: `br.com.celebre.app`
-## 🏢 Conta de Desenvolvedor: `Celebre - Gestão de Festas` (ID: `8578569816294401739`)
+# 📊 RESUMO GERAL DAS ATIVIDADES — SISTEMA E APP CELEBRE
 
 ---
 
-## 🎯 1. Principais Conquistas Deste Ciclo
+## 1. 🎯 Visão Geral do Progresso
 
-### 🌐 1.1. Conexão do Domínio Personalizado (Hostinger + Firebase)
-* **Domínio Ativo:** `celebrefesta.com.br` integrado com sucesso ao **Firebase Hosting**.
-* **Apontamento DNS:**
-  * Registro **`A`**: `@` ➔ `199.36.158.100` (Propagado globalmente).
-  * Registro **`TXT`**: `@` ➔ `hosting-site=celebre-9f5c9` (Validado pelo Google).
-  * Registro `ALIAS` antigo conflitante removido da Hostinger.
-* **Segurança & SSL:** Certificado HTTPS emitido e autenticação OAuth autorizada para `celebrefesta.com.br`.
+Nesta sessão de trabalho, foram realizadas melhorias estruturais de interface no sistema web e concluída com 100% de sucesso toda a etapa burocrática e visual de configuração do aplicativo **Celebre** no **Google Play Console**.
 
 ---
 
-### 📱 1.2. Criação da Conta & Pacote Google Play Store
-* **Conta de Desenvolvedor Ativada:** Taxa única de USD 25 liquidada e conta configurada com sucesso.
-* **Pacote Android (.AAB) Gerado:**
-  * Arquivo: `Celebre.aab` (Tamanho ultra-leve: **2.1 MB**).
-  * Package ID: `br.com.celebre.app`.
-  * Chave de Assinatura: `signing.keystore` gerada e salva.
-  * Digital Asset Links: `public/.well-known/assetlinks.json` configurado com a chave SHA-256 para navegação nativa em tela cheia (sem barra de URL).
-* **Verificação de Identidade:** Documentos enviados e em análise automática pelo Google Play.
+## 2. 🛠️ Alterações e Melhorias no Sistema Web
+
+### A. Redesign e Compactação do Modal "Novo Compromisso" (Agenda)
+* **Objetivo:** Tornar o modal mais enxuto, direto e perfeitamente legível sem rolagem excessiva.
+* **Ajustes:**
+  * Removidos contêineres internos duplicados (`.form-compact-section`) que espremiam o formulário.
+  * Organizados os campos em grade de 2 colunas: `Data` & `Horário`, `Tipo de Tarefa` & `Repetir Lembrete`, `Cliente` & `Local`.
+  * Padronizada a altura dos rótulos (`labels`) para `20px` com `white-space: nowrap`, eliminando desalinhamentos verticais.
+  * Ajustada a largura do modal para `580px` com preenchimento limpo e responsivo.
+  * Ajustada a altura dos campos de texto (`38px`) e área de observação (`48px`).
+
+### B. Ajuste Visual no Gráfico do Dashboard
+* **Problema:** O gráfico de "Faturamento vs Gastos" apresentava estouro lateral e corte de legendas no eixo X.
+* **Solução:** Fixada a altura em `160px` com margens explícitas no `BarChart` (`top: 8, right: 8, left: -10, bottom: 2`) e ajuste de posicionamento `dy={2}` nas legendas do eixo inferior.
+
+### C. Correção e Estabilidade do Service Worker (PWA)
+* **Problema:** Erro de console `TypeError: Failed to convert value to 'Response'` no `sw.js`.
+* **Solução:** Atualizado o Service Worker para garantir que todas as requisições sempre retornem um objeto `Response` válido, com tratamento de exceções para endpoints externos (Google, Firebase, Mercado Pago).
 
 ---
 
-### ⚡ 1.3. PWA (Progressive Web App) & Modo Offline
-* **Instalação Nativa:** Banner inteligente e responsivo para Android, iOS e Computador.
-* **Persistência de Fechamento:** O banner salva a preferência do usuário em `sessionStorage` e não é intrusivo.
-* **Service Worker Otimizado (`sw.js`):** Cache estático com estratégia Network-First e blindagem contra extensões do navegador (`chrome-extension://`).
-* **Firestore Multi-Abas:** Atualizado para `initializeFirestore` com `persistentLocalCache` e `persistentMultipleTabManager` (Zero erros ou avisos de depreciação no console).
+## 3. 🚀 Publicação do App no Google Play Console
 
----
+Todas as etapas de cadastro, políticas de privacidade, segurança e ficha gráfica foram **concluídas e salvas**:
 
-### 🎨 1.4. Refinamento Visual & Responsividade Mobile da Landing Page
-1. **Blindagem de Idioma:**
-   * Script legado de tradução automática removido do `index.html` e adicionada meta tag `<meta name="google" content="notranslate">`, corrigindo erros de tradução ("por", "Teste fora", "não.").
-2. **Eliminação do Espaço Superior no Mobile:**
-   * Ajustada a classe `.App.no-navbar .main-content` para zerar o recuo de 75px em telas públicas no celular.
-3. **Hero Section (Cartaz Dinâmico):**
-   * Tipografia proporcional, chips de benefícios elegantes e botão de ação compacto, aproximando a prévia do painel.
-4. **Empresas Parceiras (Letreiro Contínuo):**
-   * Transformado em um letreiro deslizante (*marquee*) em **1 única linha horizontal**, suave e com gradientes nas bordas.
-5. **Cards de Recursos (Grid 2 Colunas no Celular):**
-   * Fim dos cards gigantes empilhados; agora dispostos em **2 colunas compactas** com ícones e fontes proporcionais.
-6. **Depoimentos & Avaliações (Carrossel Deslizante):**
-   * Depoimentos em formato de carrossel contínuo com **5 estrelas douradas**, foto, nome e empresa.
-7. **Planos & Preços (Slider com Flechinhas `‹` e `›`):**
-   * Navegação lateral intuitiva no celular com botões de flechas, bolinhas indicadoras (`● ○ ○`) e suporte a arrastar com o dedo.
-   * Valores reduzidos de 3.5rem para 1.85rem com acabamento premium.
-
----
-
-## 📋 2. Tabela de Status dos Módulos
-
-| Módulo / Recurso | Status | Observação |
+| Etapa | Status | Detalhes |
 | :--- | :---: | :--- |
-| **Domínio celebrefesta.com.br** | 🟢 No Ar | Conectado, seguro (SSL) e autorizado no Firebase Auth |
-| **Conta Google Play Console** | 🟡 Verificação | Em análise de identidade pelo Google |
-| **Pacote Celebre.aab** | 🟢 Pronto | Salvo em Downloads e pronto para upload |
-| **PWA & Modo Offline** | 🟢 Ativo | Service Worker e cache multi-abas operacionais |
-| **Landing Page Responsiva** | 🟢 Perfeita | Header limpo, letreiro contínuo, carrossel de planos |
-| **Módulos do Sistema** | 🟢 Blindados | `.clientes-stats-grid` em 1 linha no desktop e 2 no mobile |
+| **Identificação do App** | Concluído | Nome: `Celebre` \| Pacote: `br.com.celebrefesta.app` |
+| **Acesso ao App (Demo)** | Concluído | Credenciais de teste fornecidas para a equipe de revisão do Google |
+| **Anúncios** | Concluído | Declarado que o aplicativo **não contém anúncios** |
+| **Classificação de Conteúdo (IARC)** | Concluído | Classificação: **Livre (L)** / Todas as idades |
+| **Público-alvo** | Concluído | Maiores de 18 anos |
+| **Segurança dos Dados (LGPD)** | Concluído | URL de exclusão vinculada: `https://celebrefesta.com.br/privacidade`. Declarados dados de Nome, E-mail, IDs, Fotos e Documentos para funcionalidade do app |
+| **Apps Governamentais** | Concluído | Declarado que o app não é governamental |
+| **Recursos Financeiros / Saúde** | Concluído | Declarado que o app não atua como instituição bancária nem app de saúde |
+| **Declaração de IA** | Concluído | Marcado como "Não rotular recursos" |
+| **Configuração da Ficha da Loja** | Concluído | Categoria: `Produtividade`. Contato oficial e site vinculados |
+| **Recursos Visuais & Gráficos** | Concluído | Ícone oficial 512x512, Banner Retangular 1024x500 e 4 Capturas de tela mobile 1080x1920 |
 
 ---
 
-## 🚀 3. Próximos Passos (Checklist)
+## 4. 📌 Próximos Passos (Para a Retomada)
 
-1. [ ] **Google Play Console:** Aguardar o e-mail de confirmação da identidade do Google.
-2. [ ] **Upload do App:** Assim que a verificação for concluída, criar o lançamento de Produção e subir o arquivo `Celebre.aab`.
-3. [ ] **Preenchimento da Ficha da Loja:** Inserir descrição curta, descrição completa, ícone `512x512` e prints do sistema.
+1. **Geração do Pacote Android (`.aab`)**:
+   * Compilar o pacote `.aab` (Android App Bundle) otimizado e assinado para `br.com.celebrefesta.app`.
+2. **Upload da Versão na Google Play**:
+   * Acessar o menu **Teste interno** ou **Produção** -> **Criar nova versão** e anexar o arquivo `.aab`.
+   * Enviar para a revisão oficial do Google Play.
+3. **Continuidade das Melhorias no Sistema Web**:
+   * Dar seguimento às demais páginas e fluxos operacionais da plataforma Celebre.
