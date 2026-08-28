@@ -11,6 +11,7 @@
   --gold-dark: var(--dourado);
   --fundo-cinza: #f1f5f9;
   --branco: #ffffff;
+  --fundo-card: #ffffff;
   --texto-principal: #0f172a;
   --texto-secundario: #64748b;
   --borda: #e2e8f0;
@@ -26,6 +27,7 @@
   --bg-main: #0b0f19 !important;
   --fundo-principal: #0b0f19 !important;
   --branco: #111827 !important;
+  --fundo-card: #111827 !important;
   --texto-principal: #f9fafb !important;
   --texto-secundario: #cbd5e1 !important;
   --borda: #374151 !important;
@@ -40,6 +42,7 @@
   --bg-main: #121212 !important;
   --fundo-principal: #121212 !important;
   --branco: #18181b !important;
+  --fundo-card: #18181b !important;
   --texto-principal: #f4f4f5 !important;
   --texto-secundario: #a1a1aa !important;
   --borda: #3f3f46 !important;
@@ -54,6 +57,7 @@
   --bg-main: #0b0f19 !important;
   --fundo-principal: #0b0f19 !important;
   --branco: #111827 !important;
+  --fundo-card: #111827 !important;
   --texto-principal: #f9fafb !important;
   --texto-secundario: #cbd5e1 !important;
   --borda: #374151 !important;

@@ -36,6 +36,10 @@ self.addEventListener('activate', (event) => {
 
 // Interceptação de requisições com estratégia Network-First resiliente
 self.addEventListener('fetch', (event) => {
+  if (self.location.hostname === 'localhost' || self.location.hostname === '127.0.0.1') {
+    return; // Deixa o Vite rodar livremente em localhost sem cache
+  }
+
   if (event.request.method !== 'GET') return;
   if (!event.request.url.startsWith('http://') && !event.request.url.startsWith('https://')) return;
 

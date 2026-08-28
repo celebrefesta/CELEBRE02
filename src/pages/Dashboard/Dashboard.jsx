@@ -855,13 +855,13 @@ const Dashboard = () => {
           </select>
 
           <div className="dash-quick-actions-grid">
-            <button onClick={() => navigate('/cadastro-cliente')} title="Novo Cliente">
+            <button className="btn-dash-quick-action" onClick={() => navigate('/cadastro-cliente')} title="Novo Cliente">
               <i className="fas fa-user-plus"></i> CLIENTE
             </button>
-            <button onClick={() => navigate('/locacoes/nova')} title="Nova Locação">
+            <button className="btn-dash-quick-action" onClick={() => navigate('/locacoes/nova')} title="Nova Locação">
               <i className="fas fa-shopping-cart"></i> LOCAÇÃO
             </button>
-            <button onClick={() => navigate('/cadastro-estoque')} title="Novo Item">
+            <button className="btn-dash-quick-action" onClick={() => navigate('/cadastro-estoque')} title="Novo Item">
               <i className="fas fa-box-open"></i> ITEM
             </button>
           </div>
@@ -986,10 +986,10 @@ const Dashboard = () => {
                 <h3 style={{ margin: 0 }}>📊 Faturamento vs Gastos</h3>
                 <p className="card-subtitle" style={{ margin: '1px 0 0 0' }}>Receita (azul) × Despesas (vermelho)</p>
               </div>
-              <span className="birthday-count-pill" style={{ background: '#f8fafc', border: '1px solid #e2e8f0', color: '#0f172a', display: 'flex', gap: '6px', alignItems: 'center' }}>
-                <span style={{ color: '#2563eb', fontWeight: 800 }}>R$ {totalFatPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                <span style={{ color: '#cbd5e1' }}>|</span>
-                <span style={{ color: '#ef4444', fontWeight: 800 }}>R$ {totalGastosPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <span className="fat-vs-gastos-badge">
+                <span className="val-receita">R$ {totalFatPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                <span className="val-sep">|</span>
+                <span className="val-despesa">R$ {totalGastosPeriodo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </span>
             </div>
 
@@ -1240,8 +1240,8 @@ const Dashboard = () => {
 
           </div>
 
-          {/* 📊 BI CATEGORIAS ULTRA COMPACTO (BARRA EMPILHADA + CHIPS INLINE) */}
-          <section className="dash-card-wide" style={{ flex: '1' }}>
+          {/* 📊 BI CATEGORIAS (BARRA EMPILHADA + 5 CHIPS) */}
+          <section className="dash-card-wide bi-card-section">
             <div className="dash-section-header">
               <div>
                 <h3 style={{ margin: 0 }}>📊 BI Financeiro por Categoria</h3>
@@ -1250,7 +1250,7 @@ const Dashboard = () => {
               <button
                 type="button"
                 onClick={() => navigate('/financeiro')}
-                style={{ background: '#0f172a', color: '#ffffff', border: 'none', padding: '4px 12px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '800', cursor: 'pointer' }}
+                className="btn-dash-link-action"
               >
                 Financeiro ➔
               </button>
@@ -1264,6 +1264,7 @@ const Dashboard = () => {
                 { id: 'fixo', icon: '🏢', label: 'Fixos', valor: categoriaBreakdown.fixo || 0, cor: '#64748b' },
                 { id: 'equipe', icon: '👥', label: 'Equipe', valor: categoriaBreakdown.equipe || 0, cor: '#8b5cf6' },
               ];
+
               return (
                 <div className="bi-stacked-bar-wrapper">
                   {/* BARRA EMPILHADA DE DISTRIBUIÇÃO */}
@@ -1282,18 +1283,22 @@ const Dashboard = () => {
                     })}
                   </div>
 
-                  {/* CHIPS INLINE ULTRA COMPACTOS */}
+                  {/* CHIPS DE TODAS AS 5 CATEGORIAS */}
                   <div className="bi-chips-grid">
                     {itensBreakdown.map(item => {
                       const pct = totalGeral > 0 ? Math.round((item.valor / totalGeral) * 100) : 0;
                       return (
                         <div key={item.id} className="bi-chip-card">
-                          <span className="bi-chip-dot" style={{ background: item.cor }}></span>
-                          <span className="bi-chip-label">{item.icon} {item.label}</span>
-                          <span className="bi-chip-val">
-                            R$ {item.valor >= 1000 ? (item.valor / 1000).toFixed(1) + 'k' : item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
-                            <span className="bi-chip-pct">({pct}%)</span>
-                          </span>
+                          <div className="bi-chip-top-row">
+                            <span className="bi-chip-dot" style={{ background: item.cor }}></span>
+                            <span className="bi-chip-label">{item.icon} {item.label}</span>
+                            <span className="bi-chip-pct" style={{ color: item.cor }}>{pct}%</span>
+                          </div>
+                          <div className="bi-chip-bottom-row">
+                            <strong className="bi-chip-val">
+                              R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </strong>
+                          </div>
                         </div>
                       );
                     })}

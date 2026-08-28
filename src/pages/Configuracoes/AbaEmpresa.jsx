@@ -1,6 +1,7 @@
-import React from 'react';
+import React, { useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
 import { formatCpfCnpj, formatCEP, formatTelefone } from '../../utils/mascaras';
+import { testarChaveGoogleMaps } from '../../utils/googleMapsService';
 
 const AbaEmpresa = ({ 
   config, 
@@ -15,6 +16,32 @@ const AbaEmpresa = ({
   salvarTudo,
   salvandoTudo
 }) => {
+  const [testandoGoogle, setTestandoGoogle] = useState(false);
+  const [resultadoTesteGoogle, setResultadoTesteGoogle] = useState(null);
+
+  const handleTestarGoogleMaps = async () => {
+    const key = (config.googleMapsApiKey || '').trim();
+    if (!key) {
+      alert("Por favor, cole a sua Chave de API do Google Maps primeiro.");
+      return;
+    }
+    setTestandoGoogle(true);
+    setResultadoTesteGoogle(null);
+    try {
+      const res = await testarChaveGoogleMaps(key);
+      setResultadoTesteGoogle({
+        sucesso: true,
+        mensagem: `🟢 Conexão com Google Maps Oficial 100% ativa! Trajeto teste: ${res.km} km (${res.duracaoTexto}).`
+      });
+    } catch (err) {
+      setResultadoTesteGoogle({
+        sucesso: false,
+        mensagem: `🔴 Erro no teste: ${err.message || 'Verifique se a chave está correta e se a Distance Matrix API e Maps JavaScript API estão ativadas no Google Cloud Console.'}`
+      });
+    } finally {
+      setTestandoGoogle(false);
+    }
+  };
 
   const atualizarEnderecoCompleto = (overrideObj = {}) => {
     const r = overrideObj.rua !== undefined ? overrideObj.rua : (config.rua || '');
@@ -227,20 +254,79 @@ const AbaEmpresa = ({
         </div>
       </div>
 
-      {/* CARD 3: DADOS FISCAIS E SEDE (CAMPOS DE ENDEREÇO SEPARADOS) */}
+      {/* CARD 3: DADOS FISCAIS E SEDE / ESTOQUE (PONTO DE PARTIDA DO FRETE) */}
       <div className="config-card span-2-col-full">
         <div className="card-top-bar gray-bar"></div>
         <div className="config-card-header">
           <div className="card-header-icon gray">
-            <i className="fas fa-file-contract"></i>
+            <i className="fas fa-warehouse"></i>
           </div>
           <div>
-            <h3>Dados Fiscais e Sede da Empresa</h3>
-            <p className="subtext">Informações cadastrais e endereço detalhado da sede/galpão comercial para geração de contratos.</p>
+            <h3>Sede, Estoque & Dados Fiscais da Empresa</h3>
+            <p className="subtext">Endereço de onde saem as mercadorias para cálculo de frete por KM e geração de contratos.</p>
+          </div>
+        </div>
+
+        {/* 🚚 BANNER EXPLICATIVO: PONTO DE ORIGEM DO FRETE */}
+        <div style={{
+          background: 'rgba(197, 160, 89, 0.08)',
+          border: '1.5px solid rgba(197, 160, 89, 0.35)',
+          borderRadius: '12px',
+          padding: '14px 16px',
+          marginBottom: '20px',
+          display: 'flex',
+          gap: '12px',
+          alignItems: 'flex-start'
+        }}>
+          <span style={{ fontSize: '1.4rem', lineHeight: 1 }}>🚚</span>
+          <div>
+            <strong style={{ color: 'var(--texto-principal, #0f172a)', fontSize: '0.88rem', display: 'block', marginBottom: '3px' }}>
+              Ponto de Partida Obrigatório para o Cálculo Automático de Frete
+            </strong>
+            <p style={{ margin: 0, fontSize: '0.78rem', color: 'var(--texto-secundario, #475569)', lineHeight: 1.5 }}>
+              Preencha abaixo o <strong>endereço onde seu acervo/estoque fica guardado</strong> (galpão, loja física ou seu <strong>endereço residencial</strong> caso trabalhe de casa).
+              O sistema utiliza este ponto exato como origem para calcular a quilometragem (KM) e estimar os custos de gasolina e transporte até o local da festa dos seus clientes.
+            </p>
           </div>
         </div>
         
         <div className="form-grid-3-col">
+          {/* TIPO DE LOCAL */}
+          <div className="f-group span-3-col" style={{ marginBottom: '4px' }}>
+            <label><i className="fas fa-map-marker-alt" style={{ color: '#ef4444' }}></i> Tipo de Local de Origem (Base do Frete)</label>
+            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginTop: '6px' }}>
+              {[
+                { val: 'empresa', label: '🏢 Empresa / Loja', desc: 'Ponto comercial' },
+                { val: 'residencia', label: '🏠 Residência', desc: 'Trabalho de casa' },
+                { val: 'galpao', label: '🏭 Galpão / Depósito', desc: 'Armazém próprio' }
+              ].map(opt => (
+                <button
+                  key={opt.val}
+                  type="button"
+                  onClick={() => { handleConfigChange('tipoLocalOrigem', opt.val); salvarConfigTextual('tipoLocalOrigem', opt.val); }}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '10px',
+                    border: `2px solid ${(config.tipoLocalOrigem || 'residencia') === opt.val ? '#c5a059' : 'var(--borda, #e2e8f0)'}`,
+                    background: (config.tipoLocalOrigem || 'residencia') === opt.val ? 'rgba(197,160,89,0.12)' : 'var(--fundo-card, #fff)',
+                    color: (config.tipoLocalOrigem || 'residencia') === opt.val ? '#926f2d' : 'var(--texto-secundario, #64748b)',
+                    fontWeight: '800',
+                    fontSize: '0.8rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.18s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: '2px'
+                  }}
+                >
+                  <span>{opt.label}</span>
+                  <span style={{ fontSize: '0.68rem', opacity: 0.7, fontWeight: 600 }}>{opt.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* CNPJ / CPF */}
           <div className="f-group span-1-col">
             <label><i className="fas fa-id-card"></i> CNPJ / CPF</label>
@@ -403,6 +489,139 @@ const AbaEmpresa = ({
           <i className="fas fa-map-marker-alt" style={{ color: '#ef4444', fontSize: '16px' }}></i>
           <span><strong>Endereço Formatado para Contratos:</strong> {config.endereco || 'Preencha os campos acima para gerar o endereço oficial.'}</span>
         </div>
+      </div>
+
+      {/* CARD: GOOGLE MAPS API OFICIAL (CÁLCULO DE FRETE 100% EXATO) */}
+      <div className="config-card span-2-col-full" style={{ border: config.googleMapsApiKey ? '2px solid rgba(197, 160, 89, 0.5)' : undefined }}>
+        <div className="card-top-bar gold-bar"></div>
+        <div className="config-card-header">
+          <div className="card-header-icon gold">
+            <i className="fas fa-map-marked-alt"></i>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+              <h3 style={{ margin: 0 }}>Google Maps API Oficial (Cálculo de Frete 100% Certeiro)</h3>
+              {config.googleMapsApiKey && (
+                <span style={{ background: '#dcfce7', color: '#15803d', border: '1px solid #bbf7d0', padding: '2px 8px', borderRadius: '12px', fontSize: '0.72rem', fontWeight: '800' }}>
+                  ✓ ATIVO NO SISTEMA
+                </span>
+              )}
+            </div>
+            <p className="subtext">
+              Integração oficial com a base de dados de trânsito, ruas e numerações do Google Maps para calcular o KM exato porta a porta sem margem de erro.
+            </p>
+          </div>
+        </div>
+
+        {/* BANNER EXPLICATIVO */}
+        <div style={{
+          background: 'rgba(197, 160, 89, 0.08)',
+          border: '1.5px solid rgba(197, 160, 89, 0.3)',
+          borderRadius: '12px',
+          padding: '14px 16px',
+          marginBottom: '16px',
+          fontSize: '0.80rem',
+          color: 'var(--texto-secundario, #475569)',
+          lineHeight: 1.55
+        }}>
+          <strong style={{ color: 'var(--texto-principal, #0f172a)', display: 'block', marginBottom: '4px', fontSize: '0.86rem' }}>
+            🎁 O Google Maps oferece US$ 200 de crédito gratuito todo mês (Mais de 40.000 cálculos grátis/mês)
+          </strong>
+          Com a sua chave de API inserida, o Celebre Sistema consulta diretamente os servidores da Google na hora de gerar propostas e locações, garantindo a quilometragem exata com trânsito real e sem perda financeira de combustível.
+        </div>
+
+        <div className="form-grid-2-col">
+          <div className="f-group span-2-col">
+            <label><i className="fas fa-key" style={{ color: '#c5a059' }}></i> Chave de API do Google Maps (Google Maps API Key)</label>
+            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+              <div className="input-with-icon" style={{ flex: 1 }}>
+                <i className="fas fa-lock input-icon"></i>
+                <input 
+                  type="password" 
+                  value={config.googleMapsApiKey || ''} 
+                  onChange={(e) => handleConfigChange('googleMapsApiKey', e.target.value)} 
+                  onBlur={(e) => salvarConfigTextual('googleMapsApiKey', e.target.value.trim())} 
+                  placeholder="Ex: AIzaSyD..." 
+                  style={{ fontFamily: 'monospace', letterSpacing: '1px' }}
+                />
+              </div>
+
+              <button
+                type="button"
+                onClick={handleTestarGoogleMaps}
+                disabled={testandoGoogle || !config.googleMapsApiKey}
+                style={{
+                  background: '#c5a059',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '10px',
+                  padding: '10px 18px',
+                  fontWeight: '800',
+                  fontSize: '0.82rem',
+                  cursor: testandoGoogle || !config.googleMapsApiKey ? 'not-allowed' : 'pointer',
+                  opacity: testandoGoogle || !config.googleMapsApiKey ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  whiteSpace: 'nowrap',
+                  boxShadow: '0 2px 6px rgba(197, 160, 89, 0.3)'
+                }}
+              >
+                {testandoGoogle ? (
+                  <><i className="fas fa-spinner fa-spin"></i> Testando...</>
+                ) : (
+                  <><i className="fas fa-vial"></i> Testar Conexão</>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* FEEDBACK DO TESTE */}
+        {resultadoTesteGoogle && (
+          <div style={{
+            marginTop: '12px',
+            padding: '10px 14px',
+            borderRadius: '10px',
+            fontSize: '0.80rem',
+            fontWeight: '700',
+            background: resultadoTesteGoogle.sucesso ? '#f0fdf4' : '#fef2f2',
+            border: `1.5px solid ${resultadoTesteGoogle.sucesso ? '#bbf7d0' : '#fecaca'}`,
+            color: resultadoTesteGoogle.sucesso ? '#166534' : '#991b1b',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            <span>{resultadoTesteGoogle.mensagem}</span>
+          </div>
+        )}
+
+        {/* TUTORIAL PASSO A PASSO EM 3 ETAPAS */}
+        <details style={{ marginTop: '16px', background: 'var(--fundo-app, #f8fafc)', borderRadius: '10px', padding: '10px 14px', border: '1px solid var(--borda, #e2e8f0)', cursor: 'pointer' }}>
+          <summary style={{ fontWeight: '800', fontSize: '0.80rem', color: '#926f2d', outline: 'none' }}>
+            📖 Como criar minha chave gratuita no Google Cloud (Passo a Passo Rápido)
+          </summary>
+          <div style={{ marginTop: '12px', fontSize: '0.78rem', color: 'var(--texto-secundario, #475569)', lineHeight: 1.6 }}>
+            <ol style={{ paddingLeft: '18px', margin: 0 }}>
+              <li style={{ marginBottom: '6px' }}>
+                Acesse o <a href="https://console.cloud.google.com/" target="_blank" rel="noopener noreferrer" style={{ color: '#2563eb', fontWeight: '700', textDecoration: 'underline' }}>Google Cloud Console</a> e crie um projeto gratuito (ex: "Celebre Locações").
+              </li>
+              <li style={{ marginBottom: '6px' }}>
+                No menu <strong>APIs e Serviços &gt; Biblioteca</strong>, pesquise e <strong>Ative</strong> estas 2 APIs:
+                <ul style={{ marginTop: '3px' }}>
+                  <li><strong>Distance Matrix API</strong> (calcula a distância e tempo)</li>
+                  <li><strong>Maps JavaScript API</strong> (permite chamadas seguras pelo sistema)</li>
+                </ul>
+              </li>
+              <li style={{ marginBottom: '6px' }}>
+                Acesse <strong>Credenciais &gt; Criar Credenciais &gt; Chave de API</strong>.
+              </li>
+              <li>
+                Copie a chave gerada (inicia com <code>AIzaSy...</code>) e cole no campo acima!
+              </li>
+            </ol>
+          </div>
+        </details>
       </div>
 
       {/* CARD 4: MARKETING E RASTREAMENTO */}

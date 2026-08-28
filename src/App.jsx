@@ -8,7 +8,6 @@ import { verificarELimparMidiasBackground } from './utils/limpezaMidiaService';
 // --- MENU & TOPBAR ---
 import Navbar from './components/Navbar';
 import Topbar from './components/Topbar'; 
-import InstallAppPrompt from './components/InstallAppPrompt/InstallAppPrompt';
 import './App.css';
 
 import RotaPrivada from './components/RotaPrivada'; 
@@ -430,7 +429,6 @@ const AppContent = () => {
 
   return (
     <div className={`App ${!showNavbar ? 'no-navbar' : ''}`}>
-      <InstallAppPrompt />
       {showNavbar && <Navbar />}
       
       <main className="main-content">

@@ -245,12 +245,13 @@ const Agenda = () => {
   };
 
   const handleDiaClick = (dia) => {
-    const evs = eventosDoDia(dia);
+    setDiaSelecionado(dia);
+    const evs = eventosDoDia(dia).filter(eventoVisivel);
     if (evs.length > 0) { 
-      setDiaSelecionado(dia); 
       setModalListaAberto(true);
+    } else {
+      abrirModalForm(dia);
     }
-    else abrirModalForm(dia);
   };
 
   const abrirModalForm = (dia, ev = null) => {
@@ -573,10 +574,30 @@ const Agenda = () => {
       const extra  = evsDia.length - MAX;
       
       dias.push(
-        <div key={dia} className={`day-cell${isHoje ? ' today' : ''}`} onClick={() => handleDiaClick(dia)}>
+        <div 
+          key={dia} 
+          className={`day-cell${isHoje ? ' today' : ''}`} 
+          onClick={() => handleDiaClick(dia)}
+        >
           <div className="day-header-cell">
-              <span className="day-number">{dia}</span>
+            <span className="day-number">{dia}</span>
           </div>
+
+          {/* DOTS VISUAIS PARA CELULAR */}
+          {evsDia.length > 0 && (
+            <div className="day-dots-row-mobile">
+              {evsDia.slice(0, 4).map((ev, idx) => (
+                <span 
+                  key={idx} 
+                  className="day-dot-micro" 
+                  style={{ background: TIPOS[ev.tipo]?.cor || '#3b82f6' }}
+                />
+              ))}
+              {evsDia.length > 4 && <span className="day-dot-more">+{evsDia.length - 4}</span>}
+            </div>
+          )}
+
+          {/* EVENTOS EXPANDIDOS NO DESKTOP */}
           <div className="eventos-container">
             {evsDia.slice(0, MAX).map(ev => {
               const totalEv = Number(ev.valorTotal || 0);
@@ -1193,33 +1214,34 @@ const Agenda = () => {
       </main>
 
       {modalListaAberto && (
-        <div className="modal-overlay" onClick={() => setModalListaAberto(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay modal-agenda-overlay fade-in" onClick={() => setModalListaAberto(false)}>
+          <div className="modal-content modal-agenda-lista-content" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
-              <h3>📅 {diaSelecionado} de {dataAtual.toLocaleString('pt-BR', { month: 'long' })}</h3>
+              <div>
+                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>📅 {diaSelecionado} de {dataAtual.toLocaleString('pt-BR', { month: 'long' })}</h3>
+                <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', color: 'var(--texto-secundario, #64748b)', fontWeight: 600 }}>
+                  {eventosDoDia(diaSelecionado).filter(eventoVisivel).length} {eventosDoDia(diaSelecionado).filter(eventoVisivel).length === 1 ? 'compromisso agendado' : 'compromissos agendados'}
+                </p>
+              </div>
               <button className="btn-close" onClick={() => setModalListaAberto(false)}>×</button>
             </div>
-            <div className="modal-lista-items">
-              {eventosDoDia(diaSelecionado).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99')).map(ev => (
-                <div key={ev.id} className={`item-detalhe-card ${ev.tipo}${ev.origem === 'locacao' ? ' card-locacao' : ''}`} onClick={() => abrirModalForm(diaSelecionado, ev)}>
-                  <div className="detalhe-info">
-                     <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                      {ev.horario && <span className="detalhe-horario">{ev.horario}</span>}
-                      <h4>
-                          {ev.status === 'concluido' && '✅ '}
-                          {ev.status === 'cancelado' && '❌ '}
-                          <span style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>{ev.titulo}</span>
-                      </h4>
-                      {ev.origem === 'locacao' && <span className="badge-locacao-origem">🔗</span>}
-                     </div>
-                    {ev.clienteNome && <span>👤 {ev.clienteNome}</span>}
-                    {ev.tipoServico  && <span style={{ fontSize: '0.78rem' }}>📦 {ev.tipoServico}</span>}
-                  </div>
-                  <span className={`list-tipo-badge badge-${ev.tipo}`}>{TIPOS[ev.tipo]?.label}</span>
-                </div>
-              ))}
+
+            <div className="modal-lista-items custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '60vh', overflowY: 'auto', padding: '12px 2px' }}>
+              {eventosDoDia(diaSelecionado).filter(eventoVisivel).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99')).map(ev => renderCardEvento(ev))}
             </div>
-            <button className="btn-add-no-dia" onClick={() => abrirModalForm(diaSelecionado)}>+ Novo compromisso neste dia</button>
+
+            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--borda, #e2e8f0)' }}>
+              <button 
+                type="button" 
+                className="btn-add-no-dia" 
+                onClick={() => {
+                  setModalListaAberto(false);
+                  abrirModalForm(diaSelecionado);
+                }}
+              >
+                + Novo Compromisso Neste Dia
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -854,7 +854,7 @@ const Clientes = () => {
           <div className="stat-content">
             <span className="stat-title">Total na Carteira</span>
             <strong className="stat-value">{clientes.length}</strong>
-            <span className="stat-sub">Clientes cadastrados</span>
+            <span className="stat-sub">Cadastrados</span>
           </div>
         </div>
 
@@ -865,7 +865,7 @@ const Clientes = () => {
           <div className="stat-content">
             <span className="stat-title">Aguardando Aprovação</span>
             <strong className="stat-value">{numPendentesAprovacao}</strong>
-            <span className="stat-sub">Pendentes de análise</span>
+            <span className="stat-sub">Auto-cadastro</span>
           </div>
         </div>
  
@@ -874,9 +874,9 @@ const Clientes = () => {
             <i className="fas fa-user-check"></i>
           </div>
           <div className="stat-content">
-            <span className="stat-title">Adimplentes (Ativos)</span>
+            <span className="stat-title">Adimplentes</span>
             <strong className="stat-value">{clientes.filter(c => c.situacaoFinanceira === 'adimplente').length}</strong>
-            <span className="stat-sub">Aprovados sem pendências</span>
+            <span className="stat-sub">Sem pendências</span>
           </div>
         </div>
         
@@ -887,7 +887,7 @@ const Clientes = () => {
           <div className="stat-content">
             <span className="stat-title">Com Pendências</span>
             <strong className="stat-value">{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong>
-            <span className="stat-sub">Exigem cobrança/atenção</span>
+            <span className="stat-sub">Exigem atenção</span>
           </div>
         </div>
       </div>
@@ -932,7 +932,7 @@ const Clientes = () => {
               onChange={(e) => setFiltroTagCRM(e.target.value)}
               className="select-pill-filter"
             >
-              <option value="todas">🏷️ Filtrar por Tag CRM</option>
+              <option value="todas">🏷️ Tag CRM</option>
               <option value="VIP">👑 VIP</option>
               <option value="RECORRENTE">🔄 RECORRENTE</option>
               <option value="NOVO">✨ NOVO</option>
@@ -950,7 +950,7 @@ const Clientes = () => {
                 onChange={(e) => setFiltroTipoEvento(e.target.value)}
                 className="select-pill-filter"
               >
-                <option value="todos">🎭 Filtrar por Evento</option>
+                <option value="todos">🎭 Evento</option>
                 {tiposEventoUnicos.map(tipo => (
                   <option key={tipo} value={tipo}>🎉 {tipo}</option>
                 ))}
@@ -1012,204 +1012,342 @@ const Clientes = () => {
         </div>
       </div>
 
-      {/* TABELA DE CLIENTES */}
+      {/* TABELA DE CLIENTES (DESKTOP) & LISTA DE CARDS (MOBILE) */}
       {loading ? (
-        <div className="loading-state">
-          <i className="fas fa-spinner fa-spin"></i> Carregando carteira de clientes...
+        <div className="loading-state-box">
+          <i className="fas fa-spinner fa-spin"></i>
+          <p>Carregando carteira de clientes...</p>
         </div>
       ) : (
-        <div className="table-responsive-card">
-          <table className="custom-table-pro">
-            <thead>
-              <tr>
-                <th width="35%">CLIENTE</th>
-                <th width="23%">CONTATO</th>
-                <th width="22%">ÚLTIMA LOCAÇÃO</th>
-                <th width="15%" className="text-center">SITUAÇÃO</th>
-                <th width="5%" className="text-center">AÇÕES</th> 
-              </tr>
-            </thead>
-            <tbody>
-              {clientesFiltrados.length === 0 ? (
-                 <tr>
-                   <td colSpan="5" className="empty-table-cell">
-                     <i className="fas fa-folder-open empty-icon"></i>
-                     <p>Nenhum cliente encontrado para os filtros selecionados.</p>
-                   </td>
-                 </tr>
-              ) : (
-                clientesFiltrados.map(c => {
-                  const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
-                  const tagColorida = c.tags ? getTagStyle(c.tags) : null;
-                  const eAniversariante = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
-                  const isInadimplente = c.situacaoFinanceira === 'inadimplente';
-                  const isRecorrente = clientesRecorrentesSet.has(c.id);
+        <>
+          {/* TABELA TRADICIONAL PARA DESKTOP */}
+          <div className="table-responsive-card table-desktop-view">
+            <table className="custom-table-pro">
+              <thead>
+                <tr>
+                  <th width="35%">CLIENTE</th>
+                  <th width="23%">CONTATO</th>
+                  <th width="22%">ÚLTIMA LOCAÇÃO</th>
+                  <th width="15%" className="text-center">SITUAÇÃO</th>
+                  <th width="5%" className="text-center">AÇÕES</th> 
+                </tr>
+              </thead>
+              <tbody>
+                {clientesFiltrados.length === 0 ? (
+                   <tr>
+                     <td colSpan="5" className="empty-table-cell">
+                       <i className="fas fa-folder-open empty-icon"></i>
+                       <p>Nenhum cliente encontrado para os filtros selecionados.</p>
+                     </td>
+                   </tr>
+                ) : (
+                  clientesFiltrados.map(c => {
+                    const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
+                    const tagColorida = c.tags ? getTagStyle(c.tags) : null;
+                    const eAniversariante = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
+                    const isInadimplente = c.situacaoFinanceira === 'inadimplente';
+                    const isRecorrente = clientesRecorrentesSet.has(c.id);
 
-                  return (
-                    <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover" onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }}> 
-                      
-                      {/* CLIENTE & AVATAR */}
-                      <td className="cliente-cell">
-                        <div className="cliente-info-wrapper">
-                          {c.foto ? (
-                              <img src={c.foto} className="avatar-quadrado" alt={nomeBonito} />
-                          ) : (
-                              <div className="avatar-quadrado avatar-letra-gold">{nomeBonito.charAt(0)}</div>
-                          )}
-                          <div className="user-details">
-                            <div className="client-header-info" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
-                               <strong className="client-name">{nomeBonito}</strong>
-                               {(() => {
-                                 const vip = getSeloVIPCliente(c.id);
-                                 if (vip) {
-                                   return (
-                                     <span 
-                                       className="badge-ranking-cliente" 
-                                       style={{ backgroundColor: vip.bg, color: vip.color, border: `1px solid ${vip.border}`, padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '850', cursor: 'pointer' }}
-                                       title={`LTV Acumulado: R$ ${vip.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em ${vip.qtdFestas} locações`}
-                                     >
-                                       {vip.badge}
+                    return (
+                      <tr key={c.id} onMouseLeave={() => setMenuAberto(null)} className="table-row-hover" onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }}> 
+                        
+                        {/* CLIENTE & AVATAR */}
+                        <td className="cliente-cell">
+                          <div className="cliente-info-wrapper">
+                            {c.foto ? (
+                                <img src={c.foto} className="avatar-quadrado" alt={nomeBonito} />
+                            ) : (
+                                <div className="avatar-quadrado avatar-letra-gold">{nomeBonito.charAt(0)}</div>
+                            )}
+                            <div className="user-details">
+                              <div className="client-header-info" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                                 <strong className="client-name">{nomeBonito}</strong>
+                                 {(() => {
+                                   const vip = getSeloVIPCliente(c.id);
+                                   if (vip) {
+                                     return (
+                                       <span 
+                                         className="badge-ranking-cliente" 
+                                         style={{ backgroundColor: vip.bg, color: vip.color, border: `1px solid ${vip.border}`, padding: '2px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '850', cursor: 'pointer' }}
+                                         title={`LTV Acumulado: R$ ${vip.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} em ${vip.qtdFestas} locações`}
+                                       >
+                                         {vip.badge}
+                                       </span>
+                                     );
+                                   }
+                                   return isRecorrente ? (
+                                     <span className="badge-recorrente-cliente" title="Cliente Recorrente: 2 ou mais locações confirmadas">
+                                       💎 RECORRENTE
                                      </span>
-                                   );
-                                 }
-                                 return isRecorrente ? (
-                                   <span className="badge-recorrente-cliente" title="Cliente Recorrente: 2 ou mais locações confirmadas">
-                                     💎 RECORRENTE
-                                   </span>
-                                 ) : null;
-                               })()}
-                                {eAniversariante && (
-                                  <span className="badge-aniversario-mini" title="Aniversariante deste Mês!">
-                                    🎂 ANIVERSARIANTE
-                                  </span>
-                                )}
-                                {tagColorida && (
-                                    <span className="tag-badge-dynamic" style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}` }}>
-                                        {c.tags}
+                                   ) : null;
+                                 })()}
+                                  {eAniversariante && (
+                                    <span className="badge-aniversario-mini" title="Aniversariante deste Mês!">
+                                      🎂 ANIVERSARIANTE
                                     </span>
-                                )}
+                                  )}
+                                  {tagColorida && (
+                                      <span className="tag-badge-dynamic" style={{ backgroundColor: tagColorida.bg, color: tagColorida.color, border: `1px solid ${tagColorida.border}` }}>
+                                          {c.tags}
+                                      </span>
+                                  )}
+                              </div>
+                              <span className="client-doc">
+                                <i className="far fa-id-card"></i> {c.tipoPessoa === 'juridica' ? `CNPJ: ${c.cnpj || '-'}` : c.cpf ? `CPF: ${c.cpf}` : 'Sem documento'}
+                              </span>
                             </div>
-                            <span className="client-doc">
-                              <i className="far fa-id-card"></i> {c.tipoPessoa === 'juridica' ? `CNPJ: ${c.cnpj || '-'}` : c.cpf ? `CPF: ${c.cpf}` : 'Sem documento'}
-                            </span>
                           </div>
-                        </div>
-                      </td>
+                        </td>
 
-                      {/* CONTATO & WHATSAPP */}
-                      <td className="info-cell" onClick={e => e.stopPropagation()}>
-                        {c.celular ? (
-                          <div className="contact-whatsapp-row">
-                            <span className="contact-phone">{formatarTelefone(c.celular)}</span>
-                            <button 
-                              onClick={() => abrirModalWhatsApp(c)}
-                              className={`btn-zap-icon ${isInadimplente ? 'btn-zap-cobranca' : eAniversariante ? 'btn-zap-aniversario' : ''}`}
-                              title="Enviar WhatsApp (Escolher modelo / Anexar Imagem)"
+                        {/* CONTATO & WHATSAPP */}
+                        <td className="info-cell" onClick={e => e.stopPropagation()}>
+                          {c.celular ? (
+                            <div className="contact-whatsapp-row">
+                              <span className="contact-phone">{formatarTelefone(c.celular)}</span>
+                              <button 
+                                onClick={() => abrirModalWhatsApp(c)}
+                                className={`btn-zap-icon ${isInadimplente ? 'btn-zap-cobranca' : eAniversariante ? 'btn-zap-aniversario' : ''}`}
+                                title="Enviar WhatsApp (Escolher modelo / Anexar Imagem)"
+                              >
+                                <i className="fab fa-whatsapp"></i>
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-muted">--</span>
+                          )}
+                          {c.email && (
+                            <div className="contact-email-sub">{c.email}</div>
+                          )}
+                        </td>
+
+                        {/* ÚLTIMA LOCAÇÃO */}
+                        <td className="info-cell">
+                          {(() => {
+                            const ult = getUltimaLocacao(c.id);
+                            if (ult) {
+                              return (
+                                <div className="last-rental-box">
+                                  <span className="rental-date">
+                                    <i className="far fa-calendar-alt text-amber"></i> {ult.data}
+                                  </span>
+                                  <span className="rental-theme" title={ult.tema}>
+                                    🎉 {ult.tema}
+                                  </span>
+                                </div>
+                              );
+                            }
+                            return <span className="text-muted">-- Sem locações</span>;
+                          })()}
+                        </td>
+
+                        {/* SITUAÇÃO FINANCEIRA E APROVAÇÃO */}
+                        <td className="status-cell text-center">
+                          {c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente' ? (
+                            <span className="badge-status-pro pendente" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74', fontWeight: '850' }}>
+                              <i className="fas fa-clock"></i> AGUARDANDO APROVAÇÃO
+                            </span>
+                          ) : c.situacaoFinanceira === 'inadimplente' ? (
+                            <span 
+                              onClick={(e) => verPorQueInadimplente(e, c)} 
+                              className="badge-status-pro devedor"
                             >
-                              <i className="fab fa-whatsapp"></i>
+                              <i className="fas fa-exclamation-triangle"></i> PENDÊNCIAS
+                            </span>
+                          ) : (
+                            <span className="badge-status-pro ok">
+                              <i className="fas fa-check-circle"></i> ADIMPLENTE
+                            </span>
+                          )}
+                        </td>
+
+                        {/* MENU DE AÇÕES */}
+                        <td className="actions-cell text-center" onClick={e => e.stopPropagation()}>
+                          <div className="dropdown-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                            {(c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente') && (
+                              <button 
+                                type="button"
+                                onClick={(e) => aprovarCliente(e, c.id, c.nome || c.nomeFantasia)} 
+                                className="btn-aprovar-card"
+                                title="Aprovar Cadastro do Cliente"
+                                style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '14px', fontSize: '0.74rem', fontWeight: '850', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)' }}
+                              >
+                                ✓ Aprovar
+                              </button>
+                            )}
+
+                            <button className="btn-pontinhos" onClick={(e) => { e.stopPropagation(); setMenuAberto(menuAberto === c.id ? null : c.id); }}>
+                              <i className="fas fa-ellipsis-v"></i>
+                            </button>
+
+                            {menuAberto === c.id && (
+                              <div className="menu-suspenso fade-in">
+                                {(c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente') && (
+                                  <button onClick={(e) => { aprovarCliente(e, c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu" style={{ color: '#10b981', fontWeight: '800' }}>
+                                    <i className="fas fa-check-circle" style={{ color: '#10b981' }}></i> Aprovar Cadastro
+                                  </button>
+                                )}
+
+                                <button onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); setMenuAberto(null); }} className="item-menu">
+                                  <i className="fas fa-user-circle color-purple"></i> Ver Perfil Completo
+                                </button>
+
+                                <button onClick={() => { navigate('/cadastro-cliente', { state: { clienteEditando: c } }); setMenuAberto(null); }} className="item-menu">
+                                  <i className="fas fa-edit color-blue"></i> Editar Cadastro
+                                </button>
+                                <button onClick={() => verificarETentarNovaLocacao(c)} className="item-menu">
+                                  <i className="fas fa-cart-plus color-green"></i> Nova Locação
+                                </button>
+                                <div className="menu-divider"></div>
+                                <button onClick={() => { excluirCliente(c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu item-excluir">
+                                  <i className="fas fa-trash-alt"></i> Excluir Cliente
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* LISTA DE CARDS DEDICADOS EXCLUSIVA PARA CELULAR */}
+          <div className="clientes-mobile-cards-list">
+            {clientesFiltrados.length === 0 ? (
+              <div className="empty-state-mobile">
+                <i className="fas fa-folder-open empty-icon"></i>
+                <p>Nenhum cliente encontrado.</p>
+              </div>
+            ) : (
+              clientesFiltrados.map(c => {
+                const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
+                const eAniversariante = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
+                const isRecorrente = clientesRecorrentesSet.has(c.id);
+                const ultLoc = getUltimaLocacao(c.id);
+                const vip = getSeloVIPCliente(c.id);
+
+                return (
+                  <div key={c.id} className="cliente-card-mobile" onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); }}>
+                    
+                    {/* CABEÇALHO DO CARD */}
+                    <div className="card-mobile-header">
+                      <div className="card-mobile-avatar-col">
+                        {c.foto ? (
+                          <img src={c.foto} className="card-avatar-circle" alt={nomeBonito} />
+                        ) : (
+                          <div className="card-avatar-circle">{nomeBonito.charAt(0)}</div>
+                        )}
+                      </div>
+
+                      <div className="card-mobile-title-col">
+                        <div className="card-mobile-name-row">
+                          <span className="card-client-name">{nomeBonito}</span>
+                          {vip ? (
+                            <span className="card-badge-vip" style={{ backgroundColor: vip.bg, color: vip.color, border: `1px solid ${vip.border}` }}>
+                              {vip.badge}
+                            </span>
+                          ) : isRecorrente ? (
+                            <span className="card-badge-recorrente">💎 RECORRENTE</span>
+                          ) : null}
+                          {eAniversariante && (
+                            <span className="card-badge-bday" title="Aniversariante do Mês">🎂</span>
+                          )}
+                        </div>
+                        <span className="card-client-doc">
+                          <i className="far fa-id-card"></i> {c.tipoPessoa === 'juridica' ? `CNPJ: ${c.cnpj || '-'}` : c.cpf ? `CPF: ${c.cpf}` : 'Sem documento'}
+                        </span>
+                      </div>
+
+                      <div className="card-mobile-actions-col" onClick={e => e.stopPropagation()}>
+                        <button 
+                          type="button" 
+                          className="btn-dots-mobile"
+                          onClick={() => setMenuAberto(menuAberto === c.id ? null : c.id)}
+                        >
+                          <i className="fas fa-ellipsis-v"></i>
+                        </button>
+
+                        {menuAberto === c.id && (
+                          <div className="menu-suspenso fade-in">
+                            {(c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente') && (
+                              <button onClick={(e) => { aprovarCliente(e, c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu" style={{ color: '#10b981', fontWeight: '800' }}>
+                                <i className="fas fa-check-circle" style={{ color: '#10b981' }}></i> Aprovar Cadastro
+                              </button>
+                            )}
+                            <button onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); setMenuAberto(null); }} className="item-menu">
+                              <i className="fas fa-user-circle color-purple"></i> Ver Perfil Completo
+                            </button>
+                            <button onClick={() => { navigate('/cadastro-cliente', { state: { clienteEditando: c } }); setMenuAberto(null); }} className="item-menu">
+                              <i className="fas fa-edit color-blue"></i> Editar Cadastro
+                            </button>
+                            <button onClick={() => verificarETentarNovaLocacao(c)} className="item-menu">
+                              <i className="fas fa-cart-plus color-green"></i> Nova Locação
+                            </button>
+                            <div className="menu-divider"></div>
+                            <button onClick={() => { excluirCliente(c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu item-excluir">
+                              <i className="fas fa-trash-alt"></i> Excluir Cliente
                             </button>
                           </div>
-                        ) : (
-                          <span className="text-muted">--</span>
                         )}
-                        {c.email && (
-                          <div className="contact-email-sub">{c.email}</div>
+                      </div>
+                    </div>
+
+                    {/* CORPO EM 2 COLUNAS */}
+                    <div className="card-mobile-body-grid">
+                      
+                      {/* COLUNA ESQUERDA (DADOS) */}
+                      <div className="card-mobile-left">
+                        <div className="card-mobile-data-row">
+                          <i className="fas fa-phone-alt icon-muted"></i>
+                          <span className="card-phone-text">{c.celular ? formatarTelefone(c.celular) : '--'}</span>
+                        </div>
+                        <div className="card-mobile-data-row">
+                          <i className="far fa-calendar-alt icon-amber"></i>
+                          <span className="card-event-text">
+                            {ultLoc ? `${ultLoc.data} · 🎉 ${ultLoc.tema}` : 'Sem locações'}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* COLUNA DIREITA (WHATSAPP + STATUS) */}
+                      <div className="card-mobile-right" onClick={e => e.stopPropagation()}>
+                        {c.celular && (
+                          <button 
+                            type="button"
+                            onClick={() => abrirModalWhatsApp(c)}
+                            className="card-btn-zap"
+                            title="Enviar WhatsApp"
+                          >
+                            <i className="fab fa-whatsapp"></i> WhatsApp
+                          </button>
                         )}
-                      </td>
 
-                      {/* ÚLTIMA LOCAÇÃO */}
-                      <td className="info-cell">
-                        {(() => {
-                          const ult = getUltimaLocacao(c.id);
-                          if (ult) {
-                            return (
-                              <div className="last-rental-box">
-                                <span className="rental-date">
-                                  <i className="far fa-calendar-alt text-amber"></i> {ult.data}
-                                </span>
-                                <span className="rental-theme" title={ult.tema}>
-                                  🎉 {ult.tema}
-                                </span>
-                              </div>
-                            );
-                          }
-                          return <span className="text-muted">-- Sem locações</span>;
-                        })()}
-                      </td>
-
-                      {/* SITUAÇÃO FINANCEIRA E APROVAÇÃO */}
-                      <td className="status-cell text-center">
                         {c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente' ? (
-                          <span className="badge-status-pro pendente" style={{ background: '#fff7ed', color: '#c2410c', border: '1px solid #fdba74', fontWeight: '850' }}>
-                            <i className="fas fa-clock"></i> AGUARDANDO APROVAÇÃO
+                          <span className="card-status-badge badge-pendente">
+                            <i className="fas fa-clock"></i> PENDENTE
                           </span>
                         ) : c.situacaoFinanceira === 'inadimplente' ? (
-                          <span 
-                            onClick={(e) => verPorQueInadimplente(e, c)} 
-                            className="badge-status-pro devedor"
-                          >
+                          <span onClick={(e) => verPorQueInadimplente(e, c)} className="card-status-badge badge-devedor">
                             <i className="fas fa-exclamation-triangle"></i> PENDÊNCIAS
                           </span>
                         ) : (
-                          <span className="badge-status-pro ok">
+                          <span className="card-status-badge badge-ok">
                             <i className="fas fa-check-circle"></i> ADIMPLENTE
                           </span>
                         )}
-                      </td>
+                      </div>
 
-                      {/* MENU DE AÇÕES */}
-                      <td className="actions-cell text-center" onClick={e => e.stopPropagation()}>
-                        <div className="dropdown-container" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
-                          {(c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente') && (
-                            <button 
-                              type="button"
-                              onClick={(e) => aprovarCliente(e, c.id, c.nome || c.nomeFantasia)} 
-                              className="btn-aprovar-card"
-                              title="Aprovar Cadastro do Cliente"
-                              style={{ background: '#10b981', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '14px', fontSize: '0.74rem', fontWeight: '850', cursor: 'pointer', boxShadow: '0 2px 8px rgba(16, 185, 129, 0.25)' }}
-                            >
-                              ✓ Aprovar
-                            </button>
-                          )}
+                    </div>
 
-                          <button className="btn-pontinhos" onClick={(e) => { e.stopPropagation(); setMenuAberto(menuAberto === c.id ? null : c.id); }}>
-                            <i className="fas fa-ellipsis-v"></i>
-                          </button>
-
-                          {menuAberto === c.id && (
-                            <div className="menu-suspenso fade-in">
-                              {(c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente') && (
-                                <button onClick={(e) => { aprovarCliente(e, c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu" style={{ color: '#10b981', fontWeight: '800' }}>
-                                  <i className="fas fa-check-circle" style={{ color: '#10b981' }}></i> Aprovar Cadastro
-                                </button>
-                              )}
-
-                              <button onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); setMenuAberto(null); }} className="item-menu">
-                                <i className="fas fa-user-circle color-purple"></i> Ver Perfil Completo
-                              </button>
-
-                              <button onClick={() => { navigate('/cadastro-cliente', { state: { clienteEditando: c } }); setMenuAberto(null); }} className="item-menu">
-                                <i className="fas fa-edit color-blue"></i> Editar Cadastro
-                              </button>
-                              <button onClick={() => verificarETentarNovaLocacao(c)} className="item-menu">
-                                <i className="fas fa-cart-plus color-green"></i> Nova Locação
-                              </button>
-                              <div className="menu-divider"></div>
-                              <button onClick={() => { excluirCliente(c.id, c.nome || c.nomeFantasia); setMenuAberto(null); }} className="item-menu item-excluir">
-                                <i className="fas fa-trash-alt"></i> Excluir Cliente
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </td>
-
-                    </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
-        </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </>
       )}
 
       {/* FICHÁRIO COMPLETO DO CLIENTE (PERFIL DE LUXO) */}

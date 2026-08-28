@@ -1382,9 +1382,287 @@
     align-items: center;
     justify-content: center;
   }
-  .calendar-wrapper { padding: 15px; min-height: 0; flex: 1; overflow: hidden;}
-  .calendar-grid { grid-auto-rows: 1fr !important; overflow-y: hidden !important; }
-  .weekday-header { font-size: 0.65rem; padding: 10px 4px;}
+  .calendar-wrapper { 
+    padding: 12px; 
+    min-height: 0; 
+    flex: 1; 
+    overflow-y: auto !important;
+    overflow-x: hidden;
+  }
+  .calendar-grid { 
+    grid-auto-rows: minmax(46px, auto) !important; 
+    gap: 4px !important;
+  }
+  .day-cell {
+    min-height: 48px !important;
+    padding: 4px 2px !important;
+    border-radius: 10px !important;
+  }
+  .day-header-cell {
+    margin-bottom: 2px !important;
+    justify-content: center !important;
+  }
+  .day-number {
+    font-size: 0.76rem !important;
+    width: 22px !important;
+    height: 22px !important;
+  }
+  .eventos-container {
+    display: none !important;
+  }
+  .day-dots-row-mobile {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+  }
+  .day-dot-micro {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .day-dot-more {
+    font-size: 7px;
+    font-weight: 850;
+    color: var(--gold-primary);
+    line-height: 1;
+  }
+  .weekday-header { font-size: 0.65rem; padding: 8px 2px;}
   .event-time { display: inline;} 
-  .list-item-card { flex-direction: column; align-items: flex-start; padding: 18px;}
+  .list-item-card { flex-direction: column; align-items: flex-start; padding: 14px; gap: 8px;}
+
+  /* 📱 PAINEL DE EVENTOS DO DIA SELECIONADO NO CELULAR */
+  .mobile-day-events-panel {
+    display: flex !important;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid var(--borda, rgba(255, 255, 255, 0.08));
+    width: 100%;
+  }
+}
+
+/* =========================================
+   📱 ESTILOS DO PAINEL DO DIA SELECIONADO (DESKTOP & MOBILE)
+========================================= */
+.mobile-day-events-panel {
+  display: none;
+}
+
+.day-dots-row-mobile {
+  display: none;
+}
+
+.day-cell.is-selected-day {
+  border: 2px solid var(--gold-primary) !important;
+  background: var(--gold-light, rgba(197, 160, 89, 0.12)) !important;
+  box-shadow: 0 0 12px rgba(197, 160, 89, 0.25) !important;
+}
+
+.day-cell.is-selected-day .day-number {
+  color: var(--gold-primary) !important;
+  font-weight: 850 !important;
+}
+
+.mobile-day-events-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+}
+
+.mobile-day-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-day-icon {
+  font-size: 20px;
+}
+
+.mobile-day-texts {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.mobile-day-title {
+  margin: 0;
+  font-size: 0.86rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+[data-theme^='dark'] .mobile-day-title {
+  color: #f4f4f5 !important;
+}
+
+.mobile-badge-hoje {
+  background: linear-gradient(135deg, #c5a059, #b38e46);
+  color: #ffffff;
+  font-size: 0.6rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.mobile-day-count-sub {
+  font-size: 0.68rem;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 600;
+}
+
+[data-theme^='dark'] .mobile-day-count-sub {
+  color: #a1a1aa !important;
+}
+
+.btn-add-mobile-day {
+  background: linear-gradient(135deg, #c5a059, #b38e46);
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 6px 12px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(197, 160, 89, 0.3);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-add-mobile-day:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.05);
+}
+
+.mobile-day-events-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.mobile-day-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1.5px dashed var(--borda, rgba(255, 255, 255, 0.1));
+  border-radius: 12px;
+  font-size: 0.76rem;
+  color: var(--texto-secundario, #94a3b8);
+  text-align: center;
+}
+
+.btn-add-empty-mobile {
+  background: rgba(197, 160, 89, 0.12);
+  border: 1px solid var(--gold-primary);
+  color: var(--gold-primary);
+  border-radius: 20px;
+  padding: 6px 14px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-add-empty-mobile:hover {
+  background: var(--gold-primary);
+  color: #ffffff;
+}
+
+.modal-agenda-lista-content {
+  width: 520px !important;
+  max-width: 95vw !important;
+  padding: 16px 18px !important;
+  border-radius: 16px !important;
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
+  box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25) !important;
+}
+
+[data-theme^='dark'] .modal-agenda-lista-content {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+.btn-add-no-dia {
+  width: 100%;
+  background: linear-gradient(135deg, #c5a059, #b38e46);
+  color: #ffffff;
+  border: none;
+  border-radius: 10px;
+  padding: 10px 16px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(197, 160, 89, 0.3);
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.btn-add-no-dia:hover {
+  filter: brightness(1.1);
+  transform: translateY(-1px);
+}
+
+/* =========================================
+   DARK THEME NO CALENDÁRIO / AGENDA
+========================================= */
+[data-theme^='dark'] .day-cell {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+[data-theme^='dark'] .day-cell.empty {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.05);
+}
+
+[data-theme^='dark'] .day-number {
+  color: #cbd5e1;
+}
+
+[data-theme^='dark'] .day-cell:hover .day-number {
+  color: #ffffff;
+  background: #27272a;
+}
+
+[data-theme^='dark'] .list-item-card {
+  background: #18181b;
+  border-color: #27272a;
+}
+
+[data-theme^='dark'] .list-item-card:hover {
+  border-color: #3f3f46;
+}
+
+[data-theme^='dark'] .list-item-header h4 {
+  color: #f4f4f5;
+}
+
+[data-theme^='dark'] .list-cliente {
+  color: #cbd5e1;
+}
+
+[data-theme^='dark'] .list-financeiro {
+  color: #a1a1aa;
 }

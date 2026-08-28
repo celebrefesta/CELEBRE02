@@ -213,13 +213,15 @@ const EditarLocacao = () => {
 
             setLogistica({
               tipo: tipoLogSalvo,
+              statusLocal: log.statusLocal || 'definido',
               cep: log.cep || '',
               rua: log.rua || log.endereco || '',
               numero: log.numero || '',
               bairro: log.bairro || '',
               cidade: log.cidade || '',
               frete: freteFormatado,
-              obsTransporte: log.obsTransporte || ''
+              referencia: log.referencia || log.obsTransporte || '',
+              obsTransporte: ''
             });
 
             const itensFormatados = (data.itens || []).map(item => ({
@@ -256,10 +258,14 @@ const EditarLocacao = () => {
   }, [id, usuarioLogado, navigate, tenantId]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
-  const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
-  const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
-  const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
-  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
+  const catalogoFonte = (configEmpresa?.catalogoVitrine && Object.keys(configEmpresa.catalogoVitrine).length > 0)
+    ? configEmpresa.catalogoVitrine
+    : CATALOGO_TEMAS;
+
+  const categoriasDeTemaUnicas = Object.keys(catalogoFonte);
+  const subcategoriasDisponiveis = categoriaTema ? Object.keys(catalogoFonte[categoriaTema] || {}) : [];
+  const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(catalogoFonte[categoriaTema][subcategoriaTema] || {}) : [];
+  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? (catalogoFonte[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || []) : [];
 
   const isOverlapping = (start1, end1, start2, end2) => {
       if (!start1 || !end1 || !start2 || !end2) return false;
@@ -928,9 +934,10 @@ const EditarLocacao = () => {
               </div>
             </div>
             
-            <div className="form-row mt-10">
-                <div className="form-group flex-1">
-                    <label>Categoria do Tema *</label>
+            <div className="grid-temas-2col mt-10">
+                {/* 1º CATEGORIA */}
+                <div className="form-group">
+                    <label>🎭 1º Categoria do Tema *</label>
                     <select value={categoriaTema} onChange={e => {
                         setCategoriaTema(e.target.value);
                         setSubcategoriaTema('');
@@ -942,8 +949,9 @@ const EditarLocacao = () => {
                     </select>
                 </div>
    
-                <div className="form-group flex-1">
-                    <label>Subcategoria do Tema *</label>
+                {/* 2º SUBCATEGORIA */}
+                <div className="form-group">
+                    <label>2º Subcategoria *</label>
                     <select value={subcategoriaTema} onChange={e => {
                         setSubcategoriaTema(e.target.value);
                         setGrupoTemaSelecionado('');
@@ -953,11 +961,10 @@ const EditarLocacao = () => {
                         {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
                     </select>
                 </div>
-            </div>
 
-            <div className="form-row mt-10">
-                <div className="form-group flex-1">
-                    <label>Grupo de Tema *</label>
+                {/* 3º GRUPO / ESTILO */}
+                <div className="form-group">
+                    <label>3º Grupo / Estilo *</label>
                     <select value={grupoTemaSelecionado} onChange={e => {
                         setGrupoTemaSelecionado(e.target.value);
                         setTemaFesta('');
@@ -967,14 +974,15 @@ const EditarLocacao = () => {
                     </select>
                 </div>
          
-                <div className="form-group flex-1">
-                    <label>Tema Específico *</label>
+                {/* 4º TEMA ESPECÍFICO */}
+                <div className="form-group">
+                    <label>4º Tema Específico *</label>
                     <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={(!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA') || isFinalizado}>
                         <option value="">Selecione o Tema...</option>
                         {temasDisponiveis.map(t => (
                             <option key={t} value={t}>{t}</option>
                         ))}
-                        <option value="OUTRO_TEMA" style={{fontWeight: 'bold', color: '#3b82f6'}}>✏️ Outro (Digitar Novo Tema)</option>
+                        <option value="OUTRO_TEMA" style={{fontWeight: 'bold', color: '#c5a059'}}>✏️ Outro (Digitar Novo Tema)</option>
                     </select>
                 </div>
             </div>
@@ -1026,22 +1034,211 @@ const EditarLocacao = () => {
 
             {logistica.tipo === 'entrega' ? (
               <div className="logistica-form mt-15">
-                <div className="form-row">
-                  <div className="form-group flex-1"><label>CEP</label><input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} disabled={isFinalizado}/></div>
-                  <div className="form-group flex-2"><label>Cidade / UF</label><input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} disabled={isFinalizado}/></div>
-                  <div className="form-group flex-1"><label>Taxa Frete (R$)</label><input type="text" placeholder="0,00" value={logistica.frete} onChange={handleFreteChange} disabled={isFinalizado}/></div>
+                
+                {/* 📍 SELETOR DE STATUS DO LOCAL / FRETE */}
+                <div className="seletor-status-local">
+                  <button
+                    type="button"
+                    className={`btn-status-local ${(!logistica.statusLocal || logistica.statusLocal === 'definido') ? 'ativo' : ''}`}
+                    onClick={() => setLogistica(prev => ({ ...prev, statusLocal: 'definido' }))}
+                    disabled={isFinalizado}
+                  >
+                    <span className="icon">📍</span>
+                    <div className="texto">
+                      <strong>Endereço Definido</strong>
+                      <small>Local completo informado</small>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`btn-status-local warning ${logistica.statusLocal === 'a_definir' ? 'ativo' : ''}`}
+                    onClick={() => {
+                      setLogistica(prev => ({ 
+                        ...prev, 
+                        statusLocal: 'a_definir', 
+                        frete: '' 
+                      }));
+                    }}
+                    disabled={isFinalizado}
+                  >
+                    <span className="icon">⏳</span>
+                    <div className="texto">
+                      <strong>Local a Definir</strong>
+                      <small>Frete lançado após envio</small>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`btn-status-local info ${logistica.statusLocal === 'estimado' ? 'ativo' : ''}`}
+                    onClick={() => setLogistica(prev => ({ ...prev, statusLocal: 'estimado' }))}
+                    disabled={isFinalizado}
+                  >
+                    <span className="icon">🚚</span>
+                    <div className="texto">
+                      <strong>Frete Estimado</strong>
+                      <small>Taxa sugestiva com ajuste</small>
+                    </div>
+                  </button>
                 </div>
-                <div className="form-row">
-                  <div className="form-group flex-2"><label>Logradouro</label><input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} disabled={isFinalizado}/></div>
-                  <div className="form-group-inline flex-2">
-                    <div className="form-group flex-1"><label>Número</label><input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} disabled={isFinalizado}/></div>
-                    <div className="form-group flex-2"><label>Bairro</label><input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} disabled={isFinalizado}/></div>
+
+                {/* MODO 1: LOCAL A DEFINIR (FRETE PENDENTE) */}
+                {logistica.statusLocal === 'a_definir' && (
+                  <div className="container-status-modo mt-12">
+                    <div className="banner-status-local warning">
+                      <span className="banner-icon">⏳</span>
+                      <div>
+                        <strong>Local da Festa & Frete a Definir pelo Cliente</strong>
+                        <p>
+                          O valor do frete <strong>não será somado agora</strong>. O orçamento e o contrato constarão com a observação oficial de que o frete será calculado e adicionado ao pedido assim que o cliente confirmar o endereço final.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid-logistica-linha2 mt-12">
+                      <div className="form-group">
+                        <label>Cidade / Região Prevista (Opcional)</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Vargem Grande do Sul - SP"
+                          value={logistica.cidade}
+                          onChange={e => setLogistica({...logistica, cidade: e.target.value})}
+                          disabled={isFinalizado}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Status Frete</label>
+                        <input
+                          type="text"
+                          value="A CALCULAR"
+                          disabled
+                          style={{ fontWeight: '800', color: '#d97706', background: '#fef3c7', borderColor: '#fde68a' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group mt-12">
+                      <label>📝 Observações ou Preferências de Transporte</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Cliente está escolhendo entre 2 chácaras na saída da cidade..."
+                        value={logistica.referencia || logistica.obsTransporte || ''}
+                        onChange={e => setLogistica({...logistica, referencia: e.target.value, obsTransporte: ''})}
+                        disabled={isFinalizado}
+                      />
+                    </div>
                   </div>
-                </div>
-                <div className="form-group mt-10">
-                  <label>Observações de Transporte</label>
-                  <textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})} disabled={isFinalizado}></textarea>
-                </div>
+                )}
+
+                {/* MODO 2: FRETE ESTIMADO (SUJEITO A REAJUSTE POR KM) */}
+                {logistica.statusLocal === 'estimado' && (
+                  <div className="container-status-modo mt-12">
+                    <div className="banner-status-local info">
+                      <span className="banner-icon">🚚</span>
+                      <div>
+                        <strong>Frete Sugestivo (Sujeito a Ajuste por KM)</strong>
+                        <p>
+                          Preencha abaixo o valor estimado de frete (ex: tarifa urbana). O orçamento deixará explícito que caso o evento ocorra em chácaras, zona rural ou outro município, haverá reajuste de acordo com a quilometragem final.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid-logistica-linha1 mt-12">
+                      <div className="form-group">
+                        <label>Cidade / Região Prevista</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Vargem Grande do Sul - SP"
+                          value={logistica.cidade}
+                          onChange={e => setLogistica({...logistica, cidade: e.target.value})}
+                          disabled={isFinalizado}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Bairro / Área Prevista</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Centro / Perímetro Urbano"
+                          value={logistica.bairro}
+                          onChange={e => setLogistica({...logistica, bairro: e.target.value})}
+                          disabled={isFinalizado}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa Frete Estimada (R$)</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: 50,00"
+                          value={logistica.frete}
+                          onChange={handleFreteChange}
+                          disabled={isFinalizado}
+                          style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#16a34a' : 'var(--texto-principal, #0f172a)' }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="form-group mt-12">
+                      <label>📝 Observações de Transporte</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Tarifa estimada para centro/bairros urbanos..."
+                        value={logistica.referencia || logistica.obsTransporte || ''}
+                        onChange={e => setLogistica({...logistica, referencia: e.target.value, obsTransporte: ''})}
+                        disabled={isFinalizado}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* MODO 3: ENDEREÇO DEFINIDO */}
+                {(!logistica.statusLocal || logistica.statusLocal === 'definido') && (
+                  <>
+                    <div className="grid-logistica-linha1 mt-12">
+                      <div className="form-group">
+                        <label>CEP</label>
+                        <input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} disabled={isFinalizado}/>
+                      </div>
+                      <div className="form-group">
+                        <label>Cidade / UF</label>
+                        <input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} disabled={isFinalizado}/>
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa Frete (R$)</label>
+                        <input type="text" placeholder="0,00" value={logistica.frete} onChange={handleFreteChange} disabled={isFinalizado} style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#16a34a' : 'var(--texto-principal, #0f172a)' }}/>
+                      </div>
+                    </div>
+
+                    <div className="grid-logistica-linha2 mt-12">
+                      <div className="form-group">
+                        <label>Logradouro</label>
+                        <input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} disabled={isFinalizado}/>
+                      </div>
+                      <div className="form-group">
+                        <label>Número</label>
+                        <input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} disabled={isFinalizado}/>
+                      </div>
+                    </div>
+
+                    <div className="grid-logistica-linha3 mt-12">
+                      <div className="form-group">
+                        <label>Bairro</label>
+                        <input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} disabled={isFinalizado}/>
+                      </div>
+                    </div>
+
+                    <div className="form-group mt-12">
+                      <label>📝 Observações de Transporte</label>
+                      <input
+                        type="text"
+                        placeholder="Casa de esquina, deixar com porteiro..."
+                        value={logistica.referencia || logistica.obsTransporte || ''}
+                        onChange={e => setLogistica({...logistica, referencia: e.target.value, obsTransporte: ''})}
+                        disabled={isFinalizado}
+                      />
+                    </div>
+                  </>
+                )}
               </div>
             ) : (
               <p className="texto-aviso-logistica mt-15">⚠️ O cliente fará a retirada e devolução dos itens diretamente no local.</p>

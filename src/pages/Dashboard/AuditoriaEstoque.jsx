@@ -187,57 +187,48 @@ const AuditoriaEstoque = () => {
           </p>
         </div>
 
-        {/* BARRA DE FILTROS RÁPIDOS */}
-        <div className="auditoria-filter-chips">
-          <button 
-            className={`chip-filter ${filtroCategoria === 'todos' ? 'active' : ''}`}
-            onClick={() => setFiltroCategoria('todos')}
-          >
-            Todas ({pedidosComProblema.length})
-          </button>
-          {qtdEstoque > 0 && (
+        {/* ABAS DE FILTRO SEGMENTADAS E CENTRALIZADAS */}
+        <div className="auditoria-tabs-container">
+          <div className="auditoria-segmented-tabs">
             <button 
-              className={`chip-filter chip-purple ${filtroCategoria === 'estoque' ? 'active' : ''}`}
-              onClick={() => setFiltroCategoria('estoque')}
+              className={`seg-tab ${filtroCategoria === 'todos' ? 'active' : ''}`}
+              onClick={() => setFiltroCategoria('todos')}
             >
-              🔒 Estoque Travado ({qtdEstoque})
+              Todas <span className="seg-count">{pedidosComProblema.length}</span>
             </button>
-          )}
-          {qtdDevolucao > 0 && (
-            <button 
-              className={`chip-filter chip-amber ${filtroCategoria === 'devolucao' ? 'active' : ''}`}
-              onClick={() => setFiltroCategoria('devolucao')}
-            >
-              ⏰ Devolução Atrasada ({qtdDevolucao})
-            </button>
-          )}
-          {qtdFinanceiro > 0 && (
-            <button 
-              className={`chip-filter chip-red ${filtroCategoria === 'financeiro' ? 'active' : ''}`}
-              onClick={() => setFiltroCategoria('financeiro')}
-            >
-              💰 Saldo Pendente ({qtdFinanceiro})
-            </button>
-          )}
-          {qtdAvarias > 0 && (
-            <button 
-              className={`chip-filter chip-orange ${filtroCategoria === 'avaria' ? 'active' : ''}`}
-              onClick={() => setFiltroCategoria('avaria')}
-            >
-              ⚠️ Avarias ({qtdAvarias})
-            </button>
-          )}
-
-          <button 
-            type="button"
-            className="chip-filter chip-blue"
-            style={{ marginLeft: 'auto', background: 'rgba(59, 130, 246, 0.12)', color: '#3b82f6', borderColor: 'rgba(59, 130, 246, 0.3)' }}
-            onClick={handleExecutarLimpezaMidia}
-            disabled={limpandoMidia}
-            title="Remove fotos de vistorias sem avarias que completaram 15 dias para liberar armazenamento"
-          >
-            {limpandoMidia ? '⏳ Limpando Mídias...' : '🧹 Limpar Mídias Expiradas'}
-          </button>
+            {qtdDevolucao > 0 && (
+              <button 
+                className={`seg-tab ${filtroCategoria === 'devolucao' ? 'active' : ''}`}
+                onClick={() => setFiltroCategoria('devolucao')}
+              >
+                ⏰ Atrasadas <span className="seg-count count-amber">{qtdDevolucao}</span>
+              </button>
+            )}
+            {qtdFinanceiro > 0 && (
+              <button 
+                className={`seg-tab ${filtroCategoria === 'financeiro' ? 'active' : ''}`}
+                onClick={() => setFiltroCategoria('financeiro')}
+              >
+                💰 Pendências <span className="seg-count count-red">{qtdFinanceiro}</span>
+              </button>
+            )}
+            {qtdEstoque > 0 && (
+              <button 
+                className={`seg-tab ${filtroCategoria === 'estoque' ? 'active' : ''}`}
+                onClick={() => setFiltroCategoria('estoque')}
+              >
+                🔒 Estoque <span className="seg-count count-purple">{qtdEstoque}</span>
+              </button>
+            )}
+            {qtdAvarias > 0 && (
+              <button 
+                className={`seg-tab ${filtroCategoria === 'avaria' ? 'active' : ''}`}
+                onClick={() => setFiltroCategoria('avaria')}
+              >
+                ⚠️ Avarias <span className="seg-count count-orange">{qtdAvarias}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         {/* CORPO DA MODAL */}
@@ -258,47 +249,59 @@ const AuditoriaEstoque = () => {
 
               return (
                 <div key={pedido.id} className="auditoria-card-luxury">
-                  
-                  <div className="auditoria-main-info">
-                    {/* TOPO DO CARD */}
-                    <div className="card-top-row">
-                      <div className="client-badge-group">
-                        <div className="avatar-mini-gold">{clienteNome.charAt(0)}</div>
-                        <div>
-                          <strong className="cliente-nome-txt">{clienteNome}</strong>
-                          <span className="pedido-id-code">Pedido #{pedido.id.slice(-5).toUpperCase()}</span>
-                        </div>
-                      </div>
-
-                      <div className="badges-row">
-                        <span className="badge-pill-status">Status: <b>{pedido.status?.toUpperCase()}</b></span>
-                        {pedido.dataRetirada && (
-                          <span className="badge-pill-date">📅 Retirada: {pedido.dataRetirada.split('-').reverse().join('/')}</span>
-                        )}
-                        {pedido.dataDevolucao && (
-                          <span className="badge-pill-date">🔄 Devolução: {pedido.dataDevolucao.split('-').reverse().join('/')}</span>
-                        )}
+                  {/* LINHA 1: CLIENTE + STATUS */}
+                  <div className="card-top-row">
+                    <div className="client-badge-group">
+                      <div className="avatar-mini-gold">{clienteNome.charAt(0).toUpperCase()}</div>
+                      <div className="client-info-col">
+                        <strong className="cliente-nome-txt">{clienteNome}</strong>
+                        <span className="pedido-id-code">#{pedido.id.slice(-5).toUpperCase()}</span>
                       </div>
                     </div>
 
-                    {/* ITENS ALUGADOS (RAIO-X DE PEÇAS) */}
-                    <div className="order-items-preview">
-                      <strong>📦 Peças Afetadas:</strong>
-                      <span className="items-text-truncated">{listaItensStr}</span>
+                    <span className={`badge-pill-status status-${(pedido.status || '').toLowerCase()}`}>
+                      {pedido.status?.toUpperCase() || 'LOCAÇÃO'}
+                    </span>
+                  </div>
+
+                  {/* LINHA 2: DATAS */}
+                  {(pedido.dataRetirada || pedido.dataDevolucao) && (
+                    <div className="card-dates-row">
+                      {pedido.dataRetirada && (
+                        <span className="date-item">
+                          <i className="far fa-calendar-alt"></i> Retirada: <b>{pedido.dataRetirada.split('-').reverse().join('/')}</b>
+                        </span>
+                      )}
+                      {pedido.dataRetirada && pedido.dataDevolucao && <span className="date-separator">•</span>}
+                      {pedido.dataDevolucao && (
+                        <span className="date-item">
+                          <i className="fas fa-undo-alt"></i> Devolução: <b>{pedido.dataDevolucao.split('-').reverse().join('/')}</b>
+                        </span>
+                      )}
                     </div>
+                  )}
 
-                    {/* RESUMO FINANCEIRO */}
-                    {valorTotal > 0 && (
-                      <div className="financial-preview-bar">
-                        <span>Total: <b>R$ {valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></span>
-                        <span>Pago: <b className="text-green">R$ {valorPago.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></span>
-                        {saldo > 0 && (
-                          <span className="badge-saldo-pendente">Pendência: <b>R$ {saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></span>
-                        )}
-                      </div>
-                    )}
+                  {/* LINHA 3: PEÇAS AFETADAS */}
+                  <div className="order-items-preview">
+                    <span className="items-icon">📦</span>
+                    <span className="items-text-truncated">{listaItensStr}</span>
+                  </div>
 
-                    {/* TAGS DE ANOMALIA */}
+                  {/* LINHA 4: RESUMO FINANCEIRO */}
+                  {valorTotal > 0 && (
+                    <div className="financial-preview-bar">
+                      <span className="fin-val">Total: <b>R$ {valorTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></span>
+                      <span className="fin-val">Pago: <b className="text-green">R$ {valorPago.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></span>
+                      {saldo > 0 ? (
+                        <span className="fin-val text-red">Pendente: <b>R$ {saldo.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</b></span>
+                      ) : (
+                        <span className="fin-val text-green">Quitado ✓</span>
+                      )}
+                    </div>
+                  )}
+
+                  {/* LINHA 5: TAGS DE ALERTA */}
+                  {pedido.alertas && pedido.alertas.length > 0 && (
                     <div className="auditoria-tags-erro">
                       {pedido.alertas.map((alerta, idx) => (
                         <span key={idx} className={`tag-erro ${alerta.tipo}`}>
@@ -306,9 +309,9 @@ const AuditoriaEstoque = () => {
                         </span>
                       ))}
                     </div>
-                  </div>
+                  )}
 
-                  {/* COLUNA DE AÇÕES RÁPIDAS */}
+                  {/* LINHA 6: AÇÕES */}
                   <div className="auditoria-actions-col">
                     {fone && (
                       <button 
@@ -340,6 +343,19 @@ const AuditoriaEstoque = () => {
               );
             })
           )}
+        </div>
+
+        {/* FOOTER DISCRETO PARA LIMPEZA DE ARMAZENAMENTO */}
+        <div className="auditoria-footer-luxury">
+          <button 
+            type="button" 
+            className="btn-limpar-midias-footer"
+            onClick={handleExecutarLimpezaMidia}
+            disabled={limpandoMidia}
+            title="Remove fotos de vistorias sem avarias de pedidos concluídos há mais de 15 dias"
+          >
+            {limpandoMidia ? '⏳ Limpando fotos antigas...' : '🧹 Limpar Fotos Antigas de Vistorias (+15 dias)'}
+          </button>
         </div>
       </div>
     </div>

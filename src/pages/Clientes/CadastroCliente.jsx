@@ -61,23 +61,6 @@ const TAGS_PERFIL = [
   'BÁSICO', 'PROBLEMÁTICO'
 ];
 
-const TIPOS_NOTAS_CRM = [
-  { id: '💬 Atendimento', label: 'Atendimento', icon: '💬', color: '#2563eb', bg: '#eff6ff' },
-  { id: '📱 WhatsApp', label: 'WhatsApp', icon: '📱', color: '#16a34a', bg: '#f0fdf4' },
-  { id: '📞 Ligação', label: 'Ligação', icon: '📞', color: '#9333ea', bg: '#faf5ff' },
-  { id: '🤝 Reunião', label: 'Reunião', icon: '🤝', color: '#0284c7', bg: '#f0f9ff' },
-  { id: '⭐ Preferência', label: 'Preferência', icon: '⭐', color: '#b45309', bg: '#fefce8' },
-  { id: '⚡ Urgente', label: 'Urgente', icon: '⚡', color: '#dc2626', bg: '#fef2f2' },
-];
-
-const TEMPLATES_NOTAS_RAPIDAS = [
-  "Solicitou orçamento",
-  "Negociação em andamento",
-  "Agendado retorno de contato",
-  "Retirada no galpão",
-  "Pagamento via PIX confirmado"
-];
-
 const calcularTagAutomaticaPorHistorico = (qtdLocacoes, somaGastoTotal) => {
   if (somaGastoTotal >= 5000 || qtdLocacoes >= 5) {
     return 'VIP';
@@ -132,11 +115,6 @@ const CadastroCliente = () => {
   const [dragging, setDragging] = useState(false);
   const [startMouse, setStartMouse] = useState({ x: 0, y: 0 });
 
-  // NOTAS & TIMELINE CRM
-  const [historicoNotas, setHistoricoNotas] = useState([]);
-  const [textoNovaNota, setTextoNovaNota] = useState('');
-  const [tipoNovaNota, setTipoNovaNota] = useState('💬 Atendimento');
-
   const [formData, setFormData] = useState({
     nome: '', cpf: '', rg: '', nascimento: '', sexo: '', datasComemorativas: '',
     razaoSocial: '', nomeFantasia: '', cnpj: '', inscricaoEstadual: '',
@@ -159,7 +137,6 @@ const CadastroCliente = () => {
       setTipoPessoa(clienteEditando.tipoPessoa || 'fisica');
       setFotoBase64(clienteEditando.foto || '');
       setPosicaoFoto(clienteEditando.posicaoFoto || { x: 50, y: 50 });
-      setHistoricoNotas(clienteEditando.historicoNotas || []);
 
       const eraPendenteAntigo = clienteEditando.situacaoFinanceira === 'pendente';
       const statusReal = clienteEditando.statusCadastro ? clienteEditando.statusCadastro : (eraPendenteAntigo ? 'pendente' : 'aprovado');
@@ -409,27 +386,6 @@ const CadastroCliente = () => {
     setFormData({ ...formData, tags: tagSugeridaAuto });
   };
 
-  const adicionarNotaHistorico = () => {
-    if (!textoNovaNota.trim()) return;
-    
-    const novaNota = {
-      id: Date.now(),
-      tipo: tipoNovaNota,
-      texto: textoNovaNota.trim(),
-      autor: usuarioLogado?.displayName || usuarioLogado?.email?.split('@')[0] || 'Equipe',
-      dataHora: new Date().toISOString()
-    };
-
-    const listaAtualizada = [novaNota, ...historicoNotas];
-    setHistoricoNotas(listaAtualizada);
-    setTextoNovaNota('');
-  };
-
-  const removerNotaHistorico = (idNota) => {
-    const listaAtualizada = historicoNotas.filter(n => n.id !== idNota);
-    setHistoricoNotas(listaAtualizada);
-  };
-
   const handleFileChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -518,7 +474,7 @@ const CadastroCliente = () => {
           }
           if (meuNome && meuNome === bancoNome && meuCelular.length > 8 && meuCelular === bancoCelular) {
               alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!`);
-              return true;
+              return true; 
           }
       }
       return false; 
@@ -548,7 +504,6 @@ const CadastroCliente = () => {
           tipoPessoa, 
           foto: fotoBase64, 
           posicaoFoto, 
-          historicoNotas,
           atualizadoEm: new Date().toISOString(),
           userId: tenantId 
       };
@@ -717,7 +672,7 @@ const CadastroCliente = () => {
         <form id="cliente-form-main" onSubmit={salvarCliente} className="estoque-form-layout" autoComplete="on">
           
           {/* COLUNA ESQUERDA: CARD EXECUTIVE PROFILE */}
-          <div className="left-photo-col">
+          <div className={`left-photo-col ${!clienteEditando ? 'is-novo-cadastro' : 'is-edicao'}`}>
             <div className="profile-card-banner"></div>
             
             {/* AVATAR COM ANEL DE DEGRADÊ DOURADO */}
@@ -877,29 +832,29 @@ const CadastroCliente = () => {
 
               {tipoPessoa === 'fisica' ? (
                 <div className="form-grid-4">
-                  <div className="form-group span-2">
+                  <div className="form-group span-4">
                     <label htmlFor="nome">NOME COMPLETO *</label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="far fa-user"></i></span>
                       <input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} required placeholder="Ex: Rosa Maria Vichinhsk" />
                     </div>
                   </div>
-                  <div className="form-group span-1">
+                  <div className="form-group span-2 col-mobile-half">
                     <label htmlFor="cpf">CPF</label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="far fa-id-badge"></i></span>
                       <input id="cpf" type="text" name="cpf" autoComplete="off" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} />
                     </div>
                   </div>
-                  <div className="form-group span-1">
+                  <div className="form-group span-2 col-mobile-half">
                     <label htmlFor="rg">RG (OPCIONAL)</label>
                     <input id="rg" type="text" name="rg" autoComplete="off" placeholder="00.000.000-0" value={formData.rg} onChange={handleChange} />
                   </div>
-                  <div className="form-group span-1">
-                    <label htmlFor="nascimento">🎂 ANIVERSÁRIO / NASCIMENTO</label>
+                  <div className="form-group span-2 col-mobile-half">
+                    <label htmlFor="nascimento">ANIVERSÁRIO 🎂</label>
                     <input id="nascimento" type="date" name="nascimento" autoComplete="bday" value={formData.nascimento} onChange={handleChange} />
                   </div>
-                  <div className="form-group span-1">
+                  <div className="form-group span-2 col-mobile-half">
                     <label htmlFor="sexo">SEXO</label>
                     <select id="sexo" name="sexo" autoComplete="sex" value={formData.sexo} onChange={handleChange}>
                       <option value="">Selecione...</option>
@@ -907,8 +862,8 @@ const CadastroCliente = () => {
                       <option value="Masculino">Masculino</option>
                     </select>
                   </div>
-                  <div className="form-group span-2">
-                    <label htmlFor="datasComemorativas">🎁 ANIVERSÁRIOS DA FAMÍLIA / DATAS FESTIVAS</label>
+                  <div className="form-group span-4">
+                    <label htmlFor="datasComemorativas">DATAS FESTIVAS DA FAMÍLIA 🎁</label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="fas fa-gift" style={{color:'#c5a059'}}></i></span>
                       <input id="datasComemorativas" type="text" name="datasComemorativas" autoComplete="off" value={formData.datasComemorativas} onChange={handleChange} placeholder="Ex: Filha Maria (15/09), Casamento (10/12)" />
@@ -986,28 +941,28 @@ const CadastroCliente = () => {
               </div>
 
               <div className="form-grid-4">
-                <div className="form-group span-1">
+                <div className="form-group span-2 col-mobile-half">
                   <label htmlFor="celular">CELULAR / WHATSAPP *</label>
                   <div className="input-icon-wrapper">
                     <span className="input-left-icon"><i className="fab fa-whatsapp color-green"></i></span>
                     <input id="celular" type="tel" name="celular" autoComplete="tel" placeholder="(00) 00000-0000" value={formData.celular} onChange={handleChange} />
                   </div>
                 </div>
-                <div className="form-group span-1">
+                <div className="form-group span-2 col-mobile-half">
                   <label htmlFor="telefoneFixo">TELEFONE FIXO</label>
                   <div className="input-icon-wrapper">
                     <span className="input-left-icon"><i className="fas fa-phone-square-alt"></i></span>
                     <input id="telefoneFixo" type="tel" name="telefoneFixo" autoComplete="tel" placeholder="(00) 0000-0000" value={formData.telefoneFixo} onChange={handleChange} />
                   </div>
                 </div>
-                <div className="form-group span-2">
+                <div className="form-group span-4">
                   <label htmlFor="email">E-MAIL</label>
                   <div className="input-icon-wrapper">
                     <span className="input-left-icon"><i className="far fa-envelope"></i></span>
                     <input id="email" type="email" name="email" autoComplete="email" placeholder="nome@email.com" value={formData.email} onChange={handleChange} />
                   </div>
                 </div>
-                <div className="form-group span-2">
+                <div className="form-group span-4">
                   <label htmlFor="origem">COMO NOS CONHECEU?</label>
                   <div className="input-icon-wrapper">
                     <span className="input-left-icon"><i className="fas fa-bullhorn"></i></span>
@@ -1037,7 +992,7 @@ const CadastroCliente = () => {
               </div>
 
               <div className="form-grid-4">
-                <div className="form-group span-2">
+                <div className="form-group span-4">
                   <label htmlFor="cep">CEP (BUSCA AUTOMÁTICA)</label>
                   <div className="input-icon-wrapper">
                     <span className="input-left-icon"><i className="fas fa-search-location"></i></span>
@@ -1045,28 +1000,26 @@ const CadastroCliente = () => {
                     <span className="badge-viacep-auto"><i className="fas fa-magic"></i> ViaCEP Auto</span>
                   </div>
                 </div>
-                <div className="form-group span-2">
+                <div className="form-group span-4">
                   <label htmlFor="logradouro">LOGRADOURO / RUA</label>
                   <div className="input-icon-wrapper">
                     <span className="input-left-icon"><i className="fas fa-road"></i></span>
                     <input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} placeholder="Rua, Avenida, Alameda..." />
                   </div>
                 </div>
-                <div className="form-group-row span-4">
-                  <div className="form-group flex-1">
-                    <label htmlFor="numeroInput">NÚMERO</label>
-                    <input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} placeholder="Ex: 123" />
-                  </div>
-                  <div className="form-group flex-small">
-                    <label htmlFor="uf">UF</label>
-                    <input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="SP" value={formData.uf} onChange={handleChange} />
-                  </div>
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="numeroInput">NÚMERO</label>
+                  <input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} placeholder="Ex: 123" />
                 </div>
-                <div className="form-group span-2">
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="uf">UF</label>
+                  <input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="SP" value={formData.uf} onChange={handleChange} />
+                </div>
+                <div className="form-group span-2 col-mobile-half">
                   <label htmlFor="bairro">BAIRRO</label>
                   <input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} placeholder="Nome do Bairro" />
                 </div>
-                <div className="form-group span-2">
+                <div className="form-group span-2 col-mobile-half">
                   <label htmlFor="cidade">CIDADE</label>
                   <input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} placeholder="Cidade" />
                 </div>
@@ -1197,126 +1150,7 @@ const CadastroCliente = () => {
               </div>
             </div>
 
-            {/* CARD 5: LINHA DO TEMPO DE ATENDIMENTO & NOTAS CRM */}
-            <div className="form-section-card crm-timeline-card">
-              <div className="form-section-header">
-                <span className="section-header-icon gold-glow"><i className="fas fa-stream"></i></span>
-                <div style={{ flex: 1 }}>
-                  <div className="header-title-flex">
-                    <h3 style={{ margin: 0 }}>LINHA DO TEMPO DE ATENDIMENTO & NOTAS CRM</h3>
-                    <span className="timeline-counter-badge">
-                      {historicoNotas.length} {historicoNotas.length === 1 ? 'registro' : 'registros'}
-                    </span>
-                  </div>
-                  <p style={{ margin: '2px 0 0 0' }}>Registre ligações, preferências, acordos e histórico de atendimento com o cliente</p>
-                </div>
-              </div>
-
-              {/* SELETOR DE CATEGORIA DAS NOTAS (PÍLULAS INTERATIVAS) */}
-              <div className="note-category-pills">
-                <span className="pills-label"><i className="fas fa-filter"></i> Tipo de Registro:</span>
-                <div className="pills-flex">
-                  {TIPOS_NOTAS_CRM.map(cat => {
-                    const ativada = tipoNovaNota === cat.id;
-                    return (
-                      <button 
-                        key={cat.id} 
-                        type="button" 
-                        className={`pill-cat-btn ${ativada ? 'active' : ''}`}
-                        onClick={() => setTipoNovaNota(cat.id)}
-                        style={ativada ? { backgroundColor: cat.color, color: '#ffffff', borderColor: cat.color, boxShadow: `0 4px 12px ${cat.color}40` } : { backgroundColor: cat.bg, color: cat.color, borderColor: `${cat.color}30` }}
-                      >
-                        <span>{cat.icon}</span> {cat.label}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* CAIXA DE CRIAÇÃO DA NOTA COM ATALHOS RÁPIDOS */}
-              <div className="nova-nota-card-pro">
-                <textarea 
-                  rows="2"
-                  value={textoNovaNota} 
-                  onChange={(e) => setTextoNovaNota(e.target.value)} 
-                  placeholder={`Digite aqui o resumo do atendimento (${tipoNovaNota})...`}
-                  className="textarea-nota-pro"
-                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); adicionarNotaHistorico(); } }}
-                />
-
-                <div className="nova-nota-footer-row">
-                  <div className="templates-rapidos-row">
-                    <span className="tmpl-title"><i className="fas fa-magic"></i> Atalhos rápidos:</span>
-                    {TEMPLATES_NOTAS_RAPIDAS.map((tmpl, idx) => (
-                      <button 
-                        key={idx} 
-                        type="button" 
-                        className="btn-tmpl-chip"
-                        onClick={() => setTextoNovaNota(prev => prev ? `${prev} - ${tmpl}` : tmpl)}
-                      >
-                        + {tmpl}
-                      </button>
-                    ))}
-                  </div>
-
-                  <button 
-                    type="button" 
-                    onClick={adicionarNotaHistorico}
-                    className="btn-salvar-nota-gold"
-                  >
-                    <i className="fas fa-paper-plane"></i> Registrar Nota
-                  </button>
-                </div>
-              </div>
-
-              {/* LISTA DE NOTAS DA TIMELINE */}
-              <div className="timeline-notes-container">
-                {historicoNotas.length === 0 ? (
-                  <div className="empty-timeline-box">
-                    <div className="empty-icon-circle"><i className="far fa-comments"></i></div>
-                    <h4>Nenhum registro na linha do tempo ainda</h4>
-                    <p>Selecione um tipo acima e registre a primeira nota de atendimento para este cliente!</p>
-                  </div>
-                ) : (
-                  <div className="timeline-feed-list">
-                    {historicoNotas.map((nota) => {
-                      const catInfo = TIPOS_NOTAS_CRM.find(c => c.id === nota.tipo) || { color: '#c5a059', bg: '#fefce8', icon: '📝' };
-                      return (
-                        <div key={nota.id} className="timeline-feed-item" style={{ borderLeftColor: catInfo.color }}>
-                          <div className="timeline-icon-node" style={{ backgroundColor: catInfo.bg, color: catInfo.color, borderColor: catInfo.color }}>
-                            <span>{catInfo.icon}</span>
-                          </div>
-                          <div className="timeline-card-body">
-                            <div className="timeline-card-header">
-                              <div className="header-left">
-                                <span className="cat-badge-pill" style={{ backgroundColor: catInfo.bg, color: catInfo.color, border: `1px solid ${catInfo.color}40` }}>
-                                  {nota.tipo}
-                                </span>
-                                <span className="author-name"><i className="far fa-user-circle"></i> {nota.autor}</span>
-                              </div>
-                              <div className="header-right">
-                                <span className="time-stamp"><i className="far fa-clock"></i> {new Date(nota.dataHora).toLocaleString('pt-BR')}</span>
-                                <button 
-                                  type="button" 
-                                  onClick={() => removerNotaHistorico(nota.id)} 
-                                  className="btn-trash-note"
-                                  title="Excluir nota"
-                                >
-                                  <i className="fas fa-trash-alt"></i>
-                                </button>
-                              </div>
-                            </div>
-                            <p className="timeline-text-content">{nota.texto}</p>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* CARD 6: HISTÓRICO DE LOCAÇÕES E CONTRATOS */}
+            {/* HISTÓRICO DE LOCAÇÕES E CONTRATOS */}
             {clienteEditando && historicoLocacoes.length > 0 && (
               <div style={{gridColumn: '1 / -1', width: '100%'}}>
                 <div className="form-section-card">

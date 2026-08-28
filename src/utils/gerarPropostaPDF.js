@@ -154,7 +154,17 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.text(`Data Retirada/Evento: ${dataRetirada}`, xCol2 + 4, y + 18);
   doc.text(`Data Devolucao: ${dataDevolucao}`, xCol2 + 4, y + 23);
   
-  const tipoLog = (pedido.logistica?.tipo === 'entrega' || pedido.logistica?.frete) ? 'Com Frete (Entrega)' : 'Retirada no Balcao';
+  let tipoLog = 'Retirada no Balcao';
+  const log = pedido.logistica || {};
+  if (log.tipo === 'entrega' || log.frete) {
+    if (log.statusLocal === 'a_definir') {
+      tipoLog = 'Entrega (Local a Definir)';
+    } else if (log.statusLocal === 'estimado') {
+      tipoLog = `Entrega (Frete Estimado: R$ ${freteVal.toFixed(2)})`;
+    } else {
+      tipoLog = log.cidade ? `Entrega (${log.cidade})` : 'Com Frete (Entrega)';
+    }
+  }
   doc.text(`Logistica: ${tipoLog}`, xCol2 + 4, y + 28);
 
   y += 38;
@@ -285,7 +295,19 @@ export const gerarPropostaPDF = (pedido, empresa = {}, clienteObj = {}, acao = '
   doc.text(`• Chave PIX: ${chavePix}`, 18, y + 14);
   doc.text('• Validade desta proposta: 5 dias uteis', 18, y + 20);
   doc.text('• Reserva garantida mediante sinal (50%)', 18, y + 26);
-  doc.text('• Pecas sujeitas a disponibilidade de estoque', 18, y + 32);
+  
+  if (log.tipo === 'entrega' && log.statusLocal === 'a_definir') {
+    doc.setTextColor(217, 119, 6); // Dourado escuro / âmbar
+    doc.text('• Frete: A calcular apos envio do endereco final', 18, y + 32);
+    doc.setTextColor(...darkGray);
+  } else if (log.tipo === 'entrega' && log.statusLocal === 'estimado') {
+    doc.setTextColor(30, 64, 175); // Azul
+    doc.text('• Frete estimado. Sujeito a reajuste por KM fora do perimetro urbano', 18, y + 32);
+    doc.setTextColor(...darkGray);
+  } else {
+    doc.text('• Pecas sujeitas a disponibilidade de estoque', 18, y + 32);
+  }
+
   doc.text('• Devolucao no prazo sob pena de diaria extra', 18, y + 38);
 
   y += 50;

@@ -6,6 +6,7 @@ import { collection, getDocs, doc, getDoc, addDoc, getCountFromServer, serverTim
 import { getAuth } from 'firebase/auth'; 
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 import { gerarPropostaPDF } from '../../utils/gerarPropostaPDF';
+import { calcularDistanciaGoogleMaps } from '../../utils/googleMapsService';
 import ModalCalendarioDisponibilidade from './ModalCalendarioDisponibilidade';
 
 // 🏷️ TIPOS DE EVENTO (mesmos da tela de Locações)
@@ -21,6 +22,7 @@ const TIPOS_EVENTO = [
   { value: 'outro',            label: 'Outro',            emoji: '🎉' },
 ];
 
+// 👑 SISTEMA CELEBRE - NOVA LOCAÇÃO (ENTERPRISE EDITION)
 const NovaLocacao = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -136,9 +138,36 @@ const NovaLocacao = () => {
   const [grupoTemaSelecionado, setGrupoTemaSelecionado] = useState('');
   const [temaFesta, setTemaFesta] = useState('');
   const [temaDigitadoPersonalizado, setTemaDigitadoPersonalizado] = useState('');
+  const [modoBuscaRapidaTema, setModoBuscaRapidaTema] = useState(false);
+  const [buscaClienteTexto, setBuscaClienteTexto] = useState('');
+  const [mostrarDropdownCliente, setMostrarDropdownCliente] = useState(false);
+  const seletorClienteRef = useRef(null);
+
+  // 🛡️ Fecha a gaveta de busca de clientes ao clicar fora ou apertar Esc
+  useEffect(() => {
+    const handleClickFora = (e) => {
+      if (seletorClienteRef.current && !seletorClienteRef.current.contains(e.target)) {
+        setMostrarDropdownCliente(false);
+      }
+    };
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') {
+        setMostrarDropdownCliente(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickFora);
+    document.addEventListener('touchstart', handleClickFora);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => {
+      document.removeEventListener('mousedown', handleClickFora);
+      document.removeEventListener('touchstart', handleClickFora);
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
   
   const [logistica, setLogistica] = useState({ 
     tipo: 'retirada', 
+    statusLocal: 'definido', // 'definido' | 'a_definir' | 'estimado'
     cep: '', 
     rua: '', 
     numero: '', 
@@ -157,6 +186,7 @@ const NovaLocacao = () => {
 
   // 🚚 Parâmetros avançados de frete baseados em veículo e combustível
   const [paramFrete, setParamFrete] = useState({
+    tipoCombustivel: 'gasolina', // 'gasolina', 'alcool', 'gasolina_aditivada', 'diesel', 'gnv'
     precoGasolina: '5.90',
     veiculo: '1.0',
     consumoKmL: '12.0',
@@ -399,10 +429,91 @@ const NovaLocacao = () => {
   }, [usuarioLogado, navigate, tenantId, location.state]);
 
   const categoriasUnicasEstoque = ['Todos', ...new Set(estoque.map(item => item.categoria).filter(Boolean))];
-  const categoriasDeTemaUnicas = Object.keys(CATALOGO_TEMAS);
-  const subcategoriasDisponiveis = categoriaTema ? Object.keys(CATALOGO_TEMAS[categoriaTema] || {}) : [];
-  const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(CATALOGO_TEMAS[categoriaTema][subcategoriaTema] || {}) : [];
-  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? CATALOGO_TEMAS[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || [] : [];
+  const catalogoFonte = (configEmpresa?.catalogoVitrine && Object.keys(configEmpresa.catalogoVitrine).length > 0)
+    ? configEmpresa.catalogoVitrine
+    : CATALOGO_TEMAS;
+
+  const categoriasDeTemaUnicas = Object.keys(catalogoFonte);
+  const subcategoriasDisponiveis = categoriaTema ? Object.keys(catalogoFonte[categoriaTema] || {}) : [];
+  const gruposDisponiveis = (categoriaTema && subcategoriaTema) ? Object.keys(catalogoFonte[categoriaTema][subcategoriaTema] || {}) : [];
+  const temasDisponiveis = (categoriaTema && subcategoriaTema && grupoTemaSelecionado) ? (catalogoFonte[categoriaTema][subcategoriaTema][grupoTemaSelecionado] || []) : [];
+
+  // 🔍 Índice Geral de Temas para Busca Instantânea Inteligente
+  const todosTemasIndexados = React.useMemo(() => {
+    const lista = [];
+    Object.keys(catalogoFonte).forEach(cat => {
+      const subs = catalogoFonte[cat] || {};
+      Object.keys(subs).forEach(sub => {
+        const grupos = subs[sub] || {};
+        Object.keys(grupos).forEach(grupo => {
+          const temas = grupos[grupo] || [];
+          temas.forEach(t => {
+            lista.push({
+              categoria: cat,
+              subcategoria: sub,
+              grupo: grupo,
+              tema: t,
+              caminhoCompleto: `${cat} › ${sub} › ${grupo} › ${t}`
+            });
+          });
+        });
+      });
+    });
+    return lista;
+  }, [catalogoFonte]);
+
+  // 🔍 Busca Instantânea de Clientes (Nome, Telefone, Documento)
+  const clientesFiltrados = React.useMemo(() => {
+    if (!buscaClienteTexto || !buscaClienteTexto.trim()) return clientes.slice(0, 20);
+    const termo = buscaClienteTexto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    return clientes.filter(c => {
+      const nome = (c.nome || c.nomeFantasia || c.razaoSocial || '').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const tel = (c.celular || c.telefone || '').replace(/\D/g, '');
+      const doc = (c.cpf || c.cnpj || '').replace(/\D/g, '');
+      return nome.includes(termo) || tel.includes(termo) || doc.includes(termo);
+    }).slice(0, 20);
+  }, [clientes, buscaClienteTexto]);
+
+  const handleSelecionarCliente = (cId) => {
+    setClienteSelecionado(cId);
+    setAutorizacaoExcepcional(false);
+    setMostrarDropdownCliente(false);
+    setBuscaClienteTexto('');
+    if (cId) {
+      const infoPend = getPendenciasCliente(cId);
+      if (infoPend.temPendencia) {
+        setModalTravaCliente({
+          cliente: infoPend.clienteObj,
+          pendencias: infoPend.pendencias,
+          valorDevido: infoPend.valorDevido
+        });
+      }
+
+      // Preenche endereço do cliente na logística se houver
+      const cli = clientes.find(c => String(c.id) === String(cId));
+      if (cli && (cli.rua || cli.endereco || cli.cep || cli.cidade)) {
+        const endCli = {
+          cep: cli.cep || '',
+          rua: cli.rua || cli.endereco || '',
+          numero: cli.numero || '',
+          bairro: cli.bairro || '',
+          cidade: cli.cidade ? `${cli.cidade}${cli.uf ? ` - ${cli.uf}` : ''}` : ''
+        };
+        setLogistica(prev => ({
+          ...prev,
+          cep: prev.cep || endCli.cep,
+          rua: prev.rua || endCli.rua,
+          numero: prev.numero || endCli.numero,
+          bairro: prev.bairro || endCli.bairro,
+          cidade: prev.cidade || endCli.cidade
+        }));
+
+        if (endCli.rua || endCli.cep) {
+          calcularDistanciaAutomatica(endCli);
+        }
+      }
+    }
+  };
 
   const isOverlapping = (start1, end1, start2, end2) => {
       if (!start1 || !end1 || !start2 || !end2) return false;
@@ -700,106 +811,215 @@ const NovaLocacao = () => {
 
   const calcularDistanciaAutomatica = async (destinoCustom = null, isManual = false) => {
     const dest = destinoCustom || logistica;
-    const ruaDest = dest.rua || '';
-    const cidadeDest = dest.cidade || '';
+    const ruaDest = (dest.rua || '').trim();
+    let cidadeDest = (dest.cidade || '').trim();
+    let ufDest = '';
+    if (cidadeDest.includes('-')) {
+      const parts = cidadeDest.split('-');
+      cidadeDest = parts[0].trim();
+      ufDest = (parts[1] || '').trim().toUpperCase();
+    } else if (cidadeDest.includes('/')) {
+      const parts = cidadeDest.split('/');
+      cidadeDest = parts[0].trim();
+      ufDest = (parts[1] || '').trim().toUpperCase();
+    }
+
     const cepDest = (dest.cep || '').replace(/\D/g, '');
-    const numDest = dest.numero || '';
+    const numDest = (dest.numero || '').trim();
 
-    // Endereço de destino
-    const endDestino = `${ruaDest} ${numDest}, ${cidadeDest} ${dest.cep || ''}`.trim();
-    
-    // Endereço de origem (Sede da empresa cadastrada em configuracoes_empresa)
     const conf = configEmpresa || {};
-    const endOrigem = `${conf.rua || conf.endereco || ''} ${conf.numero || ''}, ${conf.bairro || ''}, ${conf.cidade || ''} ${conf.uf || ''} ${conf.cep || ''}`.trim();
+    let cidadeOrigem = (conf.cidade || '').trim();
+    let ufOrigem = (conf.uf || '').trim().toUpperCase();
+    if (cidadeOrigem.includes('-')) {
+      const p = cidadeOrigem.split('-');
+      cidadeOrigem = p[0].trim();
+      if (!ufOrigem && p[1]) ufOrigem = p[1].trim().toUpperCase();
+    }
+    const ruaOrigem = (conf.rua || conf.endereco || '').trim();
+    const cepOrigem = (conf.cep || '').replace(/\D/g, '');
 
-    if (!ruaDest && cepDest.length < 8) {
+    const temOrigemValida = Boolean(cidadeOrigem || (cepOrigem.length === 8) || ruaOrigem);
+
+    // Montar endereços para Google Maps Directions de forma limpa e precisa:
+    // Formato: Rua, Número, Cidade - UF, Brasil (sem enfiar bairro ou CEP no meio que causam conflitos no Maps)
+    const buildMapsAddress = (rua, num, bairro, cidade, uf, cep) => {
+      const ruaLimpa = (rua || '').trim();
+      const numLimpo = (num || '').trim();
+      const cidLimpa = (cidade || '').trim();
+      const ufLimpa = (uf || 'SP').trim().toUpperCase();
+
+      if (ruaLimpa && numLimpo && cidLimpa) {
+        return `${ruaLimpa}, ${numLimpo}, ${cidLimpa} - ${ufLimpa}, Brasil`;
+      }
+      if (ruaLimpa && cidLimpa) {
+        return `${ruaLimpa}, ${cidLimpa} - ${ufLimpa}, Brasil`;
+      }
+      if (cep && cidLimpa) {
+        return `${cidLimpa} - ${ufLimpa}, ${cep}, Brasil`;
+      }
+      if (cep) return `${cep}, Brasil`;
+      return [ruaLimpa, numLimpo, cidLimpa, ufLimpa].filter(Boolean).join(', ');
+    };
+
+    const endOrigem = buildMapsAddress(ruaOrigem, conf.numero, conf.bairro, cidadeOrigem, ufOrigem, conf.cep);
+    const endDestino = buildMapsAddress(ruaDest, numDest, dest.bairro, cidadeDest, ufDest || ufOrigem, dest.cep);
+    const googleMapsUrl = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(endOrigem) + '&destination=' + encodeURIComponent(endDestino);
+
+    if (!ruaDest && cepDest.length < 8 && !cidadeDest) {
       if (isManual) alert("Por favor, informe o CEP ou o endereço do local da festa para calcular a distância.");
       return;
     }
 
-    if (!endOrigem || endOrigem.length < 3) {
-      if (isManual) alert("Endereço da sede da sua empresa não foi configurado. Configure o endereço em 'Configurações > Empresa' para que a distância automática funcione com base na sua sede.");
+    if (!temOrigemValida || endOrigem.length < 3) {
+      if (isManual) alert("⚠️ Endereço da sede/estoque da sua empresa ainda não foi configurado!\n\nAcesse 'Configurações > Empresa' e preencha o endereço onde seus materiais ficam guardados (sua loja, galpão ou sua residência) para que o sistema saiba de onde partir para calcular o frete.");
       return;
     }
 
     setCalculandoDistancia(true);
     try {
-      const buscarCoord = async (qList) => {
-        for (const q of qList) {
-          if (!q || q.trim().length < 3) continue;
-          try {
-            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(q)}`, {
-              headers: { 'Accept-Language': 'pt-BR' }
-            });
-            const data = await res.json();
-            if (data && data.length > 0) return data[0];
-          } catch (e) {
-            // fallback
-          }
-        }
-        return null;
-      };
-
-      // 1. Geocodificar Origem (Empresa)
-      const coordOrigem = await buscarCoord([
-        `${conf.rua || conf.endereco || ''}, ${conf.cidade || ''} - ${conf.uf || ''}, Brasil`,
-        `${conf.bairro || ''}, ${conf.cidade || ''} - ${conf.uf || ''}, Brasil`,
-        `${conf.cep || ''}, Brasil`,
-        `${conf.cidade || ''} - ${conf.uf || ''}, Brasil`
-      ]);
-
-      // 2. Geocodificar Destino (Evento)
-      const coordDestino = await buscarCoord([
-        `${ruaDest} ${numDest}, ${cidadeDest}, Brasil`,
-        `${ruaDest}, ${cidadeDest}, Brasil`,
-        `${dest.bairro || ''}, ${cidadeDest}, Brasil`,
-        `${dest.cep || ''}, Brasil`,
-        `${cidadeDest}, Brasil`
-      ]);
-
       let kmCalculado = 0;
+      let duracaoTextoGoogle = null;
+      let oficialGoogle = false;
+      let numeroNaoMapeado = false;
 
-      if (coordOrigem && coordDestino) {
-        const lat1 = parseFloat(coordOrigem.lat);
-        const lon1 = parseFloat(coordOrigem.lon);
-        const lat2 = parseFloat(coordDestino.lat);
-        const lon2 = parseFloat(coordDestino.lon);
-
-        // Rota de trânsito rodoviária OSRM
+      // 🌟 1. PRIORIDADE MÁXIMA: GOOGLE MAPS API OFICIAL (SE CONFIGURADO)
+      const apiKeyGoogle = (conf.googleMapsApiKey || '').trim();
+      if (apiKeyGoogle) {
         try {
-          const resRoute = await fetch(`https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`);
-          const dataRoute = await resRoute.json();
-          if (dataRoute.routes && dataRoute.routes.length > 0) {
-            kmCalculado = Math.round((dataRoute.routes[0].distance / 1000) * 10) / 10;
+          const resGoogle = await calcularDistanciaGoogleMaps(endOrigem, endDestino, apiKeyGoogle);
+          if (resGoogle && resGoogle.km > 0) {
+            kmCalculado = resGoogle.km;
+            duracaoTextoGoogle = resGoogle.duracaoTexto;
+            oficialGoogle = true;
           }
-        } catch (eRoute) {
-          console.warn("OSRM routing fallback", eRoute);
-        }
-
-        // Fallback Haversine geodésico (com fator de curvas 1.25x)
-        if (!kmCalculado || kmCalculado <= 0) {
-          const R = 6371; // km
-          const dLat = (lat2 - lat1) * Math.PI / 180;
-          const dLon = (lon2 - lon1) * Math.PI / 180;
-          const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
-                    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
-                    Math.sin(dLon/2) * Math.sin(dLon/2);
-          const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-          kmCalculado = Math.round(R * c * 1.25 * 10) / 10;
+        } catch (errGoogle) {
+          console.warn("Google Maps API oficial retornou erro, usando contingência:", errGoogle);
         }
       }
 
+      // 🌐 2. CONTINGÊNCIA GRATUITA (OPENSTREETMAP / OSRM) CASO NÃO TENHA CHAVE GOOGLE
+      if (!kmCalculado) {
+        // Helper para extrair o nome do logradouro se houver nome comercial antes (ex: "Panificadora X, R. Y")
+        const extrairLogradouro = (texto) => {
+          if (!texto) return '';
+          const regex = /(?:^|,\s*)(r\.|rua|av\.|avenida|alameda|travessa|rodovia|estrada)\s+([^,]+)/i;
+          const match = texto.match(regex);
+          if (match) {
+            return (match[1] + ' ' + match[2]).trim();
+          }
+          return texto.trim();
+        };
+
+        const buscarCoord = async (qList, numBuscado = null) => {
+          let tentouComNumero = false;
+          for (let i = 0; i < qList.length; i++) {
+            const q = qList[i];
+            const queryTemNumero = numBuscado && q.includes(String(numBuscado));
+            if (queryTemNumero) tentouComNumero = true;
+
+            if (!q || q.trim().length < 3) continue;
+            try {
+              const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&countrycodes=br&limit=1&q=${encodeURIComponent(q.trim())}`, {
+                headers: { 'Accept-Language': 'pt-BR' }
+              });
+              const data = await res.json();
+              if (data && data.length > 0 && data[0].lat && data[0].lon) {
+                if (tentouComNumero && !queryTemNumero && numBuscado) {
+                  numeroNaoMapeado = true;
+                }
+                return { lat: parseFloat(data[0].lat), lon: parseFloat(data[0].lon), displayName: data[0].display_name || '' };
+              }
+            } catch (e) {
+              // fallback
+            }
+          }
+          return null;
+        };
+
+        // Geocodificar Origem (Empresa / Estoque)
+        const ruaOrigemLimpa = extrairLogradouro(ruaOrigem);
+        const queriesOrigem = [];
+        if (ruaOrigemLimpa && conf.numero && cidadeOrigem) queriesOrigem.push(`${ruaOrigemLimpa}, ${conf.numero}, ${cidadeOrigem} - ${ufOrigem}, Brasil`);
+        if (ruaOrigemLimpa && cidadeOrigem) queriesOrigem.push(`${ruaOrigemLimpa}, ${cidadeOrigem} - ${ufOrigem}, Brasil`);
+        if (ruaOrigem && conf.numero && cidadeOrigem) queriesOrigem.push(`${ruaOrigem}, ${conf.numero}, ${cidadeOrigem} - ${ufOrigem}, Brasil`);
+        if (cepOrigem.length === 8) queriesOrigem.push(conf.cep + ', Brasil');
+        if (conf.bairro && cidadeOrigem) queriesOrigem.push(`${conf.bairro}, ${cidadeOrigem} - ${ufOrigem}, Brasil`);
+        if (cidadeOrigem && ufOrigem) queriesOrigem.push(`${cidadeOrigem} - ${ufOrigem}, Brasil`);
+
+        const coordOrigem = await buscarCoord(queriesOrigem, conf.numero);
+
+        // Geocodificar Destino (Local da Festa)
+        const ruaDestLimpa = extrairLogradouro(ruaDest);
+        const queriesDestino = [];
+        if (ruaDestLimpa && numDest && cidadeDest) queriesDestino.push(`${ruaDestLimpa}, ${numDest}, ${cidadeDest} - ${ufDest || ufOrigem}, Brasil`);
+        if (ruaDestLimpa && cidadeDest) queriesDestino.push(`${ruaDestLimpa}, ${cidadeDest} - ${ufDest || ufOrigem}, Brasil`);
+        if (ruaDest && numDest && cidadeDest) queriesDestino.push(`${ruaDest}, ${numDest}, ${cidadeDest} - ${ufDest || ufOrigem}, Brasil`);
+        if (cepDest.length === 8) queriesDestino.push(dest.cep + ', Brasil');
+        if (dest.bairro && cidadeDest) queriesDestino.push(`${dest.bairro}, ${cidadeDest} - ${ufDest || ufOrigem}, Brasil`);
+        if (cidadeDest) queriesDestino.push(`${cidadeDest} - ${ufDest || ufOrigem}, Brasil`);
+
+        const coordDestino = await buscarCoord(queriesDestino, numDest);
+
+        if (coordOrigem && coordDestino) {
+          const lat1 = coordOrigem.lat, lon1 = coordOrigem.lon;
+          const lat2 = coordDestino.lat, lon2 = coordDestino.lon;
+
+          // Normalização para comparar cidades (sem acentos)
+          const norm = (s) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+          const mesmaCidade = cidadeOrigem && cidadeDest && norm(cidadeOrigem) === norm(cidadeDest);
+
+          // Haversine (linha reta em km)
+          const R = 6371;
+          const dLat = (lat2 - lat1) * Math.PI / 180;
+          const dLon = (lon2 - lon1) * Math.PI / 180;
+          const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
+          const distHaversine = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+          // 1. Tentar rota viária real via OSRM
+          try {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 6000);
+            const resRoute = await fetch(
+              `https://router.project-osrm.org/route/v1/driving/${lon1},${lat1};${lon2},${lat2}?overview=false`,
+              { signal: ctrl.signal }
+            );
+            clearTimeout(timer);
+            const dataRoute = await resRoute.json();
+            if (dataRoute.routes?.length > 0 && dataRoute.routes[0].distance > 0) {
+              const osrmKm = dataRoute.routes[0].distance / 1000;
+              if (!(mesmaCidade && osrmKm > 40)) {
+                kmCalculado = Math.max(0.5, Math.round(osrmKm * 10) / 10);
+              }
+            }
+          } catch (eRoute) {
+            console.warn('OSRM indisponível, usando estimativa Haversine viária', eRoute);
+          }
+
+          // 2. Fallback por estimativa viária (fator 1.35x sobre a linha reta)
+          if (!kmCalculado && distHaversine > 0) {
+            kmCalculado = Math.max(1, Math.round(distHaversine * 1.35 * 10) / 10);
+          }
+        }
+      }
+
+      // Disponibilizar link Maps com ou sem km e status do número
+      const infoAtualizada = {
+        origem: endOrigem,
+        destino: endDestino,
+        mapsUrl: googleMapsUrl,
+        km: kmCalculado || null,
+        duracaoTexto: duracaoTextoGoogle,
+        oficialGoogle: oficialGoogle,
+        numeroNaoMapeado: Boolean(numDest && numeroNaoMapeado && !oficialGoogle),
+        numeroDigitado: numDest || ''
+      };
+      setInfoRota(infoAtualizada);
+
       if (kmCalculado > 0) {
         setKmDistancia(String(kmCalculado));
-        const googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(endOrigem)}&destination=${encodeURIComponent(endDestino)}`;
-        setInfoRota({
-          km: kmCalculado,
-          origem: endOrigem,
-          destino: endDestino,
-          mapsUrl: googleMapsUrl
-        });
       } else if (isManual) {
-        alert("Não foi possível encontrar a rota exata automaticamente. Você pode digitar a distância em KM manualmente no campo.");
+        alert("⚠️ Não conseguimos calcular a distância automaticamente com precisão.\n\nO Google Maps foi aberto para você ver a rota real e digitar o KM correto manualmente no campo 'Distância do Trajeto'.");
+        window.open(googleMapsUrl, '_blank');
       }
     } catch (err) {
       console.error("Erro ao calcular rota automática:", err);
@@ -867,13 +1087,68 @@ const NovaLocacao = () => {
     });
   };
 
+  // ⚡ ATALHOS RÁPIDOS DE DATAS PARA LOCAÇÃO DE EVENTOS
+  const aplicarAtalhoDatas = (tipo) => {
+    const hoje = new Date();
+    const formatYMD = (d) => {
+      const ano = d.getFullYear();
+      const mes = String(d.getMonth() + 1).padStart(2, '0');
+      const dia = String(d.getDate()).padStart(2, '0');
+      return `${ano}-${mes}-${dia}`;
+    };
+
+    const addDays = (d, dias) => {
+      const res = new Date(d);
+      res.setDate(res.getDate() + dias);
+      return res;
+    };
+
+    if (tipo === 'hoje_amanha') {
+      const ret = hoje;
+      const dev = addDays(hoje, 1);
+      setDatas(prev => ({
+        ...prev,
+        retirada: formatYMD(ret),
+        devolucao: formatYMD(dev)
+      }));
+    } else if (tipo === 'proxima_sexta_segunda') {
+      const diaSemana = hoje.getDay(); // 0 Dom, 1 Seg, ..., 5 Sex, 6 Sab
+      const diasAteSexta = (5 - diaSemana + 7) % 7;
+      const sexta = addDays(hoje, diasAteSexta === 0 && diaSemana !== 5 ? 7 : diasAteSexta);
+      const segunda = addDays(sexta, 3);
+      setDatas(prev => ({
+        ...prev,
+        retirada: formatYMD(sexta),
+        devolucao: formatYMD(segunda)
+      }));
+    } else if (tipo === 'proximo_sabado_segunda') {
+      const diaSemana = hoje.getDay();
+      const diasAteSabado = (6 - diaSemana + 7) % 7;
+      const sabado = addDays(hoje, diasAteSabado === 0 && diaSemana !== 6 ? 7 : diasAteSabado);
+      const segunda = addDays(sabado, 2);
+      setDatas(prev => ({
+        ...prev,
+        retirada: formatYMD(sabado),
+        devolucao: formatYMD(segunda)
+      }));
+    } else if (tipo === 'proximo_sabado_domingo') {
+      const diaSemana = hoje.getDay();
+      const diasAteSabado = (6 - diaSemana + 7) % 7;
+      const sabado = addDays(hoje, diasAteSabado === 0 && diaSemana !== 6 ? 7 : diasAteSabado);
+      const domingo = addDays(sabado, 1);
+      setDatas(prev => ({
+        ...prev,
+        retirada: formatYMD(sabado),
+        devolucao: formatYMD(domingo)
+      }));
+    }
+  };
+
   const interceptarSalvamento = (status) => {
     if (!clienteSelecionado) return alert("Selecione o Cliente!");
     
-    if (temaFesta === 'OUTRO_TEMA' && !temaDigitadoPersonalizado) {
-        return alert("Por favor, digite o nome do tema personalizado!");
-    } else if (!temaFesta) {
-        return alert("Selecione o Tema da Festa!");
+    if (!temaFesta || !temaFesta.trim()) {
+        return alert("Por favor, preencha o Tema da Festa / Evento!");
     }
 
     if (!datas.retirada) return alert("Preencha a Data de Retirada!");
@@ -924,7 +1199,7 @@ const NovaLocacao = () => {
         numeroPedido: codigo, 
         clienteId: clienteSelecionado, 
         clienteNome: nomeClienteReal, 
-        temaFesta: temaFinalParaSalvar, 
+        temaFesta: (temaFesta || '').trim(), 
         tipoServico, 
         tipoEvento: tipoEvento || null,  // 🏷️ Tipo de evento salvo automaticamente
         dataRetirada: datas.retirada, 
@@ -1246,237 +1521,340 @@ const NovaLocacao = () => {
               </div>
             </div>
 
-            <div className="form-group mt-20 mb-15">
-              <div className="cliente-header-row">
-                <label className="label-secao-sub">CLIENTE SELECIONADO *</label>
-                <button 
-                  type="button" 
-                  className="btn-add-cliente-luxo"
-                  onClick={() => setModalNovoClienteAberto(true)}
-                >
-                  <i className="fas fa-user-plus"></i> + NOVO CLIENTE
-                </button>
-              </div>
-                <select 
-                  value={clienteSelecionado} 
-                  onChange={e => {
-                    const cId = e.target.value;
-                    setClienteSelecionado(cId);
-                    setAutorizacaoExcepcional(false);
-                    if (cId) {
-                      const infoPend = getPendenciasCliente(cId);
-                      if (infoPend.temPendencia) {
-                        setModalTravaCliente({
-                          cliente: infoPend.clienteObj,
-                          pendencias: infoPend.pendencias,
-                          valorDevido: infoPend.valorDevido
-                        });
-                      }
+            {/* 👤 SELEÇÃO DE CLIENTE LUXO (BUSCA SEARCHABLE + CARD EXECUTIVO) */}
+            <div className="form-group mt-15 mb-15">
+              <label className="label-secao-sub" style={{ marginBottom: '6px' }}>👤 CLIENTE *</label>
 
-                      // Preenche endereço do cliente na logística se houver
-                      const cli = clientes.find(c => String(c.id) === String(cId));
-                      if (cli && (cli.rua || cli.endereco || cli.cep || cli.cidade)) {
-                        const endCli = {
-                          cep: cli.cep || '',
-                          rua: cli.rua || cli.endereco || '',
-                          numero: cli.numero || '',
-                          bairro: cli.bairro || '',
-                          cidade: cli.cidade ? `${cli.cidade}${cli.uf ? ` - ${cli.uf}` : ''}` : ''
-                        };
-                        setLogistica(prev => ({
-                          ...prev,
-                          cep: prev.cep || endCli.cep,
-                          rua: prev.rua || endCli.rua,
-                          numero: prev.numero || endCli.numero,
-                          bairro: prev.bairro || endCli.bairro,
-                          cidade: prev.cidade || endCli.cidade
-                        }));
+              {(() => {
+                const clienteObjSelecionado = clientes.find(c => String(c.id) === String(clienteSelecionado));
+                const pendenciasClienteAtual = getPendenciasCliente(clienteSelecionado);
 
-                        if (endCli.rua || endCli.cep) {
-                          calcularDistanciaAutomatica(endCli);
-                        }
-                      }
-                    }
-                  }}
-                  className="select-cliente-vip"
-                  style={{
-                    borderColor: clienteSelecionado && getPendenciasCliente(clienteSelecionado).temPendencia ? '#ef4444' : '#cbd5e1',
-                    background: clienteSelecionado && getPendenciasCliente(clienteSelecionado).temPendencia ? '#fef2f2' : '#ffffff'
-                  }}
-                >
-                  <option value="" disabled hidden>Selecione um cliente cadastrado...</option>
-                  {clientes.map(c => {
-                    const infoPend = getPendenciasCliente(c.id);
-                    return (
-                      <option key={c.id} value={c.id}>
-                        {infoPend.temPendencia ? '⚠️ [PENDÊNCIA] ' : '👤 '} 
-                        {c.nome || c.nomeFantasia || c.razaoSocial} {c.celular ? `(${c.celular})` : ''}
-                        {infoPend.temPendencia ? ` — Débito R$ ${infoPend.valorDevido.toFixed(2)}` : ''}
-                      </option>
-                    );
-                  })}
-                </select>
-
-                {/* BANNER DE ALERTA DE PENDÊNCIA SE O CLIENTE ATUAL TIVER RESTRIÇÃO */}
-                {clienteSelecionado && (() => {
-                  const info = getPendenciasCliente(clienteSelecionado);
-                  if (!info.temPendencia) return null;
+                if (!clienteObjSelecionado) {
                   return (
-                    <div style={{
-                      marginTop: '8px',
-                      background: '#fef2f2',
-                      border: '1px solid #fecaca',
-                      borderRadius: '10px',
-                      padding: '10px 14px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'space-between',
-                      gap: '10px',
-                      flexWrap: 'wrap'
-                    }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <span style={{ fontSize: '1.2rem', color: '#dc2626' }}>🚨</span>
-                        <div>
-                          <strong style={{ fontSize: '0.84rem', color: '#991b1b', display: 'block' }}>
-                            ATENÇÃO: CLIENTE COM PENDÊNCIA FINANCEIRA (R$ {info.valorDevido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })})
-                          </strong>
-                          <span style={{ fontSize: '0.74rem', color: '#b91c1c' }}>
-                            {autorizacaoExcepcional 
-                              ? '⚠️ Locação autorizada pelo gestor sob termo de ciência.' 
-                              : 'Recomendado regularizar débitos em atraso antes de concluir a locação.'}
-                          </span>
-                        </div>
+                    <div className="seletor-cliente-container" ref={seletorClienteRef}>
+                      <div className="seletor-cliente-input-box">
+                        <i className="fas fa-search seletor-cliente-icon"></i>
+                        <input
+                          type="text"
+                          placeholder="Buscar cliente por Nome, WhatsApp ou CPF..."
+                          value={buscaClienteTexto}
+                          onChange={e => {
+                            setBuscaClienteTexto(e.target.value);
+                            setMostrarDropdownCliente(true);
+                          }}
+                          onFocus={() => setMostrarDropdownCliente(true)}
+                          className="input-busca-cliente"
+                        />
+                        {buscaClienteTexto && (
+                          <button
+                            type="button"
+                            className="btn-limpar-busca-cli"
+                            onClick={() => {
+                              setBuscaClienteTexto('');
+                              setMostrarDropdownCliente(false);
+                            }}
+                          >
+                            ✕
+                          </button>
+                        )}
                       </div>
-                      <button 
-                        type="button" 
-                        onClick={() => setModalTravaCliente({ cliente: info.clienteObj, pendencias: info.pendencias, valorDevido: info.valorDevido })}
-                        style={{
-                          background: '#dc2626',
-                          color: '#ffffff',
-                          border: 'none',
-                          padding: '6px 12px',
-                          borderRadius: '8px',
-                          fontSize: '0.74rem',
-                          fontWeight: '800',
-                          cursor: 'pointer'
-                        }}
-                      >
-                        🔍 Ver Pendência
-                      </button>
+
+                      {/* DROPDOWN POPUP DE CLIENTES */}
+                      {mostrarDropdownCliente && (
+                        <div className="popover-clientes-lista">
+                          {clientesFiltrados.length > 0 ? (
+                            clientesFiltrados.map(c => {
+                              const infoPend = getPendenciasCliente(c.id);
+                              const nome = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente sem nome';
+                              const tel = c.celular || c.telefone || '';
+                              const doc = c.cpf || c.cnpj || '';
+
+                              return (
+                                <div
+                                  key={c.id}
+                                  className={`cliente-opcao-card ${infoPend.temPendencia ? 'com-pendencia' : ''}`}
+                                  onClick={() => handleSelecionarCliente(c.id)}
+                                >
+                                  <div className="cliente-opcao-avatar">
+                                    {nome.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="cliente-opcao-dados">
+                                    <div className="cliente-opcao-nome">
+                                      {nome}
+                                    </div>
+                                    <div className="cliente-opcao-sub">
+                                      {tel && <span>📱 {tel}</span>}
+                                      {doc && <span>📄 {doc}</span>}
+                                    </div>
+                                  </div>
+                                  <div className="cliente-opcao-status">
+                                    {infoPend.temPendencia ? (
+                                      <span className="badge-pendencia-pill">
+                                        ⚠️ Débito R$ {infoPend.valorDevido.toFixed(2)}
+                                      </span>
+                                    ) : (
+                                      <span className="badge-ok-pill">✓ Ativo</span>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          ) : (
+                            <div className="cliente-opcao-vazia">
+                              <p style={{ margin: 0 }}>Nenhum cliente cadastrado encontrado com "<strong>{buscaClienteTexto}</strong>".</p>
+                              <small style={{ color: '#94a3b8' }}>Cadastre o cliente previamente na aba Clientes.</small>
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
-                })()}
+                }
+
+                /* CARD DO CLIENTE SELECIONADO */
+                return (
+                  <div className={`card-cliente-selecionado ${pendenciasClienteAtual.temPendencia ? 'alerta-debito' : ''}`}>
+                    <div className="card-cli-left">
+                      <div className="card-cli-avatar">
+                        {(clienteObjSelecionado.nome || clienteObjSelecionado.nomeFantasia || 'C').charAt(0).toUpperCase()}
+                      </div>
+                      <div className="card-cli-info">
+                        <div className="card-cli-nome-row">
+                          <strong>{clienteObjSelecionado.nome || clienteObjSelecionado.nomeFantasia || clienteObjSelecionado.razaoSocial}</strong>
+                          {pendenciasClienteAtual.temPendencia ? (
+                            <span className="badge-pendencia-pill">
+                              ⚠️ Débito R$ {pendenciasClienteAtual.valorDevido.toFixed(2)}
+                            </span>
+                          ) : (
+                            <span className="badge-ok-pill">✓ Regular</span>
+                          )}
+                        </div>
+                        <div className="card-cli-sub-info">
+                          {(clienteObjSelecionado.celular || clienteObjSelecionado.telefone) && (
+                            <span>📱 {clienteObjSelecionado.celular || clienteObjSelecionado.telefone}</span>
+                          )}
+                          {(clienteObjSelecionado.cpf || clienteObjSelecionado.cnpj) && (
+                            <span>📄 {clienteObjSelecionado.cpf || clienteObjSelecionado.cnpj}</span>
+                          )}
+                          {clienteObjSelecionado.cidade && (
+                            <span>📍 {clienteObjSelecionado.cidade}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="card-cli-actions">
+                      {pendenciasClienteAtual.temPendencia && (
+                        <button
+                          type="button"
+                          className="btn-ver-pendencia-mini"
+                          onClick={() => setModalTravaCliente({
+                            cliente: pendenciasClienteAtual.clienteObj,
+                            pendencias: pendenciasClienteAtual.pendencias,
+                            valorDevido: pendenciasClienteAtual.valorDevido
+                          })}
+                        >
+                          🔍 Ver Débito
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="btn-trocar-cliente"
+                        onClick={() => {
+                          setClienteSelecionado('');
+                          setMostrarDropdownCliente(true);
+                        }}
+                        title="Trocar Cliente"
+                      >
+                        Trocar ✕
+                      </button>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* 🏷️ TIPO DE EVENTO & 🎭 TEMA DA FESTA (DIRETO E SEM BUROCRACIA) */}
+            {/* 🏷️ TIPO DE EVENTO & 🎭 TEMA DA FESTA (GRID 2 COLUNAS LIMPO E DIRETO) */}
+            <div className="grid-temas-2col mt-12">
+              {/* 1. TIPO DE EVENTO */}
+              <div className="form-group">
+                <label>🏷️ Tipo de Evento</label>
+                <select
+                  value={tipoEvento}
+                  onChange={e => setTipoEvento(e.target.value)}
+                  className="select-gaveta-evento"
+                >
+                  <option value="">Selecione o Tipo de Evento...</option>
+                  {TIPOS_EVENTO.map(tipo => (
+                    <option key={tipo.value} value={tipo.value}>
+                      {tipo.emoji} {tipo.label}
+                    </option>
+                  ))}
+                </select>
               </div>
 
-            <div className="form-row mt-10">
-                <div className="form-group flex-1">
-                    <label>Categoria do Tema *</label>
-                    <select value={categoriaTema} onChange={e => {
-                        const novaCat = e.target.value;
-                        setCategoriaTema(novaCat);
-                        const subsDaCat = novaCat ? Object.keys(CATALOGO_TEMAS[novaCat] || {}) : [];
-                        if (subsDaCat.length === 1) {
-                            const unicaSub = subsDaCat[0];
-                            setSubcategoriaTema(unicaSub);
-                            const gruposDaSub = Object.keys(CATALOGO_TEMAS[novaCat][unicaSub] || {});
-                            if (gruposDaSub.length === 1) setGrupoTemaSelecionado(gruposDaSub[0]);
-                            else setGrupoTemaSelecionado('');
-                        } else {
-                            setSubcategoriaTema('');
-                            setGrupoTemaSelecionado('');
-                        }
-                        setTemaFesta('');
-                    }}>
-                        <option value="" disabled hidden>Selecione a Categoria...</option>
-                        {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                </div>
-       
-                <div className="form-group flex-1">
-                    <label>Subcategoria do Tema *</label>
-                    <select value={subcategoriaTema} onChange={e => {
-                        const novaSub = e.target.value;
-                        setSubcategoriaTema(novaSub);
-                        const gruposDaSub = (categoriaTema && novaSub) ? Object.keys(CATALOGO_TEMAS[categoriaTema][novaSub] || {}) : [];
-                        if (gruposDaSub.length === 1) setGrupoTemaSelecionado(gruposDaSub[0]);
-                        else setGrupoTemaSelecionado('');
-                        setTemaFesta('');
-                    }} disabled={!categoriaTema || subcategoriasDisponiveis.length === 1}>
-                        <option value="" disabled hidden>{!categoriaTema ? 'Escolha a Categoria antes...' : 'Selecione a Subcategoria...'}</option>
-                        {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
-                    </select>
-                </div>
+              {/* 2. 1º CATEGORIA */}
+              <div className="form-group">
+                <label>🎭 1º Categoria *</label>
+                <select
+                  value={categoriaTema}
+                  onChange={e => {
+                    setCategoriaTema(e.target.value);
+                    setSubcategoriaTema('');
+                    setGrupoTemaSelecionado('');
+                    setTemaFesta('');
+                  }}
+                >
+                  <option value="">Selecione a Categoria...</option>
+                  {categoriasDeTemaUnicas.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 3. 2º SUBCATEGORIA */}
+              <div className="form-group">
+                <label>2º Subcategoria *</label>
+                <select
+                  value={subcategoriaTema}
+                  onChange={e => {
+                    setSubcategoriaTema(e.target.value);
+                    setGrupoTemaSelecionado('');
+                    setTemaFesta('');
+                  }}
+                  disabled={!categoriaTema}
+                >
+                  <option value="">Selecione a Subcategoria...</option>
+                  {subcategoriasDisponiveis.map(sub => (
+                    <option key={sub} value={sub}>{sub}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 4. 3º GRUPO / ESTILO */}
+              <div className="form-group">
+                <label>3º Grupo / Estilo *</label>
+                <select
+                  value={grupoTemaSelecionado}
+                  onChange={e => {
+                    setGrupoTemaSelecionado(e.target.value);
+                    setTemaFesta('');
+                  }}
+                  disabled={!subcategoriaTema}
+                >
+                  <option value="">Selecione o Grupo...</option>
+                  {gruposDisponiveis.map(grupo => (
+                    <option key={grupo} value={grupo}>{grupo}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* 5. 4º TEMA ESPECÍFICO (DESTAQUE NA LARGURA TOTAL) */}
+              <div className="form-group tema-destaque-campo">
+                <label>🎉 4º Tema Específico da Festa / Evento *</label>
+                <select
+                  value={temaFesta}
+                  onChange={e => setTemaFesta(e.target.value)}
+                  disabled={!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA'}
+                >
+                  <option value="">Selecione o Tema...</option>
+                  {temasDisponiveis.map(t => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                  <option value="OUTRO_TEMA" style={{ fontWeight: 'bold', color: '#c5a059' }}>✏️ Outro (Digitar Novo Tema Personalizado)</option>
+                </select>
+              </div>
             </div>
 
-            <div className="form-row mt-10">
-              <div className="form-group flex-1">
-                    <label>Grupo de Tema *</label>
-                    <select value={grupoTemaSelecionado} onChange={e => {
-                        setGrupoTemaSelecionado(e.target.value);
-                        setTemaFesta('');
-                    }} disabled={!subcategoriaTema || gruposDisponiveis.length === 1}>
-                        <option value="" disabled hidden>{!subcategoriaTema ? 'Escolha a Subcategoria antes...' : 'Selecione o Grupo...'}</option>
-                        {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
-                    </select>
-                </div>
-
-                <div className="form-group flex-1">
-                  <label>Tema Específico *</label>
-                    <select value={temaFesta} onChange={e => setTemaFesta(e.target.value)} disabled={(!grupoTemaSelecionado && temaFesta !== 'OUTRO_TEMA')}>
-                        <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Escolha o Grupo antes...' : 'Selecione o Tema...'}</option>
-                        {temasDisponiveis.map(t => (
-                            <option key={t} value={t}>{t}</option>
-                        ))}
-                        <option value="OUTRO_TEMA" style={{fontWeight: 'bold', color: '#3b82f6'}}>✏️ Outro (Digitar Novo Tema)</option>
-                    </select>
-                </div>
-            </div>
-
+            {/* SE DIGITAR OUTRO TEMA */}
             {temaFesta === 'OUTRO_TEMA' && (
-                <div className="form-row" style={{animation: 'fadeIn 0.3s'}}>
-                    <div className="form-group flex-1" style={{background: '#eff6ff', padding: '15px', borderRadius: '8px', border: '1px dashed #3b82f6'}}>
-                        <label style={{color: '#1d4ed8'}}>Digite o nome do novo tema *</label>
-                        <input 
-                          type="text" 
-                          placeholder="Ex: Bailarina Rosa com Ouro..." 
-                          value={temaDigitadoPersonalizado} 
-                          onChange={e => {
-                            const val = e.target.value;
-                            const formatado = val.replace(/(?:^|\s)\S/g, a => a.toUpperCase());
-                            setTemaDigitadoPersonalizado(formatado);
-                          }} 
-                          autoCapitalize="words"
-                          style={{borderColor: '#bfdbfe'}} 
-                          autoFocus
-                        />
-                    </div>
-                </div>
+              <div className="form-group mt-10" style={{ background: 'rgba(197, 160, 89, 0.08)', padding: '12px 14px', borderRadius: '10px', border: '1.5px dashed #c5a059' }}>
+                <label style={{ color: '#926f2d', fontWeight: '800' }}>✏️ Digite o nome do Tema Personalizado *</label>
+                <input
+                  type="text"
+                  placeholder="Ex: Bailarina Rosa com Ouro..."
+                  value={temaDigitadoPersonalizado}
+                  onChange={e => setTemaDigitadoPersonalizado(e.target.value)}
+                  style={{ borderColor: '#c5a059', marginTop: '4px' }}
+                  autoFocus
+                />
+              </div>
             )}
 
-            <div className="form-row mt-10 grid-2-col-mobile">
-              <div className="form-group flex-1">
-                <label>Data Retirada *</label>
-                <input type="date" value={datas.retirada} onChange={handleDataRetiradaChange} />
+            {/* ⚡ ATALHOS RÁPIDOS DE DATAS */}
+            <div className="barra-atalhos-datas mt-12">
+              <span className="label-atalhos-datas">
+                ⚡ Atalhos Rápidos:
+              </span>
+              <div className="grupo-botoes-atalhos-datas">
+                <button
+                  type="button"
+                  className="btn-chip-data"
+                  onClick={() => aplicarAtalhoDatas('proxima_sexta_segunda')}
+                  title="Retira Sexta (14h) e devolve Segunda (12h)"
+                >
+                  🎉 Sex ➔ Seg
+                </button>
+                <button
+                  type="button"
+                  className="btn-chip-data"
+                  onClick={() => aplicarAtalhoDatas('proximo_sabado_segunda')}
+                  title="Retira Sábado (09h) e devolve Segunda (12h)"
+                >
+                  🎈 Sáb ➔ Seg
+                </button>
+                <button
+                  type="button"
+                  className="btn-chip-data"
+                  onClick={() => aplicarAtalhoDatas('proximo_sabado_domingo')}
+                  title="Retira Sábado (09h) e devolve Domingo (18h)"
+                >
+                  📅 Sáb ➔ Dom
+                </button>
+                <button
+                  type="button"
+                  className="btn-chip-data"
+                  onClick={() => aplicarAtalhoDatas('hoje_amanha')}
+                  title="Retira Hoje (09h) e devolve Amanhã (18h)"
+                >
+                  ⚡ Hoje ➔ Amanhã
+                </button>
+              </div>
+            </div>
+
+            {/* 📅 DATAS E HORÁRIOS EM GRID ROBUSTO (4 COLUNAS NO DESKTOP, 2x2 NO MOBILE) */}
+            <div className="grid-datas-celebre mt-10">
+              <div className="form-group">
+                <label>📅 Data Retirada *</label>
+                <input 
+                  type="date" 
+                  value={datas.retirada} 
+                  onChange={handleDataRetiradaChange} 
+                />
               </div>
 
-              <div className="form-group flex-1">
-                <label>Hora Retirada</label>
+              <div className="form-group">
+                <label>⏰ Hora Retirada</label>
                 <input 
                   type="time" 
                   value={datas.horarioRetirada || '09:00'} 
                   onChange={e => setDatas({...datas, horarioRetirada: e.target.value})} 
                 />
               </div>
-            </div>
 
-            <div className="form-row mt-10 grid-2-col-mobile">
-              <div className="form-group flex-1">
-                <label>Data Devolução *</label>
-                <input type="date" min={datas.retirada} value={datas.devolucao} onChange={e => setDatas({...datas, devolucao: e.target.value})} />
+              <div className="form-group">
+                <label>📅 Data Devolução *</label>
+                <input 
+                  type="date" 
+                  min={datas.retirada} 
+                  value={datas.devolucao} 
+                  onChange={e => setDatas({...datas, devolucao: e.target.value})} 
+                />
               </div>
 
-              <div className="form-group flex-1">
-                <label>Hora Devolução</label>
+              <div className="form-group">
+                <label>⏰ Hora Devolução</label>
                 <input 
                   type="time" 
                   value={datas.horarioDevolucao || '18:00'} 
@@ -1485,37 +1863,14 @@ const NovaLocacao = () => {
               </div>
             </div>
 
-            <div className="form-row mt-10">
-              <div className="form-group flex-1">
-                <label>🎉 Horário Previsto da Festa / Evento</label>
-                <input 
-                  type="time" 
-                  value={datas.horarioFesta || '19:00'} 
-                  onChange={e => setDatas({...datas, horarioFesta: e.target.value})} 
-                />
-              </div>
-            </div>
-
-            {/* 🏷️ TIPO DE EVENTO */}
-            <div className="form-group mt-15">
-              <label className="label-tipo-evento">🏷️ TIPO DE EVENTO</label>
-              <div className="grid-tipos-evento">
-                {TIPOS_EVENTO.map(tipo => {
-                  const isSelected = tipoEvento === tipo.value;
-                  return (
-                    <button
-                      key={tipo.value}
-                      type="button"
-                      onClick={() => setTipoEvento(prev => prev === tipo.value ? '' : tipo.value)}
-                      className={`btn-tipo-evento ${isSelected ? 'active' : ''}`}
-                    >
-                      <span className="evento-emoji">{tipo.emoji}</span>
-                      <span className="evento-label">{tipo.label}</span>
-                      {isSelected && <span className="evento-check">✓</span>}
-                    </button>
-                  );
-                })}
-              </div>
+            {/* 🎉 HORÁRIO PREVISTO DA FESTA */}
+            <div className="form-group mt-12">
+              <label>🎉 Horário Previsto da Festa / Evento</label>
+              <input 
+                type="time" 
+                value={datas.horarioFesta || '19:00'} 
+                onChange={e => setDatas({...datas, horarioFesta: e.target.value})} 
+              />
             </div>
           </div>
 
@@ -1549,136 +1904,280 @@ const NovaLocacao = () => {
 
             {logistica.tipo === 'entrega' ? (
               <div className="logistica-form mt-15">
-                <div className="form-row">
-                  <div className="form-group flex-1">
-                    <label>CEP do Local da Festa</label>
-                    <input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} />
-                  </div>
-                  <div className="form-group flex-2">
-                    <label>Cidade / UF</label>
-                    <input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} />
-                  </div>
-                  <div className="form-group flex-1">
-                    <label>Taxa de Frete Final (R$)</label>
-                    <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
-                      <input 
-                        type="text" 
-                        placeholder="0,00" 
-                        value={logistica.frete} 
-                        onChange={handleFreteChange} 
-                        style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#16a34a' : '#0f172a' }}
-                      />
-                      {getFreteNumerico() > 0 && (
-                        <button
-                          type="button"
-                          onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
-                          style={{ padding: '6px 8px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecdd3', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer' }}
-                          title="Zerar Frete"
-                        >
-                          <i className="fas fa-times"></i>
-                        </button>
-                      )}
+                
+                {/* 📍 SELETOR DE STATUS DO LOCAL / FRETE */}
+                <div className="seletor-status-local">
+                  <button
+                    type="button"
+                    className={`btn-status-local ${(!logistica.statusLocal || logistica.statusLocal === 'definido') ? 'ativo' : ''}`}
+                    onClick={() => setLogistica(prev => ({ ...prev, statusLocal: 'definido' }))}
+                  >
+                    <span className="icon">📍</span>
+                    <div className="texto">
+                      <strong>Endereço Definido</strong>
+                      <small>Local completo informado</small>
                     </div>
-                  </div>
-                </div>
-                
-                <div className="form-row mt-10">
-                  <div className="form-group flex-2">
-                    <label>Logradouro (Rua / Av.)</label>
-                    <input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} />
-                  </div>
-                  <div className="form-group flex-1">
-                    <label>Número</label>
-                    <input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} />
-                  </div>
-                  <div className="form-group flex-2">
-                    <label>Bairro</label>
-                    <input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} />
-                  </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`btn-status-local warning ${logistica.statusLocal === 'a_definir' ? 'ativo' : ''}`}
+                    onClick={() => {
+                      setLogistica(prev => ({ 
+                        ...prev, 
+                        statusLocal: 'a_definir', 
+                        frete: '' // Zera o frete para não cobrar antes de saber a distância
+                      }));
+                      setKmDistancia('');
+                    }}
+                  >
+                    <span className="icon">⏳</span>
+                    <div className="texto">
+                      <strong>Local a Definir</strong>
+                      <small>Frete lançado após envio</small>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    className={`btn-status-local info ${logistica.statusLocal === 'estimado' ? 'ativo' : ''}`}
+                    onClick={() => setLogistica(prev => ({ ...prev, statusLocal: 'estimado' }))}
+                  >
+                    <span className="icon">🚚</span>
+                    <div className="texto">
+                      <strong>Frete Estimado</strong>
+                      <small>Taxa sugestiva com ajuste</small>
+                    </div>
+                  </button>
                 </div>
 
-                <div className="form-row mt-10">
-                  <div className="form-group flex-1">
-                    <label>Ponto de Referência</label>
-                    <input type="text" placeholder="Ex: Ao lado do mercado, portão preto..." value={logistica.referencia} onChange={e => setLogistica({...logistica, referencia: e.target.value})} />
-                  </div>
-                </div>
-                
-                <div className="form-group mt-10">
-                  <label>Observações de Transporte</label>
-                  <textarea rows="2" placeholder="Casa de esquina, deixar com porteiro..." value={logistica.obsTransporte} onChange={e => setLogistica({...logistica, obsTransporte: e.target.value})}></textarea>
-                </div>
-
-                {/* 🧮 CALCULADORA INTEGRADA DE FRETE POR KM AUTOMÁTICA */}
-                <div style={{ marginTop: '16px', background: '#f8fafc', padding: '16px', borderRadius: '16px', border: '1.5px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '8px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <span style={{ fontSize: '1.2rem' }}>🧮</span>
+                {/* MODO 1: LOCAL A DEFINIR (FRETE PENDENTE) */}
+                {logistica.statusLocal === 'a_definir' && (
+                  <div className="container-status-modo mt-12">
+                    <div className="banner-status-local warning">
+                      <span className="banner-icon">⏳</span>
                       <div>
-                        <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>Calculadora de Frete por KM</strong>
-                        <p style={{ margin: 0, fontSize: '0.74rem', color: '#64748b' }}>Cálculo automático baseado no endereço da sede da sua empresa</p>
+                        <strong>Local da Festa & Frete a Definir pelo Cliente</strong>
+                        <p>
+                          O valor do frete <strong>não será somado agora</strong>. O orçamento e o contrato constarão com a observação oficial de que o frete será calculado e adicionado ao pedido assim que o cliente confirmar o endereço final.
+                        </p>
                       </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                      <button
-                        type="button"
-                        onClick={() => calcularDistanciaAutomatica(null, true)}
-                        disabled={calculandoDistancia}
-                        style={{
-                          background: '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '6px 12px',
-                          fontSize: '0.74rem',
-                          fontWeight: '750',
-                          color: '#2563eb',
-                          cursor: calculandoDistancia ? 'not-allowed' : 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '6px',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                        }}
-                      >
-                        {calculandoDistancia ? (
-                          <><i className="fas fa-spinner fa-spin"></i> Calculando Rota...</>
-                        ) : (
-                          <><i className="fas fa-map-marker-alt"></i> 📍 Calcular Distância Automática</>
-                        )}
-                      </button>
+                    <div className="grid-logistica-linha2 mt-12">
+                      <div className="form-group">
+                        <label>Cidade / Região Prevista (Opcional)</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Vargem Grande do Sul - SP"
+                          value={logistica.cidade}
+                          onChange={e => setLogistica({...logistica, cidade: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Status Frete</label>
+                        <input
+                          type="text"
+                          value="A CALCULAR"
+                          disabled
+                          style={{ fontWeight: '800', color: '#d97706', background: '#fef3c7', borderColor: '#fde68a' }}
+                        />
+                      </div>
+                    </div>
 
-                      <button
-                        type="button"
-                        onClick={() => setMostrarAjusteFrete(!mostrarAjusteFrete)}
-                        style={{
-                          background: mostrarAjusteFrete ? '#e2e8f0' : '#ffffff',
-                          border: '1px solid #cbd5e1',
-                          borderRadius: '8px',
-                          padding: '6px 10px',
-                          fontSize: '0.74rem',
-                          fontWeight: '750',
-                          color: '#334155',
-                          cursor: 'pointer',
-                          display: 'flex',
-                          alignItems: 'center',
-                          gap: '4px',
-                          boxShadow: '0 1px 2px rgba(0,0,0,0.04)'
-                        }}
-                      >
-                        <i className="fas fa-sliders-h" style={{ color: '#c5a059' }}></i> 
-                        {mostrarAjusteFrete ? 'Fechar Ajustes' : '⚙️ Ajustar Veículo & Gasolina'}
-                      </button>
+                    <div className="form-group mt-12">
+                      <label>📝 Observações ou Preferências de Transporte</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Cliente está escolhendo entre 2 chácaras na saída da cidade..."
+                        value={logistica.referencia || logistica.obsTransporte || ''}
+                        onChange={e => setLogistica({...logistica, referencia: e.target.value, obsTransporte: ''})}
+                      />
                     </div>
                   </div>
+                )}
+
+                {/* MODO 2: FRETE ESTIMADO (SUJEITO A REAJUSTE POR KM) */}
+                {logistica.statusLocal === 'estimado' && (
+                  <div className="container-status-modo mt-12">
+                    <div className="banner-status-local info">
+                      <span className="banner-icon">🚚</span>
+                      <div>
+                        <strong>Frete Sugestivo (Sujeito a Ajuste por KM)</strong>
+                        <p>
+                          Preencha abaixo o valor estimado de frete (ex: tarifa urbana). O orçamento deixará explícito que caso o evento ocorra em chácaras, zona rural ou outro município, haverá reajuste de acordo com a quilometragem final.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid-logistica-linha1 mt-12">
+                      <div className="form-group">
+                        <label>Cidade / Região Prevista</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Vargem Grande do Sul - SP"
+                          value={logistica.cidade}
+                          onChange={e => setLogistica({...logistica, cidade: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Bairro / Área Prevista</label>
+                        <input
+                          type="text"
+                          placeholder="Ex: Centro / Perímetro Urbano"
+                          value={logistica.bairro}
+                          onChange={e => setLogistica({...logistica, bairro: e.target.value})}
+                        />
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa Frete Estimada (R$)</label>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            placeholder="Ex: 50,00"
+                            value={logistica.frete}
+                            onChange={handleFreteChange}
+                            style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#16a34a' : 'var(--texto-principal, #0f172a)' }}
+                          />
+                          {getFreteNumerico() > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
+                              style={{ padding: '6px 8px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecdd3', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}
+                              title="Zerar Frete"
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="form-group mt-12">
+                      <label>📝 Observações de Transporte</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Tarifa estimada para centro/bairros urbanos..."
+                        value={logistica.referencia || logistica.obsTransporte || ''}
+                        onChange={e => setLogistica({...logistica, referencia: e.target.value, obsTransporte: ''})}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* MODO 3: ENDEREÇO DEFINIDO (COMPLETO COM CALCULADORA) */}
+                {(!logistica.statusLocal || logistica.statusLocal === 'definido') && (
+                  <>
+                    {/* LINHA 1: CEP | Cidade/UF | Taxa de Frete */}
+                    <div className="grid-logistica-linha1 mt-12">
+                      <div className="form-group">
+                        <label>CEP do Local da Festa</label>
+                        <input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} />
+                      </div>
+                      <div className="form-group">
+                        <label>Cidade / UF</label>
+                        <input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} />
+                      </div>
+                      <div className="form-group">
+                        <label>Taxa de Frete Final (R$)</label>
+                        <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                          <input
+                            type="text"
+                            placeholder="0,00"
+                            value={logistica.frete}
+                            onChange={handleFreteChange}
+                            style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#16a34a' : 'var(--texto-principal, #0f172a)' }}
+                          />
+                          {getFreteNumerico() > 0 && (
+                            <button
+                              type="button"
+                              onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
+                              style={{ padding: '6px 8px', background: '#fee2e2', color: '#dc2626', border: '1px solid #fecdd3', borderRadius: '8px', fontSize: '0.75rem', cursor: 'pointer', flexShrink: 0 }}
+                              title="Zerar Frete"
+                            >
+                              <i className="fas fa-times"></i>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* LINHA 2: Logradouro | Número (mesma linha) */}
+                    <div className="grid-logistica-linha2 mt-12">
+                      <div className="form-group">
+                        <label>Logradouro (Rua / Av.)</label>
+                        <input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} />
+                      </div>
+                      <div className="form-group">
+                        <label>Número</label>
+                        <input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} />
+                      </div>
+                    </div>
+
+                    {/* LINHA 3: Bairro */}
+                    <div className="grid-logistica-linha3 mt-12">
+                      <div className="form-group">
+                        <label>Bairro</label>
+                        <input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} />
+                      </div>
+                    </div>
+
+                    <div className="form-group mt-12">
+                      <label>📝 Referência / Observações de Transporte</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Portão preto ao lado do mercado, deixar com porteiro, casa de esquina..."
+                        value={logistica.referencia || logistica.obsTransporte || ''}
+                        onChange={e => setLogistica({...logistica, referencia: e.target.value, obsTransporte: ''})}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* 🧮 CALCULADORA INTEGRADA DE FRETE POR KM AUTOMÁTICA */}
+                <div className="box-calculadora-frete">
+                  <div className="calc-frete-header">
+                    <div className="calc-frete-header-info">
+                      <div className="calc-frete-icon-badge">🧮</div>
+                      <div>
+                        <strong>Calculadora de Frete por KM</strong>
+                        <p>Cálculo automático de rota e estimativa de custos de transporte</p>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setMostrarAjusteFrete(!mostrarAjusteFrete)}
+                      className={`btn-toggle-veiculo ${mostrarAjusteFrete ? 'ativo' : ''}`}
+                    >
+                      <i className="fas fa-sliders-h"></i>
+                      {mostrarAjusteFrete ? 'Fechar Ajustes' : 'Configurar Veículo'}
+                    </button>
+                  </div>
+
+                  {/* 📍 BANNER DE ENDEREÇO DE ORIGEM (SEDE/ESTOQUE) */}
+                  {(() => {
+                    const conf = configEmpresa || {};
+                    const temEndereco = Boolean(conf.rua || conf.cidade || (conf.cep && conf.cep.replace(/\D/g, '').length === 8));
+                    const endTexto = [conf.rua, conf.numero, conf.bairro, conf.cidade && conf.uf ? `${conf.cidade}/${conf.uf}` : conf.cidade].filter(Boolean).join(', ');
+                    
+                    return temEndereco ? (
+                      <div className="origem-frete-tag" title="Endereço cadastrado em Configurações > Empresa">
+                        📍 <span><strong>Origem (Estoque):</strong> {endTexto || conf.cep || 'Sede da Empresa'}</span>
+                      </div>
+                    ) : (
+                      <div className="origem-frete-tag alerta">
+                        ⚠️ <span><strong>Atenção:</strong> Endereço da Empresa/Estoque não cadastrado em Configurações &gt; Empresa</span>
+                      </div>
+                    );
+                  })()}
 
                   {/* PAINEL RETRÁTIL DE AJUSTE RÁPIDO DO VEÍCULO & GASOLINA */}
                   {mostrarAjusteFrete && (
-                    <div style={{ background: '#ffffff', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '14px', marginBottom: '14px', display: 'flex', flexDirection: 'column', gap: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '10px' }}>
-                        <div>
-                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
-                            🚗 Tipo de Veículo & Consumo
-                          </label>
+                    <div className="painel-ajuste-veiculo">
+                      <div className="grid-ajuste-veiculo">
+                        <div className="ajuste-campo">
+                          <label>🚗 Veículo & Consumo</label>
                           <select
                             value={paramFrete.veiculo}
                             onChange={(e) => {
@@ -1690,7 +2189,6 @@ const NovaLocacao = () => {
                                 consumoKmL: consumos[v] || prev.consumoKmL
                               }));
                             }}
-                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', background: '#f8fafc' }}
                           >
                             <option value="1.0">🚗 Carro 1.0 (12 km/l)</option>
                             <option value="1.6">🚗 Carro 1.4 / 1.6 (9.5 km/l)</option>
@@ -1700,103 +2198,131 @@ const NovaLocacao = () => {
                           </select>
                         </div>
 
-                        <div>
-                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
-                            ⛽ Gasolina (R$/Litro)
+                        <div className="ajuste-campo">
+                          <label>⛽ Tipo de Combustível</label>
+                          <select
+                            value={paramFrete.tipoCombustivel || 'gasolina'}
+                            onChange={(e) => {
+                              const tipo = e.target.value;
+                              const precosSugeridos = {
+                                gasolina: '5.90',
+                                alcool: '3.85',
+                                gasolina_aditivada: '6.25',
+                                diesel: '6.10',
+                                gnv: '4.80'
+                              };
+                              setParamFrete(prev => ({
+                                ...prev,
+                                tipoCombustivel: tipo,
+                                precoGasolina: precosSugeridos[tipo] || prev.precoGasolina
+                              }));
+                            }}
+                          >
+                            <option value="gasolina">⛽ Gasolina Comum</option>
+                            <option value="alcool">⚡ Etanol / Álcool</option>
+                            <option value="gasolina_aditivada">🚀 Gasolina Aditivada</option>
+                            <option value="diesel">🛢️ Diesel S10</option>
+                            <option value="gnv">💨 GNV (Gás Natural)</option>
+                          </select>
+                        </div>
+
+                        <div className="ajuste-campo">
+                          <label>
+                            {paramFrete.tipoCombustivel === 'alcool' 
+                              ? '⚡ Preço Etanol (R$/L)' 
+                              : paramFrete.tipoCombustivel === 'gasolina_aditivada' 
+                              ? '🚀 Gas. Aditivada (R$/L)' 
+                              : paramFrete.tipoCombustivel === 'diesel' 
+                              ? '🛢️ Preço Diesel (R$/L)' 
+                              : paramFrete.tipoCombustivel === 'gnv' 
+                              ? '💨 Preço GNV (R$/m³)' 
+                              : '⛽ Preço Gasolina (R$/L)'}
                           </label>
                           <input
                             type="number"
                             step="0.05"
                             value={paramFrete.precoGasolina}
                             onChange={(e) => setParamFrete(prev => ({ ...prev, precoGasolina: e.target.value }))}
-                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', boxSizing: 'border-box' }}
                           />
                         </div>
 
-                        <div>
-                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
-                            🔁 Trajetos da Locação
-                          </label>
+                        <div className="ajuste-campo">
+                          <label>🔁 Trajetos</label>
                           <select
                             value={paramFrete.viagens}
                             onChange={(e) => setParamFrete(prev => ({ ...prev, viagens: e.target.value }))}
-                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.76rem', fontWeight: '700', color: '#0f172a', background: '#f8fafc' }}
                           >
-                            <option value="4">🔁 4 Viagens (Levar, Voltar, Buscar, Voltar)</option>
-                            <option value="2">➡️ 2 Viagens (Apenas Entrega / Ida e Volta)</option>
+                            <option value="4">🔁 4 Viagens (Levar + Buscar)</option>
+                            <option value="2">➡️ 2 Viagens (Apenas Entrega)</option>
                           </select>
                         </div>
 
-                        <div>
-                          <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
-                            🛠️ Desgaste Veicular (R$/km)
-                          </label>
+                        <div className="ajuste-campo">
+                          <label>🛠️ Desgaste (R$/km)</label>
                           <input
                             type="number"
                             step="0.10"
                             value={paramFrete.custoAdicionalKm}
                             onChange={(e) => setParamFrete(prev => ({ ...prev, custoAdicionalKm: e.target.value }))}
-                            style={{ width: '100%', padding: '7px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.78rem', fontWeight: '700', color: '#0f172a', boxSizing: 'border-box' }}
                           />
                         </div>
                       </div>
                     </div>
                   )}
 
-                  {/* CAMPO DE DISTÂNCIA KM COM INFO DA ROTA */}
-                  <div style={{ display: 'flex', gap: '10px', alignItems: 'center', flexWrap: 'wrap' }}>
-                    <div style={{ flex: '1 1 220px' }}>
-                      <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>
-                        Distância em KM (Sede da Empresa ↔ Local da Festa)
-                      </label>
-                      <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  {/* GRID PRINCIPAL: DISTÂNCIA KM + BOTÃO CALCULAR AUTOMÁTICO */}
+                  <div className="grid-frete-controles">
+                    <div className="form-group-km">
+                      <label>📏 Distância do Trajeto (KM Ida)</label>
+                      <div className="input-km-wrapper">
                         <input 
                           type="number" 
                           min="0"
                           step="0.1"
-                          placeholder="Digite ou clique em Calcular Automática" 
+                          placeholder="Ex: 15.5" 
                           value={kmDistancia} 
                           onChange={e => setKmDistancia(e.target.value)}
-                          style={{ flex: 1, padding: '9px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.86rem', fontWeight: '800', color: '#0f172a' }}
+                          className="input-km-distancia"
                         />
+                        <span className="unidade-km-badge">km</span>
                         {kmDistancia && (
                           <button
                             type="button"
                             onClick={() => setKmDistancia('')}
-                            style={{ padding: '9px 12px', background: '#f1f5f9', color: '#64748b', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '0.8rem', cursor: 'pointer' }}
+                            className="btn-limpar-km"
                             title="Limpar KM"
                           >
-                            <i className="fas fa-times"></i>
+                            ✕
                           </button>
                         )}
                       </div>
                     </div>
 
-                    {infoRota?.mapsUrl && (
-                      <div style={{ alignSelf: 'flex-end' }}>
+                    <div className="botoes-rota-acoes">
+                      <button
+                        type="button"
+                        onClick={() => calcularDistanciaAutomatica(null, true)}
+                        disabled={calculandoDistancia}
+                        className="btn-calcular-distancia-main"
+                      >
+                        {calculandoDistancia ? (
+                          <><i className="fas fa-spinner fa-spin"></i> Calculando Rota...</>
+                        ) : (
+                          <><i className="fas fa-route"></i> Calcular Rota Automática</>
+                        )}
+                      </button>
+
+                      {infoRota?.mapsUrl && (
                         <a
                           href={infoRota.mapsUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          style={{
-                            padding: '9px 14px',
-                            background: '#ffffff',
-                            border: '1px solid #cbd5e1',
-                            borderRadius: '10px',
-                            fontSize: '0.76rem',
-                            fontWeight: '750',
-                            color: '#1e293b',
-                            textDecoration: 'none',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            gap: '6px',
-                            boxShadow: '0 1px 3px rgba(0,0,0,0.05)'
-                          }}
+                          className="btn-abrir-maps-link"
                         >
-                          <i className="fas fa-external-link-alt" style={{ color: '#3b82f6' }}></i> Abrir no Google Maps
+                          <i className="fas fa-external-link-alt"></i> Maps
                         </a>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
 
                   {/* RESULTADO CALCULADO COM MEMÓRIA DE CÁLCULO E BOTÕES DE APLICAÇÃO */}
@@ -1816,72 +2342,98 @@ const NovaLocacao = () => {
                       'caminhao': 'Caminhão (4.5 km/l)'
                     }[paramFrete.veiculo] || 'Veículo';
 
+                    const labelCombustivel = {
+                      gasolina: 'Gasolina',
+                      alcool: 'Etanol/Álcool',
+                      gasolina_aditivada: 'Gas. Aditivada',
+                      diesel: 'Diesel',
+                      gnv: 'GNV'
+                    }[paramFrete.tipoCombustivel] || 'Gasolina';
+
                     return (
-                      <div style={{ marginTop: '14px', background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '14px', padding: '14px', display: 'flex', flexDirection: 'column', gap: '10px', boxShadow: '0 4px 12px rgba(0,0,0,0.04)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
-                          <div>
-                            <span style={{ fontSize: '0.76rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                              Frete Calculado ({kmDistancia} km · {nomeVeiculo}):
+                      <div className="card-resultado-frete">
+                        {infoRota?.oficialGoogle && (
+                          <div style={{
+                            background: '#eff6ff',
+                            border: '1px solid #bfdbfe',
+                            padding: '6px 12px',
+                            borderRadius: '8px',
+                            fontSize: '0.74rem',
+                            color: '#1e40af',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            fontWeight: '700'
+                          }}>
+                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                              <i className="fab fa-google" style={{ color: '#2563eb' }}></i>
+                              Rota Oficial Google Maps (Porta a Porta)
                             </span>
-                            <div style={{ fontSize: '1.25rem', color: '#0f172a', fontWeight: '900' }}>
+                            {infoRota.duracaoTexto && (
+                              <span style={{ color: '#3b82f6', fontWeight: '800' }}>
+                                ⏱️ ~{infoRota.duracaoTexto}
+                              </span>
+                            )}
+                          </div>
+                        )}
+                        {infoRota?.numeroNaoMapeado && (
+                          <div style={{
+                            background: 'rgba(245, 158, 11, 0.1)',
+                            border: '1px solid rgba(245, 158, 11, 0.35)',
+                            padding: '8px 12px',
+                            borderRadius: '10px',
+                            fontSize: '0.74rem',
+                            color: '#92400e',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '8px'
+                          }}>
+                            <span style={{ fontSize: '1.1rem' }}>⚠️</span>
+                            <div>
+                              <strong>Numeração específica (Nº {infoRota.numeroDigitado}) não localizada no mapa desta rua:</strong> A distância foi estimada pelo início/centro da via. Confira a rota no botão <strong>Maps</strong>.
+                            </div>
+                          </div>
+                        )}
+                        <div className="resultado-frete-topo">
+                          <div className="resultado-frete-destaque">
+                            <span className="badge-veiculo-info">
+                              {kmDistancia} km · {nomeVeiculo} · {labelCombustivel} · {est.viagens} viagens
+                            </span>
+                            <div className="resultado-frete-valor">
                               R$ {freteFormatado}
                             </div>
                           </div>
 
-                          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                          <div className="resultado-frete-botoes">
                             <button
                               type="button"
                               onClick={() => {
                                 setLogistica(prev => ({ ...prev, tipo: 'entrega', frete: freteFormatado }));
                               }}
-                              style={{
-                                background: jaAplicado ? '#16a34a' : 'linear-gradient(135deg, #0f172a 0%, #1e3a5f 100%)',
-                                color: '#ffffff',
-                                border: 'none',
-                                borderRadius: '10px',
-                                padding: '10px 18px',
-                                fontSize: '0.84rem',
-                                fontWeight: '850',
-                                cursor: 'pointer',
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                gap: '8px',
-                                transition: '0.2s',
-                                boxShadow: jaAplicado ? 'none' : '0 4px 14px rgba(15, 23, 42, 0.25)'
-                              }}
+                              className={`btn-aplicar-frete ${jaAplicado ? 'ja-aplicado' : ''}`}
                             >
                               {jaAplicado ? (
                                 <><i className="fas fa-check-circle"></i> Frete Aplicado ao Pedido</>
                               ) : (
-                                <><i className="fas fa-plus-circle"></i> ➕ Aplicar este Frete (R$ {freteFormatado})</>
+                                <><i className="fas fa-plus-circle"></i> Aplicar ao Pedido (R$ {freteFormatado})</>
                               )}
                             </button>
 
                             <button
                               type="button"
                               onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
-                              style={{
-                                background: '#f8fafc',
-                                border: '1px solid #cbd5e1',
-                                borderRadius: '10px',
-                                padding: '10px 14px',
-                                fontSize: '0.78rem',
-                                fontWeight: '750',
-                                color: '#64748b',
-                                cursor: 'pointer'
-                              }}
+                              className="btn-frete-gratis"
+                              title="Remover frete e zerar valor"
                             >
-                              Frete Grátis / Zerar
+                              Zerar Frete
                             </button>
                           </div>
                         </div>
 
-                        <div style={{ fontSize: '0.76rem', color: '#475569', background: '#f8fafc', padding: '8px 12px', borderRadius: '8px', lineHeight: '1.5', border: '1px solid #f1f5f9' }}>
-                          ⛽ <strong>Gasolina:</strong> R$ {est.custoGasolina.toFixed(2)} ({est.viagens} percursos de ida/volta ÷ {est.consumo} km/l × R$ {Number(est.precoGas).toFixed(2)})
-                          <span style={{ margin: '0 8px', color: '#cbd5e1' }}>|</span>
-                          🛠️ <strong>Desgaste & Tempo:</strong> R$ {est.custoDesgaste.toFixed(2)} (R$ {Number(est.custoOp).toFixed(2)}/km)
-                          <span style={{ margin: '0 8px', color: '#cbd5e1' }}>|</span>
-                          <strong>Taxa Média:</strong> ~R$ {est.taxaEfetivaKm}/km
+                        <div className="box-memoria-calculo">
+                          <span>⛽ {labelCombustivel}: <strong>R$ {est.custoGasolina.toFixed(2)}</strong></span>
+                          <span>🛠️ Desgaste: <strong>R$ {est.custoDesgaste.toFixed(2)}</strong></span>
+                          <span>📊 Taxa Média: <strong>~R$ {est.taxaEfetivaKm}/km</strong></span>
                         </div>
                       </div>
                     );
@@ -1897,22 +2449,13 @@ const NovaLocacao = () => {
           <div className="card-secao">
             <div className="header-com-botoes">
               <h3 className="section-divider" style={{margin: 0, border: 'none'}}>📦 ITENS DO PEDIDO</h3>
-              <div className="botoes-acoes-itens">
-                <button 
-                  type="button" 
-                  className="btn-secundario-alerta" 
-                  onClick={() => { 
-                    const clienteObj = clientes.find(c => String(c.id) === String(clienteSelecionado));
-                    const nomeCli = clienteObj ? (clienteObj.nome || clienteObj.nomeFantasia || clienteObj.razaoSocial || '') : (clienteSelecionado || 'Cliente em Atendimento');
-                    const nomeTema = temaFesta === 'OUTRO_TEMA' ? temaDigitadoPersonalizado : (temaFesta || '');
-                    const url = `/compras/nova?clienteNome=${encodeURIComponent(nomeCli)}&temaFesta=${encodeURIComponent(nomeTema)}&dataRetirada=${encodeURIComponent(datas.retirada || '')}`;
-                    window.open(url, '_blank');
-                  }}
-                >
-                  🛒 Faltou algo? (Comprar)
-                </button>
-                <button type="button" className="btn-primary-outline" onClick={abrirCatalogo}>+ ADC. PEÇAS</button>
-              </div>
+              {carrinho.length > 0 && (
+                <div className="botoes-acoes-itens">
+                  <button type="button" className="btn-destaque-adc-pecas" onClick={abrirCatalogo}>
+                    ✨ + Adicionar Mais Peças
+                  </button>
+                </div>
+              )}
             </div>
 
             <div className="carrinho-container mt-15">
@@ -1965,13 +2508,22 @@ const NovaLocacao = () => {
               })()}
 
               {carrinho.length === 0 ? (
-                <div className="carrinho-vazio">Nenhuma peça adicionada ainda. Clique em "+ Adc. Peças".</div>
+                <div className="carrinho-vazio-destaque" onClick={abrirCatalogo}>
+                  <div className="vazio-icone">🛍️</div>
+                  <div className="vazio-texto">
+                    <strong>Nenhuma peça adicionada ao pedido ainda</strong>
+                    <p>Clique no botão abaixo para abrir o catálogo e selecionar mesas, painéis, louças e suportes.</p>
+                  </div>
+                  <button type="button" className="btn-vazio-abrir-catalogo">
+                    ✨ + Adicionar Peças do Acervo
+                  </button>
+                </div>
               ) : (
                 <div style={{overflowX: 'auto'}}>
                   {carrinho.filter(i => !i.isDebitoAnterior).length === 0 && (
                     <div style={{ background: '#f8fafc', border: '1px dashed #cbd5e1', borderRadius: '10px', padding: '12px 16px', marginBottom: '14px', color: '#475569', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <span style={{ fontSize: '1.1rem' }}>💡</span>
-                      <span><strong>Débito anterior incorporado!</strong> Agora adicione as peças da nova locação clicando no botão <strong>"+ ADC. PEÇAS"</strong> acima.</span>
+                      <span><strong>Débito anterior incorporado!</strong> Agora adicione as peças da nova locação clicando no botão <strong>"+ Adicionar Mais Peças"</strong> acima.</span>
                     </div>
                   )}
                     <table style={{width: '100%', borderCollapse: 'collapse', minWidth: '500px'}}>
@@ -2135,6 +2687,23 @@ const NovaLocacao = () => {
                 </div>
               )}
             </div>
+
+            {/* 🛒 RODAPÉ COM OPÇÃO DISCRETA DE COMPRAR PEÇA EM FALTA */}
+            <div style={{ marginTop: '14px', paddingTop: '10px', borderTop: '1px solid var(--borda, #f1f5f9)', display: 'flex', justifyContent: 'flex-end' }}>
+              <button 
+                type="button" 
+                className="btn-link-comprar-opcional" 
+                onClick={() => { 
+                  const clienteObj = clientes.find(c => String(c.id) === String(clienteSelecionado));
+                  const nomeCli = clienteObj ? (clienteObj.nome || clienteObj.nomeFantasia || clienteObj.razaoSocial || '') : (clienteSelecionado || 'Cliente em Atendimento');
+                  const url = `/compras/nova?clienteNome=${encodeURIComponent(nomeCli)}&temaFesta=${encodeURIComponent(temaFesta || '')}&dataRetirada=${encodeURIComponent(datas.retirada || '')}`;
+                  window.open(url, '_blank');
+                }}
+                title="Faltou alguma peça no acervo? Solicite a compra para o setor de compras"
+              >
+                🛒 Faltou alguma peça no acervo? (Comprar)
+              </button>
+            </div>
           </div>
 
           <div className="card-secao">
@@ -2153,132 +2722,117 @@ const NovaLocacao = () => {
 
         <aside className="coluna-financeiro">
           <div className="card-financeiro-sticky">
-            <h3>Resumo Financeiro</h3>
-            <div className="fin-linha">
-              <span>Subtotal Itens</span> 
-              <span>R$ {calcularTotal().subtotal.toFixed(2)}</span>
+            <div className="header-resumo-financeiro">
+              <h3>💰 Resumo Financeiro</h3>
             </div>
 
-            <div className="fin-linha" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span>Frete</span> 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontWeight: '800', color: getFreteNumerico() > 0 ? '#0f172a' : '#64748b' }}>
-                  {getFreteNumerico() > 0 ? `+ R$ ${getFreteNumerico().toFixed(2)}` : 'R$ 0,00'}
-                </span>
-                {getFreteNumerico() > 0 && (
-                  <button 
-                    type="button" 
-                    onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
-                    style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.8rem', padding: '0 2px' }}
-                    title="Remover / Zerar Frete"
-                  >
-                    <i className="fas fa-times-circle"></i>
-                  </button>
-                )}
+            <div className="fin-corpo">
+              <div className="fin-linha">
+                <span>Subtotal Itens</span> 
+                <strong>R$ {calcularTotal().subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
               </div>
-            </div>
-            
-            <div className="fin-linha desconto-linha" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '12px 0' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <span style={{ fontWeight: '700', fontSize: '0.88rem' }}>Desconto</span>
-                <div className="tipo-desconto-toggle" style={{ display: 'inline-flex', background: '#f1f5f9', borderRadius: '8px', padding: '2px', border: '1px solid #cbd5e1' }}>
-                  <button 
-                    type="button" 
-                    onClick={() => setTipoDesconto('R$')}
-                    style={{
-                      padding: '3px 8px',
-                      fontSize: '0.72rem',
-                      fontWeight: '800',
-                      borderRadius: '6px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      background: tipoDesconto === 'R$' ? '#c5a059' : 'transparent',
-                      color: tipoDesconto === 'R$' ? '#ffffff' : '#64748b',
-                      transition: '0.2s'
-                    }}
-                  >
-                    R$
-                  </button>
-                  <button 
-                    type="button" 
-                    onClick={() => setTipoDesconto('%')}
-                    style={{
-                      padding: '3px 8px',
-                      fontSize: '0.72rem',
-                      fontWeight: '800',
-                      borderRadius: '6px',
-                      border: 'none',
-                      cursor: 'pointer',
-                      background: tipoDesconto === '%' ? '#c5a059' : 'transparent',
-                      color: tipoDesconto === '%' ? '#ffffff' : '#64748b',
-                      transition: '0.2s'
-                    }}
-                  >
-                    %
-                  </button>
+
+              <div className="fin-linha">
+                <span>Frete / Logística</span> 
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <strong style={{ color: getFreteNumerico() > 0 ? '#0f172a' : '#64748b' }}>
+                    {getFreteNumerico() > 0 ? `+ R$ ${getFreteNumerico().toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'Grátis / Balcão'}
+                  </strong>
+                  {getFreteNumerico() > 0 && (
+                    <button 
+                      type="button" 
+                      onClick={() => setLogistica(prev => ({ ...prev, frete: '' }))}
+                      style={{ background: 'transparent', border: 'none', color: '#dc2626', cursor: 'pointer', fontSize: '0.8rem', padding: '0 2px' }}
+                      title="Remover / Zerar Frete"
+                    >
+                      <i className="fas fa-times-circle"></i>
+                    </button>
+                  )}
                 </div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <input 
-                  type="number" 
-                  min="0" 
-                  max={tipoDesconto === '%' ? 100 : undefined}
-                  step={tipoDesconto === '%' ? '1' : '0.01'}
-                  value={desconto} 
-                  onChange={e => setDesconto(e.target.value)} 
-                  style={{
-                    width: '90px',
-                    padding: '6px 10px',
-                    borderRadius: '8px',
-                    border: '1.5px solid #c5a059',
-                    fontSize: '0.9rem',
-                    fontWeight: '800',
-                    textAlign: 'right'
-                  }}
-                  placeholder={tipoDesconto === 'R$' ? '0,00' : '0%'}
-                />
-              </div>
-            </div>
-            {tipoDesconto === '%' && Number(desconto) > 0 && (
-              <div style={{ fontSize: '0.75rem', color: '#16a34a', fontWeight: '700', textAlign: 'right', marginTop: '-6px', marginBottom: '8px' }}>
-                - R$ {calcularTotal().valorDesconto.toFixed(2)} ({desconto}% desc.)
-              </div>
-            )}
-
-            {/* 📊 TERMÔMETRO DE MARGEM COMERCIAL */}
-            {(() => {
-              const tot = calcularTotal();
-              const sub = tot.subtotal;
-              const desc = tot.valorDesconto;
-              const margem = sub > 0 ? ((sub - desc) / sub) * 100 : 100;
-              let statusCor = '#16a34a';
-              let statusTxt = '🟢 Margem Saudável';
-              if (margem < 80 && margem >= 65) {
-                statusCor = '#d97706';
-                statusTxt = '🟡 Margem Moderada';
-              } else if (margem < 65) {
-                statusCor = '#dc2626';
-                statusTxt = '🔴 Margem Crítica / Desconto Alto';
-              }
-
-              return (
-                <div style={{ background: '#f8fafc', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${statusCor}40`, margin: '8px 0', fontSize: '0.74rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', color: statusCor }}>
-                    <span>Margem: {margem.toFixed(0)}%</span>
-                    <span>{statusTxt}</span>
+              
+              <div className="fin-linha desconto-linha">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <span style={{ fontWeight: '700' }}>Desconto</span>
+                  <div className="tipo-desconto-toggle">
+                    <button 
+                      type="button" 
+                      className={tipoDesconto === 'R$' ? 'active' : ''}
+                      onClick={() => setTipoDesconto('R$')}
+                    >
+                      R$
+                    </button>
+                    <button 
+                      type="button" 
+                      className={tipoDesconto === '%' ? 'active' : ''}
+                      onClick={() => setTipoDesconto('%')}
+                    >
+                      %
+                    </button>
                   </div>
                 </div>
-              );
-            })()}
-            
-            <div className="fin-total" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '14px 0', padding: '12px 0', borderTop: '2px dashed #e2e8f0' }}>
-              <span style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem' }}>TOTAL</span>
-              <strong style={{ fontSize: '1.4rem', color: '#c5a059', fontWeight: '900' }}>R$ {calcularTotal().total.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+
+                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                  <input 
+                    type="number" 
+                    min="0" 
+                    max={tipoDesconto === '%' ? 100 : undefined}
+                    step={tipoDesconto === '%' ? '1' : '0.01'}
+                    value={desconto} 
+                    onChange={e => setDesconto(e.target.value)} 
+                    className="input-desconto-fin"
+                    placeholder={tipoDesconto === 'R$' ? '0,00' : '0%'}
+                  />
+                </div>
+              </div>
+
+              {tipoDesconto === '%' && Number(desconto) > 0 && (
+                <div style={{ fontSize: '0.74rem', color: '#16a34a', fontWeight: '750', textAlign: 'right', marginTop: '-4px' }}>
+                  - R$ {calcularTotal().valorDesconto.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ({desconto}% desc.)
+                </div>
+              )}
+
+              {/* 📊 TERMÔMETRO DE MARGEM COMERCIAL (EXIBE APENAS QUANDO HÁ ITENS NO PEDIDO) */}
+              {(() => {
+                const tot = calcularTotal();
+                const sub = tot.subtotal;
+                if (!sub || sub <= 0) return null;
+
+                const desc = tot.valorDesconto;
+                const margem = ((sub - desc) / sub) * 100;
+                let statusCor = '#16a34a';
+                let statusTxt = 'Margem Saudável';
+                if (margem < 80 && margem >= 65) {
+                  statusCor = '#d97706';
+                  statusTxt = 'Margem Moderada';
+                } else if (margem < 65) {
+                  statusCor = '#dc2626';
+                  statusTxt = 'Desconto Alto';
+                }
+
+                return (
+                  <div className="box-margem-comercial" style={{ borderColor: `${statusCor}40` }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: '800', color: statusCor, fontSize: '0.74rem' }}>
+                      <span>Margem: {margem.toFixed(0)}%</span>
+                      <span>● {statusTxt}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+              
+              <div className="fin-linha-total">
+                <span>VALOR TOTAL</span>
+                <strong>R$ {calcularTotal().total.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
+              </div>
             </div>
             
             <div className="fin-acoes">
-              <button type="button" className="btn-salvar-form" onClick={() => interceptarSalvamento('confirmado')}>✔ CONFIRMAR PEDIDO</button>
-              <button type="button" className="btn-voltar-link" style={{width: '100%', justifyContent: 'center', marginTop: '10px'}} onClick={() => interceptarSalvamento('orcamento')}>💾 Salvar como Orçamento</button>
+              <button type="button" className="btn-confirmar-pedido" onClick={() => interceptarSalvamento('confirmado')}>
+                <i className="fas fa-check-circle"></i> CONFIRMAR PEDIDO
+              </button>
+              <button type="button" className="btn-salvar-orcamento" onClick={() => interceptarSalvamento('orcamento')}>
+                <i className="fas fa-file-invoice-dollar"></i> Salvar como Orçamento
+              </button>
             </div>
           </div>
         </aside>

@@ -797,19 +797,19 @@ const Locacoes = () => {
         </div>
         <div className="header-actions">
           <button 
+            type="button"
             className="btn-primary-celebre" 
             onClick={() => navigate('/locacoes/nova')}
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}
           >
             + NOVA LOCAÇÃO
           </button>
           <button 
-            className="btn-secundario-alerta" 
+            type="button"
+            className="btn-secondary-celebre" 
             onClick={() => setModalCalendarioAberto(true)}
             title="Ver Matriz de Disponibilidade do Acervo"
-            style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', boxSizing: 'border-box' }}
           >
-            📅 DISPONIBILIDADE
+            <i className="far fa-calendar-alt"></i> DISPONIBILIDADE
           </button>
         </div>
       </header>
@@ -1126,26 +1126,21 @@ const Locacoes = () => {
                   >
                     <td className="pedido-id-cell">
                       <div className="mobile-card-header-row">
-                        <span 
-                          className="pedido-id-text"
-                          onMouseEnter={(e) => { setHoveredPedido(item); setHoverPos({ x: e.clientX, y: e.clientY }); }}
-                          onMouseLeave={() => setHoveredPedido(null)}
-                          onMouseMove={(e) => setHoverPos({ x: e.clientX, y: e.clientY })}
-                        >
-                          {item.numeroPedido ? (
-                            `#${item.numeroPedido}`
-                          ) : item.id ? (
-                            `#${item.id.substring(0,6).toUpperCase()}`
-                          ) : item.isOrcamentoVencido ? (
-                            <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '11px' }}>PERDIDO</span>
-                          ) : isOrcamento ? (
-                            <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '11px' }}>ORÇAMENTO</span>
-                          ) : (
-                            <span style={{ color: '#94a3b8', fontWeight: 'bold' }}>#S/N</span>
-                          )}
-                        </span>
+                        <div className="mobile-card-header-left">
+                          <span className="pedido-id-text">
+                            {item.numeroPedido ? (
+                              `#${item.numeroPedido}`
+                            ) : item.id ? (
+                              `#${item.id.slice(0, 6)}`
+                            ) : isCancelado ? (
+                              <span style={{ color: '#ef4444', fontWeight: 'bold', fontSize: '11px' }}>PERDIDO</span>
+                            ) : isOrcamento ? (
+                              <span style={{ color: '#f59e0b', fontWeight: 'bold', fontSize: '11px' }}>ORÇAMENTO</span>
+                            ) : (
+                              <span style={{ color: '#94a3b8', fontWeight: 'bold' }}>#S/N</span>
+                            )}
+                          </span>
 
-                        <div className="mobile-header-status-badge">
                           <span className={`status-pill-v2 ${item.isOrcamentoVencido ? 'cancelado' : statusStr.replace(/\s+/g, '')}`}>
                             {item.isOrcamentoVencido ? 'PERDIDO' : item.status?.trim().toUpperCase() || 'S/S'}
                           </span>
@@ -1416,24 +1411,27 @@ const Locacoes = () => {
                     <td className="mobile-only-finance-cell">
                       <div className="mobile-finance-integrated-panel">
                         <div className="mobile-finance-panel-col">
-                          <span className="mobile-finance-panel-label">📅 DATA DO EVENTO</span>
+                          <span className="mobile-finance-panel-label">📅 Data do Evento</span>
                           <span className="mobile-finance-panel-val">
                             {item.dataRetirada ? new Date(item.dataRetirada + 'T12:00:00').toLocaleDateString('pt-BR') : '-'}
                           </span>
                         </div>
                         <div className="mobile-finance-panel-col border-left">
-                          <span className="mobile-finance-panel-label">💰 VALOR & STATUS</span>
-                          <div className="mobile-finance-panel-val-row">
-                            <strong className="valor-total" style={{ fontSize: '0.88rem', fontWeight: '850' }}>
+                          <div className="mobile-finance-total-row">
+                            <span className="mobile-finance-panel-label">💰 Total:</span>
+                            <strong className="valor-total">
                               R$ {valorTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </strong>
+                          </div>
+                          <div className="mobile-finance-status-row">
                             {saldoDevedor > 0 ? (
-                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '3px' }}>
-                                <span className="badge-status-pro devedor">
-                                  ▲ R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                              <div className="mobile-saldo-pendente-group">
+                                <span className="badge-devedor-mini">
+                                  Pendente: R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
                                 <button
                                   type="button"
+                                  className="btn-quitar-mini"
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     navigate('/novo-lancamento', {
@@ -1449,23 +1447,14 @@ const Locacoes = () => {
                                       }
                                     });
                                   }}
-                                  style={{
-                                    background: '#f0fdf4',
-                                    color: '#15803d',
-                                    border: '1px solid #86efac',
-                                    borderRadius: '5px',
-                                    padding: '2px 5px',
-                                    fontSize: '0.65rem',
-                                    fontWeight: '800',
-                                    cursor: 'pointer'
-                                  }}
+                                  title="Quitar saldo pendente"
                                 >
-                                  💰 Quitar
+                                  Quitar
                                 </button>
                               </div>
                             ) : (
-                              <span className="badge-status-pro ok">
-                                ✓ PAGO
+                              <span className="badge-pago-mini">
+                                ✓ 100% Pago
                               </span>
                             )}
                           </div>

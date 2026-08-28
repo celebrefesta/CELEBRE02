@@ -12,15 +12,6 @@
     <link rel="canonical" href="https://celebrefesta.com.br" />
     <meta name="description" content="O controle absoluto do seu acervo de decorações. Organize seu estoque, contratos digitais e locações." />
     
-    <!-- Redirecionamento canônico automático para o domínio oficial único -->
-    <script>
-      (function() {
-        var host = window.location.hostname;
-        if (host === 'celebre-9f5c9.web.app' || host === 'celebre-9f5c9.firebaseapp.com') {
-          window.location.replace('https://celebrefesta.com.br' + window.location.pathname + window.location.search + window.location.hash);
-        }
-      })();
-    </script>
 
     <link rel="manifest" href="/manifest.json" />
 
@@ -40,18 +31,31 @@
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
 
-    <!-- Registro Automático do Service Worker PWA -->
+    <!-- Registro Automático do Service Worker PWA (Apenas em Produção) -->
     <script>
       if ('serviceWorker' in navigator) {
-        window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js')
-            .then((reg) => {
-              console.log('✅ Celebre Service Worker registrado com sucesso:', reg.scope);
-            })
-            .catch((err) => {
-              console.warn('Service Worker não pôde ser registrado:', err);
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+          navigator.serviceWorker.getRegistrations().then((registrations) => {
+            for (const registration of registrations) {
+              registration.unregister();
+            }
+          });
+          if ('caches' in window) {
+            caches.keys().then((names) => {
+              for (const name of names) caches.delete(name);
             });
-        });
+          }
+        } else {
+          window.addEventListener('load', () => {
+            navigator.serviceWorker.register('/sw.js')
+              .then((reg) => {
+                console.log('✅ Celebre Service Worker registrado com sucesso:', reg.scope);
+              })
+              .catch((err) => {
+                console.warn('Service Worker não pôde ser registrado:', err);
+              });
+          });
+        }
       }
     </script>
   </body>
