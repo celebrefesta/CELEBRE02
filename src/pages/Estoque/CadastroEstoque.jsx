@@ -999,11 +999,11 @@ const CadastroEstoque = () => {
   return (
     <div className="clientes-container fade-in">
       
-      {/* HERO CABEÇALHO IDÊNTICO AO GESTÃO DE CLIENTES */}
-      <div className="clientes-hero-header">
+      {/* HERO CABEÇALHO CELEBRE LUXURY */}
+      <div className="clientes-hero-header ce-hero-header">
         <div className="header-title-row">
-          <div className="header-icon-badge">
-            {itemEditando ? '✏️' : '✨'}
+          <div className="header-icon-badge ce-icon-badge-glow">
+            <i className={itemEditando ? "fas fa-pen-to-square" : itemDuplicando ? "fas fa-clone" : "fas fa-boxes-stacked"}></i>
           </div>
           <div className="welcome-text">
             <h1>{itemEditando ? 'Editar Peça / Acervo' : itemDuplicando ? 'Duplicar Peça' : dadosCompra ? 'Finalizar Cadastro de Compra' : 'Cadastro de Acervo'}</h1>
@@ -1011,125 +1011,156 @@ const CadastroEstoque = () => {
           </div>
         </div>
         <div className="header-actions">
-          <Link to="/estoque" className="btn-secondary-celebre">
-            ⬅️ VOLTAR AO ESTOQUE
+          <Link to="/estoque" className="btn-secondary-celebre ce-btn-back">
+            <i className="fas fa-arrow-left"></i>
+            <span>Voltar ao Estoque</span>
           </Link>
         </div>
       </div>
 
       <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
         <form onSubmit={salvarItem}>
-          
-          {/* SEÇÃO 1: SELETOR DE MODALIDADE DE CADASTRO */}
-          <div className="ce-card-container">
-            <div className="ce-card-header-clean">
-              <div className="ce-card-header-title">
-                <span>1. O QUE VOCÊ ESTÁ CADASTRANDO?</span>
-              </div>
-              <span className="ce-badge-gold">
-                Selecione o Tipo
-              </span>
-            </div>
-
-            <div className="ce-tipo-grid">
-              <div 
-                onClick={() => handleTipoCadastroChange('avulsa')} 
-                className={`ce-tipo-card ${tipoCadastro === 'avulsa' ? 'active' : ''}`}
-              >
-                <div className="ce-tipo-icon-wrapper">🧩</div>
-                <div className="ce-tipo-info">
-                  <div className="ce-tipo-title-row">
-                    <strong>PEÇA AVULSA / UNIDADE</strong>
-                    {tipoCadastro === 'avulsa' && <span className="ce-tipo-active-pill">✔ ATIVO</span>}
-                  </div>
-                  <small>Item único (ex: 1 Bandeja, 1 Painel)</small>
-                </div>
-              </div>
-
-              <div 
-                onClick={() => handleTipoCadastroChange('kit')} 
-                className={`ce-tipo-card ${tipoCadastro === 'kit' ? 'active' : ''}`}
-              >
-                <div className="ce-tipo-icon-wrapper">📦</div>
-                <div className="ce-tipo-info">
-                  <div className="ce-tipo-title-row">
-                    <strong>KIT / CONJUNTO</strong>
-                    {tipoCadastro === 'kit' && <span className="ce-tipo-active-pill">✔ ATIVO</span>}
-                  </div>
-                  <small>Gera peças separadas (ex: Trio Cilindro)</small>
-                </div>
-              </div>
-
-              <div 
-                onClick={() => handleTipoCadastroChange('decoracao')} 
-                className={`ce-tipo-card ${tipoCadastro === 'decoracao' ? 'active' : ''}`}
-              >
-                <div className="ce-tipo-icon-wrapper">✨</div>
-                <div className="ce-tipo-info">
-                  <div className="ce-tipo-title-row">
-                    <strong>DECORAÇÃO COMPLETA</strong>
-                    {tipoCadastro === 'decoracao' && <span className="ce-tipo-active-pill">✔ ATIVO</span>}
-                  </div>
-                  <small>Junta peças prontas que já existem.</small>
-                </div>
-              </div>
-            </div>
-
-          </div>
-
-          <div style={{ display: 'flex', gap: '30px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
+          <div className="ce-unified-sheet">
             
-            <div style={{ width: '100%', maxWidth: '380px', flexShrink: 0, display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              
-              {/* CARD 1: FOTOS DO PRODUTO */}
-              <div className="ce-card-container">
-                  <div className="ce-card-header-clean">
-                    <div className="ce-card-header-title">
-                      <span>📸 FOTO PRINCIPAL DO ACERVO</span>
-                    </div>
-                    {fotos.length > 0 && (
-                      <span className="ce-badge-gold">
-                        {fotos.length} foto(s)
-                      </span>
-                    )}
+            {/* SEÇÃO 1: SELETOR DE MODALIDADE DE CADASTRO */}
+            <div className="ce-unified-section ce-section-modalidade">
+              <div className="ce-section-header-clean">
+                <div className="ce-section-header-title">
+                  <span className="ce-step-badge">1</span>
+                  <span>O QUE VOCÊ ESTÁ CADASTRANDO?</span>
+                </div>
+                <span className="ce-badge-accent">
+                  <i className="fas fa-hand-pointer"></i> Selecione o Tipo
+                </span>
+              </div>
+
+              <div className="ce-tipo-grid">
+                {/* OPÇÃO 1: PEÇA AVULSA */}
+                <div 
+                  onClick={() => handleTipoCadastroChange('avulsa')} 
+                  className={`ce-tipo-card ${tipoCadastro === 'avulsa' ? 'active' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="ce-tipo-icon-wrapper">
+                    <i className="fas fa-puzzle-piece"></i>
                   </div>
+                  <div className="ce-tipo-info">
+                    <div className="ce-tipo-title-row">
+                      <strong>PEÇA AVULSA / UNIDADE</strong>
+                      <span className="ce-tipo-tag">Unitário</span>
+                    </div>
+                    <small>Item único individual (ex: 1 Bandeja, 1 Vaso, 1 Painel)</small>
+                  </div>
+                  <div className="ce-tipo-radio">
+                    <i className="fas fa-check"></i>
+                  </div>
+                </div>
+
+                {/* OPÇÃO 2: KIT / CONJUNTO */}
+                <div 
+                  onClick={() => handleTipoCadastroChange('kit')} 
+                  className={`ce-tipo-card ${tipoCadastro === 'kit' ? 'active' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="ce-tipo-icon-wrapper">
+                    <i className="fas fa-cubes"></i>
+                  </div>
+                  <div className="ce-tipo-info">
+                    <div className="ce-tipo-title-row">
+                      <strong>KIT / CONJUNTO</strong>
+                      <span className="ce-tipo-tag">Multipeças</span>
+                    </div>
+                    <small>Gera peças desmembráveis (ex: Trio de Cilindros, Conjunto)</small>
+                  </div>
+                  <div className="ce-tipo-radio">
+                    <i className="fas fa-check"></i>
+                  </div>
+                </div>
+
+                {/* OPÇÃO 3: DECORAÇÃO COMPLETA */}
+                <div 
+                  onClick={() => handleTipoCadastroChange('decoracao')} 
+                  className={`ce-tipo-card ${tipoCadastro === 'decoracao' ? 'active' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                >
+                  <div className="ce-tipo-icon-wrapper">
+                    <i className="fas fa-wand-magic-sparkles"></i>
+                  </div>
+                  <div className="ce-tipo-info">
+                    <div className="ce-tipo-title-row">
+                      <strong>DECORAÇÃO COMPLETA</strong>
+                      <span className="ce-tipo-tag">Pacote</span>
+                    </div>
+                    <small>Pacote pronto combinando peças existentes do acervo</small>
+                  </div>
+                  <div className="ce-tipo-radio">
+                    <i className="fas fa-check"></i>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+
+            <div className="ce-form-columns">
+              
+              <div className="ce-left-panel">
+                
+                {/* SEÇÃO: FOTOS DO PRODUTO */}
+                <div className="ce-unified-section ce-section-fotos">
+                    <div className="ce-section-header-clean">
+                      <div className="ce-section-header-title">
+                        <i className="fas fa-camera ce-icon-accent"></i>
+                        <span>FOTO PRINCIPAL DO ACERVO</span>
+                      </div>
+                      {fotos.length > 0 && (
+                        <span className="ce-badge-accent">
+                          {fotos.length} foto(s)
+                        </span>
+                      )}
+                    </div>
                   
                   {tipoCadastro === 'decoracao' && (
-                    <div style={{ marginBottom: '14px', padding: '8px 12px', background: 'rgba(197, 160, 89, 0.1)', border: '1px solid #c5a059', borderRadius: '12px', fontSize: '11px', color: '#b48a3c', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <span>✨</span> Foto Geral do Cenário Completo (Capa única do catálogo)
+                    <div style={{ marginBottom: '12px', padding: '6px 12px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', border: '1px solid var(--cor-destaque, #c5a059)', borderRadius: '10px', fontSize: '11px', color: 'var(--cor-destaque, #c5a059)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-sparkles"></i> Foto Geral do Cenário Completo (Capa única do catálogo)
                     </div>
                   )}
                   
                   <div>
                     {/* Moldura da Imagem */}
-                    <div style={{ width: '100%', height: '310px', backgroundColor: '#f8fafc', borderRadius: '16px', border: fotos.length > 0 ? '3px solid #c5a059' : '2px dashed #cbd5e1', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: fotos.length > 0 ? '0 10px 25px rgba(197, 160, 89, 0.2)' : 'none', transition: '0.2s' }}>
+                    <div style={{ width: '100%', height: '260px', backgroundColor: '#f8fafc', borderRadius: '16px', border: fotos.length > 0 ? '3px solid var(--cor-destaque, #c5a059)' : '2px dashed #cbd5e1', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: fotos.length > 0 ? '0 8px 20px color-mix(in srgb, var(--cor-destaque, #c5a059) 20%, transparent)' : 'none', transition: '0.2s' }}>
                     {fotos.length > 0 ? (
                         <>
                         <img 
                             src={fotos[fotoPrincipalIndex]} 
                             draggable={false} 
                             style={{ 
-                              width: '100%', height: '100%', 
-                              objectFit: fotoPreencher ? 'cover' : 'contain', 
-                              objectPosition: `${focoAtual.x}% ${focoAtual.y}%`, 
-                              transform: `scale(${focoAtual.z || 1})`,
-                              cursor: dragging ? 'grabbing' : 'grab',
-                              transition: dragging ? 'none' : 'transform 0.2s ease-out',
-                              transformOrigin: 'center center'
+                                width: '100%', height: '100%', 
+                                objectFit: fotoPreencher ? 'cover' : 'contain', 
+                                objectPosition: `${focoAtual.x}% ${focoAtual.y}%`, 
+                                transform: `scale(${focoAtual.z || 1})`,
+                                cursor: dragging ? 'grabbing' : 'grab',
+                                transition: dragging ? 'none' : 'transform 0.2s ease-out',
+                                transformOrigin: 'center center'
                             }} 
                             onMouseDown={handlePointerDown} onTouchStart={handlePointerDown}
                             onMouseMove={handlePointerMove} onTouchMove={handlePointerMove}
                             onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp} onTouchEnd={handlePointerUp}
                         />
-                        <div style={{position: 'absolute', top: '12px', right: '12px', background: 'rgba(15, 23, 42, 0.82)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '11px', padding: '6px 14px', borderRadius: '20px', fontWeight: '700', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.2)'}}>
-                            ✥ Arraste para enquadrar
+                        <div style={{position: 'absolute', top: '12px', right: '12px', background: 'rgba(15, 23, 42, 0.82)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '11px', padding: '6px 14px', borderRadius: '20px', fontWeight: '700', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: '6px'}}>
+                            <i className="fas fa-up-down-left-right"></i>
+                            <span>Arraste para enquadrar</span>
                         </div>
                         </>
                     ) : (
                         <label htmlFor="upload-principal" style={{cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center'}}>
-                        <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#ffffff', border: '3px solid #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '28px', color: '#c5a059', marginBottom: '14px', boxShadow: '0 8px 20px rgba(197, 160, 89, 0.25)' }}>📸</div>
-                        <span style={{color: '#0f172a', fontWeight: '800', fontSize: '0.95rem', marginBottom: '4px'}}>+ Adicionar Foto</span>
-                        <span style={{color: '#64748b', fontSize: '0.75rem'}}>PNG, JPG ou WebP sem fundo ou decorada</span>
+                        <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: '#ffffff', border: '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: 'var(--cor-destaque, #c5a059)', marginBottom: '14px', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.06)' }}>
+                          <i className="fas fa-cloud-arrow-up"></i>
+                        </div>
+                        <span style={{color: '#0f172a', fontWeight: '800', fontSize: '0.92rem', marginBottom: '4px'}}>+ Adicionar Fotos</span>
+                        <span style={{color: '#64748b', fontSize: '0.75rem'}}>PNG, JPG ou WebP (com ou sem fundo)</span>
                         <input id="upload-principal" type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
                         </label>
                     )}
@@ -1141,7 +1172,7 @@ const CadastroEstoque = () => {
                                 type="button" 
                                 onClick={(e) => { e.preventDefault(); setFotoPreencher(!fotoPreencher); }} 
                                 style={{
-                                    background: fotoPreencher ? 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)' : '#1e293b', 
+                                    background: fotoPreencher ? 'var(--cor-destaque, #c5a059)' : '#1e293b', 
                                     color: '#ffffff', 
                                     border: fotoPreencher ? 'none' : '1px solid #334155', 
                                     padding: '8px 14px', 
@@ -1154,22 +1185,24 @@ const CadastroEstoque = () => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     gap: '6px',
-                                    boxShadow: fotoPreencher ? '0 2px 8px rgba(197, 160, 89, 0.3)' : 'none'
+                                    boxShadow: fotoPreencher ? '0 2px 8px color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)' : 'none'
                                 }}
                             >
-                                <span style={{fontSize: '13px'}}>{fotoPreencher ? '🔲' : '🖼️'}</span>
-                                {fotoPreencher ? 'Preenchendo' : 'Foto Inteira'}
+                                <i className={fotoPreencher ? "fas fa-expand" : "fas fa-compress"}></i>
+                                <span>{fotoPreencher ? 'Preenchendo' : 'Foto Inteira'}</span>
                             </button>
                             
                             <div style={{width: '1px', height: '22px', background: '#334155', margin: '0 2px'}}></div>
                             
-                            <span style={{fontSize: '14px', color: '#c5a059'}}>🔍</span>
+                            <span style={{fontSize: '14px', color: 'var(--cor-destaque, #c5a059)'}}>
+                              <i className="fas fa-magnifying-glass"></i>
+                            </span>
                             <input 
                                 type="range" 
                                 min="1" max="3" step="0.1" 
                                 value={focoAtual.z || 1} 
                                 onChange={handleZoomChange} 
-                                style={{flex: 1, cursor: 'pointer', accentColor: '#c5a059'}}
+                                style={{flex: 1, cursor: 'pointer', accentColor: 'var(--cor-destaque, #c5a059)'}}
                             />
                         </div>
                     )}
@@ -1179,12 +1212,12 @@ const CadastroEstoque = () => {
                             {fotos.map((f, idx) => {
                             const tFoco = getFocoThumb(idx);
                             return (
-                            <div key={idx} style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '3px solid #c5a059' : '1.5px solid #cbd5e1', position: 'relative', cursor: 'pointer', boxShadow: idx === fotoPrincipalIndex ? '0 4px 12px rgba(197, 160, 89, 0.4)' : 'none', background: '#ffffff'}} onClick={() => setFotoPrincipalIndex(idx)}>
+                            <div key={idx} style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '3px solid var(--cor-destaque, #c5a059)' : '1.5px solid #cbd5e1', position: 'relative', cursor: 'pointer', boxShadow: idx === fotoPrincipalIndex ? '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 40%, transparent)' : 'none', background: '#ffffff'}} onClick={() => setFotoPrincipalIndex(idx)}>
                                 <img src={f} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
                                 <button type="button" onClick={(e) => {e.stopPropagation(); removerFoto(idx)}} style={{position: 'absolute', top: '2px', right: '2px', background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', width: '20px', height: '20px', borderRadius: '50%', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}} title="Remover foto">×</button>
                             </div>
                         )})}
-                        <label title="Adicionar mais fotos" style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', border: '2px dashed #c5a059', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '22px', color: '#b48a3c', background: '#fef3c7', transition: '0.2s'}}>
+                        <label title="Adicionar mais fotos" style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', border: '2px dashed var(--cor-destaque, #c5a059)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '22px', color: 'var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', transition: '0.2s'}}>
                             +
                             <input type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
                         </label>
@@ -1193,19 +1226,21 @@ const CadastroEstoque = () => {
                   </div>
               </div>
 
-              {/* CARD: CARACTERÍSTICAS FÍSICAS (OPCIONAL) */}
+              {/* SEÇÃO: CARACTERÍSTICAS FÍSICAS (OPCIONAL) */}
               {tipoCadastro === 'avulsa' && (
-                <div className="ce-card-container">
-                  <div className="ce-card-header-clean">
-                    <div className="ce-card-header-title">
-                      <span>📏 CARACTERÍSTICAS & DIMENSÕES</span>
+                <div className="ce-unified-section ce-section-dimensoes">
+                  <div className="ce-section-header-clean">
+                    <div className="ce-section-header-title">
+                      <i className="fas fa-ruler-combined ce-icon-accent"></i>
+                      <span>CARACTERÍSTICAS & DIMENSÕES</span>
                     </div>
-                    <span className="ce-badge-gold">
+                    <span className="ce-badge-neutral">
                       Opcional
                     </span>
                   </div>
                   
-                  <div className="dimensoes-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                  {/* SELEÇÃO DE TAMANHO & COR */}
+                  <div className="ce-dimensoes-row">
                     {/* SELEÇÃO DE TAMANHO / REF. */}
                     <div className="ce-input-group">
                       <label htmlFor="ce-tamanho" className="ce-input-label">TAMANHO / REF.</label>
@@ -1223,13 +1258,13 @@ const CadastroEstoque = () => {
                             setTamanho(val);
                           }
                         }}
-                        style={{ fontWeight: '700' }}
+                        style={{ fontWeight: '600' }}
                       >
-                        <option value="">Selecione o Tamanho...</option>
+                        <option value="">Selecione...</option>
                         {OPCOES_TAMANHO_PREDEFINIDAS.map(tam => (
                           <option key={tam} value={tam}>{tam}</option>
                         ))}
-                        <option value="OUTRO_TAMANHO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Tamanho / Medida...</option>
+                        <option value="OUTRO_TAMANHO" style={{ fontWeight: '800', color: 'var(--cor-destaque, #c5a059)' }}>✏️ Digitar Outro...</option>
                       </select>
                       {(modoTamanhoCustom || (tamanho && !OPCOES_TAMANHO_PREDEFINIDAS.includes(tamanho))) && (
                         <input 
@@ -1239,7 +1274,7 @@ const CadastroEstoque = () => {
                           style={{ marginTop: '6px', fontWeight: '700', textTransform: 'uppercase' }} 
                           value={tamanho} 
                           onChange={e => setTamanho(e.target.value.toUpperCase())} 
-                          placeholder="Digite a referência / tamanho..." 
+                          placeholder="Digite o tamanho..." 
                           autoFocus
                         />
                       )}
@@ -1264,11 +1299,11 @@ const CadastroEstoque = () => {
                         }}
                         style={{ fontWeight: '600' }}
                       >
-                        <option value="">Selecione a Cor...</option>
+                        <option value="">Selecione...</option>
                         {OPCOES_COR_PREDEFINIDAS.map(c => (
                           <option key={c} value={c}>{c}</option>
                         ))}
-                        <option value="OUTRA_COR" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outra Cor...</option>
+                        <option value="OUTRA_COR" style={{ fontWeight: '800', color: 'var(--cor-destaque, #c5a059)' }}>✏️ Digitar Outra...</option>
                       </select>
                       {(modoCorCustom || (cor && !OPCOES_COR_PREDEFINIDAS.includes(cor))) && (
                         <input 
@@ -1278,184 +1313,130 @@ const CadastroEstoque = () => {
                           style={{ marginTop: '6px', fontWeight: '600' }} 
                           value={cor} 
                           onChange={handleTextChange(setCor)} 
-                          placeholder="Digite a cor personalizada..." 
+                          placeholder="Digite a cor..." 
                           autoFocus
                         />
                       )}
                     </div>
                   </div>
 
-                  {/* CAMPO DE SELEÇÃO POR ROLETE DE MEDIDAS (L x A x D) */}
-                  <div className="medidas-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                  {/* NOVO DESIGN DE MEDIDAS NUMÉRICAS ALINHADAS E SEM CORTES (L x A x D) */}
+                  <div className="ce-medidas-grid">
                     {/* CAMPO LARGURA (cm) */}
-                    <div className="ce-input-group">
-                      <label htmlFor="ce-largura" className="ce-input-label">LARG (cm)</label>
-                      <select 
-                        id="ce-largura"
-                        name="largura"
-                        className="ce-input-field" 
-                        value={modoLarguraCustom ? 'OUTRO' : (largura !== '' ? largura : '0')} 
-                        onChange={e => {
-                          const val = e.target.value;
-                          if (val === 'OUTRO') {
-                            setModoLarguraCustom(true);
-                          } else {
-                            setModoLarguraCustom(false);
-                            setLargura(val);
-                          }
-                        }}
-                        style={{ fontWeight: '600' }}
-                      >
-                        <option value="0">0 cm</option>
-                        {OPCOES_MEDIDAS_CM.filter(n => n > 0).map(n => (
-                          <option key={`larg-${n}`} value={n}>{n} cm</option>
-                        ))}
-                        <option value="OUTRO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Valor...</option>
-                      </select>
-                      {(modoLarguraCustom || (largura && !OPCOES_MEDIDAS_CM.includes(Number(largura)))) && (
+                    <div className="ce-medida-box">
+                      <label htmlFor="ce-largura" className="ce-medida-label">LARGURA (L)</label>
+                      <div className="ce-medida-input-wrap">
                         <input 
-                          id="ce-largura-custom"
-                          name="larguraCustom"
-                          className="ce-input-field" 
-                          type="number" 
-                          style={{ marginTop: '4px', textAlign: 'center', fontWeight: '700' }} 
+                          id="ce-largura"
+                          name="largura"
+                          type="number"
+                          className="ce-medida-input" 
                           value={largura} 
                           onChange={e => setLargura(e.target.value)} 
-                          placeholder="0" 
-                          autoFocus
+                          placeholder="0"
+                          min="0"
                         />
-                      )}
+                        <span className="ce-medida-unit">cm</span>
+                      </div>
                     </div>
 
                     {/* CAMPO ALTURA (cm) */}
-                    <div className="ce-input-group">
-                      <label htmlFor="ce-altura" className="ce-input-label">ALT (cm)</label>
-                      <select 
-                        id="ce-altura"
-                        name="altura"
-                        className="ce-input-field" 
-                        value={modoAlturaCustom ? 'OUTRO' : (altura !== '' ? altura : '0')} 
-                        onChange={e => {
-                          const val = e.target.value;
-                          if (val === 'OUTRO') {
-                            setModoAlturaCustom(true);
-                          } else {
-                            setModoAlturaCustom(false);
-                            setAltura(val);
-                          }
-                        }}
-                        style={{ fontWeight: '600' }}
-                      >
-                        <option value="0">0 cm</option>
-                        {OPCOES_MEDIDAS_CM.filter(n => n > 0).map(n => (
-                          <option key={`alt-${n}`} value={n}>{n} cm</option>
-                        ))}
-                        <option value="OUTRO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Valor...</option>
-                      </select>
-                      {(modoAlturaCustom || (altura && !OPCOES_MEDIDAS_CM.includes(Number(altura)))) && (
+                    <div className="ce-medida-box">
+                      <label htmlFor="ce-altura" className="ce-medida-label">ALTURA (A)</label>
+                      <div className="ce-medida-input-wrap">
                         <input 
-                          id="ce-altura-custom"
-                          name="alturaCustom"
-                          className="ce-input-field" 
-                          type="number" 
-                          style={{ marginTop: '4px', textAlign: 'center', fontWeight: '700' }} 
+                          id="ce-altura"
+                          name="altura"
+                          type="number"
+                          className="ce-medida-input" 
                           value={altura} 
                           onChange={e => setAltura(e.target.value)} 
-                          placeholder="0" 
-                          autoFocus
+                          placeholder="0"
+                          min="0"
                         />
-                      )}
+                        <span className="ce-medida-unit">cm</span>
+                      </div>
                     </div>
 
                     {/* CAMPO DIÂMETRO (cm) */}
-                    <div className="ce-input-group">
-                      <label htmlFor="ce-diametro" className="ce-input-label">DIÂM (cm)</label>
-                      <select 
-                        id="ce-diametro"
-                        name="diametro"
-                        className="ce-input-field" 
-                        value={modoDiametroCustom ? 'OUTRO' : (diametro !== '' ? diametro : '0')} 
-                        onChange={e => {
-                          const val = e.target.value;
-                          if (val === 'OUTRO') {
-                            setModoDiametroCustom(true);
-                          } else {
-                            setModoDiametroCustom(false);
-                            setDiametro(val);
-                          }
-                        }}
-                        style={{ fontWeight: '600' }}
-                      >
-                        <option value="0">0 cm</option>
-                        {OPCOES_MEDIDAS_CM.filter(n => n > 0).map(n => (
-                          <option key={`diam-${n}`} value={n}>{n} cm</option>
-                        ))}
-                        <option value="OUTRO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro Valor...</option>
-                      </select>
-                      {(modoDiametroCustom || (diametro && !OPCOES_MEDIDAS_CM.includes(Number(diametro)))) && (
+                    <div className="ce-medida-box">
+                      <label htmlFor="ce-diametro" className="ce-medida-label">DIÂMETRO (Ø)</label>
+                      <div className="ce-medida-input-wrap">
                         <input 
-                          id="ce-diametro-custom"
-                          name="diametroCustom"
-                          className="ce-input-field" 
-                          type="number" 
-                          style={{ marginTop: '4px', textAlign: 'center', fontWeight: '700' }} 
+                          id="ce-diametro"
+                          name="diametro"
+                          type="number"
+                          className="ce-medida-input" 
                           value={diametro} 
                           onChange={e => setDiametro(e.target.value)} 
-                          placeholder="0" 
-                          autoFocus
+                          placeholder="0"
+                          min="0"
                         />
-                      )}
+                        <span className="ce-medida-unit">cm</span>
+                      </div>
                     </div>
                   </div>
+
                 </div>
               )}
             </div>
 
-            <div style={{ flex: 1, minWidth: '0', display: 'flex', flexDirection: 'column', gap: '20px' }}>
+            <div className="ce-right-panel">
               
-              {/* CARD 2: IDENTIFICAÇÃO E DADOS BÁSICOS */}
-              <div className="ce-card-container">
-                <div className="ce-card-header-clean">
-                  <div className="ce-card-header-title">
-                    <span>📝 2. IDENTIFICAÇÃO E DADOS BÁSICOS</span>
+              {/* SEÇÃO 2: IDENTIFICAÇÃO E DADOS BÁSICOS */}
+              <div className="ce-unified-section ce-section-identificacao">
+                <div className="ce-section-header-clean">
+                  <div className="ce-section-header-title">
+                    <i className="fas fa-id-card ce-icon-accent"></i>
+                    <span>DADOS BÁSICOS & IDENTIFICAÇÃO</span>
                   </div>
-                  <span className="ce-badge-gold">
+                  <span className="ce-badge-accent">
                     Campos Principais *
                   </span>
                 </div>
 
-                <div className="form-grid-4" style={{ alignItems: 'flex-start' }}>
-                  <div className="form-group span-3">
-                    <div style={{ display: 'flex', alignItems: 'center', height: '26px', marginBottom: '6px' }}>
-                      <label htmlFor="ce-nome" className="ce-input-label" style={{ margin: 0 }}>NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label>
-                    </div>
-                    <input id="ce-nome" name="nome" className="ce-input-field" value={nome} onChange={handleTextChange(setNome)} required placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} />
+                <div className="ce-identificacao-grid">
+                  {/* NOME DO PRODUTO */}
+                  <div className="ce-input-group ce-span-2">
+                    <label htmlFor="ce-nome" className="ce-input-label">
+                      NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *
+                    </label>
+                    <input 
+                      id="ce-nome" 
+                      name="nome" 
+                      className="ce-input-field" 
+                      value={nome} 
+                      onChange={handleTextChange(setNome)} 
+                      required 
+                      placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} 
+                    />
                     {nome.trim().length >= 3 && itensExistentes.some(i => i.id !== itemEditando?.id && i.nome?.trim().toLowerCase() === nome.trim().toLowerCase()) && (
-                      <span style={{ fontSize: '11px', color: '#f59e0b', fontWeight: '800', marginTop: '4px', display: 'block' }}>
+                      <span className="ce-input-warning">
                         💡 Atenção: Você já possui um item com o nome "{nome.trim()}" cadastrado no acervo.
                       </span>
                     )}
                   </div>
                   
-                  <div className="form-group span-1">
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', height: '26px', marginBottom: '6px' }}>
+                  {/* SKU COM TOOLBAR INTEGRADA */}
+                  <div className="ce-input-group ce-span-1">
+                    <div className="ce-label-with-actions">
                       <label htmlFor="ce-codigo" className="ce-input-label" style={{ margin: 0 }}>SKU / CÓDIGO *</label>
-                      <div style={{ display: 'flex', gap: '4px' }}>
+                      <div className="ce-sku-toolbar">
                         <button 
                           type="button" 
                           onClick={() => gerarSKUAutomatico()}
-                          style={{ fontSize: '10px', color: '#ffffff', background: '#0f172a', border: '1px solid #c5a059', padding: '2px 7px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                          className="ce-sku-btn-auto"
                           title="Gerar código sequencial automático"
                         >
-                          ⚡ Auto
+                          <i className="fas fa-bolt"></i> Auto
                         </button>
                         <button 
                           type="button" 
                           onClick={iniciarScannerCadastro}
-                          style={{ fontSize: '10px', color: '#ffffff', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', border: 'none', padding: '2px 7px', borderRadius: '8px', fontWeight: '800', cursor: 'pointer', boxShadow: '0 2px 6px rgba(197, 160, 89, 0.3)', whiteSpace: 'nowrap' }}
-                          title="Escanear Etiqueta de Código de Barras / QR Code com a Câmera"
+                          className="ce-sku-btn-scan"
+                          title="Escanear Etiqueta com a Câmera"
                         >
-                          📷 Scan
+                          <i className="fas fa-barcode"></i> Scan
                         </button>
                       </div>
                     </div>
@@ -1473,14 +1454,18 @@ const CadastroEstoque = () => {
                       }}
                     />
                     {codigo && itensExistentes.some(i => i.id !== itemEditando?.id && i.codigo?.toUpperCase() === codigo.trim().toUpperCase()) && (
-                      <span style={{ fontSize: '10px', color: '#ef4444', fontWeight: '800', marginTop: '2px', display: 'block' }}>
+                      <span className="ce-input-error">
                         ⚠️ Este código SKU já existe no acervo!
                       </span>
                     )}
                   </div>
 
-                  <div className="form-group span-4" style={{ marginTop: '12px' }}>
-                    <label htmlFor="ce-tags" className="ce-input-label">🏷️ TAGS / PALAVRAS-CHAVE DE BUSCA (SEPARADAS POR VÍRGULA)</label>
+                  {/* TAGS / PALAVRAS-CHAVE */}
+                  <div className="ce-input-group ce-span-full">
+                    <label htmlFor="ce-tags" className="ce-input-label">
+                      <i className="fas fa-tags ce-icon-accent" style={{ marginRight: '6px' }}></i>
+                      TAGS / PALAVRAS-CHAVE DE BUSCA (SEPARADAS POR VÍRGULA)
+                    </label>
                     <input 
                       id="ce-tags"
                       name="tags"
@@ -1498,7 +1483,7 @@ const CadastroEstoque = () => {
                 <div className="modal-checkin-overlay">
                   <div className="modal-checkin-box animate-pop" style={{ maxWidth: '420px', padding: '16px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: '#0f172a' }}>
-                      <strong style={{ fontSize: '0.9rem' }}>📷 Escanear Código para o SKU da Peça</strong>
+                      <strong style={{ fontSize: '0.9rem' }}><i className="fas fa-camera"></i> Escanear Código para o SKU da Peça</strong>
                       <button type="button" onClick={pararScannerCadastro} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.75rem' }}>✕ Fechar</button>
                     </div>
                     <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 10px 0' }}>Aproxime o Código de Barras ou QR Code da etiqueta para preencher o código da peça.</p>
@@ -1507,26 +1492,27 @@ const CadastroEstoque = () => {
                 </div>
               )}
 
-              {/* CARD 3: LOCALIZAÇÃO FÍSICA NO GALPÃO & ESTOQUE */}
+              {/* SEÇÃO 3: LOCALIZAÇÃO FÍSICA NO GALPÃO & ESTOQUE */}
               {tipoCadastro !== 'decoracao' && (
-                <div className="ce-card-container">
-                  <div className="ce-card-header-clean">
-                    <div className="ce-card-header-title">
-                      <span>📦 3. LOCALIZAÇÃO FÍSICA NO GALPÃO & ESTOQUE</span>
+                <div className="ce-unified-section ce-section-estoque">
+                  <div className="ce-section-header-clean">
+                    <div className="ce-section-header-title">
+                      <i className="fas fa-warehouse ce-icon-accent"></i>
+                      <span>LOCALIZAÇÃO NO GALPÃO & ESTOQUE</span>
                     </div>
-                    <span className="ce-badge-gold">
+                    <span className="ce-badge-accent">
                       Prateleiras & Qtd
                     </span>
                   </div>
 
                   {/* Localização no Galpão */}
-                  <div style={{ marginBottom: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px', flexWrap: 'wrap', gap: '10px' }}>
-                      <label htmlFor="ce-localizacao" className="ce-input-label">ENDEREÇO NO GALPÃO (PRATELEIRA / CORREDOR) *</label>
+                  <div className="ce-galpao-row" style={{ marginBottom: '14px' }}>
+                    <div className="ce-label-with-actions">
+                      <label htmlFor="ce-localizacao" className="ce-input-label" style={{ margin: 0 }}>ENDEREÇO NO GALPÃO (PRATELEIRA / CORREDOR) *</label>
                       <button 
                         type="button" 
                         onClick={abrirModalLocalizacao} 
-                        style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#b48a3c', padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: '800', cursor: 'pointer' }}
+                        className="ce-btn-gerenciar-prateleira"
                       >
                         + Gerenciar Prateleiras
                       </button>
@@ -1544,11 +1530,11 @@ const CadastroEstoque = () => {
                   </div>
 
                   {/* Grid Quantidade & Estoque Mínimo */}
-                  <div className="estoque-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                  <div className="estoque-grid-responsive">
                     <div className="ce-input-group">
                       <label htmlFor="ce-quantidade" className="ce-input-label">QUANTIDADE DISPONÍVEL</label>
                       {tipoCadastro === 'kit' ? (
-                        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', fontSize: '0.85rem', color: '#b48a3c', fontWeight: '800', border: '1.5px solid var(--borda, #e2e8f0)' }}>
+                        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', fontSize: '0.85rem', color: 'var(--cor-destaque, #b48a3c)', fontWeight: '800', border: '1.5px solid var(--borda, #e2e8f0)' }}>
                           ⚡ Calculada das Peças
                         </div>
                       ) : (
@@ -1563,28 +1549,29 @@ const CadastroEstoque = () => {
                 </div>
               )}
 
-              {/* CARD 4: CATEGORIZAÇÃO NA VITRINE ONLINE */}
-              <div className="ce-card-container">
-                <div className="ce-card-header-clean">
-                  <div className="ce-card-header-title">
-                    <span>🌐 4. CATEGORIZAÇÃO NA VITRINE ONLINE</span>
+              {/* SEÇÃO 4: CATEGORIZAÇÃO NA VITRINE ONLINE */}
+              <div className="ce-unified-section ce-section-vitrine">
+                <div className="ce-section-header-clean">
+                  <div className="ce-section-header-title">
+                    <i className="fas fa-globe ce-icon-accent"></i>
+                    <span>CATEGORIZAÇÃO NA VITRINE ONLINE</span>
                   </div>
-                  <span className="ce-badge-gold">
+                  <span className="ce-badge-accent">
                     Filtros do Site *
                   </span>
                 </div>
 
-                <div className="vitrine-grid-responsive" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+                <div className="vitrine-grid-responsive">
                   {tipoCadastro === 'decoracao' && (
                     <div className="ce-input-group" style={{ gridColumn: 'span 2' }}>
-                      <label htmlFor="ce-tipo-pacote" className="ce-input-label">📌 FORMATO / MODALIDADE DE EXIBIÇÃO NO SITE *</label>
+                      <label htmlFor="ce-tipo-pacote" className="ce-input-label">📌 FORMATO / MODALIDADE NO SITE *</label>
                       <select 
                         id="ce-tipo-pacote"
                         name="tipoPacote"
                         className="ce-input-field"
                         value={tipoPacote}
                         onChange={e => setTipoPacote(e.target.value)}
-                        style={{ fontWeight: '800', color: '#0f172a', border: '1.5px solid #c5a059', background: '#fef3c7' }}
+                        style={{ fontWeight: '800', color: 'var(--texto-principal, #0f172a)', border: '1.5px solid var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)' }}
                       >
                         <option value="PEGUE E MONTE">📦 Pegue e Monte</option>
                         <option value="DECORAÇÃO">✨ Decoração</option>
@@ -1620,7 +1607,7 @@ const CadastroEstoque = () => {
                   </div>
                   
                   <div className="ce-input-group">
-                    <label htmlFor="ce-subcategoria-tema" className="ce-input-label">SUBCATEGORIA (Público/Tipo) *</label>
+                    <label htmlFor="ce-subcategoria-tema" className="ce-input-label">SUBCATEGORIA (TIPO) *</label>
                     <select 
                       id="ce-subcategoria-tema"
                       name="subcategoriaTema"
@@ -1671,17 +1658,17 @@ const CadastroEstoque = () => {
                       disabled={(!grupoTemaSelecionado && temaSelecionado !== 'OUTRO_TEMA')} 
                       required
                     >
-                      <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Aguardando...' : 'Selecione o item exato...'}</option>
+                      <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Aguardando...' : 'Selecione o tema...'}</option>
                       {temasDisponiveis.map(t => (
                         <option key={t} value={t}>{t}</option>
                       ))}
-                      <option value="OUTRO_TEMA" style={{ fontWeight: 'bold', color: '#c5a059' }}>✏️ Digitar Outro Tema...</option>
+                      <option value="OUTRO_TEMA" style={{ fontWeight: 'bold', color: 'var(--cor-destaque, #c5a059)' }}>✏️ Digitar Outro Tema...</option>
                     </select>
                   </div>
                 </div>
 
                 {temaSelecionado === 'OUTRO_TEMA' && (
-                  <div className="ce-input-group" style={{ marginTop: '16px' }}>
+                  <div className="ce-input-group" style={{ marginTop: '14px' }}>
                     <label htmlFor="ce-tema-personalizado" className="ce-input-label">NOME DO TEMA PERSONALIZADO *</label>
                     <input 
                       id="ce-tema-personalizado"
@@ -1698,12 +1685,13 @@ const CadastroEstoque = () => {
               </div>
 
               {tipoCadastro === 'decoracao' && (
-                <div className="ce-card-container">
-                  <div className="ce-card-header-clean">
-                    <div className="ce-card-header-title">
-                      <span>✨ MONTAGEM DA DECORAÇÃO</span>
+                <div className="ce-unified-section ce-section-decoracao">
+                  <div className="ce-section-header-clean">
+                    <div className="ce-section-header-title">
+                      <i className="fas fa-wand-magic-sparkles ce-icon-accent"></i>
+                      <span>MONTAGEM DA DECORAÇÃO</span>
                     </div>
-                    <span className="ce-badge-gold">
+                    <span className="ce-badge-accent">
                       Seleção do Acervo
                     </span>
                   </div>
@@ -1712,12 +1700,12 @@ const CadastroEstoque = () => {
                   </p>
                   
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => setModalCatalogoAberto(true)} style={{ flex: 1, minWidth: '200px', height: '46px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      📦 ABRIR ACERVO E ADICIONAR PEÇAS
+                    <button type="button" onClick={() => setModalCatalogoAberto(true)} style={{ flex: 1, minWidth: '200px', height: '46px', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      <i className="fas fa-box-open"></i> ABRIR ACERVO E ADICIONAR PEÇAS
                     </button>
 
                     <button type="button" onClick={() => setModalNovaPecaAberto(true)} style={{ flex: 1, minWidth: '200px', height: '46px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                      ➕ CADASTRA PEÇA NOVA NO ACERVO
+                      <i className="fas fa-plus"></i> CADASTRAR PEÇA NOVA NO ACERVO
                     </button>
                   </div>
                   
@@ -1729,7 +1717,7 @@ const CadastroEstoque = () => {
                             {item.foto ? (
                               <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                              <span style={{ fontSize: '20px' }}>📦</span>
+                              <i className="fas fa-box" style={{ fontSize: '18px', color: '#94a3b8' }}></i>
                             )}
                           </div>
 
@@ -1756,7 +1744,8 @@ const CadastroEstoque = () => {
 
                       <div style={{ background: '#f8fafc', padding: '14px 20px', textAlign: 'right', borderTop: '1.5px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
-                          ✨ Soma das Peças Avulsas:
+                          <i className="fas fa-sparkles ce-icon-accent" style={{ marginRight: '4px' }}></i>
+                          Soma das Peças Avulsas:
                         </span>
                         <strong style={{ fontSize: '1.05rem', color: '#0f172a', fontWeight: '800' }}>
                           R$ {calcularTotalSomaAvulsaKit().toFixed(2).replace('.', ',')}
@@ -1765,25 +1754,27 @@ const CadastroEstoque = () => {
                     </div>
                   ) : (
                     <div style={{ textAlign: 'center', padding: '36px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #cbd5e1', fontSize: '0.85rem', fontWeight: '600' }}>
-                      📦 Nenhuma peça foi adicionada ao pacote de decoração ainda.<br/>
-                      <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Clique em "📦 ABRIR ACERVO E ADICIONAR PEÇAS" acima para compor esta decoração.</span>
+                      <i className="fas fa-box-open ce-icon-accent" style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}></i>
+                      Nenhuma peça foi adicionada ao pacote de decoração ainda.<br/>
+                      <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Clique em "ABRIR ACERVO E ADICIONAR PEÇAS" acima para compor esta decoração.</span>
                     </div>
                   )}
                 </div>
               )}
 
               {tipoCadastro === 'kit' && (
-                <div className="ce-card-container">
-                  <div className="ce-card-header-clean">
-                    <div className="ce-card-header-title">
-                      <span>🧩 DESMEMBRAR KIT EM PEÇAS AVULSAS</span>
+                <div className="ce-unified-section ce-section-kit">
+                  <div className="ce-section-header-clean">
+                    <div className="ce-section-header-title">
+                      <i className="fas fa-cubes ce-icon-accent"></i>
+                      <span>DESMEMBRAR KIT EM PEÇAS AVULSAS</span>
                     </div>
-                    <span className="ce-badge-gold">
+                    <span className="ce-badge-neutral">
                       Opcional
                     </span>
                   </div>
                   <p style={{ fontSize: '0.8rem', color: 'var(--texto-secundario, #64748b)', marginBottom: '20px', lineHeight: '1.4' }}>
-                    💡 Adicione as peças individuais deste kit se você desejar alugá-las separadamente no sistema (ex: alugar apenas um vaso do conjunto).
+                    Adicione as peças individuais deste kit se você desejar alugá-las separadamente no sistema (ex: alugar apenas um vaso do conjunto).
                   </p>
                   
                   {pecasKitNovas.map((p, idx) => (
@@ -1811,31 +1802,35 @@ const CadastroEstoque = () => {
                         </div>
                         
                         <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '10px', padding: '0 14px', cursor: 'pointer', fontWeight: '800', height: '42px', marginTop: '18px', fontSize: '0.8rem'}}>Remover</button>
-                      </div>
+                        </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} style={{width: '100%', height: '46px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)'}}>+ Adicionar Peça ao Kit</button>
+                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} style={{width: '100%', height: '46px', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <i className="fas fa-plus"></i> Adicionar Peça ao Kit
+                  </button>
                 </div>
               )}
 
-              {/* CARD 5: PREÇOS & FINANCEIRO */}
-              <div className="ce-card-container">
-                <div className="ce-card-header-clean">
-                  <div className="ce-card-header-title">
-                    <span>💰 5. PREÇOS & FINANCEIRO</span>
+              {/* SEÇÃO 5: PREÇOS & FINANCEIRO */}
+              <div className="ce-unified-section ce-section-financeiro">
+                <div className="ce-section-header-clean">
+                  <div className="ce-section-header-title">
+                    <i className="fas fa-coins ce-icon-accent"></i>
+                    <span>PREÇOS & FINANCEIRO</span>
                   </div>
-                  <span className="ce-badge-gold">
+                  <span className="ce-badge-accent">
                     Valores em R$
                   </span>
                 </div>
 
                 {/* Grid Valores */}
-                <div className="financeiro-grid-responsive" style={{ display: 'grid', gridTemplateColumns: tipoCadastro === 'decoracao' ? '1fr' : '2fr 1fr 1fr', gap: '16px', marginBottom: tipoCadastro === 'decoracao' ? '12px' : '20px' }}>
-                  <div style={{ background: 'var(--fundo-cinza, #fffdfa)', border: '2px solid #c5a059', borderRadius: '14px', padding: '16px 20px', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.15)' }}>
+                <div className="financeiro-grid-responsive" style={{ display: 'grid', gridTemplateColumns: tipoCadastro === 'decoracao' ? '1fr' : '2fr 1fr 1fr', gap: '14px', marginBottom: tipoCadastro === 'decoracao' ? '12px' : '18px' }}>
+                  <div style={{ background: 'var(--fundo-cinza, #fffdfa)', border: '2px solid var(--cor-destaque, #c5a059)', borderRadius: '14px', padding: '16px 20px', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 15%, transparent)' }}>
                     <label htmlFor="ce-valor-aluguel" className="ce-input-label" style={{ color: 'var(--texto-principal)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
                       <span>{tipoCadastro === 'decoracao' ? 'VALOR DO ALUGUEL DESTE PACOTE (R$) *' : 'PREÇO DO ALUGUEL (R$) *'}</span>
-                      <span style={{ fontSize: '11px', color: '#b48a3c', background: '#fef3c7', padding: '3px 10px', borderRadius: '12px', fontWeight: '800' }}>
-                        {tipoCadastro === 'decoracao' ? '✨ Decoração' : '⭐ Principal'}
+                      <span style={{ fontSize: '11px', color: 'var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 12%, transparent)', padding: '3px 10px', borderRadius: '12px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                        <i className={tipoCadastro === 'decoracao' ? "fas fa-sparkles" : "fas fa-star"}></i>
+                        {tipoCadastro === 'decoracao' ? 'Decoração' : 'Principal'}
                       </span>
                     </label>
                     <input 
@@ -1847,7 +1842,7 @@ const CadastroEstoque = () => {
                       onBlur={formatarMoedaBlur(setValorAluguel)} 
                       required 
                       className="ce-input-field"
-                      style={{ height: '48px', border: '1.5px solid #c5a059', fontSize: '1.25rem', fontWeight: '800' }} 
+                      style={{ height: '48px', border: '1.5px solid var(--cor-destaque, #c5a059)', fontSize: '1.25rem', fontWeight: '800' }} 
                       placeholder="0,00"
                     />
                   </div>
@@ -1874,9 +1869,11 @@ const CadastroEstoque = () => {
                     const qtdAlugueisPayback = Math.ceil(vCompra / vAluguel);
                     const margemPorAluguel = ((vAluguel / vCompra) * 100).toFixed(1);
                     return (
-                      <div style={{ marginBottom: '20px', background: 'rgba(197, 160, 89, 0.08)', border: '1.5px solid #c5a059', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                      <div style={{ marginBottom: '18px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 8%, transparent)', border: '1.5px solid var(--cor-destaque, #c5a059)', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '20px' }}>📊</span>
+                          <span style={{ fontSize: '20px', color: 'var(--cor-destaque, #c5a059)' }}>
+                            <i className="fas fa-chart-pie"></i>
+                          </span>
                           <div>
                             <strong style={{ fontSize: '0.85rem', color: 'var(--texto-principal, #0f172a)', display: 'block' }}>Retorno do Investimento (Payback)</strong>
                             <span style={{ fontSize: '0.78rem', color: 'var(--texto-secundario, #64748b)' }}>
@@ -1884,8 +1881,8 @@ const CadastroEstoque = () => {
                             </span>
                           </div>
                         </div>
-                        <span style={{ background: '#c5a059', color: '#ffffff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800' }}>
-                          📈 Lucro líquido a partir do {qtdAlugueisPayback}º aluguel
+                        <span style={{ background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                          <i className="fas fa-arrow-trend-up"></i> Lucro líquido a partir do {qtdAlugueisPayback}º aluguel
                         </span>
                       </div>
                     );
@@ -1893,14 +1890,14 @@ const CadastroEstoque = () => {
                     const sugestao25 = (vCompra * 0.25).toFixed(2).replace('.', ',');
                     const sugestao30 = (vCompra * 0.30).toFixed(2).replace('.', ',');
                     return (
-                      <div style={{ marginBottom: '20px', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '14px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                        <span style={{ fontSize: '0.8rem', color: '#b48a3c', fontWeight: '700' }}>
+                      <div style={{ marginBottom: '18px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)', borderRadius: '14px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                        <span style={{ fontSize: '0.8rem', color: 'var(--cor-destaque, #c5a059)', fontWeight: '700' }}>
                           💡 Sugestão de Aluguel no mercado (25% a 30% do valor de compra): R$ {sugestao25} a R$ {sugestao30}
                         </span>
                         <button 
                           type="button" 
                           onClick={() => setValorAluguel(sugestao25)}
-                          style={{ background: '#b48a3c', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                          style={{ background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
                         >
                           Usar R$ {sugestao25}
                         </button>
@@ -1921,41 +1918,44 @@ const CadastroEstoque = () => {
                         R$ {calcularTotalSomaAvulsaKit().toFixed(2).replace('.', ',')}
                       </strong>
                     </div>
-                    <div style={{ background: '#fef3c7', border: '1px solid #fde68a', color: '#b48a3c', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800' }}>
-                      💡 Pacote de Decoração
+                    <div style={{ background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)', color: 'var(--cor-destaque, #c5a059)', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                      <i className="fas fa-wand-magic-sparkles"></i> Pacote de Decoração
                     </div>
                   </div>
                 )}
               </div>
 
               {/* BARRA FIXA DE AÇÃO: CANCELAR E SALVAR */}
-              <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1.5px solid var(--borda, #e2e8f0)', display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: '16px' }}>
+              <div className="ce-form-actions-bar">
                 <Link to={dadosCompra ? "/compras" : "/estoque"} className="btn-secondary-celebre" style={{ height: '44px', textDecoration: 'none' }}>
-                  CANCELAR
+                  <i className="fas fa-xmark"></i>
+                  <span>Cancelar</span>
                 </Link>
                 <button type="submit" disabled={salvando} className="btn-primary-celebre" style={{ height: '44px', padding: '0 32px' }}>
-                  {salvando ? '💾 SALVANDO...' : (tipoCadastro === 'decoracao' ? `💾 SALVAR ${tipoPacote}` : tipoCadastro === 'kit' ? '💾 SALVAR CONJUNTO' : '💾 SALVAR ACERVO')}
+                  <i className="fas fa-floppy-disk"></i>
+                  <span>{salvando ? 'Salvando...' : (tipoCadastro === 'decoracao' ? `Salvar ${tipoPacote}` : tipoCadastro === 'kit' ? 'Salvar Conjunto' : 'Salvar Acervo')}</span>
                 </button>
               </div>
 
             </div>
           </div>
-        </form>
-      </div>
+        </div>
+      </form>
+    </div>
 
       {modalCatalogoAberto && (
         <div className="modal-overlay-premium" style={{ zIndex: 99999, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)' }}>
-          <div className="catalogo-modal-container" style={{ maxWidth: '1100px', width: '92%', height: '86vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden', backgroundColor: '#ffffff', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
+          <div className="catalogo-modal-container" style={{ maxWidth: '1100px', width: '92%', height: '86vh', display: 'flex', flexDirection: 'column', padding: '0', overflow: 'hidden', backgroundColor: '#ffffff', borderRadius: '24px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.35)', border: '1px solid color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)' }}>
             
             {/* LUXURY HEADER ISOLATED */}
-            <div style={{ padding: '18px 28px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderBottom: '2px solid #c5a059', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
+            <div style={{ padding: '18px 28px', background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', borderBottom: '2px solid var(--cor-destaque, #c5a059)', flexShrink: 0, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '16px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <span style={{ fontSize: '26px' }}>📦</span>
                 <div>
                   <h3 style={{ margin: 0, fontSize: '1.2rem', color: '#ffffff', fontWeight: '800', lineHeight: '1.2' }}>
                     Acervo Físico
                   </h3>
-                  <span style={{ color: '#c5a059', fontSize: '0.82rem', fontWeight: '600', display: 'block', marginTop: '2px' }}>
+                  <span style={{ color: 'var(--cor-destaque, #c5a059)', fontSize: '0.82rem', fontWeight: '600', display: 'block', marginTop: '2px' }}>
                     Escolha as peças que compõem este pacote de decoração
                   </span>
                 </div>
@@ -1963,14 +1963,14 @@ const CadastroEstoque = () => {
 
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 {itensDoKit.length > 0 && (
-                  <div style={{ background: 'rgba(197, 160, 89, 0.2)', border: '1px solid #c5a059', padding: '6px 14px', borderRadius: '20px', color: '#fef08a', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <div style={{ background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 20%, transparent)', border: '1px solid var(--cor-destaque, #c5a059)', padding: '6px 14px', borderRadius: '20px', color: '#ffffff', fontSize: '0.8rem', fontWeight: '700', display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <span>🛒</span> {itensDoKit.reduce((acc, i) => acc + i.qtd, 0)} item(ns) selecionado(s)
                   </div>
                 )}
                 <button 
                   type="button" 
                   onClick={() => setModalNovaPecaAberto(true)} 
-                  style={{ background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px rgba(197, 160, 89, 0.35)', transition: 'all 0.2s' }}
+                  style={{ background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', padding: '10px 18px', borderRadius: '12px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '6px', boxShadow: '0 4px 14px color-mix(in srgb, var(--cor-destaque, #c5a059) 35%, transparent)', transition: 'all 0.2s' }}
                 >
                   ➕ Cadastrar Nova Peça
                 </button>
@@ -2029,10 +2029,10 @@ const CadastroEstoque = () => {
                         cursor: 'pointer',
                         whiteSpace: 'nowrap',
                         transition: 'all 0.2s ease',
-                        border: isActive ? '1px solid #c5a059' : '1.5px solid #cbd5e1',
-                        background: isActive ? 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)' : '#ffffff',
+                        border: isActive ? '1px solid var(--cor-destaque, #c5a059)' : '1.5px solid #cbd5e1',
+                        background: isActive ? 'var(--cor-destaque, #c5a059)' : '#ffffff',
                         color: isActive ? '#ffffff' : '#475569',
-                        boxShadow: isActive ? '0 4px 10px rgba(197, 160, 89, 0.25)' : 'none'
+                        boxShadow: isActive ? '0 4px 10px color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)' : 'none'
                       }}
                     >
                       {cat}
@@ -2068,19 +2068,19 @@ const CadastroEstoque = () => {
                       key={item.id} 
                       style={{ 
                         background: '#ffffff', 
-                        border: foiAdicionado ? (excedeEstoque ? '2.5px solid #f59e0b' : '2.5px solid #c5a059') : '1.5px solid #e2e8f0', 
+                        border: foiAdicionado ? (excedeEstoque ? '2.5px solid #f59e0b' : '2.5px solid var(--cor-destaque, #c5a059)') : '1.5px solid #e2e8f0', 
                         borderRadius: '16px', 
                         overflow: 'hidden', 
                         display: 'flex', 
                         flexDirection: 'column', 
-                        boxShadow: foiAdicionado ? '0 8px 20px -4px rgba(197, 160, 89, 0.25)' : '0 4px 6px -1px rgba(0, 0, 0, 0.04)', 
+                        boxShadow: foiAdicionado ? '0 8px 20px -4px color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)' : '0 4px 6px -1px rgba(0, 0, 0, 0.04)', 
                         transition: 'all 0.2s ease', 
                         position: 'relative' 
                       }} 
                     >
                       {/* INCLUDED RIBBON BADGE */}
                       {foiAdicionado && (
-                        <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, background: excedeEstoque ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <div style={{ position: 'absolute', top: '10px', right: '10px', zIndex: 10, background: excedeEstoque ? 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)' : 'var(--cor-destaque, #c5a059)', color: '#ffffff', fontSize: '11px', fontWeight: '800', padding: '4px 10px', borderRadius: '12px', boxShadow: '0 4px 10px rgba(0,0,0,0.2)', display: 'flex', alignItems: 'center', gap: '4px' }}>
                           <span>{excedeEstoque ? '⚠️' : '✓'}</span> Incluso: {qtdNoKit}x
                         </div>
                       )}
@@ -2120,7 +2120,7 @@ const CadastroEstoque = () => {
                         
                         {/* BOTTOM ROW: PRICE AND ACTION */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '10px', borderTop: '1px solid #f1f5f9' }}>
-                          <div style={{ fontSize: '0.88rem', color: '#c5a059', fontWeight: '800' }}>
+                          <div style={{ fontSize: '0.88rem', color: 'var(--cor-destaque, #c5a059)', fontWeight: '800' }}>
                             {valorAluguelItem > 0 ? `R$ ${valorAluguelItem.toFixed(2).replace('.', ',')}` : 'Sob consulta'}
                           </div>
 
@@ -2140,7 +2140,7 @@ const CadastroEstoque = () => {
                                 cursor: 'pointer', 
                                 display: 'flex', 
                                 alignItems: 'center', 
-                                gap: '4px',
+                                gap: '4px', 
                                 boxShadow: '0 2px 6px rgba(15, 23, 42, 0.15)',
                                 transition: 'all 0.2s'
                               }}
@@ -2148,7 +2148,7 @@ const CadastroEstoque = () => {
                               <span>+</span> Incluir
                             </button>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', border: '1.5px solid #c5a059', borderRadius: '10px', padding: '2px 4px' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#f8fafc', border: '1.5px solid var(--cor-destaque, #c5a059)', borderRadius: '10px', padding: '2px 4px' }}>
                               <button 
                                 type="button" 
                                 onClick={(e) => { e.stopPropagation(); decrementarPecaNoKit(item.id); }} 
@@ -2211,7 +2211,7 @@ const CadastroEstoque = () => {
               <div style={{ display: 'flex', alignItems: 'center', gap: '18px' }}>
                 <div style={{ textAlign: 'right' }}>
                   <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700', display: 'block' }}>Soma das peças avulsas:</span>
-                  <strong style={{ fontSize: '1.1rem', color: '#c5a059', fontWeight: '800' }}>
+                  <strong style={{ fontSize: '1.1rem', color: 'var(--cor-destaque, #c5a059)', fontWeight: '800' }}>
                     R$ {calcularTotalSomaAvulsaKit().toFixed(2).replace('.', ',')}
                   </strong>
                 </div>
@@ -2219,7 +2219,7 @@ const CadastroEstoque = () => {
                 <button 
                   type="button" 
                   onClick={() => setModalCatalogoAberto(false)} 
-                  style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#ffffff', border: '1px solid #c5a059', padding: '12px 24px', borderRadius: '12px', fontWeight: '800', fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.25)', transition: 'all 0.2s' }}
+                  style={{ background: 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)', color: '#ffffff', border: '1px solid var(--cor-destaque, #c5a059)', padding: '12px 24px', borderRadius: '12px', fontWeight: '800', fontSize: '0.88rem', cursor: 'pointer', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.25)', transition: 'all 0.2s' }}
                 >
                   ✓ Concluir Seleção
                 </button>
@@ -2303,7 +2303,7 @@ const CadastroEstoque = () => {
                 <button type="button" onClick={() => setModalNovaPecaAberto(false)} style={{ height: '44px', padding: '0 20px', borderRadius: '10px', border: '1.5px solid #cbd5e1', background: '#ffffff', color: '#64748b', fontWeight: '700', cursor: 'pointer' }}>
                   Cancelar
                 </button>
-                <button type="submit" disabled={salvandoNovaPecaRapida} style={{ height: '44px', padding: '0 26px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)' }}>
+                <button type="submit" disabled={salvandoNovaPecaRapida} style={{ height: '44px', padding: '0 26px', borderRadius: '10px', border: 'none', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', fontWeight: '800', cursor: 'pointer', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)' }}>
                   {salvandoNovaPecaRapida ? 'Salvando...' : '💾 Cadastrar e Incluir no Pacote'}
                 </button>
               </div>
@@ -2319,7 +2319,7 @@ const CadastroEstoque = () => {
             
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '20px' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: '#b48a3c' }}>
+                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: 'var(--cor-destaque, #c5a059)' }}>
                   📍
                 </div>
                 <div>
@@ -2374,7 +2374,7 @@ const CadastroEstoque = () => {
               </div>
 
               {gerarPreviewModalEndereco() && (
-                <div style={{ fontSize: '0.78rem', color: '#b48a3c', background: '#fef3c7', padding: '6px 12px', borderRadius: '8px', border: '1px solid #fde68a', fontWeight: '700', marginBottom: '10px' }}>
+                <div style={{ fontSize: '0.78rem', color: 'var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', padding: '6px 12px', borderRadius: '8px', border: '1px solid color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)', fontWeight: '700', marginBottom: '10px' }}>
                   Prévia: {gerarPreviewModalEndereco()}
                 </div>
               )}
@@ -2382,7 +2382,7 @@ const CadastroEstoque = () => {
               <button 
                 type="button" 
                 onClick={handleAddLocalizacaoEspecial}
-                style={{ width: '100%', height: '38px', borderRadius: '20px', fontWeight: '800', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', cursor: 'pointer', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                style={{ width: '100%', height: '38px', borderRadius: '20px', fontWeight: '800', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', cursor: 'pointer', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}
               >
                 + Adicionar esta Prateleira
               </button>
@@ -2406,7 +2406,7 @@ const CadastroEstoque = () => {
                                 style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', width: '26px', height: '26px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}
                                 title="Remover"
                             >
-                              ×
+                                ×
                             </button>
                         </div>
                     ))
@@ -2426,7 +2426,7 @@ const CadastroEstoque = () => {
                 type="button" 
                 onClick={handleSaveLocalizacoes} 
                 disabled={salvandoLocalizacoes} 
-                style={{ padding: '10px 24px', borderRadius: '30px', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.35)', textTransform: 'uppercase' }}
+                style={{ padding: '10px 24px', borderRadius: '30px', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 35%, transparent)', textTransform: 'uppercase' }}
               >
                   {salvandoLocalizacoes ? 'Salvando...' : '💾 Salvar no Sistema'}
               </button>

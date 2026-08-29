@@ -897,26 +897,53 @@ const EditarLocacao = () => {
           <div className="card-secao">
             <h3 className="section-divider">👤 DADOS DO EVENTO</h3>
 
-            <div className="form-group mb-15">
-              <label>MODALIDADE DE SERVIÇO *</label>
-              <div className="toggle-servico" style={{pointerEvents: isFinalizado ? 'none' : 'auto'}}>
-                <button type="button" className={`btn-toggle ${tipoServico === 'PEGUE E MONTE' ? 'active-pegue' : ''}`}
+            <div className="form-group mb-20">
+              <div className="label-modalidade-header">
+                <label className="label-modalidade-servico">
+                  <span>✨</span> MODALIDADE DE SERVIÇO <span className="label-obrigatorio">*</span>
+                </label>
+                <span className="badge-modalidade-tag">
+                  {tipoServico === 'PEGUE E MONTE' ? '📦 Balcão (Sem Frete)' : '🚚 Entrega & Montagem'}
+                </span>
+              </div>
+              <div className="toggle-servico-vip" style={{pointerEvents: isFinalizado ? 'none' : 'auto'}}>
+                <button 
+                  type="button" 
+                  className={`btn-servico-card ${tipoServico === 'PEGUE E MONTE' ? 'active' : ''}`} 
                   onClick={() => { 
-                      if(tipoServico !== 'PEGUE E MONTE') {
-                          setTipoServico('PEGUE E MONTE');
-                          setLogistica({...logistica, tipo: 'retirada', frete: ''}); 
-                      }
-                  }}>
-                  📦 PEGUE E MONTE
+                    if(tipoServico !== 'PEGUE E MONTE') {
+                      setTipoServico('PEGUE E MONTE');
+                      setLogistica({...logistica, tipo: 'retirada', frete: ''}); 
+                    }
+                  }}
+                >
+                  <div className="servico-icon-box">📦</div>
+                  <div className="servico-info">
+                    <strong>PEGUE E MONTE</strong>
+                    <small>Cliente retira e devolve no balcão da loja</small>
+                  </div>
+                  <div className="servico-check-badge">
+                    {tipoServico === 'PEGUE E MONTE' && <span className="check-mark">✓</span>}
+                  </div>
                 </button>
-                <button type="button" className={`btn-toggle ${tipoServico === 'DECORACAO COMPLETA' ? 'active-deco' : ''}`}
+                <button 
+                  type="button" 
+                  className={`btn-servico-card ${tipoServico === 'DECORACAO COMPLETA' ? 'active' : ''}`} 
                   onClick={() => { 
-                      if(tipoServico !== 'DECORACAO COMPLETA') {
-                          setTipoServico('DECORACAO COMPLETA');
-                          setLogistica({...logistica, tipo: 'entrega'}); 
-                      }
-                  }}>
-                  ✨ DECORAÇÃO COMPLETA
+                    if(tipoServico !== 'DECORACAO COMPLETA') {
+                      setTipoServico('DECORACAO COMPLETA');
+                      setLogistica({...logistica, tipo: 'entrega'}); 
+                    }
+                  }}
+                >
+                  <div className="servico-icon-box">✨</div>
+                  <div className="servico-info">
+                    <strong>DECORAÇÃO COMPLETA</strong>
+                    <small>Entrega, montagem e recolhimento Celebre</small>
+                  </div>
+                  <div className="servico-check-badge">
+                    {tipoServico === 'DECORACAO COMPLETA' && <span className="check-mark">✓</span>}
+                  </div>
                 </button>
               </div>
             </div>

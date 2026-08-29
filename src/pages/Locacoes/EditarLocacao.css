@@ -271,3 +271,75 @@
   color: #16a34a !important;
   margin-top: 2px !important;
 }
+
+/* TOGGLE LOGÍSTICA */
+.header-com-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.toggle-simples {
+  display: flex;
+  background: var(--fundo-cinza, #f1f5f9);
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+  max-width: 320px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.toggle-simples button {
+  flex: 1 1 50%;
+  padding: 8px 14px;
+  border: none;
+  background: transparent;
+  border-radius: 9px;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: #64748b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.toggle-simples button.active {
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+@media (max-width: 768px) {
+  .header-com-toggle {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .toggle-simples {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .toggle-simples button {
+    flex: 1 1 50% !important;
+    width: 50% !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 10px 8px !important;
+    font-size: 0.82rem !important;
+  }
+}

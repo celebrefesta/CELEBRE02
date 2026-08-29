@@ -824,6 +824,10 @@ const Estoque = () => {
       return 0;
   });
 
+  const itensEmReparoSelecionados = itens.filter(i => 
+    itensSelecionados.has(i.id) && (Number(i.qtdManutencao || 0) > 0 || i.status === 'manutencao')
+  );
+
   const imprimirListaFiltrada = async () => {
       const pdfDoc = new jsPDF();
       const agora = new Date();
@@ -956,7 +960,7 @@ const Estoque = () => {
       <div className="clientes-hero-header">
         <div className="header-title-row">
           <div className="header-icon-badge">
-            📦
+            <i className="fas fa-boxes-stacked"></i>
           </div>
           <div className="welcome-text">
             <h1>Gestão de Acervo e Estoque</h1>
@@ -964,28 +968,13 @@ const Estoque = () => {
           </div>
         </div>
         <div className="header-actions">
-          {/* 🔢 Toggle de Visualização */}
-          <div className="view-toggle-group">
-            <button
-              className={`view-toggle-btn${modoVisualizacao === 'lista' ? ' active' : ''}`}
-              onClick={() => setModoVisualizacao('lista')}
-              title="Visão em Lista"
-            >
-              ☰ Lista
-            </button>
-            <button
-              className={`view-toggle-btn${modoVisualizacao === 'grid' ? ' active' : ''}`}
-              onClick={() => setModoVisualizacao('grid')}
-              title="Visão em Cards"
-            >
-              ⊞ Cards
-            </button>
-          </div>
-          <button className="btn-secondary-celebre" onClick={imprimirListaFiltrada}>
-            🖨️ Imprimir Lista
+          <button type="button" className="btn-secondary-celebre" onClick={imprimirListaFiltrada}>
+            <i className="fas fa-print"></i>
+            <span>Imprimir Lista</span>
           </button>
-          <button className="btn-primary-celebre" onClick={() => irParaCadastro()} style={{ opacity: totalItens >= limiteEstoque ? 0.7 : 1 }}>
-            + NOVO ITEM
+          <button type="button" className="btn-primary-celebre" onClick={() => irParaCadastro()} style={{ opacity: totalItens >= limiteEstoque ? 0.7 : 1 }}>
+            <i className="fas fa-plus"></i>
+            <span>NOVO ITEM</span>
           </button>
         </div>
       </div>
@@ -995,7 +984,7 @@ const Estoque = () => {
         <div className="modal-checkin-overlay">
           <div className="modal-checkin-box animate-pop" style={{ maxWidth: '420px', padding: '16px' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: '#0f172a' }}>
-              <strong style={{ fontSize: '0.9rem' }}>📷 Escanear Código de Barras / QR Code</strong>
+              <strong style={{ fontSize: '0.9rem' }}><i className="fas fa-camera"></i> Escanear Código de Barras / QR Code</strong>
               <button type="button" onClick={pararScannerEstoque} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.75rem' }}>✕ Fechar</button>
             </div>
             <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 10px 0' }}>Aproxime a etiqueta com QR Code ou Código de Barras da peça para localizá-la no acervo.</p>
@@ -1008,7 +997,7 @@ const Estoque = () => {
       <div className="clientes-stats-grid">
         <div className="stat-card-pro card-purple">
           <div className="stat-icon-wrapper icon-purple">
-            📦
+            <i className="fas fa-boxes-stacked"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">TOTAL DE ITENS</span>
@@ -1019,7 +1008,7 @@ const Estoque = () => {
 
         <div className="stat-card-pro card-amber">
           <div className="stat-icon-wrapper icon-amber">
-            📊
+            <i className="fas fa-coins"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">VALOR DO ACERVO</span>
@@ -1030,7 +1019,7 @@ const Estoque = () => {
 
         <div className="stat-card-pro card-blue">
           <div className="stat-icon-wrapper icon-blue">
-            🛡️
+            <i className="fas fa-shield-halved"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">VALOR REPOSIÇÃO</span>
@@ -1046,7 +1035,7 @@ const Estoque = () => {
           title="Clique para filtrar apenas as peças em manutenção/reparo"
         >
           <div className="stat-icon-wrapper icon-red">
-            🛠️
+            <i className="fas fa-wrench"></i>
           </div>
           <div className="stat-content">
             <span className="stat-title">EM MANUTENÇÃO</span>
@@ -1057,9 +1046,9 @@ const Estoque = () => {
 
         <div className="stat-card-pro card-green">
           <div className="stat-icon-wrapper icon-green">
-            👁️
+            <i className="fas fa-store"></i>
           </div>
-        <div className="stat-content">
+          <div className="stat-content">
             <span className="stat-title">VISÍVEL CATÁLOGO</span>
             <strong className="stat-number">{percentualVisivel}%</strong>
             <small className="stat-desc">Disponível no catálogo</small>
@@ -1078,43 +1067,19 @@ const Estoque = () => {
         if (itensComPrevisaoAlerta.length === 0) return null;
 
         return (
-          <div style={{ 
-            background: 'linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%)', 
-            border: '1.5px solid #fca5a5', 
-            padding: '8px 14px', 
-            borderRadius: '12px', 
-            marginBottom: '12px', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'space-between', 
-            gap: '10px', 
-            boxShadow: '0 2px 8px rgba(239, 68, 68, 0.1)' 
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: '0', flex: 1 }}>
-              <span style={{ fontSize: '18px', flexShrink: 0 }}>🔔</span>
-              <strong style={{ color: '#991b1b', fontSize: '0.8rem', fontWeight: '800', lineHeight: '1.2' }}>
+          <div className="banner-alerta-prontidao">
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', minWidth: '0', flex: 1 }}>
+              <span className="alerta-icon-circulo"><i className="fas fa-triangle-exclamation"></i></span>
+              <strong style={{ color: '#991b1b', fontSize: '0.82rem', fontWeight: '800', lineHeight: '1.2' }}>
                 {itensComPrevisaoAlerta.length} peça(s) com prontidão de reparo {itensComPrevisaoAlerta.some(i => i.dataPrevisaoRetorno < hojeISO) ? 'VENCIDA' : 'para HOJE'}!
               </strong>
             </div>
             <button 
               type="button"
               onClick={() => setStatusFiltro(prev => prev === 'manutencao' ? '' : 'manutencao')} 
-              style={{ 
-                background: statusFiltro === 'manutencao' ? '#475569' : '#dc2626', 
-                color: '#ffffff', 
-                border: 'none', 
-                padding: '6px 12px', 
-                borderRadius: '8px', 
-                fontWeight: '800', 
-                fontSize: '0.75rem', 
-                cursor: 'pointer', 
-                boxShadow: statusFiltro === 'manutencao' ? '0 2px 6px rgba(71, 85, 105, 0.2)' : '0 2px 6px rgba(220, 38, 38, 0.25)',
-                transition: 'all 0.2s ease',
-                whiteSpace: 'nowrap',
-                flexShrink: 0
-              }}
+              className="btn-acao-alerta-reparo"
             >
-              {statusFiltro === 'manutencao' ? '👁️ Desver' : '🛠️ Ver Peças'}
+              {statusFiltro === 'manutencao' ? <><i className="fas fa-eye-slash"></i> Limpar Filtro</> : <><i className="fas fa-wrench"></i> Ver Peças</>}
             </button>
           </div>
         );
@@ -1124,12 +1089,34 @@ const Estoque = () => {
       <div className="table-card-container">
         <div className="table-filter-bar">
           <div className="search-input-wrapper">
-            <span className="search-icon">🔍</span>
+            <span className="search-icon"><i className="fas fa-magnifying-glass"></i></span>
             <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
 
+          {/* 🔢 Toggle de Visualização (Lista / Cards) Integrado à Barra de Ferramentas */}
+          <div className="view-toggle-group">
+            <button
+              type="button"
+              className={`view-toggle-btn${modoVisualizacao === 'lista' ? ' active' : ''}`}
+              onClick={() => setModoVisualizacao('lista')}
+              title="Visão em Lista"
+            >
+              <i className="fas fa-list"></i>
+              <span>Lista</span>
+            </button>
+            <button
+              type="button"
+              className={`view-toggle-btn${modoVisualizacao === 'grid' ? ' active' : ''}`}
+              onClick={() => setModoVisualizacao('grid')}
+              title="Visão em Cards"
+            >
+              <i className="fas fa-grip"></i>
+              <span>Cards</span>
+            </button>
+          </div>
+
           <button className="btn-secondary-celebre" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} title="Alterar Ordem Alfabética">
-              {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : '⬆️ Z - A'}
+              {ordemAlfabetica === 'A-Z' ? <><i className="fas fa-arrow-down-a-z"></i> A - Z</> : <><i className="fas fa-arrow-up-z-a"></i> Z - A</>}
           </button>
 
           <div className="filter-select-container filter-date-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -1142,7 +1129,7 @@ const Estoque = () => {
 
           <div className="filter-select-container">
             <select className="filter-select" value={localizacaoFiltro} onChange={e => setLocalizacaoFiltro(e.target.value)}>
-              <option value="">📍 Galpão: Todos</option>
+              <option value="">Galpão: Todos</option>
               {localizacoesUnicas.map(loc => (
                   <option key={loc} value={loc}>{loc}</option>
               ))}
@@ -1151,16 +1138,16 @@ const Estoque = () => {
 
           <div className="filter-select-container">
             <select className="filter-select" value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}>
-              <option value="">🚦 Status: Todos</option>
-              <option value="disponivel">✅ Somente Disponíveis</option>
-              <option value="manutencao">🛠️ Somente em Manutenção</option>
-              {dataFiltro && <option value="indisponivel">🚫 Somente Alugados / Esgotados</option>}
+              <option value="">Status: Todos</option>
+              <option value="disponivel">Somente Disponíveis</option>
+              <option value="manutencao">Somente em Manutenção</option>
+              {dataFiltro && <option value="indisponivel">Somente Alugados / Esgotados</option>}
             </select>
           </div>
 
-          <div className="filter-select-container filter-categoria-full">
+          <div className="filter-select-container filter-categoria-container">
             <select className="filter-select" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
-              <option value="">📂 Categoria: Todas</option>
+              <option value="">Categoria: Todas</option>
               {categoriasUnicas.map(cat => (
                   <option key={cat} value={cat}>{cat}</option>
               ))}
@@ -1172,38 +1159,52 @@ const Estoque = () => {
         {itensSelecionados.size > 0 && (
           <div className="bulk-action-bar">
             <div className="bulk-info">
-              <input
-                type="checkbox"
-                title="Marcar/desmarcar todos"
-                checked={itensFiltrados.length > 0 && itensSelecionados.size === itensFiltrados.length}
-                onChange={() => {
-                  if (itensSelecionados.size === itensFiltrados.length) setItensSelecionados(new Set());
-                  else setItensSelecionados(new Set(itensFiltrados.map(i => i.id)));
-                }}
-              />
-              <span><strong>{itensSelecionados.size}</strong> {itensSelecionados.size === 1 ? 'item selecionado' : 'itens selecionados'}</span>
+              <label className="bulk-select-all-label" title="Clique para selecionar ou desmarcar todos os itens visíveis">
+                <input
+                  type="checkbox"
+                  checked={itensFiltrados.length > 0 && itensSelecionados.size === itensFiltrados.length}
+                  onChange={() => {
+                    if (itensSelecionados.size === itensFiltrados.length) setItensSelecionados(new Set());
+                    else setItensSelecionados(new Set(itensFiltrados.map(i => i.id)));
+                  }}
+                />
+                <span className="bulk-select-all-text">
+                  {itensSelecionados.size === itensFiltrados.length ? 'Todos selecionados' : 'Selecionar todos'}
+                </span>
+              </label>
+              <span className="bulk-count-badge">{itensSelecionados.size} de {itensFiltrados.length}</span>
             </div>
             <div className="bulk-buttons">
+              {itensEmReparoSelecionados.length > 0 && (
+                <button 
+                  type="button"
+                  className="bulk-btn-success" 
+                  onClick={concluirManutencaoEmMassa}
+                  title={`Concluir Reparo dos ${itensEmReparoSelecionados.length} item(ns) em manutenção`}
+                >
+                  <i className="fas fa-check-circle"></i>
+                  <span className="bulk-btn-text-desktop">Concluir Reparo ({itensEmReparoSelecionados.length})</span>
+                  <span className="bulk-btn-text-mobile">Liberar ({itensEmReparoSelecionados.length})</span>
+                </button>
+              )}
               <button 
-                className="bulk-btn-success" 
-                onClick={concluirManutencaoEmMassa}
-                style={{
-                  background: 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)',
-                  color: '#ffffff',
-                  border: 'none',
-                  padding: '8px 14px',
-                  borderRadius: '10px',
-                  fontWeight: '800',
-                  fontSize: '0.82rem',
-                  cursor: 'pointer',
-                  boxShadow: '0 2px 8px rgba(22, 163, 74, 0.3)',
-                  marginRight: '8px'
-                }}
+                type="button"
+                className="bulk-btn-danger" 
+                onClick={excluirEmMassa}
+                title={`Excluir ${itensSelecionados.size} item(ns) selecionado(s)`}
               >
-                ✅ Concluir Reparo dos Selecionados
+                <i className="fas fa-trash-can"></i>
+                <span>Excluir ({itensSelecionados.size})</span>
               </button>
-              <button className="bulk-btn-danger" onClick={excluirEmMassa}>🗑️ Excluir Selecionados</button>
-              <button className="bulk-btn-cancel" onClick={() => setItensSelecionados(new Set())}>✕ Cancelar Seleção</button>
+              <button 
+                type="button"
+                className="bulk-btn-cancel" 
+                onClick={() => setItensSelecionados(new Set())}
+                title="Desmarcar seleção"
+              >
+                <i className="fas fa-xmark"></i>
+                <span>Cancelar</span>
+              </button>
             </div>
           </div>
         )}
@@ -1234,16 +1235,16 @@ const Estoque = () => {
                   <div className="estoque-card-photo" onClick={() => item.foto && setImagemAmpliada(item.foto)}>
                     {item.foto
                       ? <img src={item.foto} alt={item.nome} style={{ objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} />
-                      : <div className="estoque-card-no-photo">📷</div>}
-                    {item.foto && <div className="photo-zoom-hint" title="Clique para ampliar foto">🔍</div>}
+                      : <div className="estoque-card-no-photo"><i className="fas fa-image"></i></div>}
+                    {item.foto && <div className="photo-zoom-hint" title="Clique para ampliar foto"><i className="fas fa-magnifying-glass-plus"></i></div>}
                     <span className="badge estoque-card-status" style={{ backgroundColor: bgPill, color: colorPill, border: `1px solid ${borderPill}` }}>{labelPill}</span>
                   </div>
 
                   {(ehKitPai || ehSubPeca || isDeco) && (
                     <div className="estoque-card-badges">
-                      {ehKitPai && <span className="card-badge-kit">📦 KIT</span>}
-                      {ehSubPeca && <span className="card-badge-peca">🧩 PEÇA</span>}
-                      {isDeco && <span className="card-badge-deco">✨ DECO</span>}
+                      {ehKitPai && <span className="card-badge-kit"><i className="fas fa-box"></i> KIT</span>}
+                      {ehSubPeca && <span className="card-badge-peca"><i className="fas fa-puzzle-piece"></i> PEÇA</span>}
+                      {isDeco && <span className="card-badge-deco"><i className="fas fa-wand-magic-sparkles"></i> DECO</span>}
                     </div>
                   )}
 
@@ -1251,7 +1252,7 @@ const Estoque = () => {
                     <strong className="estoque-card-nome" style={{ color: item.nome.includes('⚠️') ? '#ef4444' : 'var(--texto-principal, #0f172a)' }}>{item.nome}</strong>
                     <span className="estoque-card-codigo">CÓD: {item.codigo || 'S/N'}</span>
                     <span className="estoque-card-cat">{item.categoria || '—'}</span>
-                    {item.localizacao && <span className="estoque-card-loc">📍 {item.localizacao}</span>}
+                    {item.localizacao && <span className="estoque-card-loc"><i className="fas fa-location-dot"></i> {item.localizacao}</span>}
                   </div>
 
                   <div className="estoque-card-footer">
@@ -1260,11 +1261,11 @@ const Estoque = () => {
                       <span>{disponivelTotal} {isDeco ? 'kit' : 'un'} disp.</span>
                     </div>
                     <div className="estoque-card-actions">
-                      <button className="action-btn" onClick={() => { setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Adicionar ao Pedido">🛒</button>
-                      <button className="action-btn" onClick={() => abrirModalManutencao(item)} title="Manutenção / Reparo" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#b45309' }}>🛠️</button>
-                      <button className="action-btn edit" onClick={() => irParaCadastro(item)} title="Editar">✏️</button>
-                      <button className="action-btn duplicate" onClick={() => duplicarItem(item)} title="Duplicar Item">📋</button>
-                      <button className="action-btn delete" onClick={async () => { if(window.confirm('Excluir permanentemente do acervo?')) { await registrarLog('EXCLUSÃO DE ACERVO', `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, 'estoque', item.id)).then(carregarDados); }}} title="Excluir">🗑️</button>
+                      <button className="action-btn add-pedido" onClick={() => { setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Adicionar ao Pedido"><i className="fas fa-cart-plus"></i></button>
+                      <button className="action-btn manutencao" onClick={() => abrirModalManutencao(item)} title="Manutenção / Reparo"><i className="fas fa-screwdriver-wrench"></i></button>
+                      <button className="action-btn edit" onClick={() => irParaCadastro(item)} title="Editar"><i className="fas fa-pen-to-square"></i></button>
+                      <button className="action-btn duplicate" onClick={() => duplicarItem(item)} title="Duplicar Item"><i className="fas fa-clone"></i></button>
+                      <button className="action-btn delete" onClick={async () => { if(window.confirm('Excluir permanentemente do acervo?')) { await registrarLog('EXCLUSÃO DE ACERVO', `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, 'estoque', item.id)).then(carregarDados); }}} title="Excluir"><i className="fas fa-trash-can"></i></button>
                     </div>
                   </div>
                 </div>
@@ -1327,10 +1328,10 @@ const Estoque = () => {
                       </td>
                       <td>
                         <div className="pro-product-cell-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, maxWidth: '100%' }}>
-                          <div style={{ width: '44px', height: '44px', backgroundColor: '#f8fafc', borderRadius: '12px', overflow: 'hidden', border: '1px solid #e2e8f0', flexShrink: 0 }}>
+                          <div className="pro-product-photo-box" style={{ width: '48px', height: '48px', backgroundColor: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid var(--borda, #e2e8f0)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {item.foto ? (
                                 <img src={item.foto} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} onClick={(e) => { e.stopPropagation(); setImagemAmpliada(item.foto); }} title="Ampliar"/>
-                              ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#cbd5e1' }}>📷</div> )}
+                              ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#94a3b8' }}><i className="fas fa-image"></i></div> )}
                           </div>
                           <div className="pro-product-info-col" style={{ display: 'flex', flexDirection: 'column', gap: '3px', minWidth: 0 }}>
                               {/* 1. NOME DO ITEM */}
@@ -1497,13 +1498,13 @@ const Estoque = () => {
                       </td>
                       <td style={{ textAlign: 'right' }}>
                         <div className="table-actions-container">
-                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setModalRoiItem(item); }} title="Ver ROI e Giro da Peça" style={{ background: '#f0fdf4', borderColor: '#bbf7d0', color: '#166534' }}>📊</button>
-                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setModalReposicaoItem(item); setQtdReposicao(1); }} title="Pedir Reposição / Compra" style={{ background: '#eff6ff', borderColor: '#bfdbfe', color: '#1d4ed8' }}>🛒</button>
-                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido">➕</button>
-                            <button className="action-btn" onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); }} title="Manutenção / Reparo" style={{ background: '#fffbeb', borderColor: '#fde68a', color: '#b45309' }}>🛠️</button>
-                            <button className="action-btn edit" onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} title="Editar">✏️</button>
-                            <button className="action-btn duplicate" onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} title="Duplicar Item">📋</button>
-                            <button className="action-btn delete" onClick={async (e) => { e.stopPropagation(); if(window.confirm("Excluir permanentemente do acervo?")) { await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); }}} title="Excluir">🗑️</button>
+                            <button className="action-btn roi" onClick={(e) => { e.stopPropagation(); setModalRoiItem(item); }} title="Ver ROI e Giro da Peça"><i className="fas fa-chart-pie"></i></button>
+                            <button className="action-btn reposicao" onClick={(e) => { e.stopPropagation(); setModalReposicaoItem(item); setQtdReposicao(1); }} title="Pedir Reposição / Compra"><i className="fas fa-cart-plus"></i></button>
+                            <button className="action-btn add-pedido" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido"><i className="fas fa-plus"></i></button>
+                            <button className="action-btn manutencao" onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); }} title="Manutenção / Reparo"><i className="fas fa-screwdriver-wrench"></i></button>
+                            <button className="action-btn edit" onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} title="Editar"><i className="fas fa-pen-to-square"></i></button>
+                            <button className="action-btn duplicate" onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} title="Duplicar Item"><i className="fas fa-clone"></i></button>
+                            <button className="action-btn delete" onClick={async (e) => { e.stopPropagation(); if(window.confirm("Excluir permanentemente do acervo?")) { await registrarLog("EXCLUSÃO DE ACERVO", `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, "estoque", item.id)).then(carregarDados); }}} title="Excluir"><i className="fas fa-trash-can"></i></button>
                         </div>
                       </td>
                     </tr>

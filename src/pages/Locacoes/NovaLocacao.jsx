@@ -488,30 +488,6 @@ const NovaLocacao = () => {
           valorDevido: infoPend.valorDevido
         });
       }
-
-      // Preenche endereço do cliente na logística se houver
-      const cli = clientes.find(c => String(c.id) === String(cId));
-      if (cli && (cli.rua || cli.endereco || cli.cep || cli.cidade)) {
-        const endCli = {
-          cep: cli.cep || '',
-          rua: cli.rua || cli.endereco || '',
-          numero: cli.numero || '',
-          bairro: cli.bairro || '',
-          cidade: cli.cidade ? `${cli.cidade}${cli.uf ? ` - ${cli.uf}` : ''}` : ''
-        };
-        setLogistica(prev => ({
-          ...prev,
-          cep: prev.cep || endCli.cep,
-          rua: prev.rua || endCli.rua,
-          numero: prev.numero || endCli.numero,
-          bairro: prev.bairro || endCli.bairro,
-          cidade: prev.cidade || endCli.cidade
-        }));
-
-        if (endCli.rua || endCli.cep) {
-          calcularDistanciaAutomatica(endCli);
-        }
-      }
     }
   };
 
@@ -595,10 +571,6 @@ const NovaLocacao = () => {
   };
 
   const abrirCatalogo = () => {
-      if (!datas.retirada || !datas.devolucao) {
-          alert("📅 ATENÇÃO: Por favor, preencha as DATAS DE RETIRADA e DEVOLUÇÃO no topo da tela primeiro!");
-          return;
-      }
       setModalAberto(true);
   };
 
@@ -840,25 +812,37 @@ const NovaLocacao = () => {
 
     const temOrigemValida = Boolean(cidadeOrigem || (cepOrigem.length === 8) || ruaOrigem);
 
-    // Montar endereços para Google Maps Directions de forma limpa e precisa:
-    // Formato: Rua, Número, Cidade - UF, Brasil (sem enfiar bairro ou CEP no meio que causam conflitos no Maps)
+    // Montar endereços para Google Maps Directions de forma limpa, estruturada e de máxima precisão:
     const buildMapsAddress = (rua, num, bairro, cidade, uf, cep) => {
       const ruaLimpa = (rua || '').trim();
       const numLimpo = (num || '').trim();
+      const bairroLimpo = (bairro || '').trim();
       const cidLimpa = (cidade || '').trim();
       const ufLimpa = (uf || 'SP').trim().toUpperCase();
+      const cepLimpo = (cep || '').replace(/\D/g, '');
 
-      if (ruaLimpa && numLimpo && cidLimpa) {
-        return `${ruaLimpa}, ${numLimpo}, ${cidLimpa} - ${ufLimpa}, Brasil`;
+      const partes = [];
+      if (ruaLimpa) {
+        if (numLimpo && numLimpo !== '0' && numLimpo.toLowerCase() !== 's/n') {
+          partes.push(`${ruaLimpa}, ${numLimpo}`);
+        } else {
+          partes.push(ruaLimpa);
+        }
       }
-      if (ruaLimpa && cidLimpa) {
-        return `${ruaLimpa}, ${cidLimpa} - ${ufLimpa}, Brasil`;
+      if (bairroLimpo && !ruaLimpa.toLowerCase().includes(bairroLimpo.toLowerCase())) {
+        partes.push(bairroLimpo);
       }
-      if (cep && cidLimpa) {
-        return `${cidLimpa} - ${ufLimpa}, ${cep}, Brasil`;
+      if (cidLimpa) {
+        partes.push(`${cidLimpa} - ${ufLimpa}`);
+      } else if (ufLimpa) {
+        partes.push(ufLimpa);
       }
-      if (cep) return `${cep}, Brasil`;
-      return [ruaLimpa, numLimpo, cidLimpa, ufLimpa].filter(Boolean).join(', ');
+      if (cepLimpo.length === 8) {
+        partes.push(cepLimpo);
+      }
+      partes.push('Brasil');
+
+      return partes.filter(Boolean).join(', ');
     };
 
     const endOrigem = buildMapsAddress(ruaOrigem, conf.numero, conf.bairro, cidadeOrigem, ufOrigem, conf.cep);
@@ -987,7 +971,10 @@ const NovaLocacao = () => {
             const dataRoute = await resRoute.json();
             if (dataRoute.routes?.length > 0 && dataRoute.routes[0].distance > 0) {
               const osrmKm = dataRoute.routes[0].distance / 1000;
-              if (!(mesmaCidade && osrmKm > 40)) {
+              if (mesmaCidade && osrmKm > 35) {
+                // Ponto geocodificado fora da cidade por falha de base gratuita
+                kmCalculado = 0;
+              } else {
                 kmCalculado = Math.max(0.5, Math.round(osrmKm * 10) / 10);
               }
             }
@@ -995,9 +982,13 @@ const NovaLocacao = () => {
             console.warn('OSRM indisponível, usando estimativa Haversine viária', eRoute);
           }
 
-          // 2. Fallback por estimativa viária (fator 1.35x sobre a linha reta)
+          // 2. Fallback por estimativa viária (fator 1.35x sobre a linha reta com trava de mesma cidade)
           if (!kmCalculado && distHaversine > 0) {
-            kmCalculado = Math.max(1, Math.round(distHaversine * 1.35 * 10) / 10);
+            if (mesmaCidade && distHaversine > 30) {
+              kmCalculado = 0; // Evita aberrações de 1.000 km na mesma cidade
+            } else {
+              kmCalculado = Math.max(1, Math.round(distHaversine * 1.35 * 10) / 10);
+            }
           }
         }
       }
@@ -1011,19 +1002,24 @@ const NovaLocacao = () => {
         duracaoTexto: duracaoTextoGoogle,
         oficialGoogle: oficialGoogle,
         numeroNaoMapeado: Boolean(numDest && numeroNaoMapeado && !oficialGoogle),
-        numeroDigitado: numDest || ''
+        numeroDigitado: numDest || '',
+        semChaveGoogle: !apiKeyGoogle
       };
       setInfoRota(infoAtualizada);
 
       if (kmCalculado > 0) {
         setKmDistancia(String(kmCalculado));
       } else if (isManual) {
-        alert("⚠️ Não conseguimos calcular a distância automaticamente com precisão.\n\nO Google Maps foi aberto para você ver a rota real e digitar o KM correto manualmente no campo 'Distância do Trajeto'.");
+        // Abre o Maps automaticamente para que o usuário veja a rota real e digite o KM
         window.open(googleMapsUrl, '_blank');
       }
     } catch (err) {
       console.error("Erro ao calcular rota automática:", err);
-      if (isManual) alert("Não foi possível conectar ao serviço de rotas. Você pode preencher o KM manualmente.");
+      if (isManual) {
+        const endDestStr = [dest.rua, dest.numero, dest.bairro, dest.cidade].filter(Boolean).join(', ');
+        const mapsBackup = 'https://www.google.com/maps/dir/?api=1&origin=' + encodeURIComponent(endOrigem) + '&destination=' + encodeURIComponent(endDestStr || endDestino);
+        window.open(mapsBackup, '_blank');
+      }
     } finally {
       setCalculandoDistancia(false);
     }
@@ -1463,20 +1459,46 @@ const NovaLocacao = () => {
 
   return (
     <div className="locacao-form-container">
-      <header className="page-header-compact">
-        <div className="header-top-row">
-          <h1 className="page-title">Nova Locação</h1>
-          <button className="btn-voltar-compact" onClick={() => navigate('/locacoes')}>
-            ← Voltar
-          </button>
+      {/* CABEÇALHO HERO PADRÃO CELEBRE */}
+      <header className="hero-header-celebre">
+        <div className="header-title-row">
+          <div className="header-icon-badge">
+            <i className="fas fa-cart-plus"></i>
+          </div>
+          <div className="welcome-text">
+            <h1 className="form-page-title">Nova Locação</h1>
+            <p className="form-page-subtitle">
+              Monte o pedido, selecione as peças do acervo e defina a logística do evento.
+            </p>
+          </div>
         </div>
-        
-        <div className="header-tools-row">
-          <button type="button" className="btn-tool-chip" onClick={() => setModalCalendarioAberto(true)}>
-            📅 Disponibilidade
+
+        <div className="header-actions">
+          <button 
+            type="button" 
+            className="btn-secondary-celebre" 
+            onClick={() => setModalCalendarioAberto(true)}
+            title="Ver Matriz de Disponibilidade do Acervo"
+          >
+            <i className="far fa-calendar-alt"></i> Disponibilidade
           </button>
-          <button type="button" className="btn-tool-chip gold" onClick={handleGerarPropostaPDF}>
-            📄 Proposta PDF
+          
+          <button 
+            type="button" 
+            className="btn-secondary-celebre" 
+            onClick={handleGerarPropostaPDF}
+            title="Gerar Proposta Comercial em PDF"
+          >
+            <i className="far fa-file-pdf"></i> Proposta PDF
+          </button>
+
+          <button 
+            type="button" 
+            className="btn-secondary-celebre" 
+            onClick={() => navigate('/locacoes')}
+            title="Voltar para a listagem de locações"
+          >
+            <i className="fas fa-arrow-left"></i> Voltar à Lista
           </button>
         </div>
       </header>
@@ -1485,10 +1507,16 @@ const NovaLocacao = () => {
         
         <div className="coluna-form">
           <div className="card-secao">
-            <h3 className="section-divider">👤 DADOS DO EVENTO & CLIENTE</h3>
+            <h3 className="section-divider">
+              <i className="fas fa-user-tag section-icon"></i> Dados do Evento & Cliente
+            </h3>
             
             <div className="form-group mb-20">
-              <label style={{ fontWeight: '800', fontSize: '0.74rem', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>MODALIDADE DE SERVIÇO *</label>
+              <div className="label-modalidade-header">
+                <label className="label-modalidade-servico">
+                  <i className="fas fa-concierge-bell label-icon"></i> Modalidade de Serviço <span className="label-obrigatorio">*</span>
+                </label>
+              </div>
               <div className="toggle-servico-vip">
                 <button 
                   type="button" 
@@ -1498,10 +1526,15 @@ const NovaLocacao = () => {
                     setLogistica(prev => ({ ...prev, tipo: 'retirada', frete: '' }));
                   }}
                 >
-                  <span className="servico-icon">📦</span>
+                  <div className="servico-icon-box">
+                    <i className="fas fa-box-open"></i>
+                  </div>
                   <div className="servico-info">
-                    <strong>PEGUE E MONTE</strong>
+                    <strong>Pegue e Monte</strong>
                     <small>Cliente retira e devolve no balcão da loja</small>
+                  </div>
+                  <div className="servico-check-badge">
+                    {tipoServico === 'PEGUE E MONTE' && <span className="check-mark">✓</span>}
                   </div>
                 </button>
                 <button 
@@ -1512,10 +1545,15 @@ const NovaLocacao = () => {
                     setLogistica(prev => ({ ...prev, tipo: 'entrega' }));
                   }}
                 >
-                  <span className="servico-icon">✨</span>
+                  <div className="servico-icon-box">
+                    <i className="fas fa-truck-fast"></i>
+                  </div>
                   <div className="servico-info">
-                    <strong>DECORAÇÃO COMPLETA</strong>
+                    <strong>Decoração Completa</strong>
                     <small>Entrega, montagem e recolhimento Celebre</small>
+                  </div>
+                  <div className="servico-check-badge">
+                    {tipoServico === 'DECORACAO COMPLETA' && <span className="check-mark">✓</span>}
                   </div>
                 </button>
               </div>
@@ -1523,7 +1561,7 @@ const NovaLocacao = () => {
 
             {/* 👤 SELEÇÃO DE CLIENTE LUXO (BUSCA SEARCHABLE + CARD EXECUTIVO) */}
             <div className="form-group mt-15 mb-15">
-              <label className="label-secao-sub" style={{ marginBottom: '6px' }}>👤 CLIENTE *</label>
+              <label><i className="fas fa-user label-icon"></i> Cliente *</label>
 
               {(() => {
                 const clienteObjSelecionado = clientes.find(c => String(c.id) === String(clienteSelecionado));
@@ -1674,12 +1712,11 @@ const NovaLocacao = () => {
               })()}
             </div>
 
-            {/* 🏷️ TIPO DE EVENTO & 🎭 TEMA DA FESTA (DIRETO E SEM BUROCRACIA) */}
             {/* 🏷️ TIPO DE EVENTO & 🎭 TEMA DA FESTA (GRID 2 COLUNAS LIMPO E DIRETO) */}
             <div className="grid-temas-2col mt-12">
               {/* 1. TIPO DE EVENTO */}
               <div className="form-group">
-                <label>🏷️ Tipo de Evento</label>
+                <label><i className="fas fa-tag label-icon"></i> Tipo de Evento</label>
                 <select
                   value={tipoEvento}
                   onChange={e => setTipoEvento(e.target.value)}
@@ -1688,7 +1725,7 @@ const NovaLocacao = () => {
                   <option value="">Selecione o Tipo de Evento...</option>
                   {TIPOS_EVENTO.map(tipo => (
                     <option key={tipo.value} value={tipo.value}>
-                      {tipo.emoji} {tipo.label}
+                      {tipo.label}
                     </option>
                   ))}
                 </select>
@@ -1696,7 +1733,7 @@ const NovaLocacao = () => {
 
               {/* 2. 1º CATEGORIA */}
               <div className="form-group">
-                <label>🎭 1º Categoria *</label>
+                <label><i className="fas fa-layer-group label-icon"></i> 1ª Categoria *</label>
                 <select
                   value={categoriaTema}
                   onChange={e => {
@@ -1715,7 +1752,7 @@ const NovaLocacao = () => {
 
               {/* 3. 2º SUBCATEGORIA */}
               <div className="form-group">
-                <label>2º Subcategoria *</label>
+                <label><i className="fas fa-sitemap label-icon"></i> 2ª Subcategoria *</label>
                 <select
                   value={subcategoriaTema}
                   onChange={e => {
@@ -1734,7 +1771,7 @@ const NovaLocacao = () => {
 
               {/* 4. 3º GRUPO / ESTILO */}
               <div className="form-group">
-                <label>3º Grupo / Estilo *</label>
+                <label><i className="fas fa-shapes label-icon"></i> 3º Grupo / Estilo *</label>
                 <select
                   value={grupoTemaSelecionado}
                   onChange={e => {
@@ -1752,7 +1789,7 @@ const NovaLocacao = () => {
 
               {/* 5. 4º TEMA ESPECÍFICO (DESTAQUE NA LARGURA TOTAL) */}
               <div className="form-group tema-destaque-campo">
-                <label>🎉 4º Tema Específico da Festa / Evento *</label>
+                <label><i className="fas fa-wand-magic-sparkles label-icon"></i> Tema Específico da Festa / Evento *</label>
                 <select
                   value={temaFesta}
                   onChange={e => setTemaFesta(e.target.value)}
@@ -1770,7 +1807,7 @@ const NovaLocacao = () => {
             {/* SE DIGITAR OUTRO TEMA */}
             {temaFesta === 'OUTRO_TEMA' && (
               <div className="form-group mt-10" style={{ background: 'rgba(197, 160, 89, 0.08)', padding: '12px 14px', borderRadius: '10px', border: '1.5px dashed #c5a059' }}>
-                <label style={{ color: '#926f2d', fontWeight: '800' }}>✏️ Digite o nome do Tema Personalizado *</label>
+                <label style={{ color: '#926f2d', fontWeight: '600' }}><i className="fas fa-pen label-icon"></i> Digite o nome do Tema Personalizado *</label>
                 <input
                   type="text"
                   placeholder="Ex: Bailarina Rosa com Ouro..."
@@ -1785,7 +1822,7 @@ const NovaLocacao = () => {
             {/* ⚡ ATALHOS RÁPIDOS DE DATAS */}
             <div className="barra-atalhos-datas mt-12">
               <span className="label-atalhos-datas">
-                ⚡ Atalhos Rápidos:
+                <i className="fas fa-bolt label-icon"></i> Atalhos Rápidos de Datas:
               </span>
               <div className="grupo-botoes-atalhos-datas">
                 <button
@@ -1794,7 +1831,7 @@ const NovaLocacao = () => {
                   onClick={() => aplicarAtalhoDatas('proxima_sexta_segunda')}
                   title="Retira Sexta (14h) e devolve Segunda (12h)"
                 >
-                  🎉 Sex ➔ Seg
+                  <i className="far fa-calendar-check icon-chip"></i> Sex ➔ Seg
                 </button>
                 <button
                   type="button"
@@ -1802,7 +1839,7 @@ const NovaLocacao = () => {
                   onClick={() => aplicarAtalhoDatas('proximo_sabado_segunda')}
                   title="Retira Sábado (09h) e devolve Segunda (12h)"
                 >
-                  🎈 Sáb ➔ Seg
+                  <i className="far fa-calendar-check icon-chip"></i> Sáb ➔ Seg
                 </button>
                 <button
                   type="button"
@@ -1810,7 +1847,7 @@ const NovaLocacao = () => {
                   onClick={() => aplicarAtalhoDatas('proximo_sabado_domingo')}
                   title="Retira Sábado (09h) e devolve Domingo (18h)"
                 >
-                  📅 Sáb ➔ Dom
+                  <i className="far fa-calendar-check icon-chip"></i> Sáb ➔ Dom
                 </button>
                 <button
                   type="button"
@@ -1818,7 +1855,7 @@ const NovaLocacao = () => {
                   onClick={() => aplicarAtalhoDatas('hoje_amanha')}
                   title="Retira Hoje (09h) e devolve Amanhã (18h)"
                 >
-                  ⚡ Hoje ➔ Amanhã
+                  <i className="fas fa-bolt icon-chip"></i> Hoje ➔ Amanhã
                 </button>
               </div>
             </div>
@@ -1826,7 +1863,7 @@ const NovaLocacao = () => {
             {/* 📅 DATAS E HORÁRIOS EM GRID ROBUSTO (4 COLUNAS NO DESKTOP, 2x2 NO MOBILE) */}
             <div className="grid-datas-celebre mt-10">
               <div className="form-group">
-                <label>📅 Data Retirada *</label>
+                <label><i className="far fa-calendar-alt label-icon"></i> Data Retirada *</label>
                 <input 
                   type="date" 
                   value={datas.retirada} 
@@ -1835,7 +1872,7 @@ const NovaLocacao = () => {
               </div>
 
               <div className="form-group">
-                <label>⏰ Hora Retirada</label>
+                <label><i className="far fa-clock label-icon"></i> Hora Retirada</label>
                 <input 
                   type="time" 
                   value={datas.horarioRetirada || '09:00'} 
@@ -1844,7 +1881,7 @@ const NovaLocacao = () => {
               </div>
 
               <div className="form-group">
-                <label>📅 Data Devolução *</label>
+                <label><i className="far fa-calendar-alt label-icon"></i> Data Devolução *</label>
                 <input 
                   type="date" 
                   min={datas.retirada} 
@@ -1854,7 +1891,7 @@ const NovaLocacao = () => {
               </div>
 
               <div className="form-group">
-                <label>⏰ Hora Devolução</label>
+                <label><i className="far fa-clock label-icon"></i> Hora Devolução</label>
                 <input 
                   type="time" 
                   value={datas.horarioDevolucao || '18:00'} 
@@ -1865,7 +1902,7 @@ const NovaLocacao = () => {
 
             {/* 🎉 HORÁRIO PREVISTO DA FESTA */}
             <div className="form-group mt-12">
-              <label>🎉 Horário Previsto da Festa / Evento</label>
+              <label><i className="far fa-clock label-icon"></i> Horário Previsto da Festa / Evento</label>
               <input 
                 type="time" 
                 value={datas.horarioFesta || '19:00'} 
@@ -1876,7 +1913,9 @@ const NovaLocacao = () => {
 
           <div className="card-secao">
             <div className="header-com-toggle">
-              <h3 className="section-divider" style={{margin: 0, border: 'none'}}>🚚 LOGÍSTICA & ENTREGA</h3>
+              <h3 className="section-divider" style={{margin: 0, border: 'none'}}>
+                <i className="fas fa-truck-fast section-icon"></i> Logística & Entrega
+              </h3>
               <div className="toggle-simples">
                 <button 
                   type="button" 
@@ -2068,15 +2107,11 @@ const NovaLocacao = () => {
                 {/* MODO 3: ENDEREÇO DEFINIDO (COMPLETO COM CALCULADORA) */}
                 {(!logistica.statusLocal || logistica.statusLocal === 'definido') && (
                   <>
-                    {/* LINHA 1: CEP | Cidade/UF | Taxa de Frete */}
-                    <div className="grid-logistica-linha1 mt-12">
+                    {/* LINHA 1: CEP (50%) | Taxa de Frete Final (50%) NA MESMA LINHA */}
+                    <div className="grid-logistica-cep-frete mt-12">
                       <div className="form-group">
                         <label>CEP do Local da Festa</label>
                         <input type="text" placeholder="00000-000" maxLength="9" value={logistica.cep} onChange={handleCepChange} />
-                      </div>
-                      <div className="form-group">
-                        <label>Cidade / UF</label>
-                        <input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} />
                       </div>
                       <div className="form-group">
                         <label>Taxa de Frete Final (R$)</label>
@@ -2102,8 +2137,20 @@ const NovaLocacao = () => {
                       </div>
                     </div>
 
-                    {/* LINHA 2: Logradouro | Número (mesma linha) */}
-                    <div className="grid-logistica-linha2 mt-12">
+                    {/* LINHA 2: Cidade / UF | Bairro (mesma linha) */}
+                    <div className="grid-logistica-cidade-bairro mt-12">
+                      <div className="form-group">
+                        <label>Cidade / UF</label>
+                        <input type="text" placeholder="Ex: Campinas - SP" value={logistica.cidade} onChange={e => setLogistica({...logistica, cidade: e.target.value})} />
+                      </div>
+                      <div className="form-group">
+                        <label>Bairro</label>
+                        <input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} />
+                      </div>
+                    </div>
+
+                    {/* LINHA 3: Logradouro | Número (mesma linha) */}
+                    <div className="grid-logistica-rua-numero mt-12">
                       <div className="form-group">
                         <label>Logradouro (Rua / Av.)</label>
                         <input type="text" placeholder="Av. das Nações..." value={logistica.rua} onChange={e => setLogistica({...logistica, rua: e.target.value})} />
@@ -2111,14 +2158,6 @@ const NovaLocacao = () => {
                       <div className="form-group">
                         <label>Número</label>
                         <input type="text" id="numeroInput" placeholder="123" value={logistica.numero} onChange={e => setLogistica({...logistica, numero: e.target.value})} />
-                      </div>
-                    </div>
-
-                    {/* LINHA 3: Bairro */}
-                    <div className="grid-logistica-linha3 mt-12">
-                      <div className="form-group">
-                        <label>Bairro</label>
-                        <input type="text" placeholder="Centro" value={logistica.bairro} onChange={e => setLogistica({...logistica, bairro: e.target.value})} />
                       </div>
                     </div>
 
@@ -2134,14 +2173,14 @@ const NovaLocacao = () => {
                   </>
                 )}
 
-                {/* 🧮 CALCULADORA INTEGRADA DE FRETE POR KM AUTOMÁTICA */}
+                {/* 🧮 CALCULADORA DE FRETE POR KM */}
                 <div className="box-calculadora-frete">
                   <div className="calc-frete-header">
                     <div className="calc-frete-header-info">
                       <div className="calc-frete-icon-badge">🧮</div>
                       <div>
                         <strong>Calculadora de Frete por KM</strong>
-                        <p>Cálculo automático de rota e estimativa de custos de transporte</p>
+                        <p>Consulte a distância no Google Maps e informe abaixo para calcular o custo</p>
                       </div>
                     </div>
 
@@ -2154,6 +2193,7 @@ const NovaLocacao = () => {
                       {mostrarAjusteFrete ? 'Fechar Ajustes' : 'Configurar Veículo'}
                     </button>
                   </div>
+
 
                   {/* 📍 BANNER DE ENDEREÇO DE ORIGEM (SEDE/ESTOQUE) */}
                   {(() => {
@@ -2266,66 +2306,107 @@ const NovaLocacao = () => {
                             onChange={(e) => setParamFrete(prev => ({ ...prev, custoAdicionalKm: e.target.value }))}
                           />
                         </div>
+
+                        <div className="ajuste-campo">
+                          <label>🔒 Taxa Mínima (R$)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={paramFrete.taxaMinima}
+                            onChange={(e) => setParamFrete(prev => ({ ...prev, taxaMinima: e.target.value }))}
+                            title="Valor mínimo cobrado mesmo em distâncias curtas. Use 0 para desativar."
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
 
-                  {/* GRID PRINCIPAL: DISTÂNCIA KM + BOTÃO CALCULAR AUTOMÁTICO */}
-                  <div className="grid-frete-controles">
-                    <div className="form-group-km">
-                      <label>📏 Distância do Trajeto (KM Ida)</label>
-                      <div className="input-km-wrapper">
-                        <input 
-                          type="number" 
-                          min="0"
-                          step="0.1"
-                          placeholder="Ex: 15.5" 
-                          value={kmDistancia} 
-                          onChange={e => setKmDistancia(e.target.value)}
-                          className="input-km-distancia"
-                        />
-                        <span className="unidade-km-badge">km</span>
-                        {kmDistancia && (
-                          <button
-                            type="button"
-                            onClick={() => setKmDistancia('')}
-                            className="btn-limpar-km"
-                            title="Limpar KM"
-                          >
-                            ✕
-                          </button>
-                        )}
-                      </div>
-                    </div>
+                  {/* BOTÃO VER ROTA NO GOOGLE MAPS + CAMPO KM MANUAL */}
+                  {(() => {
+                    const conf = configEmpresa || {};
+                    const endOrigem = [conf.rua, conf.numero, conf.bairro, conf.cidade, conf.uf].filter(Boolean).join(', ');
+                    const endDestino = [logistica.rua, logistica.numero, logistica.bairro, logistica.cidade].filter(Boolean).join(', ');
+                    const temDestino = Boolean(logistica.rua || logistica.cidade || logistica.cep);
+                    const mapsUrl = endOrigem
+                      ? `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(endOrigem + ', Brasil')}&destination=${encodeURIComponent((endDestino || logistica.cep || '') + ', Brasil')}&travelmode=driving`
+                      : temDestino
+                      ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent((endDestino || logistica.cep || '') + ', Brasil')}`
+                      : null;
 
-                    <div className="botoes-rota-acoes">
-                      <button
-                        type="button"
-                        onClick={() => calcularDistanciaAutomatica(null, true)}
-                        disabled={calculandoDistancia}
-                        className="btn-calcular-distancia-main"
-                      >
-                        {calculandoDistancia ? (
-                          <><i className="fas fa-spinner fa-spin"></i> Calculando Rota...</>
-                        ) : (
-                          <><i className="fas fa-route"></i> Calcular Rota Automática</>
-                        )}
-                      </button>
+                    return (
+                      <>
+                        {/* INSTRUÇÃO + BOTÃO MAPS SEMPRE VISÍVEL (RESPONSIVO) */}
+                        <div className="box-instrucoes-maps">
+                          <div className="box-instrucoes-maps-texto">
+                            <span className="titulo-instrucoes">
+                              📍 Como calcular a distância:
+                            </span>
+                            <div className="passos-instrucoes">
+                              <b>1.</b> Clique em <strong>Ver no Google Maps</strong> &nbsp;•&nbsp; 
+                              <b>2.</b> Veja o KM na rota &nbsp;•&nbsp; 
+                              <b>3.</b> Digite o valor abaixo e clique em <strong>Aplicar</strong>
+                            </div>
+                          </div>
+                          {mapsUrl ? (
+                            <a
+                              href={mapsUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn-maps-link-action"
+                            >
+                              <i className="fab fa-google"></i>
+                              Ver no Google Maps
+                              <i className="fas fa-external-link-alt" style={{ fontSize: '0.7rem', opacity: 0.8 }}></i>
+                            </a>
+                          ) : (
+                            <div style={{
+                              fontSize: '0.72rem',
+                              color: '#92400e',
+                              background: 'rgba(245,158,11,0.1)',
+                              border: '1px solid rgba(245,158,11,0.3)',
+                              borderRadius: '8px',
+                              padding: '8px 12px'
+                            }}>
+                              ⚠️ Preencha o endereço da festa acima para ativar o botão Maps
+                            </div>
+                          )}
+                        </div>
 
-                      {infoRota?.mapsUrl && (
-                        <a
-                          href={infoRota.mapsUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="btn-abrir-maps-link"
-                        >
-                          <i className="fas fa-external-link-alt"></i> Maps
-                        </a>
-                      )}
-                    </div>
-                  </div>
+                        {/* CAMPO KM MANUAL */}
+                        <div className="grid-frete-controles" style={{ marginTop: '10px' }}>
+                          <div className="form-group-km">
+                            <label>📏 Distância do Trajeto (KM Ida) — informe o valor do Google Maps</label>
+                            <div className="input-km-wrapper">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.1"
+                                placeholder="Ex: 2.9"
+                                value={kmDistancia}
+                                onChange={e => setKmDistancia(e.target.value)}
+                                className="input-km-distancia"
+                                autoComplete="off"
+                              />
+                              <span className="unidade-km-badge">km</span>
+                              {kmDistancia && (
+                                <button
+                                  type="button"
+                                  onClick={() => setKmDistancia('')}
+                                  className="btn-limpar-km"
+                                  title="Limpar KM"
+                                >
+                                  ✕
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </>
+                    );
+                  })()}
 
-                  {/* RESULTADO CALCULADO COM MEMÓRIA DE CÁLCULO E BOTÕES DE APLICAÇÃO */}
+
                   {(() => {
                     const est = calcularFreteEstimado(kmDistancia);
                     if (!kmDistancia || est.freteTotal <= 0) return null;
@@ -2352,48 +2433,6 @@ const NovaLocacao = () => {
 
                     return (
                       <div className="card-resultado-frete">
-                        {infoRota?.oficialGoogle && (
-                          <div style={{
-                            background: '#eff6ff',
-                            border: '1px solid #bfdbfe',
-                            padding: '6px 12px',
-                            borderRadius: '8px',
-                            fontSize: '0.74rem',
-                            color: '#1e40af',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            fontWeight: '700'
-                          }}>
-                            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                              <i className="fab fa-google" style={{ color: '#2563eb' }}></i>
-                              Rota Oficial Google Maps (Porta a Porta)
-                            </span>
-                            {infoRota.duracaoTexto && (
-                              <span style={{ color: '#3b82f6', fontWeight: '800' }}>
-                                ⏱️ ~{infoRota.duracaoTexto}
-                              </span>
-                            )}
-                          </div>
-                        )}
-                        {infoRota?.numeroNaoMapeado && (
-                          <div style={{
-                            background: 'rgba(245, 158, 11, 0.1)',
-                            border: '1px solid rgba(245, 158, 11, 0.35)',
-                            padding: '8px 12px',
-                            borderRadius: '10px',
-                            fontSize: '0.74rem',
-                            color: '#92400e',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '8px'
-                          }}>
-                            <span style={{ fontSize: '1.1rem' }}>⚠️</span>
-                            <div>
-                              <strong>Numeração específica (Nº {infoRota.numeroDigitado}) não localizada no mapa desta rua:</strong> A distância foi estimada pelo início/centro da via. Confira a rota no botão <strong>Maps</strong>.
-                            </div>
-                          </div>
-                        )}
                         <div className="resultado-frete-topo">
                           <div className="resultado-frete-destaque">
                             <span className="badge-veiculo-info">
@@ -2403,6 +2442,27 @@ const NovaLocacao = () => {
                               R$ {freteFormatado}
                             </div>
                           </div>
+
+                          {/* AVISO DE TAXA MÍNIMA APLICADA */}
+                          {est.somaReal < est.freteTotal && est.freteTotal > 0 && (
+                            <div style={{
+                              background: 'rgba(245,158,11,0.08)',
+                              border: '1px solid rgba(245,158,11,0.3)',
+                              borderRadius: '8px',
+                              padding: '6px 10px',
+                              fontSize: '0.71rem',
+                              color: '#92400e',
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '6px',
+                              marginTop: '8px'
+                            }}>
+                              <span>⚠️</span>
+                              <span>
+                                O custo real ({est.somaReal.toFixed(2).replace('.', ',')} R$) é menor que a <strong>Taxa Mínima de R$ {Number(paramFrete.taxaMinima).toFixed(2).replace('.', ',')}</strong> configurada. Para distâncias curtas, o valor mínimo é aplicado automaticamente. Para desativar, clique em <strong>Configurar Veículo</strong> e ajuste a Taxa Mínima para 0.
+                              </span>
+                            </div>
+                          )}
 
                           <div className="resultado-frete-botoes">
                             <button
@@ -2448,7 +2508,9 @@ const NovaLocacao = () => {
 
           <div className="card-secao">
             <div className="header-com-botoes">
-              <h3 className="section-divider" style={{margin: 0, border: 'none'}}>📦 ITENS DO PEDIDO</h3>
+              <h3 className="section-divider" style={{margin: 0, border: 'none'}}>
+                <i className="fas fa-boxes-stacked section-icon"></i> Itens do Pedido
+              </h3>
               {carrinho.length > 0 && (
                 <div className="botoes-acoes-itens">
                   <button type="button" className="btn-destaque-adc-pecas" onClick={abrirCatalogo}>
@@ -2514,7 +2576,7 @@ const NovaLocacao = () => {
                     <strong>Nenhuma peça adicionada ao pedido ainda</strong>
                     <p>Clique no botão abaixo para abrir o catálogo e selecionar mesas, painéis, louças e suportes.</p>
                   </div>
-                  <button type="button" className="btn-vazio-abrir-catalogo">
+                  <button type="button" className="btn-vazio-abrir-catalogo" onClick={abrirCatalogo}>
                     ✨ + Adicionar Peças do Acervo
                   </button>
                 </div>
@@ -2707,7 +2769,9 @@ const NovaLocacao = () => {
           </div>
 
           <div className="card-secao">
-            <h3 className="section-divider">🔒 OBSERVAÇÕES INTERNAS</h3>
+            <h3 className="section-divider">
+              <i className="fas fa-lock section-icon"></i> Observações Internas
+            </h3>
             <div className="form-group">
               <textarea 
                 rows="2" 
@@ -3179,17 +3243,18 @@ const NovaLocacao = () => {
                         const ehBateVolta = disp.livresReais <= 0 && disp.retornaNoDia > 0;
                         const isDeco = item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa' || item.tipoCadastro === 'decoracao';
                         const pecasCompostas = item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || item.itensDecoracao || item.itensDoKit || item.especificacoes?.pecasKit || [];
+                        const itemNoCarrinho = carrinho.find(c => c.id === item.id);
 
                         return (
                           <div 
                             key={item.id} 
-                            className="peca-card" 
+                            className={`peca-card ${itemNoCarrinho ? 'no-carrinho' : ''}`} 
                             onClick={() => { if(!estaEsgotado) addCarrinho(item); }} 
                             style={{
                               opacity: estaEsgotado ? 0.5 : 1, 
                               cursor: estaEsgotado ? 'not-allowed' : 'pointer',
-                              border: isDeco ? '1.5px solid #c5a059' : undefined,
-                              boxShadow: isDeco ? '0 4px 14px rgba(197, 160, 89, 0.2)' : undefined
+                              border: isDeco ? '1.5px solid #c5a059' : itemNoCarrinho ? '1.5px solid #16a34a' : undefined,
+                              boxShadow: isDeco ? '0 4px 14px rgba(197, 160, 89, 0.2)' : itemNoCarrinho ? '0 4px 14px rgba(22, 163, 74, 0.15)' : undefined
                             }}
                           >
                             <div className="peca-img" style={{ position: 'relative', width: '100%', height: '140px', borderRadius: '12px', overflow: 'hidden', background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -3215,7 +3280,25 @@ const NovaLocacao = () => {
                                    <span style={badgeLivres}>Livres: {disp.livresReais}</span>
                                 )}
 
-                                {!estaEsgotado && <button className="btn-add-peca" type="button">+</button>}
+                                {itemNoCarrinho && (
+                                  <span style={{ position: 'absolute', bottom: '8px', left: '8px', background: '#16a34a', color: '#ffffff', padding: '3px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '900', zIndex: 2, boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}>
+                                    🛒 {itemNoCarrinho.qtd} no pedido
+                                  </span>
+                                )}
+
+                                {!estaEsgotado && (
+                                  <button 
+                                    className="btn-add-peca" 
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      addCarrinho(item);
+                                    }}
+                                    title="Adicionar ao Pedido"
+                                  >
+                                    +
+                                  </button>
+                                )}
                             </div>
                             
                             <div className="peca-info" style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>

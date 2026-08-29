@@ -170,9 +170,24 @@
   color: #ef4444;
 }
 
-/* CELULAR */
-@media (max-width: 600px) {
-  .perfil-nome { display: none; } /* Esconde o nome para caber no celular */
-  .perfil-dropdown-menu { width: 220px; }
-  .topbar-container { padding: 10px 15px; }
+/* CELULAR & TABLET MOBILE */
+@media (max-width: 768px) {
+  .topbar-container {
+    height: 56px;
+    padding: 0 12px 0 60px; /* Espaço para o botão hambúrguer fixo à esquerda */
+    z-index: 1000;
+  }
+  .perfil-nome { 
+    display: none; 
+  }
+  .perfil-dropdown-menu { 
+    width: 220px; 
+  }
+  .topbar-direita {
+    gap: 8px;
+  }
+  .btn-toggle-tema-topbar {
+    padding: 5px 10px !important;
+    font-size: 12px !important;
+  }
 }

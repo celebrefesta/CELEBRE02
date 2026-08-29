@@ -1,12 +1,13 @@
 /**
  * 🗺️ Google Maps Service para Cálculo Exato de Distância e Rotas
- * Utiliza o DistanceMatrixService oficial do Google Maps JavaScript SDK (sem problemas de CORS)
+ * Utiliza o DirectionsService oficial do Google Maps JavaScript SDK (mesmo motor do app/web)
+ * com fallback para DistanceMatrixService.
  */
 
 let scriptCarregandoPromise = null;
 
 export const carregarGoogleMapsScript = (apiKey) => {
-  if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.DistanceMatrixService) {
+  if (typeof window !== 'undefined' && window.google && window.google.maps && window.google.maps.DirectionsService) {
     return Promise.resolve(window.google);
   }
 
@@ -53,10 +54,10 @@ export const carregarGoogleMapsScript = (apiKey) => {
 
 /**
  * 📏 Calcula a distância exata de condução (carro/trânsito) entre dois endereços usando a API oficial do Google
- * @param {string} origem Endereço completo de partida (ex: "Rua X, 100, Cidade - UF")
- * @param {string} destino Endereço completo de chegada (ex: "Rua Y, 200, Cidade - UF")
+ * @param {string} origem Endereço completo de partida (ex: "Rua X, 100, Bairro, Cidade - UF")
+ * @param {string} destino Endereço completo de chegada (ex: "Rua Y, 200, Bairro, Cidade - UF")
  * @param {string} apiKey Chave oficial da Google Maps API
- * @returns {Promise<{ km: number, metros: number, duracaoTexto: string, distanciaTexto: string, enderecoOrigemFormatado: string, enderecoDestinoFormatado: string }>}
+ * @returns {Promise<{ km: number, metros: number, duracaoTexto: string, distanciaTexto: string, enderecoOrigemFormatado: string, enderecoDestinoFormatado: string, rotasAlternativas: Array, oficialGoogle: boolean }>}
  */
 export const calcularDistanciaGoogleMaps = async (origem, destino, apiKey) => {
   if (!apiKey) {
@@ -68,61 +69,132 @@ export const calcularDistanciaGoogleMaps = async (origem, destino, apiKey) => {
 
   await carregarGoogleMapsScript(apiKey);
 
-  return new Promise((resolve, reject) => {
-    try {
-      const service = new window.google.maps.DistanceMatrixService();
+  // 🚗 1. Tentar DirectionsService primeiro (mesmo motor do Google Maps web e app móvel)
+  const tentarDirections = () => {
+    return new Promise((resolve, reject) => {
+      try {
+        const directionsService = new window.google.maps.DirectionsService();
 
-      service.getDistanceMatrix(
-        {
-          origins: [origem],
-          destinations: [destino],
-          travelMode: window.google.maps.TravelMode.DRIVING,
-          unitSystem: window.google.maps.UnitSystem.METRIC,
-          avoidHighways: false,
-          avoidTolls: false,
-        },
-        (response, status) => {
-          if (status !== 'OK' || !response) {
-            return reject(new Error(`Erro retornado pelo Google Maps: ${status}`));
+        directionsService.route(
+          {
+            origin: origem,
+            destination: destino,
+            travelMode: window.google.maps.TravelMode.DRIVING,
+            unitSystem: window.google.maps.UnitSystem.METRIC,
+            provideRouteAlternatives: true,
+            avoidHighways: false,
+            avoidTolls: false,
+          },
+          (response, status) => {
+            if (status === 'OK' && response && response.routes && response.routes.length > 0) {
+              const mainRoute = response.routes[0];
+              const leg = mainRoute.legs && mainRoute.legs[0];
+
+              if (leg && leg.distance && leg.distance.value > 0) {
+                const metros = leg.distance.value;
+                const km = Math.round((metros / 1000) * 10) / 10;
+                const distanciaTexto = leg.distance.text;
+                const duracaoTexto = leg.duration.text;
+                const enderecoOrigemFormatado = leg.start_address || origem;
+                const enderecoDestinoFormatado = leg.end_address || destino;
+
+                const rotasAlternativas = response.routes.slice(1).map(r => {
+                  const altLeg = r.legs && r.legs[0];
+                  return {
+                    km: altLeg ? Math.round(((altLeg.distance?.value || 0) / 1000) * 10) / 10 : 0,
+                    duracaoTexto: altLeg?.duration?.text || '',
+                    distanciaTexto: altLeg?.distance?.text || '',
+                    resumo: r.summary || ''
+                  };
+                });
+
+                return resolve({
+                  km,
+                  metros,
+                  distanciaTexto,
+                  duracaoTexto,
+                  enderecoOrigemFormatado,
+                  enderecoDestinoFormatado,
+                  rotasAlternativas,
+                  oficialGoogle: true
+                });
+              }
+            }
+            reject(new Error(`DirectionsService status: ${status}`));
           }
+        );
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
 
-          const row = response.rows && response.rows[0];
-          if (!row || !row.elements || !row.elements[0]) {
-            return reject(new Error("Nenhum resultado de rota retornado pelo Google Maps."));
+  // 🌐 2. Fallback para DistanceMatrixService caso DirectionsService tenha restrição
+  const tentarDistanceMatrix = () => {
+    return new Promise((resolve, reject) => {
+      try {
+        const service = new window.google.maps.DistanceMatrixService();
+
+        service.getDistanceMatrix(
+          {
+            origins: [origem],
+            destinations: [destino],
+            travelMode: window.google.maps.TravelMode.DRIVING,
+            unitSystem: window.google.maps.UnitSystem.METRIC,
+            avoidHighways: false,
+            avoidTolls: false,
+          },
+          (response, status) => {
+            if (status !== 'OK' || !response) {
+              return reject(new Error(`Erro retornado pelo Google Maps: ${status}`));
+            }
+
+            const row = response.rows && response.rows[0];
+            if (!row || !row.elements || !row.elements[0]) {
+              return reject(new Error("Nenhum resultado de rota retornado pelo Google Maps."));
+            }
+
+            const element = row.elements[0];
+
+            if (element.status === 'ZERO_RESULTS' || element.status === 'NOT_FOUND') {
+              return reject(new Error("Google Maps não encontrou trajeto viário entre esses dois endereços."));
+            }
+
+            if (element.status !== 'OK') {
+              return reject(new Error(`Falha no cálculo da rota: ${element.status}`));
+            }
+
+            const metros = element.distance.value;
+            const km = Math.round((metros / 1000) * 10) / 10;
+            const distanciaTexto = element.distance.text;
+            const duracaoTexto = element.duration.text;
+            const enderecoOrigemFormatado = response.originAddresses ? response.originAddresses[0] : origem;
+            const enderecoDestinoFormatado = response.destinationAddresses ? response.destinationAddresses[0] : destino;
+
+            resolve({
+              km,
+              metros,
+              distanciaTexto,
+              duracaoTexto,
+              enderecoOrigemFormatado,
+              enderecoDestinoFormatado,
+              rotasAlternativas: [],
+              oficialGoogle: true
+            });
           }
+        );
+      } catch (err) {
+        reject(err);
+      }
+    });
+  };
 
-          const element = row.elements[0];
-
-          if (element.status === 'ZERO_RESULTS' || element.status === 'NOT_FOUND') {
-            return reject(new Error("Google Maps não encontrou trajeto viário entre esses dois endereços."));
-          }
-
-          if (element.status !== 'OK') {
-            return reject(new Error(`Falha no cálculo da rota: ${element.status}`));
-          }
-
-          const metros = element.distance.value;
-          const km = Math.round((metros / 1000) * 10) / 10;
-          const distanciaTexto = element.distance.text;
-          const duracaoTexto = element.duration.text;
-          const enderecoOrigemFormatado = response.originAddresses ? response.originAddresses[0] : origem;
-          const enderecoDestinoFormatado = response.destinationAddresses ? response.destinationAddresses[0] : destino;
-
-          resolve({
-            km,
-            metros,
-            distanciaTexto,
-            duracaoTexto,
-            enderecoOrigemFormatado,
-            enderecoDestinoFormatado,
-            oficialGoogle: true
-          });
-        }
-      );
-    } catch (err) {
-      reject(err);
-    }
-  });
+  try {
+    return await tentarDirections();
+  } catch (eDirections) {
+    console.warn("DirectionsService falhou, tentando DistanceMatrixService:", eDirections);
+    return await tentarDistanceMatrix();
+  }
 };
 
 /**
@@ -130,8 +202,9 @@ export const calcularDistanciaGoogleMaps = async (origem, destino, apiKey) => {
  */
 export const testarChaveGoogleMaps = async (apiKey) => {
   return calcularDistanciaGoogleMaps(
-    'Avenida Paulista, 1000, São Paulo - SP',
-    'Praça da Sé, São Paulo - SP',
+    'Avenida Paulista, 1000, Bela Vista, São Paulo - SP, Brasil',
+    'Praça da Sé, Centro, São Paulo - SP, Brasil',
     apiKey
   );
 };
+

@@ -21,95 +21,123 @@
   overflow-x: clip;
 }
 
-/* --- HEADER SUPERIOR COMPACTO --- */
-.page-header-compact {
+/* --- CABEÇALHO HERO PADRÃO CELEBRE (PADRONIZADO) --- */
+.hero-header-celebre {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 18px;
-  width: 100%;
+  margin-bottom: 24px;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 16px;
+  width: 100%;
 }
 
-.header-top-row {
+.header-title-row {
   display: flex;
   align-items: center;
   gap: 14px;
 }
 
+.header-icon-badge {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #c5a059 0%, #9e7a3b 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 8px 18px rgba(197, 160, 89, 0.25);
+  flex-shrink: 0;
+}
+
+.welcome-text .form-page-title,
+.welcome-text h1,
 .page-title {
-  font-size: 1.55rem;
-  font-weight: 900;
+  font-size: 1.65rem;
+  font-weight: 850;
   color: var(--texto-principal, #0f172a);
-  letter-spacing: -0.5px;
+  letter-spacing: -0.6px;
+  margin: 0 0 2px 0;
+  display: block;
+}
+
+.welcome-text .form-page-subtitle,
+.welcome-text p {
+  font-size: 0.85rem;
+  color: var(--texto-secundario, #64748b);
   margin: 0;
+  font-weight: 500;
+}
+
+.header-actions {
   display: flex;
   align-items: center;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
-.header-tools-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.btn-voltar-compact {
-  background: var(--fundo-card, #ffffff);
-  color: var(--texto-principal, #0f172a);
-  padding: 7px 16px;
-  border-radius: 20px;
-  font-weight: 800;
-  font-size: 0.76rem;
-  border: 1.5px solid var(--borda, #cbd5e1);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
+.btn-primary-celebre {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  padding: 10px 18px !important;
+  border-radius: 12px !important;
+  font-weight: 850 !important;
+  font-size: 0.8rem !important;
+  border: none !important;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.3) !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-}
-
-.btn-voltar-compact:hover {
-  border-color: #c5a059;
-  color: #c5a059;
-}
-
-.btn-tool-chip {
-  background: var(--fundo-card, #ffffff);
-  color: #334155;
-  padding: 8px 14px;
-  border-radius: 12px;
-  font-weight: 750;
-  font-size: 0.78rem;
-  border: 1.5px solid var(--borda, #cbd5e1);
+  gap: 8px;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: inherit;
+  height: 40px;
+}
+
+.btn-primary-celebre:hover {
+  filter: brightness(1.05) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(197, 160, 89, 0.4) !important;
+}
+
+.btn-secondary-celebre {
+  background: var(--fundo-card, #ffffff) !important;
+  color: var(--texto-principal, #0f172a) !important;
+  padding: 9px 16px !important;
+  border-radius: 12px !important;
+  font-weight: 750 !important;
+  font-size: 0.8rem !important;
+  border: 1px solid var(--borda, #cbd5e1) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.04) !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
+  cursor: pointer;
+  height: 40px;
+  font-family: inherit;
   white-space: nowrap;
 }
 
-.btn-tool-chip:hover {
-  border-color: #c5a059;
-  color: #0f172a;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-.btn-tool-chip.gold {
-  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%);
-  color: #ffffff;
-  border: none;
-  font-weight: 850;
-  box-shadow: 0 3px 10px rgba(197, 160, 89, 0.3);
-}
-
-.btn-tool-chip.gold:hover {
+.btn-secondary-celebre:hover {
+  background: var(--fundo-hover, #f8fafc) !important;
+  border-color: #94a3b8 !important;
+  color: #0f172a !important;
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(197, 160, 89, 0.4);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.07) !important;
+}
+
+.btn-secondary-celebre i {
+  color: #94a3b8;
+  font-size: 0.85rem;
+  transition: color 0.2s ease;
+}
+
+.btn-secondary-celebre:hover i {
+  color: #c5a059;
 }
 
 /* --- ESTRUTURA PRINCIPAL EM 2 COLUNAS FLUIDAS --- */
@@ -153,93 +181,141 @@
 }
 
 .section-divider {
-  font-size: 0.84rem;
+  font-size: 0.88rem;
   color: var(--texto-principal, #0f172a);
-  font-weight: 850;
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.7px;
-  margin: 0 0 16px 0;
-  padding-bottom: 8px;
-  border-bottom: 1.5px solid var(--borda, #f1f5f9);
-  border-left: 4px solid #c5a059;
+  letter-spacing: 0.5px;
+  margin: 0 0 18px 0;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--borda, #f1f5f9);
+  border-left: 3.5px solid #c5a059;
   padding-left: 10px;
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-/* --- FORM GROUPS, LABELS & INPUTS PADRONIZADOS --- */
+.section-icon {
+  color: #c5a059;
+  font-size: 0.95rem;
+}
+
+/* --- FORM GROUPS, LABELS & INPUTS PADRONIZADOS (ALTO CONTRASTE & DESIGN SAAS) --- */
 .form-group {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
 }
 
 .form-group label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--texto-secundario, #64748b);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
+  font-size: 0.82rem; /* text-sm ~13px */
+  font-weight: 600; /* nítido, elegante, sem ser negrito pesado */
+  color: var(--texto-principal, #0f172a); /* PRETO com alto contraste e nitidez */
+  text-transform: none;
+  letter-spacing: 0;
   margin-bottom: 2px;
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.label-icon {
+  color: #475569; /* cinza escuro nítido para contraste */
+  font-size: 0.82rem;
+  flex-shrink: 0;
 }
 
 .form-group input,
 .form-group select,
 .form-group textarea {
-  height: 42px;
-  padding: 0 12px;
-  border: 1.5px solid var(--borda, #cbd5e1);
-  border-radius: 10px;
-  font-size: 0.86rem;
-  background-color: var(--fundo-cinza, #f8fafc);
-  color: var(--texto-principal, #0f172a);
+  height: 44px;
+  min-height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--borda, #e2e8f0); /* border-gray-200 sutil */
+  border-radius: 10px; /* rounded-lg */
+  font-size: 0.88rem;
+  background-color: var(--fundo-card, #ffffff);
+  color: var(--texto-principal, #0f172a); /* texto mais escuro e destacado */
   outline: none;
-  transition: all 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
   font-family: inherit;
   width: 100%;
   min-width: 0;
-  font-weight: 600;
+  font-weight: 600; /* maior destaque que o rótulo */
   box-sizing: border-box;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.02);
 }
 
 .form-group select {
   appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2364748b' stroke-width='2.5'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
   background-repeat: no-repeat;
-  background-position: right 12px center;
+  background-position: right 14px center;
   background-size: 14px;
-  padding-right: 36px;
+  padding-right: 38px;
   cursor: pointer;
 }
 
 .form-group textarea {
   height: auto;
-  padding: 10px 12px;
+  min-height: 72px;
+  padding: 10px 14px;
   resize: vertical;
 }
 
 .form-group input:focus,
 .form-group select:focus,
 .form-group textarea:focus {
-  border-color: #c5a059;
+  border-color: #3b82f6;
   background-color: #ffffff;
-  box-shadow: 0 0 0 3.5px rgba(197, 160, 89, 0.16);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
 }
 
 /* Espaçamentos Utilitários */
 .mt-10 { margin-top: 10px; }
 .mt-12 { margin-top: 12px; }
+.mt-14 { margin-top: 14px; }
 .mt-15 { margin-top: 15px; }
 .mb-10 { margin-bottom: 10px; }
 .mb-15 { margin-bottom: 15px; }
 .mb-20 { margin-bottom: 20px; }
 
-/* --- 1. MODALIDADE DE SERVIÇO (CARDS PEGUE E MONTE / DECORAÇÃO - 2 COLUNAS) --- */
+/* ==========================================================================
+   ✨ 1. MODALIDADE DE SERVIÇO LUXURY (CARDS PEGUE E MONTE / DECORAÇÃO - 2 COLUNAS)
+   ========================================================================== */
+.label-modalidade-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 8px;
+  width: 100%;
+}
+
+.label-modalidade-servico {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: 0.82rem;
+  color: var(--texto-principal, #0f172a);
+  text-transform: none;
+  letter-spacing: 0;
+  margin: 0;
+}
+
+.label-obrigatorio {
+  color: #ef4444;
+  font-weight: 900;
+}
+
+.badge-modalidade-tag {
+  display: none;
+}
+
 .toggle-servico-vip {
   display: grid !important;
   grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
@@ -249,35 +325,64 @@
 }
 
 .btn-servico-card {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-start;
+  gap: 12px;
   padding: 12px 14px;
-  border-radius: 14px;
-  border: 1.5px solid var(--borda, #cbd5e1);
-  background: var(--fundo-cinza, #f8fafc);
+  border-radius: 12px;
+  border: 1.5px solid var(--borda, #e2e8f0);
+  background: var(--fundo-card, #ffffff);
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  font-family: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
 }
 
 .btn-servico-card:hover {
-  border-color: #c5a059;
-  background: #ffffff;
+  border-color: #cbd5e1;
+  background: #f8fafc;
+  transform: translateY(-1px);
 }
 
-.btn-servico-card.active {
-  border-color: #c5a059;
-  background: linear-gradient(135deg, rgba(197, 160, 89, 0.12) 0%, rgba(197, 160, 89, 0.04) 100%);
-  box-shadow: 0 0 0 2px rgba(197, 160, 89, 0.25);
+.btn-servico-card.active,
+.btn-servico-card.ativo {
+  border: 1.5px solid #c5a059 !important;
+  background: rgba(197, 160, 89, 0.06) !important;
+  box-shadow: 0 0 0 1px #c5a059, 0 3px 10px rgba(197, 160, 89, 0.12) !important;
 }
 
-.servico-icon {
-  font-size: 22px;
+.servico-icon-box {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
   flex-shrink: 0;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.btn-servico-card:hover .servico-icon-box {
+  transform: scale(1.04);
+}
+
+.btn-servico-card.active .servico-icon-box,
+.btn-servico-card.ativo .servico-icon-box {
+  background: linear-gradient(135deg, var(--cor-destaque, var(--dourado, #c5a059)) 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3) !important;
 }
 
 .servico-info {
@@ -289,14 +394,21 @@
 }
 
 .servico-info strong {
-  font-size: 0.84rem;
+  font-size: 0.86rem;
   color: var(--texto-principal, #0f172a);
   font-weight: 850;
   white-space: normal !important;
-  line-height: 1.2;
+  line-height: 1.22;
   overflow: visible !important;
-  text-overflow: clip !important;
   display: block;
+  letter-spacing: 0.2px;
+  transition: color 0.2s ease;
+}
+
+.btn-servico-card.active .servico-info strong,
+.btn-servico-card.ativo .servico-info strong {
+  color: var(--cor-destaque, var(--dourado, #c5a059)) !important;
+  font-weight: 900;
 }
 
 .servico-info small {
@@ -306,6 +418,41 @@
   white-space: normal !important;
   overflow: visible !important;
   display: block;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.btn-servico-card.active .servico-info small,
+.btn-servico-card.ativo .servico-info small {
+  color: #92400e;
+  font-weight: 600;
+}
+
+.servico-check-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid var(--borda, #cbd5e1);
+  background: transparent;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-servico-card.active .servico-check-badge,
+.btn-servico-card.ativo .servico-check-badge {
+  border-color: var(--cor-destaque, var(--dourado, #c5a059)) !important;
+  background: var(--cor-destaque, var(--dourado, #c5a059)) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.45) !important;
+}
+
+.servico-check-badge .check-mark {
+  font-size: 11px;
+  font-weight: 900;
+  line-height: 1;
 }
 
 /* --- 2. SELETOR DE CLIENTE LUXO (SEARCHABLE & CARD EXECUTIVO) --- */
@@ -652,41 +799,7 @@
   color: #0f172a;
 }
 
-/* --- 3. SELEÇÃO DE MODALIDADE DE SERVIÇO (2 COLUNAS BLINDADAS) --- */
-.toggle-servico-vip {
-  display: grid !important;
-  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-  gap: 12px;
-  width: 100%;
-  box-sizing: border-box;
-}
 
-.btn-servico-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border: 1.5px solid var(--borda, #cbd5e1);
-  background: var(--fundo-card, #ffffff);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  text-align: left;
-  width: 100%;
-  box-sizing: border-box;
-  font-family: inherit;
-}
-
-.btn-servico-card:hover {
-  border-color: #c5a059;
-  transform: translateY(-1px);
-}
-
-.btn-servico-card.ativo {
-  border-color: #c5a059;
-  background: rgba(197, 160, 89, 0.08);
-  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.16);
-}
 
 /* --- 4. TEMA DA FESTA & DATAS --- */
 .grid-tema-evento {
@@ -697,65 +810,71 @@
   box-sizing: border-box;
 }
 
-/* --- Barra de Atalhos Rápidos de Datas (2 Linhas Compactas) --- */
+/* --- Barra de Atalhos Rápidos de Datas (Estilo SaaS Limpo) --- */
 .barra-atalhos-datas {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  background: rgba(197, 160, 89, 0.08);
-  padding: 8px 12px;
+  gap: 8px;
+  background: var(--fundo-cinza, #f8fafc);
+  padding: 12px 14px;
   border-radius: 12px;
-  border: 1px solid rgba(197, 160, 89, 0.25);
-  margin-bottom: 6px;
+  border: 1px solid var(--borda, #e2e8f0);
+  margin: 14px 0 10px 0;
   width: 100%;
   box-sizing: border-box;
 }
 
 .label-atalhos-datas {
-  font-size: 0.72rem;
-  font-weight: 850;
-  color: #a4803c;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: var(--texto-principal, #0f172a);
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .grupo-botoes-atalhos-datas {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 6px;
+  gap: 8px;
   width: 100%;
   box-sizing: border-box;
 }
 
 .btn-chip-data {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #e2e8f0);
   border-radius: 8px;
-  padding: 6px 4px;
-  font-size: 0.73rem;
-  font-weight: 800;
-  color: #334155;
+  padding: 8px 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--texto-principal, #334155);
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  gap: 4px;
+  gap: 6px;
   font-family: inherit;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
   white-space: nowrap;
 }
 
 .btn-chip-data:hover {
-  background: #fdfbf7;
-  border-color: #c5a059;
-  color: #926f2d;
+  background: #f1f5f9;
+  border-color: #cbd5e1;
+  color: #0f172a;
   transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(197, 160, 89, 0.2);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.06);
+}
+
+.icon-chip {
+  color: #94a3b8;
+  font-size: 0.76rem;
+  flex-shrink: 0;
 }
 
 @media (max-width: 680px) {
@@ -767,7 +886,7 @@
 .grid-datas-celebre {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 10px;
+  gap: 14px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -787,6 +906,32 @@
   width: 100%;
   box-sizing: border-box;
   align-items: flex-end;
+}
+
+/* 📦 GRIDS DE LOGÍSTICA COMPACTOS (MESMA LINHA) */
+.grid-logistica-cep-frete {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+  align-items: flex-end;
+}
+
+.grid-logistica-cidade-bairro {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.grid-logistica-rua-numero {
+  display: grid;
+  grid-template-columns: 1fr 90px;
+  gap: 10px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 /* Linha 2: Logradouro (cresce) + Número (fixo pequeno) */
@@ -863,7 +1008,7 @@
 .grid-temas-2col {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 16px;
   width: 100%;
   box-sizing: border-box;
   align-items: flex-end; /* 🛡️ Alinha perfeitamente todos os selects na mesma base */
@@ -878,19 +1023,22 @@
 }
 
 .grid-temas-2col .form-group label {
-  min-height: 18px;
-  margin-bottom: 6px;
-  font-size: 0.76rem;
-  font-weight: 750;
-  white-space: nowrap;
-  box-sizing: border-box;
+  min-height: 20px;
+  margin-bottom: 2px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--texto-principal, #0f172a);
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .grid-temas-2col .form-group select,
 .grid-temas-2col .form-group input {
   width: 100%;
   box-sizing: border-box;
-  font-weight: 700;
+  font-weight: 600;
+  color: var(--texto-principal, #0f172a);
 }
 
 .tema-destaque-campo {
@@ -898,18 +1046,23 @@
 }
 
 .tema-destaque-campo select {
-  border: 1.5px solid #c5a059 !important;
+  border: 1px solid var(--borda, #cbd5e1) !important;
   font-size: 0.90rem !important;
-  font-weight: 800 !important;
-  color: #926f2d !important;
-  background-color: rgba(197, 160, 89, 0.06) !important;
+  font-weight: 600 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  background-color: var(--fundo-card, #ffffff) !important;
   border-radius: 10px;
 }
 
+.tema-destaque-campo select:focus {
+  border-color: #3b82f6 !important;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12) !important;
+}
+
 [data-theme^='dark'] .tema-destaque-campo select {
-  background-color: rgba(197, 160, 89, 0.14) !important;
-  color: #fde68a !important;
-  border-color: #c5a059 !important;
+  background-color: rgba(255, 255, 255, 0.05) !important;
+  color: #f1f5f9 !important;
+  border-color: rgba(255, 255, 255, 0.15) !important;
 }
 
 .bloco-tema-categorias {
@@ -935,27 +1088,36 @@
 .toggle-simples {
   display: flex;
   background: var(--fundo-cinza, #f1f5f9);
-  padding: 3px;
-  border-radius: 10px;
-  gap: 3px;
+  padding: 4px;
+  border-radius: 12px;
+  gap: 4px;
+  max-width: 320px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .toggle-simples button {
-  padding: 6px 12px;
+  flex: 1 1 50%;
+  padding: 8px 14px;
   border: none;
   background: transparent;
-  border-radius: 8px;
-  font-size: 0.74rem;
+  border-radius: 9px;
+  font-size: 0.76rem;
   font-weight: 800;
   color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  white-space: nowrap;
 }
 
 .toggle-simples button.active {
   background: #ffffff;
   color: #0f172a;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
 .texto-aviso-logistica {
@@ -1462,25 +1624,32 @@
 }
 
 /* ==========================================================================
-   🧮 CALCULADORA INTEGRADA DE FRETE POR KM (DESIGN EXECUTIVO)
+   🧮 CALCULADORA DE FRETE — UNIFICADA & INTEGRADA (SEM BORDAS DUPLAS)
    ========================================================================== */
 .box-calculadora-frete {
-  margin-top: 16px;
-  background: var(--fundo-cinza, #f8fafc);
-  padding: 16px 18px;
-  border-radius: 16px;
-  border: 1.5px solid var(--borda, #e2e8f0);
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1.5px dashed var(--borda, #e2e8f0);
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-bottom: none;
+  border-radius: 0;
+  box-shadow: none;
   box-sizing: border-box;
   width: 100%;
 }
 
+/* HEADER UNIFICADO */
 .calc-frete-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 12px;
+  gap: 12px;
   flex-wrap: wrap;
-  gap: 10px;
+  padding: 0 0 14px 0;
+  background: transparent;
+  border-bottom: none;
 }
 
 .calc-frete-header-info {
@@ -1490,59 +1659,41 @@
 }
 
 .calc-frete-icon-badge {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  background: rgba(197, 160, 89, 0.14);
-  border: 1px solid rgba(197, 160, 89, 0.3);
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.22) 0%, rgba(197, 160, 89, 0.08) 100%);
+  border: 1.5px solid rgba(197, 160, 89, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.15);
 }
 
 .calc-frete-header-info strong {
-  font-size: 0.88rem;
+  font-size: 0.95rem;
   color: var(--texto-principal, #0f172a);
   display: block;
   font-weight: 850;
+  letter-spacing: -0.2px;
 }
 
 .calc-frete-header-info p {
   margin: 2px 0 0 0;
-  font-size: 0.72rem;
+  font-size: 0.76rem;
+  font-weight: 450;
   color: var(--texto-secundario, #64748b);
-}
-
-.origem-frete-tag {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: rgba(197, 160, 89, 0.08);
-  border: 1px solid rgba(197, 160, 89, 0.25);
-  padding: 8px 12px;
-  border-radius: 10px;
-  font-size: 0.74rem;
-  color: #926f2d;
-  font-weight: 750;
-  margin: 4px 0 12px 0;
-  width: 100%;
-  box-sizing: border-box;
   line-height: 1.4;
 }
 
-.origem-frete-tag.alerta {
-  background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
-  border-color: rgba(239, 68, 68, 0.35);
-}
-
+/* BOTÃO CONFIGURAR VEÍCULO */
 .btn-toggle-veiculo {
   background: var(--fundo-card, #ffffff);
-  border: 1px solid var(--borda, #cbd5e1);
-  border-radius: 8px;
-  padding: 6px 12px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  border-radius: 9px;
+  padding: 7px 13px;
   font-size: 0.74rem;
   font-weight: 800;
   color: var(--texto-principal, #475569);
@@ -1552,36 +1703,71 @@
   gap: 6px;
   transition: all 0.2s ease;
   font-family: inherit;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
 }
 
 .btn-toggle-veiculo:hover,
 .btn-toggle-veiculo.ativo {
-  background: rgba(197, 160, 89, 0.14);
+  background: rgba(197, 160, 89, 0.12);
   border-color: #c5a059;
   color: #a4803c;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.2);
 }
 
+/* ORIGEM (ESTOQUE) */
+.origem-frete-tag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(197, 160, 89, 0.08);
+  border: none;
+  border-left: 3px solid #c5a059;
+  padding: 8px 14px;
+  border-radius: 0 10px 10px 0;
+  font-size: 0.75rem;
+  color: #78350f;
+  font-weight: 450;
+  margin: 0 0 14px 0;
+  width: 100%;
+  box-sizing: border-box;
+  line-height: 1.4;
+}
+
+.origem-frete-tag strong {
+  font-weight: 800;
+  color: #5c3b00;
+}
+
+.origem-frete-tag.alerta {
+  background: rgba(239, 68, 68, 0.08);
+  border-left-color: #ef4444;
+  color: #991b1b;
+}
+
+/* PAINEL AJUSTE DO VEÍCULO */
 .painel-ajuste-veiculo {
-  background: var(--fundo-card, #ffffff);
-  border: 1px solid var(--borda, #cbd5e1);
-  border-radius: 12px;
+  background: var(--fundo-cinza, #f8fafc);
+  border: 1px solid var(--borda, #e2e8f0);
+  border-radius: 14px;
   padding: 14px;
   margin-bottom: 14px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.03);
 }
 
 .grid-ajuste-veiculo {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 10px;
 }
 
 .ajuste-campo label {
-  font-size: 0.70rem;
-  font-weight: 800;
-  color: var(--texto-secundario, #475569);
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--texto-principal, #0f172a);
   display: block;
   margin-bottom: 4px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .ajuste-campo input,
@@ -1589,30 +1775,109 @@
   width: 100%;
   padding: 7px 10px;
   border-radius: 8px;
-  border: 1px solid var(--borda, #cbd5e1);
-  font-size: 0.78rem;
+  border: 1.5px solid var(--borda, #e2e8f0);
+  font-size: 0.82rem;
   font-weight: 700;
   color: var(--texto-principal, #0f172a);
-  background: var(--fundo-cinza, #f8fafc);
+  background: var(--fundo-card, #ffffff);
   box-sizing: border-box;
+  transition: border-color 0.2s;
 }
 
-/* --- GRID PRINCIPAL (KM + BOTÕES DE AÇÃO) --- */
+.ajuste-campo input:focus,
+.ajuste-campo select:focus {
+  outline: none;
+  border-color: #c5a059;
+  box-shadow: 0 0 0 3px rgba(197,160,89,0.12);
+}
+
+/* 📍 CAIXA DE INSTRUÇÕES DO GOOGLE MAPS */
+.box-instrucoes-maps {
+  background: linear-gradient(145deg, #ffffff 0%, #f8faff 100%);
+  border: 1.5px solid #e0e7ff;
+  border-radius: 14px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 0 0 14px 0;
+  box-sizing: border-box;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.05);
+}
+
+.box-instrucoes-maps-texto {
+  font-size: 0.76rem;
+  color: #334155;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.box-instrucoes-maps-texto .titulo-instrucoes {
+  display: block;
+  font-weight: 850;
+  font-size: 0.84rem;
+  color: #1e3a8a;
+  margin-bottom: 4px;
+}
+
+.box-instrucoes-maps-texto .passos-instrucoes {
+  font-size: 0.76rem;
+  font-weight: 450;
+  color: #475569;
+  line-height: 1.5;
+}
+
+.box-instrucoes-maps-texto .passos-instrucoes b {
+  font-weight: 800;
+  color: #1d4ed8;
+}
+
+.box-instrucoes-maps-texto .passos-instrucoes strong {
+  font-weight: 750;
+  color: #0f172a;
+}
+
+.btn-maps-link-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  color: #ffffff !important;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 750;
+  font-size: 0.82rem;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(26,115,232,0.32);
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-maps-link-action:hover {
+  box-shadow: 0 6px 20px rgba(26,115,232,0.48);
+  transform: translateY(-1px);
+}
+
+/* GRID KM */
 .grid-frete-controles {
   display: grid;
-  grid-template-columns: minmax(120px, 1.2fr) minmax(170px, 2fr);
+  grid-template-columns: 1fr;
   gap: 10px;
-  align-items: flex-end;
   width: 100%;
   box-sizing: border-box;
 }
 
 .form-group-km label {
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: var(--texto-secundario, #475569);
+  font-size: 0.80rem;
+  font-weight: 600;
+  color: var(--texto-principal, #0f172a);
   display: block;
-  margin-bottom: 5px;
+  margin-bottom: 6px;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .input-km-wrapper {
@@ -1624,21 +1889,30 @@
 
 .input-km-distancia {
   width: 100%;
-  padding: 9px 58px 9px 12px;
-  border-radius: 10px;
-  border: 1.5px solid var(--borda, #cbd5e1);
-  font-size: 0.88rem;
-  font-weight: 800;
+  padding: 11px 58px 11px 14px;
+  border-radius: 12px;
+  border: 1.5px solid var(--borda, #e2e8f0);
+  font-size: 1.1rem;
+  font-weight: 900;
   color: var(--texto-principal, #0f172a);
   background: var(--fundo-card, #ffffff);
   box-sizing: border-box;
-  min-height: 40px;
+  min-height: 46px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  letter-spacing: -0.5px;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03);
+}
+
+.input-km-distancia:focus {
+  outline: none;
+  border-color: #1e40af;
+  box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
 }
 
 .unidade-km-badge {
   position: absolute;
-  right: 28px;
-  font-size: 0.74rem;
+  right: 30px;
+  font-size: 0.76rem;
   font-weight: 800;
   color: var(--texto-secundario, #94a3b8);
   pointer-events: none;
@@ -1646,8 +1920,8 @@
 
 .btn-limpar-km {
   position: absolute;
-  right: 6px;
-  background: transparent;
+  right: 8px;
+  background: var(--fundo-cinza, #f1f5f9);
   border: none;
   color: var(--texto-secundario, #94a3b8);
   font-size: 11px;
@@ -1658,145 +1932,93 @@
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: all 0.15s;
 }
 
 .btn-limpar-km:hover {
-  background: rgba(0, 0, 0, 0.08);
-  color: #0f172a;
+  background: #fee2e2;
+  color: #ef4444;
 }
 
-.botoes-rota-acoes {
-  display: flex;
-  gap: 8px;
-  width: 100%;
-  align-items: center;
-}
-
-.btn-calcular-distancia-main {
-  background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
-  color: #ffffff;
-  border: none;
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 0.80rem;
-  font-weight: 850;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  flex: 1;
-  min-height: 40px;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(30, 58, 138, 0.22);
-  font-family: inherit;
-}
-
-.btn-calcular-distancia-main:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(30, 58, 138, 0.32);
-}
-
-.btn-abrir-maps-link {
-  background: var(--fundo-card, #ffffff);
-  border: 1px solid var(--borda, #cbd5e1);
-  border-radius: 10px;
-  padding: 10px 14px;
-  font-size: 0.78rem;
-  font-weight: 800;
-  color: #2563eb;
-  text-decoration: none;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-height: 40px;
-  white-space: nowrap;
-  transition: all 0.2s ease;
-}
-
-.btn-abrir-maps-link:hover {
-  background: #eff6ff;
-  border-color: #93c5fd;
-}
-
-/* --- CARD DE RESULTADO DO FRETE --- */
+/* CARD DE RESULTADO */
 .card-resultado-frete {
-  margin-top: 14px;
-  background: var(--fundo-card, #ffffff);
-  border: 1.5px solid var(--borda, #cbd5e1);
+  margin: 14px 0 0 0;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
   border-radius: 14px;
-  padding: 14px 16px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.05);
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
 }
 
 .resultado-frete-topo {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .badge-veiculo-info {
-  font-size: 0.70rem;
+  font-size: 0.68rem;
   color: var(--texto-secundario, #64748b);
   font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
+  letter-spacing: 0.5px;
   display: block;
-  margin-bottom: 2px;
 }
 
 .resultado-frete-valor {
-  font-size: 1.35rem;
-  color: var(--texto-principal, #0f172a);
+  font-size: 1.70rem;
+  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
   font-weight: 950;
-  letter-spacing: -0.5px;
+  letter-spacing: -1px;
+  line-height: 1.1;
 }
 
 .resultado-frete-botoes {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .btn-aplicar-frete {
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   color: #ffffff;
   border: none;
-  border-radius: 10px;
-  padding: 9px 16px;
-  font-size: 0.82rem;
+  border-radius: 11px;
+  padding: 10px 18px;
+  font-size: 0.84rem;
   font-weight: 850;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
   transition: all 0.2s ease;
-  box-shadow: 0 3px 10px rgba(22, 163, 74, 0.25);
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.28);
   font-family: inherit;
+  letter-spacing: 0.1px;
 }
 
 .btn-aplicar-frete:hover {
   transform: translateY(-1px);
-  box-shadow: 0 5px 14px rgba(22, 163, 74, 0.35);
+  box-shadow: 0 7px 20px rgba(22, 163, 74, 0.38);
 }
 
 .btn-aplicar-frete.ja-aplicado {
-  background: #15803d !important;
-  opacity: 0.9;
+  background: linear-gradient(135deg, #0f5132 0%, #15803d 100%) !important;
+  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2) !important;
 }
 
 .btn-frete-gratis {
   background: var(--fundo-cinza, #f8fafc);
-  border: 1px solid var(--borda, #cbd5e1);
-  border-radius: 10px;
-  padding: 9px 12px;
+  border: 1.5px solid var(--borda, #e2e8f0);
+  border-radius: 11px;
+  padding: 10px 14px;
   font-size: 0.76rem;
   font-weight: 800;
   color: var(--texto-secundario, #64748b);
@@ -1806,20 +2028,234 @@
 }
 
 .btn-frete-gratis:hover {
-  background: rgba(197, 160, 89, 0.15);
-  border-color: #c5a059;
+  background: #fff1f2;
+  border-color: #fca5a5;
+  color: #dc2626;
 }
 
 .box-memoria-calculo {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   color: var(--texto-secundario, #475569);
-  background: var(--fundo-cinza, #f8fafc);
+  background: var(--fundo-cinza, #f1f5f9);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 9px;
   display: flex;
-  gap: 12px;
+  gap: 14px;
   flex-wrap: wrap;
-  border: 1px solid var(--borda, #f1f5f9);
+  border: 1px solid var(--borda, #e2e8f0);
+  font-weight: 600;
+}
+
+/* 📍 CAIXA DE INSTRUÇÕES DO GOOGLE MAPS */
+.box-instrucoes-maps {
+  background: linear-gradient(135deg, rgba(37,99,235,0.07) 0%, rgba(59,130,246,0.04) 100%);
+  border: 1px solid rgba(59,130,246,0.25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0 12px 0;
+  box-sizing: border-box;
+}
+
+.box-instrucoes-maps-texto {
+  font-size: 0.75rem;
+  color: #1e3a8a;
+  line-height: 1.5;
+  flex: 1;
+}
+
+.btn-maps-link-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #1a73e8 0%, #0d47a1 100%);
+  color: #ffffff !important;
+  padding: 10px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 0.82rem;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(26,115,232,0.35);
+  white-space: nowrap;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.btn-maps-link-action:hover {
+  box-shadow: 0 6px 20px rgba(26,115,232,0.5);
+  transform: translateY(-1px);
+}
+
+/* ==========================================================================
+   📦 MODAL DO CATÁLOGO DE PEÇAS & CARDS
+   ========================================================================== */
+.modal-overlay-premium {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 99999;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+.catalogo-modal {
+  background: var(--fundo-card, #ffffff);
+  border-radius: 24px;
+  width: 95%;
+  max-width: 1000px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.4);
+  border: 1.5px solid var(--borda, #e2e8f0);
+}
+
+.modal-header {
+  background: var(--fundo-card, #ffffff);
+  padding: 16px 22px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1.5px solid var(--borda, #f1f5f9);
+}
+
+.modal-header h3 {
+  margin: 0;
+  color: var(--texto-principal, #0f172a);
+  font-size: 1.15rem;
+  font-weight: 850;
+}
+
+.btn-fechar {
+  background: var(--fundo-cinza, #f1f5f9);
+  color: var(--texto-secundario, #64748b);
+  border: none;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  font-weight: 850;
+  font-size: 15px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-fechar:hover {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.catalogo-grid {
+  padding: 18px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(185px, 1fr));
+  gap: 14px;
+  overflow-y: auto;
+  max-height: 60vh;
+}
+
+.peca-card {
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #e2e8f0);
+  border-radius: 16px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.03);
+  position: relative;
+  user-select: none;
+}
+
+.peca-card:hover {
+  transform: translateY(-2px);
+  border-color: #c5a059;
+  box-shadow: 0 8px 20px rgba(197, 160, 89, 0.18);
+}
+
+.peca-card.no-carrinho {
+  border-color: #16a34a !important;
+  background: rgba(22, 163, 74, 0.03);
+}
+
+.peca-img {
+  width: 100%;
+  height: 135px;
+  max-height: 135px;
+  overflow: hidden;
+  border-radius: 12px;
+  position: relative;
+  background: var(--fundo-cinza, #f8fafc);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.peca-img img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.btn-add-peca {
+  position: absolute;
+  bottom: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  border: none;
+  font-size: 20px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.4);
+  transition: transform 0.2s ease;
+  z-index: 3;
+}
+
+.btn-add-peca:hover {
+  transform: scale(1.15);
+}
+
+.peca-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0 4px;
+}
+
+.peca-info strong {
+  font-size: 0.88rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.peca-info span {
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 600;
 }
 
 /* ==========================================================================
@@ -1857,8 +2293,50 @@
     padding: 12px 10px;
   }
 
+  .hero-header-celebre {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .header-title-row {
+    gap: 12px;
+    width: 100%;
+  }
+
+  .header-icon-badge {
+    width: 42px;
+    height: 42px;
+    font-size: 18px;
+    border-radius: 12px;
+  }
+
+  .welcome-text .form-page-title,
+  .welcome-text h1,
   .page-title {
-    font-size: 1.30rem;
+    font-size: 1.35rem;
+  }
+
+  .welcome-text .form-page-subtitle,
+  .welcome-text p {
+    font-size: 0.78rem;
+  }
+
+  .header-actions {
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .header-actions .btn-secondary-celebre,
+  .header-actions .btn-primary-celebre {
+    flex: 1 1 auto;
+    font-size: 0.76rem !important;
+    padding: 8px 12px !important;
+    height: 38px;
+    justify-content: center;
   }
 
   .card-secao {
@@ -1872,14 +2350,16 @@
   }
 
   .btn-servico-card {
-    padding: 10px 8px;
+    padding: 10px 10px;
     gap: 8px;
-    align-items: flex-start;
+    align-items: center;
   }
 
-  .servico-icon {
-    font-size: 18px;
-    margin-top: 2px;
+  .servico-icon-box {
+    width: 34px;
+    height: 34px;
+    font-size: 17px;
+    border-radius: 9px;
   }
 
   .servico-info strong {
@@ -1892,6 +2372,15 @@
     font-size: 0.65rem;
     white-space: normal !important;
     line-height: 1.2;
+  }
+
+  .servico-check-badge {
+    width: 18px;
+    height: 18px;
+  }
+
+  .servico-check-badge .check-mark {
+    font-size: 9px;
   }
 
   .grid-tema-evento {
@@ -1921,19 +2410,102 @@
   .btn-status-local {
     padding: 8px 10px;
   }
+
+  /* 📦 GRIDS DE LOGÍSTICA COMPACTOS NO CELULAR (2 COLUNAS LADO A LADO) */
+  .grid-logistica-cep-frete {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .grid-logistica-cidade-bairro {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+  }
+  .grid-logistica-rua-numero {
+    grid-template-columns: 1fr 80px !important;
+    gap: 8px !important;
+  }
+
   .grid-logistica-linha1 {
     grid-template-columns: 1fr 1fr;
   }
   .grid-logistica-linha1 .form-group:last-child {
     grid-column: span 2;
   }
-  /* Logradouro ocupa linha inteira, Número fica embaixo isolado */
   .grid-logistica-linha2 {
     grid-template-columns: 1fr;
   }
   .grid-logistica-linha3 {
     grid-template-columns: 1fr;
   }
+
+  /* 🚚 Header e Toggle de Logística 100% largura no celular */
+  .header-com-toggle {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+
+  .toggle-simples {
+    width: 100% !important;
+    max-width: 100% !important;
+    display: flex !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .toggle-simples button {
+    flex: 1 1 50% !important;
+    width: 50% !important;
+    text-align: center !important;
+    justify-content: center !important;
+    padding: 10px 8px !important;
+    font-size: 0.82rem !important;
+  }
+
+  /* 📍 CAIXA DE INSTRUÇÕES DO GOOGLE MAPS NO CELULAR */
+  .box-instrucoes-maps {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+    padding: 10px 12px !important;
+  }
+
+  .btn-maps-link-action {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    justify-content: center !important;
+    padding: 11px 16px !important;
+    font-size: 0.86rem !important;
+  }
+
+  /* 📦 MODAL DO CATÁLOGO NO CELULAR */
+  .modal-overlay-premium {
+    padding: 8px !important;
+  }
+  .catalogo-modal {
+    width: 98vw !important;
+    max-height: 94vh !important;
+    border-radius: 16px !important;
+  }
+  .catalogo-grid {
+    grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)) !important;
+    gap: 10px !important;
+    padding: 10px !important;
+  }
+  .peca-img {
+    height: 110px !important;
+    max-height: 110px !important;
+  }
+  .peca-card {
+    padding: 8px !important;
+    border-radius: 12px !important;
+  }
+  .peca-info strong {
+    font-size: 0.80rem !important;
+  }
+
   /* Calculadora de frete: empilha verticalmente */
   .grid-frete-controles {
     grid-template-columns: 1fr;
@@ -1978,14 +2550,81 @@
   border-color: var(--borda) !important;
 }
 
-[data-theme^='dark'] .btn-servico-card {
-  background: var(--fundo-cinza) !important;
-  border-color: var(--borda) !important;
-  color: var(--texto-principal) !important;
+/* 🌙 DARK MODE — MODALIDADE DE SERVIÇO (GRAFITE & AZUL MIDNIGHT) */
+[data-theme^='dark'] .label-modalidade-servico {
+  color: #cbd5e1 !important;
 }
 
-[data-theme^='dark'] .btn-servico-card strong {
-  color: var(--texto-principal) !important;
+[data-theme^='dark'] .badge-modalidade-tag {
+  background: rgba(197, 160, 89, 0.18) !important;
+  color: #fde68a !important;
+  border-color: rgba(197, 160, 89, 0.35) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border: 1.5px solid rgba(255, 255, 255, 0.12) !important;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: var(--cor-destaque, var(--dourado, #c5a059)) !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card .servico-icon-box {
+  background: rgba(255, 255, 255, 0.07) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card .servico-info strong {
+  color: #f1f5f9 !important;
+}
+
+[data-theme^='dark'] .btn-servico-card .servico-info small {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .btn-servico-card .servico-check-badge {
+  border-color: rgba(255, 255, 255, 0.25) !important;
+  background: transparent !important;
+}
+
+/* 🌟 ACTIVE NO DARK MODE (GRAFITE & AZUL MIDNIGHT) */
+[data-theme^='dark'] .btn-servico-card.active,
+[data-theme^='dark'] .btn-servico-card.ativo {
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.28) 0%, rgba(197, 160, 89, 0.10) 100%) !important;
+  border: 2px solid var(--cor-destaque, var(--dourado, #c5a059)) !important;
+  box-shadow: 0 0 22px rgba(197, 160, 89, 0.32), inset 0 0 0 1px rgba(197, 160, 89, 0.45) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card.active .servico-icon-box,
+[data-theme^='dark'] .btn-servico-card.ativo .servico-icon-box {
+  background: linear-gradient(135deg, var(--cor-destaque, var(--dourado, #c5a059)) 0%, #eab308 100%) !important;
+  border-color: transparent !important;
+  box-shadow: 0 0 14px rgba(197, 160, 89, 0.5) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card.active .servico-info strong,
+[data-theme^='dark'] .btn-servico-card.ativo .servico-info strong {
+  color: #fef08a !important;
+  text-shadow: 0 0 12px rgba(254, 240, 138, 0.35) !important;
+}
+
+[data-theme^='dark'] .btn-servico-card.active .servico-info small,
+[data-theme^='dark'] .btn-servico-card.ativo .servico-info small {
+  color: #f1f5f9 !important;
+  font-weight: 500 !important;
+}
+
+[data-theme^='dark'] .btn-servico-card.active .servico-check-badge,
+[data-theme^='dark'] .btn-servico-card.ativo .servico-check-badge {
+  background: var(--cor-destaque, var(--dourado, #c5a059)) !important;
+  border-color: var(--cor-destaque, var(--dourado, #c5a059)) !important;
+  color: #111827 !important;
+  font-weight: 900 !important;
+  box-shadow: 0 0 12px rgba(197, 160, 89, 0.6) !important;
 }
 
 [data-theme^='dark'] .toggle-simples {

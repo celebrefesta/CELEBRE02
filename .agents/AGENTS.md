@@ -12,3 +12,7 @@
 ## 3. Preservação de CSS e Estilos Visuais
 - Arquivos de estilização CSS (`Locacoes.css`, `Clientes.css`, `Estoque.css`, `Compras.css`, `ModalCalendarioDisponibilidade.css`) estão **BLINDADOS**.
 - Não alterar classes globais de grid sem verificar o impacto em todas as telas da aplicação.
+
+## 4. Regra de Estruturação e Semântica de Formulários
+- **Análise Semântica de Inputs**: Ao gerar ou refatorar formulários, campos de dados curtos e semanticamente relacionados (ex: `CEP` e `Cidade`, `Rua` e `Número`, `Data Retirada` e `Data Devolução`, `Valor` e `Desconto`) devem ser agrupados lado a lado (em 2 colunas) em telas médias e grandes (desktop/tablet).
+- **Responsividade Mobile (`<= 768px`)**: Em telas mobile, manter os campos em 1 coluna por padrão para preservar legibilidade e ergonomia de digitação, **exceto** para dados extremamente curtos ou pares complementares objetivos (como `UF` + `Número` ou `CEP` + `Frete`), que podem permanecer em 2 colunas compactas.
