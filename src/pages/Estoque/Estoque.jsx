@@ -45,10 +45,21 @@ const Estoque = () => {
 
   // 📊 MODAL DE ROI & RENTABILIDADE
   const [modalRoiItem, setModalRoiItem] = useState(null);
+  const [ocultarMetricasRoi, setOcultarMetricasRoi] = useState(() => localStorage.getItem('celebre_ocultar_roi') === 'true');
+
+  const alternarOcultarMetricasRoi = () => {
+    setOcultarMetricasRoi(prev => {
+      const next = !prev;
+      localStorage.setItem('celebre_ocultar_roi', String(next));
+      return next;
+    });
+  };
 
   // 🛒 MODAL DE REPOSIÇÃO / PEDIDO DE COMPRA
   const [modalReposicaoItem, setModalReposicaoItem] = useState(null);
   const [qtdReposicao, setQtdReposicao] = useState(1);
+  const [modoReposicao, setModoReposicao] = useState('pacote'); // 'pacote' | 'pecas'
+  const [pecasReposicaoSelecionadas, setPecasReposicaoSelecionadas] = useState([]);
   const [toastMsg, setToastMsg] = useState('');
 
   const [modalAddPedidoAberto, setModalAddPedidoAberto] = useState(false);
@@ -387,32 +398,92 @@ const Estoque = () => {
     };
   };
 
+  // 🛒 ABRIR MODAL DE REPOSIÇÃO (COM DETECÇÃO DE KIT / DECORAÇÃO)
+  const abrirModalReposicao = (item) => {
+    if (!item) return;
+    setModalReposicaoItem(item);
+    setQtdReposicao(1);
+    const pecas = item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || [];
+    if (pecas.length > 0) {
+      setPecasReposicaoSelecionadas(pecas.map(p => ({
+        ...p,
+        selecionado: true,
+        qtdReposicao: Number(p.qtd) || 1
+      })));
+      setModoReposicao('pecas'); // Padrão inteligente: desmembrar itens do kit
+    } else {
+      setPecasReposicaoSelecionadas([]);
+      setModoReposicao('pacote');
+    }
+  };
+
   // 🛒 PEDIR REPOSIÇÃO DIRETA PARA O MÓDULO DE COMPRAS
   const pedirReposicaoCompra = async (item, qtd = 1) => {
     if (!item) return;
-    try {
-      await addDoc(collection(db, "lista_compras"), {
-        userId: tenantId,
-        empresaId: tenantId,
-        nome: item.nome,
-        item: item.nome,
-        categoria: item.categoria || 'Acervo / Reposição',
-        quantidade: Number(qtd) || 1,
-        valorEstimado: Number(item.precoAquisicao || item.valorCompra || item.custoCompra || item.financeiro?.custoCompra || 0),
-        status: 'pendente',
-        prioridade: 'alta',
-        foto: item.foto || '',
-        origem: 'reposicao_estoque',
-        estoqueId: item.id,
-        codigoPeca: item.codigo || '',
-        observacoes: `Reposição solicitada diretamente do Estoque (Cód: ${item.codigo || 'S/N'}).`,
-        criadoEm: serverTimestamp()
-      });
+    const pecasDoKit = item.especificacoes?.itensDecoracao || item.especificacoes?.itensDoKit || [];
+    const isDeco = (item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa' || item.tipoCadastro === 'decoracao') && pecasDoKit.length > 0;
 
-      await registrarLog("REPOSIÇÃO DE ACERVO", `Enviou pedido de reposição da peça "${item.nome}" (${qtd} un) para a Lista de Compras.`);
-      setModalReposicaoItem(null);
-      setToastMsg(`🛒 Pedido de compra de "${item.nome}" (${qtd} un) enviado com sucesso!`);
-      setTimeout(() => setToastMsg(''), 4000);
+    try {
+      if (isDeco && modoReposicao === 'pecas') {
+        const pecasFiltradas = pecasReposicaoSelecionadas.filter(p => p.selecionado && Number(p.qtdReposicao) > 0);
+        if (pecasFiltradas.length === 0) {
+          alert("⚠️ Selecione ao menos 1 peça da composição da decoração para enviar para compras.");
+          return;
+        }
+
+        for (const peca of pecasFiltradas) {
+          await addDoc(collection(db, "lista_compras"), {
+            userId: tenantId,
+            empresaId: tenantId,
+            nome: peca.nome,
+            item: peca.nome,
+            categoria: peca.categoria || 'Acervo / Reposição',
+            quantidade: Number(peca.qtdReposicao) || 1,
+            valorEstimado: Number(peca.valorCompra || peca.preco || peca.precoOriginal || 0),
+            status: 'pendente',
+            prioridade: 'alta',
+            foto: peca.foto || item.foto || '',
+            origem: 'reposicao_decoracao_kit',
+            decoracaoOrigem: item.nome,
+            decoracaoId: item.id,
+            estoqueId: peca.id || item.id,
+            codigoPeca: peca.codigo || '',
+            observacoes: `Peça individual do kit/tema "${item.nome}" (Cód: ${item.codigo || 'S/N'}).`,
+            criadoEm: serverTimestamp()
+          });
+        }
+
+        await registrarLog("REPOSIÇÃO DE DECORAÇÃO", `Enviou ${pecasFiltradas.length} peças desmembradas da decoração "${item.nome}" para a Lista de Compras.`);
+        setModalReposicaoItem(null);
+        setToastMsg(`🛒 ${pecasFiltradas.length} ${pecasFiltradas.length === 1 ? 'peça enviada' : 'peças enviadas'} da decoração "${item.nome}" para Compras!`);
+        setTimeout(() => setToastMsg(''), 4000);
+      } else {
+        // Envio do Pacote Fechado / Peça Única
+        await addDoc(collection(db, "lista_compras"), {
+          userId: tenantId,
+          empresaId: tenantId,
+          nome: item.nome,
+          item: item.nome,
+          categoria: item.categoria || 'Acervo / Reposição',
+          quantidade: Number(qtd) || 1,
+          valorEstimado: Number(item.precoAquisicao || item.valorCompra || item.custoCompra || item.financeiro?.custoCompra || 0),
+          status: 'pendente',
+          prioridade: 'alta',
+          foto: item.foto || '',
+          origem: isDeco ? 'reposicao_decoracao_pacote' : 'reposicao_estoque',
+          estoqueId: item.id,
+          codigoPeca: item.codigo || '',
+          observacoes: isDeco 
+            ? `Reposição do Tema Completo "${item.nome}" (Cód: ${item.codigo || 'S/N'}).`
+            : `Reposição solicitada diretamente do Estoque (Cód: ${item.codigo || 'S/N'}).`,
+          criadoEm: serverTimestamp()
+        });
+
+        await registrarLog("REPOSIÇÃO DE ACERVO", `Enviou pedido de reposição de "${item.nome}" (${qtd} un) para a Lista de Compras.`);
+        setModalReposicaoItem(null);
+        setToastMsg(`🛒 Pedido de compra de "${item.nome}" (${qtd} un) enviado com sucesso!`);
+        setTimeout(() => setToastMsg(''), 4000);
+      }
     } catch (err) {
       console.error("Erro ao pedir reposição:", err);
       alert("Erro ao enviar pedido de reposição.");
@@ -1255,19 +1326,21 @@ const Estoque = () => {
                     {item.localizacao && <span className="estoque-card-loc"><i className="fas fa-location-dot"></i> {item.localizacao}</span>}
                   </div>
 
-                  <div className="estoque-card-footer">
-                    <div className="estoque-card-price-row">
-                      <strong>R$ {valorAluguelFormatado}</strong>
-                      <span>{disponivelTotal} {isDeco ? 'kit' : 'un'} disp.</span>
+                    <div className="estoque-card-footer">
+                      <div className="estoque-card-price-row">
+                        <strong>R$ {valorAluguelFormatado}</strong>
+                        <span>{disponivelTotal} {isDeco ? 'kit' : 'un'} disp.</span>
+                      </div>
+                      <div className="estoque-card-actions">
+                        <button className="action-btn roi" onClick={(e) => { e.stopPropagation(); setModalRoiItem(item); }} title="Ver Raio-X e ROI da Peça"><i className="fas fa-chart-pie"></i></button>
+                        <button className="action-btn reposicao" onClick={(e) => { e.stopPropagation(); abrirModalReposicao(item); }} title="Pedir Reposição / Compra"><i className="fas fa-cart-plus"></i></button>
+                        <button className="action-btn add-pedido" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido"><i className="fas fa-plus"></i></button>
+                        <button className="action-btn manutencao" onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); }} title="Manutenção / Reparo"><i className="fas fa-screwdriver-wrench"></i></button>
+                        <button className="action-btn edit" onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} title="Editar"><i className="fas fa-pen-to-square"></i></button>
+                        <button className="action-btn duplicate" onClick={(e) => { e.stopPropagation(); duplicarItem(item); }} title="Duplicar Item"><i className="fas fa-clone"></i></button>
+                        <button className="action-btn delete" onClick={async (e) => { e.stopPropagation(); if(window.confirm('Excluir permanentemente do acervo?')) { await registrarLog('EXCLUSÃO DE ACERVO', `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, 'estoque', item.id)).then(carregarDados); }}} title="Excluir"><i className="fas fa-trash-can"></i></button>
+                      </div>
                     </div>
-                    <div className="estoque-card-actions">
-                      <button className="action-btn add-pedido" onClick={() => { setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Adicionar ao Pedido"><i className="fas fa-cart-plus"></i></button>
-                      <button className="action-btn manutencao" onClick={() => abrirModalManutencao(item)} title="Manutenção / Reparo"><i className="fas fa-screwdriver-wrench"></i></button>
-                      <button className="action-btn edit" onClick={() => irParaCadastro(item)} title="Editar"><i className="fas fa-pen-to-square"></i></button>
-                      <button className="action-btn duplicate" onClick={() => duplicarItem(item)} title="Duplicar Item"><i className="fas fa-clone"></i></button>
-                      <button className="action-btn delete" onClick={async () => { if(window.confirm('Excluir permanentemente do acervo?')) { await registrarLog('EXCLUSÃO DE ACERVO', `Apagou permanentemente o item "${item.nome}" do estoque.`); deleteDoc(doc(db, 'estoque', item.id)).then(carregarDados); }}} title="Excluir"><i className="fas fa-trash-can"></i></button>
-                    </div>
-                  </div>
                 </div>
               );
             })}
@@ -1327,8 +1400,8 @@ const Estoque = () => {
                         <input type="checkbox" checked={selecionado} onChange={() => toggleSelecao(item.id)} onClick={e => e.stopPropagation()} />
                       </td>
                       <td>
-                        <div className="pro-product-cell-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0, maxWidth: '100%' }}>
-                          <div className="pro-product-photo-box" style={{ width: '48px', height: '48px', backgroundColor: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid var(--borda, #e2e8f0)', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div className="pro-product-cell-wrapper" style={{ display: 'flex', alignItems: 'flex-start', gap: '12px', minWidth: 0, maxWidth: '100%' }}>
+                          <div className="pro-product-photo-box" style={{ width: '48px', height: '48px', backgroundColor: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', overflow: 'hidden', border: '1.5px solid var(--borda, #e2e8f0)', flexShrink: 0, marginTop: '2px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                               {item.foto ? (
                                 <img src={item.foto} style={{ width: '100%', height: '100%', objectFit: 'cover', cursor: 'pointer', objectPosition: posImg ? `${posImg.x}% ${posImg.y}%` : '50% 50%' }} onClick={(e) => { e.stopPropagation(); setImagemAmpliada(item.foto); }} title="Ampliar"/>
                               ) : ( <div style={{ width:'100%', height:'100%', display:'flex', alignItems:'center', justifyContent:'center', fontSize:'18px', color:'#94a3b8' }}><i className="fas fa-image"></i></div> )}
@@ -1499,7 +1572,7 @@ const Estoque = () => {
                       <td style={{ textAlign: 'right' }}>
                         <div className="table-actions-container">
                             <button className="action-btn roi" onClick={(e) => { e.stopPropagation(); setModalRoiItem(item); }} title="Ver ROI e Giro da Peça"><i className="fas fa-chart-pie"></i></button>
-                            <button className="action-btn reposicao" onClick={(e) => { e.stopPropagation(); setModalReposicaoItem(item); setQtdReposicao(1); }} title="Pedir Reposição / Compra"><i className="fas fa-cart-plus"></i></button>
+                            <button className="action-btn reposicao" onClick={(e) => { e.stopPropagation(); abrirModalReposicao(item); }} title="Pedir Reposição / Compra"><i className="fas fa-cart-plus"></i></button>
                             <button className="action-btn add-pedido" onClick={(e) => { e.stopPropagation(); setItemParaPedido(item); setPedidoSelecionadoId(''); setModalAddPedidoAberto(true); }} title="Inserir direto num Pedido"><i className="fas fa-plus"></i></button>
                             <button className="action-btn manutencao" onClick={(e) => { e.stopPropagation(); abrirModalManutencao(item); }} title="Manutenção / Reparo"><i className="fas fa-screwdriver-wrench"></i></button>
                             <button className="action-btn edit" onClick={(e) => { e.stopPropagation(); irParaCadastro(item); }} title="Editar"><i className="fas fa-pen-to-square"></i></button>
@@ -1809,114 +1882,168 @@ const Estoque = () => {
         document.body
       )}
 
-      {/* 📊 MODAL DE ROI & RENTABILIDADE DA PEÇA */}
+      {/* 📊 MODAL DE ROI & RENTABILIDADE / CONTABILIDADE DA PEÇA */}
       {modalRoiItem && ReactDOM.createPortal(
         (() => {
           const m = calcularMetricasItem(modalRoiItem);
           const precoAluguel = Number(modalRoiItem.financeiro?.valorAluguel || modalRoiItem.preco || 0);
 
           return (
-            <div className="modal-overlay-blur" onClick={() => setModalRoiItem(null)}>
-              <div className="modal-maintenance-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '620px', borderRadius: '20px', overflow: 'hidden' }}>
+            <div className="modal-roi-overlay" onClick={() => setModalRoiItem(null)}>
+              <div className="modal-roi-card animate-pop" onClick={e => e.stopPropagation()}>
                 
-                {/* CABEÇALHO */}
-                <div style={{ background: '#0f172a', color: '#fff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <div>
-                    <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fde68a', fontWeight: '800' }}>📊 Raio-X de Rentabilidade & ROI da Peça</h3>
-                    <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#cbd5e1' }}>
-                      Performance de locação, faturamento gerado e retorno sobre o investimento
-                    </p>
+                {/* 👑 CABEÇALHO COMPACTO E SOFISTICADO */}
+                <div className="modal-roi-header">
+                  <div className="modal-roi-header-content">
+                    <div className="modal-roi-header-icon">
+                      <i className="fas fa-chart-pie"></i>
+                    </div>
+                    <div className="modal-roi-header-text">
+                      <div className="modal-roi-badge-top">
+                        <span className="modal-roi-badge-pill">INTELIGÊNCIA DE ACERVO</span>
+                        <span className="modal-roi-badge-code">CÓD: {modalRoiItem.codigo || 'S/N'}</span>
+                      </div>
+                      <h3>Raio-X de Rentabilidade & ROI</h3>
+                      <p>Performance operacional e histórico da peça</p>
+                    </div>
                   </div>
-                  <button onClick={() => setModalRoiItem(null)} style={{ color: '#fff', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
+                  
+                  <div className="modal-roi-header-actions-right">
+                    <button 
+                      type="button" 
+                      className={`modal-roi-btn-toggle-eye ${ocultarMetricasRoi ? 'active' : ''}`}
+                      onClick={alternarOcultarMetricasRoi}
+                      title={ocultarMetricasRoi ? "Mostrar métricas financeiras" : "Ocultar métricas financeiras"}
+                    >
+                      <i className={ocultarMetricasRoi ? "fas fa-eye-slash" : "fas fa-eye"}></i>
+                      <span>{ocultarMetricasRoi ? "Oculto" : "Visível"}</span>
+                    </button>
+
+                    <button className="modal-roi-btn-close" onClick={() => setModalRoiItem(null)} title="Fechar">
+                      <i className="fas fa-times"></i>
+                    </button>
+                  </div>
                 </div>
 
-                <div style={{ padding: '20px 24px', maxHeight: '70vh', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                <div className="modal-roi-body">
                   
-                  {/* FOTO E IDENTIFICAÇÃO */}
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '14px', background: '#f8fafc', padding: '14px', borderRadius: '14px', border: '1px solid #e2e8f0' }}>
-                    <div style={{ width: '60px', height: '60px', borderRadius: '12px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
+                  {/* 🖼️ IDENTIFICAÇÃO DO PRODUTO EM 2 COLUNAS COMPACTAS */}
+                  <div className="modal-roi-product-hero">
+                    <div className="modal-roi-hero-photo-box">
                       {modalRoiItem.foto ? (
-                        <img src={modalRoiItem.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        <img src={modalRoiItem.foto} alt={modalRoiItem.nome} />
                       ) : (
-                        <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px' }}>📷</div>
+                        <div className="modal-roi-hero-no-photo"><i className="fas fa-image"></i></div>
                       )}
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: 0, fontSize: '1.05rem', color: '#0f172a', fontWeight: '800' }}>{modalRoiItem.nome}</h4>
-                      <div style={{ fontSize: '0.78rem', color: '#64748b', marginTop: '3px' }}>
-                        CÓD: <b>{modalRoiItem.codigo || 'S/N'}</b> · Categoria: <b>{modalRoiItem.categoria || 'Geral'}</b> · Aluguel: <b>R$ {precoAluguel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b>
+                    <div className="modal-roi-hero-details">
+                      <h4 className="modal-roi-hero-title">{modalRoiItem.nome}</h4>
+                      <div className="modal-roi-hero-grid-2">
+                        <span className="modal-roi-info-chip"><i className="fas fa-tag"></i> {modalRoiItem.categoria || 'Geral'}</span>
+                        <span className="modal-roi-info-chip price"><i className="fas fa-coins"></i> Aluguel: <b>R$ {precoAluguel.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</b></span>
+                        <span className="modal-roi-info-chip"><i className="fas fa-boxes-stacked"></i> Estoque: <b>{modalRoiItem.quantidade || 0} un</b></span>
+                        <span className="modal-roi-info-chip"><i className="fas fa-barcode"></i> Cód: <b>{modalRoiItem.codigo || 'S/N'}</b></span>
                       </div>
                     </div>
                   </div>
 
-                  {/* CARDS DE MÉTRICAS */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                    
-                    <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '12px', padding: '12px' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#1e40af', textTransform: 'uppercase' }}>🔄 Giro de Locações</span>
-                      <div style={{ fontSize: '1.25rem', fontWeight: '850', color: '#1d4ed8', marginTop: '2px' }}>
-                        {m.vezesAlugada}x
+                  {/* 📊 SEÇÃO DE MÉTRICAS & CONTABILIDADE COM OPÇÃO DE OCULTAR */}
+                  {ocultarMetricasRoi ? (
+                    <div className="modal-roi-hidden-placeholder" onClick={alternarOcultarMetricasRoi}>
+                      <div className="modal-roi-hidden-content">
+                        <i className="fas fa-eye-slash"></i>
+                        <span>Métricas financeiras ocultas</span>
                       </div>
-                      <span style={{ fontSize: '0.65rem', color: '#3b82f6' }}>unidades alugadas</span>
+                      <span className="modal-roi-hidden-btn-reveal">Toque para exibir</span>
                     </div>
+                  ) : (
+                    <div className="modal-roi-metrics-container">
+                      
+                      {/* PAINEL COMPACTO EM 2 COLUNAS */}
+                      <div className="modal-roi-slim-stats-grid">
+                        
+                        <div className="modal-roi-slim-stat card-kpi-blue">
+                          <div className="stat-left">
+                            <span className="stat-label">Giro no Acervo</span>
+                            <strong className="stat-val">{m.vezesAlugada}x</strong>
+                          </div>
+                          <span className="stat-tag">alugadas</span>
+                        </div>
 
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '12px', padding: '12px' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>💰 Faturamento Total</span>
-                      <div style={{ fontSize: '1.25rem', fontWeight: '850', color: '#15803d', marginTop: '2px' }}>
-                        R$ {m.totalFaturado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        <div className="modal-roi-slim-stat card-kpi-emerald">
+                          <div className="stat-left">
+                            <span className="stat-label">Faturamento Total</span>
+                            <strong className="stat-val">R$ {m.totalFaturado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                          </div>
+                          <span className="stat-tag">bruto</span>
+                        </div>
+
+                        <div className={`modal-roi-slim-stat ${m.roiPercentual >= 0 ? 'card-kpi-gold' : 'card-kpi-red'}`}>
+                          <div className="stat-left">
+                            <span className="stat-label">Retorno (ROI)</span>
+                            <strong className="stat-val">{m.roiPercentual > 0 ? '+' : ''}{m.roiPercentual.toFixed(0)}%</strong>
+                          </div>
+                          <span className="stat-tag">retorno</span>
+                        </div>
+
+                        <div className={`modal-roi-slim-stat ${m.lucroLiquido >= 0 ? 'card-kpi-emerald' : 'card-kpi-red'}`}>
+                          <div className="stat-left">
+                            <span className="stat-label">Lucro Líquido Real</span>
+                            <strong className="stat-val">R$ {m.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                          </div>
+                          <span className="stat-tag">líquido</span>
+                        </div>
+
                       </div>
-                      <span style={{ fontSize: '0.65rem', color: '#22c55e' }}>receita bruta gerada</span>
-                    </div>
 
-                    <div style={{ background: m.roiPercentual >= 0 ? '#fefce8' : '#fef2f2', border: m.roiPercentual >= 0 ? '1px solid #fef08a' : '1px solid #fecaca', borderRadius: '12px', padding: '12px' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '800', color: m.roiPercentual >= 0 ? '#854d0e' : '#991b1b', textTransform: 'uppercase' }}>🏆 ROI da Peça</span>
-                      <div style={{ fontSize: '1.25rem', fontWeight: '850', color: m.roiPercentual >= 0 ? '#ca8a04' : '#b91c1c', marginTop: '2px' }}>
-                        {m.roiPercentual > 0 ? '+' : ''}{m.roiPercentual.toFixed(0)}%
+                      {/* DETALHAMENTO DE CUSTOS SLIM EM 2 COLUNAS */}
+                      <div className="modal-roi-slim-costs-row">
+                        <div className="modal-roi-slim-cost-chip">
+                          <span className="cost-lbl">Custo Aquisição:</span>
+                          <span className="cost-num">R$ {m.custoAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
+
+                        <div className="modal-roi-slim-cost-chip">
+                          <span className="cost-lbl">Gastos c/ Reparos:</span>
+                          <span className="cost-num text-amber">R$ {m.custoManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                        </div>
                       </div>
-                      <span style={{ fontSize: '0.65rem', color: m.roiPercentual >= 0 ? '#a16207' : '#ef4444' }}>retorno sobre custo</span>
+
                     </div>
+                  )}
 
-                  </div>
-
-                  {/* SEGUNDA LINHA DE CUSTOS & LUCRO LÍQUIDO */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '10px' }}>
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#64748b' }}>🏷️ Custo Aquisição:</span>
-                      <div style={{ fontWeight: '800', color: '#0f172a', fontSize: '0.95rem' }}>R$ {m.custoAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#64748b' }}>🛠️ Gastos Reparos:</span>
-                      <div style={{ fontWeight: '800', color: '#b45309', fontSize: '0.95rem' }}>R$ {m.custoManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</div>
-                    </div>
-
-                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px' }}>
-                      <span style={{ fontSize: '0.65rem', fontWeight: '700', color: '#64748b' }}>📈 Lucro Líquido:</span>
-                      <div style={{ fontWeight: '850', color: m.lucroLiquido >= 0 ? '#16a34a' : '#ef4444', fontSize: '0.95rem' }}>
-                        R$ {m.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  {/* 📜 HISTÓRICO DE LOCAÇÕES RECENTES */}
+                  <div className="modal-roi-history-wrapper">
+                    <div className="modal-roi-history-header">
+                      <div className="modal-roi-history-header-title">
+                        <i className="fas fa-calendar-check"></i>
+                        <span>Histórico de Locações</span>
                       </div>
+                      <span className="modal-roi-history-counter">{m.historicoPedidos.length} {m.historicoPedidos.length === 1 ? 'locação' : 'locações'}</span>
                     </div>
-                  </div>
-
-                  {/* HISTÓRICO DE PEDIDOS COM A PEÇA */}
-                  <div>
-                    <h5 style={{ margin: '0 0 8px 0', fontSize: '0.82rem', color: '#334155', fontWeight: '800', textTransform: 'uppercase' }}>
-                      📋 Histórico de Locações desta Peça ({m.historicoPedidos.length})
-                    </h5>
 
                     {m.historicoPedidos.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '20px', background: '#f8fafc', borderRadius: '10px', color: '#64748b', fontSize: '0.82rem' }}>
-                        Nenhuma locação finalizada encontrada para esta peça até o momento.
+                      <div className="modal-roi-empty-box">
+                        <i className="fas fa-folder-open"></i>
+                        <span>Nenhuma locação finalizada encontrada para esta peça até o momento.</span>
                       </div>
                     ) : (
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', maxHeight: '180px', overflowY: 'auto' }}>
+                      <div className="modal-roi-history-scroll">
                         {m.historicoPedidos.map((ped, idx) => (
-                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '0.78rem' }}>
-                            <div>
-                              <strong>Pedido #{ped.numeroPedido}</strong> · <span>👤 {ped.clienteNome}</span>
-                              <div style={{ color: '#64748b', fontSize: '0.7rem' }}>Data: {ped.dataRetirada ? ped.dataRetirada.split('-').reverse().join('/') : '-'} ({ped.qtd} un)</div>
+                          <div key={idx} className="modal-roi-history-card">
+                            <div className="modal-roi-history-card-left">
+                              <div className="modal-roi-ped-badge">#{ped.numeroPedido}</div>
+                              <div className="modal-roi-ped-info">
+                                <span className="modal-roi-client-name"><i className="fas fa-user"></i> {ped.clienteNome}</span>
+                                <span className="modal-roi-ped-date">
+                                  <i className="fas fa-calendar-alt"></i> {ped.dataRetirada ? ped.dataRetirada.split('-').reverse().join('/') : '-'} 
+                                  <span className="modal-roi-ped-qtd">• {ped.qtd} {ped.qtd === 1 ? 'un' : 'uns'}</span>
+                                </span>
+                              </div>
                             </div>
-                            <strong style={{ color: '#16a34a' }}>+ R$ {ped.valorGerado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                            <div className="modal-roi-history-card-right">
+                              <span className="modal-roi-badge-gain">+ R$ {ped.valorGerado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                            </div>
                           </div>
                         ))}
                       </div>
@@ -1925,27 +2052,32 @@ const Estoque = () => {
 
                 </div>
 
-                {/* RODAPÉ COM AÇÕES RÁPIDAS */}
-                <div style={{ padding: '14px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
+                {/* 🔘 RODAPÉ DE AÇÕES */}
+                <div className="modal-roi-actions-footer">
                   <button 
-                    onClick={() => { setModalRoiItem(null); setModalReposicaoItem(modalRoiItem); setQtdReposicao(1); }}
-                    style={{ flex: 1, padding: '10px', background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}
+                    type="button"
+                    className="modal-roi-btn-action btn-action-reposicao"
+                    onClick={() => { const item = modalRoiItem; setModalRoiItem(null); abrirModalReposicao(item); }}
                   >
-                    🛒 Pedir Reposição
+                    <i className="fas fa-cart-plus"></i>
+                    <span>Pedir Reposição</span>
                   </button>
 
                   <button 
+                    type="button"
+                    className="modal-roi-btn-action btn-action-reparo"
                     onClick={() => { const it = modalRoiItem; setModalRoiItem(null); abrirModalManutencao(it); }}
-                    style={{ flex: 1, padding: '10px', background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer' }}
                   >
-                    🛠️ Registrar Reparo
+                    <i className="fas fa-screwdriver-wrench"></i>
+                    <span>Registrar Reparo</span>
                   </button>
 
                   <button 
+                    type="button"
+                    className="modal-roi-btn-action btn-action-close"
                     onClick={() => setModalRoiItem(null)}
-                    style={{ padding: '10px 16px', background: '#ffffff', color: '#475569', border: '1px solid #cbd5e1', borderRadius: '10px', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer' }}
                   >
-                    Fechar
+                    <span>Fechar</span>
                   </button>
                 </div>
 
@@ -1958,88 +2090,246 @@ const Estoque = () => {
 
       {/* 🛒 MODAL DE PEDIDO DE REPOSIÇÃO / COMPRAS */}
       {modalReposicaoItem && ReactDOM.createPortal(
-        <div className="modal-overlay-blur" onClick={() => setModalReposicaoItem(null)}>
-          <div className="modal-maintenance-card" onClick={e => e.stopPropagation()} style={{ maxWidth: '480px', borderRadius: '20px', overflow: 'hidden' }}>
-            
-            <div style={{ background: '#0f172a', color: '#fff', padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.15rem', color: '#fde68a', fontWeight: '800' }}>🛒 Solicitar Reposição / Compra</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.75rem', color: '#cbd5e1' }}>
-                  Envie a peça diretamente para a Lista de Compras do sistema
-                </p>
-              </div>
-              <button onClick={() => setModalReposicaoItem(null)} style={{ color: '#fff', background: 'transparent', border: 'none', fontSize: '24px', cursor: 'pointer' }}>×</button>
-            </div>
+        (() => {
+          const pecasDoKit = modalReposicaoItem.especificacoes?.itensDecoracao || modalReposicaoItem.especificacoes?.itensDoKit || [];
+          const isDecoComPecas = (modalReposicaoItem.especificacoes?.isDecoracao || modalReposicaoItem.categoria === 'Decoração Completa' || modalReposicaoItem.tipoCadastro === 'decoracao') && pecasDoKit.length > 0;
+          const pecasSelecionadasCount = pecasReposicaoSelecionadas.filter(p => p.selecionado).length;
+          const totalUnidadesPecas = pecasReposicaoSelecionadas.filter(p => p.selecionado).reduce((acc, p) => acc + (Number(p.qtdReposicao) || 1), 0);
 
-            <div style={{ padding: '20px 24px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
-              
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', background: '#f8fafc', padding: '12px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <div style={{ width: '50px', height: '50px', borderRadius: '10px', overflow: 'hidden', background: '#e2e8f0', flexShrink: 0 }}>
-                  {modalReposicaoItem.foto ? (
-                    <img src={modalReposicaoItem.foto} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px' }}>📷</div>
-                  )}
-                </div>
-                <div>
-                  <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>{modalReposicaoItem.nome}</strong>
-                  <div style={{ fontSize: '0.75rem', color: '#64748b' }}>
-                    CÓD: <b>{modalReposicaoItem.codigo || 'S/N'}</b> · Estoque Atual: <b>{modalReposicaoItem.quantidade || 0} un</b>
+          const alternarSelecaoTodasPecas = () => {
+            const todosMarcados = pecasReposicaoSelecionadas.every(p => p.selecionado);
+            setPecasReposicaoSelecionadas(prev => prev.map(p => ({ ...p, selecionado: !todosMarcados })));
+          };
+
+          const alterarQtdPeca = (pecaId, delta) => {
+            setPecasReposicaoSelecionadas(prev => prev.map(p => {
+              if (p.id === pecaId) {
+                const novaQtd = Math.max(1, (Number(p.qtdReposicao) || 1) + delta);
+                return { ...p, qtdReposicao: novaQtd, selecionado: true };
+              }
+              return p;
+            }));
+          };
+
+          const togglePeca = (pecaId) => {
+            setPecasReposicaoSelecionadas(prev => prev.map(p => {
+              if (p.id === pecaId) {
+                return { ...p, selecionado: !p.selecionado };
+              }
+              return p;
+            }));
+          };
+
+          return (
+            <div className="modal-roi-overlay" onClick={() => setModalReposicaoItem(null)}>
+              <div className="modal-roi-card modal-reposicao-card animate-pop" onClick={e => e.stopPropagation()}>
+                
+                {/* 👑 CABEÇALHO COMPACTO E SOFISTICADO */}
+                <div className="modal-roi-header">
+                  <div className="modal-roi-header-content">
+                    <div className="modal-roi-header-icon" style={{ background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', boxShadow: '0 3px 10px rgba(37, 99, 235, 0.3)' }}>
+                      <i className="fas fa-cart-plus"></i>
+                    </div>
+                    <div className="modal-roi-header-text">
+                      <div className="modal-roi-badge-top">
+                        <span className="modal-roi-badge-pill" style={{ color: '#2563eb', background: 'rgba(37, 99, 235, 0.12)', borderColor: 'rgba(37, 99, 235, 0.25)' }}>
+                          SUPRIMENTOS & COMPRAS
+                        </span>
+                        <span className="modal-roi-badge-code">CÓD: {modalReposicaoItem.codigo || 'S/N'}</span>
+                      </div>
+                      <h3>Solicitar Reposição de Peça</h3>
+                      <p>Envie a peça diretamente para a Lista de Compras</p>
+                    </div>
                   </div>
+                  <button className="modal-roi-btn-close" onClick={() => setModalReposicaoItem(null)} title="Fechar">
+                    <i className="fas fa-times"></i>
+                  </button>
                 </div>
-              </div>
 
-              <div>
-                <label style={{ fontSize: '0.78rem', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px' }}>
-                  QUANTIDADE A COMPRAR / REPOR:
-                </label>
-                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                  <input 
-                    type="number" 
-                    min="1" 
-                    value={qtdReposicao} 
-                    onChange={e => setQtdReposicao(Math.max(1, parseInt(e.target.value) || 1))}
-                    style={{ flex: 1, padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '1rem', fontWeight: 'bold' }}
-                  />
-                  {[1, 2, 5, 10].map(q => (
-                    <button 
-                      key={q}
-                      type="button"
-                      onClick={() => setQtdReposicao(q)}
-                      style={{ padding: '10px 12px', background: qtdReposicao === q ? '#3b82f6' : '#f1f5f9', color: qtdReposicao === q ? '#fff' : '#475569', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: 'bold', fontSize: '0.78rem', cursor: 'pointer' }}
-                    >
-                      {q} un
-                    </button>
-                  ))}
+                <div className="modal-roi-body">
+                  
+                  {/* 🖼️ IDENTIFICAÇÃO DO PRODUTO */}
+                  <div className="modal-roi-product-hero">
+                    <div className="modal-roi-hero-photo-box">
+                      {modalReposicaoItem.foto ? (
+                        <img src={modalReposicaoItem.foto} alt={modalReposicaoItem.nome} />
+                      ) : (
+                        <div className="modal-roi-hero-no-photo"><i className="fas fa-image"></i></div>
+                      )}
+                    </div>
+                    <div className="modal-roi-hero-details">
+                      <h4 className="modal-roi-hero-title">{modalReposicaoItem.nome}</h4>
+                      <div className="modal-roi-hero-grid-2">
+                        <span className="modal-roi-info-chip"><i className="fas fa-tag"></i> {modalReposicaoItem.categoria || 'Geral'}</span>
+                        <span className="modal-roi-info-chip"><i className="fas fa-boxes-stacked"></i> Estoque Atual: <b>{modalReposicaoItem.quantidade || 0} un</b></span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 🔀 SELETOR DE MODALIDADE (QUANDO FOR DECORAÇÃO COM ITENS VINCULADOS) */}
+                  {isDecoComPecas && (
+                    <div className="modal-reposicao-mode-tabs">
+                      <button 
+                        type="button" 
+                        className={`modal-reposicao-mode-tab ${modoReposicao === 'pecas' ? 'active' : ''}`}
+                        onClick={() => setModoReposicao('pecas')}
+                      >
+                        <i className="fas fa-puzzle-piece"></i>
+                        <span>Desmembrar Peças ({pecasDoKit.length})</span>
+                      </button>
+                      <button 
+                        type="button" 
+                        className={`modal-reposicao-mode-tab ${modoReposicao === 'pacote' ? 'active' : ''}`}
+                        onClick={() => setModoReposicao('pacote')}
+                      >
+                        <i className="fas fa-box-open"></i>
+                        <span>Kit Fechado (Tema)</span>
+                      </button>
+                    </div>
+                  )}
+
+                  {/* 🧩 MODO 1: DESMEMBRAR PEÇAS DO KIT */}
+                  {isDecoComPecas && modoReposicao === 'pecas' ? (
+                    <div className="modal-reposicao-pecas-container">
+                      <div className="modal-reposicao-pecas-header">
+                        <span className="pecas-count-lbl">
+                          <i className="fas fa-list-check"></i>
+                          <b>{pecasSelecionadasCount}</b> de {pecasReposicaoSelecionadas.length} peças selecionadas
+                        </span>
+                        <button 
+                          type="button" 
+                          className="btn-toggle-all-pecas"
+                          onClick={alternarSelecaoTodasPecas}
+                        >
+                          {pecasReposicaoSelecionadas.every(p => p.selecionado) ? 'Desmarcar Todas' : 'Marcar Todas'}
+                        </button>
+                      </div>
+
+                      <div className="modal-reposicao-pecas-list">
+                        {pecasReposicaoSelecionadas.map((peca) => (
+                          <div 
+                            key={peca.id} 
+                            className={`modal-reposicao-peca-card ${peca.selecionado ? 'selected' : ''}`}
+                            onClick={() => togglePeca(peca.id)}
+                          >
+                            <div className="peca-card-left">
+                              <input 
+                                type="checkbox" 
+                                checked={!!peca.selecionado} 
+                                onChange={() => {}} 
+                                className="peca-checkbox"
+                              />
+                              <div className="peca-thumb">
+                                {peca.foto ? (
+                                  <img src={peca.foto} alt={peca.nome} />
+                                ) : (
+                                  <i className="fas fa-shapes"></i>
+                                )}
+                              </div>
+                              <div className="peca-info">
+                                <strong className="peca-name">{peca.nome}</strong>
+                                <span className="peca-cat">{peca.categoria || 'Item do Tema'}</span>
+                              </div>
+                            </div>
+
+                            <div className="peca-card-right" onClick={e => e.stopPropagation()}>
+                              <div className="peca-mini-stepper">
+                                <button 
+                                  type="button" 
+                                  className="mini-step-btn"
+                                  onClick={() => alterarQtdPeca(peca.id, -1)}
+                                  disabled={!peca.selecionado || peca.qtdReposicao <= 1}
+                                >
+                                  <i className="fas fa-minus"></i>
+                                </button>
+                                <span className="mini-step-val">{peca.qtdReposicao || 1}</span>
+                                <button 
+                                  type="button" 
+                                  className="mini-step-btn"
+                                  onClick={() => alterarQtdPeca(peca.id, 1)}
+                                  disabled={!peca.selecionado}
+                                >
+                                  <i className="fas fa-plus"></i>
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    /* 📦 MODO 2: PACOTE COMPLETO OU ITEM AVULSO NORMAL */
+                    <div className="modal-reposicao-qtd-section">
+                      <label className="modal-reposicao-label">
+                        <i className="fas fa-calculator"></i>
+                        <span>{isDecoComPecas ? 'Quantidade de Kits Temáticos a Comprar:' : 'Quantidade a Comprar / Repor:'}</span>
+                      </label>
+                      
+                      <div className="modal-reposicao-stepper">
+                        <button 
+                          type="button" 
+                          className="btn-step"
+                          onClick={() => setQtdReposicao(Math.max(1, (parseInt(qtdReposicao) || 1) - 1))}
+                        >
+                          <i className="fas fa-minus"></i>
+                        </button>
+                        <input 
+                          type="number" 
+                          min="1" 
+                          value={qtdReposicao} 
+                          onChange={e => setQtdReposicao(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="modal-reposicao-input-val"
+                        />
+                        <button 
+                          type="button" 
+                          className="btn-step"
+                          onClick={() => setQtdReposicao((parseInt(qtdReposicao) || 1) + 1)}
+                        >
+                          <i className="fas fa-plus"></i>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 💡 DICA INFORMATIVA */}
+                  <div className="modal-reposicao-tip">
+                    <i className="fas fa-lightbulb"></i>
+                    <div className="tip-text">
+                      <strong>Fluxo Automático:</strong> Ao confirmar, {isDecoComPecas && modoReposicao === 'pecas' ? 'as peças selecionadas entrarão individualmente' : 'a solicitação entrará'} na aba <b>"Compras"</b> para cotação de preços com fornecedores!
+                    </div>
+                  </div>
+
                 </div>
+
+                {/* 🔘 RODAPÉ DE AÇÕES */}
+                <div className="modal-roi-actions-footer">
+                  <button 
+                    type="button" 
+                    className="modal-roi-btn-action btn-action-close"
+                    onClick={() => setModalReposicaoItem(null)}
+                  >
+                    Cancelar
+                  </button>
+
+                  <button 
+                    type="button" 
+                    className="modal-roi-btn-action btn-action-confirm-reposicao"
+                    onClick={() => pedirReposicaoCompra(modalReposicaoItem, qtdReposicao)}
+                  >
+                    <i className="fas fa-cart-plus"></i>
+                    <span>
+                      {isDecoComPecas && modoReposicao === 'pecas' 
+                        ? `Confirmar Envio (${pecasSelecionadasCount} ${pecasSelecionadasCount === 1 ? 'modelo' : 'modelos'} · ${totalUnidadesPecas} un)`
+                        : `Confirmar Envio (${qtdReposicao} ${isDecoComPecas ? 'kit' : 'un'})`
+                      }
+                    </span>
+                  </button>
+                </div>
+
               </div>
-
-              <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '10px 12px', fontSize: '0.75rem', color: '#475569' }}>
-                💡 <b>Dica:</b> Ao confirmar, a solicitação entrará na aba <b>"Lista de Compras"</b> com prioridade ALTA para cotação de preços com fornecedores!
-              </div>
-
             </div>
-
-            <div style={{ padding: '16px 20px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', gap: '8px' }}>
-              <button 
-                type="button" 
-                onClick={() => setModalReposicaoItem(null)}
-                style={{ padding: '12px 14px', borderRadius: '10px', border: '1px solid #cbd5e1', fontWeight: 'bold', cursor: 'pointer', background: '#ffffff', color: '#475569' }}
-              >
-                Cancelar
-              </button>
-
-              <button 
-                type="button" 
-                onClick={() => pedirReposicaoCompra(modalReposicaoItem, qtdReposicao)}
-                style={{ flex: 1, padding: '12px 14px', background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)', color: '#ffffff', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 10px rgba(59,130,246,0.25)' }}
-              >
-                🛒 Confirmar Envio para Compras ({qtdReposicao} un)
-              </button>
-            </div>
-
-          </div>
-        </div>,
+          );
+        })(),
         document.body
       )}
 

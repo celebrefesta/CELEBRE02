@@ -661,10 +661,6 @@ const CadastroCliente = () => {
               <i className="fas fa-shopping-cart"></i> Nova Locação
             </button>
           )}
-
-          <button type="submit" form="cliente-form-main" className="btn-primary-celebre" disabled={salvando}>
-            <i className={salvando ? "fas fa-spinner fa-spin" : "fas fa-save"}></i> {salvando ? 'Salvando...' : (clienteEditando ? 'Salvar Alterações' : 'Cadastrar Cliente')}
-          </button>
         </div>
       </header>
 
@@ -818,9 +814,11 @@ const CadastroCliente = () => {
               </button>
             </div>
 
-            {/* CARD 1: DADOS PESSOAIS / EMPRESA */}
-            <div className="form-section-card">
-              <div className="form-section-header">
+            {/* CARTÃO UNIFICADO DE CADASTRO DO CLIENTE */}
+            <div className="form-section-card unified-sheet-card">
+              
+              {/* SEÇÃO 1: DADOS PESSOAIS / EMPRESA */}
+              <div className="unified-section-header">
                 <span className="section-header-icon">
                   <i className={tipoPessoa === 'fisica' ? "fas fa-id-card-alt" : "fas fa-building"}></i>
                 </span>
@@ -928,11 +926,11 @@ const CadastroCliente = () => {
                   </div>
                 </div>
               )}
-            </div>
 
-            {/* CARD 2: CONTATO E MARKETING */}
-            <div className="form-section-card">
-              <div className="form-section-header">
+              {/* SEÇÃO 2: CONTATO E MARKETING */}
+              <div className="form-section-divider"></div>
+              
+              <div className="unified-section-header">
                 <span className="section-header-icon"><i className="fas fa-phone-alt"></i></span>
                 <div>
                   <h3>CONTATO E MARKETING</h3>
@@ -979,11 +977,11 @@ const CadastroCliente = () => {
                   </div>
                 </div>
               </div>
-            </div>
 
-            {/* CARD 3: ENDEREÇO DA RESIDÊNCIA / ENTREGA */}
-            <div className="form-section-card">
-              <div className="form-section-header">
+              {/* SEÇÃO 3: ENDEREÇO DA RESIDÊNCIA / ENTREGA */}
+              <div className="form-section-divider"></div>
+              
+              <div className="unified-section-header">
                 <span className="section-header-icon"><i className="fas fa-map-marked-alt"></i></span>
                 <div>
                   <h3>ENDEREÇO DA RESIDÊNCIA / ENTREGA</h3>
@@ -1024,11 +1022,11 @@ const CadastroCliente = () => {
                   <input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} placeholder="Cidade" />
                 </div>
               </div>
-            </div>
 
-            {/* CARD 4: EXCLUSIVO DE CONTROLE E CLASSIFICAÇÃO CRM */}
-            <div className="crm-section-card">
-              <div className="form-section-header" style={{ marginBottom: '16px' }}>
+              {/* SEÇÃO 4: EXCLUSIVO DE CONTROLE E CLASSIFICAÇÃO CRM */}
+              <div className="form-section-divider"></div>
+              
+              <div className="unified-section-header">
                 <span className="section-header-icon"><i className="fas fa-sliders-h"></i></span>
                 <div>
                   <h3 style={{ margin: 0 }}>CONTROLE E CLASSIFICAÇÃO CRM</h3>
@@ -1037,7 +1035,6 @@ const CadastroCliente = () => {
               </div>
               
               <div className="form-grid-4">
-                
                 {/* STATUS DO CADASTRO */}
                 <div className="form-group span-2">
                   <label htmlFor="statusCadastro">
@@ -1146,13 +1143,23 @@ const CadastroCliente = () => {
                     placeholder="Preferências do cliente, restrições ou notas de atendimento gerais..."
                   />
                 </div>
-
               </div>
+
+              {/* RODAPÉ DE AÇÕES INTEGRADO AO CARTÃO */}
+              <div className="unified-card-actions-bar">
+                <Link to="/clientes" className="btn-cancelar-celebre">
+                  Cancelar
+                </Link>
+                <button type="submit" className="btn-salvar-celebre-gold" disabled={salvando}>
+                  <i className="fas fa-save"></i> {salvando ? 'Aguarde, salvando...' : clienteEditando ? 'Salvar Alterações' : 'Salvar Cliente'}
+                </button>
+              </div>
+
             </div>
 
             {/* HISTÓRICO DE LOCAÇÕES E CONTRATOS */}
             {clienteEditando && historicoLocacoes.length > 0 && (
-              <div style={{gridColumn: '1 / -1', width: '100%'}}>
+              <div style={{gridColumn: '1 / -1', width: '100%', marginTop: '14px'}}>
                 <div className="form-section-card">
                   <div className="form-section-header">
                     <span className="section-header-icon"><i className="fas fa-history"></i></span>
@@ -1191,16 +1198,6 @@ const CadastroCliente = () => {
                 </div>
               </div>
             )}
-
-            {/* RODAPÉ DE AÇÕES LUXURY */}
-            <div className="form-actions mt-compact">
-              <Link to="/clientes" className="btn-cancelar-celebre">
-                Cancelar
-              </Link>
-              <button type="submit" className="btn-salvar-celebre-gold" disabled={salvando}>
-                <i className="fas fa-save"></i> {salvando ? 'Aguarde, salvando...' : clienteEditando ? 'Salvar Alterações' : 'Salvar Cliente'}
-              </button>
-            </div>
 
           </div>
         </form>

@@ -88,6 +88,16 @@ const CadastroEstoque = () => {
   const [nome, setNome] = useState('');
   const [codigo, setCodigo] = useState('');
   const [tagsInput, setTagsInput] = useState('');
+  const [tooltipTipoAberto, setTooltipTipoAberto] = useState(null);
+
+  // ☁️ Fechar tooltip de tipo ao clicar fora em qualquer ponto da tela
+  useEffect(() => {
+    const handleFecharTooltip = () => setTooltipTipoAberto(null);
+    if (tooltipTipoAberto) {
+      window.addEventListener('click', handleFecharTooltip);
+      return () => window.removeEventListener('click', handleFecharTooltip);
+    }
+  }, [tooltipTipoAberto]);
   
   const [categoria, setCategoria] = useState('');
   const [subCategoria, setSubCategoria] = useState('');
@@ -641,7 +651,9 @@ const CadastroEstoque = () => {
 
   const handlePointerDown = (e) => {
     setDragging(true);
-    e.preventDefault(); 
+    if (e.cancelable && !e.touches) {
+      e.preventDefault(); 
+    }
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     setStartMouse({ x: clientX, y: clientY });
@@ -649,7 +661,9 @@ const CadastroEstoque = () => {
 
   const handlePointerMove = (e) => {
     if (!dragging) return;
-    e.preventDefault();
+    if (e.cancelable && !e.touches) {
+      e.preventDefault();
+    }
     const clientX = e.touches ? e.touches[0].clientX : e.clientX;
     const clientY = e.touches ? e.touches[0].clientY : e.clientY;
     const deltaX = clientX - startMouse.x;
@@ -997,296 +1011,355 @@ const CadastroEstoque = () => {
   const focoAtual = getFocoAtual();
 
   return (
-    <div className="clientes-container fade-in">
+    <div className="form-page-container fade-in">
       
-      {/* HERO CABEÇALHO CELEBRE LUXURY */}
-      <div className="clientes-hero-header ce-hero-header">
-        <div className="header-title-row">
-          <div className="header-icon-badge ce-icon-badge-glow">
-            <i className={itemEditando ? "fas fa-pen-to-square" : itemDuplicando ? "fas fa-clone" : "fas fa-boxes-stacked"}></i>
+      {/* HERO ENTERPRISE PADRONIZADO (IGUAL AO NOVO CLIENTE) */}
+      <header className="cadastro-hero-header">
+        <div className="cadastro-hero-left">
+          <div className="breadcrumb-nav">
+            <Link to="/estoque"><i className="fas fa-boxes-stacked"></i> Estoque</Link>
+            <span className="separator">/</span>
+            <span className="current-page">{itemEditando ? 'Editar Peça' : itemDuplicando ? 'Duplicar Peça' : dadosCompra ? 'Finalizar Compra' : 'Novo Item'}</span>
           </div>
-          <div className="welcome-text">
-            <h1>{itemEditando ? 'Editar Peça / Acervo' : itemDuplicando ? 'Duplicar Peça' : dadosCompra ? 'Finalizar Cadastro de Compra' : 'Cadastro de Acervo'}</h1>
-            <p>{itemDuplicando ? 'Altere as especificações (como cor ou tamanho) da nova peça antes de salvar.' : 'Cadastre peças unitárias, conjuntos ou pacotes de decoração prontos.'}</p>
-          </div>
-        </div>
-        <div className="header-actions">
-          <Link to="/estoque" className="btn-secondary-celebre ce-btn-back">
-            <i className="fas fa-arrow-left"></i>
-            <span>Voltar ao Estoque</span>
-          </Link>
-        </div>
-      </div>
 
-      <div style={{ maxWidth: '1400px', margin: '0 auto' }}>
-        <form onSubmit={salvarItem}>
-          <div className="ce-unified-sheet">
+          <div className="hero-title-group">
+            <span className="header-icon-badge">
+              <i className={itemEditando ? "fas fa-pen-to-square" : itemDuplicando ? "fas fa-clone" : "fas fa-boxes-stacked"}></i>
+            </span>
+            <div className="header-text">
+              <h1 className="form-page-title">{itemEditando ? 'EDITAR PEÇA / ACERVO' : itemDuplicando ? 'DUPLICAR PEÇA' : dadosCompra ? 'FINALIZAR CADASTRO DE COMPRA' : 'CADASTRO DE ACERVO'}</h1>
+              <p className="form-page-subtitle">
+                {itemDuplicando ? 'Altere as especificações (como cor ou tamanho) da nova peça antes de salvar.' : 'Cadastre peças unitárias, conjuntos ou pacotes de decoração prontos.'}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <div className="cadastro-hero-right-actions">
+          <button type="button" onClick={() => navigate(dadosCompra ? "/compras" : "/estoque")} className="btn-secondary-celebre">
+            <i className="fas fa-arrow-left"></i> Voltar à Lista
+          </button>
+        </div>
+      </header>
+
+      <div className="form-widescreen">
+        <form id="estoque-form-main" onSubmit={salvarItem} className="estoque-form-layout" autoComplete="on">
+          
+          {/* COLUNA ESQUERDA: CARD LATERAL DE FOTOS E PREVIEW DO PRODUTO (PADRÃO EXECUTIVE SIDEBAR) */}
+          <div className="left-photo-col">
+            <div className="profile-card-banner"></div>
             
-            {/* SEÇÃO 1: SELETOR DE MODALIDADE DE CADASTRO */}
-            <div className="ce-unified-section ce-section-modalidade">
-              <div className="ce-section-header-clean">
-                <div className="ce-section-header-title">
-                  <span className="ce-step-badge">1</span>
-                  <span>O QUE VOCÊ ESTÁ CADASTRANDO?</span>
-                </div>
-                <span className="ce-badge-accent">
-                  <i className="fas fa-hand-pointer"></i> Selecione o Tipo
-                </span>
+            <div className="profile-card-body">
+              {/* MOLDURA DA FOTO DO PRODUTO */}
+              <div className="item-photo-frame-wrapper">
+                {fotos.length > 0 ? (
+                  <div className="item-photo-preview-box">
+                    <img 
+                      src={fotos[fotoPrincipalIndex]} 
+                      draggable={false} 
+                      className="item-photo-img"
+                      alt="Foto da peça"
+                      style={{ 
+                        objectFit: fotoPreencher ? 'cover' : 'contain', 
+                        objectPosition: `${focoAtual.x}% ${focoAtual.y}%`, 
+                        transform: `scale(${focoAtual.z || 1})`,
+                        cursor: dragging ? 'grabbing' : 'grab',
+                        transition: dragging ? 'none' : 'transform 0.2s ease-out',
+                        transformOrigin: 'center center',
+                        touchAction: 'none'
+                      }} 
+                      onMouseDown={handlePointerDown} onTouchStart={handlePointerDown}
+                      onMouseMove={handlePointerMove} onTouchMove={handlePointerMove}
+                      onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp} onTouchEnd={handlePointerUp}
+                    />
+                    <div className="drag-hint-overlay">
+                      <span><i className="fas fa-arrows-alt"></i> Arraste</span>
+                    </div>
+                  </div>
+                ) : (
+                  <label htmlFor="upload-principal" className="item-photo-empty-label" title="Clique para adicionar foto">
+                    <i className="fas fa-camera avatar-camera-icon"></i>
+                    <span>+ Adicionar Fotos</span>
+                    <small style={{ fontSize: '0.64rem', color: '#94a3b8' }}>PNG, JPG ou WebP</small>
+                    <input id="upload-principal" type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
+                  </label>
+                )}
               </div>
 
-              <div className="ce-tipo-grid">
-                {/* OPÇÃO 1: PEÇA AVULSA */}
-                <div 
-                  onClick={() => handleTipoCadastroChange('avulsa')} 
-                  className={`ce-tipo-card ${tipoCadastro === 'avulsa' ? 'active' : ''}`}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="ce-tipo-icon-wrapper">
-                    <i className="fas fa-puzzle-piece"></i>
+              {/* AÇÕES E CONTROLES DA FOTO */}
+              {fotos.length > 0 && (
+                <>
+                  <div className="avatar-actions-row" style={{ marginTop: '8px' }}>
+                    <label htmlFor="upload-principal" className="btn-avatar-mini" title="Adicionar mais fotos">
+                      <i className="fas fa-plus"></i> Adicionar
+                    </label>
+                    <button 
+                      type="button" 
+                      onClick={(e) => { e.preventDefault(); setFotoPreencher(!fotoPreencher); }} 
+                      className="btn-avatar-mini"
+                      title="Alternar entre foto inteira ou preenchida"
+                    >
+                      <i className={fotoPreencher ? "fas fa-expand" : "fas fa-compress"}></i> {fotoPreencher ? 'Preenchendo' : 'Inteira'}
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => removerFoto(fotoPrincipalIndex)} 
+                      className="btn-avatar-mini remove" 
+                      title="Remover foto atual"
+                    >
+                      <i className="fas fa-trash-alt"></i>
+                    </button>
+                    <input id="upload-principal" type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
                   </div>
-                  <div className="ce-tipo-info">
-                    <div className="ce-tipo-title-row">
-                      <strong>PEÇA AVULSA / UNIDADE</strong>
-                      <span className="ce-tipo-tag">Unitário</span>
-                    </div>
-                    <small>Item único individual (ex: 1 Bandeja, 1 Vaso, 1 Painel)</small>
+
+                  {/* ZOOM SLIDER COMPACTO */}
+                  <div className="photo-zoom-bar-slim">
+                    <i className="fas fa-magnifying-glass" style={{ fontSize: '11px', color: '#c5a059' }}></i>
+                    <input 
+                      type="range" 
+                      min="1" max="3" step="0.1" 
+                      value={focoAtual.z || 1} 
+                      onChange={handleZoomChange} 
+                      className="photo-zoom-slider"
+                    />
                   </div>
-                  <div className="ce-tipo-radio">
-                    <i className="fas fa-check"></i>
+
+                  {/* THUMBNAILS DAS FOTOS */}
+                  <div className="photo-thumbnails-strip">
+                    {fotos.map((f, idx) => {
+                      const tFoco = getFocoThumb(idx);
+                      return (
+                        <div 
+                          key={idx} 
+                          className={`photo-thumb-item ${idx === fotoPrincipalIndex ? 'active' : ''}`} 
+                          onClick={() => setFotoPrincipalIndex(idx)}
+                        >
+                          <img src={f} alt={`Foto ${idx+1}`} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
+                          <button type="button" onClick={(e) => {e.stopPropagation(); removerFoto(idx)}} className="btn-thumb-remove" title="Remover">×</button>
+                        </div>
+                      );
+                    })}
                   </div>
+                </>
+              )}
+
+              {/* IDENTIDADE E RESUMO DO PRODUTO (IGUAL CLIENTE) */}
+              <div className="profile-identity-box" style={{ marginTop: fotos.length > 0 ? '6px' : '10px' }}>
+                <h3 className="profile-client-name">
+                  {nome || (tipoCadastro === 'decoracao' ? 'Nova Decoração' : tipoCadastro === 'kit' ? 'Novo Conjunto' : 'Nova Peça')}
+                </h3>
+                
+                <div className="profile-document-pill">
+                  <i className="fas fa-barcode"></i> 
+                  <span>{codigo || 'SKU Auto'}</span>
                 </div>
 
-                {/* OPÇÃO 2: KIT / CONJUNTO */}
-                <div 
-                  onClick={() => handleTipoCadastroChange('kit')} 
-                  className={`ce-tipo-card ${tipoCadastro === 'kit' ? 'active' : ''}`}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="ce-tipo-icon-wrapper">
-                    <i className="fas fa-cubes"></i>
+                {categoriaTema && (
+                  <div className="profile-tag-pill" style={{ backgroundColor: 'rgba(197, 160, 89, 0.15)', color: '#9e7a3b', border: '1px solid rgba(197, 160, 89, 0.3)' }}>
+                    <span>🏷️ {categoriaTema} {subcategoriaTema ? `• ${subcategoriaTema}` : ''}</span>
                   </div>
-                  <div className="ce-tipo-info">
-                    <div className="ce-tipo-title-row">
-                      <strong>KIT / CONJUNTO</strong>
-                      <span className="ce-tipo-tag">Multipeças</span>
-                    </div>
-                    <small>Gera peças desmembráveis (ex: Trio de Cilindros, Conjunto)</small>
-                  </div>
-                  <div className="ce-tipo-radio">
-                    <i className="fas fa-check"></i>
-                  </div>
+                )}
+              </div>
+
+              {/* STATUS MINI CARDS */}
+              <div className="profile-status-cards">
+                <div className="status-mini-card aprovado">
+                  <span className="status-label">ESTOQUE</span>
+                  <strong className="status-val">
+                    {tipoCadastro === 'kit' ? '⚡ Kit' : `${quantidade || 1} un`}
+                  </strong>
                 </div>
 
-                {/* OPÇÃO 3: DECORAÇÃO COMPLETA */}
-                <div 
-                  onClick={() => handleTipoCadastroChange('decoracao')} 
-                  className={`ce-tipo-card ${tipoCadastro === 'decoracao' ? 'active' : ''}`}
-                  role="button"
-                  tabIndex={0}
-                >
-                  <div className="ce-tipo-icon-wrapper">
-                    <i className="fas fa-wand-magic-sparkles"></i>
-                  </div>
-                  <div className="ce-tipo-info">
-                    <div className="ce-tipo-title-row">
-                      <strong>DECORAÇÃO COMPLETA</strong>
-                      <span className="ce-tipo-tag">Pacote</span>
-                    </div>
-                    <small>Pacote pronto combinando peças existentes do acervo</small>
-                  </div>
-                  <div className="ce-tipo-radio">
-                    <i className="fas fa-check"></i>
-                  </div>
+                <div className="status-mini-card adimplente">
+                  <span className="status-label">ALUGUEL</span>
+                  <strong className="status-val">
+                    {valorAluguel ? `R$ ${valorAluguel}` : 'R$ 0,00'}
+                  </strong>
                 </div>
               </div>
 
+              {/* DATA DE CADASTRO FOOTER */}
+              <div className="profile-since-footer">
+                <i className="far fa-calendar-alt"></i> Cadastrado em: {itemEditando?.criadoEm ? new Date(itemEditando.criadoEm).toLocaleDateString('pt-BR') : 'Hoje'}
+              </div>
             </div>
 
-            <div className="ce-form-columns">
-              
-              <div className="ce-left-panel">
-                
-                {/* SEÇÃO: FOTOS DO PRODUTO */}
-                <div className="ce-unified-section ce-section-fotos">
-                    <div className="ce-section-header-clean">
-                      <div className="ce-section-header-title">
-                        <i className="fas fa-camera ce-icon-accent"></i>
-                        <span>FOTO PRINCIPAL DO ACERVO</span>
-                      </div>
-                      {fotos.length > 0 && (
-                        <span className="ce-badge-accent">
-                          {fotos.length} foto(s)
-                        </span>
-                      )}
-                    </div>
-                  
-                  {tipoCadastro === 'decoracao' && (
-                    <div style={{ marginBottom: '12px', padding: '6px 12px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', border: '1px solid var(--cor-destaque, #c5a059)', borderRadius: '10px', fontSize: '11px', color: 'var(--cor-destaque, #c5a059)', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                      <i className="fas fa-sparkles"></i> Foto Geral do Cenário Completo (Capa única do catálogo)
-                    </div>
-                  )}
-                  
-                  <div>
-                    {/* Moldura da Imagem */}
-                    <div style={{ width: '100%', height: '260px', backgroundColor: '#f8fafc', borderRadius: '16px', border: fotos.length > 0 ? '3px solid var(--cor-destaque, #c5a059)' : '2px dashed #cbd5e1', position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: fotos.length > 0 ? '0 8px 20px color-mix(in srgb, var(--cor-destaque, #c5a059) 20%, transparent)' : 'none', transition: '0.2s' }}>
-                    {fotos.length > 0 ? (
-                        <>
-                        <img 
-                            src={fotos[fotoPrincipalIndex]} 
-                            draggable={false} 
-                            style={{ 
-                                width: '100%', height: '100%', 
-                                objectFit: fotoPreencher ? 'cover' : 'contain', 
-                                objectPosition: `${focoAtual.x}% ${focoAtual.y}%`, 
-                                transform: `scale(${focoAtual.z || 1})`,
-                                cursor: dragging ? 'grabbing' : 'grab',
-                                transition: dragging ? 'none' : 'transform 0.2s ease-out',
-                                transformOrigin: 'center center'
-                            }} 
-                            onMouseDown={handlePointerDown} onTouchStart={handlePointerDown}
-                            onMouseMove={handlePointerMove} onTouchMove={handlePointerMove}
-                            onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp} onTouchEnd={handlePointerUp}
-                        />
-                        <div style={{position: 'absolute', top: '12px', right: '12px', background: 'rgba(15, 23, 42, 0.82)', backdropFilter: 'blur(6px)', color: '#ffffff', fontSize: '11px', padding: '6px 14px', borderRadius: '20px', fontWeight: '700', pointerEvents: 'none', border: '1px solid rgba(255,255,255,0.2)', display: 'flex', alignItems: 'center', gap: '6px'}}>
-                            <i className="fas fa-up-down-left-right"></i>
-                            <span>Arraste para enquadrar</span>
-                        </div>
-                        </>
-                    ) : (
-                        <label htmlFor="upload-principal" style={{cursor: 'pointer', width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '24px', textAlign: 'center'}}>
-                        <div style={{ width: '60px', height: '60px', borderRadius: '16px', background: '#ffffff', border: '2px solid #cbd5e1', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: 'var(--cor-destaque, #c5a059)', marginBottom: '14px', boxShadow: '0 4px 14px rgba(15, 23, 42, 0.06)' }}>
-                          <i className="fas fa-cloud-arrow-up"></i>
-                        </div>
-                        <span style={{color: '#0f172a', fontWeight: '800', fontSize: '0.92rem', marginBottom: '4px'}}>+ Adicionar Fotos</span>
-                        <span style={{color: '#64748b', fontSize: '0.75rem'}}>PNG, JPG ou WebP (com ou sem fundo)</span>
-                        <input id="upload-principal" type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
-                        </label>
-                    )}
-                    </div>
-                    
-                    {fotos.length > 0 && (
-                        <div style={{display: 'flex', alignItems: 'center', gap: '10px', marginTop: '16px', background: '#0f172a', padding: '12px 16px', borderRadius: '14px', border: '1px solid #1e293b'}}>
-                            <button 
-                                type="button" 
-                                onClick={(e) => { e.preventDefault(); setFotoPreencher(!fotoPreencher); }} 
-                                style={{
-                                    background: fotoPreencher ? 'var(--cor-destaque, #c5a059)' : '#1e293b', 
-                                    color: '#ffffff', 
-                                    border: fotoPreencher ? 'none' : '1px solid #334155', 
-                                    padding: '8px 14px', 
-                                    borderRadius: '8px', 
-                                    fontSize: '0.78rem', 
-                                    fontWeight: '800', 
-                                    cursor: 'pointer', 
-                                    transition: '0.2s', 
-                                    flexShrink: 0,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    gap: '6px',
-                                    boxShadow: fotoPreencher ? '0 2px 8px color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)' : 'none'
-                                }}
-                            >
-                                <i className={fotoPreencher ? "fas fa-expand" : "fas fa-compress"}></i>
-                                <span>{fotoPreencher ? 'Preenchendo' : 'Foto Inteira'}</span>
-                            </button>
-                            
-                            <div style={{width: '1px', height: '22px', background: '#334155', margin: '0 2px'}}></div>
-                            
-                            <span style={{fontSize: '14px', color: 'var(--cor-destaque, #c5a059)'}}>
-                              <i className="fas fa-magnifying-glass"></i>
-                            </span>
-                            <input 
-                                type="range" 
-                                min="1" max="3" step="0.1" 
-                                value={focoAtual.z || 1} 
-                                onChange={handleZoomChange} 
-                                style={{flex: 1, cursor: 'pointer', accentColor: 'var(--cor-destaque, #c5a059)'}}
-                            />
-                        </div>
-                    )}
+          </div>
 
-                    {fotos.length > 0 && (
-                        <div className="photo-thumbnails-row" style={{display: 'flex', gap: '10px', overflowX: 'auto', paddingBottom: '4px', marginTop: '16px'}}>
-                            {fotos.map((f, idx) => {
-                            const tFoco = getFocoThumb(idx);
-                            return (
-                            <div key={idx} style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', overflow: 'hidden', border: idx === fotoPrincipalIndex ? '3px solid var(--cor-destaque, #c5a059)' : '1.5px solid #cbd5e1', position: 'relative', cursor: 'pointer', boxShadow: idx === fotoPrincipalIndex ? '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 40%, transparent)' : 'none', background: '#ffffff'}} onClick={() => setFotoPrincipalIndex(idx)}>
-                                <img src={f} style={{ width: '100%', height: '100%', objectFit: 'contain', objectPosition: `${tFoco.x}% ${tFoco.y}%`, transform: `scale(${tFoco.z})` }} />
-                                <button type="button" onClick={(e) => {e.stopPropagation(); removerFoto(idx)}} style={{position: 'absolute', top: '2px', right: '2px', background: 'rgba(239,68,68,0.9)', color: 'white', border: 'none', width: '20px', height: '20px', borderRadius: '50%', fontSize: '12px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold'}} title="Remover foto">×</button>
-                            </div>
-                        )})}
-                        <label title="Adicionar mais fotos" style={{width: '64px', height: '64px', flexShrink: 0, borderRadius: '12px', border: '2px dashed var(--cor-destaque, #c5a059)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', fontSize: '22px', color: 'var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', transition: '0.2s'}}>
-                            +
-                            <input type="file" accept="image/*" multiple onChange={handleFileChange} style={{display:'none'}} />
-                        </label>
-                        </div>
-                    )}
+          {/* COLUNA DIREITA: FORMULÁRIO WIDESCREEN ALINHADO COM CARDS PADRONIZADOS */}
+          <div className="right-data-col">
+            
+            {/* SELETOR DE MODALIDADE DE CADASTRO (CARDS INTERATIVOS LUXURY) */}
+            <div className="modalidade-cadastro-section">
+              <div className="label-modalidade-header">
+                <label className="label-modalidade-servico">
+                  <i className="fas fa-layer-group" style={{ color: '#c5a059' }}></i> Modalidade de Cadastro <span className="label-obrigatorio">*</span>
+                </label>
+              </div>
+              
+              <div className="toggle-servico-vip estoque-modalidade-grid">
+                {/* 1. PEÇA AVULSA */}
+                <button 
+                  type="button" 
+                  className={`btn-servico-card ${tipoCadastro === 'avulsa' ? 'active' : ''}`} 
+                  onClick={() => handleTipoCadastroChange('avulsa')}
+                >
+                  <div className="servico-icon-box">
+                    <i className="fas fa-box-open"></i>
                   </div>
+                  <div className="servico-info">
+                    <strong>Peça Avulsa</strong>
+                    <small>Item unitário individual no acervo</small>
+                  </div>
+                  <div className="servico-check-badge">
+                    {tipoCadastro === 'avulsa' && <span className="check-mark">✓</span>}
+                  </div>
+                </button>
+
+                {/* 2. KIT / CONJUNTO */}
+                <button 
+                  type="button" 
+                  className={`btn-servico-card ${tipoCadastro === 'kit' ? 'active' : ''}`} 
+                  onClick={() => handleTipoCadastroChange('kit')}
+                >
+                  <div className="servico-icon-box">
+                    <i className="fas fa-cubes"></i>
+                  </div>
+                  <div className="servico-info">
+                    <strong>Kit / Conjunto</strong>
+                    <small>Conjunto com peças desmembráveis</small>
+                  </div>
+                  <div className="servico-check-badge">
+                    {tipoCadastro === 'kit' && <span className="check-mark">✓</span>}
+                  </div>
+                </button>
+
+                {/* 3. DECORAÇÃO COMPLETA */}
+                <button 
+                  type="button" 
+                  className={`btn-servico-card ${tipoCadastro === 'decoracao' ? 'active' : ''}`} 
+                  onClick={() => handleTipoCadastroChange('decoracao')}
+                >
+                  <div className="servico-icon-box">
+                    <i className="fas fa-truck-fast"></i>
+                  </div>
+                  <div className="servico-info">
+                    <strong>Decoração Completa</strong>
+                    <small>Pacote pronto montado com acervo</small>
+                  </div>
+                  <div className="servico-check-badge">
+                    {tipoCadastro === 'decoracao' && <span className="check-mark">✓</span>}
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* CARTÃO UNIFICADO DE PREENCHIMENTO DO ACERVO */}
+            <div className="form-section-card unified-sheet-card">
+              
+              {/* SEÇÃO 1: DADOS BÁSICOS & IDENTIFICAÇÃO */}
+              <div className="unified-section-header">
+                <span className="section-header-icon">
+                  <i className="fas fa-id-card-alt"></i>
+                </span>
+                <div>
+                  <h3>DADOS BÁSICOS & IDENTIFICAÇÃO</h3>
+                  <p>Informações principais de identificação, dimensões e código do item</p>
+                </div>
               </div>
 
-              {/* SEÇÃO: CARACTERÍSTICAS FÍSICAS (OPCIONAL) */}
-              {tipoCadastro === 'avulsa' && (
-                <div className="ce-unified-section ce-section-dimensoes">
-                  <div className="ce-section-header-clean">
-                    <div className="ce-section-header-title">
-                      <i className="fas fa-ruler-combined ce-icon-accent"></i>
-                      <span>CARACTERÍSTICAS & DIMENSÕES</span>
-                    </div>
-                    <span className="ce-badge-neutral">
-                      Opcional
-                    </span>
+              <div className="form-grid-4">
+                {/* LINHA 1: NOME DO PRODUTO */}
+                <div className="form-group span-4">
+                  <label htmlFor="ce-nome">NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fas fa-box"></i></span>
+                    <input 
+                      id="ce-nome" 
+                      name="nome" 
+                      type="text" 
+                      value={nome} 
+                      onChange={handleTextChange(setNome)} 
+                      required 
+                      placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} 
+                    />
                   </div>
-                  
-                  {/* SELEÇÃO DE TAMANHO & COR */}
-                  <div className="ce-dimensoes-row">
-                    {/* SELEÇÃO DE TAMANHO / REF. */}
-                    <div className="ce-input-group">
-                      <label htmlFor="ce-tamanho" className="ce-input-label">TAMANHO / REF.</label>
-                      <select 
-                        id="ce-tamanho"
-                        name="tamanho"
-                        className="ce-input-field" 
-                        value={modoTamanhoCustom ? 'OUTRO_TAMANHO' : (OPCOES_TAMANHO_PREDEFINIDAS.includes(tamanho) ? tamanho : (tamanho ? 'OUTRO_TAMANHO' : ''))} 
-                        onChange={e => {
-                          const val = e.target.value;
-                          if (val === 'OUTRO_TAMANHO') {
-                            setModoTamanhoCustom(true);
-                          } else {
-                            setModoTamanhoCustom(false);
-                            setTamanho(val);
-                          }
-                        }}
-                        style={{ fontWeight: '600' }}
-                      >
-                        <option value="">Selecione...</option>
-                        {OPCOES_TAMANHO_PREDEFINIDAS.map(tam => (
-                          <option key={tam} value={tam}>{tam}</option>
-                        ))}
-                        <option value="OUTRO_TAMANHO" style={{ fontWeight: '800', color: 'var(--cor-destaque, #c5a059)' }}>✏️ Digitar Outro...</option>
-                      </select>
-                      {(modoTamanhoCustom || (tamanho && !OPCOES_TAMANHO_PREDEFINIDAS.includes(tamanho))) && (
-                        <input 
-                          id="ce-tamanho-custom"
-                          name="tamanhoCustom"
-                          className="ce-input-field" 
-                          style={{ marginTop: '6px', fontWeight: '700', textTransform: 'uppercase' }} 
-                          value={tamanho} 
-                          onChange={e => setTamanho(e.target.value.toUpperCase())} 
-                          placeholder="Digite o tamanho..." 
-                          autoFocus
-                        />
-                      )}
-                    </div>
+                  {nome.trim().length >= 3 && itensExistentes.some(i => i.id !== itemEditando?.id && i.nome?.trim().toLowerCase() === nome.trim().toLowerCase()) && (
+                    <span className="ce-input-warning" style={{ fontSize: '0.72rem', color: '#b45309', marginTop: '3px' }}>
+                      💡 Atenção: Você já possui um item com o nome "{nome.trim()}" cadastrado no acervo.
+                    </span>
+                  )}
+                </div>
 
-                    {/* SELEÇÃO DE COR PREDOMINANTE */}
-                    <div className="ce-input-group">
-                      <label htmlFor="ce-cor" className="ce-input-label">COR PREDOMINANTE</label>
+                {/* LINHA 2: SKU / CÓDIGO E TAGS / BUSCA */}
+                <div className="form-group span-2 col-mobile-half">
+                  <div className="ce-label-with-actions">
+                    <label htmlFor="ce-codigo" style={{ margin: 0 }}>SKU / CÓDIGO *</label>
+                    <div className="ce-sku-toolbar">
+                      <button 
+                        type="button" 
+                        onClick={() => gerarSKUAutomatico()}
+                        className="ce-sku-btn-auto"
+                        title="Gerar código sequencial automático"
+                      >
+                        <i className="fas fa-bolt"></i> Auto
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={iniciarScannerCadastro}
+                        className="ce-sku-btn-scan"
+                        title="Escanear Etiqueta com a Câmera"
+                      >
+                        <i className="fas fa-barcode"></i> Scan
+                      </button>
+                    </div>
+                  </div>
+                  <input 
+                    id="ce-codigo" 
+                    name="codigo" 
+                    type="text" 
+                    value={codigo} 
+                    onChange={(e) => setCodigo(e.target.value.toUpperCase())}
+                    placeholder="Ex: VAS-001"
+                    style={{ 
+                      fontWeight: '800', 
+                      letterSpacing: '1px',
+                      border: (codigo && itensExistentes.some(i => i.id !== itemEditando?.id && i.codigo?.toUpperCase() === codigo.trim().toUpperCase())) ? '2px solid #ef4444' : undefined 
+                    }}
+                  />
+                  {codigo && itensExistentes.some(i => i.id !== itemEditando?.id && i.codigo?.toUpperCase() === codigo.trim().toUpperCase()) && (
+                    <span className="ce-input-error" style={{ fontSize: '0.72rem', color: '#ef4444', marginTop: '3px' }}>
+                      ⚠️ Este código SKU já existe no acervo!
+                    </span>
+                  )}
+                </div>
+
+                <div className="form-group span-2 col-mobile-half">
+                  <div className="ce-label-with-actions">
+                    <label htmlFor="ce-tags" style={{ margin: 0 }}>
+                      <i className="fas fa-tags" style={{ marginRight: '4px', color: '#c5a059' }}></i>
+                      TAGS / BUSCA
+                    </label>
+                    <span className="ce-badge-neutral" style={{ fontSize: '7.5px', padding: '1px 4px' }}>Vírgulas</span>
+                  </div>
+                  <input 
+                    id="ce-tags" 
+                    name="tags" 
+                    type="text" 
+                    value={tagsInput} 
+                    onChange={e => setTagsInput(e.target.value)} 
+                    placeholder="Ex: #rustico, #dourado, #boho" 
+                  />
+                </div>
+
+                {/* LINHA 3: COR PREDOMINANTE E TAMANHO / REF. NA MESMA LINHA */}
+                {tipoCadastro === 'avulsa' && (
+                  <>
+                    <div className="form-group span-2 col-mobile-half">
+                      <label htmlFor="ce-cor">COR PREDOMINANTE</label>
                       <select 
                         id="ce-cor"
                         name="cor"
-                        className="ce-input-field" 
                         value={modoCorCustom ? 'OUTRA_COR' : (OPCOES_COR_PREDEFINIDAS.includes(cor) ? cor : (cor ? 'OUTRA_COR' : ''))} 
                         onChange={e => {
                           const val = e.target.value;
@@ -1297,20 +1370,18 @@ const CadastroEstoque = () => {
                             setCor(val);
                           }
                         }}
-                        style={{ fontWeight: '600' }}
                       >
                         <option value="">Selecione...</option>
                         {OPCOES_COR_PREDEFINIDAS.map(c => (
                           <option key={c} value={c}>{c}</option>
                         ))}
-                        <option value="OUTRA_COR" style={{ fontWeight: '800', color: 'var(--cor-destaque, #c5a059)' }}>✏️ Digitar Outra...</option>
+                        <option value="OUTRA_COR" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outra...</option>
                       </select>
                       {(modoCorCustom || (cor && !OPCOES_COR_PREDEFINIDAS.includes(cor))) && (
                         <input 
                           id="ce-cor-custom"
                           name="corCustom"
-                          className="ce-input-field" 
-                          style={{ marginTop: '6px', fontWeight: '600' }} 
+                          style={{ marginTop: '6px' }} 
                           value={cor} 
                           onChange={handleTextChange(setCor)} 
                           placeholder="Digite a cor..." 
@@ -1318,362 +1389,252 @@ const CadastroEstoque = () => {
                         />
                       )}
                     </div>
-                  </div>
 
-                  {/* NOVO DESIGN DE MEDIDAS NUMÉRICAS ALINHADAS E SEM CORTES (L x A x D) */}
-                  <div className="ce-medidas-grid">
-                    {/* CAMPO LARGURA (cm) */}
-                    <div className="ce-medida-box">
-                      <label htmlFor="ce-largura" className="ce-medida-label">LARGURA (L)</label>
-                      <div className="ce-medida-input-wrap">
+                    <div className="form-group span-2 col-mobile-half">
+                      <label htmlFor="ce-tamanho">TAMANHO / REF.</label>
+                      <select 
+                        id="ce-tamanho"
+                        name="tamanho"
+                        value={modoTamanhoCustom ? 'OUTRO_TAMANHO' : (OPCOES_TAMANHO_PREDEFINIDAS.includes(tamanho) ? tamanho : (tamanho ? 'OUTRO_TAMANHO' : ''))} 
+                        onChange={e => {
+                          const val = e.target.value;
+                          if (val === 'OUTRO_TAMANHO') {
+                            setModoTamanhoCustom(true);
+                          } else {
+                            setModoTamanhoCustom(false);
+                            setTamanho(val);
+                          }
+                        }}
+                      >
+                        <option value="">Selecione...</option>
+                        {OPCOES_TAMANHO_PREDEFINIDAS.map(tam => (
+                          <option key={tam} value={tam}>{tam}</option>
+                        ))}
+                        <option value="OUTRO_TAMANHO" style={{ fontWeight: '800', color: '#c5a059' }}>✏️ Digitar Outro...</option>
+                      </select>
+                      {(modoTamanhoCustom || (tamanho && !OPCOES_TAMANHO_PREDEFINIDAS.includes(tamanho))) && (
                         <input 
-                          id="ce-largura"
-                          name="largura"
-                          type="number"
-                          className="ce-medida-input" 
-                          value={largura} 
-                          onChange={e => setLargura(e.target.value)} 
-                          placeholder="0"
-                          min="0"
+                          id="ce-tamanho-custom"
+                          name="tamanhoCustom"
+                          style={{ marginTop: '6px', fontWeight: '700', textTransform: 'uppercase' }} 
+                          value={tamanho} 
+                          onChange={e => setTamanho(e.target.value.toUpperCase())} 
+                          placeholder="Digite o tamanho..." 
+                          autoFocus
                         />
-                        <span className="ce-medida-unit">cm</span>
-                      </div>
+                      )}
                     </div>
 
-                    {/* CAMPO ALTURA (cm) */}
-                    <div className="ce-medida-box">
-                      <label htmlFor="ce-altura" className="ce-medida-label">ALTURA (A)</label>
-                      <div className="ce-medida-input-wrap">
-                        <input 
-                          id="ce-altura"
-                          name="altura"
-                          type="number"
-                          className="ce-medida-input" 
-                          value={altura} 
-                          onChange={e => setAltura(e.target.value)} 
-                          placeholder="0"
-                          min="0"
-                        />
-                        <span className="ce-medida-unit">cm</span>
+                    {/* LINHA 4: OS 3 CAMPOS DE MEDIDAS (LARGURA, ALTURA, DIÂMETRO) NA MESMA LINHA */}
+                    <div className="form-group span-4">
+                      <div className="medidas-grid-3col">
+                        <div className="form-group">
+                          <label htmlFor="ce-largura">LARGURA (L)</label>
+                          <div className="input-unit-wrapper">
+                            <input id="ce-largura" name="largura" type="number" value={largura} onChange={e => setLargura(e.target.value)} placeholder="0" min="0" />
+                            <span className="input-unit-tag">cm</span>
+                          </div>
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="ce-altura">ALTURA (A)</label>
+                          <div className="input-unit-wrapper">
+                            <input id="ce-altura" name="altura" type="number" value={altura} onChange={e => setAltura(e.target.value)} placeholder="0" min="0" />
+                            <span className="input-unit-tag">cm</span>
+                          </div>
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="ce-diametro">DIÂMETRO (Ø)</label>
+                          <div className="input-unit-wrapper">
+                            <input id="ce-diametro" name="diametro" type="number" value={diametro} onChange={e => setDiametro(e.target.value)} placeholder="0" min="0" />
+                            <span className="input-unit-tag">cm</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-
-                    {/* CAMPO DIÂMETRO (cm) */}
-                    <div className="ce-medida-box">
-                      <label htmlFor="ce-diametro" className="ce-medida-label">DIÂMETRO (Ø)</label>
-                      <div className="ce-medida-input-wrap">
-                        <input 
-                          id="ce-diametro"
-                          name="diametro"
-                          type="number"
-                          className="ce-medida-input" 
-                          value={diametro} 
-                          onChange={e => setDiametro(e.target.value)} 
-                          placeholder="0"
-                          min="0"
-                        />
-                        <span className="ce-medida-unit">cm</span>
-                      </div>
-                    </div>
-                  </div>
-
-                </div>
-              )}
-            </div>
-
-            <div className="ce-right-panel">
-              
-              {/* SEÇÃO 2: IDENTIFICAÇÃO E DADOS BÁSICOS */}
-              <div className="ce-unified-section ce-section-identificacao">
-                <div className="ce-section-header-clean">
-                  <div className="ce-section-header-title">
-                    <i className="fas fa-id-card ce-icon-accent"></i>
-                    <span>DADOS BÁSICOS & IDENTIFICAÇÃO</span>
-                  </div>
-                  <span className="ce-badge-accent">
-                    Campos Principais *
-                  </span>
-                </div>
-
-                <div className="ce-identificacao-grid">
-                  {/* NOME DO PRODUTO */}
-                  <div className="ce-input-group ce-span-2">
-                    <label htmlFor="ce-nome" className="ce-input-label">
-                      NOME DO {tipoCadastro === 'decoracao' ? 'PACOTE' : tipoCadastro === 'kit' ? 'CONJUNTO / KIT' : 'PRODUTO'} *
-                    </label>
-                    <input 
-                      id="ce-nome" 
-                      name="nome" 
-                      className="ce-input-field" 
-                      value={nome} 
-                      onChange={handleTextChange(setNome)} 
-                      required 
-                      placeholder={tipoCadastro === 'decoracao' ? "Ex: Decoração Completa Safari" : "Ex: Trio de Cilindros..."} 
-                    />
-                    {nome.trim().length >= 3 && itensExistentes.some(i => i.id !== itemEditando?.id && i.nome?.trim().toLowerCase() === nome.trim().toLowerCase()) && (
-                      <span className="ce-input-warning">
-                        💡 Atenção: Você já possui um item com o nome "{nome.trim()}" cadastrado no acervo.
-                      </span>
-                    )}
-                  </div>
-                  
-                  {/* SKU COM TOOLBAR INTEGRADA */}
-                  <div className="ce-input-group ce-span-1">
-                    <div className="ce-label-with-actions">
-                      <label htmlFor="ce-codigo" className="ce-input-label" style={{ margin: 0 }}>SKU / CÓDIGO *</label>
-                      <div className="ce-sku-toolbar">
-                        <button 
-                          type="button" 
-                          onClick={() => gerarSKUAutomatico()}
-                          className="ce-sku-btn-auto"
-                          title="Gerar código sequencial automático"
-                        >
-                          <i className="fas fa-bolt"></i> Auto
-                        </button>
-                        <button 
-                          type="button" 
-                          onClick={iniciarScannerCadastro}
-                          className="ce-sku-btn-scan"
-                          title="Escanear Etiqueta com a Câmera"
-                        >
-                          <i className="fas fa-barcode"></i> Scan
-                        </button>
-                      </div>
-                    </div>
-                    <input 
-                      id="ce-codigo"
-                      name="codigo"
-                      className="ce-input-field"
-                      value={codigo} 
-                      onChange={(e) => setCodigo(e.target.value.toUpperCase())}
-                      placeholder="Ex: VAS-001"
-                      style={{ 
-                        fontWeight: '800', 
-                        letterSpacing: '1px',
-                        border: (codigo && itensExistentes.some(i => i.id !== itemEditando?.id && i.codigo?.toUpperCase() === codigo.trim().toUpperCase())) ? '2px solid #ef4444' : undefined 
-                      }}
-                    />
-                    {codigo && itensExistentes.some(i => i.id !== itemEditando?.id && i.codigo?.toUpperCase() === codigo.trim().toUpperCase()) && (
-                      <span className="ce-input-error">
-                        ⚠️ Este código SKU já existe no acervo!
-                      </span>
-                    )}
-                  </div>
-
-                  {/* TAGS / PALAVRAS-CHAVE */}
-                  <div className="ce-input-group ce-span-full">
-                    <label htmlFor="ce-tags" className="ce-input-label">
-                      <i className="fas fa-tags ce-icon-accent" style={{ marginRight: '6px' }}></i>
-                      TAGS / PALAVRAS-CHAVE DE BUSCA (SEPARADAS POR VÍRGULA)
-                    </label>
-                    <input 
-                      id="ce-tags"
-                      name="tags"
-                      className="ce-input-field" 
-                      value={tagsInput} 
-                      onChange={e => setTagsInput(e.target.value)} 
-                      placeholder="Ex: #rustico, #dourado, #casamento, #boho, #provencal" 
-                    />
-                  </div>
-                </div>
+                  </>
+                )}
               </div>
 
-              {/* MODAL CÂMERA SCANNER NO CADASTRO DE ESTOQUE */}
-              {cameraCadastroAberta && (
-                <div className="modal-checkin-overlay">
-                  <div className="modal-checkin-box animate-pop" style={{ maxWidth: '420px', padding: '16px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', color: '#0f172a' }}>
-                      <strong style={{ fontSize: '0.9rem' }}><i className="fas fa-camera"></i> Escanear Código para o SKU da Peça</strong>
-                      <button type="button" onClick={pararScannerCadastro} style={{ background: '#ef4444', color: '#fff', border: 'none', padding: '4px 10px', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.75rem' }}>✕ Fechar</button>
-                    </div>
-                    <p style={{ fontSize: '0.78rem', color: '#64748b', margin: '0 0 10px 0' }}>Aproxime o Código de Barras ou QR Code da etiqueta para preencher o código da peça.</p>
-                    <div id="reader-camera-cadastro" style={{ width: '100%', borderRadius: '10px', overflow: 'hidden', background: '#000' }}></div>
-                  </div>
-                </div>
-              )}
-
-              {/* SEÇÃO 3: LOCALIZAÇÃO FÍSICA NO GALPÃO & ESTOQUE */}
+              {/* SEÇÃO 2: LOCALIZAÇÃO NO GALPÃO & ESTOQUE */}
               {tipoCadastro !== 'decoracao' && (
-                <div className="ce-unified-section ce-section-estoque">
-                  <div className="ce-section-header-clean">
-                    <div className="ce-section-header-title">
-                      <i className="fas fa-warehouse ce-icon-accent"></i>
-                      <span>LOCALIZAÇÃO NO GALPÃO & ESTOQUE</span>
-                    </div>
-                    <span className="ce-badge-accent">
-                      Prateleiras & Qtd
+                <>
+                  <div className="form-section-divider"></div>
+                  
+                  <div className="unified-section-header">
+                    <span className="section-header-icon">
+                      <i className="fas fa-warehouse"></i>
                     </span>
-                  </div>
-
-                  {/* Localização no Galpão */}
-                  <div className="ce-galpao-row" style={{ marginBottom: '14px' }}>
-                    <div className="ce-label-with-actions">
-                      <label htmlFor="ce-localizacao" className="ce-input-label" style={{ margin: 0 }}>ENDEREÇO NO GALPÃO (PRATELEIRA / CORREDOR) *</label>
-                      <button 
-                        type="button" 
-                        onClick={abrirModalLocalizacao} 
-                        className="ce-btn-gerenciar-prateleira"
-                      >
-                        + Gerenciar Prateleiras
-                      </button>
+                    <div>
+                      <h3>LOCALIZAÇÃO NO GALPÃO & ESTOQUE</h3>
+                      <p>Prateleiras, corredores e controle de quantidade de segurança</p>
                     </div>
-                    <select 
-                      id="ce-localizacao"
-                      name="localizacao"
-                      className="ce-input-field"
-                      value={localizacao} 
-                      onChange={e => setLocalizacao(e.target.value)}
-                    >
-                      <option value="">Selecione a Prateleira / Local no Galpão...</option>
-                      {listasSistema.localizacoes.map(l => <option key={l} value={l}>{l}</option>)}
-                    </select>
                   </div>
 
-                  {/* Grid Quantidade & Estoque Mínimo */}
-                  <div className="estoque-grid-responsive">
-                    <div className="ce-input-group">
-                      <label htmlFor="ce-quantidade" className="ce-input-label">QUANTIDADE DISPONÍVEL</label>
+                  <div className="form-grid-4">
+                    <div className="form-group span-4">
+                      <div className="ce-label-with-actions">
+                        <label htmlFor="ce-localizacao" style={{ margin: 0 }}>ENDEREÇO / PRATELEIRA NO GALPÃO *</label>
+                        <button 
+                          type="button" 
+                          onClick={abrirModalLocalizacao} 
+                          className="btn-gerenciar-prateleiras-mini"
+                          title="Gerenciar lista de prateleiras e corredores"
+                        >
+                          <i className="fas fa-layer-group"></i> + Gerenciar Prateleiras
+                        </button>
+                      </div>
+                      <select 
+                        id="ce-localizacao"
+                        name="localizacao"
+                        value={localizacao} 
+                        onChange={e => setLocalizacao(e.target.value)}
+                      >
+                        <option value="">Selecione a Prateleira / Local no Galpão...</option>
+                        {(listasSistema?.localizacoes || []).map(l => <option key={l} value={l}>{l}</option>)}
+                      </select>
+                    </div>
+
+                    <div className="form-group span-2 col-mobile-half">
+                      <label htmlFor="ce-quantidade">QUANTIDADE DISPONÍVEL</label>
                       {tipoCadastro === 'kit' ? (
-                        <div style={{ height: '44px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fundo-cinza, #f8fafc)', borderRadius: '12px', fontSize: '0.85rem', color: 'var(--cor-destaque, #b48a3c)', fontWeight: '800', border: '1.5px solid var(--borda, #e2e8f0)' }}>
+                        <div style={{ height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fundo-cinza, #f8fafc)', borderRadius: '9px', fontSize: '0.82rem', color: '#c5a059', fontWeight: '800', border: '1px solid var(--borda, #cbd5e1)' }}>
                           ⚡ Calculada das Peças
                         </div>
                       ) : (
-                        <input id="ce-quantidade" name="quantidade" className="ce-input-field" type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} min="1" style={{ fontWeight: '800', textAlign: 'center' }}/>
+                        <input id="ce-quantidade" name="quantidade" type="number" value={quantidade} onChange={e => setQuantidade(e.target.value)} min="1" style={{ fontWeight: '800', textAlign: 'center' }} />
                       )}
                     </div>
-                    <div className="ce-input-group">
-                      <label htmlFor="ce-estoque-minimo" className="ce-input-label">ESTOQUE MÍNIMO DE SEGURANÇA</label>
-                      <input id="ce-estoque-minimo" name="estoqueMinimo" className="ce-input-field" type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'} style={{ fontWeight: '700', textAlign: 'center' }} />
+
+                    <div className="form-group span-2 col-mobile-half">
+                      <label htmlFor="ce-estoque-minimo">ESTOQUE MÍNIMO DE SEGURANÇA</label>
+                      <input id="ce-estoque-minimo" name="estoqueMinimo" type="number" value={estoqueMinimo} onChange={e => setEstoqueMinimo(e.target.value)} disabled={alertaEstoque === 'NaoAvisar'} style={{ fontWeight: '700', textAlign: 'center' }} />
                     </div>
                   </div>
-                </div>
+                </>
               )}
 
-              {/* SEÇÃO 4: CATEGORIZAÇÃO NA VITRINE ONLINE */}
-              <div className="ce-unified-section ce-section-vitrine">
-                <div className="ce-section-header-clean">
-                  <div className="ce-section-header-title">
-                    <i className="fas fa-globe ce-icon-accent"></i>
-                    <span>CATEGORIZAÇÃO NA VITRINE ONLINE</span>
+              {/* SEÇÃO 3: CATEGORIZAÇÃO NA VITRINE ONLINE */}
+              <div className="form-section-divider"></div>
+              
+              <div className="unified-section-header">
+                <span className="section-header-icon">
+                  <i className="fas fa-globe"></i>
+                </span>
+                <div>
+                  <h3>CATEGORIZAÇÃO NA VITRINE ONLINE</h3>
+                  <p>Filtros hierárquicos e organização do catálogo virtual</p>
+                </div>
+              </div>
+
+              <div className="form-grid-4">
+                {tipoCadastro === 'decoracao' && (
+                  <div className="form-group span-4">
+                    <label htmlFor="ce-tipo-pacote">📌 FORMATO / MODALIDADE NO SITE *</label>
+                    <select 
+                      id="ce-tipo-pacote"
+                      name="tipoPacote"
+                      value={tipoPacote}
+                      onChange={e => setTipoPacote(e.target.value)}
+                      style={{ fontWeight: '800', color: 'var(--texto-principal, #0f172a)', border: '1.5px solid #c5a059' }}
+                    >
+                      <option value="PEGUE E MONTE">📦 Pegue e Monte</option>
+                      <option value="DECORAÇÃO">✨ Decoração Completa</option>
+                    </select>
                   </div>
-                  <span className="ce-badge-accent">
-                    Filtros do Site *
-                  </span>
+                )}
+
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="ce-categoria-tema">CATEGORIA NA VITRINE *</label>
+                  <select 
+                    id="ce-categoria-tema"
+                    name="categoriaTema"
+                    value={categoriaTema} 
+                    onChange={e => {
+                      const novaCat = e.target.value;
+                      setCategoriaTema(novaCat);
+                      const subsDaCat = novaCat ? Object.keys(CATALOGO_TEMAS[novaCat] || {}) : [];
+                      if (subsDaCat.length === 1) {
+                        setSubcategoriaTema(subsDaCat[0]);
+                        const gruposDaSub = Object.keys(CATALOGO_TEMAS[novaCat][subsDaCat[0]] || {});
+                        if (gruposDaSub.length === 1) { setGrupoTemaSelecionado(gruposDaSub[0]); } else { setGrupoTemaSelecionado(''); }
+                      } else { 
+                        setSubcategoriaTema('');
+                        setGrupoTemaSelecionado(''); 
+                      }
+                      setTemaSelecionado('');
+                    }} 
+                    required
+                  >
+                    <option value="" disabled hidden>Selecione...</option>
+                    {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                  </select>
                 </div>
 
-                <div className="vitrine-grid-responsive">
-                  {tipoCadastro === 'decoracao' && (
-                    <div className="ce-input-group" style={{ gridColumn: 'span 2' }}>
-                      <label htmlFor="ce-tipo-pacote" className="ce-input-label">📌 FORMATO / MODALIDADE NO SITE *</label>
-                      <select 
-                        id="ce-tipo-pacote"
-                        name="tipoPacote"
-                        className="ce-input-field"
-                        value={tipoPacote}
-                        onChange={e => setTipoPacote(e.target.value)}
-                        style={{ fontWeight: '800', color: 'var(--texto-principal, #0f172a)', border: '1.5px solid var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)' }}
-                      >
-                        <option value="PEGUE E MONTE">📦 Pegue e Monte</option>
-                        <option value="DECORAÇÃO">✨ Decoração</option>
-                      </select>
-                    </div>
-                  )}
-                  <div className="ce-input-group">
-                    <label htmlFor="ce-categoria-tema" className="ce-input-label">CATEGORIA NA VITRINE *</label>
-                    <select 
-                      id="ce-categoria-tema"
-                      name="categoriaTema"
-                      className="ce-input-field"
-                      value={categoriaTema} 
-                      onChange={e => {
-                        const novaCat = e.target.value;
-                        setCategoriaTema(novaCat);
-                        const subsDaCat = novaCat ? Object.keys(CATALOGO_TEMAS[novaCat] || {}) : [];
-                        if (subsDaCat.length === 1) {
-                          setSubcategoriaTema(subsDaCat[0]);
-                          const gruposDaSub = Object.keys(CATALOGO_TEMAS[novaCat][subsDaCat[0]] || {});
-                          if (gruposDaSub.length === 1) { setGrupoTemaSelecionado(gruposDaSub[0]); } else { setGrupoTemaSelecionado(''); }
-                        } else { 
-                          setSubcategoriaTema('');
-                          setGrupoTemaSelecionado(''); 
-                        }
-                        setTemaSelecionado('');
-                      }} 
-                      required
-                    >
-                      <option value="" disabled hidden>Selecione...</option>
-                      {categoriasDeTemaUnicas.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                    </select>
-                  </div>
-                  
-                  <div className="ce-input-group">
-                    <label htmlFor="ce-subcategoria-tema" className="ce-input-label">SUBCATEGORIA (TIPO) *</label>
-                    <select 
-                      id="ce-subcategoria-tema"
-                      name="subcategoriaTema"
-                      className="ce-input-field"
-                      value={subcategoriaTema} 
-                      onChange={e => {
-                        const novaSub = e.target.value;
-                        setSubcategoriaTema(novaSub);
-                        const gruposDaSub = (categoriaTema && novaSub) ? Object.keys(CATALOGO_TEMAS[categoriaTema][novaSub] || {}) : [];
-                        if (gruposDaSub.length === 1) { setGrupoTemaSelecionado(gruposDaSub[0]); } else { setGrupoTemaSelecionado(''); }
-                        setTemaSelecionado('');
-                      }} 
-                      disabled={!categoriaTema || subcategoriasDisponiveis.length === 1} 
-                      required
-                    >
-                      <option value="" disabled hidden>{!categoriaTema ? 'Aguardando...' : 'Selecione...'}</option>
-                      {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
-                    </select>
-                  </div>
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="ce-subcategoria-tema">SUBCATEGORIA (TIPO) *</label>
+                  <select 
+                    id="ce-subcategoria-tema"
+                    name="subcategoriaTema"
+                    value={subcategoriaTema} 
+                    onChange={e => {
+                      const novaSub = e.target.value;
+                      setSubcategoriaTema(novaSub);
+                      const gruposDaSub = (categoriaTema && novaSub) ? Object.keys(CATALOGO_TEMAS[categoriaTema][novaSub] || {}) : [];
+                      if (gruposDaSub.length === 1) { setGrupoTemaSelecionado(gruposDaSub[0]); } else { setGrupoTemaSelecionado(''); }
+                      setTemaSelecionado('');
+                    }} 
+                    disabled={!categoriaTema || subcategoriasDisponiveis.length === 1} 
+                    required
+                  >
+                    <option value="" disabled hidden>{!categoriaTema ? 'Aguardando...' : 'Selecione...'}</option>
+                    {subcategoriasDisponiveis.map(sub => <option key={sub} value={sub}>{sub}</option>)}
+                  </select>
+                </div>
 
-                  <div className="ce-input-group">
-                    <label htmlFor="ce-grupo-tema" className="ce-input-label">FILTRO DE GRUPO *</label>
-                    <select 
-                      id="ce-grupo-tema"
-                      name="grupoTema"
-                      className="ce-input-field"
-                      value={grupoTemaSelecionado} 
-                      onChange={e => {
-                        setGrupoTemaSelecionado(e.target.value);
-                        setTemaSelecionado('');
-                      }} 
-                      disabled={!subcategoriaTema || gruposDisponiveis.length === 1} 
-                      required
-                    >
-                      <option value="" disabled hidden>{!subcategoriaTema ? 'Aguardando...' : 'Selecione...'}</option>
-                      {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
-                    </select>
-                  </div>
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="ce-grupo-tema">FILTRO DE GRUPO *</label>
+                  <select 
+                    id="ce-grupo-tema"
+                    name="grupoTema"
+                    value={grupoTemaSelecionado} 
+                    onChange={e => {
+                      setGrupoTemaSelecionado(e.target.value);
+                      setTemaSelecionado('');
+                    }} 
+                    disabled={!subcategoriaTema || gruposDisponiveis.length === 1} 
+                    required
+                  >
+                    <option value="" disabled hidden>{!subcategoriaTema ? 'Aguardando...' : 'Selecione...'}</option>
+                    {gruposDisponiveis.map(grupo => <option key={grupo} value={grupo}>{grupo}</option>)}
+                  </select>
+                </div>
 
-                  <div className="ce-input-group">
-                    <label htmlFor="ce-tema-selecionado" className="ce-input-label">FILTRO ESPECÍFICO *</label>
-                    <select 
-                      id="ce-tema-selecionado"
-                      name="temaSelecionado"
-                      className="ce-input-field"
-                      value={temaSelecionado} 
-                      onChange={e => setTemaSelecionado(e.target.value)} 
-                      disabled={(!grupoTemaSelecionado && temaSelecionado !== 'OUTRO_TEMA')} 
-                      required
-                    >
-                      <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Aguardando...' : 'Selecione o tema...'}</option>
-                      {temasDisponiveis.map(t => (
-                        <option key={t} value={t}>{t}</option>
-                      ))}
-                      <option value="OUTRO_TEMA" style={{ fontWeight: 'bold', color: 'var(--cor-destaque, #c5a059)' }}>✏️ Digitar Outro Tema...</option>
-                    </select>
-                  </div>
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="ce-tema-selecionado">FILTRO ESPECÍFICO / TEMA *</label>
+                  <select 
+                    id="ce-tema-selecionado"
+                    name="temaSelecionado"
+                    value={temaSelecionado} 
+                    onChange={e => setTemaSelecionado(e.target.value)} 
+                    disabled={(!grupoTemaSelecionado && temaSelecionado !== 'OUTRO_TEMA')} 
+                    required
+                  >
+                    <option value="" disabled hidden>{!grupoTemaSelecionado ? 'Aguardando...' : 'Selecione o tema...'}</option>
+                    {temasDisponiveis.map(t => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                    <option value="OUTRO_TEMA" style={{ fontWeight: 'bold', color: '#c5a059' }}>✏️ Digitar Outro Tema...</option>
+                  </select>
                 </div>
 
                 {temaSelecionado === 'OUTRO_TEMA' && (
-                  <div className="ce-input-group" style={{ marginTop: '14px' }}>
-                    <label htmlFor="ce-tema-personalizado" className="ce-input-label">NOME DO TEMA PERSONALIZADO *</label>
+                  <div className="form-group span-4">
+                    <label htmlFor="ce-tema-personalizado">NOME DO TEMA PERSONALIZADO *</label>
                     <input 
                       id="ce-tema-personalizado"
                       name="temaPersonalizado"
-                      className="ce-input-field"
                       type="text" 
                       placeholder="Ex: Safari Baby..." 
                       value={temaDigitadoPersonalizado} 
@@ -1684,184 +1645,194 @@ const CadastroEstoque = () => {
                 )}
               </div>
 
+              {/* SEÇÃO 4: MONTAGEM DA DECORAÇÃO (SE DECORAÇÃO) */}
               {tipoCadastro === 'decoracao' && (
-                <div className="ce-unified-section ce-section-decoracao">
-                  <div className="ce-section-header-clean">
-                    <div className="ce-section-header-title">
-                      <i className="fas fa-wand-magic-sparkles ce-icon-accent"></i>
-                      <span>MONTAGEM DA DECORAÇÃO</span>
-                    </div>
-                    <span className="ce-badge-accent">
-                      Seleção do Acervo
+                <>
+                  <div className="form-section-divider"></div>
+                  
+                  <div className="unified-section-header">
+                    <span className="section-header-icon">
+                      <i className="fas fa-wand-magic-sparkles"></i>
                     </span>
+                    <div>
+                      <h3>MONTAGEM DA DECORAÇÃO</h3>
+                      <p>Composição de peças do acervo no pacote pronto</p>
+                    </div>
                   </div>
+
                   <p style={{ fontSize: '0.8rem', color: 'var(--texto-secundario, #64748b)', margin: '0 0 16px 0' }}>
                     Abra o acervo do galpão para selecionar peças existentes ou cadastre peças novas na hora para este pacote!
                   </p>
                   
                   <div style={{ display: 'flex', gap: '12px', marginBottom: '20px', flexWrap: 'wrap' }}>
-                    <button type="button" onClick={() => setModalCatalogoAberto(true)} style={{ flex: 1, minWidth: '200px', height: '46px', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <button type="button" onClick={() => setModalCatalogoAberto(true)} className="btn-primary-celebre" style={{ flex: 1, minWidth: '200px', height: '44px', justifyContent: 'center' }}>
                       <i className="fas fa-box-open"></i> ABRIR ACERVO E ADICIONAR PEÇAS
                     </button>
 
-                    <button type="button" onClick={() => setModalNovaPecaAberto(true)} style={{ flex: 1, minWidth: '200px', height: '46px', background: '#0f172a', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.2)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    <button type="button" onClick={() => setModalNovaPecaAberto(true)} className="btn-secondary-celebre" style={{ flex: 1, minWidth: '200px', height: '44px', justifyContent: 'center', background: '#0f172a', color: '#fff', borderColor: '#0f172a' }}>
                       <i className="fas fa-plus"></i> CADASTRAR PEÇA NOVA NO ACERVO
                     </button>
                   </div>
                   
                   {itensDoKit.length > 0 ? (
-                    <div style={{ background: 'var(--fundo-card, #ffffff)', borderRadius: '16px', border: '1.5px solid var(--borda, #e2e8f0)', overflow: 'hidden', boxShadow: '0 4px 12px rgba(15, 23, 42, 0.03)' }}>
+                    <div style={{ background: 'var(--fundo-card, #ffffff)', borderRadius: '14px', border: '1px solid var(--borda, #e2e8f0)', overflow: 'hidden' }}>
                       {itensDoKit.map((item, idx) => (
-                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '14px', padding: '12px 16px', borderBottom: idx !== itensDoKit.length - 1 ? '1px solid var(--borda, #f1f5f9)' : 'none' }}>
-                          <div style={{ width: '48px', height: '48px', background: '#f8fafc', borderRadius: '10px', border: '1px solid #cbd5e1', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: '12px', padding: '10px 14px', borderBottom: idx !== itensDoKit.length - 1 ? '1px solid var(--borda, #f1f5f9)' : 'none' }}>
+                          <div style={{ width: '42px', height: '42px', background: '#f8fafc', borderRadius: '8px', border: '1px solid #cbd5e1', overflow: 'hidden', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             {item.foto ? (
                               <img src={item.foto} alt={item.nome} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                             ) : (
-                              <i className="fas fa-box" style={{ fontSize: '18px', color: '#94a3b8' }}></i>
+                              <i className="fas fa-box" style={{ fontSize: '16px', color: '#94a3b8' }}></i>
                             )}
                           </div>
 
                           <div style={{ flex: 1, minWidth: '0' }}>
-                            <strong style={{ fontSize: '0.88rem', color: 'var(--texto-principal, #0f172a)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            <strong style={{ fontSize: '0.84rem', color: 'var(--texto-principal, #0f172a)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                               {item.nome}
                             </strong>
-                            <span style={{ fontSize: '0.75rem', color: 'var(--texto-secundario, #64748b)', fontWeight: '600' }}>
+                            <span style={{ fontSize: '0.72rem', color: 'var(--texto-secundario, #64748b)', fontWeight: '600' }}>
                               Valor avulso base: R$ {(item.precoOriginal || 0).toFixed(2).replace('.', ',')}
                             </span>
                           </div>
 
-                          <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '10px', padding: '3px 6px', border: '1px solid #cbd5e1' }}>
-                            <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? { ...i, qtd: Math.max(1, i.qtd - 1) } : i))} style={{ border: 'none', background: '#ffffff', color: '#0f172a', borderRadius: '6px', width: '26px', height: '26px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>-</button>
-                            <span style={{ fontSize: '0.85rem', fontWeight: '800', width: '32px', textAlign: 'center', color: '#0f172a' }}>{item.qtd}</span>
-                            <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i))} style={{ border: 'none', background: '#ffffff', color: '#0f172a', borderRadius: '6px', width: '26px', height: '26px', fontWeight: 'bold', cursor: 'pointer', boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}>+</button>
+                          <div style={{ display: 'flex', alignItems: 'center', background: '#f1f5f9', borderRadius: '8px', padding: '2px 4px', border: '1px solid #cbd5e1' }}>
+                            <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? { ...i, qtd: Math.max(1, i.qtd - 1) } : i))} style={{ border: 'none', background: '#ffffff', color: '#0f172a', borderRadius: '4px', width: '24px', height: '24px', fontWeight: 'bold', cursor: 'pointer' }}>-</button>
+                            <span style={{ fontSize: '0.8rem', fontWeight: '800', width: '28px', textAlign: 'center', color: '#0f172a' }}>{item.qtd}</span>
+                            <button type="button" onClick={() => setItensDoKit(itensDoKit.map(i => i.id === item.id ? { ...i, qtd: i.qtd + 1 } : i))} style={{ border: 'none', background: '#ffffff', color: '#0f172a', borderRadius: '4px', width: '24px', height: '24px', fontWeight: 'bold', cursor: 'pointer' }}>+</button>
                           </div>
 
-                          <button type="button" onClick={() => setItensDoKit(itensDoKit.filter(i => i.id !== item.id))} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '8px', padding: '6px 12px', cursor: 'pointer', fontWeight: '800', fontSize: '0.75rem' }}>
-                            ✕ Remover
+                          <button type="button" onClick={() => setItensDoKit(itensDoKit.filter(i => i.id !== item.id))} style={{ background: '#fee2e2', color: '#ef4444', border: 'none', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontWeight: '800', fontSize: '0.72rem' }}>
+                            ✕
                           </button>
                         </div>
                       ))}
 
-                      <div style={{ background: '#f8fafc', padding: '14px 20px', textAlign: 'right', borderTop: '1.5px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <span style={{ fontSize: '0.78rem', color: '#64748b', fontWeight: '700' }}>
-                          <i className="fas fa-sparkles ce-icon-accent" style={{ marginRight: '4px' }}></i>
+                      <div style={{ background: '#f8fafc', padding: '12px 16px', textAlign: 'right', borderTop: '1px dashed #cbd5e1', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '700' }}>
                           Soma das Peças Avulsas:
                         </span>
-                        <strong style={{ fontSize: '1.05rem', color: '#0f172a', fontWeight: '800' }}>
+                        <strong style={{ fontSize: '0.98rem', color: '#0f172a', fontWeight: '800' }}>
                           R$ {calcularTotalSomaAvulsaKit().toFixed(2).replace('.', ',')}
                         </strong>
                       </div>
                     </div>
                   ) : (
-                    <div style={{ textAlign: 'center', padding: '36px 20px', color: '#64748b', background: '#f8fafc', borderRadius: '16px', border: '2px dashed #cbd5e1', fontSize: '0.85rem', fontWeight: '600' }}>
-                      <i className="fas fa-box-open ce-icon-accent" style={{ fontSize: '24px', marginBottom: '8px', display: 'block' }}></i>
-                      Nenhuma peça foi adicionada ao pacote de decoração ainda.<br/>
-                      <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>Clique em "ABRIR ACERVO E ADICIONAR PEÇAS" acima para compor esta decoração.</span>
+                    <div style={{ textAlign: 'center', padding: '30px 16px', color: '#64748b', background: '#f8fafc', borderRadius: '12px', border: '1.5px dashed #cbd5e1', fontSize: '0.82rem', fontWeight: '600' }}>
+                      <i className="fas fa-box-open" style={{ fontSize: '22px', marginBottom: '6px', color: '#c5a059', display: 'block' }}></i>
+                      Nenhuma peça adicionada ao pacote de decoração ainda.<br/>
+                      <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Clique no botão dourado acima para selecionar itens do acervo.</span>
                     </div>
                   )}
-                </div>
+                </>
               )}
 
+              {/* SEÇÃO 5: DESMEMBRAR KIT EM PEÇAS AVULSAS (SE KIT) */}
               {tipoCadastro === 'kit' && (
-                <div className="ce-unified-section ce-section-kit">
-                  <div className="ce-section-header-clean">
-                    <div className="ce-section-header-title">
-                      <i className="fas fa-cubes ce-icon-accent"></i>
-                      <span>DESMEMBRAR KIT EM PEÇAS AVULSAS</span>
-                    </div>
-                    <span className="ce-badge-neutral">
-                      Opcional
-                    </span>
-                  </div>
-                  <p style={{ fontSize: '0.8rem', color: 'var(--texto-secundario, #64748b)', marginBottom: '20px', lineHeight: '1.4' }}>
-                    Adicione as peças individuais deste kit se você desejar alugá-las separadamente no sistema (ex: alugar apenas um vaso do conjunto).
-                  </p>
+                <>
+                  <div className="form-section-divider"></div>
                   
+                  <div className="unified-section-header">
+                    <span className="section-header-icon">
+                      <i className="fas fa-cubes"></i>
+                    </span>
+                    <div>
+                      <h3>DESMEMBRAR KIT EM PEÇAS AVULSAS</h3>
+                      <p>Cadastre peças avulsas desmembráveis deste conjunto</p>
+                    </div>
+                  </div>
+
+                  <p style={{ fontSize: '0.8rem', color: 'var(--texto-secundario, #64748b)', marginBottom: '16px' }}>
+                    Adicione as peças individuais deste kit se você desejar alugá-las separadamente no sistema (ex: trio de cilindros que pode ser alugado junto ou avulso).
+                  </p>
+
                   {pecasKitNovas.map((p, idx) => (
-                    <div key={p.id} style={{background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '14px', padding: '16px', marginBottom: '14px'}}>
-                        <div style={{display: 'flex', gap: '12px', flexWrap: 'wrap', alignItems: 'center'}}>
-                        <div style={{flex: 2, minWidth: '150px'}}>
-                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>NOME DA PEÇA (Ex: Vaso M, Tampo)</label>
-                          <input type="text" placeholder="Ex: Vaso Médio Palha" value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
+                    <div key={p.id} style={{background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '12px', padding: '12px', marginBottom: '10px'}}>
+                      <div style={{display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center'}}>
+                        <div style={{flex: 2, minWidth: '130px'}}>
+                          <label style={{fontSize: '0.68rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '3px'}}>NOME DA PEÇA *</label>
+                          <input type="text" placeholder="Ex: Vaso Médio" value={p.nome} onChange={e => atualizarPecaKitNova(idx, 'nome', e.target.value)} style={{width: '100%', height: '38px', padding: '0 10px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
+                        </div>
+                        <div style={{flex: 1, minWidth: '80px'}}>
+                          <label style={{fontSize: '0.68rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '3px'}}>TAMANHO</label>
+                          <input type="text" placeholder="Ex: P, M" value={p.tamanho} onChange={e => atualizarPecaKitNova(idx, 'tamanho', e.target.value.toUpperCase())} style={{width: '100%', height: '38px', padding: '0 10px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontWeight: '700', textTransform: 'uppercase'}} />
+                        </div>
+                        <div style={{flex: 1, minWidth: '80px'}}>
+                          <label style={{fontSize: '0.68rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '3px'}}>COR</label>
+                          <input type="text" placeholder="Ex: Rosa" value={p.cor} onChange={e => atualizarPecaKitNova(idx, 'cor', e.target.value)} style={{width: '100%', height: '38px', padding: '0 10px', fontSize: '0.82rem', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
                         </div>
                         <div style={{flex: 1, minWidth: '100px'}}>
-                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>TAMANHO <span style={{fontSize: '10px', color: '#94a3b8'}}>(opcional)</span></label>
-                          <input type="text" placeholder="Ex: P, M, 2X2" value={p.tamanho} onChange={e => atualizarPecaKitNova(idx, 'tamanho', e.target.value.toUpperCase())} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none', fontWeight: '700', textTransform: 'uppercase'}} />
-                        </div>
-                        <div style={{flex: 1, minWidth: '100px'}}>
-                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>COR <span style={{fontSize: '10px', color: '#94a3b8'}}>(opcional)</span></label>
-                          <input type="text" placeholder="Ex: Rosa" value={p.cor} onChange={e => atualizarPecaKitNova(idx, 'cor', e.target.value)} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.85rem', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
-                        </div>
-                        <div style={{flex: 1, minWidth: '120px'}}>
-                          <label style={{fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px'}}>VALOR AVULSO (R$) *</label>
+                          <label style={{fontSize: '0.68rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '3px'}}>VALOR AVULSO (R$) *</label>
                           <input type="text" placeholder="0,00" value={p.valorAluguel} onChange={e => atualizarPecaKitNova(idx, 'valorAluguel', e.target.value)} onBlur={e => {
                               let val = e.target.value.replace(',', '.');
                               const num = parseFloat(val);
                               if(!isNaN(num)) atualizarPecaKitNova(idx, 'valorAluguel', num.toFixed(2).replace('.', ','));
-                          }} style={{width: '100%', height: '42px', padding: '0 12px', fontSize: '0.9rem', fontWeight: '800', borderRadius: '10px', border: '1.5px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
+                          }} style={{width: '100%', height: '38px', padding: '0 10px', fontSize: '0.85rem', fontWeight: '800', borderRadius: '8px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#0f172a', outline: 'none'}} />
                         </div>
                         
-                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '10px', padding: '0 14px', cursor: 'pointer', fontWeight: '800', height: '42px', marginTop: '18px', fontSize: '0.8rem'}}>Remover</button>
-                        </div>
+                        <button type="button" onClick={() => setPecasKitNovas(pecasKitNovas.filter(item => item.id !== p.id))} style={{background: '#fee2e2', color: '#ef4444', border: '1px solid #fca5a5', borderRadius: '8px', padding: '0 10px', cursor: 'pointer', fontWeight: '800', height: '38px', marginTop: '16px', fontSize: '0.74rem'}}>✕</button>
+                      </div>
                     </div>
                   ))}
-                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} style={{width: '100%', height: '46px', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', borderRadius: '12px', fontWeight: '800', cursor: 'pointer', transition: '0.2s', fontSize: '0.88rem', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 30%, transparent)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                  
+                  <button type="button" onClick={() => setPecasKitNovas([...pecasKitNovas, { id: Date.now(), nome: '', valorAluguel: '', cor: '', tamanho: '', largura: '', altura: '', diametro: '', comprimento: '' }])} className="btn-secondary-celebre" style={{ width: '100%', justifyContent: 'center', height: '40px' }}>
                     <i className="fas fa-plus"></i> Adicionar Peça ao Kit
                   </button>
-                </div>
+                </>
               )}
 
-              {/* SEÇÃO 5: PREÇOS & FINANCEIRO */}
-              <div className="ce-unified-section ce-section-financeiro">
-                <div className="ce-section-header-clean">
-                  <div className="ce-section-header-title">
-                    <i className="fas fa-coins ce-icon-accent"></i>
-                    <span>PREÇOS & FINANCEIRO</span>
+              {/* SEÇÃO 6: PREÇOS & FINANCEIRO */}
+              <div className="form-section-divider"></div>
+              
+              <div className="unified-section-header">
+                <span className="section-header-icon">
+                  <i className="fas fa-coins"></i>
+                </span>
+                <div>
+                  <h3>PREÇOS & FINANCEIRO</h3>
+                  <p>Valores de locação, aquisição e retorno de investimento</p>
+                </div>
+              </div>
+
+              <div className="form-grid-4">
+                <div className="form-group span-4">
+                  <div className="precos-grid-3col">
+                    <div className="form-group">
+                      <label htmlFor="ce-valor-aluguel" style={{ color: 'var(--texto-principal, #0f172a)', fontWeight: '850' }}>
+                        {tipoCadastro === 'decoracao' ? 'VALOR DO ALUGUEL (R$) *' : 'PREÇO DO ALUGUEL (R$) *'}
+                      </label>
+                      <div className="input-icon-wrapper">
+                        <span className="input-left-icon"><i className="fas fa-dollar-sign" style={{ color: '#c5a059' }}></i></span>
+                        <input 
+                          id="ce-valor-aluguel"
+                          name="valorAluguel"
+                          type="text" 
+                          value={valorAluguel} 
+                          onChange={e => setValorAluguel(e.target.value)} 
+                          onBlur={formatarMoedaBlur(setValorAluguel)} 
+                          required 
+                          style={{ height: '42px', border: '1.5px solid #c5a059', fontSize: '1rem', fontWeight: '850' }} 
+                          placeholder="0,00"
+                        />
+                      </div>
+                    </div>
+
+                    {tipoCadastro !== 'decoracao' && (
+                      <>
+                        <div className="form-group">
+                          <label htmlFor="ce-valor-compra">VALOR COMPRA (R$)</label>
+                          <input id="ce-valor-compra" name="valorCompra" type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00" style={{ height: '42px', fontWeight: '700' }} />
+                        </div>
+
+                        <div className="form-group">
+                          <label htmlFor="ce-valor-reposicao">REPOSIÇÃO (R$)</label>
+                          <input id="ce-valor-reposicao" name="valorReposicao" type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00" style={{ height: '42px', fontWeight: '700' }} />
+                        </div>
+                      </>
+                    )}
                   </div>
-                  <span className="ce-badge-accent">
-                    Valores em R$
-                  </span>
                 </div>
 
-                {/* Grid Valores */}
-                <div className="financeiro-grid-responsive" style={{ display: 'grid', gridTemplateColumns: tipoCadastro === 'decoracao' ? '1fr' : '2fr 1fr 1fr', gap: '14px', marginBottom: tipoCadastro === 'decoracao' ? '12px' : '18px' }}>
-                  <div style={{ background: 'var(--fundo-cinza, #fffdfa)', border: '2px solid var(--cor-destaque, #c5a059)', borderRadius: '14px', padding: '16px 20px', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 15%, transparent)' }}>
-                    <label htmlFor="ce-valor-aluguel" className="ce-input-label" style={{ color: 'var(--texto-principal)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                      <span>{tipoCadastro === 'decoracao' ? 'VALOR DO ALUGUEL DESTE PACOTE (R$) *' : 'PREÇO DO ALUGUEL (R$) *'}</span>
-                      <span style={{ fontSize: '11px', color: 'var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 12%, transparent)', padding: '3px 10px', borderRadius: '12px', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                        <i className={tipoCadastro === 'decoracao' ? "fas fa-sparkles" : "fas fa-star"}></i>
-                        {tipoCadastro === 'decoracao' ? 'Decoração' : 'Principal'}
-                      </span>
-                    </label>
-                    <input 
-                      id="ce-valor-aluguel"
-                      name="valorAluguel"
-                      type="text" 
-                      value={valorAluguel} 
-                      onChange={e => setValorAluguel(e.target.value)} 
-                      onBlur={formatarMoedaBlur(setValorAluguel)} 
-                      required 
-                      className="ce-input-field"
-                      style={{ height: '48px', border: '1.5px solid var(--cor-destaque, #c5a059)', fontSize: '1.25rem', fontWeight: '800' }} 
-                      placeholder="0,00"
-                    />
-                  </div>
-
-                  {tipoCadastro !== 'decoracao' && (
-                    <>
-                      <div className="ce-input-group">
-                        <label htmlFor="ce-valor-compra" className="ce-input-label">VALOR COMPRA (R$)</label>
-                        <input id="ce-valor-compra" name="valorCompra" className="ce-input-field" type="text" value={valorCompra} onChange={e => setValorCompra(e.target.value)} onBlur={formatarMoedaBlur(setValorCompra)} placeholder="0,00" style={{ fontWeight: '700' }} />
-                      </div>
-                      <div className="ce-input-group">
-                        <label htmlFor="ce-valor-reposicao" className="ce-input-label">REPOSIÇÃO (R$)</label>
-                        <input id="ce-valor-reposicao" name="valorReposicao" className="ce-input-field" type="text" value={valorReposicao} onChange={e => setValorReposicao(e.target.value)} onBlur={formatarMoedaBlur(setValorReposicao)} placeholder="0,00" style={{ fontWeight: '700' }} />
-                      </div>
-                    </>
-                  )}
-                </div>
-
-                {/* 📊 CALCULADORA DE PAYBACK / RETORNO DE INVESTIMENTO & SUGESTÃO INTELIGENTE */}
+                {/* 📊 CALCULADORA DE PAYBACK */}
                 {(() => {
                   const vCompra = Number(String(valorCompra || '0').replace(/\./g, '').replace(',', '.'));
                   const vAluguel = Number(String(valorAluguel || '0').replace(/\./g, '').replace(',', '.'));
@@ -1869,20 +1840,20 @@ const CadastroEstoque = () => {
                     const qtdAlugueisPayback = Math.ceil(vCompra / vAluguel);
                     const margemPorAluguel = ((vAluguel / vCompra) * 100).toFixed(1);
                     return (
-                      <div style={{ marginBottom: '18px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 8%, transparent)', border: '1.5px solid var(--cor-destaque, #c5a059)', borderRadius: '14px', padding: '14px 18px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
+                      <div className="form-group span-4" style={{ marginTop: '6px', background: 'rgba(197, 160, 89, 0.08)', border: '1.5px solid #c5a059', borderRadius: '12px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                          <span style={{ fontSize: '20px', color: 'var(--cor-destaque, #c5a059)' }}>
+                          <span style={{ fontSize: '18px', color: '#c5a059' }}>
                             <i className="fas fa-chart-pie"></i>
                           </span>
                           <div>
-                            <strong style={{ fontSize: '0.85rem', color: 'var(--texto-principal, #0f172a)', display: 'block' }}>Retorno do Investimento (Payback)</strong>
-                            <span style={{ fontSize: '0.78rem', color: 'var(--texto-secundario, #64748b)' }}>
-                              A peça se paga com <strong>{qtdAlugueisPayback} locação(ões)</strong> (Taxa de retorno: {margemPorAluguel}% do valor de compra por aluguel).
+                            <strong style={{ fontSize: '0.82rem', color: '#0f172a', display: 'block' }}>Retorno do Investimento (Payback)</strong>
+                            <span style={{ fontSize: '0.74rem', color: '#64748b' }}>
+                              A peça se paga com <strong>{qtdAlugueisPayback} locação(ões)</strong> (Retorno de {margemPorAluguel}% por locação).
                             </span>
                           </div>
                         </div>
-                        <span style={{ background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', padding: '4px 12px', borderRadius: '20px', fontSize: '0.75rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                          <i className="fas fa-arrow-trend-up"></i> Lucro líquido a partir do {qtdAlugueisPayback}º aluguel
+                        <span style={{ background: '#c5a059', color: '#ffffff', padding: '3px 10px', borderRadius: '16px', fontSize: '0.72rem', fontWeight: '800' }}>
+                          ✓ Lucro a partir do {qtdAlugueisPayback}º aluguel
                         </span>
                       </div>
                     );
@@ -1890,14 +1861,14 @@ const CadastroEstoque = () => {
                     const sugestao25 = (vCompra * 0.25).toFixed(2).replace('.', ',');
                     const sugestao30 = (vCompra * 0.30).toFixed(2).replace('.', ',');
                     return (
-                      <div style={{ marginBottom: '18px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)', borderRadius: '14px', padding: '12px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px' }}>
-                        <span style={{ fontSize: '0.8rem', color: 'var(--cor-destaque, #c5a059)', fontWeight: '700' }}>
-                          💡 Sugestão de Aluguel no mercado (25% a 30% do valor de compra): R$ {sugestao25} a R$ {sugestao30}
+                      <div className="form-group span-4" style={{ marginTop: '6px', background: 'rgba(197, 160, 89, 0.1)', border: '1px solid rgba(197, 160, 89, 0.25)', borderRadius: '12px', padding: '10px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                        <span style={{ fontSize: '0.76rem', color: '#c5a059', fontWeight: '700' }}>
+                          💡 Sugestão de Aluguel (25% a 30% da compra): R$ {sugestao25} a R$ {sugestao30}
                         </span>
                         <button 
                           type="button" 
                           onClick={() => setValorAluguel(sugestao25)}
-                          style={{ background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', padding: '6px 14px', borderRadius: '10px', fontSize: '0.75rem', fontWeight: '800', cursor: 'pointer' }}
+                          style={{ background: '#c5a059', color: '#ffffff', border: 'none', padding: '5px 12px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: '800', cursor: 'pointer' }}
                         >
                           Usar R$ {sugestao25}
                         </button>
@@ -1906,42 +1877,23 @@ const CadastroEstoque = () => {
                   }
                   return null;
                 })()}
-
-                {/* Banner Comparativo Decoração */}
-                {tipoCadastro === 'decoracao' && (
-                  <div style={{ background: 'var(--fundo-cinza, #f8fafc)', border: '1.5px solid var(--borda, #cbd5e1)', borderRadius: '14px', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px' }}>
-                    <div>
-                      <span style={{ fontSize: '0.75rem', color: 'var(--texto-secundario, #64748b)', fontWeight: '700', display: 'block', textTransform: 'uppercase' }}>
-                        Soma das peças selecionadas no acervo:
-                      </span>
-                      <strong style={{ fontSize: '1.1rem', color: 'var(--texto-principal, #0f172a)', fontWeight: '800' }}>
-                        R$ {calcularTotalSomaAvulsaKit().toFixed(2).replace('.', ',')}
-                      </strong>
-                    </div>
-                    <div style={{ background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 12%, transparent)', border: '1px solid color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)', color: 'var(--cor-destaque, #c5a059)', padding: '6px 14px', borderRadius: '20px', fontSize: '0.8rem', fontWeight: '800', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                      <i className="fas fa-wand-magic-sparkles"></i> Pacote de Decoração
-                    </div>
-                  </div>
-                )}
               </div>
 
-              {/* BARRA FIXA DE AÇÃO: CANCELAR E SALVAR */}
-              <div className="ce-form-actions-bar">
-                <Link to={dadosCompra ? "/compras" : "/estoque"} className="btn-secondary-celebre" style={{ height: '44px', textDecoration: 'none' }}>
-                  <i className="fas fa-xmark"></i>
-                  <span>Cancelar</span>
-                </Link>
-                <button type="submit" disabled={salvando} className="btn-primary-celebre" style={{ height: '44px', padding: '0 32px' }}>
-                  <i className="fas fa-floppy-disk"></i>
-                  <span>{salvando ? 'Salvando...' : (tipoCadastro === 'decoracao' ? `Salvar ${tipoPacote}` : tipoCadastro === 'kit' ? 'Salvar Conjunto' : 'Salvar Acervo')}</span>
+              {/* BARRA DE AÇÃO NO RODAPÉ INTEGRADA */}
+              <div className="unified-card-actions-bar">
+                <button type="button" onClick={() => navigate(dadosCompra ? "/compras" : "/estoque")} className="btn-secondary-celebre">
+                  <i className="fas fa-arrow-left"></i> Cancelar
+                </button>
+                <button type="submit" className="btn-primary-celebre" disabled={salvando}>
+                  <i className={salvando ? "fas fa-spinner fa-spin" : "fas fa-save"}></i> {salvando ? 'Salvando...' : (tipoCadastro === 'decoracao' ? `Salvar ${tipoPacote}` : tipoCadastro === 'kit' ? 'Salvar Conjunto' : 'Salvar Peça')}
                 </button>
               </div>
 
             </div>
+
           </div>
-        </div>
-      </form>
-    </div>
+        </form>
+      </div>
 
       {modalCatalogoAberto && (
         <div className="modal-overlay-premium" style={{ zIndex: 99999, backgroundColor: 'rgba(15, 23, 42, 0.75)', backdropFilter: 'blur(6px)' }}>
@@ -2314,121 +2266,133 @@ const CadastroEstoque = () => {
 
       {/* 🔥 MODAL EXECUTIVE PARA GERENCIAR PRATELEIRAS & ENDEREÇAMENTO FÍSICO 🔥 */}
       {modalLocalizacaoAberto && (
-        <div className="modal-overlay-premium" style={{ zIndex: 100000, background: 'rgba(15, 23, 42, 0.65)', backdropFilter: 'blur(6px)' }}>
-          <div className="modal-box-premium" style={{ maxWidth: '540px', width: '92%', padding: '30px', borderRadius: '24px', backgroundColor: '#ffffff', boxShadow: '0 25px 50px -12px rgba(15, 23, 42, 0.25)', border: '1px solid #e2e8f0' }}>
+        <div className="modal-overlay-premium" onClick={() => setModalLocalizacaoAberto(false)}>
+          <div className="modal-prateleiras-box" onClick={e => e.stopPropagation()}>
             
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid #f1f5f9', paddingBottom: '16px', marginBottom: '20px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 15%, transparent)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '20px', color: 'var(--cor-destaque, #c5a059)' }}>
-                  📍
+            {/* CABEÇALHO DO MODAL */}
+            <div className="modal-prateleiras-header">
+              <div className="modal-prateleiras-header-title">
+                <div className="modal-prateleiras-icon">
+                  <i className="fas fa-layer-group"></i>
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, color: '#0f172a', fontSize: '1.05rem', fontWeight: '800' }}>Gerenciar Prateleiras do Galpão</h3>
-                  <span style={{ fontSize: '0.75rem', color: '#64748b' }}>Cadastre corredores, prateleiras e caixotões</span>
+                  <h3>Gerenciar Prateleiras do Galpão</h3>
+                  <span>Cadastre e organize corredores, prateleiras e nichos</span>
                 </div>
               </div>
               <button 
+                type="button"
+                className="modal-prateleiras-btn-close"
                 onClick={() => setModalLocalizacaoAberto(false)} 
-                style={{ background: '#f1f5f9', border: 'none', width: '32px', height: '32px', borderRadius: '50%', fontSize: '18px', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}
+                title="Fechar"
               >
-                ×
+                ✕
               </button>
             </div>
             
-            {/* CONSTRUTOR RÁPIDO DE ENDEREÇO */}
-            <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '16px', padding: '16px', marginBottom: '20px' }}>
-              <div style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '10px' }}>
-                + CADASTRAR NOVO ENDEREÇO
+            {/* FORMULÁRIO DE NOVO ENDEREÇO */}
+            <div className="modal-prateleiras-form-card">
+              <div className="modal-prateleiras-form-title">
+                <i className="fas fa-plus-circle" style={{ color: '#c5a059' }}></i>
+                Cadastrar Novo Endereço
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', marginBottom: '10px' }}>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', display: 'block', marginBottom: '3px' }}>CORREDOR</label>
+              
+              <div className="modal-prateleiras-inputs-grid">
+                <div className="modal-prateleiras-input-group">
+                  <label>CORREDOR</label>
                   <input 
                     type="text" 
-                    placeholder="Ex: Corredor A" 
+                    placeholder="Ex: A, B..." 
                     value={modalCorredor} 
                     onChange={e => setModalCorredor(e.target.value)}
-                    style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', background: '#fff' }}
                   />
                 </div>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', display: 'block', marginBottom: '3px' }}>PRATELEIRA</label>
+                <div className="modal-prateleiras-input-group">
+                  <label>PRATELEIRA</label>
                   <input 
                     type="text" 
-                    placeholder="Ex: Prateleira 1" 
+                    placeholder="Ex: 1, 2..." 
                     value={modalPrateleira} 
                     onChange={e => setModalPrateleira(e.target.value)}
-                    style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', background: '#fff' }}
                   />
                 </div>
-                <div>
-                  <label style={{ fontSize: '0.68rem', fontWeight: '800', color: '#64748b', display: 'block', marginBottom: '3px' }}>BANDEJA</label>
+                <div className="modal-prateleiras-input-group">
+                  <label>BANDEJA / NICHO</label>
                   <input 
                     type="text" 
-                    placeholder="Ex: Bandeja 3" 
+                    placeholder="Ex: 3, 4..." 
                     value={modalBandeja} 
                     onChange={e => setModalBandeja(e.target.value)}
-                    style={{ width: '100%', height: '38px', padding: '0 10px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '0.82rem', outline: 'none', background: '#fff' }}
                   />
                 </div>
               </div>
 
               {gerarPreviewModalEndereco() && (
-                <div style={{ fontSize: '0.78rem', color: 'var(--cor-destaque, #c5a059)', background: 'color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent)', padding: '6px 12px', borderRadius: '8px', border: '1px solid color-mix(in srgb, var(--cor-destaque, #c5a059) 25%, transparent)', fontWeight: '700', marginBottom: '10px' }}>
-                  Prévia: {gerarPreviewModalEndereco()}
+                <div className="modal-prateleiras-preview-tag">
+                  <i className="fas fa-map-pin"></i>
+                  <span>Prévia: <strong>{gerarPreviewModalEndereco()}</strong></span>
                 </div>
               )}
 
               <button 
                 type="button" 
                 onClick={handleAddLocalizacaoEspecial}
-                style={{ width: '100%', height: '38px', borderRadius: '20px', fontWeight: '800', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', cursor: 'pointer', fontSize: '0.78rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}
+                className="modal-prateleiras-btn-add"
               >
-                + Adicionar esta Prateleira
+                <i className="fas fa-plus"></i> Adicionar à Lista
               </button>
             </div>
 
-            {/* LISTA DE LOCALIZAÇÕES CADASTRADAS */}
-            <div style={{ marginBottom: '8px', fontSize: '0.72rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
-              PRATELEIRAS SALVAS NO SISTEMA:
-            </div>
+            {/* LISTA DE LOCALIZAÇÕES SALVAS */}
+            <div className="modal-prateleiras-list-section">
+              <div className="modal-prateleiras-list-title">
+                PRATELEIRAS REGISTRADAS NO SISTEMA ({localizacoesEditaveis.length})
+              </div>
 
-            <div style={{ maxHeight: '220px', overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: '12px', background: '#ffffff', padding: '6px' }}>
+              <div className="modal-prateleiras-list-box">
                 {localizacoesEditaveis.length === 0 ? (
-                    <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8', fontSize: '13px' }}>Nenhuma localização cadastrada ainda.</div>
+                  <div style={{ padding: '24px 16px', textAlign: 'center', color: '#94a3b8', fontSize: '0.82rem' }}>
+                    <i className="fas fa-warehouse" style={{ fontSize: '24px', display: 'block', marginBottom: '8px', opacity: 0.5 }}></i>
+                    Nenhuma prateleira cadastrada ainda.
+                  </div>
                 ) : (
-                    localizacoesEditaveis.map((loc, idx) => (
-                        <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: '8px', marginBottom: '4px', background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-                            <span style={{ fontSize: '0.85rem', color: '#0f172a', fontWeight: '600' }}>📍 {loc}</span>
-                            <button 
-                                type="button" 
-                                onClick={() => handleRemoveLocalizacao(loc)}
-                                style={{ background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', width: '26px', height: '26px', borderRadius: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}
-                                title="Remover"
-                            >
-                                ×
-                            </button>
-                        </div>
-                    ))
+                  localizacoesEditaveis.map((loc, idx) => (
+                    <div key={idx} className="modal-prateleiras-item-row">
+                      <span className="modal-prateleiras-item-text">
+                        <i className="fas fa-map-marker-alt" style={{ color: '#c5a059' }}></i>
+                        {loc}
+                      </span>
+                      <button 
+                        type="button" 
+                        onClick={() => handleRemoveLocalizacao(loc)}
+                        className="modal-prateleiras-btn-delete"
+                        title="Remover prateleira"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))
                 )}
+              </div>
             </div>
 
-            {/* BOTÕES DE AÇÃO */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '22px', paddingTop: '16px', borderTop: '1px solid #f1f5f9' }}>
+            {/* RODAPÉ COM BOTÕES DE AÇÃO */}
+            <div className="modal-prateleiras-footer">
               <button 
                 type="button" 
                 onClick={() => setModalLocalizacaoAberto(false)} 
-                style={{ padding: '10px 20px', borderRadius: '30px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '700', fontSize: '0.82rem', cursor: 'pointer' }}
+                className="modal-prateleiras-btn-cancel"
               >
-                  Cancelar
+                Cancelar
               </button>
               <button 
                 type="button" 
                 onClick={handleSaveLocalizacoes} 
                 disabled={salvandoLocalizacoes} 
-                style={{ padding: '10px 24px', borderRadius: '30px', background: 'var(--cor-destaque, #c5a059)', color: '#ffffff', border: 'none', fontWeight: '800', fontSize: '0.82rem', cursor: 'pointer', boxShadow: '0 4px 12px color-mix(in srgb, var(--cor-destaque, #c5a059) 35%, transparent)', textTransform: 'uppercase' }}
+                className="modal-prateleiras-btn-save"
               >
-                  {salvandoLocalizacoes ? 'Salvando...' : '💾 Salvar no Sistema'}
+                <i className="fas fa-save"></i>
+                {salvandoLocalizacoes ? 'Salvando...' : 'Salvar no Sistema'}
               </button>
             </div>
 

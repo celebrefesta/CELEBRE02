@@ -312,6 +312,31 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 30/08/2026 — 13h00 às 16h40 (BRT)
+- ✅ **📱 Arquitetura Dual Desktop / Mobile & Eliminação de Espaço Fantasma (`Compras.jsx`, `Compras.css`)**:
+  - Implementação do padrão dual: visualização em tabela no desktop (`.compras-desktop-table-view`) e visualização semântica em cartões no mobile (`.compras-mobile-cards-view`).
+  - Identificada e eliminada a causa raiz do espaço vazio de 440px no mobile (`flex: 2 1 440px`), travando a barra de filtros em altura estável (`42px`).
+- ✅ **🔍 Filtros Ergonômicos & Fim do Corte de Texto em Telas Pequenas (`Compras.css`)**:
+  - Reorganização dos dropdowns de **Tipo** e **Status** em 2 colunas simétricas (`repeat(2, 1fr)`), com 50% de largura cada (~170px úteis), eliminando palavras cortadas.
+  - Botão de ordenação alocado em largura total (`grid-column: span 2`) com altura de `38px` exibindo textos completos (`Mais Recentes`, `Ordem: A - Z`, `Ordem: Z - A`).
+  - Refinamento tipográfico reduzindo o peso da fonte de `750/800` para `500/550`.
+- ✅ **🎯 Busca Estrita por Nome do Produto com Normalização de Acentos (`Compras.jsx`)**:
+  - Busca refatorada para filtrar estritamente pelo Nome do Produto (`item.nome`), ignorando dados secundários de fornecedor ou vínculos internos.
+  - Normalização NFD (`normalize("NFD")`) para compatibilidade total com caracteres acentuados.
+- ✅ **🛠️ Correção dos Botões de Ação e Filtro de Reposição de Acervo (`Compras.jsx`)**:
+  - Adicionado o import de `getDoc` do Firestore, corrigindo o erro `ReferenceError: getDoc is not defined` que travava as funções `somarManualAoEstoque` e `executarTrocaStatus`.
+  - Filtro de "Reposição Acervo" expandido para reconhecer variações de origem e categoria (`acervo`, `reposição`, `reposicao_estoque`, `reposicao_decoracao_kit`, `estoque geral`).
+- ✅ **🛑 Estabilização Completa de Layout ao Digitar na Busca (`Compras.css`)**:
+  - Configurado `font-size: 16px !important;` no campo de busca mobile para impedir que navegadores móveis deem auto-zoom e desloquem o viewport.
+  - Aplicado `contain: layout style !important;` nos contêineres de cards e tabela para isolar 100% o reflow da lista.
+  - Adicionado `scrollbar-gutter: stable;` e `min-height` estável para eliminar saltos horizontais e verticais de scrollbar.
+  - Removido `transform: translateY(8px)` de `@keyframes fadeInCelebre`.
+- ✅ **🌙 Alto Contraste & Acabamento Premium no Modo Escuro (`Compras.css`)**:
+  - Botão `+ ADICIONAR ITEM` com texto e ícone em branco nítido de alto contraste (`#ffffff`, peso `850`) sobre degradê dourado.
+  - Aba ativa `Minha Lista` com texto e badge em preto nobre (`#0f172a`, peso `850`) sobre fundo dourado.
+  - Cores semânticas vibrantes para `Exportar WhatsApp` (`#4ade80`), `Imprimir PDF` (`#ffffff`), títulos e descrições.
+- ✅ **Build de Produção Verificado**: `npm run build` aprovado com **0 erros** (`built in 13.31s - 13.85s`).
+
 ### 🗓️ Sessão: 22/08/2026 — 08h00 às 11h35 (BRT)
 - ✅ **📸 Upload Rápido de Imagem & Remoção de Fundo por IA WASM (`Moodboard.jsx`, `Moodboard.css`)**:
   - Botão de upload dedicado na barra lateral esquerda com suporte a formatos `.png`, `.jpg`, `.webp`.
@@ -480,5 +505,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 22/08/2026 — 11h40 (BRT)  
+> **⏱️ Última atualização:** 30/08/2026 — 16h40 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

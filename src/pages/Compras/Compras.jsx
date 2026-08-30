@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../../firebaseConfig";
-import { collection, query, onSnapshot, doc, updateDoc, deleteDoc, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, onSnapshot, doc, getDoc, updateDoc, deleteDoc, where, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
 import { useNavigate } from "react-router-dom";
 import { getAuth } from "firebase/auth";
 import "./Compras.css";
@@ -752,22 +752,40 @@ const Compras = () => {
     setModalExportarAberto(false);
   };
 
+  const normalizarTexto = (texto) => {
+    return (texto || '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .trim();
+  };
+
   let itensFiltrados = itens.filter(item => {
-    const termo = busca.toLowerCase();
-    const matchBusca = (item.nome || '').toLowerCase().includes(termo) || 
-                       (item.vinculo || '').toLowerCase().includes(termo) || 
-                       (item.fornecedor || '').toLowerCase().includes(termo);
+    const termo = normalizarTexto(busca);
+    const matchBusca = !termo || normalizarTexto(item.nome).includes(termo);
     const matchStatus = filtroStatus === "todos" ? true : item.status === filtroStatus;
 
     let matchCat = true;
     if (filtroCategoria === 'cidade') {
-      matchCat = item.tipoEntrega === '1' || Number(item.diasFrete) === 1;
+      matchCat = item.tipoEntrega === '1' || Number(item.diasFrete) === 1 || item.canalCompra === 'presencial';
     } else if (filtroCategoria === 'pedido') {
-      matchCat = item.vinculoTipo === 'pedido';
+      matchCat = item.vinculoTipo === 'pedido' || (item.vinculo && item.vinculo !== 'Estoque Geral');
     } else if (filtroCategoria === 'acervo') {
-      matchCat = item.categoria === 'acervo' || item.vinculoTipo === 'geral';
+      const catNome = normalizarTexto(item.categoria);
+      const origNome = normalizarTexto(item.origem);
+      const vincNome = normalizarTexto(item.vinculo);
+      matchCat = catNome.includes('acervo') || 
+                 catNome.includes('reposi') || 
+                 catNome.includes('geral') || 
+                 origNome.includes('reposicao') || 
+                 origNome.includes('estoque') ||
+                 item.vinculoTipo === 'geral' || 
+                 item.vinculoTipo === 'acervo' ||
+                 vincNome === 'estoque geral' ||
+                 (!item.vinculoTipo && !item.vinculo);
     } else if (filtroCategoria === 'material') {
-      matchCat = item.categoria === 'material';
+      const catNome = normalizarTexto(item.categoria);
+      matchCat = catNome.includes('material') || catNome.includes('consumo');
     }
 
     let matchVinculo = true;
@@ -797,24 +815,24 @@ const Compras = () => {
   };
 
   const faltantesFiltradosDecoracao = faltantesDecoracao.filter(item => {
-    const busca = buscaDecoracao.toLowerCase().trim();
+    const busca = normalizarTexto(buscaDecoracao);
     if (!busca) return true;
-    return (item.decoracaoNome || '').toLowerCase().includes(busca) ||
-           (item.pecaNome || '').toLowerCase().includes(busca);
+    return normalizarTexto(item.pecaNome).includes(busca) ||
+           normalizarTexto(item.decoracaoNome).includes(busca);
   });
 
   return (
-    <div className="clientes-container fade-in">
+    <div className="compras-container fade-in">
       
       {/* HERO CABEÇALHO IDÊNTICO AO GESTÃO DE CLIENTES */}
       <div className="clientes-hero-header">
         <div className="header-title-row">
           <div className="header-icon-badge">
-            🛒
+            <i className="fas fa-cart-shopping"></i>
           </div>
           <div className="welcome-text">
             <h1>Lista de Compras & Aquisições</h1>
-            <p>Gerencie aquisições vinculadas aos pedidos, fornecedores, e peças faltantes em decorações.</p>
+            <p>Gerencie aquisições vinculadas aos pedidos, fornecedores e peças faltantes em decorações.</p>
           </div>
         </div>
         <div className="header-actions">
@@ -824,7 +842,7 @@ const Compras = () => {
             onClick={() => setModalExportarAberto(true)}
             title="Enviar lista formatada para o WhatsApp"
           >
-            📲 Exportar / WhatsApp
+            <i className="fab fa-whatsapp"></i> Exportar WhatsApp
           </button>
           <button 
             type="button" 
@@ -832,10 +850,11 @@ const Compras = () => {
             onClick={() => imprimirListaPDF(false)}
             title="Imprimir ou salvar em PDF"
           >
-            📄 Imprimir (PDF)
+            <i className="fas fa-file-pdf"></i> Imprimir (PDF)
           </button>
           <button className="btn-primary-celebre" onClick={() => navigate("/compras/nova")}>
-            + ADICIONAR ITEM
+            <i className="fas fa-plus"></i>
+            <span>ADICIONAR ITEM</span>
           </button>
         </div>
       </div>
@@ -847,7 +866,8 @@ const Compras = () => {
           onClick={() => setAbaAtiva('lista')}
           className={`tab-btn-celebre ${abaAtiva === 'lista' ? 'active' : ''}`}
         >
-          <span>🛒 Minha Lista</span>
+          <i className="fas fa-cart-shopping"></i>
+          <span>Minha Lista</span>
           <span className="tab-badge">{itens.length}</span>
         </button>
 
@@ -856,7 +876,8 @@ const Compras = () => {
           onClick={() => setAbaAtiva('decoracoes')}
           className={`tab-btn-celebre ${abaAtiva === 'decoracoes' ? 'active' : ''}`}
         >
-          <span>✨ Peças Faltantes</span>
+          <i className="fas fa-sparkles"></i>
+          <span>Peças Faltantes</span>
           {faltantesDecoracao.length > 0 && (
             <span className="tab-badge warning">{faltantesDecoracao.length}</span>
           )}
@@ -867,10 +888,10 @@ const Compras = () => {
       <div className="clientes-stats-grid">
         <div className="stat-card-pro card-purple">
           <div className="stat-icon-wrapper icon-purple">
-            🛒
+            <i className="fas fa-boxes-stacked"></i>
           </div>
           <div className="stat-content">
-            <span className="stat-title">TOTAL NA LISTA</span>
+            <span className="stat-title">ITENS NA LISTA</span>
             <strong className="stat-number">{itens.length}</strong>
             <small className="stat-desc">Itens cadastrados</small>
           </div>
@@ -878,37 +899,37 @@ const Compras = () => {
 
         <div className="stat-card-pro card-amber">
           <div className="stat-icon-wrapper icon-amber">
-            📂
+            <i className="fas fa-coins"></i>
           </div>
           <div className="stat-content">
-            <span className="stat-title">ORÇAMENTO PENDENTE</span>
+            <span className="stat-title">A COMPRAR</span>
             <strong className="stat-number">R$ {totais.pendente.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small className="stat-desc">Estimado p/ compras</small>
+            <small className="stat-desc">Orçamento estimado</small>
           </div>
         </div>
 
         <div className="stat-card-pro card-red">
           <div className="stat-icon-wrapper icon-red">
-            ✨
+            <i className="fas fa-puzzle-piece"></i>
           </div>
           <div className="stat-content">
-            <span className="stat-title">FALTANTES EM DECORAÇÃO</span>
+            <span className="stat-title">FALTAM EM KITS</span>
             <strong className="stat-number">{faltantesDecoracao.length}</strong>
-            <small className="stat-desc">Itens a adquirir</small>
+            <small className="stat-desc">Peças a adquirir</small>
           </div>
         </div>
 
         <div className="stat-card-pro card-green">
           <div className="stat-icon-wrapper icon-green">
-            ✅
+            <i className="fas fa-circle-check"></i>
           </div>
           <div className="stat-content">
-            <span className="stat-title">REALIZADO (MÊS)</span>
+            <span className="stat-title">INVESTIDO (MÊS)</span>
             <strong className="stat-number">R$ {totais.realizado.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-            <small className="stat-desc" style={{ color: totais.economia > 0 ? '#166534' : totais.economia < 0 ? '#b91c1c' : '#64748b', fontWeight: '800' }}>
+            <small className="stat-desc">
               {totais.economia > 0 && `🟢 Economia: R$ ${totais.economia.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`}
               {totais.economia < 0 && `🔴 Excedente: R$ ${Math.abs(totais.economia).toLocaleString('pt-BR', {minimumFractionDigits: 2})}`}
-              {totais.economia === 0 && `Investimento aprovado`}
+              {totais.economia === 0 && `Total aprovado`}
             </small>
           </div>
         </div>
@@ -991,35 +1012,39 @@ const Compras = () => {
           <div className="table-filter-bar">
             <div className="search-input-wrapper">
               <span className="search-icon">🔍</span>
-              <input type="text" placeholder="Buscar por item, pedido ou fornecedor..." value={busca} onChange={e => setBusca(e.target.value)} />
+              <input type="text" placeholder="Buscar por item ou produto..." value={busca} onChange={e => setBusca(e.target.value)} />
             </div>
 
-            <button className="btn-secondary-celebre" onClick={alternarOrdem} title="Mudar Ordem">
-                {ordemAlfabetica === 'A-Z' ? '⬇️ A - Z' : ordemAlfabetica === 'Z-A' ? '⬆️ Z - A' : '📅 Recentes'}
-            </button>
+            <div className="compras-filter-trio-row">
+              <div className="filter-select-container filter-tipo-container">
+                <select className="filter-select" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)}>
+                  <option value="todos">📦 Tipo: Todos</option>
+                  <option value="cidade">🛒 Presencial (Cidade)</option>
+                  <option value="pedido">🔗 Vinculado a Pedido</option>
+                  <option value="acervo">🏢 Reposição Acervo</option>
+                  <option value="material">🛠️ Material Consumo</option>
+                </select>
+              </div>
+              
+              <div className="filter-select-container filter-status-container">
+                <select className="filter-select" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
+                  <option value="todos">📊 Status: Todos</option>
+                  <option value="pendente">⏳ Falta Comprar</option>
+                  <option value="comprado">🚚 A Caminho</option>
+                  <option value="chegou">📦 No Acervo</option>
+                </select>
+              </div>
 
-            <div className="filter-select-container">
-              <select className="filter-select" value={filtroCategoria} onChange={(e) => setFiltroCategoria(e.target.value)} style={{ fontWeight: '700' }}>
-                <option value="todos">📦 Tipo: Todos</option>
-                <option value="cidade">🛒 Compra Presencial</option>
-                <option value="pedido">🔗 Vinculadas a Pedidos</option>
-                <option value="acervo">🏢 Reposição de Acervo</option>
-                <option value="material">🛠️ Material de Consumo</option>
-              </select>
-            </div>
-            
-            <div className="filter-select-container">
-              <select className="filter-select" value={filtroStatus} onChange={(e) => setFiltroStatus(e.target.value)}>
-                <option value="todos">📊 Status: Todos</option>
-                <option value="pendente">⏳ Falta Comprar</option>
-                <option value="comprado">🚚 A Caminho</option>
-                <option value="chegou">📦 No Acervo</option>
-              </select>
+              <button className="btn-secondary-celebre btn-ordem-celebre" onClick={alternarOrdem} title="Mudar Ordem">
+                <i className={ordemAlfabetica === 'A-Z' ? "fas fa-arrow-down-a-z" : ordemAlfabetica === 'Z-A' ? "fas fa-arrow-down-z-a" : "fas fa-calendar-days"}></i>
+                <span>{ordemAlfabetica === 'A-Z' ? 'Ordem: A - Z' : ordemAlfabetica === 'Z-A' ? 'Ordem: Z - A' : 'Mais Recentes'}</span>
+              </button>
             </div>
           </div>
 
-          <div className="table-responsive-wrapper">
-            <table className="pro-table">
+          {/* 💻 VISUALIZAÇÃO DESKTOP: TABELA PRO-TABLE (> 900px) */}
+          <div className="table-responsive-wrapper compras-desktop-table-view">
+            <table className="compras-table">
               <thead>
                 <tr>
                   <th style={{ width: '40px', textAlign: 'center' }}>
@@ -1148,35 +1173,30 @@ const Compras = () => {
                     return (
                       <tr 
                         key={item.id} 
-                        className={ehConcluido ? 'linha-comprado' : ''}
-                        style={{
-                          opacity: ehConcluido ? 0.45 : 1,
-                          background: itensSelecionados.includes(item.id) ? '#fef3c7' : ehConcluido ? 'rgba(248, 250, 252, 0.75)' : undefined,
-                          transition: 'all 0.2s ease'
-                        }}
+                        className={`compras-table-row ${ehConcluido ? 'linha-comprado' : ''} ${itensSelecionados.includes(item.id) ? 'linha-selecionada' : ''}`}
                       >
                         <td className="td-checkbox" onClick={e => e.stopPropagation()}>
                           <input 
                             type="checkbox" 
                             checked={itensSelecionados.includes(item.id)} 
                             onChange={() => toggleSelecionarItem(item.id)} 
-                            style={{ cursor: 'pointer', width: '18px', height: '18px' }}
+                            className="compras-checkbox-input"
                           />
                         </td>
                         <td className="td-item-info">
-                          <span className="nome-produto" style={{ textDecoration: ehConcluido ? 'line-through' : 'none', color: ehConcluido ? '#64748b' : undefined }}>
+                          <span className={`nome-produto ${ehConcluido ? 'concluido' : ''}`}>
                             {item.nome} {item.formato === 'kit' && <span className="tag-kit-gold">(KIT)</span>}
                           </span>
                           <div 
                             className="vinculo-tag" 
                             onClick={(e) => { e.stopPropagation(); setFiltroVinculoAtivo(item.vinculo); }}
-                            style={{ marginTop: '4px', opacity: ehConcluido ? 0.7 : 1, maxWidth: '280px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', cursor: 'pointer' }}
                             title="Clique para filtrar todos os itens deste vínculo"
                           >
-                            {isPedido ? '🔗' : '📦'} {item.vinculo || "Estoque Geral"}
+                            <i className={isPedido ? "fas fa-link" : "fas fa-box"}></i>
+                            <span>{item.vinculo || "Estoque Geral"}</span>
                           </div>
                           {item.fornecedor && (
-                            <div style={{ fontSize: '11px', color: '#b48a3c', fontWeight: '800', marginTop: '6px', display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <div className="fornecedor-container-row">
                               {(item.fornecedor.startsWith('http://') || item.fornecedor.startsWith('https://') || item.fornecedor.startsWith('www.')) ? (
                                 <a 
                                   href={item.fornecedor.startsWith('www.') ? `https://${item.fornecedor}` : item.fornecedor} 
@@ -1185,19 +1205,19 @@ const Compras = () => {
                                   className="fornecedor-link"
                                   title={item.fornecedor}
                                 >
-                                  🔗 Link do Fornecedor ↗
+                                  <i className="fas fa-arrow-up-right-from-square"></i> Link Fornecedor
                                 </a>
                               ) : (
-                                <span className="fornecedor-texto-badge">📍 Fornecedor: {item.fornecedor}</span>
+                                <span className="fornecedor-texto-badge"><i className="fas fa-store"></i> {item.fornecedor}</span>
                               )}
                               {item.fornecedorTelefone && (
                                 <button 
                                   type="button" 
                                   onClick={() => abrirWhatsAppFornecedor(item.fornecedorTelefone, item.nome, item.quantidade)} 
-                                  style={{ background: '#25d366', color: '#ffffff', border: 'none', borderRadius: '12px', padding: '3px 9px', fontSize: '10px', fontWeight: '800', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '3px', boxShadow: '0 2px 5px rgba(37, 211, 102, 0.25)' }} 
+                                  className="btn-whats-fornecedor"
                                   title="Abrir conversa no WhatsApp com o fornecedor"
                                 >
-                                  💬 Whats
+                                  <i className="fab fa-whatsapp"></i> Whats
                                 </button>
                               )}
                             </div>
@@ -1205,14 +1225,14 @@ const Compras = () => {
                         </td>
                         
                         <td data-label="Qtd." className="td-qtd">
-                            <strong style={{fontSize: '15px', color: '#0f172a'}}>{item.quantidade}x</strong>
+                            <strong className="qtd-badge-val">{item.quantidade}x</strong>
                         </td>
                         
                         <td data-label="Valor Total" className="td-valor">
                             <div className="preco-real">
                               R$ {subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
                             </div>
-                            <small style={{fontSize: '10px', color: '#94a3b8', display: 'block'}}>
+                            <small className="preco-estimado-sub">
                                Est: R$ {valEst.toFixed(2)} un.
                             </small>
                             {item.valorPago !== undefined && item.valorPago !== null && item.valorPago !== '' && (
@@ -1224,7 +1244,7 @@ const Compras = () => {
                                 >
                                   {valPago < valEst && `🟢 R$ ${valPago.toFixed(2)} un (-R$ ${(valEst - valPago).toFixed(2)})`}
                                   {valPago > valEst && `🔴 R$ ${valPago.toFixed(2)} un (+R$ ${(valPago - valEst).toFixed(2)})`}
-                                  {valPago === valEst && `✅ R$ ${valPago.toFixed(2)} un (No estimado)`}
+                                  {valPago === valEst && `✅ R$ ${valPago.toFixed(2)} un (Estimado)`}
                                 </span>
                               </div>
                             )}
@@ -1239,12 +1259,13 @@ const Compras = () => {
                         </td>
 
                         <td data-label="Logística" className="td-logistica">
-                          <div style={{display: 'flex', flexDirection: 'column', gap: '4px', alignItems: 'flex-end', textAlign: 'right'}} className="logistica-inner-box">
-                            <span className="prazo-badge" style={{background: isPedido ? '#f0fdf4' : '#f8fafc', border: isPedido ? '1px solid #bbf7d0' : '1px solid #e2e8f0', color: isPedido ? '#166534' : '#475569', padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: '800'}}>
+                          <div className="logistica-inner-box">
+                            <span className={`prazo-badge ${isPedido ? 'prazo-pedido' : 'prazo-estoque'}`}>
+                              <i className={isPedido ? "fas fa-calendar-day" : "fas fa-truck-fast"}></i>
                               {dataExibicao}
                             </span>
                             {infoExtraRastreio && (
-                                <span style={{ fontSize: '9px', color: '#0f172a', fontWeight: '800', background: '#fffbeb', padding: '2px 6px', borderRadius: '4px', border: '1px solid #fcd34d'}}>
+                                <span className="extra-rastreio-badge">
                                     {infoExtraRastreio}
                                 </span>
                             )}
@@ -1264,34 +1285,34 @@ const Compras = () => {
                                  onClick={() => isPresencial ? handleStatusChange(item, 'chegou') : handleStatusChange(item, 'comprado')}
                                  title={isPresencial ? "Compra presencial (Já está com você)" : "Marcar como comprado via frete"}
                                >
-                                  🛒 {isPresencial ? 'Marcar Comprado' : 'Marcar A Caminho'}
-                               </button>
+                                  <i className="fas fa-cart-shopping"></i> {isPresencial ? 'Comprado' : 'A Caminho'}
+                                </button>
                             )}
                             
                             {item.status === 'comprado' && (
                                <>
                                  <button className="btn-acao-status desfazer" onClick={() => handleStatusChange(item, 'pendente')} title="Voltar para Pendente">
-                                   ↩ Pendente
+                                   <i className="fas fa-rotate-left"></i> Pendente
                                  </button>
-                                 <button className="btn-acao-status chegou" onClick={() => handleStatusChange(item, 'chegou')}>
-                                   📦 Chegou
+                                 <button className="btn-acao-status chegou" onClick={() => handleStatusChange(item, 'chegou')} title="Confirmar chegada no acervo">
+                                   <i className="fas fa-box-open"></i> Chegou
                                  </button>
                                </>
                             )}
 
                             {item.status === 'chegou' && (
                               item.estoqueSomado ? (
-                                <span style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', padding: '6px 12px', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem', display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-                                  ✓ Estoque Somado (+{item.quantidade || 1} un)
+                                <span className="badge-estoque-somado">
+                                  <i className="fas fa-check"></i> Estoque Somado (+{item.quantidade || 1})
                                 </span>
                               ) : (item.isItemExistente || item.vinculoTipo === 'decoracao' || estoqueExistenteNomes.has((item.nome || '').toLowerCase().trim())) ? (
                                 <button 
                                   type="button"
                                   onClick={() => somarManualAoEstoque(item)}
-                                  style={{ background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)', color: '#ffffff', border: 'none', padding: '6px 12px', borderRadius: '8px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 2px 6px rgba(16, 185, 129, 0.3)' }}
+                                  className="btn-somar-estoque-manual"
                                   title="Clique para somar a quantidade comprada ao acervo existente"
                                 >
-                                  ➕ Somar +{item.quantidade || 1} un ao Estoque
+                                  <i className="fas fa-plus"></i> Somar +{item.quantidade || 1} un
                                 </button>
                               ) : item.categoria !== "material" ? (
                                 <button 
@@ -1299,18 +1320,20 @@ const Compras = () => {
                                   onClick={() => navigate('/cadastro-estoque', { state: { dadosCompra: item } })}
                                   title="Cadastrar detalhes da peça inédita no Acervo"
                                 >
-                                  ➕ Cadastrar
+                                  <i className="fas fa-plus"></i> Cadastrar
                                 </button>
                               ) : (
-                                <span style={{ background: '#f8fafc', color: '#64748b', border: '1px solid #e2e8f0', padding: '6px 12px', borderRadius: '10px', fontWeight: '800', fontSize: '0.78rem' }}>
-                                  📦 Material Baixado
+                                <span className="badge-material-baixado">
+                                  <i className="fas fa-box"></i> Material Baixado
                                 </span>
                               )
                             )}
 
-                            <button className="action-btn recomprar" onClick={() => handleRecomprar(item)} title="🔁 Recriar/Recomprar este item (Compra Recorrente)">🔁</button>
-                            <button className="action-btn edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar">✏️</button>
-                            <button className="action-btn delete" onClick={() => handleExcluir(item.id, item.nome)} title="Excluir">🗑️</button>
+                            <div className="table-mini-actions-group">
+                              <button className="action-btn recomprar" onClick={() => handleRecomprar(item)} title="Recomprar este item"><i className="fas fa-rotate"></i></button>
+                              <button className="action-btn edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar"><i className="fas fa-pen-to-square"></i></button>
+                              <button className="action-btn delete" onClick={() => handleExcluir(item.id, item.nome)} title="Excluir"><i className="fas fa-trash-can"></i></button>
+                            </div>
                           </div>
                         </td>
                       </tr>
@@ -1319,6 +1342,270 @@ const Compras = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* 📱 VISUALIZAÇÃO MOBILE: CARDS LUXURY ESTRUTURADOS (<= 900px) */}
+          <div className="compras-mobile-cards-view">
+            {loading ? (
+              <div className="compras-empty-state-mobile">
+                <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: '#c5a059' }}></i>
+                <span>Carregando lista de compras...</span>
+              </div>
+            ) : itensFiltrados.length === 0 ? (
+              <div className="compras-empty-state-mobile">
+                <i className="fas fa-box-open" style={{ fontSize: '28px', color: '#94a3b8' }}></i>
+                <span>Nenhum item encontrado com estes filtros.</span>
+              </div>
+            ) : (
+              itensFiltrados.map((item) => {
+                const qtd = Number(item.quantidade) || 1;
+                const valEst = Number(item.valorEstimado) || 0;
+                const valPago = (item.valorPago !== undefined && item.valorPago !== null && item.valorPago !== '') ? Number(item.valorPago) : valEst;
+                const subtotal = qtd * valPago;
+
+                const isPedido = item.vinculoTipo === 'pedido'; 
+                const isPresencial = item.tipoEntrega === '1' || Number(item.diasFrete) === 1;
+                
+                const hoje = new Date();
+                hoje.setHours(0,0,0,0);
+                
+                let alertaClasse = '';
+                let alertaTexto = '';
+                let dataExibicao = 'S/D';
+
+                if (item.status === 'pendente') {
+                    if (isPresencial) {
+                        dataExibicao = 'Presencial';
+                    } else if (isPedido && item.prazo) {
+                        const dataPrazo = new Date(item.prazo + 'T00:00:00');
+                        const diasParaPrazo = Math.ceil((dataPrazo.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+                        dataExibicao = item.prazo.split('-').reverse().join('/');
+                        
+                        if (diasParaPrazo < 0) { 
+                            alertaClasse = 'alerta-vencido';
+                            alertaTexto = '☠️ ATRASADA'; 
+                        } else if (diasParaPrazo === 0) { 
+                            alertaClasse = 'alerta-urgente';
+                            alertaTexto = '🚨 HOJE!'; 
+                        } else if (diasParaPrazo <= 5) { 
+                            alertaClasse = 'alerta-urgente';
+                            alertaTexto = `🚨 ${diasParaPrazo}d`; 
+                        } else if (diasParaPrazo <= 10) { 
+                            alertaClasse = 'alerta-atencao';
+                            alertaTexto = `⚠️ ${diasParaPrazo}d`; 
+                        } else { 
+                            alertaClasse = 'alerta-seguro';
+                            alertaTexto = `✅ Seguro`; 
+                        }
+                    } else {
+                        dataExibicao = 'Online';
+                    }
+                } 
+                else if (item.status === 'comprado') {
+                    let previsaoDate = null;
+                    if (item.dataCompra && item.diasFrete !== undefined) {
+                        previsaoDate = new Date(item.dataCompra);
+                        previsaoDate.setDate(previsaoDate.getDate() + Number(item.diasFrete));
+                    } else if (!isPedido && item.prazo) {
+                        previsaoDate = new Date(item.prazo + 'T00:00:00');
+                    }
+
+                    if (previsaoDate) {
+                        dataExibicao = previsaoDate.toLocaleDateString('pt-BR');
+                        const diasParaChegar = Math.ceil((previsaoDate.getTime() - hoje.getTime()) / (1000 * 60 * 60 * 24));
+                        
+                        if (diasParaChegar < 0) { 
+                            alertaClasse = 'alerta-urgente';
+                            alertaTexto = '🚨 ATRASADO'; 
+                        } else if (diasParaChegar === 0) { 
+                            alertaClasse = 'alerta-seguro';
+                            alertaTexto = '📦 HOJE!'; 
+                        } else { 
+                            alertaClasse = 'alerta-a-caminho';
+                            alertaTexto = `📦 ${diasParaChegar}d`; 
+                        }
+                    } else {
+                        dataExibicao = 'Aguardando';
+                    }
+                } 
+                else if (item.status === 'chegou') {
+                    dataExibicao = isPresencial ? 'Presencial' : 'Entregue';
+                }
+
+                const ehConcluido = isItemConcluido(item);
+                const isSelected = itensSelecionados.includes(item.id);
+
+                return (
+                  <div 
+                    key={item.id} 
+                    className={`compras-mobile-card ${ehConcluido ? 'card-comprado' : ''} ${isSelected ? 'card-selecionado' : ''}`}
+                  >
+                    {/* TOPO: CHECKBOX + NOME + TAG KIT */}
+                    <div className="cm-card-top-header">
+                      <div className="cm-card-title-group">
+                        <input 
+                          type="checkbox" 
+                          checked={isSelected} 
+                          onChange={() => toggleSelecionarItem(item.id)} 
+                          className="compras-checkbox-input"
+                        />
+                        <span className={`cm-card-nome ${ehConcluido ? 'concluido' : ''}`}>
+                          {item.nome} {item.formato === 'kit' && <span className="tag-kit-gold">(KIT)</span>}
+                        </span>
+                      </div>
+
+                      <span className={`badge ${item.status}`}>
+                        {item.status === 'pendente' && 'Pendente'}
+                        {item.status === 'comprado' && 'A Caminho'}
+                        {item.status === 'chegou' && 'No Acervo'}
+                      </span>
+                    </div>
+
+                    {/* VÍNCULO & FORNECEDOR */}
+                    <div className="cm-card-meta-row">
+                      <div 
+                        className="vinculo-tag" 
+                        onClick={() => setFiltroVinculoAtivo(item.vinculo)}
+                        title="Clique para filtrar itens deste vínculo"
+                      >
+                        <i className={isPedido ? "fas fa-link" : "fas fa-box"}></i>
+                        <span>{item.vinculo || "Estoque Geral"}</span>
+                      </div>
+
+                      {item.fornecedor && (
+                        <div className="cm-card-fornecedor-box">
+                          {(item.fornecedor.startsWith('http://') || item.fornecedor.startsWith('https://') || item.fornecedor.startsWith('www.')) ? (
+                            <a 
+                              href={item.fornecedor.startsWith('www.') ? `https://${item.fornecedor}` : item.fornecedor} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="fornecedor-link"
+                            >
+                              <i className="fas fa-arrow-up-right-from-square"></i> Link
+                            </a>
+                          ) : (
+                            <span className="fornecedor-texto-badge"><i className="fas fa-store"></i> {item.fornecedor}</span>
+                          )}
+                          {item.fornecedorTelefone && (
+                            <button 
+                              type="button" 
+                              onClick={() => abrirWhatsAppFornecedor(item.fornecedorTelefone, item.nome, item.quantidade)} 
+                              className="btn-whats-fornecedor"
+                            >
+                              <i className="fab fa-whatsapp"></i> Whats
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* SUB-GRID COM VALOR, QUANTIDADE E LOGÍSTICA */}
+                    <div className="cm-card-body-grid">
+                      <div className="cm-info-col">
+                        <span className="cm-info-label">QUANTIDADE</span>
+                        <strong className="cm-info-val-qtd">{item.quantidade}x</strong>
+                      </div>
+
+                      <div className="cm-info-col" style={{ textAlign: 'right' }}>
+                        <span className="cm-info-label">VALOR TOTAL</span>
+                        <strong className="cm-info-val-preco">
+                          R$ {subtotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                        </strong>
+                        <small className="preco-estimado-sub">
+                          Est: R$ {valEst.toFixed(2)} un.
+                        </small>
+                      </div>
+                    </div>
+
+                    {/* BADGE DE ECONOMIA (SE HOUVER) */}
+                    {item.valorPago !== undefined && item.valorPago !== null && item.valorPago !== '' && (
+                      <div className="cm-card-economia-row">
+                        <span 
+                          className={`badge-valor-pago ${valPago < valEst ? 'economia' : valPago > valEst ? 'excedente' : 'igual'}`}
+                          onClick={() => abrirModalValorPago(item, null)}
+                        >
+                          {valPago < valEst && `🟢 R$ ${valPago.toFixed(2)} un (-R$ ${(valEst - valPago).toFixed(2)})`}
+                          {valPago > valEst && `🔴 R$ ${valPago.toFixed(2)} un (+R$ ${(valPago - valEst).toFixed(2)})`}
+                          {valPago === valEst && `✅ R$ ${valPago.toFixed(2)} un (Estimado)`}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* LINHA DE LOGÍSTICA / PRAZO */}
+                    <div className="cm-card-logistica-line">
+                      <span className={`prazo-badge ${isPedido ? 'prazo-pedido' : 'prazo-estoque'}`}>
+                        <i className={isPedido ? "fas fa-calendar-day" : "fas fa-truck-fast"}></i>
+                        <span>{dataExibicao}</span>
+                      </span>
+
+                      {item.status !== 'chegou' && alertaTexto && (
+                        <span className={`alerta-logistica ${alertaClasse}`}>
+                          {alertaTexto}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* RODAPÉ DE AÇÕES DO CARD */}
+                    <div className="cm-card-footer-actions">
+                      <div className="cm-status-action-box">
+                        {item.status === 'pendente' && (
+                          <button 
+                            className="btn-acao-status comprar" 
+                            onClick={() => isPresencial ? handleStatusChange(item, 'chegou') : handleStatusChange(item, 'comprado')}
+                          >
+                            <i className="fas fa-cart-shopping"></i> {isPresencial ? 'Comprado' : 'A Caminho'}
+                          </button>
+                        )}
+                        
+                        {item.status === 'comprado' && (
+                          <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+                            <button className="btn-acao-status desfazer" onClick={() => handleStatusChange(item, 'pendente')}>
+                              <i className="fas fa-rotate-left"></i> Pendente
+                            </button>
+                            <button className="btn-acao-status chegou" onClick={() => handleStatusChange(item, 'chegou')}>
+                              <i className="fas fa-box-open"></i> Chegou
+                            </button>
+                          </div>
+                        )}
+
+                        {item.status === 'chegou' && (
+                          item.estoqueSomado ? (
+                            <span className="badge-estoque-somado">
+                              <i className="fas fa-check"></i> Estoque Somado (+{item.quantidade || 1})
+                            </span>
+                          ) : (item.isItemExistente || item.vinculoTipo === 'decoracao' || estoqueExistenteNomes.has((item.nome || '').toLowerCase().trim())) ? (
+                            <button 
+                              type="button"
+                              onClick={() => somarManualAoEstoque(item)}
+                              className="btn-somar-estoque-manual"
+                            >
+                              <i className="fas fa-plus"></i> Somar +{item.quantidade || 1} un
+                            </button>
+                          ) : item.categoria !== "material" ? (
+                            <button 
+                              className="btn-cadastrar-acervo" 
+                              onClick={() => navigate('/cadastro-estoque', { state: { dadosCompra: item } })}
+                            >
+                              <i className="fas fa-plus"></i> Cadastrar no Acervo
+                            </button>
+                          ) : (
+                            <span className="badge-material-baixado">
+                              <i className="fas fa-box"></i> Material Baixado
+                            </span>
+                          )
+                        )}
+                      </div>
+
+                      <div className="table-mini-actions-group">
+                        <button className="action-btn recomprar" onClick={() => handleRecomprar(item)} title="Recomprar"><i className="fas fa-rotate"></i></button>
+                        <button className="action-btn edit" onClick={() => navigate(`/compras/editar/${item.id}`)} title="Editar"><i className="fas fa-pen-to-square"></i></button>
+                        <button className="action-btn delete" onClick={() => handleExcluir(item.id, item.nome)} title="Excluir"><i className="fas fa-trash-can"></i></button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
           </div>
         </div>
       ) : (
@@ -1339,8 +1626,9 @@ const Compras = () => {
             </div>
           </div>
 
-          <div className="table-responsive-wrapper">
-            <table className="pro-table">
+          {/* 💻 VISUALIZAÇÃO DESKTOP: TABELA (> 900px) */}
+          <div className="table-responsive-wrapper compras-desktop-table-view">
+            <table className="compras-table">
               <thead>
                 <tr>
                   <th>DECORAÇÃO (TEMA)</th>
@@ -1397,7 +1685,7 @@ const Compras = () => {
                         ) : (
                           <button 
                             type="button"
-                            onClick={() => vincularFaltanteALista(item)}
+                            onClick={() => adicionarItemDecoracaoALista(item)}
                             style={{ background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', padding: '8px 14px', borderRadius: '12px', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)' }}
                           >
                             🛒 Adicionar à Lista
@@ -1409,6 +1697,80 @@ const Compras = () => {
                 )}
               </tbody>
             </table>
+          </div>
+
+          {/* 📱 VISUALIZAÇÃO MOBILE: CARDS DE FALTANTES (<= 900px) */}
+          <div className="compras-mobile-cards-view">
+            {loadingDecoracoes ? (
+              <div className="compras-empty-state-mobile">
+                <i className="fas fa-spinner fa-spin" style={{ fontSize: '20px', color: '#c5a059' }}></i>
+                <span>Analisando estoque e decorações...</span>
+              </div>
+            ) : faltantesFiltradosDecoracao.length === 0 ? (
+              <div className="compras-empty-state-mobile">
+                <i className="fas fa-sparkles" style={{ fontSize: '28px', color: '#c5a059' }}></i>
+                <span>🎉 Nenhuma peça faltante! Todas as peças estão disponíveis no acervo.</span>
+              </div>
+            ) : (
+              faltantesFiltradosDecoracao.map(item => (
+                <div key={item.idUnico} className="faltante-mobile-card">
+                  <div className="fm-card-top-decor">
+                    {item.decoracaoFoto ? (
+                      <img src={item.decoracaoFoto} alt={item.decoracaoNome} className="fm-decor-thumb" />
+                    ) : (
+                      <div className="fm-decor-thumb-placeholder">✨</div>
+                    )}
+                    <div className="fm-decor-info">
+                      <strong className="fm-decor-title">{item.decoracaoNome}</strong>
+                      <span className="fm-decor-sub">Decoração Completa</span>
+                    </div>
+                  </div>
+
+                  <div className="fm-card-peca-box">
+                    {item.pecaFoto ? (
+                      <img src={item.pecaFoto} alt={item.pecaNome} className="fm-peca-thumb" />
+                    ) : (
+                      <div className="fm-peca-thumb-placeholder">📦</div>
+                    )}
+                    <div className="fm-peca-info">
+                      <span className="fm-peca-label">PEÇA FALTANTE</span>
+                      <strong className="fm-peca-title">{item.pecaNome}</strong>
+                    </div>
+                  </div>
+
+                  <div className="fm-card-stats-row">
+                    <div className="fm-stat-item">
+                      <span className="fm-stat-label">NO PACOTE</span>
+                      <strong className="fm-stat-val">{item.qtdNoKit}x</strong>
+                    </div>
+                    <div className="fm-stat-item">
+                      <span className="fm-stat-label">ESTOQUE</span>
+                      <strong className={`fm-stat-val ${item.qtdNoEstoque === 0 ? 'zerado' : ''}`}>{item.qtdNoEstoque}x</strong>
+                    </div>
+                    <div className="fm-stat-item">
+                      <span className="fm-stat-label">FALTA COMPRAR</span>
+                      <strong className="fm-stat-val faltam">-{item.faltam}x</strong>
+                    </div>
+                  </div>
+
+                  <div className="fm-card-action-footer">
+                    {item.jaNaLista ? (
+                      <span className="badge-ja-na-lista">
+                        ✓ Já na Lista de Compras
+                      </span>
+                    ) : (
+                      <button 
+                        type="button"
+                        onClick={() => adicionarItemDecoracaoALista(item)}
+                        className="btn-adicionar-faltante-mobile"
+                      >
+                        🛒 Adicionar à Lista (-{item.faltam}x)
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       )}

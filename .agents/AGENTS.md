@@ -16,3 +16,8 @@
 ## 4. Regra de Estruturação e Semântica de Formulários
 - **Análise Semântica de Inputs**: Ao gerar ou refatorar formulários, campos de dados curtos e semanticamente relacionados (ex: `CEP` e `Cidade`, `Rua` e `Número`, `Data Retirada` e `Data Devolução`, `Valor` e `Desconto`) devem ser agrupados lado a lado (em 2 colunas) em telas médias e grandes (desktop/tablet).
 - **Responsividade Mobile (`<= 768px`)**: Em telas mobile, manter os campos em 1 coluna por padrão para preservar legibilidade e ergonomia de digitação, **exceto** para dados extremamente curtos ou pares complementares objetivos (como `UF` + `Número` ou `CEP` + `Frete`), que podem permanecer em 2 colunas compactas.
+
+## 5. 🔒 Cadeado de Escopo de CSS (Isolamento Total entre Páginas)
+- **OBRIGATÓRIO**: Qualquer estilo CSS criado ou editado para uma página ou modal específico **DEVE ESTAR ESCOFADO (ISOLADO)** dentro da classe raiz daquela tela (ex.: `.cadastro-estoque-container .classe`, `.nova-locacao-page .classe`, `.clientes-container .classe`).
+- **NUNCA** declarar classes utilitárias ou genéricas (ex.: `.form-group`, `.btn-servico-card`, `.span-2`, `.icon-box`) soltas na raiz do CSS global sem o prefixo da página, para **IMEDIR 100% O VAZAMENTO DE ESTILOS** de uma tela para outra.
+

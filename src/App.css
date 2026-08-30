@@ -19,18 +19,18 @@
 }
 
 /* =====================================================
-   🌙 MODO ESCURO 1: DARK MIDNIGHT (AZUL-PETRÓLEO VIBRANTE)
+   🌙 MODO ESCURO PADRÃO: CINZA GRAFITE NOBRE (CHARCOAL LUXURY)
    ===================================================== */
 [data-theme='dark'] {
-  --azul-escuro: #f1f5f9 !important;
-  --fundo-cinza: #1f2937 !important;
-  --bg-main: #0b0f19 !important;
-  --fundo-principal: #0b0f19 !important;
-  --branco: #111827 !important;
-  --fundo-card: #111827 !important;
-  --texto-principal: #f9fafb !important;
-  --texto-secundario: #cbd5e1 !important;
-  --borda: #374151 !important;
+  --azul-escuro: #f4f4f5 !important;
+  --fundo-cinza: #27272a !important;
+  --bg-main: #121212 !important;
+  --fundo-principal: #121212 !important;
+  --branco: #18181b !important;
+  --fundo-card: #18181b !important;
+  --texto-principal: #f4f4f5 !important;
+  --texto-secundario: #a1a1aa !important;
+  --borda: #3f3f46 !important;
   color-scheme: dark;
 }
 
@@ -472,8 +472,6 @@
    ===================================================== */
 
 /* 1. CADASTRAR NO ACERVO / ESTOQUE (PRINT 1) */
-[data-theme='dark'] .cadastro-estoque-container,
-[data-theme='dark'] .estoque-form-layout,
 [data-theme='dark'] .passo-box,
 [data-theme='dark'] .info-box,
 [data-theme='dark'] div[style*="background: #f8fafc"],
