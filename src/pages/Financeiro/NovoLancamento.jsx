@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { db, auth, storage } from "../../firebaseConfig";
 import { collection, addDoc, getDocs, query, where, doc, updateDoc, arrayUnion, serverTimestamp } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { gerarReciboLancamentoPDF } from "../../utils/gerarReciboLancamentoPDF";
-import "./NovoLancamento.css";
+import "./Novolancamento.css";
 
 const NovoLancamento = () => {
   const navigate = useNavigate();
@@ -108,214 +108,31 @@ const NovoLancamento = () => {
         console.warn("Erro ao carregar fornecedores auxiliares:", errForn);
       }
 
-      // 4. Ordens de Compra
+      // 4. Compras da Empresa
       try {
-        const qComp = query(collection(db, "compras"), where("userId", "==", tenantId));
+        const qComp = query(collection(db, "lista_compras"), where("userId", "==", tenantId));
         const snapComp = await getDocs(qComp);
         setCompras(snapComp.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (errComp) {
-        console.warn("Erro ao carregar compras auxiliares:", errComp);
+        console.warn("Erro ao carregar ordens de compra:", errComp);
       }
 
-      // 5. Peças do Acervo / Estoque
+      // 5. Peças do Acervo
       try {
-        const qEst = query(collection(db, "estoque"), where("userId", "==", tenantId));
-        const snapEst = await getDocs(qEst);
-        setPecasAcervo(snapEst.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (errEst) {
-        console.warn("Erro ao carregar estoque auxiliar:", errEst);
+        const qPecas = query(collection(db, "estoque"), where("userId", "==", tenantId));
+        const snapPecas = await getDocs(qPecas);
+        setPecasAcervo(snapPecas.docs.map(d => ({ id: d.id, ...d.data() })));
+      } catch (errPecas) {
+        console.warn("Erro ao carregar peças do acervo:", errPecas);
       }
 
       setCarregandoListas(false);
     };
 
     carregarDadosAuxiliares();
-  }, [usuarioLogado, tenantId, navigate]);
+  }, [usuarioLogado, navigate, tenantId]);
 
-  // 🎯 AUTO-SELEÇÃO DE PEDIDO / CLIENTE / PEÇA VIA NAVEGAÇÃO DE ATALHO (Agenda / Clientes / Locações / Estoque)
-  useEffect(() => {
-    if (location.state?.pecaId) {
-      setNovo(prev => ({
-        ...prev,
-        tipo: 'saida',
-        categoria: 'Manutenção e Reparos',
-        centroCusto: 'Manutenção Acervo',
-        pecaId: location.state.pecaId,
-        pecaNome: location.state.pecaNome || prev.pecaNome,
-        valor: location.state.valor || prev.valor,
-        descricao: location.state.descricao || `Manutenção da Peça: ${location.state.pecaNome || ''}`
-      }));
-      if (location.state.valor) {
-        setValDisplay(formatarMoedaInput(location.state.valor));
-      }
-    } else if (locacoes.length > 0) {
-      const targetLocId = location.state?.locacaoId || location.state?.pedidoId;
-      if (targetLocId) {
-        handleLocacaoSelect(targetLocId);
-      } else if (location.state?.clienteId) {
-        setNovo(prev => ({
-          ...prev,
-          clienteId: location.state.clienteId,
-          clienteNome: location.state.clienteNome || prev.clienteNome
-        }));
-      }
-    }
-  }, [locacoes, location.state]);
-
-  // 💰 FORMATADOR DE MOEDA EM TEMPO REAL (R$)
-  const formatarMoedaInput = (valorNumerico) => {
-    if (!valorNumerico && valorNumerico !== 0) return "";
-    return (Number(valorNumerico)).toLocaleString("pt-BR", {
-      style: "currency",
-      currency: "BRL"
-    });
-  };
-
-  const handleValorChange = (e) => {
-    const raw = e.target.value.replace(/\D/g, "");
-    if (!raw) {
-      setValDisplay("");
-      setNovo(prev => ({ ...prev, valor: "" }));
-      return;
-    }
-    const num = Number(raw) / 100;
-    setNovo(prev => ({ ...prev, valor: num }));
-    setValDisplay(formatarMoedaInput(num));
-  };
-
-  const adicionarValorRapido = (adicional) => {
-    const valorAtual = Number(novo.valor) || 0;
-    const novoValor = valorAtual + adicional;
-    setNovo(prev => ({ ...prev, valor: novoValor }));
-    setValDisplay(formatarMoedaInput(novoValor));
-  };
-
-  // 🧮 CALCULADORA DE TAXAS E DESCONTOS
-  const aplicarDesconto = (porcentagem) => {
-    const valAtual = Number(novo.valor) || 0;
-    if (valAtual <= 0) return;
-    const novoVal = valAtual * (1 - porcentagem / 100);
-    setNovo(prev => ({ ...prev, valor: novoVal }));
-    setValDisplay(formatarMoedaInput(novoVal));
-  };
-
-  const aplicarTaxa = (porcentagem) => {
-    const valAtual = Number(novo.valor) || 0;
-    if (valAtual <= 0) return;
-    const novoVal = valAtual * (1 + porcentagem / 100);
-    setNovo(prev => ({ ...prev, valor: novoVal }));
-    setValDisplay(formatarMoedaInput(novoVal));
-  };
-
-  // ⚡ PREENCHIMENTO AUTOMÁTICO PELO PEDIDO
-  const handleLocacaoSelect = (locId) => {
-    if (!locId) {
-      setNovo(prev => ({ 
-        ...prev, 
-        locacaoId: "", 
-        locacaoNumero: "", 
-        clienteId: "", 
-        clienteNome: "" 
-      }));
-      return;
-    }
-
-    const loc = locacoes.find(l => l.id === locId);
-    if (loc) {
-      const total = Number(loc.valorTotal || loc.total || loc.financeiro?.total || 0);
-      const jaPago = Number(loc.valorPago || 0);
-      const resta = Math.max(0, total - jaPago);
-
-      const numPed = loc.numeroPedido || loc.numero || (loc.id ? loc.id.slice(0, 6).toUpperCase() : '');
-      const cliNome = loc.clienteNome || loc.nomeCliente || "";
-      const cliId = loc.clienteId || "";
-
-      const valorSugerido = resta > 0 ? resta : (total > 0 ? total : novo.valor);
-
-      setNovo(prev => ({
-        ...prev,
-        locacaoId: loc.id,
-        locacaoNumero: numPed,
-        clienteId: cliId || prev.clienteId,
-        clienteNome: cliNome || prev.clienteNome,
-        valor: valorSugerido,
-        descricao: `Locação Pedido #${numPed}${cliNome ? ' - ' + cliNome : ''}`
-      }));
-
-      if (valorSugerido > 0) {
-        setValDisplay(formatarMoedaInput(valorSugerido));
-      }
-    }
-  };
-
-  // 🛒 SELEÇÃO E PREENCHIMENTO POR ORDEM DE COMPRA
-  const handleCompraSelect = (compId) => {
-    if (!compId) {
-      setNovo(prev => ({ ...prev, compraId: "" }));
-      return;
-    }
-    const comp = compras.find(c => c.id === compId);
-    if (comp) {
-      const valComp = Number(comp.valorTotal || comp.valor || 0);
-      setNovo(prev => ({
-        ...prev,
-        compraId: comp.id,
-        fornecedorId: comp.fornecedorId || prev.fornecedorId,
-        fornecedorNome: comp.fornecedorNome || comp.fornecedor || prev.fornecedorNome,
-        valor: valComp > 0 ? valComp : prev.valor,
-        descricao: `Pagamento Compra #${comp.numero || comp.id.slice(0,6)} - ${comp.nomeItem || comp.descricao || 'Acervo'}`
-      }));
-      if (valComp > 0) {
-        setValDisplay(formatarMoedaInput(valComp));
-      }
-    }
-  };
-
-  // 🛠️ SELEÇÃO DE PEÇA DO ACERVO
-  const handlePecaSelect = (pId) => {
-    if (!pId) {
-      setNovo(prev => ({ ...prev, pecaId: "", pecaNome: "" }));
-      return;
-    }
-    const p = pecasAcervo.find(item => item.id === pId);
-    if (p) {
-      setNovo(prev => ({
-        ...prev,
-        pecaId: p.id,
-        pecaNome: p.nome || p.titulo || ""
-      }));
-    }
-  };
-
-  // 📎 SELEÇÃO E UPLOAD DE COMPROVANTE
-  const handleFileChange = (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (file.size > 10 * 1024 * 1024) {
-      alert("O arquivo excede o limite máximo de 10MB.");
-      return;
-    }
-
-    setArquivoComprovante(file);
-    setNomeArquivo(file.name);
-
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onloadend = () => setPreviewComprovante(reader.result);
-      reader.readAsDataURL(file);
-    } else {
-      setPreviewComprovante("pdf");
-    }
-  };
-
-  const removerComprovante = () => {
-    setArquivoComprovante(null);
-    setPreviewComprovante(null);
-    setNomeArquivo("");
-  };
-
-  // 🔥 REGISTRO DE AUDITORIA
+  // Sistema de Auditoria de Logs
   const registrarLog = async (acao, detalhes) => {
     try {
       const nomeEquipa = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Equipe";
@@ -330,23 +147,159 @@ const NovoLancamento = () => {
         dataHora: new Date().toISOString(),
         criadoEm: serverTimestamp()
       });
-    } catch (error) {
-      console.error("Erro ao gravar log da auditoria:", error);
+    } catch (errLog) {
+      console.warn("Erro ao gravar log de auditoria:", errLog);
     }
   };
 
-  // 💬 DISPARO DE NOTIFICAÇÃO NO WHATSAPP DO CLIENTE/FORNECEDOR
-  const enviarWhatsAppComprovante = (itemSalvo) => {
-    let whatsappNum = "";
-    if (itemSalvo.clienteId) {
-      const cli = clientes.find(c => c.id === itemSalvo.clienteId);
-      whatsappNum = cli?.whatsapp || cli?.telefone || "";
-    } else if (itemSalvo.fornecedorId) {
-      const forn = fornecedores.find(f => f.id === itemSalvo.fornecedorId);
-      whatsappNum = forn?.whatsapp || forn?.telefone || "";
+  // Máscara monetária do input de valor
+  const handleValorChange = (e) => {
+    let digits = e.target.value.replace(/\D/g, "");
+    if (!digits) {
+      setValDisplay("");
+      setNovo(prev => ({ ...prev, valor: "" }));
+      return;
+    }
+    const num = Number(digits) / 100;
+    setValDisplay(num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+    setNovo(prev => ({ ...prev, valor: num }));
+  };
+
+  const adicionarValorRapido = (adicional) => {
+    const valAtual = Number(novo.valor) || 0;
+    const novoValor = valAtual + adicional;
+    setNovo(prev => ({ ...prev, valor: novoValor }));
+    setValDisplay(novoValor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+  };
+
+  const aplicarDesconto = (percentual) => {
+    const valAtual = Number(novo.valor) || 0;
+    if (valAtual <= 0) return;
+    const novoValor = Math.max(0, valAtual * (1 - percentual / 100));
+    setNovo(prev => ({ ...prev, valor: novoValor }));
+    setValDisplay(novoValor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+  };
+
+  const aplicarTaxa = (percentual) => {
+    const valAtual = Number(novo.valor) || 0;
+    if (valAtual <= 0) return;
+    const novoValor = valAtual * (1 + percentual / 100);
+    setNovo(prev => ({ ...prev, valor: novoValor }));
+    setValDisplay(novoValor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+  };
+
+  // Seleção Inteligente de Locação
+  const handleLocacaoSelect = (locId) => {
+    if (!locId) {
+      setNovo(prev => ({ ...prev, locacaoId: "", locacaoNumero: "" }));
+      return;
+    }
+    const locAlvo = locacoes.find(l => l.id === locId);
+    if (!locAlvo) return;
+
+    const total = Number(locAlvo.valorTotal || locAlvo.total || locAlvo.financeiro?.total || 0);
+    const jaPago = Number(locAlvo.valorPago || 0);
+    const saldoDevedor = Math.max(0, total - jaPago);
+
+    const cliId = locAlvo.clienteId || locAlvo.cliente?.id || "";
+    const cliNome = locAlvo.clienteNome || locAlvo.nomeCliente || locAlvo.cliente?.nome || "";
+
+    const numPedido = locAlvo.numeroPedido || locAlvo.numero || locAlvo.id.slice(0, 6).toUpperCase();
+
+    setNovo(prev => ({
+      ...prev,
+      locacaoId: locId,
+      locacaoNumero: numPedido,
+      clienteId: cliId || prev.clienteId,
+      clienteNome: cliNome || prev.clienteNome,
+      descricao: prev.descricao ? prev.descricao : `Locação #${numPedido} - ${cliNome}`,
+      valor: prev.valor ? prev.valor : saldoDevedor
+    }));
+
+    if (!valDisplay && saldoDevedor > 0) {
+      setValDisplay(saldoDevedor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+    }
+  };
+
+  // Seleção de Compra
+  const handleCompraSelect = (compId) => {
+    if (!compId) {
+      setNovo(prev => ({ ...prev, compraId: "" }));
+      return;
+    }
+    const compAlvo = compras.find(c => c.id === compId);
+    if (!compAlvo) return;
+
+    const vCompra = Number(compAlvo.valorTotal || compAlvo.valor || 0);
+    const descCompra = compAlvo.nomeItem || compAlvo.descricao || "Compra de Materiais";
+
+    setNovo(prev => ({
+      ...prev,
+      compraId: compId,
+      fornecedorNome: compAlvo.fornecedor || prev.fornecedorNome,
+      descricao: prev.descricao ? prev.descricao : `Pagamento Compra #${compAlvo.numero || compAlvo.id.slice(0, 6)}: ${descCompra}`,
+      valor: prev.valor ? prev.valor : vCompra
+    }));
+
+    if (!valDisplay && vCompra > 0) {
+      setValDisplay(vCompra.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }));
+    }
+  };
+
+  // Seleção de Peça de Acervo
+  const handlePecaSelect = (pecaId) => {
+    if (!pecaId) {
+      setNovo(prev => ({ ...prev, pecaId: "", pecaNome: "" }));
+      return;
+    }
+    const pecaAlvo = pecasAcervo.find(p => p.id === pecaId);
+    if (!pecaAlvo) return;
+
+    setNovo(prev => ({
+      ...prev,
+      pecaId: pecaId,
+      pecaNome: pecaAlvo.nome || pecaAlvo.titulo || "Peça",
+      descricao: prev.descricao ? prev.descricao : `Manutenção / Conserto da Peça: ${pecaAlvo.nome || pecaAlvo.titulo}`
+    }));
+  };
+
+  // Manipulação de Arquivo de Comprovante
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+      alert("O arquivo é muito grande! Tamanho máximo: 10MB.");
+      return;
     }
 
-    const numLimpo = whatsappNum.replace(/\D/g, "");
+    setArquivoComprovante(file);
+    setNomeArquivo(file.name);
+
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (event) => setPreviewComprovante(event.target.result);
+      reader.readAsDataURL(file);
+    } else {
+      setPreviewComprovante(null);
+    }
+  };
+
+  const removerComprovante = () => {
+    setArquivoComprovante(null);
+    setPreviewComprovante(null);
+    setNomeArquivo("");
+  };
+
+  const enviarWhatsAppComprovante = (itemSalvo) => {
+    let numLimpo = "";
+    if (itemSalvo.clienteId) {
+      const cli = clientes.find(c => c.id === itemSalvo.clienteId);
+      if (cli?.telefone || cli?.celular || cli?.whatsapp) {
+        numLimpo = (cli.whatsapp || cli.celular || cli.telefone).replace(/\D/g, "");
+      }
+    }
+
     const valorTxt = Number(itemSalvo.valorTotal || itemSalvo.valor || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
     const isEntrada = itemSalvo.tipo === 'entrada';
 
@@ -479,7 +432,7 @@ const NovoLancamento = () => {
       // 🔥 4. DAR BAIXA NA ORDEM DE COMPRA SE VINCULADA
       if (novo.compraId && novo.status === 'pago') {
         try {
-          const compRef = doc(db, "compras", novo.compraId);
+          const compRef = doc(db, "lista_compras", novo.compraId);
           await updateDoc(compRef, {
             statusPagamento: "Pago",
             dataPagamento: novo.data,
@@ -529,91 +482,162 @@ const NovoLancamento = () => {
   const isEntrada = novo.tipo === 'entrada';
 
   return (
-    <div className="pag-novo-lancamento">
-      {/* CABEÇALHO DA PÁGINA */}
-      <header className="header-nl">
-        <button className="btn-voltar-nl" onClick={() => navigate("/financeiro")}>
-          ← Voltar ao Financeiro
-        </button>
-        <h2>{isEntrada ? '💰 Nova Receita (Entrada)' : '📄 Nova Despesa (Saída)'}</h2>
-      </header>
+    <div className="pag-novo-lancamento form-page-container fade-in">
 
-      <div className="nl-container">
-        <div className={`nl-card ${isEntrada ? 'card-entrada' : 'card-saida'}`}>
-
-          {/* 🖼️ HEADER DO CARD DINÂMICO COMPACTO */}
-          <div className={`nl-card-banner ${isEntrada ? 'banner-entrada' : 'banner-saida'}`}>
-            <div className="nl-banner-info">
-              <span className={`nl-badge ${isEntrada ? 'badge-entrada' : 'badge-saida'}`}>
-                {isEntrada ? '🟢 ENTRADA DE RECURSOS' : '🔴 SAÍDA DE RECURSOS'}
-              </span>
-              <h3>{isEntrada ? 'Cadastrar Nova Receita' : 'Cadastrar Nova Despesa'}</h3>
+      {/* ===== HERO CABEÇALHO & BREADCRUMB (PADRÃO CLIENTES & COMPRAS) ===== */}
+      <div className="cadastro-hero-header">
+        <div className="cadastro-hero-left">
+          <div className="breadcrumb-nav">
+            <Link to="/financeiro"><i className="fas fa-coins"></i> Financeiro</Link>
+            <span className="separator">/</span>
+            <span className="current-page">{isEntrada ? 'Nova Receita' : 'Nova Despesa'}</span>
+          </div>
+          <div className="hero-title-group">
+            <div className="header-icon-badge">
+              <i className={isEntrada ? "fas fa-arrow-trend-up" : "fas fa-arrow-trend-down"}></i>
             </div>
-            <div className="nl-tipo-selector-mini">
-              <button
-                type="button"
-                className={`nl-tipo-btn ${isEntrada ? 'ativo-entrada' : ''}`}
-                onClick={() => setNovo(prev => ({ ...prev, tipo: 'entrada', categoria: 'Locação', centroCusto: 'Pegue & Monte' }))}
-              >
-                🟢 ENTRADA
-              </button>
-              <button
-                type="button"
-                className={`nl-tipo-btn ${!isEntrada ? 'ativo-saida' : ''}`}
-                onClick={() => setNovo(prev => ({ ...prev, tipo: 'saida', categoria: 'Compra para Estoque', centroCusto: 'Infraestrutura Galpão' }))}
-              >
-                🔴 SAÍDA
-              </button>
+            <div>
+              <h1 className="form-page-title">{isEntrada ? 'Cadastrar Nova Receita' : 'Cadastrar Nova Despesa'}</h1>
+              <p className="form-page-subtitle">Registre recebimentos de locações, vendas ou pagamentos e despesas operacionais.</p>
             </div>
           </div>
+        </div>
+        <div className="cadastro-hero-right-actions">
+          <button type="button" className="btn-secondary-celebre" onClick={() => navigate('/financeiro')}>
+            <i className="fas fa-arrow-left"></i>
+            <span>Voltar ao Financeiro</span>
+          </button>
+        </div>
+      </div>
 
-          {/* FORMULÁRIO EM GRADE 2 COLUNAS LADO A LADO */}
-          <form onSubmit={handleSalvar} className="nl-form">
+      {/* ===== FORMULÁRIO WIDESCREEN & CARTÃO UNIFICADO ===== */}
+      <div className="form-widescreen">
+        <form onSubmit={handleSalvar}>
+          <div className="form-section-card unified-sheet-card">
 
-            <div className="nl-grid-2col">
-              
-              {/* 🟢 COLUNA ESQUERDA: VALORES, DESCRIÇÃO, CATEGORIA, COMPRAS E PEÇA DO ACERVO */}
-              <div className="nl-col">
-                
-                {/* VALOR COM MÁSCARA MONETÁRIA */}
-                <div className="nl-group nl-group-valor">
-                  <label>
-                    Valor {novo.tipo === 'saida' && novo.formaPagto === 'Cartão de Crédito' ? 'Base (R$)' : '(R$)'} *
+            {/* SEÇÃO 1: TIPO DE RECURSO (RECEITA VS DESPESA) */}
+            <div className="unified-section-header">
+              <span className="section-header-icon">
+                <i className="fas fa-money-bill-transfer"></i>
+              </span>
+              <div>
+                <h3>NATUREZA DO LANÇAMENTO</h3>
+                <p>Escolha se este lançamento é uma entrada ou saída de caixa</p>
+              </div>
+            </div>
+
+            <div className="toggle-servico-vip nl-tipo-grid">
+              <button
+                type="button"
+                className={`btn-servico-card ${isEntrada ? 'active' : ''}`}
+                onClick={() => setNovo(prev => ({ ...prev, tipo: 'entrada', categoria: 'Locação', centroCusto: 'Pegue & Monte' }))}
+                title="Entrada de dinheiro no caixa"
+              >
+                <div className="servico-icon-box">
+                  <i className="fas fa-circle-arrow-up" style={{ color: isEntrada ? '#ffffff' : '#16a34a' }}></i>
+                </div>
+                <div className="servico-info">
+                  <strong>🟢 Receita / Entrada</strong>
+                  <small>Locações, vendas, fretes e entradas de recursos</small>
+                </div>
+                <div className="servico-check-badge">
+                  {isEntrada && <span className="check-mark">✓</span>}
+                </div>
+              </button>
+
+              <button
+                type="button"
+                className={`btn-servico-card ${!isEntrada ? 'active' : ''}`}
+                onClick={() => setNovo(prev => ({ ...prev, tipo: 'saida', categoria: 'Compra para Estoque', centroCusto: 'Infraestrutura Galpão' }))}
+                title="Saída de dinheiro do caixa"
+              >
+                <div className="servico-icon-box">
+                  <i className="fas fa-circle-arrow-down" style={{ color: !isEntrada ? '#ffffff' : '#dc2626' }}></i>
+                </div>
+                <div className="servico-info">
+                  <strong>🔴 Despesa / Saída</strong>
+                  <small>Compras, manutenção, taxas, luz, equipe e despesas</small>
+                </div>
+                <div className="servico-check-badge">
+                  {!isEntrada && <span className="check-mark">✓</span>}
+                </div>
+              </button>
+            </div>
+
+            {/* SEÇÃO 2: VALORES E DETALHES PRINCIPAIS */}
+            <div className="form-section-divider"></div>
+
+            <div className="unified-section-header">
+              <span className="section-header-icon">
+                <i className="fas fa-sack-dollar"></i>
+              </span>
+              <div>
+                <h3>VALOR E IDENTIFICAÇÃO</h3>
+                <p>Informe o valor, data de liquidação, descrição e classificação</p>
+              </div>
+            </div>
+
+            <div className="form-grid-4">
+
+              {/* LINHA 1: VALOR (Largo) + DATA DO LANÇAMENTO (Compacto) NA MESMA LINHA */}
+              <div className="nc-row-nome-qtd span-4">
+                <div className="form-group nc-field-nome">
+                  <label htmlFor="nl-valor">
+                    VALOR {novo.tipo === 'saida' && novo.formaPagto === 'Cartão de Crédito' ? 'BASE (R$)' : '(R$)'} *
                   </label>
-                  <div className="nl-input-valor-wrapper">
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon">
+                      <strong style={{ fontSize: '0.75rem', color: isEntrada ? '#16a34a' : '#dc2626' }}>R$</strong>
+                    </span>
                     <input
+                      id="nl-valor"
                       type="text"
                       placeholder="R$ 0,00"
                       required
                       autoFocus
-                      className={`nl-input-valor ${isEntrada ? 'entrada' : 'saida'}`}
+                      className="nl-input-valor-celebre"
                       value={valDisplay}
                       onChange={handleValorChange}
                     />
                   </div>
 
-                  {/* 🔘 PÍLULAS DE ADIÇÃO RÁPIDA E 🧮 CALCULADORA DE TAXAS/DESCONTOS */}
-                  <div className="nl-pilulas-valor">
-                    <span className="pilula-rotulo">+ Rápido:</span>
-                    <button type="button" onClick={() => adicionarValorRapido(50)}>+50</button>
-                    <button type="button" onClick={() => adicionarValorRapido(100)}>+100</button>
-                    <button type="button" onClick={() => adicionarValorRapido(250)}>+250</button>
-                    <button type="button" onClick={() => adicionarValorRapido(500)}>+500</button>
-
-                    <span className="pilula-divisor">|</span>
-
-                    {/* CALCULADORA DE TAXAS E DESCONTOS */}
-                    <button type="button" className="btn-calc-desc" onClick={() => aplicarDesconto(5)} title="Desconto de 5%">-5%</button>
-                    <button type="button" className="btn-calc-desc" onClick={() => aplicarDesconto(10)} title="Desconto de 10%">-10%</button>
-                    <button type="button" className="btn-calc-taxa" onClick={() => aplicarTaxa(3.5)} title="Taxa maquininha 3.5%">+3.5%</button>
-                    <button type="button" className="btn-calc-taxa" onClick={() => aplicarTaxa(4.9)} title="Taxa maquininha 4.9%">+4.9%</button>
+                  {/* Pílulas de adição rápida e cálculo */}
+                  <div className="nl-pilulas-bar">
+                    <span className="pilula-lbl">+ Rápido:</span>
+                    <button type="button" className="btn-pilula" onClick={() => adicionarValorRapido(50)}>+50</button>
+                    <button type="button" className="btn-pilula" onClick={() => adicionarValorRapido(100)}>+100</button>
+                    <button type="button" className="btn-pilula" onClick={() => adicionarValorRapido(250)}>+250</button>
+                    <button type="button" className="btn-pilula" onClick={() => adicionarValorRapido(500)}>+500</button>
+                    <span className="pilula-div">|</span>
+                    <button type="button" className="btn-pilula-taxa" onClick={() => aplicarDesconto(5)} title="Desconto 5%">-5%</button>
+                    <button type="button" className="btn-pilula-taxa" onClick={() => aplicarDesconto(10)} title="Desconto 10%">-10%</button>
+                    <button type="button" className="btn-pilula-taxa" onClick={() => aplicarTaxa(3.5)} title="Taxa 3.5%">+3.5%</button>
                   </div>
                 </div>
 
-                {/* DESCRIÇÃO / TÍTULO */}
-                <div className="nl-group">
-                  <label>Descrição / Título *</label>
+                <div className="form-group nc-field-qtd">
+                  <label htmlFor="nl-data">
+                    {novo.status === 'pago' 
+                      ? (isEntrada ? 'RECEBIMENTO *' : 'PAGAMENTO *') 
+                      : 'VENCIMENTO *'}
+                  </label>
                   <input
+                    id="nl-data"
+                    type="date"
+                    required
+                    value={novo.data}
+                    onChange={e => setNovo({ ...novo, data: e.target.value })}
+                  />
+                </div>
+              </div>
+
+              {/* LINHA 2: DESCRIÇÃO / TÍTULO + SITUAÇÃO DO PAGAMENTO */}
+              <div className="form-group span-3">
+                <label htmlFor="nl-desc">DESCRIÇÃO / TÍTULO *</label>
+                <div className="input-icon-wrapper">
+                  <span className="input-left-icon"><i className="fas fa-file-lines"></i></span>
+                  <input
+                    id="nl-desc"
                     type="text"
                     placeholder={isEntrada ? "Ex: Pagamento locação Ana Silva..." : "Ex: Compra de Bexigas, Luz..."}
                     required
@@ -621,75 +645,189 @@ const NovoLancamento = () => {
                     onChange={e => setNovo({ ...novo, descricao: e.target.value })}
                   />
                 </div>
+              </div>
 
-                {/* CATEGORIA E FORMA DE PAGAMENTO */}
-                <div className="nl-subrow">
-                  <div className="nl-group">
-                    <label>Categoria *</label>
-                    <select 
-                      value={novo.categoria} 
-                      onChange={e => setNovo({ ...novo, categoria: e.target.value })}
-                    >
-                      {isEntrada
-                        ? categoriasEntrada.map(cat => <option key={cat} value={cat}>{cat}</option>)
-                        : categoriasSaida.map(cat => <option key={cat} value={cat}>{cat}</option>)
-                      }
-                    </select>
-                  </div>
+              <div className="form-group span-1 col-mobile-half">
+                <label htmlFor="nl-status">SITUAÇÃO *</label>
+                <select
+                  id="nl-status"
+                  value={novo.status}
+                  onChange={e => setNovo({ ...novo, status: e.target.value })}
+                  className={novo.status === 'pago' ? 'select-status-pago' : 'select-status-pendente'}
+                >
+                  <option value="pago">{isEntrada ? '✅ Recebido' : '✅ Pago'}</option>
+                  <option value="pendente">⏳ Pendente</option>
+                </select>
+              </div>
 
-                  <div className="nl-group">
-                    <label>Forma de Pagto *</label>
-                    <select 
-                      value={novo.formaPagto} 
-                      onChange={e => setNovo({ ...novo, formaPagto: e.target.value })}
-                    >
-                      <option value="Pix">⚡ PIX Instantâneo</option>
-                      <option value="Dinheiro">💵 Dinheiro em Espécie</option>
-                      <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
-                      <option value="Cartão de Débito">💳 Cartão de Débito</option>
-                      <option value="Transferência">🏦 Transferência / TED</option>
-                      <option value="Boleto Bancário">📄 Boleto Bancário</option>
-                      <option value="A Cobrar">⏳ A Cobrar / Fiado</option>
-                    </select>
-                  </div>
+              {/* LINHA 3: CATEGORIA + FORMA DE PAGAMENTO + CENTRO DE CUSTO */}
+              <div className="form-group span-2 col-mobile-half">
+                <label htmlFor="nl-cat">CATEGORIA *</label>
+                <select 
+                  id="nl-cat"
+                  value={novo.categoria} 
+                  onChange={e => setNovo({ ...novo, categoria: e.target.value })}
+                >
+                  {isEntrada
+                    ? categoriasEntrada.map(cat => <option key={cat} value={cat}>{cat}</option>)
+                    : categoriasSaida.map(cat => <option key={cat} value={cat}>{cat}</option>)
+                  }
+                </select>
+              </div>
+
+              <div className="form-group span-2 col-mobile-half">
+                <label htmlFor="nl-forma">FORMA DE PAGAMENTO *</label>
+                <select 
+                  id="nl-forma"
+                  value={novo.formaPagto} 
+                  onChange={e => setNovo({ ...novo, formaPagto: e.target.value })}
+                >
+                  <option value="Pix">⚡ PIX Instantâneo</option>
+                  <option value="Dinheiro">💵 Dinheiro em Espécie</option>
+                  <option value="Cartão de Crédito">💳 Cartão de Crédito</option>
+                  <option value="Cartão de Débito">💳 Cartão de Débito</option>
+                  <option value="Transferência">🏦 Transferência / TED</option>
+                  <option value="Boleto Bancário">📄 Boleto Bancário</option>
+                  <option value="A Cobrar">⏳ A Cobrar / Fiado</option>
+                </select>
+              </div>
+
+              <div className={`form-group ${novo.tipo === 'saida' && novo.formaPagto === 'Cartão de Crédito' ? 'span-2 col-mobile-half' : 'span-4'}`}>
+                <label htmlFor="nl-centro">🏷️ CENTRO DE CUSTO / TAG *</label>
+                <select 
+                  id="nl-centro"
+                  value={novo.centroCusto} 
+                  onChange={e => setNovo({ ...novo, centroCusto: e.target.value })}
+                >
+                  {isEntrada
+                    ? centrosCustoEntrada.map(cc => <option key={cc} value={cc}>{cc}</option>)
+                    : centrosCustoSaida.map(cc => <option key={cc} value={cc}>{cc}</option>)
+                  }
+                </select>
+              </div>
+
+              {novo.tipo === 'saida' && novo.formaPagto === 'Cartão de Crédito' && (
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="nl-parcelas">PARCELAS NO CARTÃO</label>
+                  <select 
+                    id="nl-parcelas"
+                    value={novo.parcelas} 
+                    onChange={e => setNovo({ ...novo, parcelas: e.target.value })}
+                  >
+                    {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n}x</option>)}
+                  </select>
                 </div>
+              )}
 
-                {/* 🏷️ CENTRO DE CUSTO / TAG DO LANÇAMENTO */}
-                <div className="nl-subrow">
-                  <div className="nl-group">
-                    <label>🏷️ Centro de Custo / Tag *</label>
-                    <select 
-                      value={novo.centroCusto} 
-                      onChange={e => setNovo({ ...novo, centroCusto: e.target.value })}
-                    >
-                      {isEntrada
-                        ? centrosCustoEntrada.map(cc => <option key={cc} value={cc}>{cc}</option>)
-                        : centrosCustoSaida.map(cc => <option key={cc} value={cc}>{cc}</option>)
-                      }
-                    </select>
-                  </div>
+            </div>
 
-                  {/* PARCELAMENTO E JUROS SE CARTÃO */}
-                  {novo.tipo === 'saida' && novo.formaPagto === 'Cartão de Crédito' && (
-                    <div className="nl-group">
-                      <label>Parcelas / Juros</label>
-                      <div className="nl-input-parcelas-row">
-                        <select 
-                          value={novo.parcelas} 
-                          onChange={e => setNovo({ ...novo, parcelas: e.target.value })}
-                        >
-                          {[1,2,3,4,5,6,7,8,9,10,11,12].map(n => <option key={n} value={n}>{n}x</option>)}
-                        </select>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            {/* SEÇÃO 3: VÍNCULOS AUXILIARES (PEDIDO, CLIENTE, FORNECEDOR, ACERVO) */}
+            <div className="form-section-divider"></div>
 
-                {/* 🛒 VÍNCULO COM ORDEM DE COMPRA (SE DESPESA) */}
-                {!isEntrada && (
-                  <div className="nl-group">
-                    <label>🛒 Vincular Ordem de Compra (Dar baixa)</label>
+            <div className="unified-section-header">
+              <span className="section-header-icon">
+                <i className="fas fa-link"></i>
+              </span>
+              <div>
+                <h3>VÍNCULOS E INTEGRAÇÃO</h3>
+                <p>Vincule a uma locação, cliente, fornecedor ou peça do acervo</p>
+              </div>
+            </div>
+
+            <div className="form-grid-4">
+
+              {/* VÍNCULO PEDIDO / LOCAÇÃO */}
+              <div className="form-group span-2 col-mobile-half">
+                <label htmlFor="nl-locacao">⚡ VINCULAR PEDIDO / LOCAÇÃO</label>
+                <select
+                  id="nl-locacao"
+                  value={novo.locacaoId}
+                  onChange={e => handleLocacaoSelect(e.target.value)}
+                  disabled={carregandoListas}
+                >
+                  <option value="">-- Nenhum pedido selecionado --</option>
+                  {locacoes.map(loc => {
+                    const total = Number(loc.valorTotal || loc.total || loc.financeiro?.total || 0);
+                    const jaPago = Number(loc.valorPago || 0);
+                    const resta = Math.max(0, total - jaPago);
+                    
+                    const numPed = loc.numeroPedido || loc.numero || (loc.id ? loc.id.slice(0, 6).toUpperCase() : '');
+                    const numTxt = numPed ? `Pedido #${numPed}` : 'Pedido';
+                    const cliNome = loc.clienteNome || loc.nomeCliente || "Cliente sem nome";
+                    const dtEvento = formatarDataBr(loc.dataRetirada || loc.dataEvento || loc.data || "");
+                    const dtTxt = dtEvento ? ` (${dtEvento})` : "";
+                    const restaTxt = resta > 0 
+                      ? `Falta: R$ ${resta.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` 
+                      : `(QUITADO)`;
+
+                    return (
+                      <option key={loc.id} value={loc.id}>
+                        {numTxt} • {cliNome}{dtTxt} • {restaTxt}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+
+              {/* CLIENTE OU FORNECEDOR */}
+              <div className="form-group span-2 col-mobile-half">
+                <label htmlFor="nl-clifor">
+                  {isEntrada ? '👤 CLIENTE VINCULADO' : '🏭 FORNECEDOR VINCULADO'}
+                </label>
+                {isEntrada ? (
+                  <select
+                    id="nl-clifor"
+                    value={novo.clienteId}
+                    onChange={e => {
+                      const id = e.target.value;
+                      const cli = clientes.find(c => c.id === id);
+                      setNovo(prev => ({
+                        ...prev,
+                        clienteId: id,
+                        clienteNome: cli ? cli.nome : ""
+                      }));
+                    }}
+                    disabled={carregandoListas}
+                  >
+                    <option value="">-- Selecione o cliente --</option>
+                    {clientes.map(cli => (
+                      <option key={cli.id} value={cli.id}>
+                        {cli.nome}
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <select
+                    id="nl-clifor"
+                    value={novo.fornecedorId}
+                    onChange={e => {
+                      const id = e.target.value;
+                      const forn = fornecedores.find(f => f.id === id);
+                      setNovo(prev => ({
+                        ...prev,
+                        fornecedorId: id,
+                        fornecedorNome: forn ? (forn.nomeEmpresa || forn.nome) : ""
+                      }));
+                    }}
+                    disabled={carregandoListas}
+                  >
+                    <option value="">-- Selecione o fornecedor --</option>
+                    {fornecedores.map(forn => (
+                      <option key={forn.id} value={forn.id}>
+                        {forn.nomeEmpresa || forn.nome || "Fornecedor"}
+                      </option>
+                    ))}
+                  </select>
+                )}
+              </div>
+
+              {/* SE DESPESA: ORDEM DE COMPRA E PEÇA DO ACERVO */}
+              {!isEntrada && (
+                <>
+                  <div className="form-group span-2 col-mobile-half">
+                    <label htmlFor="nl-compra">🛒 VINCULAR ORDEM DE COMPRA (DAR BAIXA)</label>
                     <select
+                      id="nl-compra"
                       value={novo.compraId}
                       onChange={e => handleCompraSelect(e.target.value)}
                       disabled={carregandoListas}
@@ -702,281 +840,160 @@ const NovoLancamento = () => {
                       ))}
                     </select>
                   </div>
-                )}
 
-                {/* 🛠️ VÍNCULO COM PEÇA DO ACERVO / CONSISTÊNCIA MANUTENÇÃO */}
-                <div className="nl-group">
-                  <label>🛠️ Vincular Peça do Acervo / Conserto (Opcional)</label>
-                  <select
-                    value={novo.pecaId}
-                    onChange={e => handlePecaSelect(e.target.value)}
-                    disabled={carregandoListas}
-                  >
-                    <option value="">-- Nenhuma peça de acervo vinculada --</option>
-                    {pecasAcervo.map(p => (
-                      <option key={p.id} value={p.id}>
-                        {p.sku ? `[${p.sku}] ` : ''}{p.nome || p.titulo || "Peça"} ({p.categoria || "Geral"})
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  <div className="form-group span-2 col-mobile-half">
+                    <label htmlFor="nl-peca">🛠️ VINCULAR PEÇA DO ACERVO / CONSERTO</label>
+                    <select
+                      id="nl-peca"
+                      value={novo.pecaId}
+                      onChange={e => handlePecaSelect(e.target.value)}
+                      disabled={carregandoListas}
+                    >
+                      <option value="">-- Nenhuma peça de acervo vinculada --</option>
+                      {pecasAcervo.map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.sku ? `[${p.sku}] ` : ''}{p.nome || p.titulo || "Peça"} ({p.categoria || "Geral"})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
 
-                {/* 🔁 OPÇÃO DE LANÇAMENTO RECORRENTE (REPETIR MENSALMENTE) */}
-                <div className="nl-group nl-box-recorrente">
+              {/* OBSERVAÇÕES INTERNAS */}
+              <div className="form-group span-4">
+                <label htmlFor="nl-obs">OBSERVAÇÕES INTERNAS / NOTAS</label>
+                <textarea
+                  id="nl-obs"
+                  rows="2"
+                  placeholder="Ex: Pago via Pix Nubank pelo marido da cliente..."
+                  value={novo.observacoes}
+                  onChange={e => setNovo({ ...novo, observacoes: e.target.value })}
+                ></textarea>
+              </div>
+
+              {/* RECORRÊNCIA E COMPROVANTE */}
+              <div className="form-group span-2 col-mobile-half">
+                <label>🔁 LANÇAMENTO RECORRENTE</label>
+                <div className="nl-recorrente-box">
                   <label className="nl-recorrente-toggle">
                     <input 
                       type="checkbox" 
                       checked={isRecorrente} 
                       onChange={e => setIsRecorrente(e.target.checked)} 
                     />
-                    <span>🔁 Repetir este lançamento nos próximos meses</span>
+                    <span>Repetir nos próximos meses</span>
                   </label>
                   {isRecorrente && (
-                    <div className="nl-recorrente-options">
-                      <label>Duração:</label>
-                      <select 
-                        value={mesesRecorrencia} 
-                        onChange={e => setMesesRecorrencia(e.target.value)}
-                      >
-                        <option value={2}>Por 2 meses</option>
-                        <option value={3}>Por 3 meses</option>
-                        <option value={6}>Por 6 meses</option>
-                        <option value={12}>Por 12 meses (1 ano)</option>
-                      </select>
-                    </div>
+                    <select 
+                      value={mesesRecorrencia} 
+                      onChange={e => setMesesRecorrencia(e.target.value)}
+                      className="select-meses-rec"
+                    >
+                      <option value={2}>Por 2 meses</option>
+                      <option value={3}>Por 3 meses</option>
+                      <option value={6}>Por 6 meses</option>
+                      <option value={12}>Por 12 meses (1 ano)</option>
+                    </select>
                   )}
                 </div>
-
               </div>
 
-              {/* 🔵 COLUNA DIREITA: DATA, VÍNCULOS, SITUAÇÃO, OBSERVAÇÕES E ANEXO */}
-              <div className="nl-col">
-
-                {/* DATA */}
-                <div className="nl-group">
-                  <label>
-                    {novo.status === 'pago' 
-                      ? (isEntrada ? '📅 Data Recebimento *' : '📅 Data Pagamento *') 
-                      : '📅 Data Vencimento *'}
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={novo.data}
-                    onChange={e => setNovo({ ...novo, data: e.target.value })}
-                  />
-                </div>
-
-                {/* ⚡ VÍNCULO PEDIDO / LOCAÇÃO (FORMATADO E CLARO) */}
-                <div className="nl-group">
-                  <label>⚡ Vincular Pedido (Nome, Data e Saldo Devedor)</label>
-                  <select
-                    value={novo.locacaoId}
-                    onChange={e => handleLocacaoSelect(e.target.value)}
-                    disabled={carregandoListas}
-                    className="select-pedidos-formatado"
-                  >
-                    <option value="">-- Nenhum pedido selecionado --</option>
-                    {locacoes.map(loc => {
-                      const total = Number(loc.valorTotal || loc.total || loc.financeiro?.total || 0);
-                      const jaPago = Number(loc.valorPago || 0);
-                      const resta = Math.max(0, total - jaPago);
-                      
-                      const numPed = loc.numeroPedido || loc.numero || (loc.id ? loc.id.slice(0, 6).toUpperCase() : '');
-                      const numTxt = numPed ? `Pedido #${numPed}` : 'Pedido';
-                      const cliNome = loc.clienteNome || loc.nomeCliente || "Cliente sem nome";
-                      const dtEvento = formatarDataBr(loc.dataRetirada || loc.dataEvento || loc.data || "");
-                      const dtTxt = dtEvento ? ` (${dtEvento})` : "";
-                      const restaTxt = resta > 0 
-                        ? `Falta: R$ ${resta.toLocaleString('pt-BR', {minimumFractionDigits: 2})}` 
-                        : `(QUITADO)`;
-
-                      return (
-                        <option key={loc.id} value={loc.id}>
-                          {numTxt} • {cliNome}{dtTxt} • {restaTxt}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-
-                {/* CLIENTE OU FORNECEDOR */}
-                <div className="nl-group">
-                  <label>
-                    {isEntrada ? '👤 Cliente (Opcional)' : '🏭 Fornecedor (Opcional)'}
-                  </label>
-                  {isEntrada ? (
-                    <select
-                      value={novo.clienteId}
-                      onChange={e => {
-                        const id = e.target.value;
-                        const cli = clientes.find(c => c.id === id);
-                        setNovo(prev => ({
-                          ...prev,
-                          clienteId: id,
-                          clienteNome: cli ? cli.nome : ""
-                        }));
-                      }}
-                      disabled={carregandoListas}
-                    >
-                      <option value="">-- Selecione o cliente --</option>
-                      {clientes.map(cli => (
-                        <option key={cli.id} value={cli.id}>
-                          {cli.nome}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <select
-                      value={novo.fornecedorId}
-                      onChange={e => {
-                        const id = e.target.value;
-                        const forn = fornecedores.find(f => f.id === id);
-                        setNovo(prev => ({
-                          ...prev,
-                          fornecedorId: id,
-                          fornecedorNome: forn ? (forn.nomeEmpresa || forn.nome) : ""
-                        }));
-                      }}
-                      disabled={carregandoListas}
-                    >
-                      <option value="">-- Selecione o fornecedor --</option>
-                      {fornecedores.map(forn => (
-                        <option key={forn.id} value={forn.id}>
-                          {forn.nomeEmpresa || forn.nome || "Fornecedor"}
-                        </option>
-                      ))}
-                    </select>
-                  )}
-                </div>
-
-                {/* SITUAÇÃO DO PAGAMENTO */}
-                <div className="nl-group status-group">
-                  <label>Situação *</label>
-                  <div className="nl-status-options">
-                    <label className={`status-radio ${novo.status === 'pago' ? 'selecionado' : ''}`}>
-                      <input
-                        type="radio"
-                        name="status"
-                        value="pago"
-                        checked={novo.status === 'pago'}
-                        onChange={() => setNovo({ ...novo, status: 'pago' })}
-                      />
-                      {isEntrada ? '✅ Recebido' : '✅ Pago'}
-                    </label>
-                    <label className={`status-radio pendente ${novo.status === 'pendente' ? 'selecionado' : ''}`}>
-                      <input
-                        type="radio"
-                        name="status"
-                        value="pendente"
-                        checked={novo.status === 'pendente'}
-                        onChange={() => setNovo({ ...novo, status: 'pendente' })}
-                      />
-                      ⏳ Pendente
+              <div className="form-group span-2 col-mobile-half">
+                <label>📎 COMPROVANTE / RECIBO</label>
+                {!arquivoComprovante ? (
+                  <div className="nl-upload-dropzone">
+                    <input
+                      type="file"
+                      id="input-comprovante-file"
+                      accept="image/*,application/pdf"
+                      onChange={handleFileChange}
+                      style={{ display: 'none' }}
+                    />
+                    <label htmlFor="input-comprovante-file" className="nl-upload-label">
+                      <i className="fas fa-paperclip"></i>
+                      <span>Clique para Anexar Comprovante / PDF</span>
                     </label>
                   </div>
-                </div>
-
-                {/* 📝 OBSERVAÇÕES / NOTAS INTERNAS */}
-                <div className="nl-group">
-                  <label>📝 Observações Internas (Opcional)</label>
-                  <input
-                    type="text"
-                    placeholder="Ex: Pago via Pix Nubank pelo marido da cliente..."
-                    value={novo.observacoes}
-                    onChange={e => setNovo({ ...novo, observacoes: e.target.value })}
-                  />
-                </div>
-
-                {/* COMPROVANTE COMPACTO */}
-                <div className="nl-group nl-comprovante-box-compact">
-                  {!arquivoComprovante ? (
-                    <div className="nl-upload-dropzone-mini">
-                      <input
-                        type="file"
-                        id="input-comprovante-file"
-                        accept="image/*,application/pdf"
-                        onChange={handleFileChange}
-                        style={{ display: 'none' }}
-                      />
-                      <label htmlFor="input-comprovante-file" className="nl-upload-label-mini">
-                        <span>📎 Anexar Comprovante / Recibo</span>
-                      </label>
-                    </div>
-                  ) : (
-                    <div className="nl-comprovante-preview-mini">
-                      <span>📄 {nomeArquivo.length > 25 ? nomeArquivo.slice(0, 22) + '...' : nomeArquivo}</span>
-                      <button type="button" className="btn-remover-mini" onClick={removerComprovante}>❌</button>
-                    </div>
-                  )}
-                </div>
-
+                ) : (
+                  <div className="nl-comprovante-preview">
+                    <span>📄 {nomeArquivo.length > 25 ? nomeArquivo.slice(0, 22) + '...' : nomeArquivo}</span>
+                    <button type="button" className="btn-remover-comprovante" onClick={removerComprovante} title="Remover anexo">✕</button>
+                  </div>
+                )}
               </div>
 
             </div>
 
-            {/* BOTÕES DE AÇÃO LADO A LADO NO RODAPÉ DO CARD */}
-            <div className="nl-actions">
-              <button 
-                type="button" 
-                className="btn-cancelar" 
-                onClick={() => navigate("/financeiro")}
-              >
-                Cancelar
+            {/* BARRA DE AÇÕES NO RODAPÉ DO CARTÃO UNIFICADO */}
+            <div className="unified-card-actions-bar">
+              <button type="button" className="btn-cancelar-celebre" onClick={() => navigate('/financeiro')}>
+                <i className="fas fa-times"></i> Cancelar
               </button>
-
               <button
                 type="submit"
-                className={`btn-salvar-dinamico ${isEntrada ? 'btn-salvar-entrada' : 'btn-salvar-saida'}`}
+                className={`btn-salvar-celebre-gold ${isEntrada ? 'btn-receita-gold' : 'btn-despesa-gold'}`}
                 disabled={salvando}
               >
                 {salvando ? (
-                  <span>⏳ Salvando...</span>
+                  <><i className="fas fa-spinner fa-spin"></i> Salvando...</>
+                ) : isEntrada ? (
+                  <><i className="fas fa-check"></i> Confirmar Receita</>
                 ) : (
-                  <span>
-                    {isEntrada ? '✔ CONFIRMAR RECEITA' : '✔ CONFIRMAR DESPESA'}
-                  </span>
+                  <><i className="fas fa-check"></i> Confirmar Despesa</>
                 )}
               </button>
             </div>
 
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
 
       {/* 📄 MODAL DE SUCESSO E AÇÕES RÁPIDAS (RECIBO PDF & WHATSAPP) */}
       {ultimoLancamentoSalvo && (
-        <div className="nl-modal-sucesso-overlay">
-          <div className="nl-modal-sucesso-card">
-            <div className="nl-modal-sucesso-icon">✨</div>
-            <h3>Lançamento Registrado com Sucesso!</h3>
-            <p>
-              O valor de <strong>R$ {Number(ultimoLancamentoSalvo.valorTotal || ultimoLancamentoSalvo.valor).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong> foi gravado no fluxo de caixa.
-            </p>
+        <div className="modal-overlay-premium" onClick={() => navigate("/financeiro")}>
+          <div className="modal-box-pedido" onClick={e => e.stopPropagation()}>
+            <div className="modal-header-pedido">
+              <div className="modal-header-left">
+                <div className="modal-header-icon-badge">
+                  <i className="fas fa-circle-check" style={{ color: '#16a34a' }}></i>
+                </div>
+                <div>
+                  <h3>Lançamento Registrado com Sucesso!</h3>
+                  <p>
+                    O valor de <strong>R$ {Number(ultimoLancamentoSalvo.valorTotal || ultimoLancamentoSalvo.valor).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong> foi gravado no caixa.
+                  </p>
+                </div>
+              </div>
+              <button type="button" className="btn-fechar-modal" onClick={() => navigate("/financeiro")} title="Fechar">✕</button>
+            </div>
 
-            <div className="nl-modal-sucesso-acoes">
+            <div className="modal-lista-pedidos" style={{ gap: '10px', padding: '20px' }}>
               <button
                 type="button"
-                className="btn-sucesso-pdf"
+                className="card-pedido-select"
+                style={{ justifyContent: 'center', gap: '8px', padding: '12px', background: 'rgba(197, 160, 89, 0.1)', borderColor: '#c5a059', color: '#c5a059', fontWeight: 800 }}
                 onClick={() => gerarReciboLancamentoPDF(ultimoLancamentoSalvo)}
               >
-                📄 Baixar Recibo (PDF)
+                <i className="fas fa-file-pdf"></i> Baixar Recibo em PDF
               </button>
 
               <button
                 type="button"
-                className="btn-sucesso-wapp"
+                className="card-pedido-select"
+                style={{ justifyContent: 'center', gap: '8px', padding: '12px', background: 'rgba(37, 211, 102, 0.1)', borderColor: '#25d366', color: '#16a34a', fontWeight: 800 }}
                 onClick={() => enviarWhatsAppComprovante(ultimoLancamentoSalvo)}
               >
-                💬 Enviar no WhatsApp
+                <i className="fab fa-whatsapp"></i> Enviar Comprovante no WhatsApp
               </button>
 
               <button
                 type="button"
-                className="btn-sucesso-fechar"
+                className="btn-secondary-celebre"
+                style={{ width: '100%', justifyContent: 'center', marginTop: '6px' }}
                 onClick={() => navigate("/financeiro")}
               >
-                ✓ Voltar ao Financeiro
+                <i className="fas fa-arrow-left"></i> Voltar ao Fluxo de Caixa
               </button>
             </div>
           </div>

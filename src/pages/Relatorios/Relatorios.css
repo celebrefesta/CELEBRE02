@@ -1,339 +1,594 @@
-/* =========================================
-   1. BLINDAGEM GERAL DE LARGURA (O GERAL)
-========================================= */
-.dashboard-container, .dashboard-container * {
-    box-sizing: border-box;
-    max-width: 100%;
-}
+/* ================================================================
+   📊 RELATÓRIOS ESTRATÉGICOS (CELEBRE ENTERPRISE LUXURY)
+   ================================================================ */
 
-.dashboard-container {
-  font-family: 'Inter', system-ui, sans-serif;
-  color: #334155;
-  padding: 30px;
+.relatorios-container.dashboard-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  color: var(--texto-principal, #0f172a);
+  padding: 28px 36px;
   width: 100%;
+  box-sizing: border-box;
+  background-color: var(--fundo-principal, #f8fafc);
+  min-height: calc(100vh - 60px);
   overflow-x: hidden;
-  background-color: #f8fafc;
-  min-height: 100vh;
+}
+
+.relatorios-container * {
+  box-sizing: border-box;
 }
 
 /* =========================================
-   2. HEADER E ABAS (PÁGINA PRINCIPAL)
-========================================= */
+   2. CABEÇALHO HERO E ABAS DO TOPO
+   ========================================= */
 .relatorios-badge-head {
   display: inline-block;
-  background: #f1f5f9;
-  color: #475569;
-  font-size: 0.7rem;
+  background: var(--fundo-cinza, #f1f5f9);
+  color: var(--texto-secundario, #475569);
+  font-size: 0.72rem;
   font-weight: 850;
   padding: 4px 10px;
   border-radius: 8px;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--borda, #cbd5e1);
   letter-spacing: 0.5px;
 }
 
 .dashboard-header.relatorios-header-ajuste {
-  background: white; 
-  padding: 24px 30px;
-  border-radius: 20px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.04); 
-  border: 1px solid #e2e8f0;
+  background: var(--fundo-card, #ffffff);
+  padding: 22px 28px;
+  border-radius: 16px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+  border: 1px solid var(--borda, #e2e8f0);
   display: flex;
   justify-content: space-between;
-  align-items: center; 
-  margin-bottom: 24px;
-  flex-wrap: wrap; 
-  gap: 20px;
+  align-items: center;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 16px;
+  width: 100%;
 }
 
-.header-text h1 { margin: 0; font-size: 22px; font-weight: 850; color: #0f172a; text-transform: uppercase; letter-spacing: -0.5px;}
-.header-text p { margin: 6px 0 0 0; color: #64748b; font-size: 13.5px; line-height: 1.4;}
+.header-text h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+  text-transform: uppercase;
+  letter-spacing: -0.4px;
+}
 
+.header-text p {
+  margin: 4px 0 0 0;
+  color: var(--texto-secundario, #64748b);
+  font-size: 0.84rem;
+  line-height: 1.4;
+}
+
+/* Abas de Navegação Principal */
 .tabs-relatorios-compacto {
   display: flex;
-  background-color: #f8fafc;
+  background-color: var(--fundo-cinza, #f8fafc);
   padding: 4px;
   border-radius: 14px;
   gap: 6px;
-  border: 1px solid #e2e8f0;
-  max-width: 100%; 
+  border: 1px solid var(--borda, #e2e8f0);
+  max-width: 100%;
   flex-wrap: wrap;
 }
 
 .tabs-relatorios-compacto button {
-  padding: 10px 16px; 
-  border: 1px solid transparent; 
-  background: transparent; 
+  padding: 9px 16px;
+  border: 1px solid transparent;
+  background: transparent;
   font-weight: 800;
-  color: #64748b;
-  border-radius: 10px; 
+  color: var(--texto-secundario, #64748b);
+  border-radius: 10px;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-size: 12.5px;
+  font-size: 0.78rem;
   display: flex;
   align-items: center;
   gap: 6px;
-  white-space: nowrap; 
+  white-space: nowrap;
 }
 
-.tabs-relatorios-compacto button:hover { color: #0f172a; background: #ffffff; }
+.tabs-relatorios-compacto button:hover {
+  color: var(--texto-principal, #0f172a);
+  background: var(--fundo-card, #ffffff);
+}
+
 .tabs-relatorios-compacto button.active {
-  background: #0f172a !important; 
-  color: #ffffff !important; 
-  border-color: #0f172a !important;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.3) !important;
 }
 
-.relatorio-content { margin-top: 10px; width: 100%; }
+.relatorio-content {
+  margin-top: 8px;
+  width: 100%;
+}
 
 /* =========================================
-   3. ESTILOS INTERNOS: CARDS E TABELAS (TAB FINANCEIRO E OUTRAS)
-========================================= */
-
-/* 🔥 CARDS PRINCIPAIS E KPI DESKTOP 🔥 */
-.main-card {
-  background: var(--branco);
-  border: 1px solid var(--borda);
-  border-radius: 12px;
-  padding: 25px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
-}
-
-.kpi-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 20px;
+   3. CARDS UNIFICADOS DE RELATÓRIO
+   ========================================= */
+.rel-card-unificado {
+  background: var(--fundo-card, #ffffff);
+  border-radius: 16px;
+  border: 1px solid var(--borda, #e2e8f0);
+  padding: 20px 24px;
   margin-bottom: 20px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+  width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
-.kpi-card {
-  background: white;
-  padding: 18px 20px; 
-  border-radius: 12px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  border: 1px solid #e2e8f0;
+.rel-card-header {
   display: flex;
-  flex-direction: column;
-  transition: transform 0.2s;
-}
-
-.kpi-card:hover { transform: translateY(-2px); }
-.kpi-card span { font-size: 11px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.kpi-card h2 { margin: 0; font-size: 24px; font-weight: 800; letter-spacing: -0.5px; color: #0f172a; } 
-.kpi-card small { margin-top: 6px; font-size: 12px; color: #94a3b8; font-weight: 500; }
-
-.card-verde { border-bottom: 4px solid #10b981; }
-.card-vermelho { border-bottom: 4px solid #ef4444; }
-.card-destaque { border-bottom: 4px solid #0f172a; }
-
-
-/* 🔥 HEADER DO DRE, FILTROS E BOTÃO PDF 🔥 */
-.dre-header { 
-  display: flex; 
-  justify-content: space-between; 
-  align-items: flex-end; 
-  flex-wrap: wrap; 
-  gap: 15px; 
-  margin-bottom: 20px; 
-}
-
-.dre-actions-group {
-  display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  margin-bottom: 16px;
   flex-wrap: wrap;
+  gap: 12px;
 }
 
-/* Filtros */
-.dre-filter-buttons {
-  display: flex;
-  background-color: #f1f5f9;
-  padding: 4px;
-  border-radius: 10px;
-  gap: 4px;
-  border: 1px solid #e2e8f0;
+.rel-card-title {
+  margin: 0;
+  font-size: 1rem;
+  color: var(--texto-principal, #0f172a);
+  font-weight: 850;
 }
 
-.dre-filter-buttons button {
-  border: none;
-  background: transparent;
-  padding: 8px 16px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 700;
-  color: #64748b;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.rel-card-sub {
+  margin: 2px 0 0 0;
+  font-size: 0.74rem;
+  color: var(--texto-secundario, #64748b);
 }
 
-.dre-filter-buttons button:hover { color: #0f172a; }
-.dre-filter-buttons button.active { 
-  background-color: var(--dourado) !important; 
-  color: #ffffff !important; 
-  box-shadow: 0 2px 6px rgba(0,0,0,0.15) !important; 
-}
-
-/* 🔥 O BOTÃO DE PDF NA COR DA APARÊNCIA 🔥 */
-.btn-export-pdf {
-  background-color: var(--dourado) !important; 
-  color: white !important;
-  border: none;
-  padding: 10px 20px; /* Mais delicado que o blocão original */
-  border-radius: 8px;
-  font-weight: 700;
-  font-size: 13px;
-  cursor: pointer;
-  transition: all 0.2s;
+.rel-card-actions {
   display: flex;
   align-items: center;
   gap: 8px;
-  box-shadow: 0 4px 6px rgba(15, 23, 42, 0.1);
-}
-.btn-export-pdf:hover { 
-  background-color: #1e293b; 
-  transform: translateY(-1px); 
-  box-shadow: 0 6px 12px rgba(15, 23, 42, 0.2); 
+  flex-wrap: wrap;
 }
 
+.rel-btn-action-outline {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--borda, #cbd5e1);
+  background: var(--fundo-card, #ffffff);
+  color: var(--texto-principal, #0f172a);
+  font-weight: 700;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
 
-/* Outros elementos das Tabs */
-.main-card { background: white; padding: 24px; border-radius: 12px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; margin-top: 20px;}
-.progress-container { display: flex; height: 12px; background-color: #f1f5f9; border-radius: 6px; overflow: hidden; margin-bottom: 8px;}
-.progress-bar-green { background-color: #10b981; transition: width 0.5s ease; }
-.progress-bar-red { background-color: #ef4444; transition: width 0.5s ease; }
-.progress-labels { display: flex; justify-content: space-between; font-size: 12px;}
+.rel-btn-action-outline:hover {
+  background: var(--fundo-cinza, #f1f5f9);
+}
 
-.table-container { overflow-x: auto; width: 100%; margin-top: 15px;}
-.custom-table { width: 100%; border-collapse: collapse; min-width: 600px;}
-.table-pro th { text-align: left; padding: 14px 16px; font-size: 11px; color: #64748b; font-weight: 800; text-transform: uppercase; border-bottom: 2px solid #e2e8f0; background-color: #f8fafc;}
-.table-pro td { padding: 14px 16px; font-size: 14px; border-bottom: 1px solid #f1f5f9; vertical-align: middle;}
-.badge-dre { padding: 4px 8px; border-radius: 6px; font-size: 11px; font-weight: 800; text-transform: uppercase; display: inline-block;}
-.badge-dre.receita { background-color: #ecfdf5; color: #059669; border: 1px solid #a7f3d0;}
-.badge-dre.despesa { background-color: #fef2f2; color: #dc2626; border: 1px solid #fecaca;}
-.ranking-list { list-style: none; padding: 0;}
+.rel-btn-action-primary {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: #0f172a;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 0.78rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
 
+.rel-btn-action-primary:hover {
+  background: #1e293b;
+}
+
+/* Scroll seguro para tabelas */
+.rel-table-scroll-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  border-radius: 12px;
+}
 
 /* =========================================
-   📱 RESPONSIVIDADE MOBILE (A MÁGICA FINAL)
-========================================= */
-@media (max-width: 900px) {
-  
-  .dashboard-container { padding: 60px 0 20px 0 !important; }
+   4. TABELA DO DRE EXECUTIVO
+   ========================================= */
+.rel-dre-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+}
 
-  .dashboard-header.relatorios-header-ajuste { 
-      padding: 20px 15px !important; 
-      margin-bottom: 20px !important; 
-      flex-direction: column !important;
-      align-items: flex-start !important; 
-      gap: 20px !important;
-      border-radius: 0 !important; 
-      border-left: none !important;
-      border-right: none !important;
-      box-shadow: none !important; 
+.rel-dre-table thead tr {
+  background: var(--fundo-cinza, #f1f5f9);
+  color: var(--texto-secundario, #475569);
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  font-weight: 850;
+  letter-spacing: 0.5px;
+}
+
+.rel-dre-table th {
+  padding: 12px 18px;
+  border-bottom: 1.5px solid var(--borda, #e2e8f0);
+}
+
+.rel-dre-table td {
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--borda, #f1f5f9);
+}
+
+.rel-dre-row-highlight {
+  background: var(--fundo-cinza, #f8fafc);
+  font-weight: 850;
+}
+
+.rel-dre-row-highlight td {
+  border-bottom: 1.5px solid var(--borda, #e2e8f0);
+}
+
+.rel-dre-label {
+  color: var(--texto-principal, #0f172a);
+}
+
+.rel-dre-sublabel {
+  padding-left: 36px !important;
+  color: var(--texto-secundario, #64748b);
+}
+
+.rel-dre-val {
+  text-align: right;
+  font-weight: 750;
+}
+
+.rel-dre-val.positive {
+  color: #15803d;
+}
+
+.rel-dre-val.negative {
+  color: #dc2626;
+}
+
+.rel-dre-pct {
+  text-align: right;
+  color: var(--texto-secundario, #64748b);
+  font-weight: 700;
+}
+
+.rel-dre-pct-sub {
+  text-align: right;
+  color: var(--texto-secundario, #94a3b8);
+  font-size: 0.78rem;
+}
+
+.rel-dre-row-sub.border-end td {
+  border-bottom: 1.5px solid var(--borda, #cbd5e1);
+}
+
+.rel-dre-row-total {
+  background: var(--fundo-cinza, #f8fafc);
+  font-weight: 900;
+  font-size: 0.95rem;
+}
+
+.rel-dre-row-total td {
+  padding: 14px 18px;
+  border-top: 2px solid var(--borda, #cbd5e1);
+  border-bottom: 2px solid var(--borda, #cbd5e1);
+}
+
+.rel-dre-totallabel {
+  color: var(--texto-principal, #0f172a);
+}
+
+.rel-dre-totalval.positive {
+  text-align: right;
+  color: #15803d;
+}
+
+.rel-dre-totalval.negative {
+  text-align: right;
+  color: #b91c1c;
+}
+
+/* =========================================
+   5. FORMAS DE PAGAMENTO E TEMAS
+   ========================================= */
+.rel-formas-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+
+.rel-forma-card {
+  border-radius: 14px;
+  padding: 16px;
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.rel-forma-card.pix {
+  background: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.rel-forma-card.cartao {
+  background: #eff6ff;
+  border-color: #bfdbfe;
+}
+
+.rel-forma-card.dinheiro {
+  background: #fefce8;
+  border-color: #fde047;
+}
+
+.rel-forma-card.outros {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.rel-forma-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.rel-forma-card.pix .rel-forma-label { color: #166534; font-size: 0.76rem; font-weight: 800; }
+.rel-forma-card.pix .rel-forma-pct { color: #16a34a; font-size: 0.7rem; font-weight: bold; }
+.rel-forma-card.pix .rel-forma-val { color: #15803d; font-size: 1.2rem; display: block; margin-top: 6px; }
+
+.rel-forma-card.cartao .rel-forma-label { color: #1e40af; font-size: 0.76rem; font-weight: 800; }
+.rel-forma-card.cartao .rel-forma-pct { color: #2563eb; font-size: 0.7rem; font-weight: bold; }
+.rel-forma-card.cartao .rel-forma-val { color: #1d4ed8; font-size: 1.2rem; display: block; margin-top: 6px; }
+
+.rel-forma-card.dinheiro .rel-forma-label { color: #854d0e; font-size: 0.76rem; font-weight: 800; }
+.rel-forma-card.dinheiro .rel-forma-pct { color: #a16207; font-size: 0.7rem; font-weight: bold; }
+.rel-forma-card.dinheiro .rel-forma-val { color: #ca8a04; font-size: 1.2rem; display: block; margin-top: 6px; }
+
+.rel-forma-card.outros .rel-forma-label { color: #475569; font-size: 0.76rem; font-weight: 800; }
+.rel-forma-card.outros .rel-forma-pct { color: #64748b; font-size: 0.7rem; font-weight: bold; }
+.rel-forma-card.outros .rel-forma-val { color: #334155; font-size: 1.2rem; display: block; margin-top: 6px; }
+
+/* Lista de Temas */
+.rel-temas-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rel-tema-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--fundo-cinza, #f8fafc);
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.rel-tema-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.rel-tema-rank {
+  font-size: 1.1rem;
+  font-weight: 900;
+  color: var(--dourado, #c5a059);
+}
+
+.rel-tema-nome {
+  font-size: 0.88rem;
+  color: var(--texto-principal, #0f172a);
+}
+
+.rel-tema-qtd {
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+  display: block;
+}
+
+.rel-tema-total {
+  font-size: 1rem;
+  color: #15803d;
+}
+
+/* =========================================
+   📱 RESPONSIVIDADE MOBILE COM BORDA DE SEGURANÇA
+   ========================================= */
+@media (max-width: 900px) {
+  .relatorios-container.dashboard-container {
+    padding: 14px 10px 24px 10px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .dashboard-header.relatorios-header-ajuste {
+    padding: 16px !important;
+    margin-bottom: 14px !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 14px !important;
+    border-radius: 16px !important;
+  }
+
+  .header-text h1 {
+    font-size: 1.25rem !important;
+  }
+
+  .header-text p {
+    font-size: 0.76rem !important;
   }
 
   .tabs-relatorios-compacto {
-      display: grid !important;
-      grid-template-columns: repeat(2, 1fr) !important; 
-      width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
   }
 
-  /* -------------------------------------
-     🔥 CARDS MEGA FININHOS NO MOBILE 🔥
-  ---------------------------------------- */
-  .kpi-grid { 
-      display: flex !important; 
-      flex-direction: column !important; 
-      gap: 6px !important; 
-      margin-bottom: 20px !important; 
-      padding: 0 15px !important;
+  .tabs-relatorios-compacto button {
+    width: 100% !important;
+    height: 42px !important;
+    padding: 0 10px !important;
+    font-size: 0.76rem !important;
+    justify-content: center !important;
+    text-align: center !important;
+    border-radius: 12px !important;
+    background: var(--fundo-card, #ffffff) !important;
+    border: 1px solid var(--borda, #e2e8f0) !important;
+    color: var(--texto-secundario, #64748b) !important;
   }
 
-  .kpi-card { 
-      flex-direction: row !important; 
-      justify-content: space-between !important;
-      align-items: center !important;
-      padding: 10px 14px !important; 
-      text-align: left !important;
-      border-radius: 8px !important;
-      min-height: 0 !important; 
+  .tabs-relatorios-compacto button.active {
+    background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+    color: #ffffff !important;
+    border-color: transparent !important;
   }
 
-  .card-verde { border-bottom: 1px solid #e2e8f0 !important; border-left: 4px solid #10b981 !important; }
-  .card-vermelho { border-bottom: 1px solid #e2e8f0 !important; border-left: 4px solid #ef4444 !important; }
-  .card-destaque { border-bottom: 1px solid #e2e8f0 !important; border-left: 4px solid #0f172a !important; }
-
-  .kpi-card span { 
-      font-size: 10px !important; 
-      margin-bottom: 0 !important; 
-      color: #64748b !important;
-      letter-spacing: 0.5px !important;
-      line-height: 1 !important; 
-  }
-  
-  .kpi-card h2 { 
-      font-size: 16px !important; 
-      margin: 0 !important; 
-      text-align: right !important; 
-      line-height: 1 !important; 
-  }
-  
-  .kpi-card small { display: none !important; } 
-
-
-  /* -------------------------------------
-     🔥 FILTROS E BOTÃO PDF MOBILE 🔥
-  ---------------------------------------- */
-  .dre-header { flex-direction: column; align-items: flex-start; gap: 15px;}
-  
-  .dre-actions-group { 
-      width: 100% !important; 
-      flex-direction: column !important; 
-      align-items: stretch !important; 
-      gap: 12px !important;
-  }
-  
-  .dre-filter-buttons { 
-      width: 100% !important; 
-      display: grid !important; 
-      grid-template-columns: repeat(3, 1fr) !important; 
-      padding: 4px !important;
-  }
-  
-  .dre-filter-buttons button { 
-      padding: 10px 5px !important; 
-      font-size: 12px !important;
+  .rel-card-unificado {
+    padding: 16px !important;
+    border-radius: 16px !important;
+    margin-bottom: 14px !important;
   }
 
-  /* Volta a cor escura também no celular, sem o preenchimento excessivo */
-  .btn-export-pdf { 
-      width: 100% !important; 
-      justify-content: center !important; 
-      padding: 14px !important;  
-      font-size: 14px !important; 
-      background-color: #0f172a !important; 
-      color: white !important;
-      border: none !important;
+  .rel-card-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
   }
 
-  .main-card { padding: 20px 15px !important; border-radius: 0 !important; border-left: none !important; border-right: none !important; box-shadow: none !important; background: transparent !important;}
-  
-  .table-container { padding: 0 !important; width: 100% !important; border-radius: 0 !important; border: none !important;}
-  .custom-table, .custom-table tbody { display: block !important; width: 100% !important; min-width: 0 !important; }
-  .table-pro thead { display: none !important; }
-
-  /* Tabela de Relatório vira Cards na Tela Infinita */
-  .table-pro tr { 
-      display: grid !important;
-      grid-template-columns: 1fr auto !important; 
-      grid-template-areas: "data data" "desc desc" "operacao valor" !important;
-      width: 100% !important; background: white !important; padding: 15px !important; margin-bottom: 12px !important;
-      border-radius: 12px !important; border: 1px solid #e2e8f0 !important; gap: 8px !important;
+  .rel-card-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
   }
-  
-  .table-pro td { display: flex !important; flex-direction: column !important; padding: 0 !important; border: none !important;}
-  .table-pro td:nth-child(1) { grid-area: data !important; font-size: 11px !important;}
-  .table-pro td:nth-child(2) { grid-area: desc !important; margin-bottom: 8px !important;}
-  .table-pro td:nth-child(2) strong { font-size: 16px !important;}
-  .table-pro td:nth-child(3) { grid-area: operacao !important; align-items: flex-start !important; justify-content: flex-end !important;}
-  .table-pro td:nth-child(4) { grid-area: valor !important; align-items: flex-end !important; justify-content: flex-end !important; font-size: 18px !important;}
+
+  .rel-btn-action-outline,
+  .rel-btn-action-primary {
+    width: 100% !important;
+    justify-content: center !important;
+    text-align: center !important;
+    padding: 10px !important;
+    font-size: 0.74rem !important;
+  }
+
+  .rel-formas-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  .rel-forma-card {
+    padding: 12px !important;
+  }
+
+  .rel-forma-card .rel-forma-val {
+    font-size: 1rem !important;
+  }
 }
+
+/* ================================================================
+   🌙 ADAPTAÇÃO TEMA ESCURO (GRAFITE, MIDNIGHT & DARK)
+   ================================================================ */
+[data-theme^='dark'] .relatorios-container {
+  background-color: var(--fundo-principal, #121212) !important;
+  color: var(--texto-principal, #f4f4f5) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .dashboard-header.relatorios-header-ajuste,
+[data-theme^='dark'] .relatorios-container .rel-card-unificado {
+  background: var(--fundo-card, #18181b) !important;
+  border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .header-text h1,
+[data-theme^='dark'] .relatorios-container .rel-card-title,
+[data-theme^='dark'] .relatorios-container .rel-dre-label,
+[data-theme^='dark'] .relatorios-container .rel-dre-totallabel,
+[data-theme^='dark'] .relatorios-container .rel-tema-nome {
+  color: var(--texto-principal, #f4f4f5) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .header-text p,
+[data-theme^='dark'] .relatorios-container .rel-card-sub,
+[data-theme^='dark'] .relatorios-container .rel-dre-sublabel,
+[data-theme^='dark'] .relatorios-container .rel-dre-pct,
+[data-theme^='dark'] .relatorios-container .rel-tema-qtd {
+  color: var(--texto-secundario, #a1a1aa) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .relatorios-badge-head {
+  background: var(--fundo-cinza, #27272a) !important;
+  color: var(--texto-secundario, #a1a1aa) !important;
+  border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .tabs-relatorios-compacto {
+  background-color: var(--fundo-cinza, #27272a) !important;
+  border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .tabs-relatorios-compacto button {
+  color: var(--texto-secundario, #a1a1aa) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .tabs-relatorios-compacto button:hover {
+  color: var(--texto-principal, #f4f4f5) !important;
+  background: var(--fundo-card, #18181b) !important;
+}
+
+[data-theme^='dark'] .relatorios-container .tabs-relatorios-compacto button.active {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+}
+
+[data-theme^='dark'] .rel-btn-action-outline {
+  background: var(--fundo-card, #18181b) !important;
+  color: var(--texto-principal, #f4f4f5) !important;
+  border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme^='dark'] .rel-btn-action-outline:hover {
+  background: var(--fundo-cinza, #27272a) !important;
+}
+
+[data-theme^='dark'] .rel-btn-action-primary {
+  background: var(--dourado, #c5a059) !important;
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .rel-dre-table thead tr,
+[data-theme^='dark'] .rel-dre-row-highlight,
+[data-theme^='dark'] .rel-dre-row-total,
+[data-theme^='dark'] .rel-tema-item {
+  background: var(--fundo-cinza, #27272a) !important;
+  border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme^='dark'] .rel-dre-table th,
+[data-theme^='dark'] .rel-dre-table td {
+  border-bottom-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme^='dark'] .rel-forma-card.pix { background: #14291e !important; border-color: #1e4630 !important; }
+[data-theme^='dark'] .rel-forma-card.cartao { background: #12233f !important; border-color: #1e3a6a !important; }
+[data-theme^='dark'] .rel-forma-card.dinheiro { background: #2f2710 !important; border-color: #4e4018 !important; }
+[data-theme^='dark'] .rel-forma-card.outros { background: #202024 !important; border-color: #37373f !important; }
+
+[data-theme^='dark'] .rel-forma-card.pix .rel-forma-label { color: #4ade80 !important; }
+[data-theme^='dark'] .rel-forma-card.cartao .rel-forma-label { color: #60a5fa !important; }
+[data-theme^='dark'] .rel-forma-card.dinheiro .rel-forma-label { color: #facc15 !important; }
+[data-theme^='dark'] .rel-forma-card.outros .rel-forma-label { color: #cbd5e1 !important; }

@@ -1,637 +1,1040 @@
-/* =========================================
-   PROTEÇÃO DE ESCOPO E LAYOUT BASE
-   ========================================= */
-.pag-novo-lancamento, .pag-novo-lancamento * { 
-  box-sizing: border-box; 
-}
+/* ====================================================
+   NOVO LANÇAMENTO FINANCEIRO - CELEBRE LUXURY DESIGN
+   PADRÃO 100% ALINHADO COM CADASTRO CLIENTES & COMPRAS
+   Escopo Blindado e Isolado: .pag-novo-lancamento
+   ==================================================== */
 
 .pag-novo-lancamento {
-  background: var(--fundo-cinza, #f8fafc);
-  min-height: 100vh;
-  width: 100%;
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  width: 100% !important;
+  max-width: 1560px !important;
+  margin: 0 auto !important;
+  padding: 24px 32px !important;
+  box-sizing: border-box;
+  background-color: transparent;
+  min-height: calc(100vh - 60px);
   color: var(--texto-principal, #0f172a);
-  transition: background-color 0.3s ease, color 0.3s ease;
-  padding-bottom: 25px;
 }
 
-/* =========================================
-   CABEÇALHO FIXO
-   ========================================= */
-.header-nl {
-  background: var(--branco, #ffffff);
-  padding: 10px 30px;
-  border-bottom: 1px solid var(--borda, #e2e8f0);
+.pag-novo-lancamento * {
+  box-sizing: border-box;
+}
+
+.pag-novo-lancamento.fade-in {
+  animation: nlFadeInCelebre 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes nlFadeInCelebre {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ====================================================
+   HERO CABEÇALHO & BREADCRUMB
+   ==================================================== */
+.pag-novo-lancamento .cadastro-hero-header {
   display: flex;
-  align-items: center;
-  gap: 16px;
-  position: sticky; 
-  top: 0; 
-  z-index: 50;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.03);
-}
-
-.header-nl h2 { 
-  margin: 0; 
-  font-size: 17px; 
-  font-weight: 800;
-  letter-spacing: -0.3px;
-  color: var(--texto-principal, #0f172a); 
-}
-
-.btn-voltar-nl {
-  border: 1px solid var(--borda, #e2e8f0); 
-  background: var(--fundo-cinza, #f1f5f9); 
-  padding: 7px 14px;
-  border-radius: 8px; 
-  font-weight: 600; 
-  font-size: 12.5px;
-  cursor: pointer; 
-  color: var(--texto-secundario, #64748b);
-  transition: all 0.2s ease;
-}
-
-.btn-voltar-nl:hover { 
-  background: var(--borda, #e2e8f0); 
-  color: var(--texto-principal, #0f172a); 
-}
-
-/* =========================================
-   CONTAINER E CARD WIDE (LARGURA PADRÃO COMPACTA)
-   ========================================= */
-.nl-container { 
-  padding: 16px 20px; 
-  display: flex; 
-  justify-content: center; 
-}
-
-.nl-card {
-  background: var(--branco, #ffffff); 
-  width: 100%; 
-  max-width: 1020px;
-  border-radius: 16px; 
-  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.06);
-  border: 1px solid var(--borda, #e2e8f0);
-  overflow: hidden;
-  transition: all 0.3s ease;
-}
-
-/* =========================================
-   🖼️ HEADER DO CARD DINÂMICO COMPACTO (BANNER)
-   ========================================= */
-.nl-card-banner {
-  padding: 12px 20px;
-  border-bottom: 1px solid var(--borda, #e2e8f0);
-  display: flex;
-  align-items: center;
   justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 24px !important;
+  flex-wrap: wrap;
   gap: 16px;
-  transition: all 0.3s ease;
 }
 
-.banner-entrada {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.1) 0%, rgba(16, 185, 129, 0.02) 100%);
-  border-left: 5px solid #10b981;
-}
-
-.banner-saida {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(239, 68, 68, 0.02) 100%);
-  border-left: 5px solid #ef4444;
-}
-
-.nl-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
-}
-
-.badge-entrada {
-  background: rgba(16, 185, 129, 0.2);
-  color: #059669;
-}
-
-.badge-saida {
-  background: rgba(239, 68, 68, 0.2);
-  color: #dc2626;
-}
-
-[data-theme='dark'] .badge-entrada { color: #4ade80; }
-[data-theme='dark'] .badge-saida { color: #f87171; }
-
-.nl-banner-info h3 {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 800;
-  color: var(--texto-principal, #0f172a);
-}
-
-/* TOGGLE COMPACTO DENTRO DO BANNER */
-.nl-tipo-selector-mini {
-  display: flex;
-  gap: 4px;
-  background: var(--fundo-cinza, #f1f5f9);
-  padding: 3px;
-  border-radius: 8px;
-  border: 1px solid var(--borda, #cbd5e1);
-}
-
-.nl-tipo-selector-mini .nl-tipo-btn {
-  padding: 6px 14px;
-  border-radius: 6px;
-  border: none;
-  background: transparent;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: var(--texto-secundario, #64748b);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.nl-tipo-selector-mini .nl-tipo-btn.ativo-entrada {
-  background: #10b981;
-  color: white;
-  box-shadow: 0 2px 6px rgba(16, 185, 129, 0.3);
-}
-
-.nl-tipo-selector-mini .nl-tipo-btn.ativo-saida {
-  background: #ef4444;
-  color: white;
-  box-shadow: 0 2px 6px rgba(239, 68, 68, 0.3);
-}
-
-/* =========================================
-   FORMULÁRIO EM 2 COLUNAS LADO A LADO
-   ========================================= */
-.nl-form { 
-  padding: 18px 22px; 
-  display: flex; 
-  flex-direction: column; 
-  gap: 12px; 
-}
-
-.nl-grid-2col {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 20px;
-}
-
-@media(max-width: 768px) {
-  .nl-grid-2col {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-  .nl-card-banner {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-.nl-col {
+.pag-novo-lancamento .cadastro-hero-left {
   display: flex;
   flex-direction: column;
-  gap: 11px;
+  gap: 8px;
 }
 
-.nl-subrow {
+.pag-novo-lancamento .breadcrumb-nav {
   display: flex;
-  gap: 10px;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--texto-secundario, #64748b);
 }
 
-@media(max-width: 500px) {
-  .nl-subrow {
-    flex-direction: column;
-    gap: 11px;
-  }
-}
-
-.nl-group { 
-  display: flex; 
-  flex-direction: column; 
-  gap: 5px; 
-  flex: 1; 
-}
-
-.nl-group label { 
-  font-size: 10.5px; 
-  font-weight: 700; 
-  color: var(--texto-secundario, #64748b); 
-  text-transform: uppercase; 
-  letter-spacing: 0.3px;
-}
-
-.nl-group input, 
-.nl-group select {
-  padding: 9px 12px; 
-  border: 1px solid var(--borda, #cbd5e1); 
-  border-radius: 9px;
-  font-size: 13px; 
-  outline: none; 
-  background: var(--branco, #ffffff); 
-  color: var(--texto-principal, #0f172a);
-  transition: all 0.2s ease;
-  width: 100%;
-}
-
-.select-pedidos-formatado {
-  font-weight: 600;
-  color: var(--texto-principal, #0f172a);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.select-pedidos-formatado option {
-  padding: 8px 12px;
-  font-size: 13px;
-}
-
-.nl-group input:focus, 
-.nl-group select:focus { 
-  border-color: var(--dourado, #c5a059); 
-  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15); 
-}
-
-/* 💰 INPUT DE VALOR MONETÁRIO FORMATADO */
-.nl-input-valor { 
-  font-size: 20px !important; 
-  font-weight: 800 !important; 
-  letter-spacing: -0.5px;
-  width: 100%;
-}
-
-.nl-input-valor.entrada { 
-  color: #10b981 !important; 
-  border-color: rgba(16, 185, 129, 0.4) !important;
-}
-
-.nl-input-valor.saida { 
-  color: #ef4444 !important; 
-  border-color: rgba(239, 68, 68, 0.4) !important;
-}
-
-/* 🔘 PÍLULAS DE VALOR RÁPIDO & CALCULADORA DE TAXAS/DESCONTOS */
-.nl-pilulas-valor {
-  display: flex;
+.pag-novo-lancamento .breadcrumb-nav a {
+  color: var(--texto-secundario, #64748b);
+  text-decoration: none;
+  transition: color 0.2s ease;
+  display: inline-flex;
   align-items: center;
   gap: 4px;
-  flex-wrap: wrap;
-  margin-top: 1px;
 }
 
-.pilula-rotulo {
-  font-size: 9.5px;
-  color: var(--texto-secundario, #94a3b8);
-  font-weight: 600;
+.pag-novo-lancamento .breadcrumb-nav a:hover {
+  color: #c5a059;
 }
 
-.pilula-divisor {
-  font-size: 10px;
-  color: var(--borda, #cbd5e1);
-  margin: 0 2px;
+.pag-novo-lancamento .breadcrumb-nav .separator {
+  color: #cbd5e1;
 }
 
-.nl-pilulas-valor button {
-  background: var(--fundo-cinza, #f1f5f9);
-  border: 1px solid var(--borda, #cbd5e1);
-  padding: 2px 7px;
-  border-radius: 10px;
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--texto-secundario, #475569);
-  cursor: pointer;
-  transition: all 0.2s ease;
+.pag-novo-lancamento .breadcrumb-nav .current-page {
+  color: var(--texto-principal, #0f172a);
+  font-weight: 850;
 }
 
-.nl-pilulas-valor button:hover {
-  background: var(--dourado, #c5a059);
-  color: white;
-  border-color: var(--dourado, #c5a059);
-}
-
-.btn-calc-desc {
-  background: rgba(16, 185, 129, 0.1) !important;
-  color: #059669 !important;
-  border-color: rgba(16, 185, 129, 0.3) !important;
-}
-
-.btn-calc-desc:hover {
-  background: #10b981 !important;
-  color: white !important;
-}
-
-.btn-calc-taxa {
-  background: rgba(234, 179, 8, 0.12) !important;
-  color: #a16207 !important;
-  border-color: rgba(234, 179, 8, 0.3) !important;
-}
-
-.btn-calc-taxa:hover {
-  background: #eab308 !important;
-  color: white !important;
-}
-
-/* 🔁 BOX DE LANÇAMENTO RECORRENTE */
-.nl-box-recorrente {
-  background: rgba(197, 160, 89, 0.05);
-  border: 1px solid rgba(197, 160, 89, 0.25);
-  padding: 8px 12px;
-  border-radius: 9px;
-  margin-top: 2px;
-}
-
-.nl-recorrente-toggle {
+.pag-novo-lancamento .hero-title-group {
   display: flex;
   align-items: center;
-  gap: 8px;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--dourado, #c5a059);
-  cursor: pointer;
-  text-transform: none !important;
+  gap: 12px;
 }
 
-.nl-recorrente-toggle input {
-  width: 15px;
-  height: 15px;
-  accent-color: var(--dourado, #c5a059);
-}
-
-.nl-recorrente-options {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 6px;
-  padding-top: 6px;
-  border-top: 1px dashed rgba(197, 160, 89, 0.3);
-}
-
-.nl-recorrente-options label {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--texto-secundario, #64748b);
-}
-
-.nl-recorrente-options select {
-  padding: 5px 10px;
-  font-size: 12px;
-}
-
-/* =========================================
-   BOTÕES DE STATUS (PAGO / RECEBIDO VS PENDENTE)
-   ========================================= */
-.nl-status-options { 
-  display: flex; 
-  gap: 8px; 
-}
-
-.status-radio {
-  flex: 1; 
-  padding: 8px; 
-  border: 2px solid var(--borda, #e2e8f0); 
-  border-radius: 9px;
-  text-align: center; 
-  font-size: 11.5px;
-  font-weight: 700; 
-  cursor: pointer; 
-  color: var(--texto-secundario, #64748b);
-  display: flex; 
-  align-items: center; 
-  justify-content: center; 
-  gap: 6px;
-  transition: all 0.2s ease;
-  background: var(--branco, #ffffff);
-}
-
-.status-radio input { 
-  display: none; 
-}
-
-.status-radio.selecionado { 
-  border-color: #10b981; 
-  background: rgba(16, 185, 129, 0.08); 
-  color: #059669; 
-}
-
-.status-radio.pendente.selecionado { 
-  border-color: #eab308; 
-  background: rgba(234, 179, 8, 0.08); 
-  color: #a16207; 
-}
-
-/* =========================================
-   🧾 COMPROVANTE COMPACTO
-   ========================================= */
-.nl-comprovante-box-compact {
-  margin-top: 1px;
-}
-
-.nl-upload-dropzone-mini {
-  border: 1px dashed var(--dourado, #c5a059);
-  border-radius: 9px;
-  padding: 8px;
-  background: rgba(197, 160, 89, 0.04);
-  text-align: center;
-}
-
-.nl-upload-label-mini {
-  cursor: pointer;
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--dourado, #c5a059);
-  display: block;
-}
-
-.nl-upload-label-mini:hover {
-  text-decoration: underline;
-}
-
-.nl-comprovante-preview-mini {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: var(--fundo-cinza, #f1f5f9);
-  padding: 6px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--borda, #cbd5e1);
-  font-size: 11.5px;
-  font-weight: 600;
-}
-
-.btn-remover-mini {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  font-size: 11px;
-}
-
-/* =========================================
-   🎨 BOTÕES DE AÇÃO FINAIS (RODAPÉ DO CARD)
-   ========================================= */
-.nl-actions { 
-  display: flex; 
-  justify-content: flex-end; 
-  align-items: center;
-  gap: 12px; 
-  margin-top: 4px; 
-  padding-top: 12px; 
-  border-top: 1px solid var(--borda, #e2e8f0); 
-}
-
-.btn-cancelar { 
-  padding: 9px 18px; 
-  border: none; 
-  background: transparent; 
-  color: var(--texto-secundario, #64748b); 
-  font-weight: 700; 
-  font-size: 12.5px;
-  cursor: pointer; 
-  transition: all 0.2s ease;
-}
-
-.btn-cancelar:hover { 
-  background: var(--fundo-cinza, #f1f5f9); 
-  border-radius: 8px; 
-  color: var(--texto-principal, #0f172a); 
-}
-
-.btn-salvar-dinamico { 
-  padding: 10px 24px; 
-  border: none; 
-  border-radius: 9px; 
-  color: white; 
-  font-weight: 800; 
-  font-size: 13px; 
-  letter-spacing: 0.2px;
-  cursor: pointer; 
-  transition: all 0.2s ease; 
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.btn-salvar-entrada { 
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%); 
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.25); 
-}
-
-.btn-salvar-saida { 
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%); 
-  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.25); 
-}
-
-.btn-salvar-dinamico:hover { 
-  transform: translateY(-1px); 
-  filter: brightness(1.08);
-}
-
-/* =========================================
-   📄 MODAL DE SUCESSO & AÇÕES RÁPIDAS
-   ========================================= */
-.nl-modal-sucesso-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
+.pag-novo-lancamento .header-icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 20px;
-  animation: fadeIn 0.25s ease-out;
+  font-size: 18px;
+  box-shadow: 0 6px 16px rgba(197, 160, 89, 0.25);
+  flex-shrink: 0;
 }
 
-.nl-modal-sucesso-card {
-  background: var(--branco, #ffffff);
-  border: 1px solid var(--dourado, #c5a059);
-  border-radius: 20px;
-  width: 100%;
-  max-width: 480px;
-  padding: 30px;
-  text-align: center;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-}
-
-.nl-modal-sucesso-icon {
-  font-size: 42px;
-  margin-bottom: 10px;
-}
-
-.nl-modal-sucesso-card h3 {
-  margin: 0 0 10px 0;
-  font-size: 20px;
-  font-weight: 800;
+.pag-novo-lancamento .form-page-title {
+  font-size: 1.45rem;
+  font-weight: 850;
   color: var(--texto-principal, #0f172a);
+  letter-spacing: -0.5px;
+  margin: 0;
 }
 
-.nl-modal-sucesso-card p {
-  margin: 0 0 24px 0;
-  font-size: 14px;
+.pag-novo-lancamento .form-page-subtitle {
+  font-size: 0.8rem;
   color: var(--texto-secundario, #64748b);
-  line-height: 1.5;
+  margin: 2px 0 0 0;
+  font-weight: 500;
 }
 
-.nl-modal-sucesso-acoes {
+.pag-novo-lancamento .cadastro-hero-right-actions {
   display: flex;
-  flex-direction: column;
-  gap: 10px;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.btn-sucesso-pdf {
-  background: #1e293b;
-  color: #c5a059;
-  border: 1px solid #c5a059;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 800;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
+.pag-novo-lancamento .btn-secondary-celebre {
+  background: var(--fundo-card, #ffffff) !important;
+  color: var(--texto-principal, #0f172a) !important;
+  padding: 8px 16px !important;
+  border-radius: 10px !important;
+  font-weight: 750 !important;
+  font-size: 0.78rem !important;
+  border: 1px solid var(--borda, #e2e8f0) !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+  transition: all 0.2s ease !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  height: 38px !important;
+  box-sizing: border-box !important;
 }
 
-.btn-sucesso-pdf:hover {
-  background: #c5a059;
-  color: #0f172a;
-}
-
-.btn-sucesso-wapp {
-  background: #25d366;
-  color: white;
-  border: none;
-  padding: 12px;
-  border-radius: 10px;
-  font-weight: 800;
-  font-size: 13.5px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
-}
-
-.btn-sucesso-wapp:hover {
-  filter: brightness(1.08);
+.pag-novo-lancamento .btn-secondary-celebre:hover {
+  background: var(--fundo-hover, #f8fafc) !important;
+  border-color: #cbd5e1 !important;
   transform: translateY(-1px);
 }
 
-.btn-sucesso-fechar {
-  background: var(--fundo-cinza, #f1f5f9);
+/* ====================================================
+   CONTAINER WIDESCREEN & CARTÃO UNIFICADO
+   ==================================================== */
+.pag-novo-lancamento .form-widescreen {
+  width: 100% !important;
+  max-width: 100% !important;
+  background: transparent !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  box-sizing: border-box;
+  border: none !important;
+}
+
+.pag-novo-lancamento .form-section-card {
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #e2e8f0);
+  border-radius: 18px;
+  padding: 22px 24px;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03);
+  transition: all 0.2s ease;
+}
+
+.pag-novo-lancamento .form-section-card.unified-sheet-card {
+  padding: 22px 24px 20px 24px;
+}
+
+/* CABEÇALHO INTEGRADO DE SEÇÃO DO CARTÃO UNIFICADO */
+.pag-novo-lancamento .unified-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.pag-novo-lancamento .unified-section-header .section-header-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: rgba(197, 160, 89, 0.12);
+  color: #c5a059;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
+.pag-novo-lancamento .unified-section-header h3 {
+  margin: 0;
+  font-size: 0.84rem;
+  font-weight: 850;
   color: var(--texto-principal, #0f172a);
-  border: 1px solid var(--borda, #cbd5e1);
-  padding: 11px;
-  border-radius: 10px;
-  font-weight: 700;
-  font-size: 13px;
+  letter-spacing: -0.1px;
+  text-transform: uppercase;
+}
+
+.pag-novo-lancamento .unified-section-header p {
+  margin: 2px 0 0 0;
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+}
+
+/* DIVISÓRIA SUAVE ENTRE SEÇÕES DO CARTÃO UNIFICADO */
+.pag-novo-lancamento .form-section-divider {
+  height: 1px;
+  background: linear-gradient(90deg, #f1f5f9 0%, #e2e8f0 30%, #cbd5e1 50%, #e2e8f0 70%, #f1f5f9 100%);
+  margin: 18px 0 16px 0;
+  width: 100%;
+}
+
+/* ====================================================
+   CARDS DE SELEÇÃO VIP (RECEITA VS DESPESA)
+   ==================================================== */
+.pag-novo-lancamento .toggle-servico-vip,
+.pag-novo-lancamento .nl-tipo-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pag-novo-lancamento .btn-servico-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+  padding: 14px 18px;
+  border-radius: 14px;
+  border: 1.5px solid var(--borda, #e2e8f0);
+  background: var(--fundo-card, #ffffff);
   cursor: pointer;
   transition: all 0.2s ease;
+  text-align: left;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font-family: inherit;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+}
+
+.pag-novo-lancamento .btn-servico-card:hover {
+  border-color: #cbd5e1;
+  background: var(--fundo-hover, #f8fafc);
+  transform: translateY(-1px);
+}
+
+.pag-novo-lancamento .btn-servico-card.active,
+.pag-novo-lancamento .btn-servico-card.ativo {
+  border: 2px solid #c5a059 !important;
+  background: rgba(197, 160, 89, 0.05) !important;
+  box-shadow: 0 0 0 1px #c5a059, 0 4px 14px rgba(197, 160, 89, 0.12) !important;
+}
+
+.pag-novo-lancamento .servico-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  color: #64748b;
+  border: 1px solid #e2e8f0;
+  transition: all 0.2s ease;
+}
+
+.pag-novo-lancamento .btn-servico-card:hover .servico-icon-box {
+  transform: scale(1.04);
+}
+
+.pag-novo-lancamento .btn-servico-card.active .servico-icon-box,
+.pag-novo-lancamento .btn-servico-card.ativo .servico-icon-box {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3) !important;
+}
+
+.pag-novo-lancamento .servico-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  justify-content: center;
+  min-width: 0;
+  flex: 1;
+}
+
+.pag-novo-lancamento .servico-info strong {
+  font-size: 0.90rem;
+  color: var(--texto-principal, #0f172a);
+  font-weight: 850;
+  display: block;
+  white-space: normal !important;
+  line-height: 1.22;
+  letter-spacing: -0.1px;
+}
+
+.pag-novo-lancamento .btn-servico-card.active .servico-info strong,
+.pag-novo-lancamento .btn-servico-card.ativo .servico-info strong {
+  color: #c5a059 !important;
+  font-weight: 900;
+}
+
+.pag-novo-lancamento .servico-info small {
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+  line-height: 1.25;
+  font-weight: 500;
+  display: block;
+  margin-top: 2px;
+}
+
+.pag-novo-lancamento .btn-servico-card.active .servico-info small,
+.pag-novo-lancamento .btn-servico-card.ativo .servico-info small {
+  color: #78350f !important;
+  font-weight: 550;
+}
+
+.pag-novo-lancamento .servico-check-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid var(--borda, #cbd5e1);
+  background: transparent;
+  margin-left: auto;
+  transition: all 0.2s ease;
+}
+
+.pag-novo-lancamento .btn-servico-card.active .servico-check-badge,
+.pag-novo-lancamento .btn-servico-card.ativo .servico-check-badge {
+  border-color: #c5a059 !important;
+  background: #c5a059 !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.35) !important;
+}
+
+.pag-novo-lancamento .servico-check-badge .check-mark {
+  font-size: 10px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+/* ====================================================
+   GRID DE INPUTS E FORMULÁRIO (PADRÃO CLIENTES & COMPRAS)
+   ==================================================== */
+.pag-novo-lancamento .form-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 12px;
+  width: 100%;
+}
+
+/* LINHA 1: VALOR (LARGO) + DATA (COMPACTO) */
+.pag-novo-lancamento .nc-row-nome-qtd {
+  display: grid !important;
+  grid-template-columns: 1fr 180px !important;
+  gap: 12px !important;
+  width: 100% !important;
+  grid-column: span 4 !important;
+}
+
+.pag-novo-lancamento .nc-row-nome-qtd .nc-field-nome {
+  width: 100% !important;
+}
+
+.pag-novo-lancamento .nc-row-nome-qtd .nc-field-qtd {
+  width: 100% !important;
+}
+
+.pag-novo-lancamento .span-1 { grid-column: span 1; }
+.pag-novo-lancamento .span-2 { grid-column: span 2; }
+.pag-novo-lancamento .span-3 { grid-column: span 3; }
+.pag-novo-lancamento .span-4 { grid-column: span 4; }
+
+.pag-novo-lancamento .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  width: 100%;
+}
+
+.pag-novo-lancamento .form-group label {
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--texto-secundario, #64748b);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  height: 16px;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.pag-novo-lancamento .form-group input,
+.pag-novo-lancamento .form-group select,
+.pag-novo-lancamento .form-group textarea {
+  width: 100%;
+  height: 40px;
+  background: var(--fundo-cinza, #f8fafc);
+  border: 1px solid var(--borda, #cbd5e1);
+  border-radius: 9px;
+  padding: 0 12px;
+  font-family: inherit;
+  font-size: 0.84rem;
+  color: var(--texto-principal, #0f172a);
+  outline: none;
+  transition: all 0.2s ease;
+  box-sizing: border-box;
+}
+
+.pag-novo-lancamento .form-group textarea {
+  height: auto !important;
+  padding: 10px 12px !important;
+}
+
+.pag-novo-lancamento .form-group input:focus,
+.pag-novo-lancamento .form-group select:focus,
+.pag-novo-lancamento .form-group textarea:focus {
+  border-color: #c5a059;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+  background: var(--fundo-card, #ffffff);
+}
+
+.pag-novo-lancamento .input-icon-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.pag-novo-lancamento .input-left-icon {
+  position: absolute;
+  left: 12px;
+  color: #94a3b8;
+  font-size: 13px;
+  pointer-events: none;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.pag-novo-lancamento .input-icon-wrapper input,
+.pag-novo-lancamento .input-icon-wrapper select {
+  padding-left: 34px !important;
+}
+
+.pag-novo-lancamento .nl-input-valor-celebre {
+  font-size: 1.05rem !important;
+  font-weight: 850 !important;
+  letter-spacing: -0.2px;
+}
+
+/* Pílulas de Valor Rápido */
+.pag-novo-lancamento .nl-pilulas-bar {
+  display: flex;
+  align-items: center;
+  gap: 5px;
   margin-top: 4px;
+  flex-wrap: wrap;
 }
 
-.btn-sucesso-fechar:hover {
-  background: var(--borda, #cbd5e1);
+.pag-novo-lancamento .pilula-lbl {
+  font-size: 0.64rem;
+  font-weight: 750;
+  color: var(--texto-secundario, #64748b);
+  text-transform: uppercase;
 }
 
-@keyframes fadeIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+.pag-novo-lancamento .btn-pilula {
+  background: var(--fundo-cinza, #f1f5f9);
+  border: 1px solid var(--borda, #cbd5e1);
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pag-novo-lancamento .btn-pilula:hover {
+  background: #c5a059;
+  color: #ffffff;
+  border-color: #c5a059;
+}
+
+.pag-novo-lancamento .pilula-div {
+  color: #cbd5e1;
+  font-size: 0.70rem;
+}
+
+.pag-novo-lancamento .btn-pilula-taxa {
+  background: rgba(197, 160, 89, 0.1);
+  border: 1px solid rgba(197, 160, 89, 0.3);
+  padding: 2px 7px;
+  border-radius: 6px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  color: #9e7a3b;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pag-novo-lancamento .btn-pilula-taxa:hover {
+  background: #c5a059;
+  color: #ffffff;
+}
+
+/* Seletor de Situação */
+.pag-novo-lancamento .select-status-pago {
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+  border-color: #bbf7d0 !important;
+  font-weight: 800 !important;
+}
+
+.pag-novo-lancamento .select-status-pendente {
+  background: #fffbeb !important;
+  color: #b45309 !important;
+  border-color: #fde68a !important;
+  font-weight: 800 !important;
+}
+
+/* Recorrência Box */
+.pag-novo-lancamento .nl-recorrente-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  height: 40px;
+  padding: 0 12px;
+  background: var(--fundo-cinza, #f8fafc);
+  border: 1px solid var(--borda, #cbd5e1);
+  border-radius: 9px;
+  box-sizing: border-box;
+}
+
+.pag-novo-lancamento .nl-recorrente-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: var(--texto-principal, #0f172a);
+  cursor: pointer;
+}
+
+.pag-novo-lancamento .select-meses-rec {
+  height: 28px !important;
+  padding: 0 6px !important;
+  font-size: 0.70rem !important;
+  font-weight: 800 !important;
+  border-radius: 6px !important;
+  width: auto !important;
+}
+
+/* Upload Dropzone */
+.pag-novo-lancamento .nl-upload-dropzone {
+  width: 100%;
+}
+
+.pag-novo-lancamento .nl-upload-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 40px;
+  background: var(--fundo-cinza, #f8fafc);
+  border: 1.5px dashed var(--borda, #cbd5e1);
+  border-radius: 9px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: var(--texto-secundario, #64748b);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.pag-novo-lancamento .nl-upload-label:hover {
+  border-color: #c5a059;
+  color: #c5a059;
+  background: #fffdf9;
+}
+
+.pag-novo-lancamento .nl-comprovante-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 12px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 9px;
+  font-size: 0.74rem;
+  font-weight: 750;
+  color: #166534;
+}
+
+.pag-novo-lancamento .btn-remover-comprovante {
+  background: none;
+  border: none;
+  color: #dc2626;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+/* ====================================================
+   BARRA DE AÇÕES NO RODAPÉ DO CARTÃO UNIFICADO
+   ==================================================== */
+.pag-novo-lancamento .unified-card-actions-bar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1.5px solid var(--borda, #f1f5f9);
+}
+
+.pag-novo-lancamento .btn-cancelar-celebre {
+  background: var(--fundo-card, #ffffff) !important;
+  color: var(--texto-secundario, #64748b) !important;
+  border: 1px solid var(--borda, #cbd5e1) !important;
+  padding: 9px 20px !important;
+  border-radius: 10px !important;
+  font-weight: 750 !important;
+  font-size: 0.80rem !important;
+  height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.pag-novo-lancamento .btn-cancelar-celebre:hover {
+  background: var(--fundo-hover, #f8fafc) !important;
+  color: var(--texto-principal, #0f172a) !important;
+  border-color: #94a3b8 !important;
+}
+
+.pag-novo-lancamento .btn-salvar-celebre-gold {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  padding: 9px 26px !important;
+  border-radius: 10px !important;
+  font-weight: 850 !important;
+  font-size: 0.82rem !important;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.3) !important;
+  height: 40px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+}
+
+.pag-novo-lancamento .btn-salvar-celebre-gold:hover:not(:disabled) {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(197, 160, 89, 0.4) !important;
+}
+
+.pag-novo-lancamento .btn-salvar-celebre-gold:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.pag-novo-lancamento .btn-receita-gold {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+  box-shadow: 0 4px 14px rgba(22, 163, 74, 0.3) !important;
+}
+
+.pag-novo-lancamento .btn-despesa-gold {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%) !important;
+  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.3) !important;
+}
+
+/* ====================================================
+   MODAL DE SUCESSO / RECIBO
+   ==================================================== */
+.pag-novo-lancamento .modal-overlay-premium {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  animation: nlFadeInCelebre 0.2s ease;
+}
+
+.pag-novo-lancamento .modal-box-pedido {
+  background: var(--fundo-card, #ffffff);
+  border-radius: 18px;
+  width: 100%;
+  max-width: 500px;
+  border: 1px solid var(--borda, #e2e8f0);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.2);
+  overflow: hidden;
+}
+
+.pag-novo-lancamento .modal-header-pedido {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--borda, #f1f5f9);
+}
+
+.pag-novo-lancamento .modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pag-novo-lancamento .modal-header-icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: rgba(34, 197, 94, 0.12);
+  color: #16a34a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.pag-novo-lancamento .modal-header-pedido h3 {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 850;
+  color: var(--texto-principal, #0f172a);
+}
+
+.pag-novo-lancamento .modal-header-pedido p {
+  margin: 2px 0 0 0;
+  font-size: 0.72rem;
+  color: var(--texto-secundario, #64748b);
+}
+
+.pag-novo-lancamento .btn-fechar-modal {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: var(--fundo-cinza, #f1f5f9);
+  border: none;
+  font-size: 13px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.pag-novo-lancamento .btn-fechar-modal:hover {
+  background: #e2e8f0;
+  color: #0f172a;
+}
+
+.pag-novo-lancamento .card-pedido-select {
+  display: flex;
+  align-items: center;
+  border-radius: 10px;
+  border: 1px solid var(--borda, #e2e8f0);
+  background: var(--fundo-card, #ffffff);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: 0.82rem;
+}
+
+.pag-novo-lancamento .card-pedido-select:hover {
+  transform: translateY(-1px);
+}
+
+/* ====================================================
+   RESPONSIVIDADE (MOBILE & TABLET <= 900px / <= 768px)
+   ==================================================== */
+@media (max-width: 900px) {
+  .pag-novo-lancamento {
+    padding: 16px 14px !important;
+  }
+
+  .pag-novo-lancamento .form-section-card {
+    padding: 18px 16px !important;
+    border-radius: 14px !important;
+  }
+
+  .pag-novo-lancamento .cadastro-hero-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 18px !important;
+  }
+
+  .pag-novo-lancamento .cadastro-hero-right-actions {
+    width: 100%;
+  }
+
+  .pag-novo-lancamento .btn-secondary-celebre {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pag-novo-lancamento .toggle-servico-vip,
+  .pag-novo-lancamento .nl-tipo-grid {
+    grid-template-columns: 1fr !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .pag-novo-lancamento {
+    padding: 12px 10px !important;
+  }
+
+  .pag-novo-lancamento .form-section-card {
+    padding: 14px 12px !important;
+    border-radius: 12px !important;
+  }
+
+  .pag-novo-lancamento .form-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px 8px !important;
+  }
+
+  .pag-novo-lancamento .nc-row-nome-qtd {
+    grid-template-columns: 1fr 130px !important;
+    grid-column: span 2 !important;
+    gap: 8px !important;
+  }
+
+  .pag-novo-lancamento .span-4,
+  .pag-novo-lancamento .span-3,
+  .pag-novo-lancamento .span-2:not(.col-mobile-half) {
+    grid-column: span 2 !important;
+  }
+
+  .pag-novo-lancamento .col-mobile-half,
+  .pag-novo-lancamento .span-1 {
+    grid-column: span 1 !important;
+  }
+
+  .pag-novo-lancamento .form-group label {
+    font-size: 0.62rem !important;
+    height: 14px !important;
+    line-height: 14px !important;
+  }
+
+  .pag-novo-lancamento .form-group input,
+  .pag-novo-lancamento .form-group select,
+  .pag-novo-lancamento .form-group textarea {
+    height: 38px !important;
+    font-size: 0.8rem !important;
+    padding: 0 10px !important;
+    border-radius: 8px !important;
+  }
+
+  .pag-novo-lancamento .input-icon-wrapper input,
+  .pag-novo-lancamento .input-icon-wrapper select {
+    padding-left: 30px !important;
+  }
+
+  .pag-novo-lancamento .input-left-icon {
+    left: 9px !important;
+    font-size: 12px !important;
+  }
+
+  .pag-novo-lancamento .unified-card-actions-bar {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .pag-novo-lancamento .btn-cancelar-celebre,
+  .pag-novo-lancamento .btn-salvar-celebre-gold {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+/* ====================================================
+   🌙 TEMA ESCURO (BLINDAGEM & LUXURY DARK MODE)
+   ==================================================== */
+[data-theme^='dark'] .pag-novo-lancamento {
+  background-color: transparent;
+  color: #f4f4f5;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .form-page-title {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .form-page-subtitle {
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .breadcrumb-nav .current-page {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .form-section-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .unified-section-header h3 {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .unified-section-header p {
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .form-section-divider {
+  background: linear-gradient(90deg, #18181b 0%, #27272a 30%, #3f3f46 50%, #27272a 70%, #18181b 100%) !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .form-group label {
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .form-group input,
+[data-theme^='dark'] .pag-novo-lancamento .form-group select,
+[data-theme^='dark'] .pag-novo-lancamento .form-group textarea {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .form-group input:focus,
+[data-theme^='dark'] .pag-novo-lancamento .form-group select:focus,
+[data-theme^='dark'] .pag-novo-lancamento .form-group textarea:focus {
+  background: #27272a !important;
+  border-color: #c5a059 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .btn-servico-card {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .btn-servico-card:hover {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .btn-servico-card.active,
+[data-theme^='dark'] .pag-novo-lancamento .btn-servico-card.ativo {
+  border-color: #c5a059 !important;
+  background: rgba(197, 160, 89, 0.12) !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .servico-icon-box {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .servico-info strong {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .btn-secondary-celebre {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .btn-secondary-celebre:hover {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .btn-cancelar-celebre {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .btn-cancelar-celebre:hover {
+  background: #27272a !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .modal-box-pedido {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .modal-header-pedido {
+  border-bottom-color: #27272a !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .modal-header-pedido h3 {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .card-pedido-select {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme^='dark'] .pag-novo-lancamento .nl-recorrente-box,
+[data-theme^='dark'] .pag-novo-lancamento .nl-upload-label {
+  background: #27272a !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
 }

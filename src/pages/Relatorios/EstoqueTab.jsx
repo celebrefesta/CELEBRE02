@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable'; 
+import { gerarRelatorioEstoquePDF } from '../../utils/gerarRelatorioEstoquePDF';
 import './EstoqueTab.css';
 
 const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
@@ -30,8 +29,8 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const [categoriasDisponiveis, setCategoriasDisponiveis] = useState([]);
 
   const [dadosEmpresa, setDadosEmpresa] = useState({
-    nomeEmpresa: 'Celebre Festas',
-    logotipo: '',
+    nomeEmpresa: localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || '',
+    logotipo: localStorage.getItem('logotipoEmpresa') || '',
     cnpj: '',
     endereco: ''
   });
@@ -75,12 +74,28 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
         if (snapConfig.exists && snapConfig.exists()) {
           const cfg = snapConfig.data();
+          const nomeFinal = cfg.nomeEmpresa || cfg.nomeFantasia || cfg.razaoSocial || cfg.nome || localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || 'Minha Empresa';
           setDadosEmpresa({
-            nomeEmpresa: cfg.nomeFantasia || cfg.razaoSocial || cfg.nome || 'Celebre Festas',
-            logotipo: cfg.logo || cfg.logotipo || '',
+            nomeEmpresa: nomeFinal,
+            logotipo: cfg.logotipo || cfg.logo || '',
             cnpj: cfg.cnpj || '',
             endereco: cfg.endereco || ''
           });
+          if (nomeFinal) localStorage.setItem('nomeEmpresa', nomeFinal);
+        } else {
+          try {
+            const snapUser = await getDoc(doc(db, "usuarios", tenantId));
+            if (snapUser.exists()) {
+              const u = snapUser.data();
+              const uNome = u.nomeEmpresa || u.nomeCompleto || u.empresaNome || u.nomeExibicao;
+              if (uNome) {
+                setDadosEmpresa(prev => ({ ...prev, nomeEmpresa: uNome }));
+                localStorage.setItem('nomeEmpresa', uNome);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
         }
 
         const estoque = snapEstoque.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -199,65 +214,45 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     });
   }, [estoqueListaCompleta, termoBusca, filtroCategoria, filtroStatus]);
 
-  // EXPORTAR CSV (EXCEL)
+  // EXPORTAR CSV (EXCEL COM UTF-8 BOM)
   const exportarCSVEstoque = () => {
     const cabecalho = ["Item / Peca", "Categoria", "Qtd Fisica", "Status", "Locacoes Realizadas", "Valor Aquisicao (R$)", "Valor Locacao (R$)"];
     const linhas = estoqueFiltrado.map(item => [
-      `"${item.nome.replace(/"/g, '""')}"`,
-      `"${item.categoria}"`,
-      `"${item.quantidade}"`,
-      `"${item.status}"`,
-      `"${item.qtdLocacoes}"`,
-      `"${item.valorAquisicao.toFixed(2).replace('.', ',')}"`,
-      `"${item.valorLocacao.toFixed(2).replace('.', ',')}"`
+      `"${(item.nome || '').replace(/"/g, '""')}"`,
+      `"${(item.categoria || 'Geral').replace(/"/g, '""')}"`,
+      `"${item.quantidade || 0}"`,
+      `"${item.status || ''}"`,
+      `"${item.qtdLocacoes || 0}"`,
+      `"${Number(item.valorAquisicao || 0).toFixed(2).replace('.', ',')}"`,
+      `"${Number(item.valorLocacao || 0).toFixed(2).replace('.', ',')}"`
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\r\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Inventario_${dadosEmpresa.nomeEmpresa.replace(/[^\w\s-]/gi, '')}_${new Date().toISOString().split('T')[0]}.csv`);
+    const nomeEmpresaSanitizado = (dadosEmpresa.nomeEmpresa || 'Empresa').replace(/[^\w\s-]/gi, '').trim().replace(/\s+/g, '_');
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Inventario_${nomeEmpresaSanitizado}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     registrarLog("EXPORTACAO_CSV_ESTOQUE", `Exportou inventário de estoque em CSV (${estoqueFiltrado.length} itens).`);
   };
 
   // EXPORTAR PDF
   const exportarPDFEstoque = async () => {
     try {
-      const docPDF = new jsPDF();
-      let startY = 22;
-
-      docPDF.setFontSize(18);
-      docPDF.setTextColor(15, 23, 42);
-      docPDF.text(dadosEmpresa.nomeEmpresa, 14, startY);
-      
-      docPDF.setFontSize(9);
-      docPDF.setTextColor(100);
-      docPDF.text(`INVENTÁRIO DE ACERVO & AUDITORIA FÍSICA · Filtro: ${filtroStatus}`, 14, startY + 6);
-      docPDF.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} · Total: ${estoqueFiltrado.length} tipos de itens`, 14, startY + 11);
-
-      const tableColumn = ["Item / Peça", "Categoria", "Qtd Física", "Giro (Festas)", "Status"];
-      const tableRows = estoqueFiltrado.map(item => [
-        item.nome,
-        item.categoria,
-        item.quantidade,
-        item.qtdLocacoes,
-        item.status
-      ]);
-
-      autoTable(docPDF, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: startY + 16,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 23, 42] },
-        styles: { fontSize: 8.5 },
-        columnStyles: { 2: { halign: 'center' }, 3: { halign: 'center', fontStyle: 'bold' } }
+      gerarRelatorioEstoquePDF({
+        empresa: dadosEmpresa,
+        metricas,
+        estoque: estoqueFiltrado,
+        filtroStatus,
+        filtroCategoria,
+        usuarioEmail: usuarioLogado?.email
       });
-
-      docPDF.save(`Inventario_Acervo_${dadosEmpresa.nomeEmpresa.replace(/[^\w\s-]/gi, '')}_${new Date().toISOString().split('T')[0]}.pdf`);
       await registrarLog("EXPORTAÇÃO DE INVENTÁRIO", "Baixou o relatório completo de estoque em PDF.");
     } catch (error) {
       console.error(error);
@@ -273,20 +268,22 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
       {mostrarIndicadores && (
         <>
           {/* 💡 PAINEL DE INSIGHTS INTELIGENTES ESTOQUE */}
-          <div style={{ background: '#ffffff', color: '#0f172a', border: '1.5px solid #e2e8f0', borderLeft: '5px solid #10b981', padding: '14px 18px', borderRadius: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.3rem' }}>📦</span>
-              <div>
-                <strong style={{ fontSize: '0.82rem', color: '#0f172a', letterSpacing: '0.4px', textTransform: 'uppercase' }}>SAÚDE DO ACERVO &amp; DISPONIBILIDADE FÍSICA</strong>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                  Total de <strong>{metricas.totalPecas} peças físicas</strong> em acervo ({metricas.tiposDiferentes} categorias). 
-                  {metricas.emManutencao > 0 ? ` ⚠️ ${metricas.emManutencao} peças em reparo.` : ' 🟢 100% das peças prontas para saída!'}
-                </p>
+          <div className="rel-card-unificado" style={{ borderLeft: '5px solid #10b981', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '1.3rem' }}>📦</span>
+                <div>
+                  <strong style={{ fontSize: '0.82rem', color: 'var(--texto-principal, #0f172a)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>SAÚDE DO ACERVO &amp; DISPONIBILIDADE FÍSICA</strong>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--texto-secundario, #64748b)' }}>
+                    Total de <strong>{metricas.totalPecas} peças físicas</strong> em acervo ({metricas.tiposDiferentes} categorias). 
+                    {metricas.emManutencao > 0 ? ` ⚠️ ${metricas.emManutencao} peças em reparo.` : ' 🟢 100% das peças prontas para saída!'}
+                  </p>
+                </div>
               </div>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: 'var(--fundo-cinza, #f8fafc)', color: '#10b981', border: '1px solid var(--borda, #cbd5e1)' }}>
+                {metricas.tiposDiferentes} Categorias
+              </span>
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: '#f8fafc', color: '#10b981', border: '1px solid #cbd5e1' }}>
-              {metricas.tiposDiferentes} Categorias
-            </span>
           </div>
 
           {/* 4 CARDS KPI BLINDADOS (GOLDEN RULE 1 & 2) */}
@@ -331,23 +328,23 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           </div>
 
           {/* 📊 WIDGET COMPACTO DE CATEGORIAS E TEMAS */}
-          <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '16px 20px', margin: '16px 0', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="rel-card-unificado">
+            <div className="rel-card-header">
               <div>
-                <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: '850' }}>📊 Distribuição de Categorias &amp; Temas Mais Pedidos</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', color: '#64748b' }}>Proporção de peças no estoque e popularidade por tema</p>
+                <h3 className="rel-card-title">📊 Distribuição de Categorias &amp; Temas Mais Pedidos</h3>
+                <p className="rel-card-sub">Proporção de peças no estoque e popularidade por tema</p>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
               {/* CATEGORIAS */}
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📦 Categorias Físicas</span>
+              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📦 Categorias Físicas</span>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {rankingCategorias.map(([cat, total], idx) => {
                     const pct = metricas.totalPecas > 0 ? Math.round((total / metricas.totalPecas) * 100) : 0;
                     return (
-                      <span key={idx} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                      <span key={idx} style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--texto-principal, #0f172a)' }}>
                         {cat}: <strong>{total} pçs ({pct}%)</strong>
                       </span>
                     );
@@ -356,15 +353,15 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
               </div>
 
               {/* TEMAS */}
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🔥 Temas Campeões em Locação</span>
+              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🔥 Temas Campeões em Locação</span>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {rankingTemas.map(([tema, total], idx) => (
-                    <span key={idx} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#10b981' }}>
+                    <span key={idx} style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#10b981' }}>
                       {tema}: <strong>{total} festas</strong>
                     </span>
                   ))}
-                  {rankingTemas.length === 0 && <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Sem temas registrados.</span>}
+                  {rankingTemas.length === 0 && <span style={{ fontSize: '0.74rem', color: 'var(--texto-secundario, #94a3b8)' }}>Sem temas registrados.</span>}
                 </div>
               </div>
             </div>
@@ -373,25 +370,25 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
       )}
 
       {/* TABELA DE INVENTÁRIO */}
-      <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '18px 22px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+      <div className="rel-card-unificado">
+        <div className="rel-card-header">
           <div>
-            <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>📦 Controle de Inventário Físico &amp; Giro ({estoqueFiltrado.length})</h3>
-            <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Lista detalhada de peças com volume de locações realizadas.</p>
+            <h3 className="rel-card-title">📦 Controle de Inventário Físico &amp; Giro ({estoqueFiltrado.length})</h3>
+            <p className="rel-card-sub">Lista detalhada de peças com volume de locações realizadas.</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="rel-card-actions">
             <button 
               type="button" 
               onClick={alternarIndicadores}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              className="rel-btn-action-outline"
             >
               {mostrarIndicadores ? '👁️ Ocultar Indicadores' : '📊 Ver Indicadores & KPIs'}
             </button>
             <button 
               type="button" 
               onClick={exportarCSVEstoque}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              className="rel-btn-action-outline"
             >
               📊 Exportar Excel (CSV)
             </button>

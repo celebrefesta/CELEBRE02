@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable'; 
+import { gerarRelatorioClientesPDF } from '../../utils/gerarRelatorioClientesPDF';
 import './ClientesTab.css';
 
 const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
@@ -29,8 +28,8 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const [todosClientesData, setTodosClientesData] = useState([]);
 
   const [dadosEmpresa, setDadosEmpresa] = useState({
-    nomeEmpresa: 'Celebre Festas',
-    logotipo: '',
+    nomeEmpresa: localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || '',
+    logotipo: localStorage.getItem('logotipoEmpresa') || '',
     cnpj: '',
     endereco: ''
   });
@@ -72,12 +71,28 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
         if (snapConfig.exists && snapConfig.exists()) {
           const configData = snapConfig.data();
+          const nomeFinal = configData.nomeEmpresa || configData.nomeFantasia || configData.razaoSocial || configData.nome || localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || 'Minha Empresa';
           setDadosEmpresa({
-            nomeEmpresa: configData.nomeFantasia || configData.razaoSocial || configData.nome || 'Celebre Festas',
-            logotipo: configData.logo || configData.logotipo || '',
+            nomeEmpresa: nomeFinal,
+            logotipo: configData.logotipo || configData.logo || '',
             cnpj: configData.cnpj || '',
             endereco: configData.endereco || ''
           });
+          if (nomeFinal) localStorage.setItem('nomeEmpresa', nomeFinal);
+        } else {
+          try {
+            const snapUser = await getDoc(doc(db, "usuarios", tenantId));
+            if (snapUser.exists()) {
+              const u = snapUser.data();
+              const uNome = u.nomeEmpresa || u.nomeCompleto || u.empresaNome || u.nomeExibicao;
+              if (uNome) {
+                setDadosEmpresa(prev => ({ ...prev, nomeEmpresa: uNome }));
+                localStorage.setItem('nomeEmpresa', uNome);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
         }
 
         const clientes = snapClientes.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -204,66 +219,44 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     });
   }, [todosClientesData, termoBusca, filtroSegmento]);
 
-  // EXPORTAR CSV (EXCEL)
+  // EXPORTAR CSV (EXCEL COM UTF-8 BOM)
   const exportarCSVClientes = () => {
     const cabecalho = ["Nome", "Telefone", "Cidade", "Qtd Festas", "Total Gasto (R$)", "Status", "Ultima Locacao"];
     const linhas = clientesFiltrados.map(c => [
-      `"${c.nome.replace(/"/g, '""')}"`,
-      `"${c.telefone}"`,
-      `"${c.cidade}"`,
-      `"${c.festas}"`,
-      `"${c.totalGasto.toFixed(2).replace('.', ',')}"`,
-      `"${c.status}"`,
-      `"${c.ultimaLocacaoStr}"`
+      `"${(c.nome || '').replace(/"/g, '""')}"`,
+      `"${c.telefone || ''}"`,
+      `"${(c.cidade || '').replace(/"/g, '""')}"`,
+      `"${c.festas || 0}"`,
+      `"${Number(c.totalGasto || 0).toFixed(2).replace('.', ',')}"`,
+      `"${c.status || ''}"`,
+      `"${c.ultimaLocacaoStr || ''}"`
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\r\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Clientes_${dadosEmpresa.nomeEmpresa.replace(/[^\w\s-]/gi, '')}_${new Date().toISOString().split('T')[0]}.csv`);
+    const nomeEmpresaSanitizado = (dadosEmpresa.nomeEmpresa || 'Empresa').replace(/[^\w\s-]/gi, '').trim().replace(/\s+/g, '_');
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Clientes_${nomeEmpresaSanitizado}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     registrarLog("EXPORTACAO_CSV_CLIENTES", `Exportou lista de clientes em CSV (${clientesFiltrados.length} registros).`);
   };
 
   // EXPORTAR PDF
   const exportarRelatorioGeral = async () => {
     try {
-      const docPDF = new jsPDF();
-      let startY = 22; 
-
-      docPDF.setFontSize(18);
-      docPDF.setTextColor(15, 23, 42);
-      docPDF.text(dadosEmpresa.nomeEmpresa, 14, startY);
-
-      docPDF.setFontSize(9);
-      docPDF.setTextColor(100);
-      docPDF.text(`RELATÓRIO DE CLIENTES & CRM · Filtro: ${filtroSegmento}`, 14, startY + 6);
-      docPDF.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} · Total: ${clientesFiltrados.length} clientes`, 14, startY + 11);
-
-      const tableColumn = ["Nome do Cliente", "Telefone", "Cidade", "Locações", "Total Gasto (R$)", "Status"];
-      const tableRows = clientesFiltrados.map(c => [
-        c.nome,
-        c.telefone || '-',
-        c.cidade,
-        c.festas,
-        `R$ ${c.totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,
-        c.status
-      ]);
-
-      autoTable(docPDF, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: startY + 16,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 23, 42] },
-        styles: { fontSize: 8.5 },
-        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } }
+      gerarRelatorioClientesPDF({
+        empresa: dadosEmpresa,
+        metricas,
+        clientes: clientesFiltrados,
+        filtroSegmento,
+        usuarioEmail: usuarioLogado?.email
       });
-
-      docPDF.save(`Relatorio_Clientes_${dadosEmpresa.nomeEmpresa.replace(/[^\w\s-]/gi, '')}_${new Date().toISOString().split('T')[0]}.pdf`);
       await registrarLog("EXPORTAÇÃO DE RELATÓRIO DE CLIENTES", `Baixou a lista de carteira de clientes em PDF.`);
     } catch (error) {
       console.error(error);
@@ -290,23 +283,23 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const topCidadeNome = rankingCidades.length > 0 ? rankingCidades[0][0] : 'Não especificada';
 
   return (
-    <div className="fade-in">
+    <div className="fade-in rel-clientes-wrapper">
       
       {mostrarIndicadores && (
         <>
           {/* 💡 PAINEL DE INSIGHTS INTELIGENTES CLIENTES */}
-          <div style={{ background: '#ffffff', color: '#0f172a', border: '1.5px solid #e2e8f0', borderLeft: '5px solid #3b82f6', padding: '14px 18px', borderRadius: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.3rem' }}>💎</span>
+          <div className="rel-clientes-insights">
+            <div className="rel-clientes-insights-left">
+              <span className="rel-clientes-insights-icon">💎</span>
               <div>
-                <strong style={{ fontSize: '0.82rem', color: '#0f172a', letterSpacing: '0.4px', textTransform: 'uppercase' }}>CLIENTE DE MAIOR LTV &amp; REGIÃO PRINCIPAL</strong>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                  Cliente principal: <strong>{topClienteNome}</strong> (R$ {topClienteGasto.toLocaleString('pt-BR')}). Cidade líder em eventos: <strong>{topCidadeNome}</strong>.
+                <strong className="rel-clientes-insights-title">CLIENTE DE MAIOR LTV &amp; REGIÃO PRINCIPAL</strong>
+                <p className="rel-clientes-insights-sub">
+                  Cliente principal: <strong>{topClienteNome}</strong> (R$ {topClienteGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Cidade líder em eventos: <strong>{topCidadeNome}</strong>.
                 </p>
               </div>
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: '#f8fafc', color: '#3b82f6', border: '1px solid #cbd5e1' }}>
-              Retorno: {metricas.taxaRetorno}%
+            <span className="rel-clientes-insights-badge">
+              Taxa de Retorno: {metricas.taxaRetorno}%
             </span>
           </div>
 
@@ -334,7 +327,7 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
               <div className="stat-icon-wrapper icon-purple">💳</div>
               <div className="stat-content">
                 <span className="stat-title">TICKET MÉDIO (LTV)</span>
-                <strong className="stat-number">R$ {metricas.ticketMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <strong className="stat-number">R$ {metricas.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                 <small className="stat-desc">Valor por locação</small>
               </div>
             </div>
@@ -350,37 +343,37 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           </div>
 
           {/* 📊 WIDGET COMPACTO DE RANKING DE CLIENTES VIP & REGIÕES */}
-          <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '16px 20px', margin: '16px 0', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="rel-card-unificado">
+            <div className="rel-card-header">
               <div>
-                <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: '850' }}>🏆 Top Clientes VIP &amp; Cidades Líderes</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', color: '#64748b' }}>Maiores investidores e concentração geográfica de eventos</p>
+                <h3 className="rel-card-title">🏆 Top Clientes VIP &amp; Cidades Líderes</h3>
+                <p className="rel-card-sub">Maiores investidores e concentração geográfica de eventos</p>
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
+            <div className="rel-clientes-rank-grid">
               {/* PAINEL CLIENTES VIP */}
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🥇 Top 3 Clientes em Faturamento</span>
+              <div className="rel-clientes-rank-card">
+                <span className="rel-clientes-rank-header">🥇 Top 3 Clientes em Faturamento</span>
                 {topClientes.slice(0, 3).map((c, idx) => (
-                  <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.76rem', margin: '4px 0' }}>
-                    <span style={{ color: '#0f172a', fontWeight: 700 }}>{idx + 1}º {c.nome}</span>
-                    <span style={{ color: '#10b981', fontWeight: 850 }}>R$ {c.gastoTotal.toLocaleString('pt-BR')}</span>
+                  <div key={idx} className="rel-clientes-rank-row">
+                    <span style={{ color: 'var(--texto-principal, #0f172a)', fontWeight: 700 }}>{idx + 1}º {c.nome}</span>
+                    <span style={{ color: '#10b981', fontWeight: 850 }}>R$ {c.gastoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
                   </div>
                 ))}
-                {topClientes.length === 0 && <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Sem lançamentos acumulados.</span>}
+                {topClientes.length === 0 && <span style={{ fontSize: '0.74rem', color: 'var(--texto-secundario, #94a3b8)' }}>Sem lançamentos acumulados.</span>}
               </div>
 
               {/* PAINEL CIDADES */}
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📍 Top Cidades em Festas</span>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+              <div className="rel-clientes-rank-card">
+                <span className="rel-clientes-rank-header">📍 Top Cidades em Festas</span>
+                <div className="rel-clientes-cidades-tags">
                   {rankingCidades.map(([cidade, count], idx) => (
-                    <span key={idx} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6' }}>
+                    <span key={idx} className="rel-clientes-cidade-tag">
                       {cidade}: <strong>{count} festas</strong>
                     </span>
                   ))}
-                  {rankingCidades.length === 0 && <span style={{ fontSize: '0.74rem', color: '#94a3b8' }}>Sem cidades registradas.</span>}
+                  {rankingCidades.length === 0 && <span style={{ fontSize: '0.74rem', color: 'var(--texto-secundario, #94a3b8)' }}>Sem cidades registradas.</span>}
                 </div>
               </div>
             </div>
@@ -389,130 +382,162 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
       )}
 
       {/* TABELA GERAL DE CLIENTES */}
-      <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '18px 22px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+      <div className="rel-card-unificado">
+        <div className="rel-card-header">
           <div>
-            <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>📋 Carteira Completa de Clientes ({clientesFiltrados.length})</h3>
-            <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Listagem segmentada com histórico de festas e LTV.</p>
+            <h3 className="rel-card-title">📋 Carteira Completa de Clientes ({clientesFiltrados.length})</h3>
+            <p className="rel-card-sub">Listagem segmentada com histórico de festas e LTV.</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="rel-card-actions">
             <button 
               type="button" 
               onClick={alternarIndicadores}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              className="rel-btn-action-outline"
             >
-              {mostrarIndicadores ? '👁️ Ocultar Indicadores' : '📊 Ver Indicadores & KPIs'}
+              {mostrarIndicadores ? '👁️ Ocultar KPIs' : '📊 Ver KPIs'}
             </button>
-            <button 
-              type="button" 
-              onClick={exportarCSVClientes}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-            >
-              📊 Exportar Excel (CSV)
-            </button>
-            <button type="button" className="btn-export-pdf" onClick={exportarRelatorioGeral}>
-              📄 Baixar Carteira (PDF)
-            </button>
+            <div className="rel-export-btn-group">
+              <button 
+                type="button" 
+                onClick={exportarCSVClientes}
+                className="rel-btn-action-outline"
+                title="Exportar planilha Excel (CSV)"
+              >
+                📊 Excel (CSV)
+              </button>
+              <button 
+                type="button" 
+                className="rel-btn-action-primary" 
+                onClick={exportarRelatorioGeral}
+                title="Baixar Relatório Executivo em PDF"
+              >
+                📄 Baixar PDF
+              </button>
+            </div>
           </div>
         </div>
 
         {/* BARRA DE PESQUISA & SEGMENTAÇÃO */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-          <div style={{ flex: '1', minWidth: '240px' }}>
+        <div className="rel-clientes-subbar">
+          <div className="rel-clientes-search-box">
+            <i className="fas fa-search rel-search-icon"></i>
             <input 
               type="text" 
-              placeholder="🔍 Buscar por nome, cidade ou telefone..." 
+              placeholder="Buscar por nome, cidade ou telefone..." 
               value={termoBusca}
               onChange={e => setTermoBusca(e.target.value)}
-              style={{ width: '100%', padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', background: '#ffffff', outline: 'none' }}
+              className="rel-clientes-search-input"
             />
+            {termoBusca && (
+              <button 
+                type="button" 
+                className="rel-clear-search-btn" 
+                onClick={() => setTermoBusca('')}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div className="rel-clientes-pills">
             <button 
               type="button" 
               onClick={() => setFiltroSegmento('TODOS')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroSegmento === 'TODOS' ? '1.5px solid #0f172a' : '1px solid #cbd5e1', background: filtroSegmento === 'TODOS' ? '#0f172a' : '#ffffff', color: filtroSegmento === 'TODOS' ? '#ffffff' : '#334155', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
+              className={`rel-cliente-pill-btn ${filtroSegmento === 'TODOS' ? 'active' : ''}`}
             >
-              Todos ({todosClientesData.length})
+              📋 Todos ({todosClientesData.length})
             </button>
             <button 
               type="button" 
               onClick={() => setFiltroSegmento('VIP')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroSegmento === 'VIP' ? '1.5px solid #a16207' : '1px solid #cbd5e1', background: filtroSegmento === 'VIP' ? '#fefce8' : '#ffffff', color: '#a16207', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
+              className={`rel-cliente-pill-btn vip ${filtroSegmento === 'VIP' ? 'active' : ''}`}
             >
               ⭐ Clientes VIP
             </button>
             <button 
               type="button" 
               onClick={() => setFiltroSegmento('ATIVOS')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroSegmento === 'ATIVOS' ? '1.5px solid #16a34a' : '1px solid #cbd5e1', background: filtroSegmento === 'ATIVOS' ? '#f0fdf4' : '#ffffff', color: '#15803d', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
+              className={`rel-cliente-pill-btn ativo ${filtroSegmento === 'ATIVOS' ? 'active' : ''}`}
             >
               🟢 Ativos
             </button>
             <button 
               type="button" 
               onClick={() => setFiltroSegmento('INATIVOS')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroSegmento === 'INATIVOS' ? '1.5px solid #dc2626' : '1px solid #cbd5e1', background: filtroSegmento === 'INATIVOS' ? '#fef2f2' : '#ffffff', color: '#dc2626', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
+              className={`rel-cliente-pill-btn inativo ${filtroSegmento === 'INATIVOS' ? 'active' : ''}`}
             >
               ⚪ Inativos (&gt;6m)
             </button>
           </div>
         </div>
 
-        <div className="table-container" style={{ marginTop: '10px' }}>
-          <table className="custom-table table-pro">
+        {/* TABELA PROTEGIDA COM SCROLL HORIZONTAL */}
+        <div className="rel-table-scroll-wrapper">
+          <table className="rel-clientes-table">
             <thead>
               <tr>
-                <th>CLIENTE</th>
-                <th>CIDADE / CONTATO</th>
-                <th style={{textAlign: 'center'}}>Nº FESTAS</th>
-                <th style={{textAlign: 'right'}}>GASTO TOTAL (LTV)</th>
-                <th style={{textAlign: 'center'}}>STATUS</th>
-                <th style={{textAlign: 'center', width: '90px'}}>AÇÃO CRM</th>
+                <th style={{ width: '30%' }}>CLIENTE</th>
+                <th style={{ width: '24%' }}>CIDADE / CONTATO</th>
+                <th style={{ width: '12%', textAlign: 'center' }}>Nº FESTAS</th>
+                <th style={{ width: '16%', textAlign: 'right' }}>GASTO TOTAL (LTV)</th>
+                <th style={{ width: '10%', textAlign: 'center' }}>STATUS</th>
+                <th style={{ width: '8%', textAlign: 'center' }}>AÇÃO CRM</th>
               </tr>
             </thead>
             <tbody>
               {clientesFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhum cliente encontrado para os filtros selecionados.</td>
+                  <td colSpan="6" className="rel-table-empty-cell">
+                    Nenhum cliente encontrado para os filtros selecionados.
+                  </td>
                 </tr>
               ) : (
                 clientesFiltrados.map((c, idx) => (
                   <tr key={idx}>
                     <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <strong style={{color: '#0f172a'}}>{c.nome}</strong>
+                      <div className="rel-cliente-nome-row">
+                        <strong className="rel-cliente-nome">{c.nome}</strong>
                         {c.seloVIP && (
-                          <span style={{ fontSize: '0.64rem', fontWeight: '850', padding: '2px 6px', borderRadius: '6px', background: c.seloVIP.bg, color: c.seloVIP.color, border: '1px solid #cbd5e1' }}>
+                          <span 
+                            className="rel-cliente-vip-badge" 
+                            style={{ 
+                              background: c.seloVIP.bg, 
+                              color: c.seloVIP.color,
+                              borderColor: c.seloVIP.color 
+                            }}
+                          >
                             {c.seloVIP.label}
                           </span>
                         )}
                       </div>
-                      <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>Última locação: {c.ultimaLocacaoStr}</div>
+                      <div className="rel-cliente-subtext">Última locação: {c.ultimaLocacaoStr}</div>
                     </td>
                     <td>
-                      <div style={{ color: '#334155', fontWeight: 600 }}>{c.cidade}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{c.telefone || 'Sem telefone'}</div>
+                      <div className="rel-cliente-cidade">{c.cidade}</div>
+                      <div className="rel-cliente-subtext">{c.telefone || 'Sem telefone'}</div>
                     </td>
-                    <td style={{textAlign: 'center', fontWeight: '850', color: '#0f172a'}}>{c.festas}</td>
-                    <td style={{textAlign: 'right', fontWeight: '850', color: '#10b981'}}>
-                      R$ {c.totalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                    <td style={{ textAlign: 'center' }}>
+                      <span className="rel-cliente-festas-count">{c.festas}</span>
                     </td>
-                    <td style={{textAlign: 'center'}}>
-                      <span className={`badge-dre ${c.status === 'Ativo' ? 'receita' : 'despesa'}`}>
+                    <td style={{ textAlign: 'right' }}>
+                      <strong className="rel-cliente-valor">
+                        R$ {c.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </strong>
+                    </td>
+                    <td style={{ textAlign: 'center' }}>
+                      <span className={`rel-status-pill ${c.status === 'Ativo' ? 'ativo' : 'inativo'}`}>
                         {c.status === 'Ativo' ? '🟢 Ativo' : '⚪ Inativo'}
                       </span>
                     </td>
-                    <td style={{textAlign: 'center'}}>
+                    <td style={{ textAlign: 'center' }}>
                       <button 
                         type="button" 
                         onClick={() => abrirWhatsAppCliente(c)}
-                        style={{ padding: '5px 10px', borderRadius: '8px', border: '1px solid #bbf7d0', background: '#f0fdf4', color: '#16a34a', fontSize: '0.74rem', fontWeight: 'bold', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '4px' }}
-                        title="Enviar mensagem WhatsApp"
+                        className="rel-btn-crm-whatsapp"
+                        title="Enviar mensagem no WhatsApp"
                       >
-                        💬 WhatsApp
+                        <i className="fab fa-whatsapp"></i> WhatsApp
                       </button>
                     </td>
                   </tr>

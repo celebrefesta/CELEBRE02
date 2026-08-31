@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { gerarRelatorioFinanceiroPDF } from '../../utils/gerarRelatorioFinanceiroPDF';
 import './FinanceiroTab.css';
 
 const NOMES_MESES = [
@@ -31,8 +30,8 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const [todosLancamentos, setTodosLancamentos] = useState([]);
 
   const [dadosEmpresa, setDadosEmpresa] = useState({
-    nomeEmpresa: 'Celebre Festas',
-    logotipo: '',
+    nomeEmpresa: localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || '',
+    logotipo: localStorage.getItem('logotipoEmpresa') || '',
     cnpj: '',
     endereco: '',
     chavePix: ''
@@ -77,13 +76,29 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
         if (snapConfig.exists && snapConfig.exists()) {
           const cfg = snapConfig.data();
+          const nomeFinal = cfg.nomeEmpresa || cfg.nomeFantasia || cfg.razaoSocial || cfg.nome || localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || 'Minha Empresa';
           setDadosEmpresa({
-            nomeEmpresa: cfg.nomeFantasia || cfg.razaoSocial || cfg.nome || 'Celebre Festas',
-            logotipo: cfg.logo || cfg.logotipo || '',
+            nomeEmpresa: nomeFinal,
+            logotipo: cfg.logotipo || cfg.logo || '',
             cnpj: cfg.cnpj || '',
             endereco: cfg.endereco || '',
             chavePix: cfg.chavePix || cfg.pix || ''
           });
+          if (nomeFinal) localStorage.setItem('nomeEmpresa', nomeFinal);
+        } else {
+          try {
+            const snapUser = await getDoc(doc(db, "usuarios", tenantId));
+            if (snapUser.exists()) {
+              const u = snapUser.data();
+              const uNome = u.nomeEmpresa || u.nomeCompleto || u.empresaNome || u.nomeExibicao;
+              if (uNome) {
+                setDadosEmpresa(prev => ({ ...prev, nomeEmpresa: uNome }));
+                localStorage.setItem('nomeEmpresa', uNome);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
         }
 
         setTodasLocacoes(snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -233,6 +248,68 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     });
   }, [transacoesPeriodo, filtroTipo]);
 
+  const [filtroFormaSelecionada, setFiltroFormaSelecionada] = useState('todas'); 
+  // 'todas' | 'pix' | 'cartao_credito' | 'cartao_debito' | 'dinheiro' | 'cheque' | 'outros'
+
+  const resumoExtrato = useMemo(() => {
+    const totalEntradas = transacoesPeriodo.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
+    const totalSaidas = transacoesPeriodo.filter(t => t.tipo === 'despesa').reduce((acc, t) => acc + t.valor, 0);
+    const saldo = totalEntradas - totalSaidas;
+    return { totalEntradas, totalSaidas, saldo };
+  }, [transacoesPeriodo]);
+
+  const receitasPorForma = useMemo(() => {
+    return transacoesPeriodo.filter(t => t.tipo === 'receita');
+  }, [transacoesPeriodo]);
+
+  // Contagem individual por modalidade de pagamento
+  const contagemFormas = useMemo(() => {
+    let pix = 0, credito = 0, debito = 0, dinheiro = 0, cheque = 0, outros = 0;
+    receitasPorForma.forEach(t => {
+      const f = String(t.formaPagto || '').toLowerCase();
+      if (f.includes('pix')) pix++;
+      else if (f.includes('déb') || f.includes('deb')) debito++;
+      else if (f.includes('créd') || f.includes('cred') || f.includes('cart')) credito++;
+      else if (f.includes('dinheiro') || f.includes('especie') || f.includes('espécie')) dinheiro++;
+      else if (f.includes('cheque')) cheque++;
+      else outros++;
+    });
+    return { todas: receitasPorForma.length, pix, credito, debito, dinheiro, cheque, outros };
+  }, [receitasPorForma]);
+
+  const transacoesFormasFiltradas = useMemo(() => {
+    if (filtroFormaSelecionada === 'todas') return receitasPorForma;
+    return receitasPorForma.filter(t => {
+      const f = String(t.formaPagto || '').toLowerCase();
+      if (filtroFormaSelecionada === 'pix') return f.includes('pix');
+      if (filtroFormaSelecionada === 'cartao_credito') {
+        return f.includes('créd') || f.includes('cred') || (f.includes('cart') && !f.includes('deb') && !f.includes('déb'));
+      }
+      if (filtroFormaSelecionada === 'cartao_debito') {
+        return f.includes('déb') || f.includes('deb');
+      }
+      if (filtroFormaSelecionada === 'dinheiro') {
+        return f.includes('dinheiro') || f.includes('especie') || f.includes('espécie');
+      }
+      if (filtroFormaSelecionada === 'cheque') {
+        return f.includes('cheque');
+      }
+      if (filtroFormaSelecionada === 'outros') {
+        const isPix = f.includes('pix');
+        const isCred = f.includes('créd') || f.includes('cred') || (f.includes('cart') && !f.includes('deb') && !f.includes('déb'));
+        const isDeb = f.includes('deb') || f.includes('déb');
+        const isDinheiro = f.includes('dinheiro') || f.includes('especie') || f.includes('espécie');
+        const isCheque = f.includes('cheque');
+        return !isPix && !isCred && !isDeb && !isDinheiro && !isCheque;
+      }
+      return true;
+    });
+  }, [receitasPorForma, filtroFormaSelecionada]);
+
+  const totalFormasSelecionado = useMemo(() => {
+    return transacoesFormasFiltradas.reduce((acc, t) => acc + t.valor, 0);
+  }, [transacoesFormasFiltradas]);
+
   // 📊 CÁLCULOS DRE CONSOLIDADOS
   const metricasDRE = useMemo(() => {
     const receitas = transacoesPeriodo.filter(t => t.tipo === 'receita').reduce((acc, t) => acc + t.valor, 0);
@@ -314,80 +391,44 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     };
   }, [transacoesPeriodo, todasLocacoes]);
 
-  // EXPORTAR EXCEL / CSV
+  // EXPORTAR EXCEL / CSV (COMPATIBILIDADE 100% COM MICROSOFT EXCEL UTF-8 BOM)
   const exportarCSV = () => {
-    const cabecalho = ["Data", "Descricao", "Categoria", "Operacao", "Forma Pagto", "Valor (R$)"];
+    const cabecalho = ["Data", "Descricao / Origem", "Categoria", "Operacao", "Forma de Pagamento", "Valor (R$)"];
     const linhas = transacoesFiltradasTabela.map(t => [
       `"${t.dataStr}"`,
-      `"${t.descricao?.replace(/"/g, '""')}"`,
-      `"${t.categoria || 'Geral'}"`,
+      `"${(t.descricao || '').replace(/"/g, '""')}"`,
+      `"${(t.categoria || 'Geral').replace(/"/g, '""')}"`,
       `"${t.tipo === 'receita' ? 'Entrada' : 'Saida'}"`,
-      `"${t.formaPagto || 'Pix'}"`,
+      `"${(t.formaPagto || 'Pix').replace(/"/g, '""')}"`,
       `"${t.valor.toFixed(2).replace('.', ',')}"`
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\r\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `DRE_Financeiro_${filtroMes || 'Geral'}_${filtroAno || 'Geral'}.csv`);
+    const nomeEmpresaSanitizado = (dadosEmpresa.nomeEmpresa || 'Empresa').replace(/[^\w\s-]/gi, '').trim().replace(/\s+/g, '_');
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Extrato_Financeiro_${nomeEmpresaSanitizado}_${filtroMes || 'Geral'}_${filtroAno || 'Geral'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    registrarLog("EXPORTACAO_CSV_RELATORIO", `Exportou planilha CSV do DRE financeiro (${filtroMes}/${filtroAno}).`);
+    URL.revokeObjectURL(url);
+    registrarLog("EXPORTACAO_CSV_RELATORIO", `Exportou planilha CSV do financeiro (${filtroMes}/${filtroAno}).`);
   };
 
-  // EXPORTAR PDF EXECUTIVO
+  // EXPORTAR PDF EXECUTIVO (PADRÃO LUXO ENTERPRISE)
   const exportarPDF = async () => {
     try {
-      const doc = new jsPDF();
-      const dataHojeStr = new Date().toLocaleDateString('pt-BR');
-      let startY = 22;
-
-      doc.setFontSize(18);
-      doc.setTextColor(15, 23, 42);
-      doc.text(dadosEmpresa.nomeEmpresa, 14, startY);
-      
-      doc.setFontSize(9);
-      doc.setTextColor(100);
-      const periodoTexto = (filtroMes && filtroAno) ? `${NOMES_MESES[Number(filtroMes) - 1]} de ${filtroAno}` : 'Histórico Geral Consolidado';
-      doc.text(`DEMONSTRATIVO DE RESULTADO DO EXERCÍCIO (DRE) · Período: ${periodoTexto}`, 14, startY + 6);
-      doc.text(`Gerado em: ${dataHojeStr} por ${usuarioLogado?.email || 'Administrador'}`, 14, startY + 11);
-
-      // Resumo DRE Box
-      doc.setFillColor(248, 250, 252);
-      doc.rect(14, startY + 16, 182, 32, 'F');
-
-      doc.setFontSize(10);
-      doc.setTextColor(15, 23, 42);
-      doc.text(`(+) Receita Bruta: R$ ${metricasDRE.receitas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 24);
-      doc.text(`(-) Custos Diretos: R$ ${metricasDRE.totalCustosDiretos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 31);
-      doc.text(`(-) Despesas Fixas: R$ ${metricasDRE.despesasFixas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`, 20, startY + 38);
-
-      doc.setFont(undefined, 'bold');
-      doc.setTextColor(metricasDRE.lucroLiquido >= 0 ? 22 : 220, metricasDRE.lucroLiquido >= 0 ? 163 : 38, metricasDRE.lucroLiquido >= 0 ? 74 : 38);
-      doc.text(`LUCRO LÍQUIDO: R$ ${metricasDRE.lucroLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})} (${metricasDRE.margemLiquidaPct}% Margem)`, 100, startY + 31);
-
-      const tableColumn = ["Data", "Descrição da Operação", "Categoria", "Tipo", "Valor (R$)"];
-      const tableRows = transacoesFiltradasTabela.map(t => [
-        t.dataStr || '-',
-        t.descricao || '-',
-        t.categoria || 'Geral',
-        t.tipo === 'receita' ? 'Entrada' : 'Saída',
-        `${t.tipo === 'receita' ? '+' : '-'} R$ ${t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`
-      ]);
-
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: startY + 54, 
-        theme: 'striped',
-        headStyles: { fillColor: [15, 23, 42] }, 
-        styles: { fontSize: 8.5 },
-        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } }
+      gerarRelatorioFinanceiroPDF({
+        empresa: dadosEmpresa,
+        metricasDRE,
+        transacoes: transacoesFiltradasTabela,
+        filtroMes,
+        filtroAno,
+        usuarioEmail: usuarioLogado?.email
       });
-
-      doc.save(`DRE_Executivo_${dadosEmpresa.nomeEmpresa}_${filtroMes}_${filtroAno}.pdf`);
       await registrarLog("EXPORTACAO_PDF_DRE", `Fez o download do PDF executivo do DRE (${filtroMes}/${filtroAno}).`);
     } catch (error) {
       console.error("Erro ao gerar PDF: ", error);
@@ -404,45 +445,60 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     <div className="fade-in">
       
       {/* 🗓️ BARRA SUPERIOR DE FILTRO DINÂMICO DE PERÍODO */}
-      <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '14px 20px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+      <div className="rel-filter-card">
+        <div className="rel-filter-info">
           <span style={{ fontSize: '1.4rem' }}>📈</span>
           <div>
-            <strong style={{ fontSize: '0.92rem', color: '#0f172a' }}>Período de Análise Financeira & DRE</strong>
-            <p style={{ margin: 0, fontSize: '0.72rem', color: '#64748b' }}>
+            <strong className="rel-filter-title">Período de Análise Financeira & DRE</strong>
+            <p className="rel-filter-sub">
               {filtroMes && filtroAno ? `${NOMES_MESES[Number(filtroMes)-1]} / ${filtroAno}` : 'Histórico Consolidado'} · {dadosEmpresa.nomeEmpresa}
             </p>
           </div>
         </div>
 
-        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+        <div className="rel-filter-controls">
           <select 
             value={filtroMes} 
             onChange={e => setFiltroMes(e.target.value)}
-            style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', background: '#f8fafc' }}
+            className="rel-select-custom"
           >
-            <option value="">📆 Mês: Todos</option>
-            {NOMES_MESES.map((m, idx) => (
-              <option key={idx} value={String(idx + 1).padStart(2, '0')}>{m}</option>
-            ))}
+            <option value="">📅 Mês: Todos</option>
+            {NOMES_MESES.map((m, idx) => {
+              const numMes = idx + 1;
+              const ehMesFuturo = filtroAno === anoAtualNum && numMes > Number(mesAtualNum);
+              return (
+                <option 
+                  key={idx} 
+                  value={String(numMes).padStart(2, '0')}
+                  disabled={ehMesFuturo}
+                >
+                  📅 Mês: {m} {ehMesFuturo ? '(Futuro)' : ''}
+                </option>
+              );
+            })}
           </select>
 
           <select 
             value={filtroAno} 
-            onChange={e => setFiltroAno(e.target.value)}
-            style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', fontWeight: 'bold', color: '#0f172a', background: '#f8fafc' }}
+            onChange={e => {
+              const novoAno = e.target.value;
+              setFiltroAno(novoAno);
+              if (novoAno === anoAtualNum && filtroMes && Number(filtroMes) > Number(mesAtualNum)) {
+                setFiltroMes(mesAtualNum);
+              }
+            }}
+            className="rel-select-custom"
           >
             <option value="">📆 Ano: Todos</option>
-            <option value="2024">2024</option>
-            <option value="2025">2025</option>
-            <option value="2026">2026</option>
-            <option value="2027">2027</option>
+            {Array.from({ length: 4 }, (_, i) => Number(anoAtualNum) - 3 + i).map(ano => (
+              <option key={ano} value={String(ano)}>📆 Ano: {ano}</option>
+            ))}
           </select>
 
           <button 
             type="button" 
             onClick={() => { setFiltroMes(mesAtualNum); setFiltroAno(anoAtualNum); }}
-            style={{ padding: '7px 12px', borderRadius: '8px', border: filtroMes === mesAtualNum ? '1.5px solid #0f172a' : '1px solid #cbd5e1', background: filtroMes === mesAtualNum ? '#0f172a' : '#ffffff', color: filtroMes === mesAtualNum ? '#ffffff' : '#334155', fontSize: '0.78rem', fontWeight: 'bold', cursor: 'pointer' }}
+            className={`rel-quick-btn ${filtroMes === mesAtualNum && filtroAno === anoAtualNum ? 'active' : ''}`}
           >
             Este Mês
           </button>
@@ -450,9 +506,9 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           <button 
             type="button" 
             onClick={() => { setFiltroMes(''); setFiltroAno(''); }}
-            style={{ padding: '7px 12px', borderRadius: '8px', border: !filtroMes && !filtroAno ? '1.5px solid #0f172a' : '1px solid #cbd5e1', background: !filtroMes && !filtroAno ? '#0f172a' : '#ffffff', color: !filtroMes && !filtroAno ? '#ffffff' : '#334155', fontSize: '0.78rem', fontWeight: 'bold', cursor: 'pointer' }}
+            className={`rel-quick-btn ${!filtroMes && !filtroAno ? 'active' : ''}`}
           >
-            Tudo
+            Histórico
           </button>
         </div>
       </div>
@@ -501,21 +557,12 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
       )}
 
       {/* 📊 SELETOR DE SUB-VISÕES DO RELATÓRIO */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', margin: '16px 0 12px 0', borderBottom: '2px solid #e2e8f0', paddingBottom: '10px', flexWrap: 'wrap', gap: '10px' }}>
-        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+      <div className="rel-subtabs-container">
+        <div className="rel-subtabs-group">
           <button
             type="button"
             onClick={() => setVisaoRelatorio('dre')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: 'none',
-              background: visaoRelatorio === 'dre' ? '#0f172a' : '#f1f5f9',
-              color: visaoRelatorio === 'dre' ? '#ffffff' : '#475569',
-              fontWeight: '800',
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
+            className={`rel-subtab-btn ${visaoRelatorio === 'dre' ? 'active' : ''}`}
           >
             📈 Demonstrativo DRE
           </button>
@@ -523,16 +570,7 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           <button
             type="button"
             onClick={() => setVisaoRelatorio('extrato')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: 'none',
-              background: visaoRelatorio === 'extrato' ? '#0f172a' : '#f1f5f9',
-              color: visaoRelatorio === 'extrato' ? '#ffffff' : '#475569',
-              fontWeight: '800',
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
+            className={`rel-subtab-btn ${visaoRelatorio === 'extrato' ? 'active' : ''}`}
           >
             📋 Extrato Livro Caixa ({transacoesPeriodo.length})
           </button>
@@ -540,193 +578,239 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           <button
             type="button"
             onClick={() => setVisaoRelatorio('formas')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: 'none',
-              background: visaoRelatorio === 'formas' ? '#0f172a' : '#f1f5f9',
-              color: visaoRelatorio === 'formas' ? '#ffffff' : '#475569',
-              fontWeight: '800',
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
+            className={`rel-subtab-btn ${visaoRelatorio === 'formas' ? 'active' : ''}`}
           >
             ⚡ Formas de Pagamento
           </button>
 
-          <button
-            type="button"
-            onClick={() => setVisaoRelatorio('temas')}
-            style={{
-              padding: '8px 16px',
-              borderRadius: '10px',
-              border: 'none',
-              background: visaoRelatorio === 'temas' ? '#0f172a' : '#f1f5f9',
-              color: visaoRelatorio === 'temas' ? '#ffffff' : '#475569',
-              fontWeight: '800',
-              fontSize: '0.8rem',
-              cursor: 'pointer'
-            }}
+          <button 
+            type="button" 
+            onClick={alternarIndicadores}
+            className={`rel-subtab-btn rel-btn-toggle-kpi ${mostrarIndicadores ? 'kpi-ativo' : ''}`}
           >
-            🏆 Temas Mais Rentáveis
+            {mostrarIndicadores ? '👁️ Ocultar KPIs' : '📊 Ver KPIs'}
           </button>
         </div>
-
-        <button 
-          type="button" 
-          onClick={alternarIndicadores}
-          style={{ padding: '7px 12px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '700', fontSize: '0.74rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
-        >
-          {mostrarIndicadores ? '👁️ Ocultar Indicadores' : '📊 Ver Indicadores & KPIs'}
-        </button>
       </div>
 
       {/* VISÃO 1: DEMONSTRATIVO DRE CONTÁBIL */}
       {visaoRelatorio === 'dre' && (
-        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', overflow: 'hidden', padding: '20px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px', flexWrap: 'wrap', gap: '10px' }}>
+        <div className="rel-card-unificado">
+          <div className="rel-card-header">
             <div>
-              <h3 style={{ margin: 0, fontSize: '1rem', color: '#0f172a', fontWeight: '850' }}>
+              <h3 className="rel-card-title">
                 Demonstração do Resultado do Exercício (DRE Gerencial)
               </h3>
-              <p style={{ margin: '2px 0 0 0', fontSize: '0.74rem', color: '#64748b' }}>
+              <p className="rel-card-sub">
                 Visão contábil detalhada com margem de contribuição e lucro operacional limpo.
               </p>
             </div>
 
-            <div style={{ display: 'flex', gap: '8px' }}>
-              <button 
-                type="button" 
-                onClick={exportarCSV}
-                style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                📊 Exportar Excel (CSV)
-              </button>
-              <button 
-                type="button" 
-                onClick={exportarPDF}
-                style={{ padding: '8px 14px', borderRadius: '8px', border: 'none', background: '#0f172a', color: '#ffffff', fontWeight: '800', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-              >
-                📄 Baixar PDF Executivo
-              </button>
+            <div className="rel-card-actions">
+              <div className="rel-export-btn-group">
+                <button 
+                  type="button" 
+                  onClick={exportarCSV}
+                  className="rel-btn-action-outline"
+                >
+                  📊 Exportar Excel (CSV)
+                </button>
+                <button 
+                  type="button" 
+                  onClick={exportarPDF}
+                  className="rel-btn-action-primary"
+                >
+                  📄 Baixar PDF Executivo
+                </button>
+              </div>
             </div>
           </div>
 
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.86rem' }}>
-            <thead>
-              <tr style={{ background: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.72rem' }}>
-                <th style={{ padding: '12px 18px', textAlign: 'left' }}>Estrutura de Resultados</th>
-                <th style={{ padding: '12px 18px', textAlign: 'right', width: '180px' }}>Valor (R$)</th>
-                <th style={{ padding: '12px 18px', textAlign: 'right', width: '120px' }}>% da Receita</th>
-              </tr>
-            </thead>
-            <tbody>
-              {/* 1. RECEITA OPERACIONAL */}
-              <tr style={{ background: '#f8fafc', fontWeight: '850', borderBottom: '1px solid #e2e8f0' }}>
-                <td style={{ padding: '12px 18px', color: '#0f172a' }}>(+) 1. RECEITA OPERACIONAL BRUTA (Locações e Eventos)</td>
-                <td style={{ padding: '12px 18px', textAlign: 'right', color: '#15803d' }}>R$ {metricasDRE.receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: '12px 18px', textAlign: 'right', color: '#64748b' }}>100.0%</td>
-              </tr>
+          <div className="rel-table-scroll-wrapper">
+            <table className="rel-dre-table">
+              <thead>
+                <tr>
+                  <th className="rel-dre-th-desc">ESTRUTURA DE RESULTADOS</th>
+                  <th className="rel-dre-th-val">VALOR (R$)</th>
+                  <th className="rel-dre-th-pct">% RECEITA</th>
+                </tr>
+              </thead>
+              <tbody>
+                {/* 1. RECEITA OPERACIONAL */}
+                <tr className="rel-dre-row-highlight">
+                  <td className="rel-dre-label">(+) 1. RECEITA OPERACIONAL BRUTA (Locações e Eventos)</td>
+                  <td className="rel-dre-val positive">R$ {metricasDRE.receitas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="rel-dre-pct">100.0%</td>
+                </tr>
 
-              {/* 2. CUSTOS DIRETOS */}
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Aquisição de Acervo e Compras para Estoque</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.custosAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.custosAquisicao / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
-              </tr>
-              <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Insumos, Materiais & Embalagens</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.custosInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.custosInsumos / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
-              </tr>
-              <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
-                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Manutenção & Reparos do Acervo</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.custosManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.custosManutencao / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
-              </tr>
+                {/* 2. CUSTOS DIRETOS */}
+                <tr className="rel-dre-row-sub">
+                  <td className="rel-dre-sublabel">(-) Aquisição de Acervo e Compras para Estoque</td>
+                  <td className="rel-dre-val negative">- R$ {metricasDRE.custosAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="rel-dre-pct-sub">{metricasDRE.receitas > 0 ? ((metricasDRE.custosAquisicao / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+                </tr>
+                <tr className="rel-dre-row-sub">
+                  <td className="rel-dre-sublabel">(-) Insumos, Materiais &amp; Embalagens</td>
+                  <td className="rel-dre-val negative">- R$ {metricasDRE.custosInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="rel-dre-pct-sub">{metricasDRE.receitas > 0 ? ((metricasDRE.custosInsumos / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+                </tr>
+                <tr className="rel-dre-row-sub border-end">
+                  <td className="rel-dre-sublabel">(-) Manutenção &amp; Reparos do Acervo</td>
+                  <td className="rel-dre-val negative">- R$ {metricasDRE.custosManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="rel-dre-pct-sub">{metricasDRE.receitas > 0 ? ((metricasDRE.custosManutencao / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+                </tr>
 
-              {/* 3. MARGEM DE CONTRIBUIÇÃO */}
-              <tr style={{ background: '#f8fafc', fontWeight: '850', borderBottom: '1.5px solid #cbd5e1' }}>
-                <td style={{ padding: '12px 18px', color: '#0f172a' }}>(=) MARGEM DE CONTRIBUIÇÃO / LUCRO BRUTO</td>
-                <td style={{ padding: '12px 18px', textAlign: 'right', color: metricasDRE.margemBruta >= 0 ? '#15803d' : '#dc2626' }}>R$ {metricasDRE.margemBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: '12px 18px', textAlign: 'right', color: '#0f172a' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.margemBruta / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
-              </tr>
+                {/* 3. MARGEM DE CONTRIBUIÇÃO */}
+                <tr className="rel-dre-row-highlight">
+                  <td className="rel-dre-label">(=) MARGEM DE CONTRIBUIÇÃO / LUCRO BRUTO</td>
+                  <td className={`rel-dre-val ${metricasDRE.margemBruta >= 0 ? 'positive' : 'negative'}`}>
+                    R$ {metricasDRE.margemBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className="rel-dre-pct">{metricasDRE.receitas > 0 ? ((metricasDRE.margemBruta / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+                </tr>
 
-              {/* 4. DESPESAS FIXAS */}
-              <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
-                <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Despesas Fixas, Equipe, Aluguel & Operacionais</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {metricasDRE.despesasFixas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{metricasDRE.receitas > 0 ? ((metricasDRE.despesasFixas / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
-              </tr>
+                {/* 4. DESPESAS FIXAS */}
+                <tr className="rel-dre-row-sub border-end">
+                  <td className="rel-dre-sublabel">(-) Despesas Fixas, Equipe, Aluguel &amp; Operacionais</td>
+                  <td className="rel-dre-val negative">- R$ {metricasDRE.despesasFixas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
+                  <td className="rel-dre-pct-sub">{metricasDRE.receitas > 0 ? ((metricasDRE.despesasFixas / metricasDRE.receitas) * 100).toFixed(1) : 0}%</td>
+                </tr>
 
-              {/* 5. LUCRO LÍQUIDO FINAL */}
-              <tr style={{ background: '#f8fafc', fontWeight: '900', fontSize: '1rem' }}>
-                <td style={{ padding: '14px 18px', color: '#0f172a' }}>🏆 (=) RESULTADO OPERACIONAL LÍQUIDO</td>
-                <td style={{ padding: '14px 18px', textAlign: 'right', color: metricasDRE.lucroLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
-                  R$ {metricasDRE.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                </td>
-                <td style={{ padding: '14px 18px', textAlign: 'right', color: metricasDRE.lucroLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
-                  {metricasDRE.margemLiquidaPct}%
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                {/* 5. LUCRO LÍQUIDO FINAL */}
+                <tr className="rel-dre-row-total">
+                  <td className="rel-dre-totallabel">🏆 (=) RESULTADO OPERACIONAL LÍQUIDO</td>
+                  <td className={`rel-dre-totalval ${metricasDRE.lucroLiquido >= 0 ? 'positive' : 'negative'}`}>
+                    R$ {metricasDRE.lucroLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                  </td>
+                  <td className={`rel-dre-totalval ${metricasDRE.lucroLiquido >= 0 ? 'positive' : 'negative'}`}>
+                    {metricasDRE.margemLiquidaPct}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
       {/* VISÃO 2: EXTRATO COMPLETO LIVRO CAIXA */}
       {visaoRelatorio === 'extrato' && (
-        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '18px 22px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-          <div className="dre-header">
+        <div className="rel-card-unificado">
+          
+          {/* CABEÇALHO DO EXTRATO COM CONTROLES */}
+          <div className="rel-card-header">
             <div>
-              <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>📋 Extrato Livro Caixa ({transacoesFiltradasTabela.length})</h3>
-              <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Movimentações do período selecionado.</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 className="rel-card-title">📋 Extrato Livro Caixa</h3>
+                <span className="rel-extrato-counter-badge">{transacoesFiltradasTabela.length} lançamentos</span>
+              </div>
+              <p className="rel-card-sub">Histórico analítico de entradas e saídas do período selecionado.</p>
             </div>
             
-            <div className="dre-actions-group">
-              <div className="dre-filter-buttons">
-                <button type="button" className={filtroTipo === 'todos' ? 'active' : ''} onClick={() => setFiltroTipo('todos')}>Todos</button>
-                <button type="button" className={filtroTipo === 'receita' ? 'active btn-verde' : ''} onClick={() => setFiltroTipo('receita')}>🟢 Entradas</button>
-                <button type="button" className={filtroTipo === 'despesa' ? 'active btn-vermelho' : ''} onClick={() => setFiltroTipo('despesa')}>🔴 Saídas</button>
+            <div className="rel-card-actions">
+              {/* FILTRO SEGMENTADO (TODOS / ENTRADAS / SAÍDAS) */}
+              <div className="rel-segmented-filter">
+                <button 
+                  type="button" 
+                  className={`rel-seg-btn ${filtroTipo === 'todos' ? 'active' : ''}`} 
+                  onClick={() => setFiltroTipo('todos')}
+                >
+                  Todos ({transacoesPeriodo.length})
+                </button>
+                <button 
+                  type="button" 
+                  className={`rel-seg-btn verde ${filtroTipo === 'receita' ? 'active' : ''}`} 
+                  onClick={() => setFiltroTipo('receita')}
+                >
+                  🟢 Entradas ({transacoesPeriodo.filter(t => t.tipo === 'receita').length})
+                </button>
+                <button 
+                  type="button" 
+                  className={`rel-seg-btn vermelho ${filtroTipo === 'despesa' ? 'active' : ''}`} 
+                  onClick={() => setFiltroTipo('despesa')}
+                >
+                  🔴 Saídas ({transacoesPeriodo.filter(t => t.tipo === 'despesa').length})
+                </button>
               </div>
 
-              <button type="button" className="btn-export-pdf" onClick={exportarPDF}>
-                📄 Baixar PDF
-              </button>
+              {/* BOTÕES DE EXPORTAÇÃO */}
+              <div className="rel-export-btn-group">
+                <button 
+                  type="button" 
+                  onClick={exportarCSV} 
+                  className="rel-btn-action-outline"
+                  title="Exportar planilha em formato Excel (CSV)"
+                >
+                  📊 Excel (CSV)
+                </button>
+                <button 
+                  type="button" 
+                  onClick={exportarPDF} 
+                  className="rel-btn-action-primary"
+                  title="Baixar Relatório Executivo em PDF"
+                >
+                  📄 Baixar PDF
+                </button>
+              </div>
             </div>
           </div>
 
-          <div className="table-container" style={{ marginTop: '15px' }}>
-            <table className="custom-table table-pro">
+          {/* TABELA DE LANÇAMENTOS COM DESIGN LUXO */}
+          <div className="rel-table-scroll-wrapper">
+            <table className="rel-extrato-table">
               <thead>
                 <tr>
-                  <th width="15%">DATA</th>
-                  <th width="45%">DESCRIÇÃO / ORIGEM</th>
-                  <th style={{textAlign: 'center'}} width="20%">OPERAÇÃO</th>
-                  <th style={{textAlign: 'right'}} width="20%">VALOR (R$)</th>
+                  <th style={{ width: '14%' }}>DATA</th>
+                  <th style={{ width: '40%' }}>DESCRIÇÃO / ORIGEM</th>
+                  <th style={{ width: '22%' }}>CATEGORIA & MÉTODO</th>
+                  <th style={{ width: '11%', textAlign: 'center' }}>OPERAÇÃO</th>
+                  <th style={{ width: '13%', textAlign: 'right' }}>VALOR (R$)</th>
                 </tr>
               </thead>
               <tbody>
                 {transacoesFiltradasTabela.length === 0 ? (
                   <tr>
-                     <td colSpan="4" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhuma movimentação encontrada para o período selecionado.</td>
+                    <td colSpan="5" className="rel-empty-row">
+                      <div className="rel-empty-box">
+                        <span style={{ fontSize: '2rem' }}>📂</span>
+                        <strong>Nenhuma movimentação encontrada</strong>
+                        <p>Altere os filtros de mês/ano ou tipo de lançamento para visualizar os registros.</p>
+                      </div>
+                    </td>
                   </tr>
                 ) : (
                   transacoesFiltradasTabela.map((t) => (
-                    <tr key={t.id}>
-                      <td style={{color: '#64748b', fontWeight: '600'}}>{t.dataStr}</td>
-                      <td>
-                        <strong style={{color: '#0f172a'}}>{t.descricao}</strong>
-                        <div style={{ fontSize: '0.7rem', color: '#94a3b8' }}>{t.categoria} · {t.formaPagto}</div>
+                    <tr key={t.id} className="rel-extrato-row">
+                      <td className="rel-col-data">
+                        <span className="rel-date-badge">
+                          <i className="far fa-calendar-alt" style={{ marginRight: '5px', opacity: 0.6 }}></i>
+                          {t.dataStr}
+                        </span>
                       </td>
-                      <td style={{textAlign: 'center'}}>
-                        <span className={`badge-dre ${t.tipo}`}>
+
+                      <td className="rel-col-desc">
+                        <strong className="rel-desc-title">{t.descricao}</strong>
+                        {t.tema && (
+                          <div className="rel-desc-tema">
+                            <i className="fas fa-magic" style={{ fontSize: '0.65rem', marginRight: '4px', color: '#c5a059' }}></i>
+                            {t.tema}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="rel-col-meta">
+                        <span className="rel-tag-categoria">{t.categoria || 'Geral'}</span>
+                        <span className="rel-tag-pagto">⚡ {t.formaPagto || 'Pix'}</span>
+                      </td>
+
+                      <td className="rel-col-tipo" style={{ textAlign: 'center' }}>
+                        <span className={`rel-tipo-pill ${t.tipo}`}>
                           {t.tipo === 'receita' ? '🟢 Entrada' : '🔴 Saída'}
                         </span>
                       </td>
-                      <td style={{ textAlign: 'right', fontWeight: '850', color: t.tipo === 'receita' ? '#10b981' : '#ef4444' }}>
-                        {t.tipo === 'receita' ? '+ ' : '- '} 
-                        R$ {t.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+
+                      <td className={`rel-col-valor ${t.tipo === 'receita' ? 'positive' : 'negative'}`} style={{ textAlign: 'right' }}>
+                        {t.tipo === 'receita' ? '+ ' : '- '}
+                        R$ {t.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </td>
                     </tr>
                   ))
@@ -737,88 +821,191 @@ const FinanceiroTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
         </div>
       )}
 
-      {/* VISÃO 3: RAIO-X DE FORMAS DE PAGAMENTO */}
+      {/* VISÃO 3: RAIO-X DE FORMAS DE PAGAMENTO COM LISTAGEM ANALÍTICA */}
       {visaoRelatorio === 'formas' && (
-        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>⚡ Distribuição de Recebimentos por Forma de Pagamento</h3>
-          
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px' }}>
-            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#166534' }}>⚡ PIX</span>
-                <span style={{ fontSize: '0.7rem', color: '#16a34a', fontWeight: 'bold' }}>
-                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.pix / metricasDRE.receitas) * 100).toFixed(0) : 0}%
-                </span>
+        <div className="rel-card-unificado">
+          <div className="rel-card-header">
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                <h3 className="rel-card-title">⚡ Distribuição de Recebimentos por Forma de Pagamento</h3>
               </div>
-              <strong style={{ fontSize: '1.25rem', color: '#15803d', display: 'block', marginTop: '6px' }}>
+              <p className="rel-card-sub">Concentração de receita por método de liquidação e extrato detalhado por modalidade.</p>
+            </div>
+
+            <div className="rel-card-actions">
+              <div className="rel-export-btn-group">
+                <button 
+                  type="button" 
+                  onClick={exportarCSV} 
+                  className="rel-btn-action-outline"
+                  title="Exportar planilha Excel (CSV)"
+                >
+                  📊 Excel (CSV)
+                </button>
+                <button 
+                  type="button" 
+                  onClick={exportarPDF} 
+                  className="rel-btn-action-primary"
+                  title="Baixar Relatório Executivo em PDF"
+                >
+                  📄 Baixar PDF
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          {/* CARDS PURAMENTE INFORMATIVOS DE FORMAS DE PAGAMENTO */}
+          <div className="rel-formas-grid">
+            <div className="rel-forma-card pix">
+              <div className="rel-forma-header">
+                <span className="rel-forma-label">⚡ PIX</span>
+              </div>
+              <strong className="rel-forma-val">
                 R$ {metricasDRE.formas.pix.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
               </strong>
             </div>
 
-            <div style={{ background: '#eff6ff', border: '1px solid #bfdbfe', borderRadius: '14px', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#1e40af' }}>💳 CARTÃO</span>
-                <span style={{ fontSize: '0.7rem', color: '#2563eb', fontWeight: 'bold' }}>
-                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.cartao / metricasDRE.receitas) * 100).toFixed(0) : 0}%
-                </span>
+            <div className="rel-forma-card cartao">
+              <div className="rel-forma-header">
+                <span className="rel-forma-label">💳 CARTÃO</span>
               </div>
-              <strong style={{ fontSize: '1.25rem', color: '#1d4ed8', display: 'block', marginTop: '6px' }}>
+              <strong className="rel-forma-val">
                 R$ {metricasDRE.formas.cartao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
               </strong>
             </div>
 
-            <div style={{ background: '#fefce8', border: '1px solid #fde047', borderRadius: '14px', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#854d0e' }}>💵 DINHEIRO</span>
-                <span style={{ fontSize: '0.7rem', color: '#a16207', fontWeight: 'bold' }}>
-                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.dinheiro / metricasDRE.receitas) * 100).toFixed(0) : 0}%
-                </span>
+            <div className="rel-forma-card dinheiro">
+              <div className="rel-forma-header">
+                <span className="rel-forma-label">💵 DINHEIRO</span>
               </div>
-              <strong style={{ fontSize: '1.25rem', color: '#ca8a04', display: 'block', marginTop: '6px' }}>
+              <strong className="rel-forma-val">
                 R$ {metricasDRE.formas.dinheiro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
               </strong>
             </div>
 
-            <div style={{ background: '#f8fafc', border: '1px solid #cbd5e1', borderRadius: '14px', padding: '16px' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '0.76rem', fontWeight: '800', color: '#475569' }}>🏦 OUTROS</span>
-                <span style={{ fontSize: '0.7rem', color: '#64748b', fontWeight: 'bold' }}>
-                  {metricasDRE.receitas > 0 ? ((metricasDRE.formas.outros / metricasDRE.receitas) * 100).toFixed(0) : 0}%
-                </span>
+            <div className="rel-forma-card outros">
+              <div className="rel-forma-header">
+                <span className="rel-forma-label">🏦 OUTROS</span>
               </div>
-              <strong style={{ fontSize: '1.25rem', color: '#334155', display: 'block', marginTop: '6px' }}>
+              <strong className="rel-forma-val">
                 R$ {metricasDRE.formas.outros.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
               </strong>
             </div>
           </div>
-        </div>
-      )}
 
-      {/* VISÃO 4: TEMAS MAIS RENTÁVEIS */}
-      {visaoRelatorio === 'temas' && (
-        <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '20px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-          <h3 style={{ margin: '0 0 16px 0', fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>🏆 Top Temas e Serviços Mais Rentáveis no Período</h3>
-
-          {metricasDRE.rankingTemas.length === 0 ? (
-            <div style={{ padding: '30px', textAlign: 'center', color: '#64748b' }}>Nenhum tema com faturamento no período selecionado.</div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-              {metricasDRE.rankingTemas.map((t, idx) => (
-                <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', padding: '12px 18px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                    <span style={{ fontSize: '1.1rem', fontWeight: '900', color: '#c5a059' }}>#{idx + 1}</span>
-                    <div>
-                      <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>{t.tema}</strong>
-                      <span style={{ fontSize: '0.72rem', color: '#64748b', display: 'block' }}>{t.qtd} locações realizadas</span>
-                    </div>
-                  </div>
-                  <strong style={{ fontSize: '1rem', color: '#15803d' }}>
-                    R$ {t.total.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                  </strong>
-                </div>
-              ))}
+          {/* BARRA DE FILTRO RÁPIDO E CONTEXTO DO MÉTODO SELECIONADO */}
+          <div className="rel-formas-subbar">
+            <div className="rel-formas-subbar-info">
+              <span className="rel-formas-subbar-title">
+                {filtroFormaSelecionada === 'todas' && '📄 Todos os Recebimentos'}
+                {filtroFormaSelecionada === 'pix' && '⚡ Recebimentos via PIX'}
+                {filtroFormaSelecionada === 'cartao_credito' && '💳 Cartão de Crédito'}
+                {filtroFormaSelecionada === 'cartao_debito' && '💳 Cartão de Débito'}
+                {filtroFormaSelecionada === 'dinheiro' && '💵 Recebimentos em Dinheiro'}
+                {filtroFormaSelecionada === 'cheque' && '📑 Recebimentos em Cheque'}
+                {filtroFormaSelecionada === 'outros' && '🏦 Outros Meios (Boleto/Transf.)'}
+              </span>
+              <span className="rel-formas-subbar-count">
+                Volume Total: <strong style={{ color: '#15803d' }}>R$ {totalFormasSelecionado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+              </span>
             </div>
-          )}
+
+            {/* SELETOR EM GAVETA (DROPDOWN) EXCLUSIVO E ELEGANTE */}
+            <div className="rel-formas-select-container">
+              <label className="rel-formas-select-label">
+                <i className="fas fa-filter" style={{ color: '#c5a059' }}></i> Filtrar Modalidade:
+              </label>
+              <select 
+                className="rel-formas-select-dropdown"
+                value={filtroFormaSelecionada}
+                onChange={(e) => setFiltroFormaSelecionada(e.target.value)}
+              >
+                <option value="todas">📋 Todos os Recebimentos ({contagemFormas.todas})</option>
+                <option value="pix">⚡ PIX ({contagemFormas.pix})</option>
+                <option value="cartao_credito">💳 Cartão de Crédito ({contagemFormas.credito})</option>
+                <option value="cartao_debito">💳 Cartão de Débito ({contagemFormas.debito})</option>
+                <option value="dinheiro">💵 Dinheiro ({contagemFormas.dinheiro})</option>
+                <option value="cheque">📑 Cheque ({contagemFormas.cheque})</option>
+                <option value="outros">🏦 Outros Meios (Boleto / Transf.) ({contagemFormas.outros})</option>
+              </select>
+            </div>
+          </div>
+
+          {/* TABELA DE LANÇAMENTOS POR FORMA DE PAGAMENTO */}
+          <div className="rel-table-scroll-wrapper">
+            <table className="rel-extrato-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '14%' }}>DATA</th>
+                  <th style={{ width: '40%' }}>CLIENTE / ORIGEM DO RECEBIMENTO</th>
+                  <th style={{ width: '22%' }}>MÉTODO DE PAGAMENTO</th>
+                  <th style={{ width: '11%', textAlign: 'center' }}>CATEGORIA</th>
+                  <th style={{ width: '13%', textAlign: 'right' }}>VALOR RECEBIDO</th>
+                </tr>
+              </thead>
+              <tbody>
+                {transacoesFormasFiltradas.length === 0 ? (
+                  <tr>
+                    <td colSpan="5" className="rel-empty-row">
+                      <div className="rel-empty-box">
+                        <span style={{ fontSize: '2rem' }}>💳</span>
+                        <strong>Nenhum recebimento registrado para esta modalidade</strong>
+                        <p>Selecione outra forma de pagamento ou altere o período no topo da página.</p>
+                      </div>
+                    </td>
+                  </tr>
+                ) : (
+                  transacoesFormasFiltradas.map((t) => (
+                    <tr key={t.id} className="rel-extrato-row">
+                      <td className="rel-col-data">
+                        <span className="rel-date-badge">
+                          <i className="far fa-calendar-alt" style={{ marginRight: '5px', opacity: 0.6 }}></i>
+                          {t.dataStr}
+                        </span>
+                      </td>
+
+                      <td className="rel-col-desc">
+                        <strong className="rel-desc-title">{t.descricao}</strong>
+                        {t.tema && (
+                          <div className="rel-desc-tema">
+                            <i className="fas fa-magic" style={{ fontSize: '0.65rem', marginRight: '4px', color: '#c5a059' }}></i>
+                            {t.tema}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="rel-col-meta">
+                        <span className={`rel-tag-forma-destaque ${
+                          String(t.formaPagto || '').toLowerCase().includes('pix') ? 'pix' : 
+                          String(t.formaPagto || '').toLowerCase().includes('cart') || String(t.formaPagto || '').toLowerCase().includes('cred') || String(t.formaPagto || '').toLowerCase().includes('deb') ? 'cartao' : 
+                          String(t.formaPagto || '').toLowerCase().includes('dinheiro') || String(t.formaPagto || '').toLowerCase().includes('especie') ? 'dinheiro' : 
+                          String(t.formaPagto || '').toLowerCase().includes('cheque') ? 'cheque' : 'outros'
+                        }`}>
+                          {String(t.formaPagto || '').toLowerCase().includes('pix') && '⚡ '}
+                          {(String(t.formaPagto || '').toLowerCase().includes('cart') || String(t.formaPagto || '').toLowerCase().includes('cred') || String(t.formaPagto || '').toLowerCase().includes('deb')) && '💳 '}
+                          {(String(t.formaPagto || '').toLowerCase().includes('dinheiro') || String(t.formaPagto || '').toLowerCase().includes('especie')) && '💵 '}
+                          {String(t.formaPagto || '').toLowerCase().includes('cheque') && '📑 '}
+                          {!String(t.formaPagto || '').toLowerCase().includes('pix') && !String(t.formaPagto || '').toLowerCase().includes('cart') && !String(t.formaPagto || '').toLowerCase().includes('cred') && !String(t.formaPagto || '').toLowerCase().includes('deb') && !String(t.formaPagto || '').toLowerCase().includes('dinheiro') && !String(t.formaPagto || '').toLowerCase().includes('especie') && !String(t.formaPagto || '').toLowerCase().includes('cheque') && '🏦 '}
+                          {t.formaPagto || 'Pix'}
+                        </span>
+                      </td>
+
+                      <td className="rel-col-tipo" style={{ textAlign: 'center' }}>
+                        <span className="rel-tag-categoria">
+                          {t.categoria || 'Locações e Eventos'}
+                        </span>
+                      </td>
+
+                      <td className="rel-col-valor positive" style={{ textAlign: 'right' }}>
+                        + R$ {t.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+
         </div>
       )}
 

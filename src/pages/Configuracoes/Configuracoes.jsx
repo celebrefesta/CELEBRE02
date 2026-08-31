@@ -108,6 +108,9 @@ const Configuracoes = () => {
         if (precisaAtualizarDB || !docSnap.exists()) {
              await setDoc(docRef, newState, { merge: true });
         }
+        if (dadosConf.nomeEmpresa) {
+          localStorage.setItem('nomeEmpresa', dadosConf.nomeEmpresa);
+        }
         setConfig(prev => ({ ...prev, ...newState }));
 
         if (!isCollaborator) {
@@ -185,6 +188,9 @@ const Configuracoes = () => {
     if (!usuarioLogado) return;
     try { 
         await updateDoc(getDocConfigRef(), { [campo]: valor });
+        if (campo === 'nomeEmpresa') {
+          localStorage.setItem('nomeEmpresa', valor);
+        }
         const nomesAmigaveis = { nomeEmpresa: 'Nome da Empresa', cnpj: 'CNPJ / CPF', telefone: 'WhatsApp / Telefone', emailEmpresa: 'E-mail', endereco: 'Endereço Completo', instagram: 'Instagram', slogan: 'Slogan', site: 'Site / Link', pixelFacebook: 'Pixel do Facebook' };
         await registrarLog("ALTERAÇÃO DE CONFIGURAÇÃO", `Atualizou o campo "${nomesAmigaveis[campo] || campo}" da empresa para: "${valor}".`);
     } catch (e) { console.error(e); }

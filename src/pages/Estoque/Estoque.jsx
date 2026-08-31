@@ -1025,7 +1025,7 @@ const Estoque = () => {
   }
 
   return (
-    <div className="clientes-container fade-in" onClick={() => setMenuAberto(null)}>
+    <div className="estoque-container clientes-container fade-in" onClick={() => setMenuAberto(null)}>
       
       {/* HERO CABEÇALHO IDÊNTICO AO GESTÃO DE CLIENTES */}
       <div className="clientes-hero-header">
@@ -1164,7 +1164,7 @@ const Estoque = () => {
             <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
           </div>
 
-          {/* 🔢 Toggle de Visualização (Lista / Cards) Integrado à Barra de Ferramentas */}
+          {/* 🔢 Toggle de Visualização (Lista / Cards) em linha exclusiva no mobile */}
           <div className="view-toggle-group">
             <button
               type="button"
@@ -1186,10 +1186,6 @@ const Estoque = () => {
             </button>
           </div>
 
-          <button className="btn-secondary-celebre" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} title="Alterar Ordem Alfabética">
-              {ordemAlfabetica === 'A-Z' ? <><i className="fas fa-arrow-down-a-z"></i> A - Z</> : <><i className="fas fa-arrow-up-z-a"></i> Z - A</>}
-          </button>
-
           <div className="filter-select-container filter-date-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
             <input type="date" className="filter-select" value={dataFiltro} onChange={e => {
                 setDataFiltro(e.target.value);
@@ -1198,7 +1194,7 @@ const Estoque = () => {
             {dataFiltro && <button className="btn-limpar-data" onClick={limparFiltroData} title="Limpar Data">✕</button>}
           </div>
 
-          <div className="filter-select-container">
+          <div className="filter-select-container filter-localizacao-container">
             <select className="filter-select" value={localizacaoFiltro} onChange={e => setLocalizacaoFiltro(e.target.value)}>
               <option value="">Galpão: Todos</option>
               {localizacoesUnicas.map(loc => (
@@ -1207,7 +1203,7 @@ const Estoque = () => {
             </select>
           </div>
 
-          <div className="filter-select-container">
+          <div className="filter-select-container filter-status-container">
             <select className="filter-select" value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}>
               <option value="">Status: Todos</option>
               <option value="disponivel">Somente Disponíveis</option>
@@ -1224,6 +1220,10 @@ const Estoque = () => {
               ))}
             </select>
           </div>
+
+          <button className="btn-secondary-celebre btn-ordem-estoque" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} title="Alterar Ordem Alfabética">
+              {ordemAlfabetica === 'A-Z' ? <><i className="fas fa-arrow-down-a-z"></i> A - Z</> : <><i className="fas fa-arrow-up-z-a"></i> Z - A</>}
+          </button>
         </div>
 
         {/* ── BARRA DE SELEÇÃO EM MASSA ── */}

@@ -45,7 +45,9 @@ const Relatorios = () => {
 
   const [mostrarIndicadores, setMostrarIndicadores] = useState(() => {
     const salvo = localStorage.getItem('relatorios_mostrar_indicadores');
-    return salvo !== null ? salvo === 'true' : true;
+    if (salvo !== null) return salvo === 'true';
+    // Por padrão: no celular (<= 900px) inicia OCULTO para evitar poluição visual, e no desktop visível
+    return typeof window !== 'undefined' ? window.innerWidth > 900 : true;
   });
 
   const alternarIndicadores = () => {
@@ -64,7 +66,7 @@ const Relatorios = () => {
   }, [activeTab, usuarioLogado, navigate, tenantId]);
 
   return (
-    <div className="dashboard-container relatorios-main-wrapper">
+    <div className="relatorios-container dashboard-container relatorios-main-wrapper fade-in">
       
       {/* CABEÇALHO EXECUTIVO REPAGINADO */}
       <div className="dashboard-header relatorios-header-ajuste">

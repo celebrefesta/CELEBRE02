@@ -18,6 +18,19 @@
 - **Responsividade Mobile (`<= 768px`)**: Em telas mobile, manter os campos em 1 coluna por padrão para preservar legibilidade e ergonomia de digitação, **exceto** para dados extremamente curtos ou pares complementares objetivos (como `UF` + `Número` ou `CEP` + `Frete`), que podem permanecer em 2 colunas compactas.
 
 ## 5. 🔒 Cadeado de Escopo de CSS (Isolamento Total entre Páginas)
-- **OBRIGATÓRIO**: Qualquer estilo CSS criado ou editado para uma página ou modal específico **DEVE ESTAR ESCOFADO (ISOLADO)** dentro da classe raiz daquela tela (ex.: `.cadastro-estoque-container .classe`, `.nova-locacao-page .classe`, `.clientes-container .classe`).
-- **NUNCA** declarar classes utilitárias ou genéricas (ex.: `.form-group`, `.btn-servico-card`, `.span-2`, `.icon-box`) soltas na raiz do CSS global sem o prefixo da página, para **IMEDIR 100% O VAZAMENTO DE ESTILOS** de uma tela para outra.
+- **OBRIGATÓRIO**: Qualquer estilo CSS criado ou editado para uma página ou modal específico **DEVE ESTAR ESCOPADO (ISOLADO)** dentro da classe raiz daquela tela (ex.: `.cadastro-estoque-container .classe`, `.nova-locacao-page .classe`, `.clientes-container .classe`, `.estoque-container .classe`).
+- **NUNCA** declarar classes utilitárias ou genéricas (ex.: `.form-group`, `.btn-servico-card`, `.span-2`, `.icon-box`) soltas na raiz do CSS global sem o prefixo da página, para **IMPEDIR 100% O VAZAMENTO DE ESTILOS** de uma tela para outra.
+
+## 6. 🔒 Blindagem Específica do Módulo de Estoque & Acervo (`Estoque.css` e `Estoque.jsx`)
+- **Barra de Filtros Mobile (`<= 900px`)**:
+  - A classe `.estoque-container .table-filter-bar` opera obrigatoriamente em **Grid de 2 Colunas Simétricas**.
+  - O alternador de visualização `.view-toggle-group` (`[ 📋 Lista | ▦ Cards ]`) **DEVE PERMANECER EM LINHA ÚNICA EXCLUSIVA SEPARADA (`grid-column: 1 / -1 !important; width: 100% !important;`)**.
+  - O botão de ordenação `.btn-ordem-estoque` ocupa a base em 100% da largura (`grid-column: 1 / -1 !important;`).
+  - Os filtros de Data, Galpão, Status e Categoria permanecem agrupados em pares de 2 colunas simétricas (`repeat(2, 1fr)`).
+- **Lista/Tabela de Acervo Mobile (`<= 900px`)**:
+  - A tabela `.pro-table` no mobile **DEVE PERMANECER EM FORMATO DE CARDS EMPILHADOS (`display: flex !important; flex-direction: column !important;`)**.
+  - O cabeçalho tradicional `thead` no mobile **DEVE PERMANECER OCULTO (`display: none !important;`)** para impedir qualquer esmagamento horizontal de colunas e quebra de palavras.
+  - A classe raiz do componente `Estoque.jsx` **DEVE CONTER OBRIGATORIAMENTE `.estoque-container` (`className="estoque-container clientes-container fade-in"`)** para garantir a ancoragem de todas as regras responsivas.
+- **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
+  - O arquivo `Estoque.css` está **BLINDADO E CONGELADO**. Nenhuma regra de layout, espaçamento, grid ou responsividade pode ser alterada sem instrução explícita do usuário.
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, Link } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, getDocs, serverTimestamp, query, doc, getDoc, updateDoc, where } from 'firebase/firestore';
 import { getAuth, onAuthStateChanged } from 'firebase/auth';
@@ -55,6 +55,16 @@ const NovaCompra = () => {
   const [modalFornecedoresAberto, setModalFornecedoresAberto] = useState(false);
   const [buscaFornecedor, setBuscaFornecedor] = useState('');
   const [canalCompra, setCanalCompra] = useState('online'); // 'online' | 'presencial'
+
+  // Formatação de data brasileira
+  const formatarData = (dataStr) => {
+    if (!dataStr) return 'Data não informada';
+    const partes = String(dataStr).split('-');
+    if (partes.length === 3) {
+      return `${partes[2]}/${partes[1]}/${partes[0]}`;
+    }
+    return dataStr;
+  };
 
   // SISTEMA DE AUDITORIA
   const registrarLog = async (acao, detalhes) => {
@@ -356,471 +366,558 @@ const NovaCompra = () => {
     </div>
   );
 
-  const totalEstimado = (Number(quantidade) || 1) * (valorEstimado ? Number(valorEstimado.replace(/\./g, '').replace(',', '.')) : 0);
   const diasEntregaNum = tipoEntrega === 'outro' ? (Number(diasPersonalizados) || 0) : Number(tipoEntrega);
 
   return (
-    <div className="nc-page fade-in">
+    <div className="nova-compra-page form-page-container fade-in">
 
-      {/* ===== HERO HEADER ===== */}
-      <div className="nc-hero">
-        <div className="nc-hero-left">
-          <div className="nc-hero-badge">
-            <span>✨</span> GESTÃO DE COMPRAS &amp; AQUISIÇÕES
+      {/* ===== HERO CABEÇALHO & BREADCRUMB (PADRÃO CLIENTES) ===== */}
+      <div className="cadastro-hero-header">
+        <div className="cadastro-hero-left">
+          <div className="breadcrumb-nav">
+            <Link to="/compras"><i className="fas fa-cart-shopping"></i> Compras</Link>
+            <span className="separator">/</span>
+            <span className="current-page">{isEditing ? 'Editar Solicitação' : 'Nova Solicitação'}</span>
           </div>
-          <h1>{isEditing ? '✏️ Editar Solicitação de Compra' : '🛒 Nova Solicitação de Compra'}</h1>
-          <p>Registre itens para o acervo, insumos ou materiais vinculados a pedidos de clientes.</p>
-        </div>
-        <button className="nc-btn-back" onClick={() => navigate('/compras')}>
-          ← Voltar para Lista
-        </button>
-      </div>
-
-      {/* ===== STEPPER INDICATOR ===== */}
-      <div className="nc-steps">
-        <div className="nc-step nc-step-active">
-          <div className="nc-step-dot">1</div>
-          <span>Para quem?</span>
-        </div>
-        <div className="nc-step-line"></div>
-        <div className="nc-step nc-step-active">
-          <div className="nc-step-dot">2</div>
-          <span>O que comprar?</span>
-        </div>
-        <div className="nc-step-line"></div>
-        <div className="nc-step nc-step-active">
-          <div className="nc-step-dot">3</div>
-          <span>Onde e como?</span>
-        </div>
-      </div>
-
-      <form className="nc-form" onSubmit={salvarCompra}>
-
-        {/* ===== SEÇÃO 1: PARA QUEM É ESTA COMPRA (DESTINO) ===== */}
-        <div className="nc-section">
-          <div className="nc-section-title">
-            <div className="nc-section-icon nc-icon-green">🎯</div>
+          <div className="hero-title-group">
+            <div className="header-icon-badge">
+              <i className={isEditing ? "fas fa-pen-to-square" : "fas fa-cart-shopping"}></i>
+            </div>
             <div>
-              <h2>Para quem é esta compra?</h2>
-              <p>Defina se vai para o estoque geral ou para um pedido específico de cliente</p>
+              <h1 className="form-page-title">{isEditing ? 'Editar Solicitação de Compra' : 'Nova Solicitação de Compra'}</h1>
+              <p className="form-page-subtitle">Registre itens para o acervo, insumos ou materiais vinculados a pedidos de clientes.</p>
             </div>
           </div>
+        </div>
+        <div className="cadastro-hero-right-actions">
+          <button type="button" className="btn-secondary-celebre" onClick={() => navigate('/compras')}>
+            <i className="fas fa-arrow-left"></i>
+            <span>Voltar para Lista</span>
+          </button>
+        </div>
+      </div>
 
-          <div className="nc-destino-grid">
-            <button
-              type="button"
-              className={`nc-destino-card ${destino === 'geral' ? 'nc-destino-ativo' : ''}`}
-              onClick={() => { setDestino('geral'); setPedidoSelecionado(null); }}
-            >
-              <div className="nc-destino-icon">🏢</div>
-              <div className="nc-destino-text">
-                <strong>Reposição de Acervo</strong>
-                <small>Item vai para o estoque geral da empresa</small>
+      {/* ===== FORMULÁRIO WIDESCREEN & CARTÃO UNIFICADO ===== */}
+      <div className="form-widescreen">
+        <form onSubmit={salvarCompra}>
+          <div className="form-section-card unified-sheet-card">
+
+            {/* SEÇÃO 1: DESTINO DA COMPRA */}
+            <div className="unified-section-header">
+              <span className="section-header-icon">
+                <i className="fas fa-bullseye"></i>
+              </span>
+              <div>
+                <h3>PARA QUEM É ESTA COMPRA?</h3>
+                <p>Defina se vai para o estoque geral ou para um pedido específico de cliente</p>
               </div>
-              {destino === 'geral' && <div className="nc-destino-check">✓</div>}
-            </button>
+            </div>
 
-            <button
-              type="button"
-              className={`nc-destino-card ${destino === 'pedido' ? 'nc-destino-ativo nc-destino-pedido' : ''}`}
-              onClick={() => { setDestino('pedido'); setModalPedidosAberto(true); }}
-            >
-              <div className="nc-destino-icon">🎈</div>
-              <div className="nc-destino-text">
-                <strong>Pedido Específico</strong>
-                <small>Item exclusivo para um cliente / evento</small>
-              </div>
-              {destino === 'pedido' && <div className="nc-destino-check">✓</div>}
-            </button>
-          </div>
+            <div className="toggle-servico-vip nc-destino-grid">
+              <button
+                type="button"
+                className={`btn-servico-card ${destino === 'geral' ? 'active' : ''}`}
+                onClick={() => { setDestino('geral'); setPedidoSelecionado(null); }}
+                title="Item vai para o estoque geral da empresa"
+              >
+                <div className="servico-icon-box">
+                  <i className="fas fa-boxes-stacked"></i>
+                </div>
+                <div className="servico-info">
+                  <strong>Reposição de Acervo</strong>
+                  <small>Estoque geral da loja</small>
+                </div>
+                <div className="servico-check-badge">
+                  {destino === 'geral' && <span className="check-mark">✓</span>}
+                </div>
+              </button>
 
-          {/* Card do pedido vinculado */}
-          {destino === 'pedido' && (
-            <div style={{ marginTop: '16px' }}>
-              {pedidoSelecionado ? (
-                <div className="nc-pedido-vinculado">
-                  <div className="nc-pedido-info">
-                    <div className="nc-pedido-avatar">🎉</div>
-                    <div>
-                      <strong>{pedidoSelecionado.clienteNome}</strong>
-                      <span>{pedidoSelecionado.temaFesta || 'Tema não informado'}</span>
-                      {pedidoSelecionado.dataRetirada && (
-                        <span style={{ fontSize: '12px', color: '#94a3b8' }}>
-                          📅 {pedidoSelecionado.dataRetirada.split('-').reverse().join('/')}
-                        </span>
-                      )}
+              <button
+                type="button"
+                className={`btn-servico-card ${destino === 'pedido' ? 'active' : ''}`}
+                onClick={() => { setDestino('pedido'); setModalPedidosAberto(true); }}
+                title="Item exclusivo para um cliente ou evento"
+              >
+                <div className="servico-icon-box">
+                  <i className="fas fa-champagne-glasses"></i>
+                </div>
+                <div className="servico-info">
+                  <strong>Pedido Específico</strong>
+                  <small>Para cliente ou festa</small>
+                </div>
+                <div className="servico-check-badge">
+                  {destino === 'pedido' && <span className="check-mark">✓</span>}
+                </div>
+              </button>
+            </div>
+
+            {/* Card do pedido vinculado */}
+            {destino === 'pedido' && (
+              <div style={{ marginTop: '14px' }}>
+                {pedidoSelecionado ? (
+                  <div className="nc-pedido-vinculado">
+                    <div className="nc-pedido-info">
+                      <div className="nc-pedido-avatar">
+                        <i className="fas fa-champagne-glasses" style={{ color: '#c5a059' }}></i>
+                      </div>
+                      <div>
+                        <div className="nc-pedido-tag">PEDIDO #{pedidoSelecionado.numeroPedido || pedidoSelecionado.id?.substring(0,6)}</div>
+                        <strong>{pedidoSelecionado.cliente?.nome || pedidoSelecionado.clienteNome || 'Cliente em Atendimento'}</strong>
+                        <p>
+                          {pedidoSelecionado.temaFesta || pedidoSelecionado.tema || 'Tema não informado'} • Evento: {formatarData(pedidoSelecionado.dataEvento || pedidoSelecionado.dataRetirada)}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="nc-pedido-actions">
+                      <button
+                        type="button"
+                        className="nc-btn-trocar"
+                        onClick={() => setModalPedidosAberto(true)}
+                      >
+                        <i className="fas fa-arrow-rotate-right"></i> Trocar
+                      </button>
+                      <button
+                        type="button"
+                        className="nc-btn-remover-pedido"
+                        onClick={() => setPedidoSelecionado(null)}
+                        title="Desvincular pedido"
+                      >
+                        <i className="fas fa-times"></i>
+                      </button>
                     </div>
                   </div>
-                  <button type="button" className="nc-btn-alterar" onClick={() => setModalPedidosAberto(true)}>
-                    🔄 Trocar
-                  </button>
+                ) : (
+                  <div className="nc-pedido-empty" onClick={() => setModalPedidosAberto(true)}>
+                    <div className="nc-vazio-icon"><i className="fas fa-link"></i></div>
+                    <div>
+                      <strong>Nenhum pedido vinculado</strong>
+                      <p>Clique aqui para selecionar a qual locação ou cliente este item pertence</p>
+                    </div>
+                    <button type="button" className="nc-btn-vincular">
+                      <i className="fas fa-search"></i> Vincular Pedido
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Alerta de prazo */}
+            {destino === 'pedido' && pedidoSelecionado && mensagemPrazo && (
+              <div className={`nc-alerta ${erroPrazo ? 'nc-alerta-erro' : 'nc-alerta-ok'}`}>
+                <i className={erroPrazo ? "fas fa-triangle-exclamation" : "fas fa-circle-check"}></i>
+                <span>{mensagemPrazo}</span>
+              </div>
+            )}
+
+            {/* SEÇÃO 2: DETALHES DO ITEM E VALORES */}
+            <div className="form-section-divider"></div>
+
+            <div className="unified-section-header">
+              <span className="section-header-icon">
+                <i className="fas fa-tag"></i>
+              </span>
+              <div>
+                <h3>O QUE SERÁ COMPRADO?</h3>
+                <p>Identifique o item, quantidade, categoria e valores estimados</p>
+              </div>
+            </div>
+
+            <div className="form-grid-4">
+              {/* LINHA 1: NOME DO ITEM (Largo) + QUANTIDADE (Compacto) NA MESMA LINHA */}
+              <div className="nc-row-nome-qtd span-4">
+                <div className="form-group nc-field-nome">
+                  <label htmlFor="nc-nome">NOME DO ITEM / PEÇA *</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fas fa-box-open"></i></span>
+                    <input
+                      id="nc-nome"
+                      type="text"
+                      placeholder="Ex: Vaso Murano Âmbar 30cm, Boleira Ouro..."
+                      value={nome}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNome(val.replace(/(?:^|\s)\S/g, (a) => a.toUpperCase()));
+                      }}
+                      required
+                    />
+                  </div>
                 </div>
-              ) : (
-                <div className="nc-pedido-empty" onClick={() => setModalPedidosAberto(true)}>
-                  <span>🔍</span>
-                  <span>Clique para buscar e vincular o pedido do cliente</span>
+
+                <div className="form-group nc-field-qtd">
+                  <label htmlFor="nc-qtd">QTD *</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><i className="fas fa-hashtag"></i></span>
+                    <input
+                      id="nc-qtd"
+                      type="number"
+                      min="1"
+                      value={quantidade}
+                      onChange={(e) => setQuantidade(e.target.value)}
+                      className="nc-input-center"
+                      required
+                    />
+                  </div>
                 </div>
-              )}
-            </div>
-          )}
+              </div>
 
-          {/* Alerta de prazo */}
-          {destino === 'pedido' && pedidoSelecionado && mensagemPrazo && (
-            <div className={`nc-alerta ${erroPrazo ? 'nc-alerta-erro' : 'nc-alerta-ok'}`}>
-              <span>{mensagemPrazo}</span>
-            </div>
-          )}
-        </div>
-
-        <div className="nc-divider"></div>
-
-        {/* ===== SEÇÃO 2: O QUE COMPRAR ===== */}
-        <div className="nc-section">
-          <div className="nc-section-title">
-            <div className="nc-section-icon nc-icon-gold">📦</div>
-            <div>
-              <h2>O que será comprado?</h2>
-              <p>Identifique o item, quantidade, categoria e valor estimado</p>
-            </div>
-          </div>
-
-          <div className="nc-fields-grid nc-grid-3">
-            {/* Nome do item — ocupa 2 colunas */}
-            <div className="nc-field nc-col-span-2">
-              <label htmlFor="nc-nome">Nome do Item / Peça *</label>
-              <input
-                id="nc-nome"
-                type="text"
-                placeholder="Ex: Vaso de Cerâmica Rosa Bebê, Boleira Ouro..."
-                value={nome}
-                onChange={e => {
-                  const val = e.target.value;
-                  setNome(val.replace(/(?:^|\s)\S/g, a => a.toUpperCase()));
-                }}
-                autoCapitalize="words"
-                required
-              />
-            </div>
-
-            {/* Quantidade */}
-            <div className="nc-field">
-              <label htmlFor="nc-qtd">Quantidade *</label>
-              <input
-                id="nc-qtd"
-                type="number"
-                min="1"
-                value={quantidade}
-                onChange={e => setQuantidade(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* Categoria */}
-            <div className="nc-field">
-              <label htmlFor="nc-cat">Categoria *</label>
-              <select id="nc-cat" value={categoria} onChange={e => setCategoria(e.target.value)}>
-                <option value="acervo">📦 Peça de Acervo / Decoração</option>
-                <option value="insumo">🛠️ Insumo / Consumível (Balões, Fitas)</option>
-                <option value="infraestrutura">🏢 Infraestrutura / Escritório</option>
-              </select>
-            </div>
-
-            {/* Formato (só acervo) */}
-            {categoria === 'acervo' && (
-              <div className="nc-field">
-                <label htmlFor="nc-fmt">Formato *</label>
-                <select id="nc-fmt" value={formato} onChange={e => setFormato(e.target.value)}>
-                  <option value="unidade">Peça Avulsa / Única</option>
-                  <option value="kit">Kit / Conjunto de Peças</option>
+              {/* LINHA 2: CATEGORIA + FORMATO (OU KIT COM Nº PEÇAS) */}
+              <div className={`form-group ${categoria === 'acervo' ? (formato === 'kit' ? 'span-2 col-mobile-half' : 'span-2 col-mobile-half') : 'span-4'}`}>
+                <label htmlFor="nc-cat">CATEGORIA *</label>
+                <select
+                  id="nc-cat"
+                  value={categoria}
+                  onChange={(e) => setCategoria(e.target.value)}
+                >
+                  <option value="acervo">📦 Peça de Acervo / Decoração</option>
+                  <option value="insumo">🛠️ Insumo / Consumível (Balões, Fitas)</option>
+                  <option value="infraestrutura">🏢 Infraestrutura / Escritório</option>
                 </select>
               </div>
-            )}
 
-            {/* Nº de peças no kit */}
-            {categoria === 'acervo' && formato === 'kit' && (
-              <div className="nc-field">
-                <label htmlFor="nc-pkit">Nº Peças no Kit *</label>
-                <input
-                  id="nc-pkit"
-                  type="number"
-                  min="2"
-                  value={quantidadePecasKit}
-                  onChange={e => setQuantidadePecasKit(e.target.value)}
-                />
-              </div>
-            )}
-          </div>
+              {categoria === 'acervo' && (
+                <div className={`form-group ${formato === 'kit' ? 'span-1 col-mobile-half' : 'span-2 col-mobile-half'}`}>
+                  <label htmlFor="nc-fmt">FORMATO *</label>
+                  <select
+                    id="nc-fmt"
+                    value={formato}
+                    onChange={(e) => setFormato(e.target.value)}
+                  >
+                    <option value="unidade">Peça Avulsa / Única</option>
+                    <option value="kit">Kit / Conjunto de Peças</option>
+                  </select>
+                </div>
+              )}
 
-          {/* CUSTO UNITÁRIO E PREÇO DE ALUGUEL EM 2 COLUNAS */}
-          <div className="nc-fields-grid nc-grid-2" style={{ marginTop: '16px' }}>
-            <div className="nc-field">
-              <label htmlFor="nc-custo">Custo Unitário (R$)</label>
-              <div className="nc-input-prefix">
-                <span>R$</span>
-                <input
-                  id="nc-custo"
-                  type="text"
-                  placeholder="0,00"
-                  value={valorEstimado}
-                  onChange={e => setValorEstimado(maskCurrency(e.target.value))}
-                />
-              </div>
-            </div>
-
-            {categoria === 'acervo' ? (
-              <div className="nc-field">
-                <label htmlFor="nc-aluguel">Aluguel (R$)</label>
-                <div className="nc-input-prefix">
-                  <span>R$</span>
+              {categoria === 'acervo' && formato === 'kit' && (
+                <div className="form-group span-1 col-mobile-half">
+                  <label htmlFor="nc-pkit">Nº PEÇAS NO KIT *</label>
                   <input
-                    id="nc-aluguel"
+                    id="nc-pkit"
+                    type="number"
+                    min="2"
+                    value={quantidadePecasKit}
+                    onChange={(e) => setQuantidadePecasKit(e.target.value)}
+                    className="nc-input-center"
+                  />
+                </div>
+              )}
+
+              {/* LINHA 3: CUSTO UNITÁRIO ESTIMADO + ALUGUEL ESTIMADO DA PEÇA */}
+              <div className={`form-group ${categoria === 'acervo' ? 'span-2 col-mobile-half' : 'span-4'}`}>
+                <label htmlFor="nc-custo">CUSTO UNITÁRIO ESTIMADO</label>
+                <div className="input-icon-wrapper">
+                  <span className="input-left-icon"><strong style={{ fontSize: '0.75rem', color: '#c5a059' }}>R$</strong></span>
+                  <input
+                    id="nc-custo"
                     type="text"
                     placeholder="0,00"
-                    value={valorAluguel}
-                    onChange={e => setValorAluguel(maskCurrency(e.target.value))}
+                    value={valorEstimado}
+                    onChange={(e) => setValorEstimado(maskCurrency(e.target.value))}
                   />
                 </div>
               </div>
-            ) : (
-              totalEstimado > 0 && (
-                <div className="nc-field">
-                  <label>Total Estimado</label>
-                  <div className="nc-total-badge">
-                    R$ {totalEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+
+              {categoria === 'acervo' && (
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="nc-aluguel">ALUGUEL ESTIMADO DA PEÇA</label>
+                  <div className="input-icon-wrapper">
+                    <span className="input-left-icon"><strong style={{ fontSize: '0.75rem', color: '#16a34a' }}>R$</strong></span>
+                    <input
+                      id="nc-aluguel"
+                      type="text"
+                      placeholder="0,00"
+                      value={valorAluguel}
+                      onChange={(e) => setValorAluguel(maskCurrency(e.target.value))}
+                    />
                   </div>
                 </div>
-              )
-            )}
-          </div>
+              )}
 
-          {categoria === 'acervo' && totalEstimado > 0 && (
-            <div className="nc-field" style={{ marginTop: '14px', maxWidth: '300px' }}>
-              <label>Total Estimado</label>
-              <div className="nc-total-badge">
-                R$ {totalEstimado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+              {/* LINHA 4: OBSERVAÇÕES */}
+              <div className="form-group span-4">
+                <label htmlFor="nc-obs">OBSERVAÇÕES / ESPECIFICAÇÕES (COR, TAMANHO, LINK)</label>
+                <textarea
+                  id="nc-obs"
+                  rows="2"
+                  placeholder="Ex: Comprar preferencialmente na cor Dourado Fosco, tamanho G..."
+                  value={observacoes}
+                  onChange={(e) => setObservacoes(e.target.value)}
+                ></textarea>
               </div>
             </div>
-          )}
 
-          {/* Observações */}
-          <div className="nc-field nc-obs-field">
-            <label htmlFor="nc-obs">Observações / Especificações de Cor ou Tamanho</label>
-            <textarea
-              id="nc-obs"
-              rows="2"
-              placeholder="Ex: Comprar preferencialmente na cor Dourado Fosco, tamanho G..."
-              value={observacoes}
-              onChange={e => setObservacoes(e.target.value)}
-            ></textarea>
-          </div>
-        </div>
+            {/* SEÇÃO 3: LOGÍSTICA, CANAL E FORNECEDOR */}
+            <div className="form-section-divider"></div>
 
-        <div className="nc-divider"></div>
-
-        {/* ===== SEÇÃO 3: FORNECEDOR & LOGÍSTICA ===== */}
-        <div className="nc-section">
-          <div className="nc-section-title">
-            <div className="nc-section-icon nc-icon-blue">🚚</div>
-            <div>
-              <h2>Onde e como comprar?</h2>
-              <p>Canal de compra, fornecedor, tipo de entrega e prazo estimado</p>
+            <div className="unified-section-header">
+              <span className="section-header-icon">
+                <i className="fas fa-truck-fast"></i>
+              </span>
+              <div>
+                <h3>ONDE E COMO COMPRAR?</h3>
+                <p>Canal de compra, fornecedor, tipo de frete e prazo estimado</p>
+              </div>
             </div>
-          </div>
 
-          <div className="nc-canal-toggle">
-            <button
-              type="button"
-              className={`nc-canal-btn ${canalCompra === 'online' ? 'active-online' : ''}`}
-              onClick={() => { setCanalCompra('online'); if (tipoEntrega === '1') setTipoEntrega('10'); }}
-            >
-              <span className="nc-canal-icon">🌐</span>
-              <div>
-                <strong>Compra Online</strong>
-                <small>Mercado Livre, Shopee, Amazon, e-commerce...</small>
-              </div>
-            </button>
-            <button
-              type="button"
-              className={`nc-canal-btn ${canalCompra === 'presencial' ? 'active-presencial' : ''}`}
-              onClick={() => { setCanalCompra('presencial'); setTipoEntrega('1'); }}
-            >
-              <span className="nc-canal-icon">⚡</span>
-              <div>
-                <strong>Compra Presencial</strong>
-                <small>Loja física, na cidade, atacado local...</small>
-              </div>
-            </button>
-          </div>
+            <div className="toggle-servico-vip nc-canal-toggle">
+              <button
+                type="button"
+                className={`btn-servico-card ${canalCompra === 'online' ? 'active' : ''}`}
+                onClick={() => { setCanalCompra('online'); if (tipoEntrega === '1') setTipoEntrega('10'); }}
+                title="Mercado Livre, Shopee, Amazon, e-commerce..."
+              >
+                <div className="servico-icon-box">
+                  <i className="fas fa-globe"></i>
+                </div>
+                <div className="servico-info">
+                  <strong>Compra Online</strong>
+                  <small>Mercado Livre, Shopee, E-commerce...</small>
+                </div>
+                <div className="servico-check-badge">
+                  {canalCompra === 'online' && <span className="check-mark">✓</span>}
+                </div>
+              </button>
 
-          <div className="nc-fields-grid nc-grid-2 nc-grid-logistica">
-            {/* Fornecedor / Loja */}
-            <div className="nc-field nc-col-span-2">
-              <div className="nc-label-row">
-                <label htmlFor="nc-fornecedor">
-                  {canalCompra === 'online' ? '🛒 Loja / E-commerce' : '🏪 Fornecedor / Loja Física'}
-                  {fornecedorId && <span className="nc-badge-cadastrado">✓ Cadastrado</span>}
+              <button
+                type="button"
+                className={`btn-servico-card ${canalCompra === 'presencial' ? 'active' : ''}`}
+                onClick={() => { setCanalCompra('presencial'); setTipoEntrega('1'); }}
+                title="Loja física, na cidade, atacado local..."
+              >
+                <div className="servico-icon-box">
+                  <i className="fas fa-store"></i>
+                </div>
+                <div className="servico-info">
+                  <strong>Compra Presencial</strong>
+                  <small>Loja física ou comércio na cidade</small>
+                </div>
+                <div className="servico-check-badge">
+                  {canalCompra === 'presencial' && <span className="check-mark">✓</span>}
+                </div>
+              </button>
+            </div>
+
+            <div className="form-grid-4" style={{ marginTop: '14px' }}>
+              <div className="form-group span-4">
+                <div className="tag-header-row">
+                  <label htmlFor="nc-fornecedor">
+                    {canalCompra === 'online' ? 'LOJA / E-COMMERCE' : 'FORNECEDOR / LOJA FÍSICA'}
+                    {fornecedorId && <span className="nc-badge-cadastrado">✓ Cadastrado</span>}
+                  </label>
+                  <button
+                    type="button"
+                    className="btn-auto-tag-suggest"
+                    onClick={() => setModalFornecedoresAberto(true)}
+                  >
+                    <i className="fas fa-magnifying-glass"></i> Buscar Cadastrado {listaFornecedores.length > 0 && `(${listaFornecedores.length})`}
+                  </button>
+                </div>
+                <div className="input-icon-wrapper">
+                  <span className="input-left-icon">
+                    <i className={canalCompra === 'online' ? "fas fa-globe" : "fas fa-store"}></i>
+                  </span>
+                  <input
+                    id="nc-fornecedor"
+                    type="text"
+                    placeholder={canalCompra === 'online' ? 'Ex: Mercado Livre, Shopee, Amazon, AliExpress...' : 'Ex: Festas e Chocolate, Armarinho Fernando, Atacado local...'}
+                    value={fornecedor}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setFornecedor(val);
+                      setFornecedorId('');
+                      if (val.toLowerCase().includes('mercado livre')) { setCanalCompra('online'); setTipoEntrega('2'); }
+                      else if (val.toLowerCase().includes('shopee')) { setCanalCompra('online'); setTipoEntrega('20'); }
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div className="form-group span-2 col-mobile-half">
+                <label htmlFor="nc-frete">
+                  TIPO DE FRETE / ENTREGA *
+                  {fornecedor.toLowerCase().includes('mercado livre') && (
+                    <span className="nc-hint-ml">⚡ Opções ML</span>
+                  )}
                 </label>
-                <button
-                  type="button"
-                  className="nc-btn-search"
-                  onClick={() => setModalFornecedoresAberto(true)}
-                >
-                  🔍 Buscar Cadastrado {listaFornecedores.length > 0 && `(${listaFornecedores.length})`}
-                </button>
-              </div>
-              {/* Input do fornecedor - sem atalhos rápidos aqui */}
-              <input
-                id="nc-fornecedor"
-                type="text"
-                placeholder={canalCompra === 'online' ? 'Ex: Mercado Livre, Shopee, Amazon, AliExpress...' : 'Ex: Festas e Chocolate, Armarinho Fernando, Atacadao...'}
-                value={fornecedor}
-                onChange={e => {
-                  const val = e.target.value;
-                  setFornecedor(val);
-                  setFornecedorId('');
-                  if (val.toLowerCase().includes('mercado livre')) { setCanalCompra('online'); setTipoEntrega('2'); }
-                  else if (val.toLowerCase().includes('shopee')) { setCanalCompra('online'); setTipoEntrega('20'); }
-                }}
-              />
-            </div>
-
-            <div className="nc-field">
-              <label htmlFor="nc-frete">
-                Tipo de Frete / Entrega *
-                {fornecedor.toLowerCase().includes('mercado livre') && (
-                  <span className="nc-hint-ml">⚡ Opções ML</span>
-                )}
-              </label>
-              <select id="nc-frete" value={tipoEntrega} onChange={e => setTipoEntrega(e.target.value)}>
-                {canalCompra === 'online' ? (
-                  fornecedor.toLowerCase().includes('mercado livre') ? (
-                    <>
-                      <option value="2">⚡ ML Full / Entrega Amanhã (1–2 dias úteis)</option>
-                      <option value="5">🚚 Mercado Envios / Expresso (até 5 dias)</option>
-                      <option value="10">📦 Mercado Envios / Padrão (até 10 dias)</option>
-                      <option value="outro">✏️ Dias Personalizados</option>
-                    </>
+                <select id="nc-frete" value={tipoEntrega} onChange={(e) => setTipoEntrega(e.target.value)}>
+                  {canalCompra === 'online' ? (
+                    fornecedor.toLowerCase().includes('mercado livre') ? (
+                      <>
+                        <option value="2">⚡ ML Full / Entrega Amanhã (1–2 dias úteis)</option>
+                        <option value="5">🚚 Mercado Envios / Expresso (até 5 dias)</option>
+                        <option value="10">📦 Mercado Envios / Padrão (até 10 dias)</option>
+                        <option value="outro">✏️ Dias Personalizados</option>
+                      </>
+                    ) : (
+                      <>
+                        <option value="2">⚡ Expresso / Full (1–2 dias úteis)</option>
+                        <option value="5">🚚 Sedex / Expresso (até 5 dias úteis)</option>
+                        <option value="10">📦 PAC / Padrão (até 10 dias úteis)</option>
+                        <option value="20">🚢 Internacional / Shopee / China (até 20 dias)</option>
+                        <option value="outro">✏️ Dias Personalizados</option>
+                      </>
+                    )
                   ) : (
                     <>
-                      <option value="2">⚡ Expresso / Full (1–2 dias úteis)</option>
-                      <option value="5">🚚 Sedex / Expresso (até 5 dias úteis)</option>
-                      <option value="10">📦 PAC / Padrão (até 10 dias úteis)</option>
-                      <option value="20">🚢 Internacional / Shopee / China (até 20 dias)</option>
+                      <option value="1">⚡ Compra Local / Retirada na Loja (1 dia)</option>
+                      <option value="3">🏬 Encomenda em Loja Física (até 3 dias úteis)</option>
                       <option value="outro">✏️ Dias Personalizados</option>
                     </>
-                  )
+                  )}
+                </select>
+              </div>
+
+              {tipoEntrega === 'outro' && (
+                <div className="form-group span-2 col-mobile-half">
+                  <label htmlFor="nc-dias">Nº DE DIAS ÚTEIS *</label>
+                  <input
+                    id="nc-dias"
+                    type="number"
+                    min="1"
+                    value={diasPersonalizados}
+                    onChange={(e) => setDiasPersonalizados(e.target.value)}
+                    placeholder="Ex: 15"
+                  />
+                </div>
+              )}
+
+              <div className="form-group span-2 col-mobile-half">
+                <label htmlFor="nc-cond">CONDIÇÃO DE CHEGADA *</label>
+                <select id="nc-cond" value={condicao} onChange={(e) => setCondicao(e.target.value)}>
+                  <option value="pronto">✅ Pronto para Uso (sem preparação)</option>
+                  <option value="preparar">🛠️ Necessita Preparação (+3 dias)</option>
+                </select>
+              </div>
+            </div>
+
+            {diasEntregaNum > 0 && (
+              <div className="nc-prazo-preview">
+                <i className="fas fa-calendar-day" style={{ fontSize: '18px', color: '#c5a059' }}></i>
+                <span>
+                  Com o frete selecionado, o item chegará em aproximadamente <strong>{diasEntregaNum} dias úteis</strong>
+                  {condicao === 'preparar' && <span> + <strong>3 dias</strong> de preparação</span>}.
+                </span>
+              </div>
+            )}
+
+            {/* BARRA DE AÇÕES NO RODAPÉ DO CARTÃO UNIFICADO */}
+            <div className="unified-card-actions-bar">
+              <button type="button" className="btn-cancelar-celebre" onClick={() => navigate('/compras')}>
+                <i className="fas fa-times"></i> Cancelar
+              </button>
+              <button
+                type="submit"
+                className={`btn-salvar-celebre-gold ${erroPrazo && destino === 'pedido' ? 'nc-btn-blocked' : ''}`}
+                disabled={salvando || (erroPrazo && destino === 'pedido')}
+              >
+                {salvando ? (
+                  <><i className="fas fa-spinner fa-spin"></i> Salvando...</>
+                ) : erroPrazo && destino === 'pedido' ? (
+                  '⛔ Prazo Inviável'
+                ) : isEditing ? (
+                  <><i className="fas fa-check"></i> Salvar Alterações</>
                 ) : (
-                  <>
-                    <option value="1">⚡ Compra Local / Retirada na Loja (1 dia)</option>
-                    <option value="3">🏬 Encomenda em Loja Física (até 3 dias úteis)</option>
-                    <option value="outro">✏️ Dias Personalizados</option>
-                  </>
+                  <><i className="fas fa-cart-plus"></i> Criar Solicitação de Compra</>
                 )}
-              </select>
+              </button>
             </div>
 
-            {tipoEntrega === 'outro' && (
-              <div className="nc-field">
-                <label htmlFor="nc-dias">Nº de Dias Úteis *</label>
-                <input
-                  id="nc-dias"
-                  type="number"
-                  min="1"
-                  value={diasPersonalizados}
-                  onChange={e => setDiasPersonalizados(e.target.value)}
-                  placeholder="Ex: 15"
-                />
-              </div>
-            )}
-
-            <div className="nc-field">
-              <label htmlFor="nc-cond">Condição de Chegada *</label>
-              <select id="nc-cond" value={condicao} onChange={e => setCondicao(e.target.value)}>
-                <option value="pronto">✅ Pronto para Uso (sem preparação)</option>
-                <option value="preparar">🛠️ Necessita Preparação (+3 dias)</option>
-              </select>
-            </div>
           </div>
+        </form>
+      </div>
 
-          {diasEntregaNum > 0 && (
-            <div className="nc-prazo-preview">
-              <span>📅</span>
-              <span>
-                Com o frete selecionado, o item chegará em aproximadamente <strong>{diasEntregaNum} dias úteis</strong>
-                {condicao === 'preparar' && <span> + <strong>3 dias</strong> de preparação</span>}.
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* ===== FOOTER DE AÇÕES ===== */}
-        <div className="nc-footer-actions">
-          <button type="button" className="nc-btn-cancel" onClick={() => navigate('/compras')}>
-            Cancelar
-          </button>
-          <button
-            type="submit"
-            className={`nc-btn-save ${erroPrazo && destino === 'pedido' ? 'nc-btn-blocked' : ''}`}
-            disabled={salvando || (erroPrazo && destino === 'pedido')}
-          >
-            {salvando ? (
-              <><span className="nc-spinner"></span> Salvando...</>
-            ) : erroPrazo && destino === 'pedido' ? (
-              '⛔ Prazo Inviável'
-            ) : isEditing ? (
-              '✅ Salvar Alterações'
-            ) : (
-              '🛒 Criar Solicitação de Compra'
-            )}
-          </button>
-        </div>
-      </form>
-
-      {/* ===== MODAL: SELECIONAR PEDIDO ===== */}
+      {/* ===== MODAL: SELECIONAR EVENTO / PEDIDO ===== */}
       {modalPedidosAberto && (
-        <div className="modal-overlay-premium">
-          <div className="modal-box-pedido">
+        <div className="modal-overlay-premium" onClick={() => { if (!pedidoSelecionado) setDestino('geral'); setModalPedidosAberto(false); }}>
+          <div className="modal-box-pedido" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-pedido">
-              <div>
-                <h3>Selecione o Evento</h3>
-                <p>Busque o pedido do cliente na lista abaixo.</p>
+              <div className="modal-header-left">
+                <div className="modal-header-icon-badge">
+                  <i className="fas fa-calendar-check"></i>
+                </div>
+                <div>
+                  <h3>Selecione o Evento</h3>
+                  <p>Vincule esta compra a um pedido ou evento de cliente</p>
+                </div>
               </div>
-              <button className="btn-fechar-modal" onClick={() => { if (!pedidoSelecionado) setDestino('geral'); setModalPedidosAberto(false); }}>✕</button>
+              <button 
+                type="button"
+                className="btn-fechar-modal" 
+                onClick={() => { if (!pedidoSelecionado) setDestino('geral'); setModalPedidosAberto(false); }}
+                title="Fechar"
+              >
+                ✕
+              </button>
             </div>
+
             <div className="modal-search-box">
-              <span className="icon">🔍</span>
-              <input type="text" placeholder="Buscar por cliente, tema ou código..." value={buscaPedido} onChange={e => setBuscaPedido(e.target.value)} autoFocus />
+              <i className="fas fa-magnifying-glass modal-search-icon"></i>
+              <input 
+                type="text" 
+                placeholder="Buscar por cliente, tema ou código..." 
+                value={buscaPedido} 
+                onChange={(e) => setBuscaPedido(e.target.value)} 
+                autoFocus 
+              />
+              {buscaPedido && (
+                <button type="button" className="modal-search-clear" onClick={() => setBuscaPedido('')}>
+                  ✕
+                </button>
+              )}
             </div>
+
             <div className="modal-lista-pedidos">
-              <div className="card-pedido-select" onClick={cadastrarPedidoManual} style={{ background: '#fffbeb', borderColor: '#fde68a' }}>
+              {/* Opção de vincular manualmente / em atendimento */}
+              <div className="card-pedido-select card-pedido-novo" onClick={cadastrarPedidoManual}>
                 <div className="cp-left">
-                  <span className="cp-id">➕ NOVO</span>
-                  <strong className="cp-nome" style={{ color: '#b45309' }}>Vincular a Pedido em Aberto / Digitar Cliente</strong>
-                  <span className="cp-tema">Clique para digitar o nome do cliente em atendimento</span>
+                  <span className="cp-badge-novo"><i className="fas fa-plus"></i> NOVO / AVULSO</span>
+                  <strong className="cp-nome">Digitar Cliente / Pedido em Atendimento</strong>
+                  <span className="cp-tema">Clique para digitar o nome do cliente ou evento em negociação</span>
                 </div>
                 <div className="cp-right">
-                  <span className="cp-status" style={{ background: '#fef08a', color: '#854d0e' }}>EM ABERTO</span>
+                  <span className="cp-status-pill status-aberto">EM ABERTO</span>
                 </div>
               </div>
+
               {pedidosFiltrados.length === 0 ? (
-                <div className="lista-vazia">Nenhum evento encontrado. Use a opção acima para digitar o cliente.</div>
+                <div className="modal-lista-vazia">
+                  <i className="fas fa-inbox"></i>
+                  <span>Nenhum evento encontrado. Use a opção acima para digitar o cliente.</span>
+                </div>
               ) : (
-                pedidosFiltrados.map(pedido => (
-                  <div key={pedido.id} className="card-pedido-select" onClick={() => selecionarPedido(pedido)}>
-                    <div className="cp-left">
-                      <span className="cp-id">#{pedido.numeroPedido || 'S/N'}</span>
-                      <strong className="cp-nome">{pedido.clienteNome}</strong>
-                      <span className="cp-tema">🎈 {pedido.temaFesta || 'Tema não definido'}</span>
-                    </div>
-                    <div className="cp-right">
-                      <div className="cp-data-box">
-                        <span className="label">Data da Festa</span>
-                        <strong>{pedido.dataRetirada ? pedido.dataRetirada.split('-').reverse().join('/') : 'S/D'}</strong>
+                pedidosFiltrados.map((pedido) => {
+                  const statusRaw = (pedido.status || 'aberto').toLowerCase();
+                  let statusClass = 'status-aberto';
+                  if (statusRaw.includes('aprov') || statusRaw.includes('pago') || statusRaw.includes('confirm')) statusClass = 'status-aprovado';
+                  else if (statusRaw.includes('entreg')) statusClass = 'status-entregue';
+                  else if (statusRaw.includes('finaliz') || statusRaw.includes('devolv') || statusRaw.includes('concl')) statusClass = 'status-finalizado';
+                  else if (statusRaw.includes('orcam') || statusRaw.includes('orçam')) statusClass = 'status-orcamento';
+
+                  return (
+                    <div key={pedido.id} className="card-pedido-select" onClick={() => selecionarPedido(pedido)}>
+                      <div className="cp-left">
+                        <div className="cp-meta-row">
+                          <span className="cp-id">#{pedido.numeroPedido || 'S/N'}</span>
+                          {pedido.temaFesta && (
+                            <span className="cp-tema">
+                              <i className="fas fa-cake-candles"></i> {pedido.temaFesta}
+                            </span>
+                          )}
+                        </div>
+                        <strong className="cp-nome">{pedido.clienteNome}</strong>
                       </div>
-                      <span className={`cp-status ${(pedido.status || 'aberto').toLowerCase()}`}>{pedido.status || 'EM ABERTO'}</span>
+                      <div className="cp-right">
+                        <div className="cp-data-box">
+                          <span className="label">Data do Evento</span>
+                          <strong>{pedido.dataRetirada ? pedido.dataRetirada.split('-').reverse().join('/') : 'S/D'}</strong>
+                        </div>
+                        <span className={`cp-status-pill ${statusClass}`}>
+                          {pedido.status || 'EM ABERTO'}
+                        </span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -829,29 +926,47 @@ const NovaCompra = () => {
 
       {/* ===== MODAL: BUSCAR FORNECEDOR ===== */}
       {modalFornecedoresAberto && (
-        <div className="modal-overlay-premium">
-          <div className="modal-box-pedido">
+        <div className="modal-overlay-premium" onClick={() => setModalFornecedoresAberto(false)}>
+          <div className="modal-box-pedido" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header-pedido">
-              <div>
-                <h3>🔍 Buscar Fornecedor Cadastrado</h3>
-                <p>Selecione um parceiro já cadastrado ou feche para digitar livremente.</p>
+              <div className="modal-header-left">
+                <div className="modal-header-icon-badge">
+                  <i className="fas fa-truck-field"></i>
+                </div>
+                <div>
+                  <h3>Buscar Fornecedor Cadastrado</h3>
+                  <p>Selecione um parceiro ou feche para digitar livremente</p>
+                </div>
               </div>
-              <button type="button" className="btn-fechar-modal" onClick={() => setModalFornecedoresAberto(false)}>✕</button>
+              <button type="button" className="btn-fechar-modal" onClick={() => setModalFornecedoresAberto(false)} title="Fechar">✕</button>
             </div>
+
             <div className="modal-search-box">
-              <span className="icon">🔍</span>
-              <input type="text" placeholder="Buscar por nome, telefone ou categoria..." value={buscaFornecedor} onChange={e => setBuscaFornecedor(e.target.value)} autoFocus />
+              <i className="fas fa-magnifying-glass modal-search-icon"></i>
+              <input 
+                type="text" 
+                placeholder="Buscar por nome, telefone ou categoria..." 
+                value={buscaFornecedor} 
+                onChange={(e) => setBuscaFornecedor(e.target.value)} 
+                autoFocus 
+              />
+              {buscaFornecedor && (
+                <button type="button" className="modal-search-clear" onClick={() => setBuscaFornecedor('')}>
+                  ✕
+                </button>
+              )}
             </div>
+
             {/* Atalhos rápidos dentro do modal */}
             <div className="modal-atalhos">
-              <span className="modal-atalhos-label">⚡ Atalhos rápidos:</span>
+              <span className="modal-atalhos-label"><i className="fas fa-bolt" style={{ color: '#c5a059' }}></i> Atalhos Rápidos:</span>
               <div className="modal-atalhos-chips">
                 {[
                   { label: '🛒 Mercado Livre', canal: 'online', frete: '2', nome: 'Mercado Livre' },
                   { label: '🛍️ Shopee', canal: 'online', frete: '20', nome: 'Shopee' },
                   { label: '🏪 Festas e Chocolate', canal: 'presencial', frete: '1', nome: 'Festas e Chocolate' },
                   { label: '📦 Armarinho Fernando', canal: 'presencial', frete: '1', nome: 'Armarinho Fernando' },
-                ].map(at => (
+                ].map((at) => (
                   <button
                     key={at.nome}
                     type="button"
@@ -863,34 +978,38 @@ const NovaCompra = () => {
                 ))}
               </div>
             </div>
+
             <div className="modal-lista-pedidos">
-              <div className="card-pedido-select" onClick={() => { setFornecedorId(''); setModalFornecedoresAberto(false); }} style={{ background: '#f8fafc', borderColor: '#cbd5e1' }}>
+              <div className="card-pedido-select card-pedido-livre" onClick={() => { setFornecedorId(''); setModalFornecedoresAberto(false); }}>
                 <div className="cp-left">
-                  <span className="cp-id">✏️ LIVRE</span>
-                  <strong className="cp-nome">Digitar Fornecedor Livre / Loja da Internet</strong>
-                  <span className="cp-tema">Fechar e digitar qualquer loja (Mercado Livre, Shopee, etc.)</span>
+                  <span className="cp-badge-novo"><i className="fas fa-pen"></i> DIGITAÇÃO LIVRE</span>
+                  <strong className="cp-nome">Digitar Fornecedor / Loja da Internet</strong>
+                  <span className="cp-tema">Fechar e digitar qualquer loja (Mercado Livre, Shopee, fornecedor local, etc.)</span>
                 </div>
               </div>
+
               {fornecedoresFiltradosModal.length === 0 ? (
-                <div className="lista-vazia">Nenhum fornecedor cadastrado encontrado.</div>
+                <div className="modal-lista-vazia">
+                  <i className="fas fa-inbox"></i>
+                  <span>Nenhum fornecedor cadastrado encontrado.</span>
+                </div>
               ) : (
-                fornecedoresFiltradosModal.map(f => (
+                fornecedoresFiltradosModal.map((f) => (
                   <div
                     key={f.id}
-                    className="card-pedido-select"
+                    className="card-pedido-select card-fornecedor"
                     onClick={() => { setFornecedor(f.nome || ''); setFornecedorId(f.id); setFornecedorTelefone(f.contato || f.telefone || f.whatsapp || ''); setModalFornecedoresAberto(false); }}
-                    style={{ borderLeft: '4px solid #c5a059' }}
                   >
                     <div className="cp-left">
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <strong style={{ color: '#0f172a' }}>🏭 {f.nome}</strong>
-                        {f.categoria && <span style={{ background: '#fef3c7', color: '#b48a3c', fontSize: '10px', padding: '2px 8px', borderRadius: '10px', fontWeight: '800' }}>{f.categoria}</span>}
+                      <div className="cp-meta-row">
+                        <strong className="cp-nome-fornecedor"><i className="fas fa-store"></i> {f.nome}</strong>
+                        {f.categoria && <span className="cp-cat-badge">{f.categoria}</span>}
                       </div>
-                      {f.contato && <span style={{ fontSize: '0.8rem', color: '#64748b' }}>📞 {f.contato}</span>}
-                      {f.endereco && <span style={{ fontSize: '0.78rem', color: '#94a3b8' }}>📍 {f.endereco}</span>}
+                      {f.contato && <span className="cp-contato"><i className="fas fa-phone"></i> {f.contato}</span>}
+                      {f.endereco && <span className="cp-endereco"><i className="fas fa-location-dot"></i> {f.endereco}</span>}
                     </div>
                     <div className="cp-right">
-                      <span style={{ background: '#c5a059', color: '#fff', padding: '4px 12px', borderRadius: '12px', fontSize: '11px', fontWeight: '800' }}>Selecionar ✓</span>
+                      <span className="btn-selecionar-pill">Selecionar <i className="fas fa-check"></i></span>
                     </div>
                   </div>
                 ))

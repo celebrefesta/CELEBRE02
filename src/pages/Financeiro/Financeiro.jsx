@@ -33,6 +33,26 @@ const CATEGORIAS_FIXAS_CONFIG = [
   { valor: 'Outros', label: '🏦 Outros Gastos Recorrentes', cor: '#64748b', bg: '#f1f5f9', border: '#cbd5e1' }
 ];
 
+const NOMES_MESES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+];
+
+const nomesMeses = [
+  { num: '01', nome: 'Janeiro' },
+  { num: '02', nome: 'Fevereiro' },
+  { num: '03', nome: 'Março' },
+  { num: '04', nome: 'Abril' },
+  { num: '05', nome: 'Maio' },
+  { num: '06', nome: 'Junho' },
+  { num: '07', nome: 'Julho' },
+  { num: '08', nome: 'Agosto' },
+  { num: '09', nome: 'Setembro' },
+  { num: '10', nome: 'Outubro' },
+  { num: '11', nome: 'Novembro' },
+  { num: '12', nome: 'Dezembro' }
+];
+
 const Financeiro = ({ initialAba = 'lancamentos' }) => {
   const navigate = useNavigate();
   
@@ -684,6 +704,37 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
     document.body.removeChild(link);
   };
 
+  // 📥 EXPORTAÇÃO EXECUTIVA DA DRE EM CSV / PLANILHA
+  const handleExportarDRE = () => {
+    const dre = calcularDRE();
+    const nomeMes = nomesMeses.find(m => m.num === filtroMes)?.nome || 'Todos os Meses';
+    const anoStr = filtroAno || 'Geral';
+    
+    let csv = `DEMONSTRACAO DO RESULTADO DO EXERCICIO (DRE) - CELEBRE FESTAS\n`;
+    csv += `Periodo: ${nomeMes} / ${anoStr}\n\n`;
+    csv += `Linha;Valor (R$);% da Receita\n`;
+    csv += `(+) 1. RECEITA OPERACIONAL BRUTA;${dre.receitaBruta.toFixed(2).replace('.', ',')};100,0%\n`;
+    csv += `(-) Aquisicao de Acervo & Estoque;-${dre.custosAquisicao.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.custosAquisicao / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(-) Insumos e Materiais;-${dre.custosInsumos.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.custosInsumos / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(-) Manutencao e Reparos;-${dre.custosManutencao.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.custosManutencao / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(=) MARGEM DE CONTRIBUICAO / LUCRO BRUTO;${dre.margemContribuicao.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.margemContribuicao / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(-) Equipe & Pessoal;-${dre.despesasEquipe.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.despesasEquipe / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(-) Despesas Prediais & Fixas;-${dre.despesasFixasPredio.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.despesasFixasPredio / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(-) Marketing & Vendas;-${dre.despesasMarketing.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.despesasMarketing / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(-) Impostos & Contabilidade;-${dre.despesasImpostos.toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? ((dre.despesasImpostos / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(-) Taxas Bancarias & Outros;-${(dre.despesasTaxas + dre.despesasOutras).toFixed(2).replace('.', ',')};${dre.receitaBruta > 0 ? (((dre.despesasTaxas + dre.despesasOutras) / dre.receitaBruta) * 100).toFixed(1).replace('.', ',') : '0,0'}%\n`;
+    csv += `(=) RESULTADO / LUCRO LIQUIDO;${dre.resultadoLiquido.toFixed(2).replace('.', ',')};${dre.margemLiquidaPct.toFixed(1).replace('.', ',')}%\n`;
+
+    const blob = new Blob(["\ufeff" + csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `DRE_Celebre_${nomeMes}_${anoStr}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   // 📝 SALVAR CONTA FIXA (NOVA OU EDIÇÃO)
   const handleSalvarContaFixa = async (e) => {
     e.preventDefault();
@@ -1023,8 +1074,11 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
     );
   };
 
+  const dre = calcularDRE();
+  const proj = calcularFluxoProjetado();
+
   return (
-    <div className="clientes-container fade-in">
+    <div className="financeiro-container clientes-container fade-in">
       
       {/* HERO CABEÇALHO CELEBRE */}
       <div className="clientes-hero-header">
@@ -1038,6 +1092,15 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
           </div>
         </div>
         <div className="header-actions">
+          <button 
+            type="button" 
+            className="btn-secondary-celebre" 
+            onClick={() => navigate(-1)}
+            title="Voltar para a página anterior"
+          >
+            ← Voltar
+          </button>
+
           {abaAtiva === 'contas-fixas' ? (
             <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
               <button 
@@ -1145,7 +1208,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
         </button>
       </div>
 
-      {/* CARDS DE DASHBOARD INTERATIVOS (CLIQUE PARA FILTRAR) (GOLDEN RULE 1 & 2) */}
+      {/* CARDS DE DASHBOARD INTERATIVOS (PADRÃO UNIFICADO EM TODAS AS ABAS) (GOLDEN RULE 1 & 2) */}
       <div className="clientes-stats-grid">
         {abaAtiva === 'contas-fixas' ? (
           <>
@@ -1225,6 +1288,162 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
               </div>
             </div>
           </>
+        ) : abaAtiva === 'dre-gerencial' ? (
+          <>
+            {/* CARD 1: RECEITA BRUTA */}
+            <div className="stat-card-pro card-green interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-green">
+                🟢
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">1. RECEITA BRUTA</span>
+                <strong className="stat-number">R$ {dre.receitaBruta.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">Entradas de contratos</small>
+              </div>
+            </div>
+
+            {/* CARD 2: CUSTOS DIRETOS */}
+            <div className="stat-card-pro card-red interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-red">
+                🔴
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">2. CUSTOS DIRETOS</span>
+                <strong className="stat-number">R$ {dre.totalCustosDiretos.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">Acervo, insumos & reparos</small>
+              </div>
+            </div>
+
+            {/* CARD 3: DESPESAS FIXAS */}
+            <div className="stat-card-pro card-amber interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-amber">
+                🏢
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">3. DESPESAS FIXAS</span>
+                <strong className="stat-number">R$ {dre.totalDespesasFixas.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">Equipe, aluguel, luz, net</small>
+              </div>
+            </div>
+
+            {/* CARD 4: LUCRO LÍQUIDO */}
+            <div className={`stat-card-pro ${dre.resultadoLiquido >= 0 ? 'card-green' : 'card-red'} interactive-card`} style={{ cursor: 'default' }}>
+              <div className={`stat-icon-wrapper ${dre.resultadoLiquido >= 0 ? 'icon-green' : 'icon-red'}`}>
+                {dre.resultadoLiquido >= 0 ? '🏆' : '⚠️'}
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">4. LUCRO LÍQUIDO</span>
+                <strong className="stat-number" style={{ color: dre.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
+                  R$ {dre.resultadoLiquido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </strong>
+                <small className="stat-desc">
+                  Margem: <strong style={{ color: dre.resultadoLiquido >= 0 ? '#16a34a' : '#dc2626' }}>{dre.margemLiquidaPct.toFixed(1)}%</strong>
+                </small>
+              </div>
+            </div>
+          </>
+        ) : abaAtiva === 'fluxo-projetado' ? (
+          <>
+            {/* CARD 1: ENTRADAS 30D */}
+            <div className="stat-card-pro card-blue interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-blue">
+                🔮
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">ENTRADAS (30D)</span>
+                <strong className="stat-number">R$ {proj.entradasPrevistas30.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">{proj.locacoesFuturas30.length} festas agendadas</small>
+              </div>
+            </div>
+
+            {/* CARD 2: SAIDAS FIXAS 30D */}
+            <div className="stat-card-pro card-red interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-red">
+                🔴
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">FIXAS A VENCER (30D)</span>
+                <strong className="stat-number">R$ {proj.saidasPrevistas30.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">Contas do mês</small>
+              </div>
+            </div>
+
+            {/* CARD 3: ENTRADAS 60D */}
+            <div className="stat-card-pro card-purple interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-purple">
+                🚀
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">ENTRADAS (60D)</span>
+                <strong className="stat-number">R$ {(proj.entradasPrevistas30 + proj.entradasPrevistas60).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">{proj.locacoesFuturas30.length + proj.locacoesFuturas60.length} contratos no horizonte</small>
+              </div>
+            </div>
+
+            {/* CARD 4: SALDO PROJETADO */}
+            <div className={`stat-card-pro ${proj.saldoProjetado60 >= 0 ? 'card-green' : 'card-red'} interactive-card`} style={{ cursor: 'default' }}>
+              <div className={`stat-icon-wrapper ${proj.saldoProjetado60 >= 0 ? 'icon-green' : 'icon-red'}`}>
+                🏦
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">SALDO PREVISTO (60D)</span>
+                <strong className="stat-number" style={{ color: proj.saldoProjetado60 >= 0 ? '#15803d' : '#b91c1c' }}>
+                  R$ {proj.saldoProjetado60.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+                </strong>
+                <small className="stat-desc">Após despesas dos 2 meses</small>
+              </div>
+            </div>
+          </>
+        ) : abaAtiva === 'comprovantes' ? (
+          <>
+            {/* CARD 1: COMPROVANTES */}
+            <div className="stat-card-pro card-blue interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-blue">
+                📎
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">COMPROVANTES</span>
+                <strong className="stat-number">{todosComprovantes.length}</strong>
+                <small className="stat-desc">Documentos auditados</small>
+              </div>
+            </div>
+
+            {/* CARD 2: PIX */}
+            <div className="stat-card-pro card-green interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-green">
+                ⚡
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">TOTAL EM PIX</span>
+                <strong className="stat-number">R$ {formasResumo.pix.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">Recebimentos instantâneos</small>
+              </div>
+            </div>
+
+            {/* CARD 3: CARTÃO */}
+            <div className="stat-card-pro card-purple interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-purple">
+                💳
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">TOTAL EM CARTÃO</span>
+                <strong className="stat-number">R$ {formasResumo.cartao.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">Crédito e débito</small>
+              </div>
+            </div>
+
+            {/* CARD 4: DINHEIRO */}
+            <div className="stat-card-pro card-amber interactive-card" style={{ cursor: 'default' }}>
+              <div className="stat-icon-wrapper icon-amber">
+                💵
+              </div>
+              <div className="stat-content">
+                <span className="stat-title">EM DINHEIRO</span>
+                <strong className="stat-number">R$ {formasResumo.dinheiro.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                <small className="stat-desc">Recebimentos em espécie</small>
+              </div>
+            </div>
+          </>
         ) : (
           <>
             <div 
@@ -1296,7 +1515,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
         )}
       </div>
 
-      {/* 💳 BARRINHA DE RESUMO POR FORMA DE PAGAMENTO */}
+      {/* 💳 BARRINHA DE RESUMO POR FORMA DE PAGAMENTO (SEMPRE NO MESMO LUGAR) */}
       <div className="fin-formas-bar">
         {abaAtiva === 'contas-fixas' ? (
           <>
@@ -1424,7 +1643,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                 >
                   <option value="">📅 Mês: Todos</option>
                   {nomesMeses.map(m => (
-                    <option key={m.num} value={m.num}>{m.nome}</option>
+                    <option key={m.num} value={m.num}>📅 Mês: {m.nome}</option>
                   ))}
                 </select>
 
@@ -1435,10 +1654,11 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                   title="Selecionar Ano"
                 >
                   <option value="">📆 Ano: Todos</option>
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <option value="2024">📆 Ano: 2024</option>
+                  <option value="2025">📆 Ano: 2025</option>
+                  <option value="2026">📆 Ano: 2026</option>
+                  <option value="2027">📆 Ano: 2027</option>
+                  <option value="2028">📆 Ano: 2028</option>
                 </select>
               </div>
 
@@ -1695,7 +1915,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
         </div>
       )}
 
-      {/* ABA: DRE GERENCIAL */}
+      {/* ABA: DRE GERENCIAL (DEMONSTRAÇÃO DO RESULTADO DO EXERCÍCIO) */}
       {abaAtiva === 'dre-gerencial' && (
         <div className="table-card-container fade-in">
           {(() => {
@@ -1703,10 +1923,12 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
             return (
               <div>
                 {/* BARRA DE FILTRO DE PERÍODO DRE */}
-                <div className="table-filter-bar">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <span style={{ fontSize: '1.1rem' }}>📈</span>
-                    <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Demonstração do Resultado do Exercício (DRE)</strong>
+                <div className="table-filter-bar dre-filter-bar">
+                  <div className="dre-header-info">
+                    <span className="dre-header-badge">📈 DRE Gerencial</span>
+                    <span className="dre-periodo-tag">
+                      {filtroMes ? `${nomesMeses.find(m => m.num === filtroMes)?.nome} / ${filtroAno || anoAtualNum}` : 'Histórico Consolidado'}
+                    </span>
                   </div>
 
                   <div className="fin-mes-selector-wrapper">
@@ -1717,9 +1939,9 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                         onChange={e => setFiltroMes(e.target.value)}
                         title="Selecionar Mês"
                       >
-                        <option value="">📆 Mês: Todos</option>
-                        {NOMES_MESES.map((m, idx) => (
-                          <option key={idx} value={String(idx + 1).padStart(2, '0')}>{m}</option>
+                        <option value="">📅 Mês: Todos</option>
+                        {nomesMeses.map(m => (
+                          <option key={m.num} value={m.num}>📅 Mês: {m.nome}</option>
                         ))}
                       </select>
 
@@ -1730,10 +1952,11 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                         title="Selecionar Ano"
                       >
                         <option value="">📆 Ano: Todos</option>
-                        <option value="2024">2024</option>
-                        <option value="2025">2025</option>
-                        <option value="2026">2026</option>
-                        <option value="2027">2027</option>
+                        <option value="2024">📆 Ano: 2024</option>
+                        <option value="2025">📆 Ano: 2025</option>
+                        <option value="2026">📆 Ano: 2026</option>
+                        <option value="2027">📆 Ano: 2027</option>
+                        <option value="2028">📆 Ano: 2028</option>
                       </select>
                     </div>
 
@@ -1750,126 +1973,198 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                         className={`btn-date-quick ${!filtroMes && !filtroAno ? 'active' : ''}`}
                         onClick={() => setFiltroMesPredefinido('todos')}
                       >
-                        Tudo
+                        Histórico Geral
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* 4 CARDS DESTAQUE DO DRE */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '14px', margin: '20px 0' }}>
-                  <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '14px', padding: '16px' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#166534', textTransform: 'uppercase' }}>1. Receita Bruta</span>
-                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#15803d', marginTop: '4px' }}>
-                      R$ {dre.receitaBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: '#16a34a' }}>entradas de contratos</span>
-                  </div>
-
-                  <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '14px', padding: '16px' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#991b1b', textTransform: 'uppercase' }}>2. Custos Diretos</span>
-                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#dc2626', marginTop: '4px' }}>
-                      R$ {dre.totalCustosDiretos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: '#ef4444' }}>acervo, insumos & reparos</span>
-                  </div>
-
-                  <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '14px', padding: '16px' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: '#92400e', textTransform: 'uppercase' }}>3. Despesas Fixas</span>
-                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: '#d97706', marginTop: '4px' }}>
-                      R$ {dre.totalDespesasFixas.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    <span style={{ fontSize: '0.7rem', color: '#b45309' }}>equipe, aluguel, luz, net</span>
-                  </div>
-
-                  <div style={{ background: dre.resultadoLiquido >= 0 ? '#f0fdf4' : '#fef2f2', border: `1.5px solid ${dre.resultadoLiquido >= 0 ? '#86efac' : '#fca5a5'}`, borderRadius: '14px', padding: '16px' }}>
-                    <span style={{ fontSize: '0.72rem', fontWeight: '800', color: dre.resultadoLiquido >= 0 ? '#166534' : '#991b1b', textTransform: 'uppercase' }}>4. Lucro Líquido</span>
-                    <div style={{ fontSize: '1.35rem', fontWeight: '900', color: dre.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c', marginTop: '4px' }}>
-                      R$ {dre.resultadoLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
-                    </div>
-                    <span style={{ fontSize: '0.72rem', color: dre.resultadoLiquido >= 0 ? '#16a34a' : '#ef4444', fontWeight: '800' }}>
-                      {dre.margemLiquidaPct.toFixed(1)}% margem líquida
-                    </span>
-                  </div>
+                  <button type="button" className="btn-export-excel btn-export-dre" onClick={handleExportarDRE}>
+                    📥 Exportar DRE
+                  </button>
                 </div>
 
                 {/* TABELA ESTRUTURADA DE DRE CONTÁBIL */}
-                <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', margin: '15px 0' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+                <div className="fin-table-scroll-wrapper dre-scroll-card">
+                  <table className="dre-table-vip">
                     <thead>
-                      <tr style={{ background: '#0f172a', color: '#ffffff', textTransform: 'uppercase', fontSize: '0.72rem', letterSpacing: '0.5px' }}>
-                        <th style={{ padding: '12px 18px', textAlign: 'left' }}>Estrutura de Resultados (DRE)</th>
-                        <th style={{ padding: '12px 18px', textAlign: 'right', width: '180px' }}>Valor (R$)</th>
-                        <th style={{ padding: '12px 18px', textAlign: 'right', width: '120px' }}>% da Receita</th>
+                      <tr>
+                        <th>Demonstrativo Contábil (DRE)</th>
+                        <th className="text-right">Valor (R$)</th>
+                        <th className="text-right">% Receita</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {/* RECEITA BRUTA */}
-                      <tr style={{ background: '#f8fafc', fontWeight: '800', borderBottom: '1px solid #e2e8f0' }}>
-                        <td style={{ padding: '12px 18px', color: '#0f172a' }}>(+) 1. RECEITA OPERACIONAL BRUTA (Locações & Eventos)</td>
-                        <td style={{ padding: '12px 18px', textAlign: 'right', color: '#15803d' }}>R$ {dre.receitaBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '12px 18px', textAlign: 'right', color: '#64748b' }}>100.0%</td>
-                      </tr>
-
-                      {/* CUSTOS DIRETOS */}
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Aquisição de Acervo & Peças para Estoque</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.custosAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.custosAquisicao / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Insumos, Materiais & Embalagens</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.custosInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.custosInsumos / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Manutenção & Reparos do Acervo</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.custosManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.custosManutencao / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-
-                      {/* MARGEM DE CONTRIBUIÇÃO */}
-                      <tr style={{ background: '#f8fafc', fontWeight: '800', borderBottom: '1.5px solid #cbd5e1' }}>
-                        <td style={{ padding: '12px 18px', color: '#0f172a' }}>(=) MARGEM DE CONTRIBUIÇÃO / LUCRO BRUTO</td>
-                        <td style={{ padding: '12px 18px', textAlign: 'right', color: dre.margemContribuicao >= 0 ? '#15803d' : '#dc2626' }}>R$ {dre.margemContribuicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '12px 18px', textAlign: 'right', color: '#0f172a' }}>{dre.receitaBruta > 0 ? ((dre.margemContribuicao / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-
-                      {/* DESPESAS FIXAS */}
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Equipe & Pessoal (Salários, Diárias, Pró-Labore)</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasEquipe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasEquipe / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Despesas Prediais (Aluguel, Luz, Água, Internet)</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasFixasPredio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasFixasPredio / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Marketing & Vendas</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasMarketing.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasMarketing / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1px solid #f1f5f9' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Impostos & Contabilidade</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {dre.despesasImpostos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? ((dre.despesasImpostos / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-                      <tr style={{ borderBottom: '1.5px solid #cbd5e1' }}>
-                        <td style={{ padding: '10px 18px 10px 36px', color: '#64748b' }}>(-) Taxas Bancárias & Outros Gastos</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#dc2626' }}>- R$ {(dre.despesasTaxas + dre.despesasOutras).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 18px', textAlign: 'right', color: '#94a3b8' }}>{dre.receitaBruta > 0 ? (((dre.despesasTaxas + dre.despesasOutras) / dre.receitaBruta) * 100).toFixed(1) : 0}%</td>
-                      </tr>
-
-                      {/* LUCRO LÍQUIDO FINAL */}
-                      <tr style={{ background: '#f8fafc', fontWeight: '900', fontSize: '0.98rem' }}>
-                        <td style={{ padding: '14px 18px', color: '#0f172a' }}>🏆 (=) RESULTADO / LUCRO LÍQUIDO OPERACIONAL</td>
-                        <td style={{ padding: '14px 18px', textAlign: 'right', color: dre.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
-                          R$ {dre.resultadoLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      {/* SEÇÃO 1: RECEITA BRUTA */}
+                      <tr className="dre-row-section dre-row-receita">
+                        <td className="dre-col-desc">
+                          <div className="dre-item-flex">
+                            <span className="dre-tag-op tag-pos">(+)</span>
+                            <strong>1. RECEITA OPERACIONAL BRUTA</strong>
+                          </div>
+                          <small className="dre-sub-desc">Locações & Eventos realizados no período</small>
                         </td>
-                        <td style={{ padding: '14px 18px', textAlign: 'right', color: dre.resultadoLiquido >= 0 ? '#15803d' : '#b91c1c' }}>
-                          {dre.margemLiquidaPct.toFixed(1)}%
+                        <td className="dre-col-val val-pos">
+                          <span className="dre-val-num">R$ {dre.receitaBruta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-pos">100.0% da receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          <span className="dre-pct-pill pill-pos">100.0%</span>
+                        </td>
+                      </tr>
+
+                      {/* SEÇÃO 2: CUSTOS DIRETOS */}
+                      <tr className="dre-row-sub">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Aquisição de Acervo & Peças para Estoque</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {dre.custosAquisicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.custosAquisicao / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? ((dre.custosAquisicao / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      <tr className="dre-row-sub">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Insumos, Materiais & Embalagens</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {dre.custosInsumos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.custosInsumos / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? ((dre.custosInsumos / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      <tr className="dre-row-sub border-group-end">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Manutenção & Reparos do Acervo</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {dre.custosManutencao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.custosManutencao / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? ((dre.custosManutencao / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      {/* TOTAL MARGEM DE CONTRIBUIÇÃO */}
+                      <tr className="dre-row-total dre-row-margem">
+                        <td className="dre-col-desc">
+                          <div className="dre-item-flex">
+                            <span className="dre-tag-op tag-eq">(=)</span>
+                            <strong>MARGEM DE CONTRIBUIÇÃO / LUCRO BRUTO</strong>
+                          </div>
+                          <small className="dre-sub-desc">Receita líquida disponível após custos diretos</small>
+                        </td>
+                        <td className={`dre-col-val ${dre.margemContribuicao >= 0 ? 'val-pos' : 'val-neg'}`}>
+                          <span className="dre-val-num">R$ {dre.margemContribuicao.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.margemContribuicao / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          <span className="dre-pct-pill pill-neutral">
+                            {dre.receitaBruta > 0 ? ((dre.margemContribuicao / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                          </span>
+                        </td>
+                      </tr>
+
+                      {/* SEÇÃO 3: DESPESAS OPERACIONAIS FIXAS */}
+                      <tr className="dre-row-sub">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Equipe & Pessoal (Salários, Diárias, Pró-Labore)</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {dre.despesasEquipe.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.despesasEquipe / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? ((dre.despesasEquipe / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      <tr className="dre-row-sub">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Despesas Prediais (Aluguel, Luz, Água, Internet)</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {dre.despesasFixasPredio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.despesasFixasPredio / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? ((dre.despesasFixasPredio / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      <tr className="dre-row-sub">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Marketing, Anúncios & Vendas</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {dre.despesasMarketing.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.despesasMarketing / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? ((dre.despesasMarketing / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      <tr className="dre-row-sub">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Impostos, Taxas Fiscais & Contabilidade</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {dre.despesasImpostos.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? ((dre.despesasImpostos / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? ((dre.despesasImpostos / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      <tr className="dre-row-sub border-group-end">
+                        <td className="dre-col-desc pl-indent">
+                          <span className="dre-bullet">•</span>
+                          <span>Taxas Bancárias, Maquininhas & Outros</span>
+                        </td>
+                        <td className="dre-col-val val-neg">
+                          <span className="dre-val-num">- R$ {(dre.despesasTaxas + dre.despesasOutras).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className="dre-pct-mobile pill-neutral">{dre.receitaBruta > 0 ? (((dre.despesasTaxas + dre.despesasOutras) / dre.receitaBruta) * 100).toFixed(1) : 0}% s/ receita</span>
+                        </td>
+                        <td className="dre-col-pct">
+                          {dre.receitaBruta > 0 ? (((dre.despesasTaxas + dre.despesasOutras) / dre.receitaBruta) * 100).toFixed(1) : 0}%
+                        </td>
+                      </tr>
+
+                      {/* RESULTADO FINAL / LUCRO LÍQUIDO */}
+                      <tr className={`dre-row-final ${dre.resultadoLiquido >= 0 ? 'dre-final-lucro' : 'dre-final-prejuizo'}`}>
+                        <td className="dre-col-desc">
+                          <div className="dre-item-flex">
+                            <span className="dre-tag-op tag-final">{dre.resultadoLiquido >= 0 ? '🏆' : '⚠️'} (=)</span>
+                            <strong>RESULTADO / LUCRO LÍQUIDO DO EXERCÍCIO</strong>
+                          </div>
+                          <small className="dre-sub-desc">Resultado contábil final apurado para o período</small>
+                        </td>
+                        <td className={`dre-col-val ${dre.resultadoLiquido >= 0 ? 'val-lucro-final' : 'val-prejuizo-final'}`}>
+                          <span className="dre-val-num">R$ {dre.resultadoLiquido.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          <span className={`dre-pct-mobile ${dre.resultadoLiquido >= 0 ? 'badge-lucro' : 'badge-prejuizo'}`}>
+                            {dre.margemLiquidaPct.toFixed(1)}% Margem Líquida
+                          </span>
+                        </td>
+                        <td className="dre-col-pct">
+                          <span className={`dre-pct-badge ${dre.resultadoLiquido >= 0 ? 'badge-lucro' : 'badge-prejuizo'}`}>
+                            {dre.margemLiquidaPct.toFixed(1)}% Margem
+                          </span>
                         </td>
                       </tr>
                     </tbody>
@@ -1892,63 +2187,63 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                 <div className="table-filter-bar">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <span style={{ fontSize: '1.1rem' }}>🔮</span>
-                    <strong style={{ fontSize: '0.95rem', color: '#0f172a' }}>Fluxo de Caixa Futuro & Previsibilidade</strong>
+                    <strong className="fin-proj-section-title">Fluxo de Caixa Futuro & Previsibilidade</strong>
                   </div>
-                  <span style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                  <span className="fin-proj-section-sub">
                     Baseado em contratos ativos com saldo a receber e contas fixas cadastradas.
                   </span>
                 </div>
 
-                {/* 2 GRANDES CARDS DE PROJEÇÃO */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px', margin: '20px 0' }}>
+                {/* 2 GRANDES CARDS DE PROJEÇÃO (RESPONSIVOS) */}
+                <div className="fin-projecao-cards-grid">
                   
                   {/* CARD 30 DIAS */}
-                  <div style={{ background: '#eff6ff', border: '1.5px solid #bfdbfe', borderRadius: '16px', padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '850', color: '#1e40af', textTransform: 'uppercase' }}>🔮 Projeção dos Próximos 30 Dias</span>
-                      <span style={{ background: '#dbeafe', color: '#1e40af', padding: '3px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold' }}>{proj.locacoesFuturas30.length} festas agendadas</span>
+                  <div className="fin-proj-card card-30d">
+                    <div className="fin-proj-card-header">
+                      <span className="fin-proj-card-title">🔮 Projeção dos Próximos 30 Dias</span>
+                      <span className="fin-proj-badge">{proj.locacoesFuturas30.length} festas agendadas</span>
                     </div>
 
-                    <div style={{ margin: '14px 0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                        <span style={{ color: '#1e40af' }}>Entradas de Contratos a Receber:</span>
-                        <strong style={{ color: '#15803d' }}>+ R$ {proj.entradasPrevistas30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                    <div className="fin-proj-card-body">
+                      <div className="fin-proj-card-row">
+                        <span className="fin-proj-row-label">Entradas de Contratos a Receber:</span>
+                        <strong className="fin-proj-val-pos">+ R$ {proj.entradasPrevistas30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                        <span style={{ color: '#1e40af' }}>Contas Fixas a Vencer no Mês:</span>
-                        <strong style={{ color: '#dc2626' }}>- R$ {proj.saidasPrevistas30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      <div className="fin-proj-card-row">
+                        <span className="fin-proj-row-label">Contas Fixas a Vencer no Mês:</span>
+                        <strong className="fin-proj-val-neg">- R$ {proj.saidasPrevistas30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                       </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid #bfdbfe', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#1e3a8a' }}>Saldo Projetado em Caixa (30d):</span>
-                      <strong style={{ fontSize: '1.4rem', fontWeight: '900', color: proj.saldoProjetado30 >= 0 ? '#15803d' : '#b91c1c' }}>
+                    <div className="fin-proj-card-footer">
+                      <span className="fin-proj-footer-label">Saldo Projetado em Caixa (30d):</span>
+                      <strong className={`fin-proj-total ${proj.saldoProjetado30 >= 0 ? 'pos' : 'neg'}`}>
                         R$ {proj.saldoProjetado30.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </strong>
                     </div>
                   </div>
 
                   {/* CARD 60 DIAS */}
-                  <div style={{ background: '#f8fafc', border: '1.5px solid #cbd5e1', borderRadius: '16px', padding: '20px' }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.8rem', fontWeight: '850', color: '#334155', textTransform: 'uppercase' }}>🚀 Projeção Acumulada 60 Dias</span>
-                      <span style={{ background: '#e2e8f0', color: '#334155', padding: '3px 8px', borderRadius: '8px', fontSize: '0.7rem', fontWeight: 'bold' }}>{proj.locacoesFuturas30.length + proj.locacoesFuturas60.length} festas no horizonte</span>
+                  <div className="fin-proj-card card-60d">
+                    <div className="fin-proj-card-header">
+                      <span className="fin-proj-card-title">🚀 Projeção Acumulada 60 Dias</span>
+                      <span className="fin-proj-badge">{proj.locacoesFuturas30.length + proj.locacoesFuturas60.length} festas no horizonte</span>
                     </div>
 
-                    <div style={{ margin: '14px 0', display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                        <span style={{ color: '#475569' }}>Total de Entradas em 60 dias:</span>
-                        <strong style={{ color: '#15803d' }}>+ R$ {(proj.entradasPrevistas30 + proj.entradasPrevistas60).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                    <div className="fin-proj-card-body">
+                      <div className="fin-proj-card-row">
+                        <span className="fin-proj-row-label">Total de Entradas em 60 dias:</span>
+                        <strong className="fin-proj-val-pos">+ R$ {(proj.entradasPrevistas30 + proj.entradasPrevistas60).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                       </div>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem' }}>
-                        <span style={{ color: '#475569' }}>Contas Fixas dos 2 meses:</span>
-                        <strong style={{ color: '#dc2626' }}>- R$ {proj.saidasPrevistas60.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
+                      <div className="fin-proj-card-row">
+                        <span className="fin-proj-row-label">Contas Fixas dos 2 meses:</span>
+                        <strong className="fin-proj-val-neg">- R$ {proj.saidasPrevistas60.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
                       </div>
                     </div>
 
-                    <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: '800', color: '#1e293b' }}>Saldo Projetado em Caixa (60d):</span>
-                      <strong style={{ fontSize: '1.4rem', fontWeight: '900', color: proj.saldoProjetado60 >= 0 ? '#15803d' : '#b91c1c' }}>
+                    <div className="fin-proj-card-footer">
+                      <span className="fin-proj-footer-label">Saldo Projetado em Caixa (60d):</span>
+                      <strong className={`fin-proj-total ${proj.saldoProjetado60 >= 0 ? 'pos' : 'neg'}`}>
                         R$ {proj.saldoProjetado60.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </strong>
                     </div>
@@ -1957,43 +2252,43 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                 </div>
 
                 {/* LISTA DE CONTRATOS COM SALDO A RECEBER */}
-                <div style={{ background: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', margin: '15px 0' }}>
-                  <div style={{ padding: '14px 20px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <strong style={{ fontSize: '0.88rem', color: '#0f172a' }}>📅 Contratos com Saldo a Receber nos Próximos 60 Dias</strong>
-                    <span style={{ fontSize: '0.78rem', color: '#64748b' }}>{proj.locacoesFuturas30.length + proj.locacoesFuturas60.length} pedidos pendentes</span>
+                <div className="fin-table-scroll-wrapper">
+                  <div className="fin-table-header-bar">
+                    <strong className="fin-table-header-title">📅 Contratos com Saldo a Receber nos Próximos 60 Dias</strong>
+                    <span className="fin-table-header-sub">{proj.locacoesFuturas30.length + proj.locacoesFuturas60.length} pedidos pendentes</span>
                   </div>
 
                   {proj.locacoesFuturas30.length + proj.locacoesFuturas60.length === 0 ? (
-                    <div style={{ padding: '30px', textAlign: 'center', color: '#64748b', fontSize: '0.85rem' }}>
+                    <div className="fin-table-empty">
                       ✨ Todos os contratos futuros já foram 100% quitados ou não há novos pedidos agendados no período!
                     </div>
                   ) : (
-                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.84rem' }}>
+                    <table className="pro-table fin-proj-table">
                       <thead>
-                        <tr style={{ background: '#f1f5f9', color: '#475569', textTransform: 'uppercase', fontSize: '0.72rem' }}>
-                          <th style={{ padding: '10px 16px', textAlign: 'left' }}>Data Prevista</th>
-                          <th style={{ padding: '10px 16px', textAlign: 'left' }}>Pedido / Cliente</th>
-                          <th style={{ padding: '10px 16px', textAlign: 'right' }}>Total do Contrato</th>
-                          <th style={{ padding: '10px 16px', textAlign: 'right' }}>Já Pago</th>
-                          <th style={{ padding: '10px 16px', textAlign: 'right' }}>Saldo a Receber</th>
+                        <tr>
+                          <th>Data Prevista</th>
+                          <th>Pedido / Cliente</th>
+                          <th style={{ textAlign: 'right' }}>Total do Contrato</th>
+                          <th style={{ textAlign: 'right' }}>Já Pago</th>
+                          <th style={{ textAlign: 'right' }}>Saldo a Receber</th>
                         </tr>
                       </thead>
                       <tbody>
                         {[...proj.locacoesFuturas30, ...proj.locacoesFuturas60].map((loc, idx) => (
-                          <tr key={idx} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                            <td style={{ padding: '10px 16px', fontWeight: '700', color: '#0f172a' }}>
+                          <tr key={idx}>
+                            <td className="td-data">
                               📅 {new Date(loc.dataRef + "T12:00").toLocaleDateString('pt-BR')}
                             </td>
-                            <td style={{ padding: '10px 16px' }}>
+                            <td>
                               <strong>#{loc.numeroPedido || loc.id.slice(0,6)}</strong> · {loc.clienteNome}
                             </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'right' }}>
+                            <td style={{ textAlign: 'right' }}>
                               R$ {Number(loc.valorTotal || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'right', color: '#16a34a' }}>
+                            <td style={{ textAlign: 'right', color: '#16a34a' }}>
                               R$ {Number(loc.valorPago || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </td>
-                            <td style={{ padding: '10px 16px', textAlign: 'right', fontWeight: '850', color: '#dc2626' }}>
+                            <td style={{ textAlign: 'right', fontWeight: '850', color: '#dc2626' }}>
                               R$ {loc.saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </td>
                           </tr>
@@ -2030,21 +2325,21 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
 
             {/* SELETORES MÊS, ANO E FORMA */}
             <div className="fin-mes-selector-wrapper">
-              <div className="fin-selects-row">
-                <select 
-                  className="fin-select-custom"
-                  value={filtroForma}
-                  onChange={(e) => setFiltroForma(e.target.value)}
-                  title="Filtrar Forma de Pagamento"
-                >
-                  <option value="todas">💳 Forma: Todas</option>
-                  <option value="Pix">⚡ Pix</option>
-                  <option value="Dinheiro">💵 Dinheiro</option>
-                  <option value="Cartão">💳 Cartão</option>
-                  <option value="Boleto">📄 Boleto</option>
-                  <option value="Transferência">🏦 Transferência</option>
-                </select>
+              <select 
+                className="fin-select-custom fin-select-full"
+                value={filtroForma}
+                onChange={(e) => setFiltroForma(e.target.value)}
+                title="Filtrar Forma de Pagamento"
+              >
+                <option value="todas">💳 Forma: Todas</option>
+                <option value="Pix">⚡ Pix</option>
+                <option value="Dinheiro">💵 Dinheiro</option>
+                <option value="Cartão">💳 Cartão</option>
+                <option value="Boleto">📄 Boleto</option>
+                <option value="Transferência">🏦 Transferência</option>
+              </select>
 
+              <div className="fin-selects-row">
                 <select 
                   className="fin-select-custom" 
                   value={filtroMes} 
@@ -2053,7 +2348,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                 >
                   <option value="">📅 Mês: Todos</option>
                   {nomesMeses.map(m => (
-                    <option key={m.num} value={m.num}>{m.nome}</option>
+                    <option key={m.num} value={m.num}>📅 Mês: {m.nome}</option>
                   ))}
                 </select>
 
@@ -2064,10 +2359,11 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                   title="Selecionar Ano"
                 >
                   <option value="">📆 Ano: Todos</option>
-                  <option value="2024">2024</option>
-                  <option value="2025">2025</option>
-                  <option value="2026">2026</option>
-                  <option value="2027">2027</option>
+                  <option value="2024">📆 Ano: 2024</option>
+                  <option value="2025">📆 Ano: 2025</option>
+                  <option value="2026">📆 Ano: 2026</option>
+                  <option value="2027">📆 Ano: 2027</option>
+                  <option value="2028">📆 Ano: 2028</option>
                 </select>
               </div>
 
@@ -2569,7 +2865,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                   >
                     <option value="">📅 Mês: Todos</option>
                     {nomesMeses.map(m => (
-                      <option key={m.num} value={m.num}>{m.nome}</option>
+                      <option key={m.num} value={m.num}>📅 Mês: {m.nome}</option>
                     ))}
                   </select>
 
@@ -2580,11 +2876,11 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                     title="Selecionar Ano"
                   >
                     <option value="">📆 Ano: Todos</option>
-                    <option value="2024">2024</option>
-                    <option value="2025">2025</option>
-                    <option value="2026">2026</option>
-                    <option value="2027">2027</option>
-                    <option value="2028">2028</option>
+                    <option value="2024">📆 Ano: 2024</option>
+                    <option value="2025">📆 Ano: 2025</option>
+                    <option value="2026">📆 Ano: 2026</option>
+                    <option value="2027">📆 Ano: 2027</option>
+                    <option value="2028">📆 Ano: 2028</option>
                   </select>
                 </div>
 

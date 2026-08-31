@@ -3,6 +3,7 @@
    ========================================================================== */
 
 .estoque-premium,
+.estoque-container,
 .clientes-container {
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   width: 100%;
@@ -1295,6 +1296,7 @@
 
 @media (max-width: 900px) {
   .estoque-premium,
+  .estoque-container,
   .clientes-container {
     padding: 10px 8px !important;
     width: 100% !important;
@@ -1484,15 +1486,15 @@
   .estoque-container .search-input-wrapper input {
     height: 42px !important;
     min-height: 42px !important;
-    font-size: 0.82rem !important;
-    font-weight: 600 !important;
+    font-size: 16px !important;
+    font-weight: 500 !important;
     width: 100% !important;
     max-width: 100% !important;
     border-radius: 12px !important;
     box-sizing: border-box !important;
   }
 
-  /* Toggle Lista / Cards em linha exclusiva (sozinho na linha, 100% largura) */
+  /* 🔢 Toggle Lista / Cards em Linha Única Separada (100% Largura no Mobile) */
   .estoque-container .table-filter-bar .view-toggle-group {
     grid-column: 1 / -1 !important;
     width: 100% !important;
@@ -1522,20 +1524,22 @@
     border-radius: 9px !important;
   }
 
-  /* Botão de Ordenação A-Z mobile */
-  .estoque-container .table-filter-bar .btn-secondary-celebre {
+  /* Botão de Ordenação A-Z mobile em linha inteira na base */
+  .estoque-container .table-filter-bar .btn-secondary-celebre,
+  .estoque-container .table-filter-bar .btn-ordem-estoque {
+    grid-column: 1 / -1 !important;
     width: 100% !important;
-    height: 42px !important;
+    height: 40px !important;
     border-radius: 12px !important;
     display: inline-flex !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 6px !important;
-    font-size: 0.80rem !important;
-    font-weight: 750 !important;
+    font-size: 0.82rem !important;
+    font-weight: 700 !important;
     padding: 0 8px !important;
     box-sizing: border-box !important;
-    margin: 0 !important;
+    margin-top: 2px !important;
   }
 
   .estoque-container .filter-select-container {
@@ -1553,7 +1557,7 @@
     min-height: 42px !important;
     font-size: 0.78rem !important;
     font-weight: 600 !important;
-    padding: 0 10px !important;
+    padding: 0 8px !important;
     border-radius: 12px !important;
     width: 100% !important;
     min-width: 0 !important;
@@ -1570,17 +1574,12 @@
     word-break: break-word !important;
   }
 
-  .estoque-container .filter-categoria-container {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-  }
-
   .estoque-container .filter-date-container {
     grid-column: auto !important;
     width: 100% !important;
   }
 
-  .estoque-container .filter-select-container input[type="date"] {
+  .estoque-container .filter-date-container input[type="date"] {
     width: 100% !important;
     height: 42px !important;
     min-height: 42px !important;
@@ -1588,7 +1587,28 @@
     font-weight: 600 !important;
     border-radius: 12px !important;
     box-sizing: border-box !important;
-    padding: 0 10px !important;
+    padding: 0 8px !important;
+  }
+
+  .estoque-container .filter-date-container .btn-limpar-data {
+    height: 38px !important;
+    width: 38px !important;
+    min-width: 38px !important;
+  }
+
+  .estoque-container .filter-localizacao-container {
+    grid-column: auto !important;
+    width: 100% !important;
+  }
+
+  .estoque-container .filter-status-container {
+    grid-column: auto !important;
+    width: 100% !important;
+  }
+
+  .estoque-container .filter-categoria-container {
+    grid-column: auto !important;
+    width: 100% !important;
   }
 
   /* 🔘 Barra de Seleção em Massa no Mobile (3 Colunas Alinhadas) */
@@ -1995,6 +2015,7 @@
    ========================================================================== */
 
 [data-theme='dark'] .estoque-premium,
+[data-theme='dark'] .estoque-container,
 [data-theme='dark'] .clientes-container {
   background-color: var(--fundo-principal, #0f172a) !important;
   color: var(--texto-principal, #f8fafc) !important;

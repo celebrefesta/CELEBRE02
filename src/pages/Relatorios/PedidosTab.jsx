@@ -2,8 +2,7 @@ import React, { useState, useEffect, useMemo } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { jsPDF } from 'jspdf';
-import autoTable from 'jspdf-autotable'; 
+import { gerarRelatorioPedidosPDF } from '../../utils/gerarRelatorioPedidosPDF';
 import './PedidosTab.css';
 
 const NOMES_MESES = [
@@ -32,8 +31,8 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const [taxaConversao, setTaxaConversao] = useState(0);
 
   const [dadosEmpresa, setDadosEmpresa] = useState({
-    nomeEmpresa: 'Celebre Festas',
-    logotipo: '',
+    nomeEmpresa: localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || '',
+    logotipo: localStorage.getItem('logotipoEmpresa') || '',
     cnpj: '',
     endereco: ''
   });
@@ -73,12 +72,28 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
         if (snapConfig.exists && snapConfig.exists()) {
           const configData = snapConfig.data();
+          const nomeFinal = configData.nomeEmpresa || configData.nomeFantasia || configData.razaoSocial || configData.nome || localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || 'Minha Empresa';
           setDadosEmpresa({
-            nomeEmpresa: configData.nomeFantasia || configData.razaoSocial || configData.nome || 'Celebre Festas',
-            logotipo: configData.logo || configData.logotipo || '',
+            nomeEmpresa: nomeFinal,
+            logotipo: configData.logotipo || configData.logo || '',
             cnpj: configData.cnpj || '',
             endereco: configData.endereco || ''
           });
+          if (nomeFinal) localStorage.setItem('nomeEmpresa', nomeFinal);
+        } else {
+          try {
+            const snapUser = await getDoc(doc(db, "usuarios", tenantId));
+            if (snapUser.exists()) {
+              const u = snapUser.data();
+              const uNome = u.nomeEmpresa || u.nomeCompleto || u.empresaNome || u.nomeExibicao;
+              if (uNome) {
+                setDadosEmpresa(prev => ({ ...prev, nomeEmpresa: uNome }));
+                localStorage.setItem('nomeEmpresa', uNome);
+              }
+            }
+          } catch (e) {
+            console.error(e);
+          }
         }
 
         const locacoes = snapLocacoes.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -206,69 +221,50 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     return { soma, media, saldoTotal };
   }, [pedidosFiltrados]);
 
-  // EXPORTAR CSV (EXCEL)
+  // EXPORTAR CSV (EXCEL COM UTF-8 BOM)
   const exportarCSVPedidos = () => {
     const cabecalho = ["Pedido #", "Cliente", "Telefone", "Data Festa", "Modalidade", "Tema", "Valor Total (R$)", "Valor Pago (R$)", "Saldo Devedor (R$)", "Status"];
     const linhas = pedidosFiltrados.map(p => [
-      `"${p.numero}"`,
-      `"${p.cliente.replace(/"/g, '""')}"`,
-      `"${p.telefone}"`,
-      `"${p.dataStr}"`,
-      `"${p.tipoServico}"`,
-      `"${p.tema}"`,
-      `"${p.valor.toFixed(2).replace('.', ',')}"`,
-      `"${p.valorPago.toFixed(2).replace('.', ',')}"`,
-      `"${p.saldoDevedor.toFixed(2).replace('.', ',')}"`,
-      `"${p.status}"`
+      `"${p.numero || ''}"`,
+      `"${(p.cliente || '').replace(/"/g, '""')}"`,
+      `"${p.telefone || ''}"`,
+      `"${p.dataStr || ''}"`,
+      `"${p.tipoServico || ''}"`,
+      `"${(p.tema || '').replace(/"/g, '""')}"`,
+      `"${Number(p.valor || 0).toFixed(2).replace('.', ',')}"`,
+      `"${Number(p.valorPago || 0).toFixed(2).replace('.', ',')}"`,
+      `"${Number(p.saldoDevedor || 0).toFixed(2).replace('.', ',')}"`,
+      `"${p.status || ''}"`
     ]);
 
-    const csvContent = "data:text/csv;charset=utf-8," + [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\n");
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = [cabecalho.join(";"), ...linhas.map(e => e.join(";"))].join("\r\n");
+    const blob = new Blob(["\uFEFF" + csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodedUri);
-    link.setAttribute("download", `Pedidos_${dadosEmpresa.nomeEmpresa.replace(/[^\w\s-]/gi, '')}_${new Date().toISOString().split('T')[0]}.csv`);
+    const nomeEmpresaSanitizado = (dadosEmpresa.nomeEmpresa || 'Empresa').replace(/[^\w\s-]/gi, '').trim().replace(/\s+/g, '_');
+    
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Pedidos_${nomeEmpresaSanitizado}_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
     registrarLog("EXPORTACAO_CSV_PEDIDOS", `Exportou histórico de pedidos em CSV (${pedidosFiltrados.length} contratos).`);
   };
 
   // EXPORTAR PDF
   const exportarPDFPedidos = async () => {
     try {
-      const doc = new jsPDF();
-      let startY = 22;
-
-      doc.setFontSize(18);
-      doc.setTextColor(15, 23, 42);
-      doc.text(dadosEmpresa.nomeEmpresa, 14, startY);
-
-      doc.setFontSize(9);
-      doc.setTextColor(100);
-      doc.text(`RELATÓRIO COMERCIAL DE PEDIDOS & LOCAÇÕES · Filtro: ${filtroAtual}`, 14, startY + 6);
-      doc.text(`Gerado em: ${new Date().toLocaleDateString('pt-BR')} · Volume: ${pedidosFiltrados.length} pedidos (Total: R$ ${totaisFiltro.soma.toLocaleString('pt-BR', {minimumFractionDigits: 2})})`, 14, startY + 11);
-
-      const tableColumn = ["Pedido #", "Cliente", "Data Festa", "Modalidade", "Valor (R$)", "Status"];
-      const tableRows = pedidosFiltrados.map(p => [
-        `#${p.numero}`,
-        p.cliente,
-        p.dataStr,
-        p.tipoServico,
-        `R$ ${p.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}`,
-        p.status
-      ]);
-
-      autoTable(doc, {
-        head: [tableColumn],
-        body: tableRows,
-        startY: startY + 16,
-        theme: 'striped',
-        headStyles: { fillColor: [15, 23, 42] },
-        styles: { fontSize: 8.5 },
-        columnStyles: { 4: { halign: 'right', fontStyle: 'bold' } }
+      gerarRelatorioPedidosPDF({
+        empresa: dadosEmpresa,
+        metricas: { ...metricas, taxaConversao },
+        pedidos: pedidosFiltrados,
+        totaisFiltro,
+        filtroAtual,
+        filtroMes,
+        filtroAno,
+        usuarioEmail: usuarioLogado?.email
       });
-
-      doc.save(`Relatorio_Pedidos_${dadosEmpresa.nomeEmpresa.replace(/[^\w\s-]/gi, '')}_${new Date().toISOString().split('T')[0]}.pdf`);
       await registrarLog("EXPORTAÇÃO DE RELATÓRIO DE PEDIDOS", "Baixou o relatório comercial de pedidos em PDF.");
     } catch (error) {
       console.error(error);
@@ -287,19 +283,21 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
       {mostrarIndicadores && (
         <>
           {/* 💡 PAINEL DE INSIGHTS INTELIGENTES PEDIDOS */}
-          <div style={{ background: '#ffffff', color: '#0f172a', border: '1.5px solid #e2e8f0', borderLeft: '5px solid #8b5cf6', padding: '14px 18px', borderRadius: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '10px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '1.3rem' }}>🎯</span>
-              <div>
-                <strong style={{ fontSize: '0.82rem', color: '#0f172a', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DESEMPENHO COMERCIAL &amp; CONVERSÃO DE VENDAS</strong>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: '#64748b' }}>
-                  Sua taxa de fechamento é de <strong style={{ color: '#10b981' }}>{taxaConversao}%</strong>. Existem <strong style={{ color: '#3b82f6' }}>{metricas.futuros} eventos agendados</strong> no calendário futuro.
-                </p>
+          <div className="rel-card-unificado" style={{ borderLeft: '5px solid #8b5cf6', marginBottom: '16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                <span style={{ fontSize: '1.3rem' }}>🎯</span>
+                <div>
+                  <strong style={{ fontSize: '0.82rem', color: 'var(--texto-principal, #0f172a)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DESEMPENHO COMERCIAL &amp; CONVERSÃO DE VENDAS</strong>
+                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--texto-secundario, #64748b)' }}>
+                    Sua taxa de fechamento é de <strong style={{ color: '#10b981' }}>{taxaConversao}%</strong>. Existem <strong style={{ color: '#3b82f6' }}>{metricas.futuros} eventos agendados</strong> no calendário futuro.
+                  </p>
+                </div>
               </div>
+              <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: 'var(--fundo-cinza, #f8fafc)', color: '#8b5cf6', border: '1px solid var(--borda, #cbd5e1)' }}>
+                Conversão: {taxaConversao}%
+              </span>
             </div>
-            <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: '#f8fafc', color: '#8b5cf6', border: '1px solid #cbd5e1' }}>
-              Conversão: {taxaConversao}%
-            </span>
           </div>
 
           {/* 4 CARDS KPI BLINDADOS (GOLDEN RULE 1 & 2) */}
@@ -342,21 +340,21 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           </div>
 
           {/* 📊 WIDGET COMPACTO DE STATUS E MODALIDADE */}
-          <div style={{ background: '#ffffff', borderRadius: '16px', border: '1.5px solid #e2e8f0', padding: '16px 20px', margin: '16px 0', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="rel-card-unificado">
+            <div className="rel-card-header">
               <div>
-                <h3 style={{ margin: 0, fontSize: '0.9rem', color: '#0f172a', fontWeight: '850' }}>📊 Funil de Status &amp; Modalidade de Serviço</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', color: '#64748b' }}>Volume por status de contrato e tipo de montagem</p>
+                <h3 className="rel-card-title">📊 Funil de Status &amp; Modalidade de Serviço</h3>
+                <p className="rel-card-sub">Volume por status de contrato e tipo de montagem</p>
               </div>
             </div>
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
               {/* STATUS */}
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📑 Status dos Contratos</span>
+              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📑 Status dos Contratos</span>
                 <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
                   {statusContagem.map(([st, count], idx) => (
-                    <span key={idx} style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#0f172a' }}>
+                    <span key={idx} style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--texto-principal, #0f172a)' }}>
                       {st}: <strong>{count} pedidos</strong>
                     </span>
                   ))}
@@ -364,13 +362,13 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
               </div>
 
               {/* MODALIDADES */}
-              <div style={{ background: '#f8fafc', padding: '12px 14px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: '#334155', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🎈 Modalidade da Festa</span>
+              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
+                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🎈 Modalidade da Festa</span>
                 <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6' }}>
+                  <span style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6' }}>
                     ✨ Decoração Completa: <strong>{qtdDecoracao}</strong>
                   </span>
-                  <span style={{ background: '#ffffff', border: '1px solid #cbd5e1', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#10b981' }}>
+                  <span style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#10b981' }}>
                     🎈 Pegue e Monte: <strong>{qtdPegueMonte}</strong>
                   </span>
                 </div>
@@ -381,25 +379,25 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
       )}
 
       {/* TABELA DE PEDIDOS */}
-      <div style={{ background: '#ffffff', borderRadius: '18px', border: '1.5px solid #e2e8f0', padding: '18px 22px', boxShadow: '0 4px 16px rgba(15,23,42,0.02)' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '12px', marginBottom: '14px' }}>
+      <div className="rel-card-unificado">
+        <div className="rel-card-header">
           <div>
-            <h3 style={{ margin: 0, fontSize: '0.98rem', color: '#0f172a', fontWeight: '850' }}>📋 Histórico de Pedidos &amp; Locações ({pedidosFiltrados.length})</h3>
-            <p style={{ fontSize: '0.74rem', color: '#64748b', marginTop: '2px' }}>Listagem detalhada com filtros de data, status e modalidade.</p>
+            <h3 className="rel-card-title">📋 Histórico de Pedidos &amp; Locações ({pedidosFiltrados.length})</h3>
+            <p className="rel-card-sub">Listagem detalhada com filtros de data, status e modalidade.</p>
           </div>
 
-          <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+          <div className="rel-card-actions">
             <button 
               type="button" 
               onClick={alternarIndicadores}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#475569', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              className="rel-btn-action-outline"
             >
               {mostrarIndicadores ? '👁️ Ocultar Indicadores' : '📊 Ver Indicadores & KPIs'}
             </button>
             <button 
               type="button" 
               onClick={exportarCSVPedidos}
-              style={{ padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', fontWeight: '700', fontSize: '0.78rem', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+              className="rel-btn-action-outline"
             >
               📊 Exportar Excel (CSV)
             </button>
