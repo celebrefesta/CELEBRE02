@@ -30,6 +30,104 @@
 
 
 /* ============================================================
+   🎨 MOTOR GLOBAL DE CORES DINÂMICAS (RESPEITO À APARÊNCIA)
+   Garante que quando o usuário escolhe Rosa, Pink, Azul, etc.
+   em Configurações > Aparência, TODAS as páginas adotem a cor
+   escolhida nos botões de ação, abas ativas, ícones e destaques!
+   ============================================================ */
+
+/* ── BOTÕES PRIMÁRIOS E DE AÇÃO (TODAS AS PÁGINAS) ── */
+.btn-primary,
+.btn-primary-celebre,
+.btn-novo,
+.btn-salvar,
+.btn-salvar-form,
+.btn-salvar-premium,
+.btn-novo-cliente,
+.btn-quick-action,
+.btn-header-action,
+.btn-exportar,
+.btn-novo-lancamento-unico,
+.btn-adicionar,
+.btn-add,
+.btn-cadastrar,
+.btn-confirmar,
+.btn-aplicar-frete,
+.btn-banner-action,
+.btn-action-primary,
+.rel-btn-action-primary,
+.btn-salvar-modal,
+.btn-submit {
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+  border-color: var(--dourado) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
+}
+
+.btn-primary:hover,
+.btn-primary-celebre:hover,
+.btn-novo:hover,
+.btn-salvar:hover,
+.btn-salvar-form:hover,
+.btn-novo-cliente:hover {
+  filter: brightness(1.1) !important;
+}
+
+/* ── ABAS ATIVAS EM TODAS AS TELAS (FLUXO DE CAIXA, DRE, ETC.) ── */
+.tab-btn-celebre.active,
+[data-theme^='dark'] .tab-btn-celebre.active,
+[data-theme^='dark'] .financeiro-container .tab-btn-celebre.active,
+.fin-tab.active,
+.relatorio-tab.active,
+.tabs-relatorios-compacto button.active,
+.view-btn.active,
+.sub-btn.active,
+.view-switcher-btn.active,
+.view-toggle-btn.active,
+.btn-toggle.active,
+.chip-btn.active,
+.agenda-sidebar .menu-item.highlight.ativo,
+.active-deco,
+.sidebar-list li.destak {
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+  border-color: transparent !important;
+  color: #ffffff !important;
+}
+
+.tab-btn-celebre.active *,
+[data-theme^='dark'] .tab-btn-celebre.active *,
+[data-theme^='dark'] .financeiro-container .tab-btn-celebre.active * {
+  color: #ffffff !important;
+}
+
+/* ── BADGES DE ÍCONE DO HERO CABEÇALHO ── */
+.header-icon-badge,
+.locacoes-hero-header .header-icon-badge,
+.clientes-hero-header .header-icon-badge,
+.financeiro-container .header-icon-badge {
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+  color: #ffffff !important;
+}
+
+/* ── LINKS E ÍCONES ATIVOS NA BARRA LATERAL (NAVBAR) ── */
+.menu-item.active {
+  border-left-color: var(--dourado) !important;
+}
+
+.menu-item.active i:not(.lock-icon),
+.menu-item:hover i:not(.lock-icon) {
+  color: var(--dourado) !important;
+}
+
+/* ── FOCO DE FORMULÁRIOS ── */
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--dourado) !important;
+}
+
+
+/* ============================================================
    🔒 BLOCO GLOBAL — SISTEMA DE CARDS KPI (TODAS AS PÁGINAS)
    STATUS: CONGELADO em 03/09/2026
    REGRA: 1 linha no desktop / 2 colunas no mobile

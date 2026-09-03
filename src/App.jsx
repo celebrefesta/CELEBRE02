@@ -402,6 +402,22 @@ const AppContent = () => {
         darkStyle = prefersDark ? (localStorage.getItem('darkStyle') || 'gray') : 'none';
       }
 
+      const escurecerHex = (hex, percent = 18) => {
+        try {
+          let c = hex.replace('#', '');
+          if (c.length === 3) c = c.split('').map(x => x + x).join('');
+          const num = parseInt(c, 16);
+          let r = Math.max(0, (num >> 16) - Math.round(255 * (percent / 100)));
+          let g = Math.max(0, ((num >> 8) & 0x00FF) - Math.round(255 * (percent / 100)));
+          let b = Math.max(0, (num & 0x0000FF) - Math.round(255 * (percent / 100)));
+          return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+        } catch (e) {
+          return hex;
+        }
+      };
+
+      const darkerAccent = escurecerHex(savedAccent, 18);
+
       document.documentElement.setAttribute('data-theme', effectiveTheme);
       document.documentElement.setAttribute('data-dark-style', darkStyle);
       document.documentElement.setAttribute('data-font-size', savedFontSize);
@@ -409,6 +425,8 @@ const AppContent = () => {
       document.documentElement.style.setProperty('--dourado', savedAccent, 'important');
       document.documentElement.style.setProperty('--cor-destaque', savedAccent, 'important');
       document.documentElement.style.setProperty('--primary-color', savedAccent, 'important');
+      document.documentElement.style.setProperty('--gold-primary', savedAccent, 'important');
+      document.documentElement.style.setProperty('--gold-dark', darkerAccent, 'important');
     };
 
     aplicarTemaGlobal();

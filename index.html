@@ -26,6 +26,40 @@
     <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Bebas+Neue&family=Caveat:wght@600;700&family=Cinzel:wght@600;700;800&family=Dancing+Script:wght@400;700&family=Fredoka:wght@500;600;700&family=Great+Vibes&family=Lora:ital,wght@0,400;0,600;0,700;1,400&family=Montserrat:wght@400;700;800;900&family=Outfit:wght@400;500;600;700;800;900&family=Pacifico&family=Playfair+Display:ital,wght@0,400;0,700;1,400&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800;900&family=Poppins:wght@300;400;500;600;700&family=Satisfy&display=swap" rel="stylesheet">
     
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" />
+    
+    <!-- 🎨 Sincronização Imediata de Tema e Cor de Destaque antes da renderização -->
+    <script>
+      (function() {
+        try {
+          var savedTheme = localStorage.getItem('theme') || 'light';
+          var savedAccent = localStorage.getItem('accentColor') || '#c5a059';
+          var savedDarkStyle = localStorage.getItem('darkStyle') || 'gray';
+          var isDark = savedTheme.indexOf('dark') !== -1;
+          document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+          document.documentElement.setAttribute('data-dark-style', isDark ? savedDarkStyle : 'none');
+
+          var escurecerHex = function(hex, percent) {
+            try {
+              var c = hex.replace('#', '');
+              if (c.length === 3) c = c.split('').map(function(x) { return x + x; }).join('');
+              var num = parseInt(c, 16);
+              var p = percent || 18;
+              var r = Math.max(0, (num >> 16) - Math.round(255 * (p / 100)));
+              var g = Math.max(0, ((num >> 8) & 0x00FF) - Math.round(255 * (p / 100)));
+              var b = Math.max(0, (num & 0x0000FF) - Math.round(255 * (p / 100)));
+              return '#' + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+            } catch (e) { return hex; }
+          };
+
+          var darkerAccent = escurecerHex(savedAccent, 18);
+          document.documentElement.style.setProperty('--dourado', savedAccent, 'important');
+          document.documentElement.style.setProperty('--cor-destaque', savedAccent, 'important');
+          document.documentElement.style.setProperty('--primary-color', savedAccent, 'important');
+          document.documentElement.style.setProperty('--gold-primary', savedAccent, 'important');
+          document.documentElement.style.setProperty('--gold-dark', darkerAccent, 'important');
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
