@@ -128,29 +128,27 @@
   gap: 20px !important;
 }
 
-@media (min-width: 901px) {
-  .clientes-container .table-filter-bar {
-    display: flex !important;
-    flex-direction: row !important;
-    gap: 10px !important;
-    align-items: center !important;
-    margin-bottom: 20px !important;
-    flex-wrap: wrap !important;
-  }
-}
-
 @media (max-width: 900px) {
-  .clientes-container .table-filter-bar {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-    margin-bottom: 14px !important;
+  .clientes-container .advanced-filter-bar {
+    padding: 12px !important;
+    border-radius: 16px !important;
+    margin-bottom: 16px !important;
+    gap: 10px !important;
   }
 
-  .clientes-container .table-filter-bar .search-input-wrapper {
-    grid-column: 1 / -1 !important;
+  .clientes-container .filter-top-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+  }
+
+  .clientes-container .search-input-box {
+    width: 100% !important;
+    min-width: 100% !important;
+    flex: 1 1 100% !important;
   }
 }
+
 
 
 /* ============================================================
@@ -480,10 +478,99 @@
 }
 
 
+
+/* ============================================================
+   🔒 PÁGINA: FINANCEIRO — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: Financeiro.css
+   ============================================================ */
+
+/* ── BARRA DE FILTROS MOBILE (STACKED LIMPA, SIMÉTRICA, SEM CORTES) ── */
+@media (max-width: 900px) {
+  .financeiro-container .table-filter-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: stretch !important;
+    width: 100% !important;
+    padding: 12px 14px !important;
+    border-radius: 16px !important;
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+    box-sizing: border-box !important;
+  }
+
+  .financeiro-container .search-input-wrapper {
+    width: 100% !important;
+    flex: 1 1 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .financeiro-container .search-input-wrapper input {
+    width: 100% !important;
+    height: 40px !important;
+    font-size: 16px !important;
+    padding: 8px 32px 8px 36px !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  .financeiro-container .fin-mes-selector-wrapper {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+    padding: 0 !important;
+    background: transparent !important;
+    border: none !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 2 selects simétricos ocupando 50% cada da largura total */
+  .financeiro-container .fin-selects-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .financeiro-container .fin-select-custom {
+    width: 100% !important;
+    height: 38px !important;
+    padding: 6px 10px !important;
+    font-size: 0.78rem !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 2 botões rápidos (Este Mês / Histórico) em 2 colunas simétricas */
+  .financeiro-container .fin-quick-dates {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .financeiro-container .btn-date-quick {
+    width: 100% !important;
+    height: 36px !important;
+    padding: 4px 8px !important;
+    font-size: 0.76rem !important;
+    border-radius: 10px !important;
+    text-align: center !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-weight: 750 !important;
+    box-sizing: border-box !important;
+  }
+}
+
+
 /* ============================================================
    🔓 PÁGINAS AINDA ABERTAS (sem lock ativo):
    - Dashboard
-   - Financeiro
    - Contratos
    - Agenda
    - Moodboard
@@ -494,3 +581,4 @@
 
    → Quando aprovadas, adicionar o bloco acima desta linha.
    ============================================================ */
+

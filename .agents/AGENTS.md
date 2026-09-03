@@ -55,4 +55,5 @@
   - `🔒 Logística / Kanban Galpão` (`Logistica.css`)
   - `🔒 Relatórios` (`Relatorios.css`, `PedidosTab.css`, `EstoqueTab.css`, `ClientesTab.css`)
   - `🔒 Cadastro Cliente` (`CadastroCliente.css`)
+  - `🔒 Financeiro` (`Financeiro.css`)
   - `🔒 Sistema Global de Cards KPI` (1 linha desktop / 2 colunas mobile)
