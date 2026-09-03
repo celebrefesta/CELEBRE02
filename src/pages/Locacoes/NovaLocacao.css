@@ -353,9 +353,9 @@
 
 .btn-servico-card.active,
 .btn-servico-card.ativo {
-  border: 1.5px solid #c5a059 !important;
-  background: rgba(197, 160, 89, 0.06) !important;
-  box-shadow: 0 0 0 1px #c5a059, 0 3px 10px rgba(197, 160, 89, 0.12) !important;
+  border: 1.5px solid var(--dourado, #c5a059) !important;
+  background: color-mix(in srgb, var(--dourado, #c5a059) 8%, transparent) !important;
+  box-shadow: 0 0 0 1px var(--dourado, #c5a059), 0 3px 10px rgba(0, 0, 0, 0.1) !important;
 }
 
 .servico-icon-box {
@@ -379,10 +379,10 @@
 
 .btn-servico-card.active .servico-icon-box,
 .btn-servico-card.ativo .servico-icon-box {
-  background: linear-gradient(135deg, var(--cor-destaque, var(--dourado, #c5a059)) 0%, #a4803c 100%) !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
   color: #ffffff !important;
   border-color: transparent !important;
-  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2) !important;
 }
 
 .servico-info {

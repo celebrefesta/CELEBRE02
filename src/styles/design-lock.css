@@ -63,6 +63,7 @@
 .btn-bv-criar-locacao,
 .clientes-container .btn-primary-celebre,
 .cadastro-cliente-container .btn-primary-celebre,
+.header-actions .btn-primary-celebre,
 a.btn-primary-celebre {
   background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
   border-color: var(--dourado) !important;
@@ -76,7 +77,8 @@ a.btn-primary-celebre {
 .btn-salvar:hover,
 .btn-salvar-form:hover,
 .btn-novo-cliente:hover,
-.btn-salvar-celebre-gold:hover {
+.btn-salvar-celebre-gold:hover,
+.header-actions .btn-primary-celebre:hover {
   filter: brightness(1.1) !important;
 }
 
@@ -98,7 +100,11 @@ a.btn-primary-celebre {
 .sidebar-list li.destak,
 .clientes-container .desktop-pills-only .pill-btn.active,
 [data-theme^='dark'] .clientes-container .desktop-pills-only .pill-btn.active,
-.pill-gold.active {
+.pill-gold.active,
+.filter-pills-grid .pill-btn.active,
+[data-theme^='dark'] .filter-pills-grid .pill-btn.active,
+.tabs-container .tab-btn.active,
+[data-theme^='dark'] .tabs-container .tab-btn.active {
   background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
   border-color: transparent !important;
   color: #ffffff !important;
@@ -107,7 +113,9 @@ a.btn-primary-celebre {
 .tab-btn-celebre.active *,
 [data-theme^='dark'] .tab-btn-celebre.active *,
 [data-theme^='dark'] .financeiro-container .tab-btn-celebre.active *,
-.clientes-container .desktop-pills-only .pill-btn.active * {
+.clientes-container .desktop-pills-only .pill-btn.active *,
+.filter-pills-grid .pill-btn.active *,
+.tabs-container .tab-btn.active * {
   color: #ffffff !important;
 }
 

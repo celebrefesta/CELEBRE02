@@ -94,14 +94,14 @@
 }
 
 .btn-primary-celebre {
-  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
   color: #ffffff !important;
   padding: 10px 20px !important;
   border-radius: 12px !important;
   font-weight: 850 !important;
   font-size: 0.8rem !important;
   border: none !important;
-  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.3) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
   transition: all 0.2s ease !important;
   text-decoration: none !important;
   display: inline-flex;
@@ -554,10 +554,10 @@
 }
 
 .filter-pills-grid .pill-btn.active {
-  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
   color: #ffffff !important;
-  border-color: #c5a059 !important;
-  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35) !important;
+  border-color: var(--dourado, #c5a059) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2) !important;
 }
 
 /* NÍVEL 3: SUB-GRID DE FILTROS (DATA, PERÍODO, SERVIÇO, ORDENAÇÃO) */
@@ -2589,8 +2589,8 @@
 }
 
 [data-theme^='dark'] .filter-pills-grid .pill-btn.active {
-  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
-  border-color: #c5a059 !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
+  border-color: var(--dourado, #c5a059) !important;
   color: #ffffff !important;
 }
 

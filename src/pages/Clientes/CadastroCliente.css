@@ -555,11 +555,17 @@
   color: var(--texto-principal, #0f172a);
 }
 
-.tab-btn.active {
-  background: #ffffff;
-  color: var(--texto-principal, #0f172a);
-  font-weight: 850;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+.tab-btn.active,
+.tabs-container .tab-btn.active {
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 850 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.tab-btn.active *,
+.tabs-container .tab-btn.active * {
+  color: #ffffff !important;
 }
 
 /* CARTÃO UNIFICADO DO FORMULÁRIO */
@@ -1340,9 +1346,10 @@
   color: #f4f4f5 !important;
 }
 
-[data-theme^='dark'] .tab-btn.active {
-  background: #27272a !important;
-  color: #f4f4f5 !important;
+[data-theme^='dark'] .tab-btn.active,
+[data-theme^='dark'] .tabs-container .tab-btn.active {
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
+  color: #ffffff !important;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3) !important;
 }
 

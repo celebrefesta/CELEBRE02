@@ -97,6 +97,7 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .btn-bv-criar-locacao,
     .clientes-container .btn-primary-celebre,
     .cadastro-cliente-container .btn-primary-celebre,
+    .header-actions .btn-primary-celebre,
     a.btn-primary-celebre {
       background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
       border-color: ${accentColor} !important;
@@ -112,7 +113,9 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .btn-novo-cliente:hover,
     .btn-dash-quick-action:hover,
     .dash-quick-actions-grid button:hover,
-    .btn-log-primary:hover {
+    .btn-log-primary:hover,
+    .btn-salvar-celebre-gold:hover,
+    .header-actions .btn-primary-celebre:hover {
       filter: brightness(1.08) !important;
       box-shadow: 0 6px 18px ${accentColor}55 !important;
     }
@@ -145,7 +148,11 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .btn-servico-card.ativo .servico-icon-box,
     .clientes-container .desktop-pills-only .pill-btn.active,
     [data-theme^='dark'] .clientes-container .desktop-pills-only .pill-btn.active,
-    .pill-gold.active {
+    .pill-gold.active,
+    .filter-pills-grid .pill-btn.active,
+    [data-theme^='dark'] .filter-pills-grid .pill-btn.active,
+    .tabs-container .tab-btn.active,
+    [data-theme^='dark'] .tabs-container .tab-btn.active {
       background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
       border-color: transparent !important;
       color: #ffffff !important;
@@ -155,7 +162,9 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     [data-theme^='dark'] .tab-btn-celebre.active *,
     [data-theme^='dark'] .financeiro-container .tab-btn-celebre.active *,
     .tabs-relatorios-compacto button.active *,
-    .clientes-container .desktop-pills-only .pill-btn.active * {
+    .clientes-container .desktop-pills-only .pill-btn.active *,
+    .filter-pills-grid .pill-btn.active *,
+    .tabs-container .tab-btn.active * {
       color: #ffffff !important;
     }
 
