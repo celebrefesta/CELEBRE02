@@ -26,7 +26,6 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     faturamento: 0, 
     futuros: 0 
   });
-  const [statusContagem, setStatusContagem] = useState([]);
   const [pedidosLista, setPedidosLista] = useState([]);
   const [taxaConversao, setTaxaConversao] = useState(0);
 
@@ -100,8 +99,6 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
         let faturamentoTotal = 0;
         let eventosFuturosCount = 0;
-        const contagemStatus = {};
-     
         let qtdOrcamentos = 0;
         let qtdFechados = 0;
 
@@ -114,71 +111,61 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
           const statusRaw = loc.status || 'Pendente';
           const statusLimpo = String(statusRaw).toUpperCase().trim();
-          contagemStatus[statusLimpo] = (contagemStatus[statusLimpo] || 0) + 1;
 
           let dataFesta = null;
           let anoEvento = '';
           let mesEvento = '';
 
-          if (loc.dataRetirada) {
-            dataFesta = new Date(loc.dataRetirada.includes('T') ? loc.dataRetirada : `${loc.dataRetirada}T12:00:00`);
-            const p = loc.dataRetirada.split('T')[0].split('-');
-            if (p.length >= 2) { anoEvento = p[0]; mesEvento = p[1]; }
-          } else if (loc.criadoEm?.toDate) {
-            dataFesta = loc.criadoEm.toDate();
-            anoEvento = String(dataFesta.getFullYear());
-            mesEvento = String(dataFesta.getMonth() + 1).padStart(2, '0');
-          }
-
-          if (dataFesta && dataFesta >= hoje && !statusLimpo.includes('CANCELADO')) {
-            eventosFuturosCount++;
+          const dt = loc.dataRetirada || loc.dataEvento || loc.dataCriacao;
+          if (dt) {
+            dataFesta = dt?.toDate ? dt.toDate() : new Date(dt);
+            if (dataFesta && !isNaN(dataFesta.getTime())) {
+              anoEvento = String(dataFesta.getFullYear());
+              mesEvento = String(dataFesta.getMonth() + 1).padStart(2, '0');
+              if (dataFesta >= hoje) {
+                eventosFuturosCount++;
+              }
+            }
           }
 
           if (statusLimpo.includes('ORÇAMENTO') || statusLimpo.includes('ORCAMENTO') || statusLimpo.includes('PENDENTE')) {
             qtdOrcamentos++;
-          } else if (!statusLimpo.includes('CANCELADO')) {
+          } else if (statusLimpo.includes('CONFIRM') || statusLimpo.includes('FECHAD') || statusLimpo.includes('APROVAD') || statusLimpo.includes('PAGO') || statusLimpo.includes('ENTREG') || statusLimpo.includes('DEVOLVID')) {
             qtdFechados++;
           }
 
-          let tipoServico = "DECORAÇÃO";
-          if (loc.tipoServico || loc.tipoDaFesta || loc.modalidade) {
-             tipoServico = String(loc.tipoServico || loc.tipoDaFesta || loc.modalidade).toUpperCase();
-          } 
-          else if (loc.logistica && String(loc.logistica.tipoFrete || loc.logistica.frete).toUpperCase().includes('RETIRADA')) {
-             tipoServico = "PEGUE E MONTE";
-          }
+          const numFormatado = loc.numeroContrato || loc.numero || loc.id.slice(-5).toUpperCase();
+          const tipoServico = String(loc.tipoServico || loc.modalidade || 'Decoração Completa').toUpperCase().trim();
 
           return {
             id: loc.id,
-            numero: loc.numeroPedido || loc.id.substring(0, 6).toUpperCase(),
-            cliente: loc.clienteNome || "Cliente não informado",
-            telefone: loc.clienteTelefone || loc.telefone || '',
-            tema: loc.temaFesta || loc.tema || 'Geral',
-            dataObj: dataFesta,
-            dataStr: dataFesta ? dataFesta.toLocaleDateString('pt-BR') : "Sem data",
-            anoEvento,
-            mesEvento,
-            valor: valor,
-            valorPago: Number(loc.valorPago || loc.sinal || 0),
-            saldoDevedor: Math.max(0, valor - Number(loc.valorPago || loc.sinal || 0)),
-            status: statusLimpo,
-            tipoServico: tipoServico
+            numero: numFormatado,
+            cliente: loc.clienteNome || loc.nomeCliente || loc.cliente || 'Cliente não identificado',
+            tema: loc.temaFesta || loc.tema || loc.nomeEvento || 'Decoração Geral',
+            valor,
+            status: statusRaw,
+            tipoServico: tipoServico.includes('PEGUE') ? 'Pegue e Monte' : 'Decoração Completa',
+            dataTimestamp: dataFesta ? dataFesta.getTime() : 0,
+            dataStr: dataFesta ? dataFesta.toLocaleDateString('pt-BR') : 'Data a definir',
+            mes: mesEvento,
+            ano: anoEvento
           };
         });
 
-        pedidosFormatados.sort((a, b) => (b.dataObj || 0) - (a.dataObj || 0));
-        
-        const statusArray = Object.entries(contagemStatus).sort((a, b) => b[1] - a[1]);
-        const totalOportunidades = qtdFechados + qtdOrcamentos;
-        const taxa = totalOportunidades > 0 ? Math.round((qtdFechados / totalOportunidades) * 100) : 0;
-        
-        setMetricas({ total: locacoes.length, faturamento: faturamentoTotal, futuros: eventosFuturosCount });
-        setStatusContagem(statusArray);
-        setPedidosLista(pedidosFormatados);
-        setTaxaConversao(taxa);
-        
+        const totalNegociacoes = qtdOrcamentos + qtdFechados;
+        const conv = totalNegociacoes > 0 ? Math.round((qtdFechados / totalNegociacoes) * 100) : 100;
+
+        setMetricas({
+          total: locacoes.length,
+          faturamento: faturamentoTotal,
+          futuros: eventosFuturosCount
+        });
+
+        setTaxaConversao(conv);
+        setPedidosLista(pedidosFormatados.sort((a, b) => b.dataTimestamp - a.dataTimestamp));
+
       } catch (error) {
-        console.error("Erro ao carregar pedidos:", error);
+        console.error("Erro ao carregar relatório de pedidos:", error);
       } finally {
         setLoading(false);
       }
@@ -190,50 +177,54 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   // FILTRAGEM DINÂMICA
   const pedidosFiltrados = useMemo(() => {
     return pedidosLista.filter(p => {
-      // 1. Busca textual
       const matchBusca = termoBusca === '' ||
         p.cliente.toLowerCase().includes(termoBusca.toLowerCase()) ||
-        String(p.numero).toLowerCase().includes(termoBusca.toLowerCase()) ||
-        p.tema.toLowerCase().includes(termoBusca.toLowerCase());
+        p.tema.toLowerCase().includes(termoBusca.toLowerCase()) ||
+        p.numero.toLowerCase().includes(termoBusca.toLowerCase());
 
       if (!matchBusca) return false;
+      if (filtroMes && p.mes !== filtroMes) return false;
+      if (filtroAno && p.ano !== filtroAno) return false;
 
-      // 2. Período
-      if (filtroAno && p.anoEvento !== filtroAno) return false;
-      if (filtroMes && p.mesEvento !== filtroMes) return false;
-
-      // 3. Status e Modalidade
-      if (filtroAtual === 'FECHADOS') return !p.status.includes('ORÇAMENTO') && !p.status.includes('ORCAMENTO') && !p.status.includes('PENDENTE') && !p.status.includes('CANCELADO');
-      if (filtroAtual === 'ORÇAMENTOS') return p.status.includes('ORÇAMENTO') || p.status.includes('ORCAMENTO') || p.status.includes('PENDENTE');
-      if (filtroAtual === 'CANCELADOS') return p.status.includes('CANCELADO');
-      if (filtroAtual === 'PEGUE_MONTE') return p.tipoServico.includes('PEGUE');
-      if (filtroAtual === 'DECORACAO') return !p.tipoServico.includes('PEGUE');
+      if (filtroAtual === 'FECHADOS') {
+        const st = p.status.toUpperCase();
+        return st.includes('CONFIRM') || st.includes('FECHAD') || st.includes('APROVAD') || st.includes('PAGO') || st.includes('ENTREG') || st.includes('DEVOLVID');
+      }
+      if (filtroAtual === 'ORÇAMENTOS') {
+        const st = p.status.toUpperCase();
+        return st.includes('ORÇAMENTO') || st.includes('ORCAMENTO') || st.includes('PENDENTE');
+      }
+      if (filtroAtual === 'CANCELADOS') {
+        return p.status.toUpperCase().includes('CANCEL');
+      }
+      if (filtroAtual === 'PEGUE_MONTE') {
+        return p.tipoServico.includes('Pegue');
+      }
+      if (filtroAtual === 'DECORACAO') {
+        return p.tipoServico.includes('Decoração');
+      }
 
       return true;
     });
-  }, [pedidosLista, termoBusca, filtroAno, filtroMes, filtroAtual]);
+  }, [pedidosLista, termoBusca, filtroMes, filtroAno, filtroAtual]);
 
-  // TOTAIS DO FILTRO ATIVO
+  // TOTAIS DINÂMICOS DO FILTRO
   const totaisFiltro = useMemo(() => {
     const soma = pedidosFiltrados.reduce((acc, p) => acc + p.valor, 0);
-    const media = pedidosFiltrados.length > 0 ? soma / pedidosFiltrados.length : 0;
-    const saldoTotal = pedidosFiltrados.reduce((acc, p) => acc + p.saldoDevedor, 0);
-    return { soma, media, saldoTotal };
+    const media = pedidosFiltrados.length > 0 ? (soma / pedidosFiltrados.length) : 0;
+    return { soma, media };
   }, [pedidosFiltrados]);
 
-  // EXPORTAR CSV (EXCEL COM UTF-8 BOM)
+  // EXPORTAR CSV
   const exportarCSVPedidos = () => {
-    const cabecalho = ["Pedido #", "Cliente", "Telefone", "Data Festa", "Modalidade", "Tema", "Valor Total (R$)", "Valor Pago (R$)", "Saldo Devedor (R$)", "Status"];
+    const cabecalho = ["Numero Pedido", "Cliente", "Tema / Evento", "Data Festa", "Modalidade", "Valor (R$)", "Status"];
     const linhas = pedidosFiltrados.map(p => [
-      `"${p.numero || ''}"`,
+      `"#${p.numero}"`,
       `"${(p.cliente || '').replace(/"/g, '""')}"`,
-      `"${p.telefone || ''}"`,
+      `"${(p.tema || '').replace(/"/g, '""')}"`,
       `"${p.dataStr || ''}"`,
       `"${p.tipoServico || ''}"`,
-      `"${(p.tema || '').replace(/"/g, '""')}"`,
       `"${Number(p.valor || 0).toFixed(2).replace('.', ',')}"`,
-      `"${Number(p.valorPago || 0).toFixed(2).replace('.', ',')}"`,
-      `"${Number(p.saldoDevedor || 0).toFixed(2).replace('.', ',')}"`,
       `"${p.status || ''}"`
     ]);
 
@@ -272,117 +263,57 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     }
   };
 
-  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 'bold'}}>Processando histórico de pedidos...</div>;
-
-  const qtdPegueMonte = pedidosLista.filter(p => p.tipoServico.includes('PEGUE')).length;
-  const qtdDecoracao = pedidosLista.length - qtdPegueMonte;
+  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '0.86rem'}}>Processando histórico de pedidos e vendas...</div>;
 
   return (
-    <div className="fade-in">
+    <div className="rel-pedidos-wrapper fade-in">
       
+      {/* 4 CARDS KPI ESSENCIAIS & COMPACTOS (GOLDEN RULE 1 & 2) */}
       {mostrarIndicadores && (
-        <>
-          {/* 💡 PAINEL DE INSIGHTS INTELIGENTES PEDIDOS */}
-          <div className="rel-card-unificado" style={{ borderLeft: '5px solid #8b5cf6', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '1.3rem' }}>🎯</span>
-                <div>
-                  <strong style={{ fontSize: '0.82rem', color: 'var(--texto-principal, #0f172a)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>DESEMPENHO COMERCIAL &amp; CONVERSÃO DE VENDAS</strong>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--texto-secundario, #64748b)' }}>
-                    Sua taxa de fechamento é de <strong style={{ color: '#10b981' }}>{taxaConversao}%</strong>. Existem <strong style={{ color: '#3b82f6' }}>{metricas.futuros} eventos agendados</strong> no calendário futuro.
-                  </p>
-                </div>
-              </div>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: 'var(--fundo-cinza, #f8fafc)', color: '#8b5cf6', border: '1px solid var(--borda, #cbd5e1)' }}>
-                Conversão: {taxaConversao}%
-              </span>
+        <div className="clientes-stats-grid rel-kpi-grid-compact">
+          <div className="stat-card-pro card-green">
+            <div className="stat-icon-wrapper icon-green">📑</div>
+            <div className="stat-content">
+              <span className="stat-title">TOTAL DE PEDIDOS</span>
+              <span className="stat-number">{metricas.total}</span>
+              <small className="stat-desc">Contratos no histórico</small>
             </div>
           </div>
 
-          {/* 4 CARDS KPI BLINDADOS (GOLDEN RULE 1 & 2) */}
-          <div className="clientes-stats-grid">
-            <div className="stat-card-pro card-green">
-              <div className="stat-icon-wrapper icon-green">📑</div>
-              <div className="stat-content">
-                <span className="stat-title">TOTAL DE PEDIDOS</span>
-                <strong className="stat-number">{metricas.total}</strong>
-                <small className="stat-desc">Contratos no histórico</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-amber">
-              <div className="stat-icon-wrapper icon-amber">💰</div>
-              <div className="stat-content">
-                <span className="stat-title">FATURAMENTO CONTRATADO</span>
-                <strong className="stat-number">R$ {metricas.faturamento.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-                <small className="stat-desc">Valor total de contratos</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-purple">
-              <div className="stat-icon-wrapper icon-purple">🎯</div>
-              <div className="stat-content">
-                <span className="stat-title">TAXA DE CONVERSÃO</span>
-                <strong className="stat-number">{taxaConversao}%</strong>
-                <small className="stat-desc">Orçamentos fechados</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-red">
-              <div className="stat-icon-wrapper icon-red">📅</div>
-              <div className="stat-content">
-                <span className="stat-title">EVENTOS FUTUROS</span>
-                <strong className="stat-number">{metricas.futuros}</strong>
-                <small className="stat-desc">Próximas festas no radar</small>
-              </div>
+          <div className="stat-card-pro card-amber">
+            <div className="stat-icon-wrapper icon-amber">💰</div>
+            <div className="stat-content">
+              <span className="stat-title">FATURAMENTO TOTAL</span>
+              <span className="stat-number">R$ {metricas.faturamento.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <small className="stat-desc">Valor total contratado</small>
             </div>
           </div>
 
-          {/* 📊 WIDGET COMPACTO DE STATUS E MODALIDADE */}
-          <div className="rel-card-unificado">
-            <div className="rel-card-header">
-              <div>
-                <h3 className="rel-card-title">📊 Funil de Status &amp; Modalidade de Serviço</h3>
-                <p className="rel-card-sub">Volume por status de contrato e tipo de montagem</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-              {/* STATUS */}
-              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📑 Status dos Contratos</span>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {statusContagem.map(([st, count], idx) => (
-                    <span key={idx} style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--texto-principal, #0f172a)' }}>
-                      {st}: <strong>{count} pedidos</strong>
-                    </span>
-                  ))}
-                </div>
-              </div>
-
-              {/* MODALIDADES */}
-              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🎈 Modalidade da Festa</span>
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  <span style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#3b82f6' }}>
-                    ✨ Decoração Completa: <strong>{qtdDecoracao}</strong>
-                  </span>
-                  <span style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#10b981' }}>
-                    🎈 Pegue e Monte: <strong>{qtdPegueMonte}</strong>
-                  </span>
-                </div>
-              </div>
+          <div className="stat-card-pro card-purple">
+            <div className="stat-icon-wrapper icon-purple">🎯</div>
+            <div className="stat-content">
+              <span className="stat-title">TAXA DE CONVERSÃO</span>
+              <span className="stat-number">{taxaConversao}%</span>
+              <small className="stat-desc">Orçamentos fechados</small>
             </div>
           </div>
-        </>
+
+          <div className="stat-card-pro card-red">
+            <div className="stat-icon-wrapper icon-red">📅</div>
+            <div className="stat-content">
+              <span className="stat-title">EVENTOS FUTUROS</span>
+              <span className="stat-number">{metricas.futuros}</span>
+              <small className="stat-desc">Festas agendadas</small>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* TABELA DE PEDIDOS */}
+      {/* CARD PRINCIPAL DE PEDIDOS */}
       <div className="rel-card-unificado">
         <div className="rel-card-header">
           <div>
-            <h3 className="rel-card-title">📋 Histórico de Pedidos &amp; Locações ({pedidosFiltrados.length})</h3>
+            <h3 className="rel-card-title">Histórico de Pedidos &amp; Locações ({pedidosFiltrados.length})</h3>
             <p className="rel-card-sub">Listagem detalhada com filtros de data, status e modalidade.</p>
           </div>
 
@@ -392,40 +323,58 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
               onClick={alternarIndicadores}
               className="rel-btn-action-outline"
             >
-              {mostrarIndicadores ? '👁️ Ocultar Indicadores' : '📊 Ver Indicadores & KPIs'}
+              {mostrarIndicadores ? '👁️ Ocultar KPIs' : '📊 Ver KPIs'}
             </button>
-            <button 
-              type="button" 
-              onClick={exportarCSVPedidos}
-              className="rel-btn-action-outline"
-            >
-              📊 Exportar Excel (CSV)
-            </button>
-            <button type="button" className="btn-export-pdf" onClick={exportarPDFPedidos}>
-              📄 Baixar Pedidos (PDF)
-            </button>
+            <div className="rel-export-btn-group">
+              <button 
+                type="button" 
+                onClick={exportarCSVPedidos}
+                className="rel-btn-action-outline"
+                title="Exportar pedidos em Excel (CSV)"
+              >
+                📊 Excel (CSV)
+              </button>
+              <button 
+                type="button" 
+                className="rel-btn-action-primary" 
+                onClick={exportarPDFPedidos}
+                title="Baixar Relatório de Pedidos em PDF"
+              >
+                📄 Baixar PDF
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* BARRA DE PESQUISA, PERÍODO E STATUS */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-          <div style={{ flex: '1', minWidth: '220px' }}>
+        {/* BARRA DE PESQUISA & FILTROS */}
+        <div className="rel-pedidos-subbar">
+          <div className="rel-pedidos-search-box">
+            <i className="fas fa-search rel-search-icon"></i>
             <input 
               type="text" 
-              placeholder="🔍 Buscar por cliente, pedido # ou tema..." 
+              placeholder="Buscar por cliente, pedido # ou tema..." 
               value={termoBusca}
               onChange={e => setTermoBusca(e.target.value)}
-              style={{ width: '100%', padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', background: '#ffffff', outline: 'none' }}
+              className="rel-pedidos-search-input"
             />
+            {termoBusca && (
+              <button 
+                type="button" 
+                className="rel-clear-search-btn" 
+                onClick={() => setTermoBusca('')}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="rel-pedidos-filter-controls">
             <select
               value={filtroMes}
               onChange={e => setFiltroMes(e.target.value)}
-              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.74rem', fontWeight: 'bold', color: '#0f172a', background: '#ffffff', outline: 'none' }}
+              className="rel-pedidos-select"
             >
-              <option value="">📆 Mês: Todos</option>
+              <option value="">📅 Mês: Todos</option>
               {NOMES_MESES.map((m, idx) => (
                 <option key={idx} value={String(idx + 1).padStart(2, '0')}>{m}</option>
               ))}
@@ -434,7 +383,7 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
             <select
               value={filtroAno}
               onChange={e => setFiltroAno(e.target.value)}
-              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.74rem', fontWeight: 'bold', color: '#0f172a', background: '#ffffff', outline: 'none' }}
+              className="rel-pedidos-select"
             >
               <option value="">📆 Ano: Todos</option>
               <option value="2024">2024</option>
@@ -446,9 +395,9 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
             <select 
               value={filtroAtual} 
               onChange={e => setFiltroAtual(e.target.value)}
-              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.74rem', fontWeight: '800', color: '#0f172a', background: '#ffffff', outline: 'none' }}
+              className="rel-pedidos-select rel-select-status"
             >
-              <option value="TODOS">Todos os Status</option>
+              <option value="TODOS">📋 Todos os Status</option>
               <option value="FECHADOS">🟢 Confirmados / Fechados</option>
               <option value="ORÇAMENTOS">🟡 Orçamentos</option>
               <option value="PEGUE_MONTE">🎈 Pegue e Monte</option>
@@ -458,52 +407,99 @@ const PedidosTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           </div>
         </div>
 
-        {/* RESUMO DO FILTRO */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '6px 12px', background: '#f1f5f9', borderRadius: '8px', marginBottom: '10px', fontSize: '0.74rem', color: '#475569', fontWeight: 'bold' }}>
-          <span>Total do Filtro: <strong>{pedidosFiltrados.length} pedidos</strong></span>
-          <div style={{ display: 'flex', gap: '14px' }}>
-            <span>Faturamento: <strong style={{ color: '#15803d' }}>R$ {totaisFiltro.soma.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></span>
-            <span>Ticket Médio: <strong style={{ color: '#1d4ed8' }}>R$ {totaisFiltro.media.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong></span>
-          </div>
-        </div>
-
-        <div className="table-container" style={{ marginTop: '10px' }}>
-          <table className="custom-table table-pro">
+        {/* CONTAINER DA LISTA ESTRUTURADA */}
+        <div className="rel-table-container-responsive">
+          <table className="rel-pedidos-table">
             <thead>
               <tr>
-                <th>PEDIDO #</th>
-                <th>CLIENTE / TEMA</th>
-                <th style={{textAlign: 'center'}}>DATA FESTA</th>
-                <th style={{textAlign: 'center'}}>MODALIDADE</th>
-                <th style={{textAlign: 'right'}}>VALOR TOTAL</th>
-                <th style={{textAlign: 'center'}}>STATUS</th>
+                <th style={{ width: '12%' }}>PEDIDO #</th>
+                <th style={{ width: '32%' }}>CLIENTE &amp; TEMA</th>
+                <th style={{ width: '16%', textAlign: 'center' }}>DATA FESTA</th>
+                <th style={{ width: '18%', textAlign: 'center' }}>MODALIDADE</th>
+                <th style={{ width: '12%', textAlign: 'right' }}>VALOR TOTAL</th>
+                <th style={{ width: '10%', textAlign: 'center' }}>STATUS</th>
               </tr>
             </thead>
             <tbody>
               {pedidosFiltrados.length === 0 ? (
                 <tr>
-                  <td colSpan="6" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhum pedido encontrado com os filtros aplicados.</td>
+                  <td colSpan="6" className="rel-table-empty-cell">
+                    Nenhum pedido encontrado com os filtros aplicados.
+                  </td>
                 </tr>
               ) : (
-                pedidosFiltrados.map((p, idx) => (
-                  <tr key={idx}>
-                    <td><strong style={{color: '#0f172a'}}>#{p.numero}</strong></td>
-                    <td>
-                      <div style={{ color: '#0f172a', fontWeight: 700 }}>{p.cliente}</div>
-                      <div style={{ fontSize: '0.7rem', color: '#64748b' }}>{p.tema}</div>
-                    </td>
-                    <td style={{textAlign: 'center', color: '#64748b', fontWeight: '600'}}>{p.dataStr}</td>
-                    <td style={{textAlign: 'center'}}><span className="badge-categoria">{p.tipoServico}</span></td>
-                    <td style={{textAlign: 'right', fontWeight: '850', color: '#10b981'}}>
-                      R$ {p.valor.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
-                    </td>
-                    <td style={{textAlign: 'center'}}>
-                      <span className={`badge-dre ${p.status.includes('CANCELADO') ? 'despesa' : 'receita'}`}>
-                        {p.status}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                pedidosFiltrados.map((p, idx) => {
+                  const isCancelado = String(p.status).toUpperCase().includes('CANCEL');
+                  const isOrcamento = String(p.status).toUpperCase().includes('ORÇ') || String(p.status).toUpperCase().includes('ORC') || String(p.status).toUpperCase().includes('PEND');
+
+                  return (
+                    <tr key={idx} className="rel-pedido-row">
+                      {/* CÉLULA PRINCIPAL ESTRUTURADA COM ZONAS FIXAS */}
+                      <td className="rel-cell-pedido">
+                        {/* 1. LINHA SUPERIOR: CÓDIGO + DATA (ESQUERDA) | STATUS (DIREITA) */}
+                        <div className="rel-ped-header-zone">
+                          <div className="rel-ped-meta-left">
+                            <span className="rel-ped-badge-id">#{p.numero}</span>
+                            <span className="rel-ped-data">
+                              <i className="far fa-calendar-alt"></i> {p.dataStr}
+                            </span>
+                          </div>
+                          <span className={`rel-status-pill ${isCancelado ? 'inativo' : isOrcamento ? 'orcamento' : 'ativo'}`}>
+                            {isCancelado ? '🔴 Cancelado' : isOrcamento ? '🟡 Orçamento' : '🟢 Confirmado'}
+                          </span>
+                        </div>
+
+                        {/* 2. LINHA INFERIOR: CLIENTE & TEMA (ESQUERDA) | VALOR & MODALIDADE (DIREITA) */}
+                        <div className="rel-ped-body-zone">
+                          <div className="rel-ped-info-left">
+                            <div className="rel-ped-cliente-title">{p.cliente}</div>
+                            <div className="rel-ped-tema-sub">{p.tema}</div>
+                          </div>
+                          <div className="rel-ped-info-right">
+                            <div className="rel-ped-valor-total">
+                              R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                            </div>
+                            <span className={`rel-ped-modalidade-tag ${p.tipoServico.includes('Pegue') ? 'pm' : 'dec'}`}>
+                              {p.tipoServico}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* CÉLULAS DESKTOP */}
+                      <td className="desktop-only-col">
+                        <span className="rel-ped-badge-id">#{p.numero}</span>
+                      </td>
+
+                      <td className="desktop-only-col">
+                        <div className="rel-ped-cliente-title">{p.cliente}</div>
+                        <div className="rel-ped-tema-sub">{p.tema}</div>
+                      </td>
+
+                      <td className="desktop-only-col" style={{ textAlign: 'center' }}>
+                        <span className="rel-ped-data">{p.dataStr}</span>
+                      </td>
+
+                      <td className="desktop-only-col" style={{ textAlign: 'center' }}>
+                        <span className={`rel-ped-modalidade-tag ${p.tipoServico.includes('Pegue') ? 'pm' : 'dec'}`}>
+                          {p.tipoServico}
+                        </span>
+                      </td>
+
+                      <td className="desktop-only-col" style={{ textAlign: 'right' }}>
+                        <strong className="rel-ped-valor-total">
+                          R$ {p.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                        </strong>
+                      </td>
+
+                      <td className="desktop-only-col" style={{ textAlign: 'center' }}>
+                        <span className={`rel-status-pill ${isCancelado ? 'inativo' : isOrcamento ? 'orcamento' : 'ativo'}`}>
+                          {isCancelado ? '🔴 Cancelado' : isOrcamento ? '🟡 Orçamento' : '🟢 Confirmado'}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

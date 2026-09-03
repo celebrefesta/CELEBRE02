@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroCliente.css';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, updateDoc, doc, query, getDocs, where, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, query, getDocs, getDoc, where, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 
 const formatarNomeCapitalizado = (nomeBruto) => {
@@ -92,6 +92,40 @@ const calcularDiasAteAniversario = (dataNascStr) => {
   return { dias: diffDays, dataFmt: `${String(diaNasc).padStart(2,'0')}/${String(mesNasc+1).padStart(2,'0')}` };
 };
 
+const gerarMensagemDatasFamilia = (nomeCli, nomeLoja) => {
+  const nomeFormatado = (nomeCli || 'Cliente').trim().split(' ')[0];
+  const loja = (nomeLoja || 'Nossa Empresa').trim();
+
+  return (
+    `Ol\u00e1, *${nomeFormatado}*! Tudo bem? \u2728\u{1F388}\n\n` +
+    `Aqui \u00e9 da equipe *${loja}*! Passando com muito carinho para atualizar as datas especiais da sua fam\u00edlia! \u{1F381}\n\n` +
+    `Para prepararmos *mimos exclusivos, descontos de anivers\u00e1rio* e prioridade nas suas festas, conta aqui pra gente:\n\n` +
+    `\u{1F382} *Anivers\u00e1rio dos filhos / crian\u00e7as:*\n` +
+    `\u{1F48D} *Casamento / Bodas:*\n` +
+    `\u{1F389} *Outras datas importantes:*\n\n` +
+    `Assim garantimos vantagens especiais e preparamos tudo com muito amor para os seus eventos! \u{1F970}\u2728`
+  );
+};
+
+const gerarMensagemBoasVindasNovoCliente = (nomeCli, nomeLoja) => {
+  const nomeFormatado = (nomeCli || 'Cliente').trim().split(' ')[0];
+  const loja = (nomeLoja || 'Nossa Empresa').trim();
+
+  return (
+    `Ol\u00e1, *${nomeFormatado}*! Tudo bem? \u2728\u{1F388}\n\n` +
+    `Que alegria ter voc\u00ea com a gente na *${loja}*! \u{1F389}\n\n` +
+    `Para que possamos preparar *mimos especiais, descontos de anivers\u00e1rio* e te avisar com anteced\u00eancia para voc\u00ea nunca ser pego(a) de surpresa nas datas importantes, conta aqui pra gente:\n\n` +
+    `\u{1F382} *Anivers\u00e1rio dos filhos / crian\u00e7as:*\n` +
+    `\u{1F48D} *Casamento / Bodas:*\n` +
+    `\u{1F381} *Outras comemora\u00e7\u00f5es importantes:*\n\n` +
+    `Assim garantimos vantagens exclusivas e prioridade na sua reserva em todas as suas festas! \u{1F970}\u2728`
+  );
+};
+
+const obterNomeEmpresaTenant = (config) => {
+  return config?.nomeEmpresa || config?.nomeFantasia || config?.razaoSocial || localStorage.getItem('nomeEmpresa') || 'Nossa Empresa';
+};
+
 const CadastroCliente = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -114,6 +148,30 @@ const CadastroCliente = () => {
   const [posicaoFoto, setPosicaoFoto] = useState({ x: 50, y: 50 });
   const [dragging, setDragging] = useState(false);
   const [startMouse, setStartMouse] = useState({ x: 0, y: 0 });
+
+  const [configEmpresa, setConfigEmpresa] = useState(() => {
+    const salvo = localStorage.getItem('nomeEmpresa');
+    return salvo ? { nomeEmpresa: salvo, nomeFantasia: salvo } : null;
+  });
+  const [modalBoasVindasZap, setModalBoasVindasZap] = useState(null);
+
+  useEffect(() => {
+    const carregarConfigEmpresa = async () => {
+      if (!tenantId) return;
+      try {
+        const snapConf = await getDoc(doc(db, "configuracoes_empresa", tenantId));
+        if (snapConf.exists()) {
+          const dados = snapConf.data();
+          setConfigEmpresa(dados);
+          const nomeReal = dados.nomeEmpresa || dados.nomeFantasia || dados.razaoSocial;
+          if (nomeReal) localStorage.setItem('nomeEmpresa', nomeReal);
+        }
+      } catch (e) {
+        console.error("Erro ao carregar dados da empresa:", e);
+      }
+    };
+    carregarConfigEmpresa();
+  }, [tenantId]);
 
   const [formData, setFormData] = useState({
     nome: '', cpf: '', rg: '', nascimento: '', sexo: '', datasComemorativas: '',
@@ -512,10 +570,12 @@ const CadastroCliente = () => {
         await updateDoc(doc(db, "clientes", clienteEditando.id), dadosParaSalvar);
         alert("✅ Cliente atualizado com sucesso!");
       } else {
-        await addDoc(collection(db, "clientes"), { ...dadosParaSalvar, criadoEm: new Date().toISOString() });
+        const docRef = await addDoc(collection(db, "clientes"), { ...dadosParaSalvar, criadoEm: new Date().toISOString() });
         
+        const nomePrimeiro = tipoPessoa === 'fisica' ? dadosParaSalvar.nome.split(' ')[0] : dadosParaSalvar.nomeFantasia.split(' ')[0];
+        const nomeEmpresa = obterNomeEmpresaTenant(configEmpresa);
+
         if (dadosParaSalvar.email) {
-          const nomePrimeiro = tipoPessoa === 'fisica' ? dadosParaSalvar.nome.split(' ')[0] : dadosParaSalvar.nomeFantasia.split(' ')[0];
           await addDoc(collection(db, 'mail'), {
             to: dadosParaSalvar.email,
             message: {
@@ -533,14 +593,30 @@ const CadastroCliente = () => {
                       <p style="margin: 8px 0 0 0; font-size: 15px; color: #1e3a8a;">Seu perfil já está seguro com a nossa equipe. Em breve entraremos em contato para enviar seu orçamento ou alinhar os próximos detalhes do seu evento!</p>
                     </div>
                     <p style="font-size: 16px; line-height: 1.5;">Se tiver qualquer dúvida, basta nos chamar no WhatsApp.</p>
-                    <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>Nossa Equipe Celebre</strong></p>
+                    <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>${nomeEmpresa}</strong></p>
                   </div>
                 </div>
               `
             }
           });
         }
-        alert("✅ Novo cliente cadastrado com sucesso!");
+
+        const celLimpo = (dadosParaSalvar.celular || dadosParaSalvar.telefoneFixo || '').replace(/\D/g, '');
+        if (celLimpo) {
+          const msgWhatsApp = gerarMensagemBoasVindasNovoCliente(nomePrimeiro, nomeEmpresa);
+          
+          setModalBoasVindasZap({
+            clienteId: docRef.id,
+            clienteObj: { ...dadosParaSalvar, id: docRef.id },
+            nomeCliente: nomePrimeiro,
+            celular: celLimpo,
+            mensagem: msgWhatsApp,
+            nomeEmpresa
+          });
+        } else {
+          alert("✅ Novo cliente cadastrado com sucesso!");
+          navigate('/clientes');
+        }
       }
 
       try {
@@ -861,7 +937,25 @@ const CadastroCliente = () => {
                     </select>
                   </div>
                   <div className="form-group span-4">
-                    <label htmlFor="datasComemorativas">DATAS FESTIVAS DA FAMÍLIA 🎁</label>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', flexWrap: 'wrap', gap: '6px' }}>
+                      <label htmlFor="datasComemorativas" style={{ margin: 0 }}>DATAS FESTIVAS DA FAMÍLIA 🎁</label>
+                      {formData.celular && (
+                        <button
+                          type="button"
+                          className="btn-pedir-datas-inline"
+                          onClick={() => {
+                            const tel = (formData.celular || '').replace(/\D/g, '');
+                            const nomeCli = (formData.nome || formData.nomeFantasia || 'Cliente').split(' ')[0];
+                            const nomeLoja = obterNomeEmpresaTenant(configEmpresa);
+                            const msg = gerarMensagemDatasFamilia(nomeCli, nomeLoja);
+                            window.open(`https://api.whatsapp.com/send?phone=55${tel}&text=${encodeURIComponent(msg)}`, '_blank');
+                          }}
+                          title="Enviar mensagem no WhatsApp solicitando as datas comemorativas da família"
+                        >
+                          <i className="fab fa-whatsapp"></i> Pedir Datas via WhatsApp
+                        </button>
+                      )}
+                    </div>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="fas fa-gift" style={{color:'#c5a059'}}></i></span>
                       <input id="datasComemorativas" type="text" name="datasComemorativas" autoComplete="off" value={formData.datasComemorativas} onChange={handleChange} placeholder="Ex: Filha Maria (15/09), Casamento (10/12)" />
@@ -1202,6 +1296,76 @@ const CadastroCliente = () => {
           </div>
         </form>
       </div>
+
+      {/* 🎉 MODAL DE BOAS-VINDAS E SOLICITAÇÃO DE DATAS FESTIVAS VIA WHATSAPP */}
+      {modalBoasVindasZap && (
+        <div className="modal-boas-vindas-overlay animate-fade-in" onClick={() => {}}>
+          <div className="modal-boas-vindas-card animate-pop" onClick={e => e.stopPropagation()}>
+            <div className="modal-bv-header">
+              <div className="modal-bv-icon">🎉</div>
+              <div className="modal-bv-titles">
+                <h3>Cliente Cadastrado com Sucesso!</h3>
+                <p>
+                  Deseja enviar as boas-vindas da <strong>{modalBoasVindasZap.nomeEmpresa}</strong> e solicitar as datas festivas da família para <strong>{modalBoasVindasZap.nomeCliente}</strong>?
+                </p>
+              </div>
+            </div>
+
+            <div className="modal-bv-body">
+              <label className="modal-bv-label">
+                <i className="fab fa-whatsapp" style={{ color: '#25D366' }}></i> Mensagem de Boas-Vindas & CRM:
+              </label>
+              <textarea
+                className="modal-bv-textarea"
+                rows={6}
+                value={modalBoasVindasZap.mensagem}
+                onChange={e => setModalBoasVindasZap({ ...modalBoasVindasZap, mensagem: e.target.value })}
+              />
+              <span className="modal-bv-tip">
+                💡 Ao clicar em Enviar, o WhatsApp abrirá com essa mensagem personalizada pronta.
+              </span>
+            </div>
+
+            <div className="modal-bv-actions">
+              <button
+                type="button"
+                className="btn-bv-zap-enviar"
+                onClick={() => {
+                  const url = `https://api.whatsapp.com/send?phone=55${modalBoasVindasZap.celular}&text=${encodeURIComponent(modalBoasVindasZap.mensagem)}`;
+                  window.open(url, '_blank');
+                  setModalBoasVindasZap(null);
+                  navigate('/clientes');
+                }}
+              >
+                <i className="fab fa-whatsapp"></i> Enviar WhatsApp para {modalBoasVindasZap.nomeCliente}
+              </button>
+
+              <button
+                type="button"
+                className="btn-bv-criar-locacao"
+                onClick={() => {
+                  const cli = modalBoasVindasZap.clienteObj;
+                  setModalBoasVindasZap(null);
+                  navigate('/locacoes/nova', { state: { clienteSelecionado: cli } });
+                }}
+              >
+                <i className="fas fa-shopping-cart"></i> Criar Nova Locação
+              </button>
+
+              <button
+                type="button"
+                className="btn-bv-concluir"
+                onClick={() => {
+                  setModalBoasVindasZap(null);
+                  navigate('/clientes');
+                }}
+              >
+                Concluir sem Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

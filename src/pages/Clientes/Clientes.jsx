@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import './Clientes.css';
 import { db, storage } from '../../firebaseConfig';
-import { collection, getDocs, deleteDoc, doc, updateDoc, query, where, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, query, where, writeBatch, addDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { getAuth } from 'firebase/auth';
 
@@ -24,6 +24,40 @@ const getTagStyle = (tag) => {
     'FAMÍLIA': { bg: '#c7d2fe', color: '#3730a3', border: '#a5b4fc' }
   };
   return styles[normalizedTag] || { bg: '#f3e8ff', color: '#7e22ce', border: '#e9d5ff' }; 
+};
+
+const formatarDataBR = (dataStr) => {
+  if (!dataStr) return '-';
+  if (typeof dataStr !== 'string') return '-';
+  if (dataStr.includes('/') && dataStr.split('/')[0].length === 2) return dataStr;
+  const limpa = dataStr.split('T')[0];
+  const partes = limpa.split('-');
+  if (partes.length === 3) {
+    const [ano, mes, dia] = partes;
+    if (ano.length === 4) {
+      return `${dia.padStart(2, '0')}/${mes.padStart(2, '0')}/${ano}`;
+    }
+  }
+  return dataStr;
+};
+
+const gerarMensagemDatasFamilia = (nomeCli, nomeLoja) => {
+  const nomeFormatado = (nomeCli || 'Cliente').trim().split(' ')[0];
+  const loja = (nomeLoja || 'Nossa Empresa').trim();
+
+  return (
+    `Ol\u00e1, *${nomeFormatado}*! Tudo bem? \u2728\u{1F388}\n\n` +
+    `Aqui \u00e9 da equipe *${loja}*! Passando com muito carinho para atualizar as datas especiais da sua fam\u00edlia! \u{1F381}\n\n` +
+    `Para prepararmos *mimos exclusivos, descontos de anivers\u00e1rio* e prioridade nas suas festas, conta aqui pra gente:\n\n` +
+    `\u{1F382} *Anivers\u00e1rio dos filhos / crian\u00e7as:*\n` +
+    `\u{1F48D} *Casamento / Bodas:*\n` +
+    `\u{1F389} *Outras datas importantes:*\n\n` +
+    `Assim garantimos vantagens especiais e preparamos tudo com muito amor para os seus eventos! \u{1F970}\u2728`
+  );
+};
+
+const obterNomeEmpresaTenant = (config) => {
+  return config?.nomeEmpresa || config?.nomeFantasia || config?.razaoSocial || localStorage.getItem('nomeEmpresa') || 'Nossa Empresa';
 };
 
 const Clientes = () => {
@@ -62,6 +96,10 @@ const Clientes = () => {
   const [exportandoLista, setExportandoLista] = useState(false);
   const exportMenuRef = useRef(null);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [configEmpresa, setConfigEmpresa] = useState(() => {
+    const salvo = localStorage.getItem('nomeEmpresa');
+    return salvo ? { nomeEmpresa: salvo, nomeFantasia: salvo } : null;
+  });
 
   useEffect(() => { 
     if (!usuarioLogado) {
@@ -75,6 +113,18 @@ const Clientes = () => {
     if (!usuarioLogado) return;
     setLoading(true);
     try {
+      try {
+        const snapConf = await getDoc(doc(db, "configuracoes_empresa", tenantId));
+        if (snapConf.exists()) {
+          const dados = snapConf.data();
+          setConfigEmpresa(dados);
+          const nomeReal = dados.nomeEmpresa || dados.nomeFantasia || dados.razaoSocial;
+          if (nomeReal) localStorage.setItem('nomeEmpresa', nomeReal);
+        }
+      } catch (eConf) {
+        console.warn("Erro ao buscar configuracoes_empresa:", eConf);
+      }
+
       const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
       const querySnapshot = await getDocs(qClientes);
       let listaClientes = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
@@ -405,6 +455,7 @@ const Clientes = () => {
   const gerarTextoModeloWhatsApp = (cliente, tipo) => {
     if (!cliente) return '';
     const primeiroNome = (cliente.nome || cliente.nomeFantasia || 'Cliente').trim().split(' ')[0];
+    const nomeLoja = obterNomeEmpresaTenant(configEmpresa);
 
     if (tipo === 'cobranca') {
       const res = getHistoricoDoCliente(cliente.id);
@@ -414,15 +465,17 @@ const Clientes = () => {
       });
       const totalDevido = pendencias.reduce((acc, p) => acc + (Number(p.valorTotal || p.total || 0) - Number(p.valorPago || 0)), 0);
 
-      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nPassando aqui da Celebre referente à sua locação de artigos para festa. Consta um valor pendente de *R$ ${totalDevido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}*.\n\nSe quiser, posso te mandar a chave Pix para facilitar o acerto! Como prefere fazer? 🎈✨`;
+      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nPassando aqui da *${nomeLoja}* referente à sua locação. Consta um valor pendente de *R$ ${totalDevido.toLocaleString('pt-BR', {minimumFractionDigits: 2})}*.\n\nSe quiser, posso te mandar a chave Pix para facilitar o acerto! Como prefere fazer? 🎈✨`;
     } else if (tipo === 'agradecimento') {
-      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nPassando em nome de toda a equipe Celebre para agradecer muito pela confiança em realizar a sua festa com a gente! 🎉💖\n\nEsperamos que tenha sido um momento inesquecível! Deu tudo certo com os itens? Estamos sempre à disposição para os próximos eventos! 🎈✨`;
+      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nPassando em nome de toda a equipe *${nomeLoja}* para agradecer muito pela confiança em realizar a sua festa com a gente! 🎉💖\n\nEsperamos que tenha sido um momento inesquecível! Deu tudo certo com os itens? Estamos sempre à disposição para os próximos eventos! 🎈✨`;
     } else if (tipo === 'aniversario') {
-      return `Olá, *${primeiroNome}*! 🎂🎉\n\nA equipe Celebre te deseja um Feliz Aniversário repleto de alegrias, saúde e muitas festas!\n\nPreparamos um desconto super especial para você comemorar essa data incrível com a gente. Vamos montar um projeto lindo? 🥳✨`;
+      return `Olá, *${primeiroNome}*! 🎂🎉\n\nA equipe *${nomeLoja}* te deseja um Feliz Aniversário repleto de alegrias, saúde e muitas festas!\n\nPreparamos um desconto super especial para você comemorar essa data incrível com a gente. Vamos montar um projeto lindo? 🥳✨`;
     } else if (tipo === 'promocao') {
-      return `Olá, *${primeiroNome}*! Como vai? 😊\n\nChegaram peças e acervos novos incríveis aqui na Celebre Festas! 🚚✨\n\nPreparamos uma condição exclusiva para o seu próximo evento. Vamos agendar uma visita ou montar um orçamento personalizado? 🎈🎨`;
+      return `Olá, *${primeiroNome}*! Como vai? 😊\n\nChegaram peças e acervos novos incríveis aqui na *${nomeLoja}*! 🚚✨\n\nPreparamos uma condição exclusiva para o seu próximo evento. Vamos agendar uma visita ou montar um orçamento personalizado? 🎈🎨`;
+    } else if (tipo === 'datas_familia') {
+      return gerarMensagemDatasFamilia(primeiroNome, nomeLoja);
     } else {
-      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nEntro em contato pela Celebre para conversarmos sobre seus eventos e locações. Como posso te ajudar hoje? 🎉🎈`;
+      return `Olá, *${primeiroNome}*! Tudo bem? 😊\n\nEntro em contato pela *${nomeLoja}* para conversarmos sobre seus eventos e locações. Como posso te ajudar hoje? 🎉🎈`;
     }
   };
 
@@ -509,7 +562,7 @@ const Clientes = () => {
   const dispararWhatsAppFinal = () => {
     if (!modalZapCliente?.celular) return;
     const numLimpo = modalZapCliente.celular.replace(/\D/g, '');
-    const url = `https://wa.me/55${numLimpo}?text=${encodeURIComponent(textoMensagemZap)}`;
+    const url = `https://api.whatsapp.com/send?phone=55${numLimpo}&text=${encodeURIComponent(textoMensagemZap)}`;
     window.open(url, '_blank');
     setModalZapCliente(null);
   };
@@ -1111,6 +1164,31 @@ const Clientes = () => {
                               >
                                 <i className="fab fa-whatsapp"></i>
                               </button>
+                              {!c.datasComemorativas ? (
+                                <button
+                                  type="button"
+                                  className="btn-pedir-datas-row-pill"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const tel = (c.celular || '').replace(/\D/g, '');
+                                    const nomeCli = (c.nome || c.nomeFantasia || 'Cliente').split(' ')[0];
+                                    const nomeLoja = obterNomeEmpresaTenant(configEmpresa);
+                                    const msg = gerarMensagemDatasFamilia(nomeCli, nomeLoja);
+                                    window.open(`https://api.whatsapp.com/send?phone=55${tel}&text=${encodeURIComponent(msg)}`, '_blank');
+                                  }}
+                                  title="Clique para pedir as datas comemorativas da família no WhatsApp do cliente"
+                                >
+                                  🎁 Pedir Datas
+                                </button>
+                              ) : (
+                                <span 
+                                  className="tag-datas-festivas-registradas-mini"
+                                  title={`Datas Festivas da Família: ${c.datasComemorativas}`}
+                                  onClick={(e) => { e.stopPropagation(); setClienteVisualizacao(c); setAbaAtiva('dados'); }}
+                                >
+                                  🎁 {c.datasComemorativas.length > 18 ? c.datasComemorativas.substring(0, 18) + '...' : c.datasComemorativas}
+                                </span>
+                              )}
                             </div>
                           ) : (
                             <span className="text-muted">--</span>
@@ -1190,7 +1268,6 @@ const Clientes = () => {
                                 <button onClick={() => { setClienteVisualizacao(c); setAbaAtiva('dados'); setMenuAberto(null); }} className="item-menu">
                                   <i className="fas fa-user-circle color-purple"></i> Ver Perfil Completo
                                 </button>
-
                                 <button onClick={() => { navigate('/cadastro-cliente', { state: { clienteEditando: c } }); setMenuAberto(null); }} className="item-menu">
                                   <i className="fas fa-edit color-blue"></i> Editar Cadastro
                                 </button>
@@ -1303,6 +1380,31 @@ const Clientes = () => {
                         <div className="card-mobile-data-row">
                           <i className="fas fa-phone-alt icon-muted"></i>
                           <span className="card-phone-text">{c.celular ? formatarTelefone(c.celular) : '--'}</span>
+                          {c.celular && !c.datasComemorativas && (
+                            <button
+                              type="button"
+                              className="btn-pedir-datas-row-pill"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                const tel = (c.celular || '').replace(/\D/g, '');
+                                const nomeCli = (c.nome || c.nomeFantasia || 'Cliente').split(' ')[0];
+                                const nomeLoja = obterNomeEmpresaTenant(configEmpresa);
+                                const msg = gerarMensagemDatasFamilia(nomeCli, nomeLoja);
+                                window.open(`https://api.whatsapp.com/send?phone=55${tel}&text=${encodeURIComponent(msg)}`, '_blank');
+                              }}
+                              title="Pedir datas da família no WhatsApp"
+                            >
+                              🎁 Pedir Datas
+                            </button>
+                          )}
+                          {c.datasComemorativas && (
+                            <span 
+                              className="tag-datas-festivas-registradas-mini"
+                              title={`Datas: ${c.datasComemorativas}`}
+                            >
+                              🎁
+                            </span>
+                          )}
                         </div>
                         <div className="card-mobile-data-row">
                           <i className="far fa-calendar-alt icon-amber"></i>
@@ -1390,57 +1492,48 @@ const Clientes = () => {
                   <h2 className="perfil-nome-titulo">{perfilNomeBonito}</h2>
                   
                   {/* PÍLULAS DE ETIQUETAS E STAKEHOLDERS */}
-                  <div className="perfil-tags-row-flex" style={{ display: 'flex', gap: '6px', justifyContent: 'center', flexWrap: 'wrap', marginBottom: '14px' }}>
+                  <div className="perfil-tags-row-flex">
                     <span className="perfil-tag-destaque" style={{ backgroundColor: perfilTagColorida.bg, color: perfilTagColorida.color, border: `1px solid ${perfilTagColorida.border}` }}>
                       <i className="fas fa-crown"></i> {tagTexto}
                     </span>
                     <span className={`badge-status-pro ${clienteVisualizacao.situacaoFinanceira === 'inadimplente' ? 'devedor' : 'ok'}`}>
                       {clienteVisualizacao.situacaoFinanceira === 'inadimplente' ? '⚠️ PENDÊNCIAS' : '✅ ADIMPLENTE'}
                     </span>
-                    <span className="badge-tipo-pessoa" style={{ background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: '10px', fontSize: '0.68rem', fontWeight: '800' }}>
+                    <span className="badge-tipo-pessoa">
                       {clienteVisualizacao.tipoPessoa === 'juridica' ? '🏢 PJ' : '👤 PF'}
                     </span>
                   </div>
 
                   <div className="perfil-mini-stats">
                     <div className="stat-line">
-                      <span><i className="fas fa-coins text-gold"></i> LTV (Gasto Acumulado):</span> 
-                      <strong>R$ {perfilTotalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+                      <span className="stat-label"><i className="fas fa-coins text-gold"></i> LTV Acumulado:</span> 
+                      <span className="stat-value ltv">R$ {perfilTotalGasto.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</span>
                     </div>
                     <div className="stat-line">
-                      <span><i className="fas fa-boxes text-blue"></i> Total Locações:</span> 
-                      <strong>{perfilHistorico.length} pedido{perfilHistorico.length === 1 ? '' : 's'}</strong>
+                      <span className="stat-label"><i className="fas fa-boxes text-blue"></i> Total Locações:</span> 
+                      <span className="stat-value">{perfilHistorico.length} {perfilHistorico.length === 1 ? 'locação' : 'locações'}</span>
                     </div>
                     <div className="stat-line">
-                      <span><i className="fas fa-calendar-alt text-purple"></i> Cliente Desde:</span> 
-                      <strong>{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</strong>
+                      <span className="stat-label"><i className="fas fa-calendar-alt text-purple"></i> Cliente Desde:</span> 
+                      <span className="stat-value">{clienteVisualizacao.criadoEm ? new Date(clienteVisualizacao.criadoEm).toLocaleDateString('pt-BR') : '-'}</span>
                     </div>
                   </div>
 
-                  <div className="perfil-actions-stack" style={{ display: 'flex', flexDirection: 'column', gap: '8px', width: '100%', marginTop: '14px' }}>
-                    {clienteVisualizacao.celular && (
-                      <button 
-                        onClick={() => abrirModalWhatsApp(clienteVisualizacao)}
-                        className="btn-primary-celebre"
-                        style={{ width: '100%', justifyContent: 'center' }}
-                      >
-                        <i className="fab fa-whatsapp"></i> Falar no WhatsApp
-                      </button>
-                    )}
-
+                  <div className="perfil-actions-stack">
                     <button 
+                      type="button"
                       onClick={() => verificarETentarNovaLocacao(clienteVisualizacao)} 
-                      className="btn-add-nota"
-                      style={{ width: '100%', justifyContent: 'center', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', height: '38px', borderRadius: '10px', fontSize: '0.78rem' }}
+                      className="btn-perfil-nova-locacao"
                     >
                       <i className="fas fa-cart-plus"></i> Criar Nova Locação
                     </button>
 
                     <button 
+                      type="button"
                       onClick={() => { setClienteVisualizacao(null); navigate('/cadastro-cliente', { state: { clienteEditando: clienteVisualizacao } }); }} 
-                      className="btn-editar-perfil-full"
+                      className="btn-perfil-editar"
                     >
-                      <i className="fas fa-edit"></i> Editar Cadastro
+                      <i className="fas fa-user-edit"></i> Editar Cadastro
                     </button>
                   </div>
                 </div>
@@ -1449,110 +1542,125 @@ const Clientes = () => {
                 <div className="perfil-right-col">
                   <div className="perfil-tabs-header">
                     <button onClick={() => setAbaAtiva('dados')} className={`ptab ${abaAtiva === 'dados' ? 'active' : ''}`}>
-                      <i className="fas fa-user"></i> Dados Cadastrais & CRM
+                      <i className="fas fa-user"></i> Dados & CRM
                     </button>
                     <button onClick={() => setAbaAtiva('registros')} className={`ptab ${abaAtiva === 'registros' ? 'active' : ''}`}>
-                      <i className="fas fa-history"></i> Histórico de Locações ({perfilHistorico.length})
+                      <i className="fas fa-history"></i> Locações ({perfilHistorico.length})
                     </button>
                     <button onClick={() => setAbaAtiva('timeline')} className={`ptab ${abaAtiva === 'timeline' ? 'active' : ''}`}>
                       <i className="fas fa-stream"></i> Linha do Tempo ({gerarTimelineCompleta(clienteVisualizacao.id).length + historicoNotasCliente.length})
                     </button>
                     <button onClick={() => setAbaAtiva('financeiro')} className={`ptab ${abaAtiva === 'financeiro' ? 'active' : ''}`}>
-                      <i className="fas fa-wallet"></i> Extrato Financeiro & Saldo
+                      <i className="fas fa-wallet"></i> Extrato & Saldo
                     </button>
                   </div>
                   
                   <div className="perfil-tab-body">
-                    {/* ABA 1: DADOS CADASTRAIS */}
+                    {/* ABA 1: DADOS CADASTRAIS & CRM COMPACTO */}
                     {abaAtiva === 'dados' && (
-                      <div className="perfil-dados-grid-wrapper">
+                      <div className="perfil-dados-compacto fade-in">
                         
-                        {/* QUADRO 1: IDENTIFICAÇÃO */}
-                        <div className="perfil-section-box">
-                          <h4 className="p-sec-title"><i className="fas fa-id-card"></i> Identificação do Cliente</h4>
-                          <div className="perfil-dados-grid">
-                            <div className="d-group">
-                              <label>NOME / RAZÃO SOCIAL</label>
-                              <span>{perfilNomeBonito}</span>
+                        {/* 1. DADOS CADASTRAIS & CONTATO (CARD UNIFICADO) */}
+                        <div className="card-perfil-clean">
+                          <div className="grid-dados-clean">
+                            <div className="d-item">
+                              <span className="d-label"><i className="fas fa-id-card"></i> {clienteVisualizacao.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}</span>
+                              <span className="d-val">{clienteVisualizacao.cpf || clienteVisualizacao.cnpj || '-'}</span>
                             </div>
-                            <div className="d-group">
-                              <label>{clienteVisualizacao.tipoPessoa === 'juridica' ? 'CNPJ' : 'CPF'}</label>
-                              <span>{clienteVisualizacao.cpf || clienteVisualizacao.cnpj || '-'}</span>
+
+                            <div className="d-item">
+                              <span className="d-label"><i className="fas fa-birthday-cake text-pink"></i> Nascimento</span>
+                              <span className="d-val">{formatarDataBR(clienteVisualizacao.dataNascimento || clienteVisualizacao.dataNasc || clienteVisualizacao.nascimento) || '-'}</span>
                             </div>
-                            <div className="d-group">
-                              <label>{clienteVisualizacao.tipoPessoa === 'juridica' ? 'INSCRIÇÃO ESTADUAL' : 'RG'}</label>
-                              <span>{clienteVisualizacao.rg || clienteVisualizacao.inscricaoEstadual || '-'}</span>
+
+                            <div className="d-item">
+                              <span className="d-label"><i className="fab fa-whatsapp text-green"></i> WhatsApp</span>
+                              <span className="d-val">{clienteVisualizacao.celular ? formatarTelefone(clienteVisualizacao.celular) : '-'}</span>
                             </div>
-                            <div className="d-group">
-                              <label>🎂 DATA DE NASCIMENTO / ANIVERSÁRIO</label>
-                              <span>{clienteVisualizacao.dataNascimento || clienteVisualizacao.dataNasc || '-'}</span>
+
+                            <div className="d-item">
+                              <span className="d-label"><i className="fas fa-envelope text-blue"></i> E-mail</span>
+                              <span className="d-val">{clienteVisualizacao.email || '-'}</span>
                             </div>
+
+                            {clienteVisualizacao.telefoneFixo && (
+                              <div className="d-item">
+                                <span className="d-label"><i className="fas fa-phone-alt"></i> Fixo</span>
+                                <span className="d-val">{formatarTelefone(clienteVisualizacao.telefoneFixo)}</span>
+                              </div>
+                            )}
+
+                            {clienteVisualizacao.origem && (
+                              <div className="d-item">
+                                <span className="d-label"><i className="fas fa-bullhorn text-purple"></i> Origem</span>
+                                <span className="d-val">{clienteVisualizacao.origem}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
 
-                        {/* QUADRO 2: CONTATO & ORIGEM */}
-                        <div className="perfil-section-box" style={{ marginTop: '16px' }}>
-                          <h4 className="p-sec-title"><i className="fas fa-phone-alt"></i> Contatos e Origem</h4>
-                          <div className="perfil-dados-grid">
-                            <div className="d-group">
-                              <label>CELULAR / WHATSAPP</label>
-                              <span>{formatarTelefone(clienteVisualizacao.celular) || '-'}</span>
-                            </div>
-                            <div className="d-group">
-                              <label>TELEFONE FIXO</label>
-                              <span>{formatarTelefone(clienteVisualizacao.telefoneFixo) || '-'}</span>
-                            </div>
-                            <div className="d-group">
-                              <label>E-MAIL</label>
-                              <span style={{ wordBreak: 'break-all' }}>{clienteVisualizacao.email || '-'}</span>
-                            </div>
-                            <div className="d-group">
-                              <label>COMO NOS CONHECEU?</label>
-                              <span>{clienteVisualizacao.origem || 'Não informado'}</span>
+                        {/* 2. DATAS FESTIVAS DA FAMÍLIA (LINHA DE DESTAQUE COMPACTA) */}
+                        <div className="card-perfil-datas-festivas">
+                          <div className="datas-festivas-info">
+                            <span className="datas-badge-icon"><i className="fas fa-gift"></i></span>
+                            <div className="datas-textos">
+                              <span className="datas-titulo">Datas Festivas da Família</span>
+                              <p className="datas-conteudo">
+                                {clienteVisualizacao.datasComemorativas || 'Nenhuma data especial cadastrada.'}
+                              </p>
                             </div>
                           </div>
+                          {clienteVisualizacao.celular && (
+                            <button
+                              type="button"
+                              className="btn-zap-datas-pill"
+                              onClick={() => {
+                                const tel = (clienteVisualizacao.celular || '').replace(/\D/g, '');
+                                const nomeCli = (clienteVisualizacao.nome || clienteVisualizacao.nomeFantasia || 'Cliente').split(' ')[0];
+                                const nomeLoja = obterNomeEmpresaTenant(configEmpresa);
+                                const msg = gerarMensagemDatasFamilia(nomeCli, nomeLoja);
+                                window.open(`https://api.whatsapp.com/send?phone=55${tel}&text=${encodeURIComponent(msg)}`, '_blank');
+                              }}
+                              title="Pedir datas pelo WhatsApp"
+                            >
+                              <i className="fab fa-whatsapp"></i> {clienteVisualizacao.datasComemorativas ? 'Atualizar Zap' : 'Pedir Zap'}
+                            </button>
+                          )}
                         </div>
 
-                        {/* QUADRO 3: CRM & DATAS FESTIVAS DA FAMÍLIA */}
-                        {clienteVisualizacao.datasComemorativas && (
-                          <div className="perfil-section-box" style={{ marginTop: '16px', background: '#fdf2f8', borderColor: '#fbcfe8' }}>
-                            <h4 className="p-sec-title" style={{ color: '#be185d' }}><i className="fas fa-gift"></i> 🎁 Aniversários da Família & Datas Festivas</h4>
-                            <p style={{ margin: 0, fontSize: '0.85rem', color: '#9d174d', fontWeight: '600' }}>
-                              {clienteVisualizacao.datasComemorativas}
-                            </p>
-                          </div>
-                        )}
-
-                        {/* QUADRO 4: ENDEREÇO COMPLETO E ROTA NO GOOGLE MAPS */}
-                        <div className="obs-group obs-box-wrapper" style={{ marginTop: '16px' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                            <label style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', margin: 0 }}>
-                              <i className="fas fa-map-marker-alt" style={{ color: '#ef4444' }}></i> ENDEREÇO COMPLETO DE ENTREGA
-                            </label>
+                        {/* 3. ENDEREÇO & ROTA NO MAPS */}
+                        {enderecoCompletoStr && (
+                          <div className="card-perfil-endereco">
+                            <div className="endereco-info">
+                              <span className="endereco-badge-icon"><i className="fas fa-map-marker-alt"></i></span>
+                              <div className="endereco-textos">
+                                <span className="endereco-titulo">Endereço de Entrega</span>
+                                <p className="endereco-conteudo">{enderecoCompletoStr}</p>
+                              </div>
+                            </div>
                             {mapsUrl && (
-                              <a href={mapsUrl} target="_blank" rel="noopener noreferrer" className="btn-tmpl-chip" style={{ background: '#3b82f6', color: '#ffffff', borderColor: '#2563eb', fontWeight: '800', textDecoration: 'none' }}>
-                                <i className="fas fa-directions"></i> Abrir Rota no Maps
+                              <a 
+                                href={mapsUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer" 
+                                className="btn-maps-rota-pill"
+                                title="Abrir rota no Google Maps"
+                              >
+                                <i className="fas fa-route"></i> Rota
                               </a>
                             )}
                           </div>
-                          <div className="obs-box" style={{ background: '#f8fafc', border: '1px solid #cbd5e1' }}>
-                            <p style={{ fontStyle: 'normal', color: 'var(--texto-principal)', margin: 0, fontWeight: '500' }}>
-                              {enderecoCompletoStr || 'Endereço não cadastrado.'}
-                            </p>
-                          </div>
-                        </div>
+                        )}
 
-                        {/* QUADRO 5: OBSERVAÇÕES INTERNAS */}
-                        <div className="obs-group obs-box-wrapper" style={{ marginTop: '16px' }}>
-                          <label style={{ fontSize: '0.75rem', color: '#b45309', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'block', marginBottom: '6px' }}>
-                            <i className="far fa-sticky-note"></i> OBSERVAÇÕES INTERNAS GERAIS
-                          </label>
-                          <div className="obs-box" style={{ background: '#fffbeb', border: '1px solid #fde68a' }}>
-                            <p style={{ color: '#92400e', whiteSpace: 'pre-wrap', fontStyle: 'normal', margin: 0 }}>
-                              {clienteVisualizacao.observacoes || 'Nenhuma observação registrada.'}
-                            </p>
+                        {/* 4. OBSERVAÇÕES INTERNAS (Só exibe se houver anotações!) */}
+                        {clienteVisualizacao.observacoes && (
+                          <div className="card-perfil-obs">
+                            <div className="obs-header">
+                              <i className="far fa-sticky-note"></i> Observações Internas
+                            </div>
+                            <p className="obs-body">{clienteVisualizacao.observacoes}</p>
                           </div>
-                        </div>
+                        )}
 
                       </div>
                     )}
@@ -1978,6 +2086,14 @@ const Clientes = () => {
                 >
                   <i className="fas fa-gift icon-gold"></i>
                   <span>Novidades / Promoção</span>
+                </button>
+
+                <button 
+                  className={`model-card-zap ${tipoMensagemZap === 'datas_familia' ? 'active' : ''}`}
+                  onClick={() => selecionarModeloZap('datas_familia')}
+                >
+                  <i className="fas fa-gift icon-pink" style={{ color: '#be185d' }}></i>
+                  <span>Datas da Família</span>
                 </button>
               </div>
 

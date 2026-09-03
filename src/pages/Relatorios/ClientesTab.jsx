@@ -2,8 +2,8 @@ import React, { useState, useEffect, useMemo } from "react";
 import { db } from "../../firebaseConfig";
 import { collection, getDocs, doc, getDoc, query, where, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
-import { gerarRelatorioClientesPDF } from '../../utils/gerarRelatorioClientesPDF';
-import './ClientesTab.css';
+import { gerarRelatorioClientesPDF } from "../../utils/gerarRelatorioClientesPDF";
+import "./ClientesTab.css";
 
 const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const auth = getAuth();
@@ -14,17 +14,15 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroSegmento, setFiltroSegmento] = useState('TODOS'); // 'TODOS' | 'VIP' | 'ATIVOS' | 'INATIVOS'
 
-  const [metricas, setMetricas] = useState({ 
-    total: 0, 
-    novosMes: 0, 
-    inativos: 0, 
+  const [metricas, setMetricas] = useState({
+    total: 0,
+    novosMes: 0,
+    inativos: 0,
     ticketMedio: 0,
     clientesFieis: 0,
-    taxaRetorno: 0 
+    taxaRetorno: 0
   });
 
-  const [rankingCidades, setRankingCidades] = useState([]);
-  const [topClientes, setTopClientes] = useState([]);
   const [todosClientesData, setTodosClientesData] = useState([]);
 
   const [dadosEmpresa, setDadosEmpresa] = useState({
@@ -70,13 +68,13 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
         ]);
 
         if (snapConfig.exists && snapConfig.exists()) {
-          const configData = snapConfig.data();
-          const nomeFinal = configData.nomeEmpresa || configData.nomeFantasia || configData.razaoSocial || configData.nome || localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || 'Minha Empresa';
+          const cfg = snapConfig.data();
+          const nomeFinal = cfg.nomeEmpresa || cfg.nomeFantasia || cfg.razaoSocial || cfg.nome || localStorage.getItem('nomeEmpresa') || localStorage.getItem('funcName') || usuarioLogado?.displayName || 'Minha Empresa';
           setDadosEmpresa({
             nomeEmpresa: nomeFinal,
-            logotipo: configData.logotipo || configData.logo || '',
-            cnpj: configData.cnpj || '',
-            endereco: configData.endereco || ''
+            logotipo: cfg.logotipo || cfg.logo || '',
+            cnpj: cfg.cnpj || '',
+            endereco: cfg.endereco || ''
           });
           if (nomeFinal) localStorage.setItem('nomeEmpresa', nomeFinal);
         } else {
@@ -100,42 +98,59 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
         const totalClientes = clientes.length;
         const hoje = new Date();
-        const novosMes = clientes.filter(c => {
-          if (!c.criadoEm) return false;
-          const d = c.criadoEm.toDate ? c.criadoEm.toDate() : new Date(c.criadoEm);
-          return d.getMonth() === hoje.getMonth() && d.getFullYear() === hoje.getFullYear();
-        }).length;
+        const mesAtual = hoje.getMonth();
+        const anoAtual = hoje.getFullYear();
 
-        let somaTotal = 0;
-        const cidadesCount = {};
+        let novosMes = 0;
         const clientesStats = {};
 
+        clientes.forEach(c => {
+          if (c.criadoEm) {
+            const dataCriacao = c.criadoEm?.toDate ? c.criadoEm.toDate() : new Date(c.criadoEm);
+            if (dataCriacao.getMonth() === mesAtual && dataCriacao.getFullYear() === anoAtual) {
+              novosMes++;
+            }
+          }
+          const cidade = c.cidade || "Não informada";
+          clientesStats[c.id] = {
+            id: c.id,
+            nome: c.nome || c.nomeFantasia || c.razaoSocial || "Cliente Sem Nome",
+            telefone: c.telefone || c.celular || c.whatsapp || '',
+            cidade,
+            qtdLocacoes: 0,
+            gastoTotal: 0,
+            ultimaLocacao: null
+          };
+        });
+
+        let somaTotal = 0;
         locacoes.forEach(loc => {
           const st = String(loc.status || '').toLowerCase();
           if (st.includes('cancel')) return;
 
-          const valor = Number(loc.valorTotal || loc.total || 0);
-          somaTotal += valor;
-          const cidade = loc.logistica?.cidade || loc.cidade || "Retirada na Loja";
-          cidadesCount[cidade] = (cidadesCount[cidade] || 0) + 1;
+          let vFinal = 0;
+          if (loc.valorTotal !== undefined && loc.valorTotal !== null) {
+            let vStr = String(loc.valorTotal).replace(/[^\d.,-]/g, '').replace(',', '.');
+            vFinal = parseFloat(vStr) || 0;
+          } else if (loc.total !== undefined && loc.total !== null) {
+            let vStr = String(loc.total).replace(/[^\d.,-]/g, '').replace(',', '.');
+            vFinal = parseFloat(vStr) || 0;
+          }
 
-          const cid = loc.clienteId;
-          if (cid) {
-            if (!clientesStats[cid]) {
-              clientesStats[cid] = { 
-                id: cid,
-                nome: loc.clienteNome || 'Cliente', 
-                telefone: loc.clienteTelefone || loc.telefone || '',
-                qtdLocacoes: 0, 
-                gastoTotal: 0, 
-                ultimaLocacao: new Date(0) 
-              };
+          somaTotal += vFinal;
+
+          const cId = loc.clienteId || loc.idEmpresa || loc.cliente;
+          if (cId && clientesStats[cId]) {
+            clientesStats[cId].qtdLocacoes++;
+            clientesStats[cId].gastoTotal += vFinal;
+
+            let dataEvento = loc.dataRetirada || loc.dataEvento || loc.dataCriacao;
+            if (dataEvento) {
+              const dt = dataEvento?.toDate ? dataEvento.toDate() : new Date(dataEvento);
+              if (!clientesStats[cId].ultimaLocacao || dt > clientesStats[cId].ultimaLocacao) {
+                clientesStats[cId].ultimaLocacao = dt;
+              }
             }
-            clientesStats[cid].qtdLocacoes += 1;
-            clientesStats[cid].gastoTotal += valor;
-            let dataLoc = loc.dataRetirada ? new Date(loc.dataRetirada) : (loc.criadoEm?.toDate ? loc.criadoEm.toDate() : new Date(0));
-    
-            if (dataLoc > clientesStats[cid].ultimaLocacao) clientesStats[cid].ultimaLocacao = dataLoc;
           }
         });
 
@@ -188,8 +203,6 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           taxaRetorno
         });
 
-        setRankingCidades(Object.entries(cidadesCount).sort((a, b) => b[1] - a[1]).slice(0, 5));
-        setTopClientes(listaStats.sort((a, b) => b.gastoTotal - a.gastoTotal).slice(0, 5));
         setTodosClientesData(clientesFormatadosRelatorio.sort((a, b) => b.totalGasto - a.totalGasto));
 
       } catch (error) { 
@@ -219,7 +232,7 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     });
   }, [todosClientesData, termoBusca, filtroSegmento]);
 
-  // EXPORTAR CSV (EXCEL COM UTF-8 BOM)
+  // EXPORTAR CSV
   const exportarCSVClientes = () => {
     const cabecalho = ["Nome", "Telefone", "Cidade", "Qtd Festas", "Total Gasto (R$)", "Status", "Ultima Locacao"];
     const linhas = clientesFiltrados.map(c => [
@@ -254,138 +267,78 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
         empresa: dadosEmpresa,
         metricas,
         clientes: clientesFiltrados,
-        filtroSegmento,
         usuarioEmail: usuarioLogado?.email
       });
-      await registrarLog("EXPORTAÇÃO DE RELATÓRIO DE CLIENTES", `Baixou a lista de carteira de clientes em PDF.`);
+      await registrarLog("EXPORTAÇÃO DE RELATÓRIO", "Baixou o relatório completo de clientes em PDF.");
     } catch (error) {
       console.error(error);
       alert("Erro ao exportar PDF.");
     }
   };
 
-  // WHATSAPP RÁPIDO CRM
+  // CONTATO WHATSAPP CRM
   const abrirWhatsAppCliente = (cliente) => {
-    const fone = String(cliente.telefone || '').replace(/\D/g, '');
-    if (!fone) {
-      alert("Este cliente não possui telefone cadastrado.");
+    const telLimpo = (cliente.telefone || '').replace(/\D/g, '');
+    if (!telLimpo) {
+      alert("Este cliente não possui telefone/celular cadastrado.");
       return;
     }
-    const numLimpo = fone.length <= 11 ? `55${fone}` : fone;
-    const msg = encodeURIComponent(`Olá ${cliente.nome}! Tudo bem? Aqui é da ${dadosEmpresa.nomeEmpresa}. Estamos com novas decorações e condições especiais para os seus próximos eventos. Como podemos te ajudar? 🎉`);
-    window.open(`https://wa.me/${numLimpo}?text=${msg}`, '_blank');
+    const numFinal = telLimpo.length <= 11 ? `55${telLimpo}` : telLimpo;
+    const msg = encodeURIComponent(`Olá, ${cliente.nome}! Tudo bem? Aqui é da equipe ${dadosEmpresa.nomeEmpresa || 'Celebre'}. Gostaríamos de saber como foi sua experiência conosco e apresentar novidades especiais para seus próximos eventos! 🎉`);
+    window.open(`https://wa.me/${numFinal}?text=${msg}`, '_blank');
   };
 
-  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 'bold'}}>Analisando carteira de clientes e CRM...</div>;
-
-  const topClienteNome = topClientes.length > 0 ? topClientes[0].nome : 'Nenhum';
-  const topClienteGasto = topClientes.length > 0 ? topClientes[0].gastoTotal : 0;
-  const topCidadeNome = rankingCidades.length > 0 ? rankingCidades[0][0] : 'Não especificada';
+  if (loading) return <div style={{ padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '0.86rem' }}>Calculando indicadores de clientes e LTV...</div>;
 
   return (
-    <div className="fade-in rel-clientes-wrapper">
+    <div className="rel-clientes-wrapper fade-in">
       
+      {/* 4 CARDS KPI ESSENCIAIS & COMPACTOS (GOLDEN RULE 1 & 2) */}
       {mostrarIndicadores && (
-        <>
-          {/* 💡 PAINEL DE INSIGHTS INTELIGENTES CLIENTES */}
-          <div className="rel-clientes-insights">
-            <div className="rel-clientes-insights-left">
-              <span className="rel-clientes-insights-icon">💎</span>
-              <div>
-                <strong className="rel-clientes-insights-title">CLIENTE DE MAIOR LTV &amp; REGIÃO PRINCIPAL</strong>
-                <p className="rel-clientes-insights-sub">
-                  Cliente principal: <strong>{topClienteNome}</strong> (R$ {topClienteGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}). Cidade líder em eventos: <strong>{topCidadeNome}</strong>.
-                </p>
-              </div>
-            </div>
-            <span className="rel-clientes-insights-badge">
-              Taxa de Retorno: {metricas.taxaRetorno}%
-            </span>
-          </div>
-
-          {/* 4 CARDS KPI BLINDADOS (GOLDEN RULE 1 & 2) */}
-          <div className="clientes-stats-grid">
-            <div className="stat-card-pro card-green">
-              <div className="stat-icon-wrapper icon-green">👥</div>
-              <div className="stat-content">
-                <span className="stat-title">TOTAL DE CLIENTES</span>
-                <strong className="stat-number">{metricas.total}</strong>
-                <small className="stat-desc">Base cadastrada</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-amber">
-              <div className="stat-icon-wrapper icon-amber">✨</div>
-              <div className="stat-content">
-                <span className="stat-title">NOVOS NESTE MÊS</span>
-                <strong className="stat-number">+{metricas.novosMes}</strong>
-                <small className="stat-desc">Crescimento recente</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-purple">
-              <div className="stat-icon-wrapper icon-purple">💳</div>
-              <div className="stat-content">
-                <span className="stat-title">TICKET MÉDIO (LTV)</span>
-                <strong className="stat-number">R$ {metricas.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong>
-                <small className="stat-desc">Valor por locação</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-red">
-              <div className="stat-icon-wrapper icon-red">🔁</div>
-              <div className="stat-content">
-                <span className="stat-title">TAXA DE FIDELIDADE</span>
-                <strong className="stat-number">{metricas.taxaRetorno}%</strong>
-                <small className="stat-desc">{metricas.clientesFieis} clientes recorrentes</small>
-              </div>
+        <div className="clientes-stats-grid rel-kpi-grid-compact">
+          <div className="stat-card-pro card-green">
+            <div className="stat-icon-wrapper icon-green">👥</div>
+            <div className="stat-content">
+              <span className="stat-title">TOTAL DE CLIENTES</span>
+              <span className="stat-number">{metricas.total}</span>
+              <small className="stat-desc">Base cadastrada</small>
             </div>
           </div>
 
-          {/* 📊 WIDGET COMPACTO DE RANKING DE CLIENTES VIP & REGIÕES */}
-          <div className="rel-card-unificado">
-            <div className="rel-card-header">
-              <div>
-                <h3 className="rel-card-title">🏆 Top Clientes VIP &amp; Cidades Líderes</h3>
-                <p className="rel-card-sub">Maiores investidores e concentração geográfica de eventos</p>
-              </div>
-            </div>
-
-            <div className="rel-clientes-rank-grid">
-              {/* PAINEL CLIENTES VIP */}
-              <div className="rel-clientes-rank-card">
-                <span className="rel-clientes-rank-header">🥇 Top 3 Clientes em Faturamento</span>
-                {topClientes.slice(0, 3).map((c, idx) => (
-                  <div key={idx} className="rel-clientes-rank-row">
-                    <span style={{ color: 'var(--texto-principal, #0f172a)', fontWeight: 700 }}>{idx + 1}º {c.nome}</span>
-                    <span style={{ color: '#10b981', fontWeight: 850 }}>R$ {c.gastoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
-                  </div>
-                ))}
-                {topClientes.length === 0 && <span style={{ fontSize: '0.74rem', color: 'var(--texto-secundario, #94a3b8)' }}>Sem lançamentos acumulados.</span>}
-              </div>
-
-              {/* PAINEL CIDADES */}
-              <div className="rel-clientes-rank-card">
-                <span className="rel-clientes-rank-header">📍 Top Cidades em Festas</span>
-                <div className="rel-clientes-cidades-tags">
-                  {rankingCidades.map(([cidade, count], idx) => (
-                    <span key={idx} className="rel-clientes-cidade-tag">
-                      {cidade}: <strong>{count} festas</strong>
-                    </span>
-                  ))}
-                  {rankingCidades.length === 0 && <span style={{ fontSize: '0.74rem', color: 'var(--texto-secundario, #94a3b8)' }}>Sem cidades registradas.</span>}
-                </div>
-              </div>
+          <div className="stat-card-pro card-amber">
+            <div className="stat-icon-wrapper icon-amber">✨</div>
+            <div className="stat-content">
+              <span className="stat-title">NOVOS NO MÊS</span>
+              <span className="stat-number">+{metricas.novosMes}</span>
+              <small className="stat-desc">Crescimento recente</small>
             </div>
           </div>
-        </>
+
+          <div className="stat-card-pro card-purple">
+            <div className="stat-icon-wrapper icon-purple">💳</div>
+            <div className="stat-content">
+              <span className="stat-title">TICKET MÉDIO (LTV)</span>
+              <span className="stat-number">R$ {metricas.ticketMedio.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <small className="stat-desc">Valor por locação</small>
+            </div>
+          </div>
+
+          <div className="stat-card-pro card-red">
+            <div className="stat-icon-wrapper icon-red">🔁</div>
+            <div className="stat-content">
+              <span className="stat-title">TAXA DE RETORNO</span>
+              <span className="stat-number">{metricas.taxaRetorno}%</span>
+              <small className="stat-desc">{metricas.clientesFieis} recorrentes</small>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* TABELA GERAL DE CLIENTES */}
+      {/* LISTAGEM DE CLIENTES */}
       <div className="rel-card-unificado">
         <div className="rel-card-header">
           <div>
-            <h3 className="rel-card-title">📋 Carteira Completa de Clientes ({clientesFiltrados.length})</h3>
+            <h3 className="rel-card-title">Carteira Completa de Clientes ({clientesFiltrados.length})</h3>
             <p className="rel-card-sub">Listagem segmentada com histórico de festas e LTV.</p>
           </div>
 
@@ -472,8 +425,8 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           </div>
         </div>
 
-        {/* TABELA PROTEGIDA COM SCROLL HORIZONTAL */}
-        <div className="rel-table-scroll-wrapper">
+        {/* CONTAINER DA TABELA / LISTA ESTRUTURADA */}
+        <div className="rel-table-container-responsive">
           <table className="rel-clientes-table">
             <thead>
               <tr>
@@ -494,10 +447,66 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
                 </tr>
               ) : (
                 clientesFiltrados.map((c, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <div className="rel-cliente-nome-row">
-                        <strong className="rel-cliente-nome">{c.nome}</strong>
+                  <tr key={idx} className="rel-cliente-row">
+                    {/* CÉLULA PRINCIPAL ESTRUTURADA COM ZONAS FIXAS */}
+                    <td className="rel-cell-cliente">
+                      {/* 1. ZONA SUPERIOR: CIDADE + CONTATO (ESQ) | STATUS + WHATSAPP (DIR) */}
+                      <div className="rel-cli-header-zone">
+                        <div className="rel-cli-meta-left">
+                          <span className="rel-cli-cidade-badge">{c.cidade}</span>
+                          {c.telefone && <span className="rel-cli-tel-text">{c.telefone}</span>}
+                        </div>
+                        <div className="rel-cli-right-actions">
+                          <span className={`rel-status-pill ${c.status === 'Ativo' ? 'ativo' : 'inativo'}`}>
+                            {c.status === 'Ativo' ? '🟢 Ativo' : '⚪ Inativo'}
+                          </span>
+                          <button 
+                            type="button" 
+                            onClick={() => abrirWhatsAppCliente(c)}
+                            className="rel-btn-crm-whatsapp-compact"
+                            title="Conversar no WhatsApp"
+                          >
+                            💬
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* 2. ZONA INFERIOR: NOME + VIP (ESQ) | VALOR LTV + FESTAS (DIR) */}
+                      <div className="rel-cli-body-zone">
+                        <div className="rel-cli-info-left">
+                          <div className="rel-cli-nome-group">
+                            <span className="rel-cli-nome-title">{c.nome}</span>
+                            {c.seloVIP && (
+                              <span 
+                                className="rel-cliente-vip-badge" 
+                                style={{ 
+                                  background: c.seloVIP.bg, 
+                                  color: c.seloVIP.color,
+                                  borderColor: c.seloVIP.color 
+                                }}
+                              >
+                                {c.seloVIP.label}
+                              </span>
+                            )}
+                          </div>
+                          <div className="rel-cli-sub-ultima">Última locação: {c.ultimaLocacaoStr}</div>
+                        </div>
+
+                        <div className="rel-cli-info-right">
+                          <div className="rel-cli-valor-ltv">
+                            R$ {c.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          </div>
+                          <span className="rel-cli-festas-tag">
+                            {c.festas} festa{c.festas !== 1 ? 's' : ''} realizada{c.festas !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* CÉLULAS DESKTOP */}
+                    <td className="desktop-only-col">
+                      <div className="rel-cli-nome-group">
+                        <span className="rel-cli-nome-title">{c.nome}</span>
                         {c.seloVIP && (
                           <span 
                             className="rel-cliente-vip-badge" 
@@ -511,26 +520,31 @@ const ClientesTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
                           </span>
                         )}
                       </div>
-                      <div className="rel-cliente-subtext">Última locação: {c.ultimaLocacaoStr}</div>
+                      <div className="rel-cli-sub-ultima">Última: {c.ultimaLocacaoStr}</div>
                     </td>
-                    <td>
+
+                    <td className="desktop-only-col">
                       <div className="rel-cliente-cidade">{c.cidade}</div>
                       <div className="rel-cliente-subtext">{c.telefone || 'Sem telefone'}</div>
                     </td>
-                    <td style={{ textAlign: 'center' }}>
+
+                    <td className="desktop-only-col" style={{ textAlign: 'center' }}>
                       <span className="rel-cliente-festas-count">{c.festas}</span>
                     </td>
-                    <td style={{ textAlign: 'right' }}>
-                      <strong className="rel-cliente-valor">
+
+                    <td className="desktop-only-col" style={{ textAlign: 'right' }}>
+                      <strong className="rel-cli-valor-ltv">
                         R$ {c.totalGasto.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                       </strong>
                     </td>
-                    <td style={{ textAlign: 'center' }}>
+
+                    <td className="desktop-only-col" style={{ textAlign: 'center' }}>
                       <span className={`rel-status-pill ${c.status === 'Ativo' ? 'ativo' : 'inativo'}`}>
                         {c.status === 'Ativo' ? '🟢 Ativo' : '⚪ Inativo'}
                       </span>
                     </td>
-                    <td style={{ textAlign: 'center' }}>
+
+                    <td className="desktop-only-col" style={{ textAlign: 'center' }}>
                       <button 
                         type="button" 
                         onClick={() => abrirWhatsAppCliente(c)}

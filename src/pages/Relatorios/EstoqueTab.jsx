@@ -13,7 +13,7 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
   const [loading, setLoading] = useState(true);
   const [termoBusca, setTermoBusca] = useState('');
   const [filtroCategoria, setFiltroCategoria] = useState('TODAS');
-  const [filtroStatus, setFiltroStatus] = useState('TODOS'); // 'TODOS' | 'DISPONIVEL' | 'MANUTENCAO' | 'PARADO'
+  const [filtroStatus, setFiltroStatus] = useState('TODOS'); // 'TODOS' | 'DISPONIVEL' | 'MANUTENCAO' | 'ESTRELA' | 'PARADO'
 
   const [metricas, setMetricas] = useState({ 
     totalPecas: 0, 
@@ -23,8 +23,6 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     faturamentoGeradoTotal: 0
   });
 
-  const [rankingTemas, setRankingTemas] = useState([]);
-  const [rankingCategorias, setRankingCategorias] = useState([]); 
   const [estoqueListaCompleta, setEstoqueListaCompleta] = useState([]);
   const [categoriasDisponiveis, setCategoriasDisponiveis] = useState([]);
 
@@ -104,14 +102,10 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
         // Contagem de locações por item (Giro do Acervo)
         const giroPorItem = {};
-        const temasMap = {};
 
         locacoes.forEach(loc => {
           const st = String(loc.status || '').toLowerCase();
           if (st.includes('cancel')) return;
-
-          const tema = loc.temaFesta || loc.tema || loc.nomeEvento || 'Decoração Geral';
-          temasMap[tema] = (temasMap[tema] || 0) + 1;
 
           if (loc.itens && Array.isArray(loc.itens)) {
             loc.itens.forEach(item => {
@@ -169,9 +163,6 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           investimentoTotal += (Number(vStr) || 0) * (Number(comp.quantidade) || 1);
         });
 
-        const rankingTemasArr = Object.entries(temasMap).sort((a, b) => b[1] - a[1]).slice(0, 5);
-        const rankingCatArr = Object.entries(categoriasMap).sort((a, b) => b[1] - a[1]);
-
         setMetricas({
           totalPecas,
           tiposDiferentes: estoque.length,
@@ -179,8 +170,6 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
           investimentoTotal
         });
 
-        setRankingTemas(rankingTemasArr);
-        setRankingCategorias(rankingCatArr);
         setCategoriasDisponiveis(Object.keys(categoriasMap));
         setEstoqueListaCompleta(listaMapeada.sort((a, b) => b.qtdLocacoes - a.qtdLocacoes));
 
@@ -216,7 +205,7 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
 
   // EXPORTAR CSV (EXCEL COM UTF-8 BOM)
   const exportarCSVEstoque = () => {
-    const cabecalho = ["Item / Peca", "Categoria", "Qtd Fisica", "Status", "Locacoes Realizadas", "Valor Aquisicao (R$)", "Valor Locacao (R$)"];
+    const cabecalho = ["Item / Peça", "Categoria", "Qtd Física", "Status", "Locações Realizadas", "Valor Aquisição (R$)", "Valor Locação (R$)"];
     const linhas = estoqueFiltrado.map(item => [
       `"${(item.nome || '').replace(/"/g, '""')}"`,
       `"${(item.categoria || 'Geral').replace(/"/g, '""')}"`,
@@ -260,120 +249,59 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
     }
   };
 
-  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontWeight: 'bold'}}>Calculando inventário e ROI do acervo...</div>;
+  if (loading) return <div style={{padding: '40px', textAlign: 'center', color: '#64748b', fontSize: '0.86rem'}}>Calculando inventário e indicadores do acervo...</div>;
 
   return (
-    <div className="fade-in">
+    <div className="rel-estoque-wrapper fade-in">
       
+      {/* 4 CARDS KPI ESSENCIAIS & COMPACTOS (GOLDEN RULE 1 & 2) */}
       {mostrarIndicadores && (
-        <>
-          {/* 💡 PAINEL DE INSIGHTS INTELIGENTES ESTOQUE */}
-          <div className="rel-card-unificado" style={{ borderLeft: '5px solid #10b981', marginBottom: '16px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <span style={{ fontSize: '1.3rem' }}>📦</span>
-                <div>
-                  <strong style={{ fontSize: '0.82rem', color: 'var(--texto-principal, #0f172a)', letterSpacing: '0.4px', textTransform: 'uppercase' }}>SAÚDE DO ACERVO &amp; DISPONIBILIDADE FÍSICA</strong>
-                  <p style={{ margin: '2px 0 0 0', fontSize: '0.78rem', color: 'var(--texto-secundario, #64748b)' }}>
-                    Total de <strong>{metricas.totalPecas} peças físicas</strong> em acervo ({metricas.tiposDiferentes} categorias). 
-                    {metricas.emManutencao > 0 ? ` ⚠️ ${metricas.emManutencao} peças em reparo.` : ' 🟢 100% das peças prontas para saída!'}
-                  </p>
-                </div>
-              </div>
-              <span style={{ fontSize: '0.72rem', fontWeight: 800, padding: '4px 10px', borderRadius: '8px', background: 'var(--fundo-cinza, #f8fafc)', color: '#10b981', border: '1px solid var(--borda, #cbd5e1)' }}>
-                {metricas.tiposDiferentes} Categorias
+        <div className="clientes-stats-grid rel-kpi-grid-compact">
+          <div className="stat-card-pro card-green">
+            <div className="stat-icon-wrapper icon-green">📦</div>
+            <div className="stat-content">
+              <span className="stat-title">TOTAL DE PEÇAS</span>
+              <span className="stat-number">{metricas.totalPecas}</span>
+              <small className="stat-desc">Estoque físico total</small>
+            </div>
+          </div>
+
+          <div className="stat-card-pro card-amber">
+            <div className="stat-icon-wrapper icon-amber">🎨</div>
+            <div className="stat-content">
+              <span className="stat-title">VARIEDADE DE ITENS</span>
+              <span className="stat-number">{metricas.tiposDiferentes}</span>
+              <small className="stat-desc">Modelos cadastrados</small>
+            </div>
+          </div>
+
+          <div className="stat-card-pro card-purple">
+            <div className="stat-icon-wrapper icon-purple">🛠️</div>
+            <div className="stat-content">
+              <span className="stat-title">EM MANUTENÇÃO</span>
+              <span className="stat-number" style={{ color: metricas.emManutencao > 0 ? '#d97706' : '#10b981' }}>
+                {metricas.emManutencao}
               </span>
+              <small className="stat-desc">Necessitam reparo</small>
             </div>
           </div>
 
-          {/* 4 CARDS KPI BLINDADOS (GOLDEN RULE 1 & 2) */}
-          <div className="clientes-stats-grid">
-            <div className="stat-card-pro card-green">
-              <div className="stat-icon-wrapper icon-green">📦</div>
-              <div className="stat-content">
-                <span className="stat-title">TOTAL DE PEÇAS</span>
-                <strong className="stat-number">{metricas.totalPecas}</strong>
-                <small className="stat-desc">Estoque físico total</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-amber">
-              <div className="stat-icon-wrapper icon-amber">🎨</div>
-              <div className="stat-content">
-                <span className="stat-title">VARIEDADE DE TIPOS</span>
-                <strong className="stat-number">{metricas.tiposDiferentes}</strong>
-                <small className="stat-desc">Itens distintos</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-purple">
-              <div className="stat-icon-wrapper icon-purple">🛠️</div>
-              <div className="stat-content">
-                <span className="stat-title">EM MANUTENÇÃO</span>
-                <strong className="stat-number" style={{ color: metricas.emManutencao > 0 ? '#f59e0b' : '#10b981' }}>
-                  {metricas.emManutencao}
-                </strong>
-                <small className="stat-desc">Necessitam reparo</small>
-              </div>
-            </div>
-
-            <div className="stat-card-pro card-red">
-              <div className="stat-icon-wrapper icon-red">💰</div>
-              <div className="stat-content">
-                <span className="stat-title">INVESTIMENTO EM ACERVO</span>
-                <strong className="stat-number">R$ {metricas.investimentoTotal.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
-                <small className="stat-desc">Total investido em compras</small>
-              </div>
+          <div className="stat-card-pro card-red">
+            <div className="stat-icon-wrapper icon-red">💰</div>
+            <div className="stat-content">
+              <span className="stat-title">INVESTIMENTO TOTAL</span>
+              <span className="stat-number">R$ {metricas.investimentoTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+              <small className="stat-desc">Total investido em compras</small>
             </div>
           </div>
-
-          {/* 📊 WIDGET COMPACTO DE CATEGORIAS E TEMAS */}
-          <div className="rel-card-unificado">
-            <div className="rel-card-header">
-              <div>
-                <h3 className="rel-card-title">📊 Distribuição de Categorias &amp; Temas Mais Pedidos</h3>
-                <p className="rel-card-sub">Proporção de peças no estoque e popularidade por tema</p>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '14px' }}>
-              {/* CATEGORIAS */}
-              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>📦 Categorias Físicas</span>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {rankingCategorias.map(([cat, total], idx) => {
-                    const pct = metricas.totalPecas > 0 ? Math.round((total / metricas.totalPecas) * 100) : 0;
-                    return (
-                      <span key={idx} style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: 'var(--texto-principal, #0f172a)' }}>
-                        {cat}: <strong>{total} pçs ({pct}%)</strong>
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* TEMAS */}
-              <div style={{ background: 'var(--fundo-cinza, #f8fafc)', padding: '12px 14px', borderRadius: '12px', border: '1px solid var(--borda, #e2e8f0)' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 850, color: 'var(--texto-secundario, #334155)', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>🔥 Temas Campeões em Locação</span>
-                <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
-                  {rankingTemas.map(([tema, total], idx) => (
-                    <span key={idx} style={{ background: 'var(--fundo-card, #ffffff)', border: '1px solid var(--borda, #cbd5e1)', padding: '4px 10px', borderRadius: '8px', fontSize: '0.72rem', fontWeight: 800, color: '#10b981' }}>
-                      {tema}: <strong>{total} festas</strong>
-                    </span>
-                  ))}
-                  {rankingTemas.length === 0 && <span style={{ fontSize: '0.74rem', color: 'var(--texto-secundario, #94a3b8)' }}>Sem temas registrados.</span>}
-                </div>
-              </div>
-            </div>
-          </div>
-        </>
+        </div>
       )}
 
-      {/* TABELA DE INVENTÁRIO */}
+      {/* LISTAGEM DE INVENTÁRIO */}
       <div className="rel-card-unificado">
         <div className="rel-card-header">
           <div>
-            <h3 className="rel-card-title">📦 Controle de Inventário Físico &amp; Giro ({estoqueFiltrado.length})</h3>
+            <h3 className="rel-card-title">Controle de Inventário Físico &amp; Giro ({estoqueFiltrado.length})</h3>
             <p className="rel-card-sub">Lista detalhada de peças com volume de locações realizadas.</p>
           </div>
 
@@ -383,38 +311,56 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
               onClick={alternarIndicadores}
               className="rel-btn-action-outline"
             >
-              {mostrarIndicadores ? '👁️ Ocultar Indicadores' : '📊 Ver Indicadores & KPIs'}
+              {mostrarIndicadores ? '👁️ Ocultar KPIs' : '📊 Ver KPIs'}
             </button>
-            <button 
-              type="button" 
-              onClick={exportarCSVEstoque}
-              className="rel-btn-action-outline"
-            >
-              📊 Exportar Excel (CSV)
-            </button>
-            <button type="button" className="btn-export-pdf" onClick={exportarPDFEstoque}>
-              📄 Baixar Inventário (PDF)
-            </button>
+            <div className="rel-export-btn-group">
+              <button 
+                type="button" 
+                onClick={exportarCSVEstoque}
+                className="rel-btn-action-outline"
+                title="Exportar inventário em Excel (CSV)"
+              >
+                📊 Excel (CSV)
+              </button>
+              <button 
+                type="button" 
+                className="rel-btn-action-primary" 
+                onClick={exportarPDFEstoque}
+                title="Baixar Inventário em PDF"
+              >
+                📄 Baixar PDF
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* BARRA DE PESQUISA & FILTROS DE GIRO */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px', flexWrap: 'wrap', background: '#f8fafc', padding: '10px 14px', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '12px' }}>
-          <div style={{ flex: '1', minWidth: '220px' }}>
+        {/* BARRA DE PESQUISA & FILTROS */}
+        <div className="rel-estoque-subbar">
+          <div className="rel-estoque-search-box">
+            <i className="fas fa-search rel-search-icon"></i>
             <input 
               type="text" 
-              placeholder="🔍 Buscar peça por nome..." 
+              placeholder="Buscar peça por nome ou categoria..." 
               value={termoBusca}
               onChange={e => setTermoBusca(e.target.value)}
-              style={{ width: '100%', padding: '8px 14px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.8rem', background: '#ffffff', outline: 'none' }}
+              className="rel-estoque-search-input"
             />
+            {termoBusca && (
+              <button 
+                type="button" 
+                className="rel-clear-search-btn" 
+                onClick={() => setTermoBusca('')}
+              >
+                ✕
+              </button>
+            )}
           </div>
 
-          <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap' }}>
+          <div className="rel-estoque-filter-controls">
             <select
               value={filtroCategoria}
               onChange={e => setFiltroCategoria(e.target.value)}
-              style={{ padding: '6px 10px', borderRadius: '8px', border: '1px solid #cbd5e1', fontSize: '0.74rem', fontWeight: 'bold', color: '#0f172a', background: '#ffffff', outline: 'none' }}
+              className="rel-estoque-select"
             >
               <option value="TODAS">📦 Todas as Categorias</option>
               {categoriasDisponiveis.map((cat, idx) => (
@@ -422,80 +368,128 @@ const EstoqueTab = ({ mostrarIndicadores = true, alternarIndicadores }) => {
               ))}
             </select>
 
-            <button 
-              type="button" 
-              onClick={() => setFiltroStatus('TODOS')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroStatus === 'TODOS' ? '1.5px solid #0f172a' : '1px solid #cbd5e1', background: filtroStatus === 'TODOS' ? '#0f172a' : '#ffffff', color: filtroStatus === 'TODOS' ? '#ffffff' : '#334155', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
-            >
-              Todos ({estoqueListaCompleta.length})
-            </button>
+            <div className="rel-estoque-pills">
+              <button 
+                type="button" 
+                onClick={() => setFiltroStatus('TODOS')}
+                className={`rel-estoque-pill-btn ${filtroStatus === 'TODOS' ? 'active' : ''}`}
+              >
+                📋 Todos ({estoqueListaCompleta.length})
+              </button>
 
-            <button 
-              type="button" 
-              onClick={() => setFiltroStatus('ESTRELA')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroStatus === 'ESTRELA' ? '1.5px solid #16a34a' : '1px solid #cbd5e1', background: filtroStatus === 'ESTRELA' ? '#f0fdf4' : '#ffffff', color: '#15803d', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
-            >
-              🌟 Mais Alugadas
-            </button>
+              <button 
+                type="button" 
+                onClick={() => setFiltroStatus('ESTRELA')}
+                className={`rel-estoque-pill-btn estrela ${filtroStatus === 'ESTRELA' ? 'active' : ''}`}
+              >
+                🌟 Mais Alugadas
+              </button>
 
-            <button 
-              type="button" 
-              onClick={() => setFiltroStatus('MANUTENCAO')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroStatus === 'MANUTENCAO' ? '1.5px solid #d97706' : '1px solid #cbd5e1', background: filtroStatus === 'MANUTENCAO' ? '#fef3c7' : '#ffffff', color: '#b45309', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
-            >
-              🛠️ Em Reparo ({metricas.emManutencao})
-            </button>
+              <button 
+                type="button" 
+                onClick={() => setFiltroStatus('MANUTENCAO')}
+                className={`rel-estoque-pill-btn reparo ${filtroStatus === 'MANUTENCAO' ? 'active' : ''}`}
+              >
+                🛠️ Em Reparo ({metricas.emManutencao})
+              </button>
 
-            <button 
-              type="button" 
-              onClick={() => setFiltroStatus('PARADO')}
-              style={{ padding: '6px 12px', borderRadius: '8px', border: filtroStatus === 'PARADO' ? '1.5px solid #64748b' : '1px solid #cbd5e1', background: filtroStatus === 'PARADO' ? '#f1f5f9' : '#ffffff', color: '#475569', fontSize: '0.74rem', fontWeight: '800', cursor: 'pointer' }}
-            >
-              💤 Acervo Parado
-            </button>
+              <button 
+                type="button" 
+                onClick={() => setFiltroStatus('PARADO')}
+                className={`rel-estoque-pill-btn parado ${filtroStatus === 'PARADO' ? 'active' : ''}`}
+              >
+                💤 Acervo Parado
+              </button>
+            </div>
           </div>
         </div>
 
-        <div className="table-container" style={{ marginTop: '10px' }}>
-          <table className="custom-table table-pro">
+        {/* CONTAINER DA LISTA/TABELA ESTRUTURADA */}
+        <div className="rel-table-container-responsive">
+          <table className="rel-estoque-table">
             <thead>
               <tr>
-                <th>ITEM / PRODUTO</th>
-                <th style={{textAlign: 'center'}}>CATEGORIA</th>
-                <th style={{textAlign: 'center'}}>QTD FÍSICA</th>
-                <th style={{textAlign: 'center'}}>GIRO (LOCAÇÕES)</th>
-                <th style={{textAlign: 'center'}}>STATUS</th>
+                <th style={{ width: '36%' }}>ITEM / PRODUTO</th>
+                <th style={{ width: '18%', textAlign: 'center' }}>CATEGORIA</th>
+                <th style={{ width: '14%', textAlign: 'center' }}>QTD FÍSICA</th>
+                <th style={{ width: '16%', textAlign: 'center' }}>GIRO (LOCAÇÕES)</th>
+                <th style={{ width: '16%', textAlign: 'center' }}>STATUS</th>
               </tr>
             </thead>
             <tbody>
               {estoqueFiltrado.length === 0 ? (
                 <tr>
-                  <td colSpan="5" style={{textAlign: 'center', padding: '30px', color: '#94a3b8'}}>Nenhum item encontrado com os filtros aplicados.</td>
+                  <td colSpan="5" className="rel-table-empty-cell">
+                    Nenhum item encontrado para os filtros aplicados.
+                  </td>
                 </tr>
               ) : (
                 estoqueFiltrado.map((item, idx) => (
-                  <tr key={idx}>
-                    <td>
-                      <strong style={{color: '#0f172a'}}>{item.nome}</strong>
-                      {item.giroClass === 'ESTRELA' && (
-                        <span style={{ marginLeft: '8px', fontSize: '0.65rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px', background: '#dcfce7', color: '#15803d' }}>
-                          🌟 Alta Demanda
+                  <tr key={idx} className="rel-estoque-row">
+                    {/* CÉLULA PRINCIPAL ESTRUTURADA */}
+                    <td className="rel-cell-produto">
+                      {/* 1. ZONA SUPERIOR: CATEGORIA + QTD (ESQ) | STATUS (DIR) */}
+                      <div className="rel-est-header-zone">
+                        <div className="rel-est-meta-left">
+                          <span className="rel-est-cat-badge">{item.categoria}</span>
+                          <span className="rel-est-qtd-pill">
+                            <strong>{item.quantidade}</strong> pç{item.quantidade > 1 ? 's' : ''} em estoque
+                          </span>
+                        </div>
+                        <span className={`rel-status-pill ${item.status === 'Disponível' ? 'ativo' : 'inativo'}`}>
+                          {item.status === 'Disponível' ? '🟢 Disponível' : '🟡 Reparo'}
                         </span>
-                      )}
-                      {item.giroClass === 'PARADO' && (
-                        <span style={{ marginLeft: '8px', fontSize: '0.65rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '6px', background: '#f1f5f9', color: '#64748b' }}>
-                          💤 Sem saída recente
-                        </span>
-                      )}
+                      </div>
+
+                      {/* 2. ZONA INFERIOR: NOME + DEMANDA (ESQ) | GIRO + VALOR (DIR) */}
+                      <div className="rel-est-body-zone">
+                        <div className="rel-est-info-left">
+                          <div className="rel-est-nome-title">{item.nome}</div>
+                          {item.giroClass === 'ESTRELA' && (
+                            <span className="rel-est-giro-tag estrela">🌟 Alta Demanda</span>
+                          )}
+                          {item.giroClass === 'PARADO' && (
+                            <span className="rel-est-giro-tag parado">💤 Sem saída recente</span>
+                          )}
+                        </div>
+
+                        <div className="rel-est-info-right">
+                          <div className={`rel-est-giro-count ${item.qtdLocacoes > 0 ? 'positivo' : 'neutro'}`}>
+                            {item.qtdLocacoes > 0 ? `${item.qtdLocacoes}x locado` : '0 locações'}
+                          </div>
+                          {item.valorLocacao > 0 && (
+                            <span className="rel-est-valor-locacao">
+                              Locação: R$ {item.valorLocacao.toFixed(2).replace('.', ',')}
+                            </span>
+                          )}
+                        </div>
+                      </div>
                     </td>
-                    <td style={{textAlign: 'center'}}><span className="badge-categoria">{item.categoria}</span></td>
-                    <td style={{textAlign: 'center', fontWeight: '850', color: item.quantidade <= 1 ? '#ef4444' : '#0f172a'}}>{item.quantidade}</td>
-                    <td style={{textAlign: 'center', fontWeight: '850', color: item.qtdLocacoes > 0 ? '#10b981' : '#94a3b8'}}>
-                      {item.qtdLocacoes}x
+
+                    {/* CÉLULAS DESKTOP */}
+                    <td className="desktop-only-col">
+                      <div className="rel-est-nome-title">{item.nome}</div>
                     </td>
-                    <td style={{textAlign: 'center'}}>
-                      <span className={`badge-dre ${item.status === 'Disponível' ? 'receita' : 'despesa'}`}>
-                        {item.status === 'Disponível' ? '🟢 Disponível' : '🟡 Reparo'}
+
+                    <td className="desktop-only-col" style={{ textAlign: 'center' }}>
+                      <span className="rel-est-cat-badge">{item.categoria}</span>
+                    </td>
+
+                    <td className="desktop-only-col" style={{ textAlign: 'center' }}>
+                      <span className={`rel-estoque-qtd-badge ${item.quantidade <= 1 ? 'alerta' : ''}`}>
+                        {item.quantidade} pç{item.quantidade > 1 ? 's' : ''}
+                      </span>
+                    </td>
+
+                    <td className="desktop-only-col" style={{ textAlign: 'center' }}>
+                      <span className={`rel-est-giro-count ${item.qtdLocacoes > 0 ? 'positivo' : 'neutro'}`}>
+                        {item.qtdLocacoes}x locado
+                      </span>
+                    </td>
+
+                    <td className="desktop-only-col" style={{ textAlign: 'center' }}>
+                      <span className={`rel-status-pill ${item.status === 'Disponível' ? 'ativo' : 'inativo'}`}>
+                        {item.status === 'Disponível' ? '🟢 Disponível' : '🟡 Em Reparo'}
                       </span>
                     </td>
                   </tr>

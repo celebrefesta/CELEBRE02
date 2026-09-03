@@ -15,6 +15,13 @@ import ModalBipagemGalpao from './ModalBipagemGalpao';
 import TimelineLogistica from './TimelineLogistica';
 import ModalLightboxFotos from './ModalLightboxFotos';
 
+// 🟢 ÍCONE OFICIAL DO WHATSAPP VETORIAL
+export const IconeWhatsApp = ({ size = 16, color = "#25D366" }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" fill={color} style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}>
+    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+  </svg>
+);
+
 const Logistica = () => {
   const navigate = useNavigate();
 
@@ -26,10 +33,10 @@ const Logistica = () => {
   const [locacoes, setLocacoes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [termoBusca, setTermoBusca] = useState('');
-  const [filtroTempo, setFiltroTempo] = useState('mes_atual'); // 'hoje' | 'mes_atual' | 'tudo'
+  const [filtroTempo, setFiltroTempo] = useState('tudo'); // 'hoje' | 'mes_atual' | 'tudo' | 'atrasados'
   const [filtroMotorista, setFiltroMotorista] = useState('todos');
   const [vistaAtual, setVistaAtual] = useState('kanban'); // 'kanban' | 'lista' | 'timeline'
-  const [etapaMobileAtiva, setEtapaMobileAtiva] = useState('preparacao'); // 'orcamento' | 'confirmado' | 'preparacao' | 'entregue' | 'finalizado'
+  const [etapaMobileAtiva, setEtapaMobileAtiva] = useState('confirmado'); // 'confirmado' | 'preparacao' | 'entregue' | 'finalizado'
   
   const [checklistModalId, setChecklistModalId] = useState(null);
   const [relatorioModalLoc, setRelatorioModalLoc] = useState(null);
@@ -404,7 +411,11 @@ const Logistica = () => {
 
   const locacoesFiltradas = useMemo(() => {
     return locacoes.filter(loc => {
-      // 1. Busca Textual (Cliente, Pedido, Tema, Telefone, Cidade)
+      // 1. Excluir Orçamentos e Cancelados da Esteira Logística (Galpão só opera pedidos confirmados/pagos)
+      const st = String(loc.status || '').toLowerCase().trim();
+      if (st.includes('orcam') || st.includes('cancel') || loc.isOrcamentoVencido) return false;
+
+      // 2. Busca Textual
       if (termoBusca.trim() !== '') {
         const busca = termoBusca.toLowerCase();
         const match = 
@@ -418,18 +429,23 @@ const Logistica = () => {
         if (!match) return false;
       }
 
-      // 2. Filtro de Tempo
+      // 3. Filtro de Tempo
       if (loc.dataRetirada || loc.dataDevolucao) {
         if (filtroTempo === 'hoje' && !(loc.dataRetirada === hojeStr || (loc.dataDevolucao === hojeStr && loc.status === 'entregue'))) return false;
-        if (filtroTempo === 'mes_atual' && !(loc.dataRetirada.startsWith(mesAtual) || (loc.dataDevolucao && loc.dataDevolucao.startsWith(mesAtual)))) return false;
+        if (filtroTempo === 'mes_atual') {
+          const isDoMes = (loc.dataRetirada && loc.dataRetirada.startsWith(mesAtual)) || (loc.dataDevolucao && loc.dataDevolucao.startsWith(mesAtual));
+          const isFinalizado = st.includes('finaliz') || st.includes('devolv');
+          if (!isDoMes && isFinalizado) return false;
+        }
         if (filtroTempo === 'atrasados') {
           const dataRef = loc.dataDevolucao || loc.dataRetirada;
-          const isAtrasado = dataRef && dataRef < hojeStr && loc.status !== 'finalizado' && loc.status !== 'cancelado' && loc.status !== 'orcamento';
+          const isFinalizado = st.includes('finaliz') || st.includes('devolv');
+          const isAtrasado = dataRef && dataRef < hojeStr && !isFinalizado;
           if (!isAtrasado) return false;
         }
       }
 
-      // 3. Filtro por Motorista
+      // 4. Filtro por Motorista
       if (filtroMotorista !== 'todos') {
         const mot = loc.logistica?.motoristaNome || '';
         if (mot.toLowerCase() !== filtroMotorista.toLowerCase()) return false;
@@ -439,13 +455,62 @@ const Logistica = () => {
     });
   }, [locacoes, termoBusca, filtroTempo, filtroMotorista, hojeStr, mesAtual]);
 
-  // 📦 ESTEIRA OPERACIONAL DE GALPÃO (4 ETAPAS REAIS)
-  const colunas = useMemo(() => ({
-    confirmado: locacoesFiltradas.filter(l => l.status === 'confirmado' || l.status === 'aprovado' || l.status === 'a_separar'),
-    preparacao: locacoesFiltradas.filter(l => l.status === 'preparacao' || l.status === 'em_preparacao'),
-    entregue: locacoesFiltradas.filter(l => l.status === 'entregue' || l.status === 'em_transito'),
-    finalizado: locacoesFiltradas.filter(l => l.status === 'finalizado' || l.status === 'devolvido'),
-  }), [locacoesFiltradas]);
+  // 📦 ESTEIRA OPERACIONAL DE GALPÃO (4 ETAPAS REAIS COM REGRA DE DATAS BLINDADA)
+  const colunas = useMemo(() => {
+    const list = locacoesFiltradas;
+
+    return {
+      confirmado: list.filter(l => {
+        const st = String(l.status || '').toLowerCase().trim();
+        if (st.includes('finaliz') || st.includes('devolv') || st.includes('concluid')) return false;
+        if (st === 'entregue' || st === 'em_transito' || st.includes('transito') || st.includes('entreg') || st.includes('rua')) return false;
+        if (st === 'preparacao' || st === 'em_preparacao' || st.includes('prepar') || st.includes('separ')) return false;
+        
+        // 🚨 SE A FESTA JÁ PASSOU, NÃO PODE MAIS FICAR EM 'A SEPARAR' (O processo parou no passado)
+        const dataSaida = l.dataRetirada || l.dataEvento;
+        if (dataSaida && dataSaida < hojeStr) return false;
+
+        return true;
+      }),
+      preparacao: list.filter(l => {
+        const st = String(l.status || '').toLowerCase().trim();
+        if (st.includes('finaliz') || st.includes('devolv') || st.includes('concluid')) return false;
+        if (st === 'entregue' || st === 'em_transito' || st.includes('transito') || st.includes('entreg') || st.includes('rua')) return false;
+        
+        const isEmPrep = st === 'preparacao' || st === 'em_preparacao' || st.includes('prepar') || st.includes('separ');
+        const dataSaida = l.dataRetirada || l.dataEvento;
+        if (isEmPrep && dataSaida && dataSaida < hojeStr) return false;
+
+        return isEmPrep;
+      }),
+      entregue: list.filter(l => {
+        const st = String(l.status || '').toLowerCase().trim();
+        if (st.includes('finaliz') || st.includes('devolv') || st.includes('concluid')) return false;
+        
+        const isNaRua = st === 'entregue' || st === 'em_transito' || st.includes('transito') || st.includes('entreg') || st.includes('rua');
+        
+        // 🚨 Se a data da festa JÁ PASSOU e o pedido ainda não foi finalizado, ele é alocado em 'Na Rua / Evento Realizado' com alerta crítico de esteira parada!
+        const dataSaida = l.dataRetirada || l.dataEvento;
+        const festaJaOcorreuNoPassado = Boolean(dataSaida && dataSaida < hojeStr);
+
+        return isNaRua || festaJaOcorreuNoPassado;
+      }),
+      finalizado: list.filter(l => {
+        const st = String(l.status || '').toLowerCase().trim();
+        return st === 'finalizado' || st === 'devolvido' || st.includes('finaliz') || st.includes('devolv') || st.includes('concluid');
+      }),
+    };
+  }, [locacoesFiltradas, hojeStr]);
+
+  // Se a etapa ativa mobile não tiver itens e outra tiver, seleciona automaticamente a etapa com itens
+  useEffect(() => {
+    if (colunas[etapaMobileAtiva]?.length === 0) {
+      if (colunas.confirmado.length > 0) setEtapaMobileAtiva('confirmado');
+      else if (colunas.preparacao.length > 0) setEtapaMobileAtiva('preparacao');
+      else if (colunas.entregue.length > 0) setEtapaMobileAtiva('entregue');
+      else if (colunas.finalizado.length > 0) setEtapaMobileAtiva('finalizado');
+    }
+  }, [colunas, etapaMobileAtiva]);
 
   const locacaoModalAtiva = locacoes.find(l => l.id === checklistModalId);
 
@@ -515,33 +580,95 @@ const Logistica = () => {
             ⚡ Bipar Galpão
           </button>
 
-          {/* 📄 BOTÃO SECUNDÁRIO: ROMANEIO DE ROTA */}
-          <button 
-            type="button" 
-            className="btn-log-secondary"
-            onClick={() => {
-              const res = gerarRomaneioPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null, motorista: filtroMotorista !== 'todos' ? filtroMotorista : null }, parametros, 'preview');
-              abrirPDFEmNovaAba(res);
-            }}
-            title="Visualizar e Imprimir Romaneio de Carga e Rota do Motorista em PDF"
-          >
-            📋 Romaneio (PDF)
-          </button>
+          <div className="kanban-pdf-btn-group">
+            {/* 📄 BOTÃO SECUNDÁRIO: ROMANEIO DE ROTA */}
+            <button 
+              type="button" 
+              className="btn-log-secondary"
+              onClick={() => {
+                const res = gerarRomaneioPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null, motorista: filtroMotorista !== 'todos' ? filtroMotorista : null }, parametros, 'preview');
+                abrirPDFEmNovaAba(res);
+              }}
+              title="Visualizar e Imprimir Romaneio de Carga e Rota do Motorista em PDF"
+            >
+              📋 Romaneio (PDF)
+            </button>
 
-          {/* 📦 BOTÃO SECUNDÁRIO: MAPA GERAL DE SEPARAÇÃO */}
-          <button 
-            type="button" 
-            className="btn-log-secondary"
-            onClick={() => {
-              const res = gerarFolhaSeparacaoGalpaoPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null }, parametros, 'preview');
-              abrirPDFEmNovaAba(res);
-            }}
-            title="Visualizar e Imprimir Folha de Separação de Peças de Galpão em PDF"
-          >
-            📦 Mapa de Separação (PDF)
-          </button>
+            {/* 📦 BOTÃO SECUNDÁRIO: MAPA GERAL DE SEPARAÇÃO */}
+            <button 
+              type="button" 
+              className="btn-log-secondary"
+              onClick={() => {
+                const res = gerarFolhaSeparacaoGalpaoPDF(locacoesFiltradas, { data: filtroTempo === 'hoje' ? hojeStr : null }, parametros, 'preview');
+                abrirPDFEmNovaAba(res);
+              }}
+              title="Visualizar e Imprimir Folha de Separação de Peças de Galpão em PDF"
+            >
+              📦 Mapa Separação (PDF)
+            </button>
+          </div>
         </div>
       </header>
+
+      {/* 📊 CARDS DE ESTATÍSTICAS KPI (PADRÃO CELEBRE - 1 LINHA NO DESKTOP / 2 COLUNAS NO MOBILE) */}
+      <div className="clientes-stats-grid">
+        <div className="stat-card-pro border-blue">
+          <div className="stat-icon-wrapper icon-blue">
+            <span style={{ fontSize: '20px' }}>📦</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">A SEPARAR</span>
+            <span className="stat-value">{colunas.confirmado.length}</span>
+            <span className="stat-sub">Prontos p/ galpão</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-amber">
+          <div className="stat-icon-wrapper icon-amber">
+            <span style={{ fontSize: '20px' }}>⚙️</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">EM SEPARAÇÃO</span>
+            <span className="stat-value">{colunas.preparacao.length}</span>
+            <span className="stat-sub">Na esteira de carga</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-purple">
+          <div className="stat-icon-wrapper icon-purple">
+            <span style={{ fontSize: '20px' }}>🚚</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">NA RUA / EVENTO</span>
+            <span className="stat-value">{colunas.entregue.length}</span>
+            <span className="stat-sub">Em trânsito e festas</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-green">
+          <div className="stat-icon-wrapper icon-green">
+            <span style={{ fontSize: '20px' }}>✅</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">DEVOLVIDOS</span>
+            <span className="stat-value">{colunas.finalizado.length}</span>
+            <span className="stat-sub">Retornados ao acervo</span>
+          </div>
+        </div>
+
+        <div className="stat-card-pro border-red">
+          <div className="stat-icon-wrapper icon-red">
+            <span style={{ fontSize: '20px' }}>🚨</span>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">ATRASADOS</span>
+            <span className="stat-value" style={{ color: pedidosAtrasados.length > 0 ? '#e11d48' : 'inherit' }}>
+              {pedidosAtrasados.length}
+            </span>
+            <span className="stat-sub">{pedidosAtrasados.length === 1 ? '1 devolução pendente' : `${pedidosAtrasados.length} pendentes`}</span>
+          </div>
+        </div>
+      </div>
 
       {/* 🎛️ BARRA INTEGRADA DE BUSCA E CONTROLES (PADRÃO CELEBRE) */}
       <div className="logistica-filter-panel">
@@ -702,42 +829,191 @@ const Logistica = () => {
           verificarSeEhEntrega={verificarSeEhEntrega}
           obterEnderecoCompleto={obterEnderecoCompleto}
         />
-      ) : (
-        <>
-          {/* 📱 PÍLULAS DE ETAPAS EXCLUSIVAS PARA O CELULAR */}
-          <div className="mobile-etapas-bar">
-            {etapasInfo.map(et => (
-              <button
-                key={et.key}
-                type="button"
-                className={`mobile-etapa-pill ${etapaMobileAtiva === et.key ? 'ativa' : ''}`}
-                onClick={() => setEtapaMobileAtiva(et.key)}
-                style={{
-                  borderTop: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
-                  borderRight: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
-                  borderBottom: `1.5px solid ${etapaMobileAtiva === et.key ? et.cor : '#e2e8f0'}`,
-                  borderLeft: `4px solid ${et.cor}`
-                }}
-              >
-                <span className="mobile-etapa-nome">{et.nome.replace(/^\d+\.\s*/, '')}</span>
-                <span 
-                  className="mobile-etapa-count"
-                  style={{ background: et.badgeBg, color: et.badgeColor }}
-                >
-                  {et.count}
-                </span>
-              </button>
-            ))}
+      ) : vistaAtual === 'lista' ? (
+        /* 📋 MODO ROTEIRO: TABELA EXECUTIVA E COMPACTA DE ENTREGAS & DEVOLUÇÕES */
+        <div className="roteiro-table-card fade-in">
+          <div className="roteiro-table-header">
+            <div>
+              <h3 className="roteiro-table-title">📋 Roteiro de Entregas &amp; Galpão</h3>
+              <p className="roteiro-table-sub">Visão consolidada e compacta de todos os contratos em trânsito e devolução ({locacoesFiltradas.length} pedidos).</p>
+            </div>
           </div>
 
-          {/* 📱 MODO CELULAR: LISTAGEM DIRETA DA ETAPA SELECIONADA */}
-          <div className="mobile-only-col-view">
-            <div className="mobile-col-header">
-              <span className="dot" style={{ background: etapasInfo.find(e => e.key === etapaMobileAtiva)?.cor }}></span>
-              <h3>{etapasInfo.find(e => e.key === etapaMobileAtiva)?.nome}</h3>
-              <span className="badge-count">{colunas[etapaMobileAtiva]?.length || 0}</span>
-            </div>
+          <div className="roteiro-table-responsive">
+            <table className="roteiro-table">
+              <thead>
+                <tr>
+                  <th style={{ width: '10%' }}>CONTRATO</th>
+                  <th style={{ width: '22%' }}>CLIENTE &amp; TEMA</th>
+                  <th style={{ width: '13%', textAlign: 'center' }}>ETAPA ATUAL</th>
+                  <th style={{ width: '16%' }}>SAÍDA &amp; DEVOLUÇÃO</th>
+                  <th style={{ width: '23%' }}>MODALIDADE &amp; ENDEREÇO</th>
+                  <th style={{ width: '16%', textAlign: 'center' }}>AÇÃO</th>
+                </tr>
+              </thead>
+              <tbody>
+                {locacoesFiltradas.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="roteiro-empty-cell">
+                      🍃 Nenhum pedido localizado para os filtros selecionados.
+                    </td>
+                  </tr>
+                ) : (
+                  locacoesFiltradas.map(loc => {
+                    const isEntrega = verificarSeEhEntrega ? verificarSeEhEntrega(loc) : (loc.logistica?.tipo === 'entrega');
+                    const dataBr = loc.dataRetirada ? loc.dataRetirada.split('-').reverse().join('/') : '--/--/----';
+                    const dataDevBr = loc.dataDevolucao ? loc.dataDevolucao.split('-').reverse().join('/') : '';
+                    const enderecoFormatado = obterEnderecoCompleto ? obterEnderecoCompleto(loc) : (loc.logistica?.endereco || loc.endereco || '');
 
+                    // Mapeamento da etapa
+                    const st = String(loc.status || '').toLowerCase().trim();
+                    const dataSaida = loc.dataRetirada || loc.dataEvento;
+                    const eventoPassouSemFinalizar = Boolean(dataSaida && dataSaida < hojeStr && !st.includes('finaliz') && !st.includes('devolv'));
+
+                    let etapaNome = '1. A Separar';
+                    let etapaCor = '#3b82f6';
+                    let etapaBg = '#eff6ff';
+                    let acaoTxt = 'Separar ➔';
+                    let proximoStatus = 'preparacao';
+
+                    if (eventoPassouSemFinalizar) {
+                      etapaNome = '🚨 Esteira Parada';
+                      etapaCor = '#dc2626';
+                      etapaBg = '#fee2e2';
+                      acaoTxt = 'Devolver ➔';
+                      proximoStatus = 'finalizado';
+                    } else if (st === 'preparacao' || st === 'em_preparacao' || st.includes('prepar') || st.includes('separ')) {
+                      etapaNome = '2. Em Separação';
+                      etapaCor = '#f59e0b';
+                      etapaBg = '#fef3c7';
+                      acaoTxt = 'Enviar ➔';
+                      proximoStatus = 'entregue';
+                    } else if (st === 'entregue' || st === 'em_transito' || st.includes('transito') || st.includes('entreg') || st.includes('rua')) {
+                      etapaNome = '3. Na Rua';
+                      etapaCor = '#8b5cf6';
+                      etapaBg = '#f5f3ff';
+                      acaoTxt = 'Receber ➔';
+                      proximoStatus = 'finalizado';
+                    } else if (st === 'finalizado' || st === 'devolvido' || st.includes('finaliz') || st.includes('devolv')) {
+                      etapaNome = '4. Devolvido';
+                      etapaCor = '#10b981';
+                      etapaBg = '#f0fdf4';
+                      acaoTxt = 'Concluído';
+                      proximoStatus = null;
+                    }
+
+                    return (
+                      <tr key={loc.id} className={`roteiro-row ${eventoPassouSemFinalizar ? 'roteiro-row-esteira-parada' : ''}`}>
+                        <td>
+                          <span className="roteiro-badge-id">#{loc.numeroPedido || loc.id.substring(0, 5).toUpperCase()}</span>
+                        </td>
+                        <td>
+                          <div className="roteiro-cliente-nome">{loc.clienteNome || 'Cliente'}</div>
+                          <div className="roteiro-subtext">{loc.tema || 'Decoração'}</div>
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <span className="roteiro-etapa-pill" style={{ background: etapaBg, color: etapaCor, borderColor: etapaCor }}>
+                            {etapaNome}
+                          </span>
+                        </td>
+                        <td>
+                          <div className="roteiro-data-text">📅 Saída: {dataBr} {loc.horarioRetirada ? `(${loc.horarioRetirada})` : ''}</div>
+                          {dataDevBr && (
+                            <div className="roteiro-subtext" style={{ marginTop: '2px', color: '#64748b' }}>
+                              🔄 Devolução: {dataDevBr} {loc.horarioDevolucao ? `(${loc.horarioDevolucao})` : ''}
+                            </div>
+                          )}
+                        </td>
+                        <td>
+                          <div className="roteiro-modalidade-row">
+                            <span className={`k-tag ${isEntrega ? 'tag-entrega' : 'tag-loja'}`}>
+                              {isEntrega ? '🚚 Entrega' : '🏬 Loja'}
+                            </span>
+                            {loc.logistica?.motoristaNome && (
+                              <span className="badge-micro badge-micro-motorista">
+                                🚗 {loc.logistica.motoristaNome}
+                              </span>
+                            )}
+                          </div>
+                          {isEntrega && enderecoFormatado && (
+                            <div className="roteiro-endereco-text" title={enderecoFormatado}>
+                              📍 {enderecoFormatado}
+                            </div>
+                          )}
+                        </td>
+                        <td style={{ textAlign: 'center' }}>
+                          <div className="roteiro-acoes-group">
+                            {proximoStatus ? (
+                              <button
+                                type="button"
+                                className="btn-roteiro-acao"
+                                style={{ background: etapaCor, color: '#ffffff' }}
+                                onClick={() => {
+                                  if (proximoStatus === 'finalizado') abrirCheckin(loc, 'VOLTA');
+                                  else if (proximoStatus === 'entregue') moverCard(loc.id, 'entregue');
+                                  else moverCard(loc.id, 'preparacao');
+                                }}
+                              >
+                                {acaoTxt}
+                              </button>
+                            ) : (
+                              <span className="roteiro-concluido-pill">
+                                ✅ Concluído
+                              </span>
+                            )}
+                            {isEntrega && (
+                              <button type="button" onClick={() => abrirGPS(loc)} className="btn-roteiro-icon gps" title="Abrir no Google Maps">
+                                📍
+                              </button>
+                            )}
+                            <button type="button" onClick={() => abrirWhatsApp(loc)} className="btn-roteiro-icon wpp" title="Contatar no WhatsApp">
+                              <IconeWhatsApp size={16} />
+                            </button>
+                            <button type="button" onClick={() => navigate(`/locacoes/editar/${loc.id}`)} className="btn-roteiro-icon det" title="Ver Detalhes do Pedido">
+                              🔍
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* 🖥️ MODO KANBAN TRADICIONAL (MOBILE COM PÍLULAS E DESKTOP COM 4 COLUNAS VERTICAIS) */
+        <>
+          {/* 📱 SELETOR DE ETAPAS OPERACIONAIS EM GRID SIMÉTRICO NO CELULAR */}
+          <div className="mobile-etapas-grid">
+            {etapasInfo.map(et => {
+              const isAtiva = etapaMobileAtiva === et.key;
+              return (
+                <button
+                  key={et.key}
+                  type="button"
+                  className={`mobile-etapa-btn ${isAtiva ? 'ativa' : ''}`}
+                  onClick={() => setEtapaMobileAtiva(et.key)}
+                  style={{
+                    '--etapa-border-cor': et.cor,
+                    borderLeftColor: et.cor
+                  }}
+                >
+                  <span className="mobile-etapa-nome">{et.nome}</span>
+                  <span 
+                    className="mobile-etapa-badge"
+                    style={{ background: isAtiva ? et.cor : et.badgeBg, color: isAtiva ? '#ffffff' : et.badgeColor }}
+                  >
+                    {et.count}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* 📱 MODO CELULAR: LISTAGEM DA ETAPA SELECIONADA */}
+          <div className="mobile-only-col-view">
             <div className="mobile-col-body">
               {colunas[etapaMobileAtiva]?.length === 0 ? (
                 <div className="coluna-vazia-aviso">
@@ -777,7 +1053,7 @@ const Logistica = () => {
                     onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                     onAbrirGPS={() => abrirGPS(loc)}
                     onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                    isModoLista={true} 
+                    isModoLista={false} 
                     parametros={parametros}
                     onAbrirPreviewPDF={abrirPDFEmNovaAba}
                     onAbrirLightboxFotos={abrirLightboxFotos}
@@ -787,8 +1063,8 @@ const Logistica = () => {
             </div>
           </div>
 
-          {/* 🖥️ MODO DESKTOP (KANBAN POLIDO DE 4 ETAPAS OPERACIONAIS) */}
-          <div className={`kanban-board desktop-only-board ${vistaAtual === 'lista' ? 'board-lista' : 'board-colunas'}`}>
+          {/* 🖥️ MODO DESKTOP (KANBAN POLIDO DE 4 COLUNAS VERTICAIS LADO A LADO) */}
+          <div className="kanban-board desktop-only-board board-colunas">
             
             {/* COLUNA 1: A SEPARAR / CONFIRMADOS */}
             <div className="kanban-col">
@@ -817,7 +1093,7 @@ const Logistica = () => {
                       onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                       onAbrirGPS={() => abrirGPS(loc)}
                       onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                      isModoLista={vistaAtual === 'lista'} 
+                      isModoLista={false} 
                       parametros={parametros}
                       onAbrirPreviewPDF={abrirPDFEmNovaAba}
                       onAbrirLightboxFotos={abrirLightboxFotos}
@@ -854,7 +1130,7 @@ const Logistica = () => {
                       onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                       onAbrirGPS={() => abrirGPS(loc)}
                       onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                      isModoLista={vistaAtual === 'lista'} 
+                      isModoLista={false} 
                       parametros={parametros}
                       onAbrirPreviewPDF={abrirPDFEmNovaAba}
                       onAbrirLightboxFotos={abrirLightboxFotos}
@@ -891,7 +1167,7 @@ const Logistica = () => {
                       onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                       onAbrirGPS={() => abrirGPS(loc)}
                       onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                      isModoLista={vistaAtual === 'lista'} 
+                      isModoLista={false} 
                       parametros={parametros}
                       onAbrirPreviewPDF={abrirPDFEmNovaAba}
                       onAbrirLightboxFotos={abrirLightboxFotos}
@@ -927,7 +1203,7 @@ const Logistica = () => {
                       onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
                       onAbrirGPS={() => abrirGPS(loc)}
                       onAbrirWhatsApp={() => abrirWhatsApp(loc)}
-                      isModoLista={vistaAtual === 'lista'} 
+                      isModoLista={false} 
                       parametros={parametros}
                       onAbrirPreviewPDF={abrirPDFEmNovaAba}
                       onAbrirLightboxFotos={abrirLightboxFotos}
@@ -1206,9 +1482,17 @@ const CartaoKanban = ({
   const temAssinatura = !!loc.logistica?.assinaturaEntrega;
   const enderecoFormatado = obterEnderecoCompleto ? obterEnderecoCompleto(loc) : (loc.logistica?.endereco || loc.endereco || '');
 
+  const ehEsteiraParada = (ehAtrasoDevolucao || eventoJaPassou) && !isFinal;
+
   return (
-    <div className={`k-card ${temAvaria ? 'card-com-avaria' : ''} ${temFalta ? 'card-com-falta' : ''} ${isModoLista ? 'card-modo-lista' : ''}`}>
-      {getAlertaUrgencia()}
+    <div className={`k-card ${temAvaria ? 'card-com-avaria' : ''} ${temFalta ? 'card-com-falta' : ''} ${isModoLista ? 'card-modo-lista' : ''} ${ehEsteiraParada ? 'k-card-esteira-parada' : ''}`}>
+      {ehEsteiraParada ? (
+        <div className="alerta-esteira-parada-topo">
+          🚨 ESTEIRA PARADA (Festa em {dataBr})
+        </div>
+      ) : (
+        getAlertaUrgencia()
+      )}
       {temFalta && <div className="alerta-urgente falta-badge">❌ FALTAM PEÇAS</div>}
       {temAvaria && !temFalta && <div className="alerta-urgente avaria-badge">⚠️ AVARIAS</div>}
 
@@ -1261,12 +1545,16 @@ const CartaoKanban = ({
         </div>
       )}
 
-      {/* DATA ESSENCIAL */}
-      <div className="k-card-info-compact">
-        <div className="info-linha">
-          <span>📅 Data:</span> 
-          <strong>{dataBr} {loc.horarioRetirada ? `às ${loc.horarioRetirada}` : ''}</strong>
-        </div>
+      {/* LINHA DE METADADOS & DATA DO EVENTO */}
+      <div className="k-card-info-meta">
+        <span className="k-meta-chip">
+          📅 {dataBr} {loc.horarioRetirada ? `às ${loc.horarioRetirada}` : ''}
+        </span>
+        {isEntrega && (loc.logistica?.bairro || loc.bairro || loc.logistica?.cidade || loc.cidade) && (
+          <span className="k-meta-chip location">
+            📍 {loc.logistica?.bairro || loc.bairro || loc.logistica?.cidade || loc.cidade}
+          </span>
+        )}
       </div>
 
       {/* 🚨 CARD DE AVISO DE ATRASO CRÍTICO & CONFERÊNCIA ITEM A ITEM (BOTÃO ÚNICO) */}
@@ -1431,7 +1719,7 @@ const CartaoKanban = ({
                 style={{ flex: 1, padding: '7px 6px', fontSize: '0.74rem', backgroundColor: '#f0fdf4', color: '#16a34a', borderColor: '#bbf7d0', fontWeight: '800', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}
                 title="Chamar cliente no WhatsApp"
               >
-                💬 WhatsApp
+                <IconeWhatsApp size={15} /> WhatsApp
               </button>
 
               <button 
@@ -1489,7 +1777,7 @@ const CartaoKanban = ({
                   className="k-quick-btn wpp-btn"
                   title="Chamar cliente no WhatsApp"
                 >
-                  💬 WhatsApp
+                  <IconeWhatsApp size={15} /> WhatsApp
                 </button>
               </div>
 
@@ -1536,7 +1824,7 @@ const CartaoKanban = ({
                   className="k-quick-btn wpp-btn"
                   title="Chamar cliente no WhatsApp"
                 >
-                  💬 WhatsApp
+                  <IconeWhatsApp size={15} /> WhatsApp
                 </button>
 
                 <button 

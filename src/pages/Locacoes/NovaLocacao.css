@@ -1940,88 +1940,144 @@
   color: #ef4444;
 }
 
-/* CARD DE RESULTADO */
+/* =========================================================
+   🚚 CARD RESULTADO DE FRETE INTELIGENTE (DESIGN ULTRA LUXO)
+   ========================================================= */
 .card-resultado-frete {
-  margin: 14px 0 0 0;
-  background: #ffffff;
+  margin: 16px 0 0 0;
+  background: linear-gradient(145deg, #ffffff 0%, #f8fafc 100%);
   border: 1.5px solid #e2e8f0;
-  border-radius: 14px;
-  padding: 16px;
+  border-radius: 16px;
+  padding: 18px 20px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  gap: 14px;
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.04), 0 2px 6px rgba(15, 23, 42, 0.02);
+  transition: all 0.25s ease;
+  position: relative;
+  overflow: hidden;
 }
 
-.resultado-frete-topo {
+.card-resultado-frete::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, #c5a059 0%, #16a34a 100%);
+  border-radius: 4px 0 0 4px;
+}
+
+.resultado-frete-main-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.resultado-frete-destaque {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
-.badge-veiculo-info {
-  font-size: 0.68rem;
-  color: var(--texto-secundario, #64748b);
+.resultado-frete-route-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.chip-rota-item {
+  font-size: 0.70rem;
+  font-weight: 750;
+  color: #475569;
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
+  padding: 3px 8px;
+  border-radius: 20px;
+  white-space: nowrap;
+  letter-spacing: 0.2px;
+}
+
+.resultado-frete-valor-wrap {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.resultado-frete-simbolo {
+  font-size: 1.15rem;
   font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  display: block;
+  color: #c5a059;
 }
 
-.resultado-frete-valor {
-  font-size: 1.70rem;
-  background: linear-gradient(135deg, #0f172a 0%, #1e3a8a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+.resultado-frete-valor-num {
+  font-size: 2.1rem;
   font-weight: 950;
+  color: #0f172a;
   letter-spacing: -1px;
-  line-height: 1.1;
+  line-height: 1;
+}
+
+.badge-frete-aplicado-pill {
+  font-size: 0.68rem;
+  font-weight: 800;
+  background: #ecfdf5;
+  color: #059669;
+  border: 1px solid #a7f3d0;
+  padding: 3px 9px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 
 .resultado-frete-botoes {
   display: flex;
+  align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  align-items: center;
 }
 
 .btn-aplicar-frete {
   background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
   color: #ffffff;
   border: none;
-  border-radius: 11px;
-  padding: 10px 18px;
-  font-size: 0.84rem;
+  border-radius: 12px;
+  padding: 10px 20px;
+  font-size: 0.85rem;
   font-weight: 850;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  transition: all 0.2s ease;
+  gap: 8px;
+  transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1);
   box-shadow: 0 4px 14px rgba(22, 163, 74, 0.28);
   font-family: inherit;
-  letter-spacing: 0.1px;
+  letter-spacing: 0.2px;
 }
 
 .btn-aplicar-frete:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 7px 20px rgba(22, 163, 74, 0.38);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(22, 163, 74, 0.4);
 }
 
 .btn-aplicar-frete.ja-aplicado {
-  background: linear-gradient(135deg, #0f5132 0%, #15803d 100%) !important;
-  box-shadow: 0 2px 8px rgba(22, 163, 74, 0.2) !important;
+  background: linear-gradient(135deg, #059669 0%, #047857 100%) !important;
+  box-shadow: 0 3px 10px rgba(5, 150, 105, 0.25) !important;
 }
 
 .btn-frete-gratis {
-  background: var(--fundo-cinza, #f8fafc);
-  border: 1.5px solid var(--borda, #e2e8f0);
-  border-radius: 11px;
-  padding: 10px 14px;
-  font-size: 0.76rem;
+  background: #ffffff;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  font-size: 0.78rem;
   font-weight: 800;
-  color: var(--texto-secundario, #64748b);
+  color: #64748b;
   cursor: pointer;
   transition: all 0.2s ease;
   font-family: inherit;
@@ -2029,21 +2085,78 @@
 
 .btn-frete-gratis:hover {
   background: #fff1f2;
-  border-color: #fca5a5;
-  color: #dc2626;
+  border-color: #fecdd3;
+  color: #e11d48;
+  transform: translateY(-1px);
 }
 
-.box-memoria-calculo {
-  font-size: 0.72rem;
-  color: var(--texto-secundario, #475569);
-  background: var(--fundo-cinza, #f1f5f9);
-  padding: 8px 12px;
-  border-radius: 9px;
+/* ⚠️ AVISO DE TAXA MÍNIMA DESIGN LUXUOSO */
+.aviso-taxa-minima-luxo {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.08) 0%, rgba(217, 119, 6, 0.04) 100%);
+  border: 1.5px solid rgba(245, 158, 11, 0.28);
+  border-radius: 12px;
+  padding: 10px 14px;
   display: flex;
-  gap: 14px;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.74rem;
+  color: #92400e;
+  line-height: 1.45;
+}
+
+.aviso-taxa-minima-icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.aviso-taxa-minima-texto {
+  flex: 1;
+}
+
+.aviso-taxa-minima-texto strong {
+  color: #78350f;
+  font-weight: 850;
+}
+
+/* 📊 MEMÓRIA DE CÁLCULO E TELEMETRIA */
+.box-memoria-calculo-v2 {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 16px;
   flex-wrap: wrap;
-  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.memoria-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.75rem;
+}
+
+.memoria-icon {
+  font-size: 0.85rem;
+}
+
+.memoria-label {
+  color: #64748b;
   font-weight: 600;
+}
+
+.memoria-val {
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.memoria-divider {
+  width: 1px;
+  height: 14px;
+  background: #cbd5e1;
 }
 
 /* 📍 CAIXA DE INSTRUÇÕES DO GOOGLE MAPS */
@@ -2854,11 +2967,13 @@
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4) !important;
 }
 
-[data-theme^='dark'] .badge-veiculo-info {
+[data-theme^='dark'] .chip-rota-item {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
   color: var(--texto-secundario) !important;
 }
 
-[data-theme^='dark'] .resultado-frete-valor {
+[data-theme^='dark'] .resultado-frete-valor-num {
   color: #fbbf24 !important;
 }
 
@@ -2869,12 +2984,34 @@
 }
 
 [data-theme^='dark'] .btn-frete-gratis:hover {
-  background: rgba(197, 160, 89, 0.2) !important;
+  background: rgba(220, 38, 38, 0.2) !important;
+  border-color: rgba(220, 38, 38, 0.4) !important;
+  color: #f87171 !important;
+}
+
+[data-theme^='dark'] .box-memoria-calculo-v2 {
+  background: var(--fundo-cinza) !important;
+  border-color: var(--borda) !important;
+}
+
+[data-theme^='dark'] .memoria-label {
+  color: var(--texto-secundario) !important;
+}
+
+[data-theme^='dark'] .memoria-val {
   color: var(--texto-principal) !important;
 }
 
-[data-theme^='dark'] .box-memoria-calculo {
-  background: var(--fundo-cinza) !important;
-  border-color: var(--borda) !important;
-  color: var(--texto-secundario) !important;
+[data-theme^='dark'] .memoria-divider {
+  background: var(--borda) !important;
+}
+
+[data-theme^='dark'] .aviso-taxa-minima-luxo {
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  color: #fbbf24 !important;
+}
+
+[data-theme^='dark'] .aviso-taxa-minima-texto strong {
+  color: #fde68a !important;
 }

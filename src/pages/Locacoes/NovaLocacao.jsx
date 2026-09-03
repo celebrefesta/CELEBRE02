@@ -1117,6 +1117,16 @@ const NovaLocacao = () => {
         retirada: formatYMD(sexta),
         devolucao: formatYMD(segunda)
       }));
+    } else if (tipo === 'proxima_segunda_sexta') {
+      const diaSemana = hoje.getDay(); // 0 Dom, 1 Seg, ..., 5 Sex, 6 Sab
+      const diasAteSegunda = (1 - diaSemana + 7) % 7;
+      const segunda = addDays(hoje, diasAteSegunda === 0 && diaSemana !== 1 ? 7 : diasAteSegunda);
+      const sexta = addDays(segunda, 4);
+      setDatas(prev => ({
+        ...prev,
+        retirada: formatYMD(segunda),
+        devolucao: formatYMD(sexta)
+      }));
     } else if (tipo === 'proximo_sabado_segunda') {
       const diaSemana = hoje.getDay();
       const diasAteSabado = (6 - diaSemana + 7) % 7;
@@ -1829,9 +1839,17 @@ const NovaLocacao = () => {
                   type="button"
                   className="btn-chip-data"
                   onClick={() => aplicarAtalhoDatas('proxima_sexta_segunda')}
-                  title="Retira Sexta (14h) e devolve Segunda (12h)"
+                  title="Retira Sexta (14h) e devolve Segunda (12h) - Final de Semana"
                 >
                   <i className="far fa-calendar-check icon-chip"></i> Sex ➔ Seg
+                </button>
+                <button
+                  type="button"
+                  className="btn-chip-data"
+                  onClick={() => aplicarAtalhoDatas('proxima_segunda_sexta')}
+                  title="Retira Segunda (09h) e devolve Sexta (18h) - Semanal/Corporativo"
+                >
+                  <i className="far fa-calendar-check icon-chip"></i> Seg ➔ Sex
                 </button>
                 <button
                   type="button"
@@ -2433,36 +2451,21 @@ const NovaLocacao = () => {
 
                     return (
                       <div className="card-resultado-frete">
-                        <div className="resultado-frete-topo">
+                        {/* CABEÇALHO DO RESULTADO: ESQUERDA VALOR + CHIPS / DIREITA BOTÕES */}
+                        <div className="resultado-frete-main-row">
                           <div className="resultado-frete-destaque">
-                            <span className="badge-veiculo-info">
-                              {kmDistancia} km · {nomeVeiculo} · {labelCombustivel} · {est.viagens} viagens
-                            </span>
-                            <div className="resultado-frete-valor">
-                              R$ {freteFormatado}
+                            <div className="resultado-frete-route-chips">
+                              <span className="chip-rota-item">📍 {kmDistancia} km</span>
+                              <span className="chip-rota-item">🚗 {nomeVeiculo}</span>
+                              <span className="chip-rota-item">⛽ {labelCombustivel}</span>
+                              <span className="chip-rota-item">🔄 {est.viagens} {est.viagens === 1 ? 'viagem' : 'viagens'}</span>
+                            </div>
+                            <div className="resultado-frete-valor-wrap">
+                              <span className="resultado-frete-simbolo">R$</span>
+                              <span className="resultado-frete-valor-num">{freteFormatado}</span>
+                              {jaAplicado && <span className="badge-frete-aplicado-pill">✓ Ativo no Pedido</span>}
                             </div>
                           </div>
-
-                          {/* AVISO DE TAXA MÍNIMA APLICADA */}
-                          {est.somaReal < est.freteTotal && est.freteTotal > 0 && (
-                            <div style={{
-                              background: 'rgba(245,158,11,0.08)',
-                              border: '1px solid rgba(245,158,11,0.3)',
-                              borderRadius: '8px',
-                              padding: '6px 10px',
-                              fontSize: '0.71rem',
-                              color: '#92400e',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '6px',
-                              marginTop: '8px'
-                            }}>
-                              <span>⚠️</span>
-                              <span>
-                                O custo real ({est.somaReal.toFixed(2).replace('.', ',')} R$) é menor que a <strong>Taxa Mínima de R$ {Number(paramFrete.taxaMinima).toFixed(2).replace('.', ',')}</strong> configurada. Para distâncias curtas, o valor mínimo é aplicado automaticamente. Para desativar, clique em <strong>Configurar Veículo</strong> e ajuste a Taxa Mínima para 0.
-                              </span>
-                            </div>
-                          )}
 
                           <div className="resultado-frete-botoes">
                             <button
@@ -2473,9 +2476,9 @@ const NovaLocacao = () => {
                               className={`btn-aplicar-frete ${jaAplicado ? 'ja-aplicado' : ''}`}
                             >
                               {jaAplicado ? (
-                                <><i className="fas fa-check-circle"></i> Frete Aplicado ao Pedido</>
+                                <><i className="fas fa-check-circle"></i> Frete Aplicado</>
                               ) : (
-                                <><i className="fas fa-plus-circle"></i> Aplicar ao Pedido (R$ {freteFormatado})</>
+                                <><i className="fas fa-plus-circle"></i> Aplicar Frete</>
                               )}
                             </button>
 
@@ -2490,10 +2493,35 @@ const NovaLocacao = () => {
                           </div>
                         </div>
 
-                        <div className="box-memoria-calculo">
-                          <span>⛽ {labelCombustivel}: <strong>R$ {est.custoGasolina.toFixed(2)}</strong></span>
-                          <span>🛠️ Desgaste: <strong>R$ {est.custoDesgaste.toFixed(2)}</strong></span>
-                          <span>📊 Taxa Média: <strong>~R$ {est.taxaEfetivaKm}/km</strong></span>
+                        {/* AVISO DE TAXA MÍNIMA APLICADA REFINADO */}
+                        {est.somaReal < est.freteTotal && est.freteTotal > 0 && (
+                          <div className="aviso-taxa-minima-luxo">
+                            <div className="aviso-taxa-minima-icon">ℹ️</div>
+                            <div className="aviso-taxa-minima-texto">
+                              <strong>Taxa Mínima de R$ {Number(paramFrete.taxaMinima).toFixed(2).replace('.', ',')} Aplicada:</strong> O custo real calculado foi de R$ {est.somaReal.toFixed(2).replace('.', ',')}. Para percursos curtos, o valor mínimo garante a cobertura operacional.
+                            </div>
+                          </div>
+                        )}
+
+                        {/* MEMÓRIA DE CÁLCULO E DETALHES DE TELEMETRIA */}
+                        <div className="box-memoria-calculo-v2">
+                          <div className="memoria-item">
+                            <span className="memoria-icon">⛽</span>
+                            <span className="memoria-label">{labelCombustivel}:</span>
+                            <strong className="memoria-val">R$ {est.custoGasolina.toFixed(2).replace('.', ',')}</strong>
+                          </div>
+                          <div className="memoria-divider" />
+                          <div className="memoria-item">
+                            <span className="memoria-icon">🛠️</span>
+                            <span className="memoria-label">Desgaste:</span>
+                            <strong className="memoria-val">R$ {est.custoDesgaste.toFixed(2).replace('.', ',')}</strong>
+                          </div>
+                          <div className="memoria-divider" />
+                          <div className="memoria-item">
+                            <span className="memoria-icon">📊</span>
+                            <span className="memoria-label">Taxa Média:</span>
+                            <strong className="memoria-val">~R$ {est.taxaEfetivaKm}/km</strong>
+                          </div>
                         </div>
                       </div>
                     );

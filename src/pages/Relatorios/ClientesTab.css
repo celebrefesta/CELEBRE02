@@ -1,131 +1,49 @@
 /* ================================================================
-   ⭐ RELATÓRIO DE CLIENTES & CRM - DESIGN LUXO & RESPONSIVIDADE
+   ⭐ RELATÓRIO DE CLIENTES & CRM - DESIGN ESTRUTURADO PREMIUM
    ================================================================ */
 
 .rel-clientes-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 16px;
-  width: 100%;
-}
-
-/* 💡 PAINEL DE INSIGHTS */
-.rel-clientes-insights {
-  background: var(--fundo-card, #ffffff);
-  color: var(--texto-principal, #0f172a);
-  border: 1.5px solid var(--borda, #e2e8f0);
-  border-left: 5px solid #3b82f6 !important;
-  padding: 14px 18px;
-  border-radius: 16px;
-  margin-bottom: 14px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 12px;
-  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.02);
-}
-
-.rel-clientes-insights-left {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-}
-
-.rel-clientes-insights-icon {
-  font-size: 1.4rem;
-}
-
-.rel-clientes-insights-title {
-  font-size: 0.78rem;
-  font-weight: 850;
-  color: var(--texto-principal, #0f172a);
-  letter-spacing: 0.4px;
-  text-transform: uppercase;
-}
-
-.rel-clientes-insights-sub {
-  margin: 2px 0 0 0;
-  font-size: 0.78rem;
-  color: var(--texto-secundario, #64748b);
-}
-
-.rel-clientes-insights-badge {
-  font-size: 0.72rem;
-  font-weight: 800;
-  padding: 5px 12px;
-  border-radius: 10px;
-  background: var(--fundo-cinza, #f8fafc);
-  color: #3b82f6;
-  border: 1px solid var(--borda, #cbd5e1);
-  white-space: nowrap;
-}
-
-/* 📊 WIDGET TOP RANKINGS */
-.rel-clientes-rank-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 14px;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.rel-clientes-rank-card {
-  background: var(--fundo-cinza, #f8fafc);
-  padding: 14px 16px;
-  border-radius: 14px;
-  border: 1px solid var(--borda, #e2e8f0);
+.rel-clientes-wrapper input,
+.rel-clientes-wrapper select,
+.rel-clientes-wrapper button,
+.rel-clientes-wrapper span,
+.rel-clientes-wrapper strong,
+.rel-clientes-wrapper p {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-.rel-clientes-rank-header {
-  font-size: 0.72rem;
-  font-weight: 850;
-  color: var(--texto-secundario, #475569);
-  text-transform: uppercase;
-  display: block;
-  margin-bottom: 10px;
-  letter-spacing: 0.3px;
-}
-
-.rel-clientes-rank-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 0.76rem;
-  margin: 6px 0;
-}
-
-.rel-clientes-cidades-tags {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.rel-clientes-cidade-tag {
-  background: var(--fundo-card, #ffffff);
-  border: 1px solid var(--borda, #cbd5e1);
-  padding: 4px 10px;
-  border-radius: 8px;
-  font-size: 0.72rem;
-  font-weight: 800;
-  color: #3b82f6;
-}
-
-/* 🔍 SUBBAR DE PESQUISA & FILTROS */
+/* 🔍 SUBBARRA DE PESQUISA & FILTROS */
 .rel-clientes-subbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   background: var(--fundo-cinza, #f8fafc);
-  padding: 10px 14px;
+  padding: 10px 12px;
   border-radius: 12px;
   border: 1px solid var(--borda, #e2e8f0);
   margin-bottom: 12px;
+  width: 100%;
+  box-sizing: border-box;
 }
 
 .rel-clientes-search-box {
   flex: 1;
-  min-width: 240px;
+  min-width: 220px;
   position: relative;
   display: flex;
   align-items: center;
@@ -135,26 +53,35 @@
   position: absolute;
   left: 12px;
   color: var(--texto-secundario, #94a3b8);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   pointer-events: none;
 }
 
 .rel-clientes-search-input {
   width: 100%;
-  padding: 9px 32px 9px 34px;
+  height: 40px;
+  padding: 0 34px 0 36px;
   border-radius: 10px;
-  border: 1.5px solid var(--borda, #cbd5e1);
-  font-size: 0.80rem;
-  font-weight: 600;
+  border: 1px solid var(--borda, #cbd5e1);
+  font-size: 0.84rem !important;
+  font-weight: 500 !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   background: var(--fundo-card, #ffffff);
   color: var(--texto-principal, #0f172a);
   outline: none;
   transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.03);
+}
+
+.rel-clientes-search-input::placeholder {
+  color: #94a3b8;
+  font-weight: 450;
+  font-size: 0.82rem;
 }
 
 .rel-clientes-search-input:focus {
   border-color: #c5a059;
-  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15);
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.18);
 }
 
 .rel-clear-search-btn {
@@ -163,7 +90,7 @@
   background: transparent;
   border: none;
   color: var(--texto-secundario, #94a3b8);
-  font-size: 0.8rem;
+  font-size: 0.80rem;
   cursor: pointer;
   padding: 4px;
 }
@@ -179,12 +106,17 @@
 }
 
 .rel-cliente-pill-btn {
-  padding: 7px 12px;
-  border-radius: 10px;
-  font-size: 0.74rem;
-  font-weight: 800;
+  height: 38px;
+  padding: 0 13px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  font-size: 0.78rem !important;
+  font-weight: 550 !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   background: var(--fundo-card, #ffffff);
   border: 1px solid var(--borda, #cbd5e1);
   color: var(--texto-secundario, #475569);
@@ -192,7 +124,6 @@
 }
 
 .rel-cliente-pill-btn:hover {
-  transform: translateY(-1px);
   border-color: #c5a059;
   color: #c5a059;
 }
@@ -201,31 +132,41 @@
   background: #0f172a !important;
   color: #ffffff !important;
   border-color: #0f172a !important;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.15);
+  font-weight: 600 !important;
 }
 
 .rel-cliente-pill-btn.vip.active {
   background: #a16207 !important;
   color: #ffffff !important;
   border-color: #a16207 !important;
+  font-weight: 600 !important;
 }
 
 .rel-cliente-pill-btn.ativo.active {
   background: #15803d !important;
   color: #ffffff !important;
   border-color: #15803d !important;
+  font-weight: 600 !important;
 }
 
 .rel-cliente-pill-btn.inativo.active {
   background: #dc2626 !important;
   color: #ffffff !important;
   border-color: #dc2626 !important;
+  font-weight: 600 !important;
 }
 
-/* 📋 TABELA DE CLIENTES LUXUOSA */
+/* ================================================================
+   📋 TABELA DESKTOP (> 900px)
+   ================================================================ */
+.rel-table-container-responsive {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
 .rel-clientes-table {
   width: 100%;
-  min-width: 740px;
   border-collapse: collapse;
   text-align: left;
 }
@@ -236,17 +177,17 @@
 }
 
 .rel-clientes-table th {
-  padding: 12px 14px;
-  font-size: 0.70rem;
-  font-weight: 850;
+  padding: 11px 13px;
+  font-size: 0.72rem;
+  font-weight: 650;
   color: var(--texto-secundario, #64748b);
-  letter-spacing: 0.5px;
+  letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 
 .rel-clientes-table tbody tr {
   border-bottom: 1px solid var(--borda, #e2e8f0);
-  transition: background 0.15s ease;
+  transition: background 0.12s ease;
 }
 
 .rel-clientes-table tbody tr:hover {
@@ -254,70 +195,73 @@
 }
 
 .rel-clientes-table td {
-  padding: 12px 14px;
-  font-size: 0.78rem;
+  padding: 12px 13px;
+  font-size: 0.82rem;
+  font-weight: 450;
   color: var(--texto-principal, #0f172a);
   vertical-align: middle;
 }
 
-.rel-cliente-nome-row {
+.rel-cli-nome-group {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.rel-cliente-nome {
-  font-size: 0.82rem;
-  font-weight: 800;
+.rel-cli-nome-title {
+  font-size: 0.88rem;
+  font-weight: 650;
   color: var(--texto-principal, #0f172a);
 }
 
 .rel-cliente-vip-badge {
   font-size: 0.64rem;
-  font-weight: 850;
+  font-weight: 600;
   padding: 2px 7px;
   border-radius: 6px;
   border: 1px solid currentColor;
   letter-spacing: 0.2px;
 }
 
-.rel-cliente-subtext {
+.rel-cli-sub-ultima {
   font-size: 0.70rem;
+  font-weight: 450;
   color: var(--texto-secundario, #94a3b8);
   margin-top: 2px;
 }
 
 .rel-cliente-cidade {
   color: var(--texto-principal, #334155);
-  font-weight: 700;
-  font-size: 0.78rem;
+  font-weight: 550;
+  font-size: 0.80rem;
 }
 
 .rel-cliente-festas-count {
   display: inline-block;
-  padding: 3px 8px;
-  border-radius: 8px;
+  padding: 3px 9px;
+  border-radius: 7px;
   background: var(--fundo-cinza, #f1f5f9);
   color: var(--texto-principal, #0f172a);
-  font-weight: 850;
-  font-size: 0.76rem;
+  font-weight: 650;
+  font-size: 0.78rem;
 }
 
-.rel-cliente-valor {
+.rel-cli-valor-ltv {
   color: #10b981;
-  font-weight: 850;
-  font-size: 0.84rem;
+  font-weight: 750;
+  font-size: 0.90rem;
 }
 
 .rel-status-pill {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 4px 10px;
+  padding: 3px 10px;
   border-radius: 20px;
   font-size: 0.70rem;
-  font-weight: 800;
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .rel-status-pill.ativo {
@@ -333,17 +277,17 @@
 }
 
 .rel-btn-crm-whatsapp {
-  padding: 6px 12px;
-  border-radius: 10px;
+  padding: 5px 11px;
+  border-radius: 8px;
   border: 1px solid #86efac;
   background: #f0fdf4;
   color: #16a34a;
   font-size: 0.74rem;
-  font-weight: 800;
+  font-weight: 600;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
   transition: all 0.2s ease;
   white-space: nowrap;
 }
@@ -356,32 +300,48 @@
   box-shadow: 0 4px 12px rgba(22, 163, 74, 0.25);
 }
 
+.rel-btn-crm-whatsapp-compact {
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid #86efac;
+  background: #f0fdf4;
+  color: #16a34a;
+  font-size: 0.74rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rel-btn-crm-whatsapp-compact:hover {
+  background: #16a34a;
+  color: #ffffff;
+}
+
+/* Ocultar elementos mobile no desktop */
+.rel-cell-cliente {
+  display: none;
+}
+
+.desktop-only-col {
+  display: table-cell !important;
+}
+
 .rel-table-empty-cell {
   text-align: center;
-  padding: 40px !important;
+  padding: 36px !important;
   color: var(--texto-secundario, #94a3b8);
-  font-weight: 600;
+  font-weight: 450;
+  font-size: 0.82rem;
 }
 
 /* ================================================================
-   📱 RESPONSIVIDADE MOBILE (<= 900px)
+   📱 LISTAGEM ESTRUTURADA COM ZONAS FIXAS NO MOBILE (<= 900px)
    ================================================================ */
 @media (max-width: 900px) {
-  .rel-clientes-insights {
-    flex-direction: column !important;
-    align-items: flex-start !important;
-    padding: 12px 14px !important;
-  }
-
-  .rel-clientes-insights-left {
-    align-items: flex-start !important;
-  }
-
   .rel-clientes-subbar {
     flex-direction: column !important;
     align-items: stretch !important;
-    padding: 12px !important;
-    gap: 10px !important;
+    padding: 10px !important;
+    gap: 8px !important;
   }
 
   .rel-clientes-search-box {
@@ -398,35 +358,166 @@
 
   .rel-cliente-pill-btn {
     width: 100% !important;
+    height: 38px !important;
     text-align: center !important;
     justify-content: center !important;
-    padding: 8px 6px !important;
-    font-size: 0.72rem !important;
+    padding: 0 6px !important;
+    font-size: 0.76rem !important;
   }
 
-  .rel-card-actions {
+  .rel-table-container-responsive {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow: hidden !important;
+  }
+
+  table.rel-clientes-table {
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  .rel-clientes-table thead {
+    display: none !important;
+  }
+
+  .rel-clientes-table tbody {
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
     width: 100% !important;
+    gap: 0 !important;
   }
 
-  .rel-export-btn-group {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
+  /* LINHA MODULAR ESTRUTURADA */
+  tr.rel-cliente-row {
+    display: flex !important;
+    flex-direction: column !important;
     width: 100% !important;
+    padding: 12px 2px !important;
+    border-bottom: 1px solid var(--borda, #f1f5f9) !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    box-sizing: border-box !important;
+  }
+
+  tr.rel-cliente-row:last-child {
+    border-bottom: none !important;
+  }
+
+  .rel-cell-cliente {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    padding: 0 !important;
+    border: none !important;
+    gap: 8px !important;
+  }
+
+  /* 1. ZONA SUPERIOR: CIDADE + CONTATO (ESQ) | STATUS + WHATSAPP (DIR) */
+  .rel-cli-header-zone {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .rel-cli-meta-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+  }
+
+  .rel-cli-cidade-badge {
+    display: inline-block !important;
+    background: var(--fundo-cinza, #f1f5f9) !important;
+    color: var(--texto-principal, #334155) !important;
+    font-size: 0.68rem !important;
+    font-weight: 600 !important;
+    padding: 2px 7px !important;
+    border-radius: 6px !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+  }
+
+  .rel-cli-tel-text {
+    font-size: 0.72rem !important;
+    color: var(--texto-secundario, #64748b) !important;
+    font-weight: 500 !important;
+  }
+
+  .rel-cli-right-actions {
+    display: flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  /* 2. ZONA INFERIOR: NOME + VIP (ESQ) | VALOR LTV + FESTAS (DIR) */
+  .rel-cli-body-zone {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: flex-start !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  .rel-cli-info-left {
+    flex: 1 !important;
+    min-width: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+  }
+
+  .rel-cli-nome-title {
+    font-size: 0.88rem !important;
+    font-weight: 650 !important;
+    color: var(--texto-principal, #0f172a) !important;
+    word-break: break-word !important;
+  }
+
+  .rel-cli-sub-ultima {
+    font-size: 0.72rem !important;
+    color: var(--texto-secundario, #94a3b8) !important;
+  }
+
+  .rel-cli-info-right {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-end !important;
+    gap: 2px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .rel-cli-valor-ltv {
+    font-size: 0.92rem !important;
+    font-weight: 750 !important;
+    color: #10b981 !important;
+    line-height: 1.2 !important;
+  }
+
+  .rel-cli-festas-tag {
+    font-size: 0.68rem !important;
+    color: var(--texto-secundario, #64748b) !important;
+    font-weight: 500 !important;
+  }
+
+  .desktop-only-col {
+    display: none !important;
   }
 }
 
 /* ================================================================
    🌙 TEMA ESCURO COMPLETO
    ================================================================ */
-[data-theme^='dark'] .rel-clientes-insights,
-[data-theme^='dark'] .rel-clientes-rank-card,
 [data-theme^='dark'] .rel-clientes-subbar {
   background: var(--fundo-card, #18181b) !important;
   border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme^='dark'] tr.rel-cliente-row {
+  border-bottom-color: var(--borda, #27272a) !important;
 }
 
 [data-theme^='dark'] .rel-clientes-search-input {
@@ -435,16 +526,10 @@
   color: #f4f4f5 !important;
 }
 
-[data-theme^='dark'] .rel-cliente-pill-btn {
+[data-theme^='dark'] .rel-cli-cidade-badge {
   background: var(--fundo-principal, #121212) !important;
+  color: #f4f4f5 !important;
   border-color: var(--borda, #3f3f46) !important;
-  color: var(--texto-secundario, #a1a1aa) !important;
-}
-
-[data-theme^='dark'] .rel-cliente-pill-btn.active {
-  background: #c5a059 !important;
-  color: #0f172a !important;
-  border-color: #c5a059 !important;
 }
 
 [data-theme^='dark'] .rel-clientes-table thead tr {
@@ -477,13 +562,15 @@
   border-color: rgba(220, 38, 38, 0.3) !important;
 }
 
-[data-theme^='dark'] .rel-btn-crm-whatsapp {
+[data-theme^='dark'] .rel-btn-crm-whatsapp,
+[data-theme^='dark'] .rel-btn-crm-whatsapp-compact {
   background: rgba(22, 163, 74, 0.15) !important;
   color: #4ade80 !important;
   border-color: rgba(22, 163, 74, 0.4) !important;
 }
 
-[data-theme^='dark'] .rel-btn-crm-whatsapp:hover {
+[data-theme^='dark'] .rel-btn-crm-whatsapp:hover,
+[data-theme^='dark'] .rel-btn-crm-whatsapp-compact:hover {
   background: #16a34a !important;
   color: #ffffff !important;
 }

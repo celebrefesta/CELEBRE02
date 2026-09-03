@@ -10,6 +10,29 @@ import ModalCalendarioDisponibilidade from './ModalCalendarioDisponibilidade';
 import ModalCheckinLocacao from './ModalCheckinLocacao';
 import ModalRomaneioSeparacao from './ModalRomaneioSeparacao';
 
+// 🟢 ÍCONE OFICIAL DO WHATSAPP (VETORIAL #25D366)
+const IconeWhatsApp = ({ size = 15, color = "#25D366" }) => (
+  <svg 
+    width={size} 
+    height={size} 
+    viewBox="0 0 24 24" 
+    fill="none" 
+    xmlns="http://www.w3.org/2000/svg"
+    style={{ display: 'inline-block', verticalAlign: 'middle', flexShrink: 0 }}
+  >
+    <path 
+      d="M17.472 14.382C17.15 14.22 15.57 13.441 15.275 13.334C14.98 13.227 14.766 13.173 14.551 13.495C14.337 13.816 13.72 14.539 13.533 14.754C13.345 14.968 13.158 14.995 12.836 14.834C12.514 14.673 11.478 14.333 10.247 13.236C9.289 12.382 8.642 11.328 8.455 11.006C8.267 10.685 8.435 10.51 8.597 10.35C8.742 10.205 8.92 9.972 9.081 9.785C9.242 9.597 9.296 9.463 9.403 9.249C9.51 9.034 9.457 8.847 9.376 8.686C9.296 8.525 8.653 6.945 8.385 6.299C8.124 5.671 7.859 5.756 7.662 5.746C7.474 5.736 7.26 5.734 7.045 5.734C6.831 5.734 6.483 5.814 6.188 6.136C5.893 6.457 5.063 7.234 5.063 8.815C5.063 10.395 6.215 11.922 6.376 12.137C6.537 12.351 8.642 15.602 11.868 16.993C12.636 17.324 13.237 17.523 13.704 17.671C14.475 17.916 15.176 17.881 15.731 17.798C16.35 17.706 17.636 17.02 17.904 16.27C18.172 15.519 18.172 14.876 18.092 14.742C18.011 14.608 17.797 14.544 17.472 14.382Z" 
+      fill={color}
+    />
+    <path 
+      fillRule="evenodd" 
+      clipRule="evenodd" 
+      d="M12.004 2C6.48 2 2 6.48 2 12.004C2 13.768 2.46 15.424 3.264 16.864L2.052 21.32L6.612 20.124C8.008 20.884 9.608 21.32 11.296 21.32C11.532 21.32 11.768 21.312 12.004 21.3C17.528 21.3 22.008 16.82 22.008 11.296C22.008 5.772 17.528 2 12.004 2ZM12.004 19.64C10.536 19.64 9.144 19.236 7.944 18.524L7.656 18.352L4.956 19.06L5.676 16.428L5.488 16.128C4.704 14.88 4.288 13.416 4.288 11.892C4.288 7.692 7.744 4.276 11.944 4.276C16.144 4.276 19.56 7.692 19.56 11.892C19.56 16.092 16.204 19.64 12.004 19.64Z" 
+      fill={color}
+    />
+  </svg>
+);
+
 // 🏷️ TIPOS DE EVENTO DISPONÍVEIS
 const TIPOS_EVENTO = [
   { value: 'aniversario',       label: 'Aniversário',       emoji: '🎂' },
@@ -200,8 +223,10 @@ const Locacoes = () => {
     const nomeEmpresa = configEmpresa?.nomeFantasia || configEmpresa?.nome || 'Celebre Festas';
 
     let txt = '';
-    if (tipo === 'cobranca') {
+    if (tipo === 'cobranca' || tipo === 'cobranca_pos_evento') {
       txt = `Olá, *${nome}*! Tudo bem? 😊\n\nPassando com um lembrete amigável sobre o saldo da sua locação para o evento do dia *${dataEv}* (Pedido *#${num}*):\n\n💰 *Valor Total:* R$ ${total}\n✅ *Valor Já Pago:* R$ ${pago}\n⏳ *Saldo a Quitar:* R$ ${saldo}\n\n🔑 *Chave Pix:* ${chavePix}\n🏢 *Favorecido:* ${nomeEmpresa}\n\nAssim que efetuar o pagamento, basta nos enviar o comprovante por aqui. Muito obrigado! 🎉✨`;
+    } else if (tipo === 'pos_evento') {
+      txt = `Olá, *${nome}*! Tudo bem? ✨🎈\n\nPassando para agradecer imensamente pela confiança na *${nomeEmpresa}* para o seu evento do dia *${dataEv}* (Pedido *#${num}*)!\n\nEsperamos que a sua festa tenha sido maravilhosa e inesquecível! 💖🎉\n\nConte sempre com a gente para as próximas comemorações. Um grande abraço de toda a nossa equipe! 🥰✨`;
     } else if (tipo === 'pre_evento') {
       txt = `Olá, *${nome}*! Sua festa está chegando! 🎈🥳\n\nConfirmamos a data de retirada/entrega das suas peças para o dia *${dataEv}* (Pedido *#${num}*).\n\nNossa equipe já está com os itens separados com todo o carinho para que seu evento seja inesquecível! Se precisar de algo a mais, estamos à disposição! ✨`;
     } else if (tipo === 'devolucao') {
@@ -425,7 +450,7 @@ const Locacoes = () => {
         let isVencido = false;
 
         if (data.dataRetirada && data.dataRetirada < hojeStr) {
-            if (statusReal.includes('orcam') || statusReal.includes('confirmado') || statusReal.includes('preparacao')) {
+            if (statusReal.includes('orcam')) {
                 isVencido = true;
             }
         }
@@ -446,6 +471,50 @@ const Locacoes = () => {
         console.error(error);
     } finally { 
         setLoading(false); 
+    }
+  };
+
+  // ✅ FINALIZAÇÃO RÁPIDA DE PEDIDO (DEVOLUÇÃO AO ESTOQUE & ARQUIVAMENTO EM FINALIZADOS)
+  const handleFinalizarPedidoRapido = async (pedido) => {
+    const num = pedido.numeroPedido || (pedido.id ? pedido.id.slice(0, 6).toUpperCase() : '');
+    const cliente = pedido.clienteNome || 'Cliente';
+    
+    const confirmacao = window.confirm(
+      `✅ FINALIZAR PEDIDO #${num} (${cliente})?\n\n` +
+      `Isso registrará a devolução das peças ao galpão, liberará os itens no estoque e moverá o pedido para a aba FINALIZADOS.\n\n` +
+      `Deseja continuar?`
+    );
+
+    if (!confirmacao) return;
+
+    try {
+      await updateDoc(doc(db, "locacoes", pedido.id), {
+        status: 'finalizado',
+        dataDevolucaoReal: new Date().toISOString().split('T')[0],
+        dataCheckinRetorno: new Date().toISOString(),
+        responsavelRetorno: usuarioLogado?.displayName || usuarioLogado?.email || 'Administrador'
+      });
+
+      // Espião de Log
+      try {
+        await addDoc(collection(db, "logs_atividades"), {
+          empresaId: tenantId,
+          funcionarioId: usuarioLogado.uid,
+          nomeFuncionario: localStorage.getItem('funcName') || usuarioLogado.displayName || usuarioLogado.email || "Equipe",
+          acao: "FINALIZAÇÃO DE PEDIDO",
+          tipo: "EDICAO",
+          detalhes: `Finalizou o pedido #${num} (${cliente}) e liberou os itens no acervo`,
+          dataHora: new Date().toISOString()
+        });
+      } catch (eEspiao) {
+        console.error("Erro no espião de finalização:", eEspiao);
+      }
+
+      alert(`✅ Pedido #${num} finalizado com sucesso! As peças voltaram ao estoque disponível.`);
+      carregarLocacoes();
+    } catch (e) {
+      console.error("Erro ao finalizar pedido:", e);
+      alert(`Erro ao finalizar pedido: ${e.message || 'Erro desconhecido'}`);
     }
   };
 
@@ -958,7 +1027,7 @@ const Locacoes = () => {
             Confirmados <span className="pill-badge">{chipCountConfirmados}</span>
           </button>
           <button type="button" className={`pill-btn ${filtroStatus === 'finalizados' ? 'active' : ''}`} onClick={() => setFiltroStatus('finalizados')}>
-            Arquivados <span className="pill-badge">{chipCountArquivados}</span>
+            Finalizados <span className="pill-badge">{chipCountArquivados}</span>
           </button>
           <button type="button" className={`pill-btn ${filtroStatus === 'cancelados' ? 'active' : ''}`} onClick={() => setFiltroStatus('cancelados')}>
             Lixeira / Perdidos <span className="pill-badge">{chipCountCancelados}</span>
@@ -1058,6 +1127,7 @@ const Locacoes = () => {
 
                 let alertaOperacional = null;
                 let corAlerta = '';
+                let esteiraParadaCritica = false;
                 
                 if (item.dataRetirada && !statusStr.includes('finalizado') && !statusStr.includes('cancelado') && !item.isOrcamentoVencido) {
                     const hojeObj = new Date();
@@ -1067,7 +1137,11 @@ const Locacoes = () => {
                     const diffMs = locDateObj.getTime() - hojeObj.getTime();
                     const diasParaFesta = Math.ceil(diffMs / (1000 * 3600 * 24));
                     
-                    if (statusStr.includes('confirmado') && diasParaFesta <= 4 && diasParaFesta >= 0) {
+                    if ((diasParaFesta < 0 || devDateObj.getTime() < hojeObj.getTime()) && !isOrcamento) {
+                        esteiraParadaCritica = true;
+                        alertaOperacional = `🚨 ESTEIRA PARADA! (Festa foi em ${item.dataRetirada.split('-').reverse().join('/')})`;
+                        corAlerta = "#dc2626";
+                    } else if (statusStr.includes('confirmado') && diasParaFesta <= 4 && diasParaFesta >= 0) {
                         alertaOperacional = `📦 Separar Peças! (${diasParaFesta === 0 ? 'É Hoje!' : `Faltam ${diasParaFesta} dias`})`; 
                         corAlerta = "#f59e0b";
                     } else if (statusStr.includes('preparacao') && diasParaFesta <= 0) {
@@ -1119,7 +1193,7 @@ const Locacoes = () => {
                 return (
                   <tr 
                     key={item.id} 
-                    className={temAlertas ? 'linha-alerta' : ''} 
+                    className={`${temAlertas ? 'linha-alerta' : ''} ${esteiraParadaCritica ? 'linha-esteira-parada' : ''}`} 
                     style={{ opacity: isCancelado ? 0.6 : 1, cursor: 'pointer' }}
                     onClick={() => navigate(`/locacoes/editar/${item.id}`)}
                     title="Clique para abrir detalhes do pedido"
@@ -1361,8 +1435,11 @@ const Locacoes = () => {
                     <td className="desktop-only-cell receber-cell">
                       {saldoDevedor > 0 ? (
                         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
-                          <span className="badge-status-pro devedor">
-                            ▲ R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                          <span 
+                            className="badge-status-pro devedor"
+                            style={statusStr.includes('finalizado') ? { background: '#fff1f2', color: '#e11d48', border: '1px solid #fecdd3', fontWeight: '800' } : {}}
+                          >
+                            {statusStr.includes('finalizado') ? '🚨 Saldo Devedor: ' : '▲ '}R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </span>
                           <button
                             type="button"
@@ -1386,7 +1463,7 @@ const Locacoes = () => {
                               color: '#15803d',
                               border: '1px solid #86efac',
                               borderRadius: '6px',
-                              padding: '2px 6px',
+                              padding: '2px 8px',
                               fontSize: '0.68rem',
                               fontWeight: '800',
                               cursor: 'pointer',
@@ -1397,7 +1474,7 @@ const Locacoes = () => {
                             }}
                             title="Quitar / Abater saldo no Financeiro"
                           >
-                            💰 Quitar / Abater
+                            ⚡ Quitar / Abater
                           </button>
                         </div>
                       ) : (
@@ -1426,8 +1503,8 @@ const Locacoes = () => {
                           <div className="mobile-finance-status-row">
                             {saldoDevedor > 0 ? (
                               <div className="mobile-saldo-pendente-group">
-                                <span className="badge-devedor-mini">
-                                  Pendente: R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                                <span className="badge-devedor-mini" style={statusStr.includes('finalizado') ? { background: '#fee2e2', color: '#b91c1c' } : {}}>
+                                  {statusStr.includes('finalizado') ? 'Devedor: ' : 'Pendente: '}R$ {saldoDevedor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                                 </span>
                                 <button
                                   type="button"
@@ -1475,10 +1552,48 @@ const Locacoes = () => {
                   
                     <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                       <div className="actions-row-cell">
-                        {!isOrcamento && !isCancelado && (
+                        {statusStr.includes('finalizado') || statusStr.includes('devolvido') ? (
+                          saldoDevedor > 0 ? (
+                            <button 
+                              type="button" 
+                              className="btn-quick-finalizado cobrar-devedor"
+                              title="Cobrar saldo pendente no WhatsApp"
+                              onClick={(e) => { e.stopPropagation(); abrirModalWhatsAppPedido(item, 'cobranca_pos_evento'); }}
+                            >
+                              <IconeWhatsApp size={14} color="#dc2626" /> Cobrar Devedor
+                            </button>
+                          ) : (
+                            <>
+                              <button 
+                                type="button" 
+                                className="btn-quick-finalizado pos-evento"
+                                title="Enviar mensagem de agradecimento pós-evento no WhatsApp"
+                                onClick={(e) => { e.stopPropagation(); abrirModalWhatsAppPedido(item, 'pos_evento'); }}
+                              >
+                                <IconeWhatsApp size={14} color="#16a34a" /> Pós-Evento
+                              </button>
+                              <button 
+                                type="button" 
+                                className="btn-quick-finalizado recibo"
+                                title="Imprimir Comprovante e Recibo em PDF"
+                                onClick={(e) => { e.stopPropagation(); imprimirComprovante(item); }}
+                              >
+                                📄 Recibo
+                              </button>
+                            </>
+                          )
+                        ) : !isOrcamento && !isCancelado ? (
                           <>
                             <button 
-                              type="button"
+                              type="button" 
+                              className="btn-quick-checkin finaliz"
+                              title="Finalizar Pedido e Devolver Peças ao Estoque"
+                              onClick={(e) => { e.stopPropagation(); handleFinalizarPedidoRapido(item); }}
+                            >
+                              ✅ Finalizar
+                            </button>
+                            <button 
+                              type="button" 
                               className="btn-quick-checkin ida"
                               title="Fazer Check-in de Saída (IDA)"
                               onClick={(e) => { e.stopPropagation(); abrirCheckin(item, 'IDA'); }}
@@ -1486,7 +1601,7 @@ const Locacoes = () => {
                               🛫 IDA
                             </button>
                             <button 
-                              type="button"
+                              type="button" 
                               className="btn-quick-checkin volta"
                               title="Fazer Check-in de Devolução (VOLTA)"
                               onClick={(e) => { e.stopPropagation(); abrirCheckin(item, 'VOLTA'); }}
@@ -1494,7 +1609,7 @@ const Locacoes = () => {
                               🛬 VOLTA
                             </button>
                           </>
-                        )}
+                        ) : null}
 
                         <div className="dropdown-container">
                           <button 
@@ -1509,6 +1624,21 @@ const Locacoes = () => {
                           
                           {menuAberto === item.id && (
                             <div className="menu-suspenso animate-pop" onClick={(e) => e.stopPropagation()}>
+                              {!isOrcamento && !isCancelado && !statusStr.includes('finalizado') && (
+                                <button 
+                                  type="button" 
+                                  onClick={(e) => { 
+                                    e.stopPropagation();
+                                    handleFinalizarPedidoRapido(item);
+                                    setMenuAberto(null);
+                                  }} 
+                                  className="item-menu"
+                                  style={{ color: '#16a34a', fontWeight: '800' }}
+                                >
+                                  <span className="item-icon green">✅</span> Finalizar Pedido (Devolver ao Estoque)
+                                </button>
+                              )}
+
                               <button 
                                 type="button"
                                 onClick={(e) => { 

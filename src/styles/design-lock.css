@@ -1,0 +1,496 @@
+/* ============================================================
+   🔒 CELEBRE — DESIGN LOCK SYSTEM
+   ============================================================
+   ARQUIVO BLINDADO — NÃO EDITAR SEM SOLICITAÇÃO EXPLÍCITA
+   DO USUÁRIO CAMILA/CELEBRE.
+
+   PROPÓSITO:
+   Este arquivo é importado ÚLTIMO na cascata CSS da aplicação
+   (após index.css, App.css e todos os CSS de páginas).
+   Por isso, suas regras com `!important` SEMPRE vencem qualquer
+   conflito de qualquer outro arquivo, congelando o design visual
+   aprovado de cada página.
+
+   COMO USAR:
+   → Quando uma página for aprovada, adicionar seu bloco aqui.
+   → A partir daí, nenhuma edição acidental em Pagina.css
+     conseguirá alterar as propriedades protegidas.
+   → Para descongelar uma regra, apenas o usuário pode pedir.
+
+   CASCATA DE PRIORIDADE:
+   1. index.css            (reset base)
+   2. App.css              (tokens globais, dark mode, KPI cards)
+   3. [Pagina].css         (estilos da página — editável pela IA)
+   4. design-lock.css ◄─── VENCE TUDO (importado por último)
+
+   STATUS DAS PÁGINAS:
+   🔒 CONGELADA  → design lock ativo
+   🔓 ABERTA     → design ainda pode ser modificado
+   ============================================================ */
+
+
+/* ============================================================
+   🔒 BLOCO GLOBAL — SISTEMA DE CARDS KPI (TODAS AS PÁGINAS)
+   STATUS: CONGELADO em 03/09/2026
+   REGRA: 1 linha no desktop / 2 colunas no mobile
+   ============================================================ */
+
+/* ── DESKTOP (> 900px): TODOS OS CARDS EM 1 SÓ LINHA HORIZONTAL ── */
+@media (min-width: 901px) {
+  .clientes-stats-grid,
+  .stats-wide-row {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    margin-bottom: 24px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro,
+  .stats-wide-row .stat-card-pro {
+    flex: 1 1 0px !important;
+    min-width: 0 !important;
+    width: auto !important;
+  }
+}
+
+/* ── TABLET/MOBILE (≤ 900px): GRID DE 2 COLUNAS SIMÉTRICAS ── */
+@media (max-width: 900px) {
+  .clientes-stats-grid,
+  .stats-wide-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+    margin-bottom: 16px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    flex-wrap: unset !important;
+    flex-direction: unset !important;
+  }
+
+  .clientes-stats-grid .stat-card-pro,
+  .stats-wide-row .stat-card-pro {
+    flex: initial !important;
+    width: 100% !important;
+    grid-column: auto !important;
+    padding: 10px 12px !important;
+    gap: 8px !important;
+    border-radius: 16px !important;
+    min-width: 0 !important;
+  }
+
+  /* 5º card: ocupa as 2 colunas para centralizar */
+  .clientes-stats-grid .stat-card-pro:nth-child(5):last-child,
+  .stats-wide-row .stat-card-pro:nth-child(5):last-child {
+    grid-column: span 2 !important;
+  }
+}
+
+/* ── CELULAR PEQUENO (≤ 480px): MANTÉM 2 COLUNAS ── */
+@media (max-width: 480px) {
+  .clientes-stats-grid,
+  .stats-wide-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+    width: 100% !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: CLIENTES — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: Clientes.css, CadastroCliente.css
+   ============================================================ */
+
+.clientes-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  padding: 30px 40px !important;
+  box-sizing: border-box !important;
+  min-height: calc(100vh - 60px) !important;
+}
+
+@media (max-width: 900px) {
+  .clientes-container {
+    padding: 14px 12px 24px 12px !important;
+  }
+}
+
+.clientes-container .clientes-hero-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 28px !important;
+  flex-wrap: wrap !important;
+  gap: 20px !important;
+}
+
+@media (min-width: 901px) {
+  .clientes-container .table-filter-bar {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 10px !important;
+    align-items: center !important;
+    margin-bottom: 20px !important;
+    flex-wrap: wrap !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .clientes-container .table-filter-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .clientes-container .table-filter-bar .search-input-wrapper {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: LOCAÇÕES — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: Locacoes.css
+   ============================================================ */
+
+.locacoes-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 900px) {
+  .locacoes-container .table-filter-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .locacoes-container .table-filter-bar .search-input-wrapper {
+    grid-column: 1 / -1 !important;
+  }
+
+  .locacoes-container .header-actions-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .locacoes-container .chips-operacionais-row {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  .locacoes-container .status-pills-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: NOVA LOCAÇÃO — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: NovaLocacao.css
+   ============================================================ */
+
+.nova-locacao-page {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 901px) {
+  .nova-locacao-page .locacao-grid-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 340px !important;
+    gap: 24px !important;
+    align-items: start !important;
+  }
+
+  .nova-locacao-page .form-row-2col {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .nova-locacao-page .locacao-grid-layout {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 16px !important;
+  }
+
+  .nova-locacao-page .form-row-2col {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: ESTOQUE & ACERVO — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: Estoque.css
+   ============================================================ */
+
+.estoque-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 900px) {
+  .estoque-container .table-filter-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    align-items: start !important;
+  }
+
+  .estoque-container .table-filter-bar .view-toggle-group {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: row !important;
+  }
+
+  .estoque-container .table-filter-bar .btn-ordem-estoque {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+  }
+
+  .estoque-container .table-filter-bar .search-input-wrapper {
+    grid-column: 1 / -1 !important;
+  }
+
+  .estoque-container .pro-table {
+    display: flex !important;
+    flex-direction: column !important;
+    border: none !important;
+  }
+
+  .estoque-container .pro-table thead {
+    display: none !important;
+  }
+
+  .estoque-container .pro-table tbody {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: COMPRAS — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: Compras.css
+   ============================================================ */
+
+.compras-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 901px) {
+  .compras-container .compras-desktop-table-view {
+    display: block !important;
+  }
+
+  .compras-container .compras-mobile-cards-view {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .compras-container .table-filter-bar,
+  .compras-container .compras-filter-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .compras-container .table-filter-bar .search-input-wrapper,
+  .compras-container .compras-filter-bar .search-input-wrapper {
+    grid-column: 1 / -1 !important;
+  }
+
+  .compras-container .table-filter-bar .btn-ordenacao,
+  .compras-container .compras-filter-bar .btn-ordenacao {
+    grid-column: span 2 !important;
+    width: 100% !important;
+  }
+
+  /* Sem auto-zoom no iOS */
+  .compras-container input[type="text"],
+  .compras-container input[type="search"] {
+    font-size: 16px !important;
+  }
+
+  .compras-container .compras-desktop-table-view {
+    display: none !important;
+  }
+
+  .compras-container .compras-mobile-cards-view {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: LOGÍSTICA (KANBAN GALPÃO) — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: Logistica.css
+   ============================================================ */
+
+.kanban-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 901px) {
+  .kanban-container .desktop-only-board {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+    align-items: start !important;
+  }
+
+  .kanban-container .mobile-etapas-grid,
+  .kanban-container .mobile-only-col-view {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .kanban-container .desktop-only-board {
+    display: none !important;
+  }
+
+  .kanban-container .mobile-etapas-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .kanban-container .mobile-only-col-view {
+    display: block !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: RELATÓRIOS — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: Relatorios.css, PedidosTab.css,
+                       EstoqueTab.css, ClientesTab.css
+   ============================================================ */
+
+.relatorios-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+}
+
+.relatorios-container input,
+.relatorios-container select,
+.relatorios-container button,
+.relatorios-container textarea {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+}
+
+.relatorios-container .rel-table-scroll-wrapper {
+  overflow-x: auto !important;
+  -webkit-overflow-scrolling: touch !important;
+}
+
+.relatorios-container .rel-table-scroll-wrapper table,
+.relatorios-container .rel-table-scroll-wrapper .pro-table {
+  min-width: 740px !important;
+}
+
+@media (max-width: 900px) {
+  .relatorios-container.dashboard-container {
+    padding: 14px 10px 24px 10px !important;
+  }
+
+  .relatorios-container .tabs-relatorios-compacto {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .relatorios-container .tabs-relatorios-compacto button {
+    height: 42px !important;
+    border-radius: 12px !important;
+    font-size: 0.74rem !important;
+  }
+
+  .relatorios-container .rel-export-actions {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .relatorios-container .rel-export-actions .rel-btn-action-primary {
+    grid-column: 1 / -1 !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: CADASTRO CLIENTE — STATUS: CONGELADA em 03/09/2026
+   Arquivos de origem: CadastroCliente.css
+   ============================================================ */
+
+@media (min-width: 769px) {
+  .cadastro-cliente-container .form-row-2col,
+  .cadastro-cliente-container .form-group-row {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 16px !important;
+  }
+
+  .cadastro-cliente-container .row-cep-cidade {
+    display: grid !important;
+    grid-template-columns: 180px 1fr !important;
+    gap: 16px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .cadastro-cliente-container .form-row-2col,
+  .cadastro-cliente-container .form-group-row {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  .cadastro-cliente-container .row-cep-cidade {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 10px !important;
+  }
+}
+
+
+/* ============================================================
+   🔓 PÁGINAS AINDA ABERTAS (sem lock ativo):
+   - Dashboard
+   - Financeiro
+   - Contratos
+   - Agenda
+   - Moodboard
+   - Configurações
+   - CheckinPage / CheckoutPage
+   - Catálogo / AutoCadastro
+   - LandingPage
+
+   → Quando aprovadas, adicionar o bloco acima desta linha.
+   ============================================================ */

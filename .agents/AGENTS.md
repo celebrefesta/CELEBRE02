@@ -34,3 +34,25 @@
 - **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
   - O arquivo `Estoque.css` está **BLINDADO E CONGELADO**. Nenhuma regra de layout, espaçamento, grid ou responsividade pode ser alterada sem instrução explícita do usuário.
 
+## 7. 🔒 Sistema de Design Lock — `src/styles/design-lock.css`
+
+- **ARQUIVO SAGRADO**: O arquivo `src/styles/design-lock.css` é o **repositório oficial de designs aprovados e congelados** do sistema Celebre.
+- **PRIORIDADE MÁXIMA**: Este arquivo é importado **por último** em `App.jsx` (após `App.css` e todos os CSS de páginas), portanto suas regras com `!important` **SEMPRE vencem qualquer outra regra da cascata CSS**.
+- **NUNCA EDITAR** este arquivo sem solicitação explícita do usuário. Isso inclui:
+  - NÃO remover blocos de páginas já congeladas.
+  - NÃO alterar valores de `gap`, `padding`, `grid-template-columns`, `font-size`, `border-radius` de páginas marcadas como `🔒 CONGELADA`.
+  - NÃO reordenar os blocos do arquivo.
+- **COMO ADICIONAR UMA NOVA PÁGINA**: Quando o usuário pedir para "congelar" ou "travar" o design de uma nova página:
+  1. Ler o CSS atual da página para extrair as regras críticas de layout aprovado.
+  2. Criar um novo bloco escopado no `design-lock.css` com o comentário de data e status `🔒 CONGELADA`.
+  3. Mover o status da página de `🔓 ABERTA` para `🔒 CONGELADA` no rodapé do arquivo.
+- **PÁGINAS ATUALMENTE CONGELADAS** (03/09/2026):
+  - `🔒 Clientes` (`Clientes.css`, `CadastroCliente.css`)
+  - `🔒 Locações` (`Locacoes.css`)
+  - `🔒 Nova Locação` (`NovaLocacao.css`)
+  - `🔒 Estoque & Acervo` (`Estoque.css`)
+  - `🔒 Compras` (`Compras.css`)
+  - `🔒 Logística / Kanban Galpão` (`Logistica.css`)
+  - `🔒 Relatórios` (`Relatorios.css`, `PedidosTab.css`, `EstoqueTab.css`, `ClientesTab.css`)
+  - `🔒 Cadastro Cliente` (`CadastroCliente.css`)
+  - `🔒 Sistema Global de Cards KPI` (1 linha desktop / 2 colunas mobile)

@@ -9,6 +9,7 @@ import { verificarELimparMidiasBackground } from './utils/limpezaMidiaService';
 import Navbar from './components/Navbar';
 import Topbar from './components/Topbar'; 
 import './App.css';
+import './styles/design-lock.css'; /* 🔒 DESIGN LOCK — importado por último, vence toda a cascata */
 
 import RotaPrivada from './components/RotaPrivada'; 
 import RotaAdmin from './components/RotaAdmin'; 

@@ -629,6 +629,18 @@
   background-color: #fff5f5 !important;
 }
 
+.linha-esteira-parada td {
+  background-color: #fff1f2 !important;
+}
+
+.linha-esteira-parada {
+  border-left: 4px solid #ef4444 !important;
+}
+
+.linha-esteira-parada:hover td {
+  background-color: #fee2e2 !important;
+}
+
 /* Avatar Dourado Quadrado */
 .avatar-quadrado.avatar-letra-gold {
   width: 42px;
@@ -786,6 +798,19 @@
   white-space: nowrap;
 }
 
+.btn-quick-checkin.finaliz {
+  background: #ecfdf5;
+  color: #15803d;
+  border-color: #86efac;
+}
+
+.btn-quick-checkin.finaliz:hover {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #15803d;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
+}
+
 .btn-quick-checkin.ida {
   background: #fef3c7;
   color: #92400e;
@@ -810,6 +835,59 @@
   color: #ffffff;
   border-color: #059669;
   box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+}
+
+.btn-quick-finalizado {
+  padding: 5px 9px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  border: 1px solid transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.18s ease;
+  white-space: nowrap;
+}
+
+.btn-quick-finalizado.cobrar-devedor {
+  background: #fee2e2;
+  color: #dc2626;
+  border-color: #fca5a5;
+}
+
+.btn-quick-finalizado.cobrar-devedor:hover {
+  background: #dc2626;
+  color: #ffffff;
+  border-color: #b91c1c;
+  box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);
+}
+
+.btn-quick-finalizado.pos-evento {
+  background: #f0fdf4;
+  color: #16a34a;
+  border-color: #bbf7d0;
+}
+
+.btn-quick-finalizado.pos-evento:hover {
+  background: #16a34a;
+  color: #ffffff;
+  border-color: #15803d;
+  box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
+}
+
+.btn-quick-finalizado.recibo {
+  background: #f8fafc;
+  color: #334155;
+  border-color: #cbd5e1;
+}
+
+.btn-quick-finalizado.recibo:hover {
+  background: #0f172a;
+  color: #ffffff;
+  border-color: #0f172a;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
 }
 
 .dropdown-container {
