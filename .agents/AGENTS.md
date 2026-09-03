@@ -46,14 +46,18 @@
   1. Ler o CSS atual da página para extrair as regras críticas de layout aprovado.
   2. Criar um novo bloco escopado no `design-lock.css` com o comentário de data e status `🔒 CONGELADA`.
   3. Mover o status da página de `🔓 ABERTA` para `🔒 CONGELADA` no rodapé do arquivo.
-- **PÁGINAS ATUALMENTE CONGELADAS** (03/09/2026):
+- **PÁGINAS ATUALMENTE CONGELADAS (SISTEMA 100% TRANCA GERAL)** (03/09/2026):
   - `🔒 Clientes` (`Clientes.css`, `CadastroCliente.css`)
   - `🔒 Locações` (`Locacoes.css`)
   - `🔒 Nova Locação` (`NovaLocacao.css`)
-  - `🔒 Estoque & Acervo` (`Estoque.css`)
-  - `🔒 Compras` (`Compras.css`)
+  - `🔒 Estoque & Acervo` (`Estoque.css`, `CadastroEstoque.css`)
+  - `🔒 Compras` (`Compras.css`, `NovaCompra.css`)
+  - `🔒 Financeiro` (`Financeiro.css`, `NovoLancamento.css`)
+  - `🔒 Dashboard / Início` (`Dashboard.css`)
+  - `🔒 Contratos & Novo Contrato` (`Contratos.css`, `NovoContrato.css`)
+  - `🔒 Agenda` (`Agenda.css`)
   - `🔒 Logística / Kanban Galpão` (`Logistica.css`)
-  - `🔒 Relatórios` (`Relatorios.css`, `PedidosTab.css`, `EstoqueTab.css`, `ClientesTab.css`)
-  - `🔒 Cadastro Cliente` (`CadastroCliente.css`)
-  - `🔒 Financeiro` (`Financeiro.css`)
+  - `🔒 Relatórios` (`Relatorios.css`, `PedidosTab.css`, `EstoqueTab.css`, `ClientesTab.css`, `FinanceiroTab.css`)
+  - `🔒 Catálogo & Auto-Cadastro` (`Catalago.css`, `AutoCadastro.css`)
   - `🔒 Sistema Global de Cards KPI` (1 linha desktop / 2 colunas mobile)
+  - `🔒 Motor Global de Cores Dinâmicas da Marca` (`src/utils/themeUtils.js` e `design-lock.css`)

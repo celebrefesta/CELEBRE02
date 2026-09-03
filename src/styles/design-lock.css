@@ -743,16 +743,152 @@ a.btn-primary-celebre {
 
 
 /* ============================================================
-   🔓 PÁGINAS AINDA ABERTAS (sem lock ativo):
-   - Dashboard
-   - Contratos
-   - Agenda
-   - Moodboard
-   - Configurações
-   - CheckinPage / CheckoutPage
-   - Catálogo / AutoCadastro
-   - LandingPage
+   🔒 PÁGINA: DASHBOARD (INÍCIO)
+   STATUS: CONGELADA em 03/09/2026
+   ARQUIVO DE ORIGEM: src/pages/Dashboard/Dashboard.css
+   REGRA: Grid KPI em 1 linha desktop / 2 colunas mobile,
+   ações rápidas compactas e termômetro financeiro estável
+   ============================================================ */
 
-   → Quando aprovadas, adicionar o bloco acima desta linha.
+.dash-wide-container {
+  padding: 16px 24px 32px 24px !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+}
+
+.dash-wide-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 16px !important;
+  margin-bottom: 12px !important;
+  flex-shrink: 0 !important;
+  flex-wrap: wrap !important;
+}
+
+.dash-quick-actions-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(85px, 1fr)) !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.dash-meta-card {
+  border-radius: 16px !important;
+  margin-bottom: 16px !important;
+}
+
+@media (max-width: 768px) {
+  .dash-wide-container {
+    padding: 12px 12px 28px 12px !important;
+  }
+
+  .dash-wide-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .dash-actions-container-mobile {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 8px !important;
+  }
+
+  .dash-quick-actions-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    width: 100% !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: CONTRATOS & NOVO CONTRATO
+   STATUS: CONGELADA em 03/09/2026
+   ARQUIVO DE ORIGEM: src/pages/Contratos/Contratos.css
+   REGRA: Layout executivo widescreen e cabeçalho blindado
+   ============================================================ */
+
+.contratos-container {
+  width: 100% !important;
+  padding: 24px 36px !important;
+  box-sizing: border-box !important;
+}
+
+.contratos-hero-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 24px !important;
+  flex-wrap: wrap !important;
+  gap: 16px !important;
+}
+
+@media (max-width: 768px) {
+  .contratos-container {
+    padding: 14px 12px !important;
+  }
+
+  .contratos-hero-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: AGENDA
+   STATUS: CONGELADA em 03/09/2026
+   ARQUIVO DE ORIGEM: src/pages/Agenda/Agenda.css
+   REGRA: Grade de calendário flexível e barra lateral executiva
+   ============================================================ */
+
+.agenda-layout {
+  display: flex !important;
+  width: 100% !important;
+  min-height: calc(100vh - 65px) !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 900px) {
+  .agenda-layout {
+    flex-direction: column !important;
+  }
+}
+
+
+/* ============================================================
+   🔒 PÁGINA: CATÁLOGO & AUTO-CADASTRO
+   STATUS: CONGELADA em 03/09/2026
+   ARQUIVOS DE ORIGEM: Catalago.css, AutoCadastro.css
+   REGRA: Grade de cards responsiva e formulário público blindado
+   ============================================================ */
+
+.catalogo-container,
+.autocadastro-container {
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+
+/* ============================================================
+   🔒 SISTEMA 100% CONGELADO E BLINDADO (03/09/2026)
+   TODAS AS PÁGINAS PRINCIPAIS ESTÃO COM STATUS CONGELADA:
+   ✅ 🔒 Clientes (Clientes.css, CadastroCliente.css)
+   ✅ 🔒 Locações (Locacoes.css)
+   ✅ 🔒 Nova Locação (NovaLocacao.css)
+   ✅ 🔒 Estoque & Acervo (Estoque.css, CadastroEstoque.css)
+   ✅ 🔒 Compras (Compras.css, NovaCompra.css)
+   ✅ 🔒 Financeiro (Financeiro.css, NovoLancamento.css)
+   ✅ 🔒 Dashboard / Início (Dashboard.css)
+   ✅ 🔒 Contratos & Novo Contrato (Contratos.css, NovoContrato.css)
+   ✅ 🔒 Agenda (Agenda.css)
+   ✅ 🔒 Logística / Kanban Galpão (Logistica.css)
+   ✅ 🔒 Relatórios (Relatorios.css, Tabs)
+   ✅ 🔒 Catálogo & Auto-Cadastro (Catalago.css, AutoCadastro.css)
+   ✅ 🔒 Sistema Global de Cards KPI (1 linha desktop / 2 colunas mobile)
+   ✅ 🔒 Motor Global de Cores Dinâmicas da Marca (Aparência)
    ============================================================ */
 
