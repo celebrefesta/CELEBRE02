@@ -91,7 +91,13 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .btn-catalogo-primary,
     .btn-finalizar-locacao,
     .btn-salvar-orcamento,
-    .btn-lancar-lote-contas {
+    .btn-lancar-lote-contas,
+    .btn-salvar-celebre-gold,
+    .unified-card-actions-bar .btn-salvar-celebre-gold,
+    .btn-bv-criar-locacao,
+    .clientes-container .btn-primary-celebre,
+    .cadastro-cliente-container .btn-primary-celebre,
+    a.btn-primary-celebre {
       background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
       border-color: ${accentColor} !important;
       color: #ffffff !important;
@@ -136,7 +142,10 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .btn-tipo-toggle.active,
     .tipo-desconto-toggle button.active,
     .btn-servico-card.ativo .servico-check-badge,
-    .btn-servico-card.ativo .servico-icon-box {
+    .btn-servico-card.ativo .servico-icon-box,
+    .clientes-container .desktop-pills-only .pill-btn.active,
+    [data-theme^='dark'] .clientes-container .desktop-pills-only .pill-btn.active,
+    .pill-gold.active {
       background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
       border-color: transparent !important;
       color: #ffffff !important;
@@ -145,7 +154,8 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .tab-btn-celebre.active *,
     [data-theme^='dark'] .tab-btn-celebre.active *,
     [data-theme^='dark'] .financeiro-container .tab-btn-celebre.active *,
-    .tabs-relatorios-compacto button.active * {
+    .tabs-relatorios-compacto button.active *,
+    .clientes-container .desktop-pills-only .pill-btn.active * {
       color: #ffffff !important;
     }
 
@@ -162,7 +172,10 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .contratos-hero-header .header-icon-badge,
     .relatorios-header-ajuste .header-icon-badge,
     .romaneio-icon-badge,
-    .modal-checkin-header.header-ida {
+    .modal-checkin-header.header-ida,
+    .cadastro-cliente-container .header-icon-badge,
+    .cadastro-hero-left .header-icon-badge,
+    .avatar-circle-wrapper {
       background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
       color: #ffffff !important;
       box-shadow: 0 4px 14px ${accentColor}40 !important;
@@ -176,10 +189,18 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
       border-color: ${accentColor} !important;
     }
 
+    .unified-section-header,
+    .profile-ltv-banner {
+      border-left-color: ${accentColor} !important;
+    }
+
     .header-titles strong,
     .origem-frete-tag,
     .icon-gold,
-    .gold-text {
+    .gold-text,
+    .section-header-icon,
+    .profile-ltv-banner .ltv-title i,
+    .profile-ltv-banner .ltv-amount {
       color: ${accentColor} !important;
     }
 

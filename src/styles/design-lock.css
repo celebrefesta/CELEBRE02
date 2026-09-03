@@ -57,7 +57,13 @@
 .btn-action-primary,
 .rel-btn-action-primary,
 .btn-salvar-modal,
-.btn-submit {
+.btn-submit,
+.btn-salvar-celebre-gold,
+.unified-card-actions-bar .btn-salvar-celebre-gold,
+.btn-bv-criar-locacao,
+.clientes-container .btn-primary-celebre,
+.cadastro-cliente-container .btn-primary-celebre,
+a.btn-primary-celebre {
   background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
   border-color: var(--dourado) !important;
   color: #ffffff !important;
@@ -69,7 +75,8 @@
 .btn-novo:hover,
 .btn-salvar:hover,
 .btn-salvar-form:hover,
-.btn-novo-cliente:hover {
+.btn-novo-cliente:hover,
+.btn-salvar-celebre-gold:hover {
   filter: brightness(1.1) !important;
 }
 
@@ -88,7 +95,10 @@
 .chip-btn.active,
 .agenda-sidebar .menu-item.highlight.ativo,
 .active-deco,
-.sidebar-list li.destak {
+.sidebar-list li.destak,
+.clientes-container .desktop-pills-only .pill-btn.active,
+[data-theme^='dark'] .clientes-container .desktop-pills-only .pill-btn.active,
+.pill-gold.active {
   background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
   border-color: transparent !important;
   color: #ffffff !important;
@@ -96,7 +106,8 @@
 
 .tab-btn-celebre.active *,
 [data-theme^='dark'] .tab-btn-celebre.active *,
-[data-theme^='dark'] .financeiro-container .tab-btn-celebre.active * {
+[data-theme^='dark'] .financeiro-container .tab-btn-celebre.active *,
+.clientes-container .desktop-pills-only .pill-btn.active * {
   color: #ffffff !important;
 }
 
@@ -104,9 +115,23 @@
 .header-icon-badge,
 .locacoes-hero-header .header-icon-badge,
 .clientes-hero-header .header-icon-badge,
-.financeiro-container .header-icon-badge {
+.financeiro-container .header-icon-badge,
+.cadastro-cliente-container .header-icon-badge,
+.cadastro-hero-left .header-icon-badge,
+.avatar-circle-wrapper {
   background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
   color: #ffffff !important;
+}
+
+.unified-section-header,
+.profile-ltv-banner {
+  border-left-color: var(--dourado) !important;
+}
+
+.section-header-icon,
+.profile-ltv-banner .ltv-title i,
+.profile-ltv-banner .ltv-amount {
+  color: var(--dourado) !important;
 }
 
 /* ── LINKS E ÍCONES ATIVOS NA BARRA LATERAL (NAVBAR) ── */
