@@ -57,6 +57,14 @@
           document.documentElement.style.setProperty('--primary-color', savedAccent, 'important');
           document.documentElement.style.setProperty('--gold-primary', savedAccent, 'important');
           document.documentElement.style.setProperty('--gold-dark', darkerAccent, 'important');
+
+          var styleTag = document.getElementById('celebre-dynamic-theme-style');
+          if (!styleTag) {
+            styleTag = document.createElement('style');
+            styleTag.id = 'celebre-dynamic-theme-style';
+            document.head.appendChild(styleTag);
+          }
+          styleTag.textContent = ':root { --dourado: ' + savedAccent + ' !important; --cor-destaque: ' + savedAccent + ' !important; --primary-color: ' + savedAccent + ' !important; --gold-primary: ' + savedAccent + ' !important; --gold-dark: ' + darkerAccent + ' !important; }';
         } catch (e) {}
       })();
     </script>

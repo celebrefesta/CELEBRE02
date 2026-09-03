@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './Configuracoes.css';
+import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 
 const ACCENT_COLORS = [
   { id: 'gold', name: 'Dourado Celebre', color: '#c5a059', icon: '👑' },
@@ -66,6 +67,7 @@ const AbaAparencia = () => {
     document.documentElement.style.setProperty('--primary-color', accentColor, 'important');
     document.documentElement.style.setProperty('--gold-primary', accentColor, 'important');
     document.documentElement.style.setProperty('--gold-dark', darkerAccent, 'important');
+    aplicarCorDestaqueGlobal(accentColor);
 
     // Salva no localStorage
     localStorage.setItem('theme', theme);

@@ -10,6 +10,7 @@ import Navbar from './components/Navbar';
 import Topbar from './components/Topbar'; 
 import './App.css';
 import './styles/design-lock.css'; /* 🔒 DESIGN LOCK — importado por último, vence toda a cascata */
+import { aplicarCorDestaqueGlobal } from './utils/themeUtils';
 
 import RotaPrivada from './components/RotaPrivada'; 
 import RotaAdmin from './components/RotaAdmin'; 
@@ -427,6 +428,7 @@ const AppContent = () => {
       document.documentElement.style.setProperty('--primary-color', savedAccent, 'important');
       document.documentElement.style.setProperty('--gold-primary', savedAccent, 'important');
       document.documentElement.style.setProperty('--gold-dark', darkerAccent, 'important');
+      aplicarCorDestaqueGlobal(savedAccent);
     };
 
     aplicarTemaGlobal();
