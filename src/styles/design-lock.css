@@ -119,10 +119,53 @@
   color: var(--dourado) !important;
 }
 
-/* ── FOCO DE FORMULÁRIOS ── */
-input:focus,
-select:focus,
-textarea:focus {
+/* ── ELEMENTOS DE DESTAQUE DO DASHBOARD (INÍCIO) ── */
+.header-titles strong {
+  color: var(--dourado) !important;
+}
+
+.btn-dash-quick-action,
+.dash-quick-actions-grid button {
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+  border-color: var(--dourado) !important;
+  color: #ffffff !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15) !important;
+}
+
+.btn-dash-quick-action:hover,
+.dash-quick-actions-grid button:hover {
+  filter: brightness(1.1) !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25) !important;
+}
+
+.compact-bar-fill,
+.dash-meta-bar-fill:not(.gold-fill) {
+  background: linear-gradient(90deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+}
+
+.birthday-avatar {
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+}
+
+.birthday-count-pill {
+  background: color-mix(in srgb, var(--dourado) 15%, transparent) !important;
+  color: var(--dourado) !important;
+  border-color: color-mix(in srgb, var(--dourado) 35%, transparent) !important;
+}
+
+.btn-ver-todos-anivs:hover {
+  background: var(--dourado) !important;
+  color: #ffffff !important;
+  border-color: var(--dourado) !important;
+}
+
+.btn-ajustar-meta-dash:hover {
+  border-color: var(--dourado) !important;
+  color: var(--dourado) !important;
+}
+
+.select-periodo-dash:hover,
+.select-periodo-dash:focus {
   border-color: var(--dourado) !important;
 }
 
