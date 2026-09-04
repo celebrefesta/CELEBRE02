@@ -11,7 +11,6 @@ import { gerarRomaneioPDF } from './gerarRomaneioPDF';
 import { gerarFolhaSeparacaoGalpaoPDF } from './gerarFolhaSeparacaoGalpaoPDF';
 import { ModalAssinaturaEntrega } from './ModalAssinaturaEntrega';
 import { ModalDesignarMotorista } from './ModalDesignarMotorista';
-import ModalBipagemGalpao from './ModalBipagemGalpao';
 import TimelineLogistica from './TimelineLogistica';
 import ModalLightboxFotos from './ModalLightboxFotos';
 
@@ -42,7 +41,6 @@ const Logistica = () => {
   const [relatorioModalLoc, setRelatorioModalLoc] = useState(null);
   const [modalAssinaturaLoc, setModalAssinaturaLoc] = useState(null);
   const [modalDesignarLoc, setModalDesignarLoc] = useState(null);
-  const [modalBipagemAberta, setModalBipagemAberta] = useState(false);
   const [modalEmbalagensAberta, setModalEmbalagensAberta] = useState(false);
   const [parametros, setParametros] = useState(null);
   const [textoRelatorio, setTextoRelatorio] = useState('');
@@ -570,16 +568,6 @@ const Logistica = () => {
         </div>
 
         <div className="kanban-header-actions">
-          {/* ⚡ BOTÃO PRIMÁRIO: BIPAGEM DE GALPÃO */}
-          <button 
-            type="button" 
-            className="btn-log-primary"
-            onClick={() => setModalBipagemAberta(true)}
-            title="Abrir Scanner de Bipagem Contínua de Peças e Caixotes"
-          >
-            ⚡ Bipar Galpão
-          </button>
-
           <div className="kanban-pdf-btn-group">
             {/* 📄 BOTÃO SECUNDÁRIO: ROMANEIO DE ROTA */}
             <button 
@@ -1178,11 +1166,11 @@ const Logistica = () => {
             </div>
 
             {/* COLUNA 4: DEVOLVIDOS */}
-            <div className="kanban-col">
+            <div className="kanban-col kanban-col-devolvidos">
               <div className="col-header">
                 <span className="dot" style={{background: '#10b981'}}></span>
                 <h3>4. Devolvidos</h3>
-                <span className="badge-count">{colunas.finalizado.length}</span>
+                <span className="badge-count badge-count-devolvidos">{colunas.finalizado.length}</span>
               </div>
               <div className="col-body">
                 {colunas.finalizado.length === 0 ? (
@@ -1269,15 +1257,6 @@ const Logistica = () => {
           listaMotoristasExistentes={listaMotoristas}
         />
       )}
-
-      {/* ⚡ MODAL DE BIPAGEM CONTÍNUA DE GALPÃO */}
-      <ModalBipagemGalpao 
-        isOpen={modalBipagemAberta}
-        onClose={() => setModalBipagemAberta(false)}
-        locacoes={locacoes}
-        onAtualizarLocacoes={carregarDados}
-        tenantId={tenantId}
-      />
 
       {/* 📸 MODAL LIGHTBOX DE FOTOS DE VISTORIA */}
       <ModalLightboxFotos 
@@ -1473,7 +1452,13 @@ const CartaoKanban = ({
 
   let btnChecklistTxt = 'Ver Peças';
   if (loc.status === 'preparacao') btnChecklistTxt = `Separar (${itensCheckados}/${totalItens})`;
-  if (isFaseDevolucao || loc.status === 'entregue') btnChecklistTxt = `Conferir (${itensCheckados}/${totalItens})`;
+  if (isFaseDevolucao || loc.status === 'entregue') {
+    if (isFinal) {
+      btnChecklistTxt = `Ver Peças (${totalItens})`;
+    } else {
+      btnChecklistTxt = `Conferir (${itensCheckados}/${totalItens})`;
+    }
+  }
 
   const motoristaDesignado = loc.logistica?.motoristaNome;
   const veiculoDesignado = loc.logistica?.veiculo;
@@ -1485,7 +1470,7 @@ const CartaoKanban = ({
   const ehEsteiraParada = (ehAtrasoDevolucao || eventoJaPassou) && !isFinal;
 
   return (
-    <div className={`k-card ${temAvaria ? 'card-com-avaria' : ''} ${temFalta ? 'card-com-falta' : ''} ${isModoLista ? 'card-modo-lista' : ''} ${ehEsteiraParada ? 'k-card-esteira-parada' : ''}`}>
+    <div className={`k-card ${temAvaria ? 'card-com-avaria' : ''} ${temFalta ? 'card-com-falta' : ''} ${isModoLista ? 'card-modo-lista' : ''} ${ehEsteiraParada ? 'k-card-esteira-parada' : ''} ${isFinal ? 'k-card-finalizado' : ''}`}>
       {ehEsteiraParada ? (
         <div className="alerta-esteira-parada-topo">
           🚨 ESTEIRA PARADA (Festa em {dataBr})
@@ -1500,9 +1485,14 @@ const CartaoKanban = ({
       <div className="k-card-header">
         <div className="k-card-cliente">
           <strong>{loc.clienteNome || 'Cliente'}</strong>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginTop: '1px' }}>
+          <div className="k-card-sub-row">
             <span className="k-card-pedido">{loc.numeroPedido ? `#${loc.numeroPedido}` : ''}</span>
-            {loc.tema && <span style={{ fontSize: '0.7rem', color: '#64748b' }}>• {loc.tema}</span>}
+            {isFinal && (
+              <span className="badge-micro-concluido">
+                ✓ Devolvido
+              </span>
+            )}
+            {loc.tema && <span className="k-card-tema">• {loc.tema}</span>}
           </div>
         </div>
         <span className={`k-tag ${isEntrega ? 'tag-entrega' : 'tag-loja'}`}>
@@ -1531,8 +1521,8 @@ const CartaoKanban = ({
         </div>
       )}
 
-      {/* BARRA DE PROGRESSO VISUAL DE CONFERÊNCIA */}
-      {hasItens && (isFaseSeparacao || isFaseDevolucao) && (
+      {/* BARRA DE PROGRESSO VISUAL DE CONFERÊNCIA (APENAS EM ANDAMENTO) */}
+      {hasItens && !isFinal && (isFaseSeparacao || isFaseDevolucao) && (
         <div style={{ margin: '2px 0', background: '#f1f5f9', borderRadius: '6px', overflow: 'hidden', height: '5px', position: 'relative' }}>
           <div 
             style={{ 
@@ -1610,11 +1600,33 @@ const CartaoKanban = ({
             >
               📝 Conferir Itens ({itensCheckados}/{totalItens}) ➔
             </button>
+          ) : isFinal ? (
+            /* 🌟 CARDS FINALIZADOS / DEVOLVIDOS: VISUAL ELEGANTE E EQUILIBRADO */
+            <div className="k-card-actions-final">
+              {hasItens && (
+                <button 
+                  type="button" 
+                  className="k-btn-final-itens"
+                  onClick={onAbrirChecklist}
+                  title="Visualizar itens e checklist da devolução"
+                >
+                  🔍 {btnChecklistTxt}
+                </button>
+              )}
+              <button 
+                type="button" 
+                className="k-btn-reverter-final" 
+                onClick={onVoltar}
+                title="Reverter este pedido de volta para a etapa anterior"
+              >
+                ↺ Reverter
+              </button>
+            </div>
           ) : (
             <>
               {hasItens && (isFaseSeparacao || isFaseDevolucao) && (
                 <button 
-                  type="button"
+                  type="button" 
                   className="k-btn-itens-toggle" 
                   onClick={onAbrirChecklist}
                 >
@@ -1622,20 +1634,14 @@ const CartaoKanban = ({
                 </button>
               )}
 
-              {!isFinal ? (
-                <button 
-                  type="button"
-                  className="k-btn-move" 
-                  style={{ backgroundColor: btnCor, color: 'white', flex: (hasItens && (isFaseSeparacao || isFaseDevolucao)) ? 1 : '1 1 100%' }} 
-                  onClick={handleAvancarClick}
-                >
-                  {btnTxt}
-                </button>
-              ) : (
-                <button type="button" className="k-btn-view" onClick={onVoltar} style={{ color: '#ef4444', borderColor: '#fca5a5', width: '100%' }}>
-                  ⏪ Voltar
-                </button>
-              )}
+              <button 
+                type="button" 
+                className="k-btn-move" 
+                style={{ backgroundColor: btnCor, color: 'white', flex: (hasItens && (isFaseSeparacao || isFaseDevolucao)) ? 1 : '1 1 100%' }} 
+                onClick={handleAvancarClick}
+              >
+                {btnTxt}
+              </button>
             </>
           )}
         </div>
@@ -1648,7 +1654,7 @@ const CartaoKanban = ({
         onClick={() => setExpandido(prev => !prev)}
         title={expandido ? "Ocultar detalhes adicionais" : "Expandir endereço, GPS, WhatsApp e etiquetas"}
       >
-        <span>{expandido ? '▲ Menos Informações' : '▼ Ver Mais'}</span>
+        <span>{expandido ? '▲ Menos Detalhes' : '▼ Mais Detalhes'}</span>
       </button>
 
       {/* 📦 DETALHES EXPANDIDOS (QUANDO O USUÁRIO CLICA EM VER MAIS) */}

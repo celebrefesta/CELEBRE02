@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut, onAuthStateChanged } from 'firebase/auth'; 
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
+import { aplicarCorDestaqueGlobal } from '../utils/themeUtils';
 import SininhoNotificacoes from './SininhoNotificacoes';
 import './Topbar.css';
 
@@ -155,6 +156,8 @@ const Topbar = () => {
       localStorage.removeItem('userRole');
       localStorage.removeItem('userPermissions');
       localStorage.removeItem('funcName');
+      localStorage.removeItem('accentColor');
+      aplicarCorDestaqueGlobal('#c5a059');
 
       await signOut(auth);
       navigate('/login'); 

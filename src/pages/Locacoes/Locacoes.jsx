@@ -9,6 +9,7 @@ import { gerarPropostaPDF } from '../../utils/gerarPropostaPDF';
 import ModalCalendarioDisponibilidade from './ModalCalendarioDisponibilidade';
 import ModalCheckinLocacao from './ModalCheckinLocacao';
 import ModalRomaneioSeparacao from './ModalRomaneioSeparacao';
+import ModalBipagemGalpao from '../Logistica/ModalBipagemGalpao';
 
 // 🟢 ÍCONE OFICIAL DO WHATSAPP (VETORIAL #25D366)
 const IconeWhatsApp = ({ size = 15, color = "#25D366" }) => (
@@ -67,6 +68,7 @@ const Locacoes = () => {
   // 🚨 FILTROS RÁPIDOS DE OPERAÇÃO DO DIA E ROMANEIO
   const [filtroOperacao, setFiltroOperacao] = useState('todos'); // 'todos' | 'saem_hoje' | 'entram_hoje' | 'atrasados'
   const [modalRomaneioPedido, setModalRomaneioPedido] = useState(null);
+  const [modalBipagemLocacao, setModalBipagemLocacao] = useState(null);
   
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
@@ -1318,6 +1320,18 @@ const Locacoes = () => {
                                 <span className="item-icon gold">📋</span> Romaneio & Checklist
                               </button>
 
+                              <button 
+                                type="button" 
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  setModalBipagemLocacao(item);
+                                  setMenuAberto(null);
+                                }} 
+                                className="item-menu"
+                              >
+                                <span className="item-icon blue">⚡</span> Bipar Peças (Scanner)
+                              </button>
+
                               <div className="menu-divider" />
 
                               <button 
@@ -1594,6 +1608,14 @@ const Locacoes = () => {
                             </button>
                             <button 
                               type="button" 
+                              className="btn-quick-checkin bipar"
+                              title="Bipar e conferir peças deste pedido com leitor ou câmera"
+                              onClick={(e) => { e.stopPropagation(); setModalBipagemLocacao(item); }}
+                            >
+                              ⚡ Bipar
+                            </button>
+                            <button 
+                              type="button" 
                               className="btn-quick-checkin ida"
                               title="Fazer Check-in de Saída (IDA)"
                               onClick={(e) => { e.stopPropagation(); abrirCheckin(item, 'IDA'); }}
@@ -1624,6 +1646,18 @@ const Locacoes = () => {
                           
                           {menuAberto === item.id && (
                             <div className="menu-suspenso animate-pop" onClick={(e) => e.stopPropagation()}>
+                              <button 
+                                type="button" 
+                                onClick={(e) => { 
+                                  e.stopPropagation();
+                                  setModalBipagemLocacao(item);
+                                  setMenuAberto(null);
+                                }} 
+                                className="item-menu"
+                              >
+                                <span className="item-icon blue">⚡</span> Bipar Peças (Scanner)
+                              </button>
+
                               {!isOrcamento && !isCancelado && !statusStr.includes('finalizado') && (
                                 <button 
                                   type="button" 
@@ -2313,6 +2347,18 @@ const Locacoes = () => {
           </div>
         ),
         document.body
+      )}
+
+      {/* ⚡ MODAL DE BIPAGEM CONTÍNUA DE CADA LOCAÇÃO */}
+      {modalBipagemLocacao && (
+        <ModalBipagemGalpao 
+          isOpen={!!modalBipagemLocacao}
+          onClose={() => setModalBipagemLocacao(null)}
+          locacoes={lista}
+          locacaoSelecionada={modalBipagemLocacao}
+          onAtualizarLocacoes={carregarLocacoes}
+          tenantId={tenantId}
+        />
       )}
 
     </div>

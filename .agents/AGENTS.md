@@ -46,7 +46,7 @@
   1. Ler o CSS atual da página para extrair as regras críticas de layout aprovado.
   2. Criar um novo bloco escopado no `design-lock.css` com o comentário de data e status `🔒 CONGELADA`.
   3. Mover o status da página de `🔓 ABERTA` para `🔒 CONGELADA` no rodapé do arquivo.
-- **PÁGINAS ATUALMENTE CONGELADAS (SISTEMA 100% TRANCA GERAL)** (03/09/2026):
+- **PÁGINAS ATUALMENTE CONGELADAS (SISTEMA 100% TRANCA GERAL)** (04/09/2026):
   - `🔒 Clientes` (`Clientes.css`, `CadastroCliente.css`)
   - `🔒 Locações` (`Locacoes.css`)
   - `🔒 Nova Locação` (`NovaLocacao.css`)
@@ -58,6 +58,20 @@
   - `🔒 Agenda` (`Agenda.css`)
   - `🔒 Logística / Kanban Galpão` (`Logistica.css`)
   - `🔒 Relatórios` (`Relatorios.css`, `PedidosTab.css`, `EstoqueTab.css`, `ClientesTab.css`, `FinanceiroTab.css`)
-  - `🔒 Catálogo & Auto-Cadastro` (`Catalago.css`, `AutoCadastro.css`)
+  - `🔒 Catálogo Boutique de Luxo & Auto-Cadastro` (`Catalago.css`, `AutoCadastro.css`)
   - `🔒 Sistema Global de Cards KPI` (1 linha desktop / 2 colunas mobile)
   - `🔒 Motor Global de Cores Dinâmicas da Marca` (`src/utils/themeUtils.js` e `design-lock.css`)
+
+## 8. 🔒 Blindagem Específica do Catálogo Online Boutique de Luxo (`Catalago.css` e `Catalago.jsx`)
+- **Menu Lateral Oficial (`.cat-sidebar`)**:
+  - Todo o acervo, modalidades (*Pegue & Monte*, *Decorações Completas*) e categorias reais do estoque **DEVEM PERMANECER OBRIGATORIAMENTE CONSOLIDADOS NO MENU LATERAL**.
+- **PROIBIÇÃO ESTRITA DE BARRAS HORIZONTAIS DUPLICADAS NO TOPO**:
+  - **NUNCA** reintroduzir barras horizontais de categorias, pílulas de temas ou carrosséis repetitivos no topo da vitrine (`.cat-modalidades-tabs-bar`).
+  - A área principal da vitrine **DEVE INICIAR DIRETAMENTE NA BARRA DE CONTROLES** (Busca 🔍, Data de Disponibilidade 📅 e Ordenação 🔀).
+- **Unificação Total sob o Padrão "Categorias"**:
+  - Todos os botões mobile (`.btn-trigger-mobile-filter`, `.btn-mobile-filtros-fab`), cabeçalho da gaveta lateral e botões de ação devem manter a nomenclatura padronizada **"Categorias"**.
+- **Barra Flutuante de Carrinho (`.cat-floating-cart-pill`)**:
+  - Permanece obrigatoriamente fixada na base inferior da tela (`position: fixed !important;`) com animação suave e acionamento da gaveta lateral de checkout.
+- **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
+  - O arquivo `Catalago.css` está **BLINDADO E CONGELADO**. Nenhuma regra de layout, responsividade ou posicionamento pode ser alterada sem autorização expressa do usuário.
+

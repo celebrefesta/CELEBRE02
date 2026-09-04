@@ -375,6 +375,14 @@ const AppContent = () => {
         } catch (error) {
           console.error("Erro ao verificar integridade da conta:", error);
         }
+      } else {
+        // 🔒 Usuário deslogado: limpar preferências residuais e restaurar a identidade padrão Celebre
+        localStorage.removeItem('tenantId');
+        localStorage.removeItem('userRole');
+        localStorage.removeItem('userPermissions');
+        localStorage.removeItem('funcName');
+        localStorage.removeItem('accentColor');
+        aplicarCorDestaqueGlobal('#c5a059');
       }
     });
     return () => unsubscribe();
@@ -383,10 +391,14 @@ const AppContent = () => {
   // 🎨 SINCRONIZAÇÃO GLOBAL DE TEMA E COR DE DESTAQUE DA MARCA
   useEffect(() => {
     const aplicarTemaGlobal = () => {
-      const savedTheme = localStorage.getItem('theme') || 'light';
-      const savedAccent = localStorage.getItem('accentColor') || '#c5a059';
-      const savedFontSize = localStorage.getItem('fontSize') || 'padrao';
-      const savedContrast = localStorage.getItem('highContrast') === 'true';
+      const isLanding = location.pathname === '/';
+      const tenantId = localStorage.getItem('tenantId');
+
+      // 🔒 Se for a Landing Page ou se NÃO houver tenant logado, SEMPRE utiliza o Dourado Celebre padrão (#c5a059)
+      const savedTheme = (!isLanding && tenantId) ? (localStorage.getItem('theme') || 'light') : 'light';
+      const savedAccent = (!isLanding && tenantId) ? (localStorage.getItem('accentColor') || '#c5a059') : '#c5a059';
+      const savedFontSize = (!isLanding && tenantId) ? (localStorage.getItem('fontSize') || 'padrao') : 'padrao';
+      const savedContrast = (!isLanding && tenantId) ? (localStorage.getItem('highContrast') === 'true') : false;
 
       let effectiveTheme = 'light';
       let darkStyle = 'none';
@@ -438,7 +450,7 @@ const AppContent = () => {
       window.removeEventListener('storage', aplicarTemaGlobal);
       window.removeEventListener('theme-change', aplicarTemaGlobal);
     };
-  }, []);
+  }, [location.pathname]);
 
   const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade'];
 
@@ -474,6 +486,7 @@ const AppContent = () => {
             
             <Route path="/autocadastro/:idEmpresa" element={<AutoCadastro />} /> 
             <Route path="/catalogo/:idEmpresa" element={<Catalogo />} />
+            <Route path="/catalogo" element={<Catalogo />} />
             <Route path="/assinatura/:id" element={<AssinaturaContrato />} />
             <Route path="/visualizar/:id" element={<VisualizarContrato />} /> 
 

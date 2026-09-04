@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
 import './Configuracoes.css';
 import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 
@@ -81,7 +83,23 @@ const AbaAparencia = () => {
     window.dispatchEvent(new Event('theme-change'));
   }, [theme, accentColor, fontSize, highContrast, language]);
 
-  const handleSalvarPreferencias = () => {
+  const handleSalvarPreferencias = async () => {
+    try {
+      const tenantId = localStorage.getItem('tenantId');
+      if (tenantId) {
+        const ref = doc(db, "configuracoes_empresa", tenantId);
+        await setDoc(ref, {
+          accentColor,
+          theme,
+          darkStyle,
+          fontSize,
+          highContrast,
+          language
+        }, { merge: true });
+      }
+    } catch (e) {
+      console.warn("Erro ao salvar preferências no Firestore:", e);
+    }
     setSalvoFeedback(true);
     setTimeout(() => setSalvoFeedback(false), 2500);
   };

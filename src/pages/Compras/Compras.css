@@ -184,11 +184,12 @@
   border-color: var(--borda, #cbd5e1);
 }
 
-.compras-container .tab-btn-celebre.active {
-  background: #0f172a;
-  color: #ffffff;
-  border-color: #0f172a;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+.compras-container .tab-btn-celebre.active,
+.compras-tabs-bar .tab-btn-celebre.active {
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15) !important;
 }
 
 .compras-container .tab-badge {
@@ -1440,20 +1441,20 @@
 }
 
 [data-theme='dark'] .compras-container .tab-btn-celebre.active {
-  background: #c5a059 !important;
-  border-color: #c5a059 !important;
+  background: linear-gradient(135deg, var(--dourado) 0%, var(--gold-dark, var(--dourado)) 100%) !important;
+  border-color: transparent !important;
   box-shadow: 0 4px 14px rgba(197, 160, 89, 0.30) !important;
 }
 
 [data-theme='dark'] .compras-container .tab-btn-celebre.active span,
 [data-theme='dark'] .compras-container .tab-btn-celebre.active i {
-  color: #0f172a !important;
+  color: #ffffff !important;
   font-weight: 850 !important;
 }
 
 [data-theme='dark'] .compras-container .tab-btn-celebre.active .tab-badge {
-  background: rgba(15, 23, 42, 0.20) !important;
-  color: #0f172a !important;
+  background: rgba(255, 255, 255, 0.20) !important;
+  color: #ffffff !important;
   font-weight: 850 !important;
   border: none !important;
 }

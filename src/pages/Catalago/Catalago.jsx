@@ -120,7 +120,7 @@ const Catalogo = () => {
         const snapEstoque = await getDocs(qEstoque);
         const itens = snapEstoque.docs
           .map(d => ({ id: d.id, ...d.data() }))
-          .filter(i => i.status !== 'inativo'); 
+          .filter(i => i.status !== 'inativo' && !( (i.status === 'manutencao' || i.status === 'reparo') && !i.dataPrevisaoRetorno )); 
         setEstoque(itens);
 
         // Carrega Locações Ativas para Checagem de Disponibilidade Real
@@ -203,22 +203,57 @@ const Catalogo = () => {
     return limpo;
   };
 
-  // 📅 1. CHECAGEM DE DISPONIBILIDADE REAL POR DATA
+  // 🏷️ Formatação Elegante de Títulos (Title Case)
+  const formatarNomeTitulo = (nome) => {
+    if (!nome) return '';
+    return String(nome)
+      .trim()
+      .split(' ')
+      .filter(Boolean)
+      .map(palavra => {
+        const lower = palavra.toLowerCase();
+        if (['de', 'da', 'do', 'das', 'dos', 'e', 'em', 'com', 'para', 'por'].includes(lower)) {
+          return lower;
+        }
+        return lower.charAt(0).toUpperCase() + lower.slice(1);
+      })
+      .join(' ');
+  };
+
+  // 🎨 Ícones Inteligentes para Categorias e Temas
+  const getCategoriaIcon = (catNome) => {
+    const c = (catNome || '').toLowerCase();
+    if (c.includes('vaso') || c.includes('louca') || c.includes('cerâmica') || c.includes('ceramica')) return '🏺';
+    if (c.includes('móve') || c.includes('move') || c.includes('mobili') || c.includes('mesa') || c.includes('cadeira')) return '🛋️';
+    if (c.includes('painel') || c.includes('estrutura') || c.includes('arco') || c.includes('backdrop')) return '🖼️';
+    if (c.includes('cilindro')) return '📦';
+    if (c.includes('personagen') || c.includes('display') || c.includes('boneco') || c.includes('pelúcia') || c.includes('bale')) return '🧸';
+    if (c.includes('boleira') || c.includes('doce') || c.includes('bandeja') || c.includes('prato')) return '🧁';
+    if (c.includes('ilumina') || c.includes('lustre') || c.includes('led') || c.includes('neon')) return '💡';
+    if (c.includes('flor') || c.includes('arranjo') || c.includes('folhagem')) return '🌸';
+    if (c.includes('toalha') || c.includes('tecido')) return '🧺';
+    if (c.includes('kit') || c.includes('pacote')) return '✨';
+    return '🏷️';
+  };
+
+  const getTemaIcon = (temaNome) => {
+    const t = (temaNome || '').toLowerCase();
+    if (t.includes('infantil') || t.includes('circo') || t.includes('safari') || t.includes('disney')) return '🎈';
+    if (t.includes('casamento') || t.includes('noiva')) return '💍';
+    if (t.includes('15 anos') || t.includes('debutante')) return '👑';
+    if (t.includes('bebê') || t.includes('bebe') || t.includes('chá') || t.includes('maternidade')) return '👶';
+    if (t.includes('batizado')) return '⛪';
+    if (t.includes('boho') || t.includes('rústico') || t.includes('rustico')) return '🌿';
+    if (t.includes('corporativo')) return '💼';
+    return '🎉';
+  };
+
+  // 📅 1. CHECAGEM DE DISPONIBILIDADE REAL POR DATA (SEM JARGÃO OPERACIONAL DE OFICINA)
   const calcularDisponibilidadeItem = (item) => {
     const isManutencao = item.status === 'manutencao' || item.status === 'reparo';
 
     if (!dataEventoFiltro) {
-      if (isManutencao) {
-        return { 
-          checado: true, 
-          disponivel: true, 
-          qtdLivre: 0, 
-          status: 'manutencao', 
-          label: item.dataPrevisaoRetorno 
-            ? `🛠️ Reparo até ${item.dataPrevisaoRetorno.split('-').reverse().join('/')}` 
-            : '🛠️ Em Reparo' 
-        };
-      }
+      // Quando o cliente ainda não filtrou data, não exibimos avisos de oficina
       return { checado: false, disponivel: true, qtdLivre: Number(item.quantidade || 1), status: 'neutro' };
     }
 
@@ -234,10 +269,18 @@ const Catalogo = () => {
           checado: true, 
           disponivel: false, 
           qtdLivre: 0, 
-          status: 'manutencao', 
-          label: `🛠️ Em reparo até ${item.dataPrevisaoRetorno.split('-').reverse().join('/')}` 
+          status: 'esgotado', 
+          label: `Indisponível nesta data` 
         };
       }
+    } else if (isManutencao) {
+      return { 
+        checado: true, 
+        disponivel: false, 
+        qtdLivre: 0, 
+        status: 'esgotado', 
+        label: `Indisponível nesta data` 
+      };
     }
 
     locacoes.forEach(loc => {
@@ -265,7 +308,7 @@ const Catalogo = () => {
     if (qtdLivre === 1) {
       return { checado: true, disponivel: true, qtdLivre: 1, status: 'urgencia', label: '⚡ Última unidade!' };
     }
-    return { checado: true, disponivel: true, qtdLivre: qtdLivre, status: 'disponivel', label: `✓ ${qtdLivre} disponíveis` };
+    return { checado: true, disponivel: true, qtdLivre: qtdLivre, status: 'disponivel', label: `🟢 Disponível` };
   };
 
   // ❤️ 2. GERENCIAMENTO DE FAVORITOS
@@ -538,10 +581,15 @@ const Catalogo = () => {
     if (tipo === 'categoria') {
       setFiltroCategoria(valor);
       setFiltroTema('Todos');
-    }
-    if (tipo === 'tema') {
+      setFiltroModalidade('Todas');
+    } else if (tipo === 'tema') {
       setFiltroTema(valor);
       setFiltroCategoria('Todas');
+      setFiltroModalidade('Todas');
+    } else if (tipo === 'modalidade') {
+      setFiltroModalidade(valor);
+      setFiltroCategoria('Todas');
+      setFiltroTema('Todos');
     }
     setMenuMobileAberto(false);
   };
@@ -581,8 +629,11 @@ const Catalogo = () => {
   return (
     <div className="catalogo-luxury-page">
 
-      {/* 🌟 1. HERO HEADER DARK LUXURY */}
-      <header className="cat-hero-header">
+      {/* 🌟 1. HERO HEADER BOUTIQUE DE LUXO */}
+      <header 
+        className="cat-hero-header"
+        style={empresa.capa ? { backgroundImage: `linear-gradient(180deg, rgba(7, 10, 18, 0.78) 0%, rgba(15, 23, 42, 0.94) 100%), url(${empresa.capa})`, backgroundSize: 'cover', backgroundPosition: 'center' } : {}}
+      >
         <div className="cat-hero-overlay"></div>
         
         <div className="cat-header-top-bar">
@@ -594,12 +645,12 @@ const Catalogo = () => {
             )}
             <div className="cat-brand-info">
               <h1 className="cat-brand-title">{empresa.nome}</h1>
-              <span className="cat-brand-tagline">✨ Vitrine Online de Locação & Cenografia</span>
+              <span className="cat-brand-tagline">✨ Vitrine Oficial de Locação & Cenografia</span>
             </div>
           </div>
 
           <div className="cat-header-actions">
-            {/* ❤️ Botão Topo Favoritos */}
+            {/* ❤️ Botão Topo Favoritos / Inspirações */}
             <button 
               type="button" 
               className={`btn-header-fav-pill ${verApenasFavoritos ? 'active' : ''}`}
@@ -612,32 +663,30 @@ const Catalogo = () => {
 
             {empresa.whats && (
               <a 
-                href={`https://wa.me/${empresa.whats.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${empresa.nome}! Gostaria de tirar uma dúvida sobre a locação de peças.`)}`} 
+                href={`https://wa.me/${empresa.whats.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${empresa.nome}! Estou navegando no catálogo online e gostaria de falar com uma cenógrafa.`)}`} 
                 target="_blank" 
                 rel="noreferrer"
                 className="btn-header-zap"
-                title="Atendimento Rápido no WhatsApp"
+                title="Atendimento VIP no WhatsApp"
               >
-                <span>💬 WhatsApp</span>
+                <span>💬 Falar com a Cenógrafa</span>
               </a>
             )}
-
-            <button 
-              className="btn-header-admin-login" 
-              onClick={() => navigate(usuarioLogado ? '/dashboard' : '/login')}
-              title="Área Administrativa do Sistema"
-            >
-              🔒 Acesso Restrito
-            </button>
           </div>
         </div>
 
-        {/* Informações de Contato */}
+        {/* Informações de Contato & Badges de Autoridade */}
         <div className="cat-header-meta-row">
           {empresa.endereco && (
-            <span className="meta-item">
+            <a 
+              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(empresa.endereco)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="meta-item meta-link"
+              title="Ver endereço no Google Maps"
+            >
               <span className="meta-icon">📍</span> {empresa.endereco}
-            </span>
+            </a>
           )}
           {empresa.insta && (
             <a 
@@ -645,10 +694,14 @@ const Catalogo = () => {
               target="_blank" 
               rel="noreferrer" 
               className="meta-item meta-link"
+              title="Instagram Oficial"
             >
               <span className="meta-icon">📸</span> @{empresa.insta.replace('@', '')}
             </a>
           )}
+          <span className="meta-item meta-badge-trust">
+            <span className="meta-icon">✨</span> Peças 100% Higienizadas
+          </span>
         </div>
       </header>
 
@@ -660,7 +713,7 @@ const Catalogo = () => {
           <div className="cat-sidebar-overlay" onClick={() => setMenuMobileAberto(false)} />
         )}
 
-        {/* 📌 MENU LATERAL: FOCADO 100% NO ACERVO & TEMAS DO ESTOQUE */}
+        {/* 📌 MENU LATERAL: FOCADO 100% NO ACERVO, CATEGORIAS & TEMAS DO ESTOQUE */}
         <aside className={`cat-sidebar ${menuMobileAberto ? 'open' : ''}`}>
           
           <div className="sidebar-mobile-header">
@@ -668,20 +721,55 @@ const Catalogo = () => {
             <button className="btn-fechar-sidebar" onClick={() => setMenuMobileAberto(false)}>✕</button>
           </div>
 
-          {/* Seção: Categorias do Acervo Real */}
+          {/* Seção: Coleção & Modalidades */}
           <div className="sidebar-section">
-            <h3 className="sidebar-title">Acervo de Peças</h3>
+            <h3 className="sidebar-title">Coleção</h3>
             <ul className="sidebar-list">
               <li
-                className={filtroCategoria === 'Todas' && filtroTema === 'Todos' && !verApenasFavoritos ? 'active destak' : 'destak'}
+                className={filtroCategoria === 'Todas' && filtroTema === 'Todos' && filtroModalidade === 'Todas' && !verApenasFavoritos ? 'active destak' : 'destak'}
                 onClick={() => {
                   setVerApenasFavoritos(false);
                   selecionarFiltro('categoria', 'Todas');
                 }}
               >
-                <span>🌟 Todas as Categorias</span>
+                <span>🌟 Todo o Acervo</span>
                 <span className="sidebar-count">{estoque.length}</span>
               </li>
+
+              {qtdPegueMonte > 0 && (
+                <li
+                  className={filtroModalidade === 'Pegue e Monte' && !verApenasFavoritos ? 'active' : ''}
+                  onClick={() => {
+                    setVerApenasFavoritos(false);
+                    selecionarFiltro('modalidade', 'Pegue e Monte');
+                  }}
+                >
+                  <span>📦 Pegue & Monte</span>
+                  <span className="sidebar-count">{qtdPegueMonte}</span>
+                </li>
+              )}
+
+              {qtdDecoracao > 0 && (
+                <li
+                  className={filtroModalidade === 'Decoração Completa' && !verApenasFavoritos ? 'active' : ''}
+                  onClick={() => {
+                    setVerApenasFavoritos(false);
+                    selecionarFiltro('modalidade', 'Decoração Completa');
+                  }}
+                >
+                  <span>✨ Decorações Completas</span>
+                  <span className="sidebar-count">{qtdDecoracao}</span>
+                </li>
+              )}
+            </ul>
+          </div>
+
+          <div className="sidebar-divider"></div>
+
+          {/* Seção: Categorias do Acervo Real */}
+          <div className="sidebar-section">
+            <h3 className="sidebar-title">Categorias</h3>
+            <ul className="sidebar-list">
               {categoriasDinamicas.map(cat => {
                 const count = estoque.filter(i => String(i.categoria || '').trim() === cat).length;
                 return (
@@ -693,7 +781,7 @@ const Catalogo = () => {
                       selecionarFiltro('categoria', cat);
                     }}
                   >
-                    <span>{cat}</span>
+                    <span>{getCategoriaIcon(cat)} {cat}</span>
                     <span className="sidebar-count">{count}</span>
                   </li>
                 );
@@ -719,7 +807,7 @@ const Catalogo = () => {
                           selecionarFiltro('tema', tema);
                         }}
                       >
-                        <span>{tema}</span>
+                        <span>{getTemaIcon(tema)} {tema}</span>
                         <span className="sidebar-count">{count}</span>
                       </li>
                     );
@@ -733,58 +821,27 @@ const Catalogo = () => {
 
         {/* 🛍️ CONTEÚDO PRINCIPAL (ÁREA DA VITRINE AMPLA) */}
         <main className="cat-content">
-
-          {/* 🌟 ABAS SEGMENTADAS NO TOPO (ESTILO BOUTIQUE) */}
-          <div className="cat-modalidades-tabs-bar">
-            <button 
-              type="button"
-              className={`modalidade-tab-btn ${filtroModalidade === 'Todas' && !verApenasFavoritos ? 'active' : ''}`}
-              onClick={() => {
-                setVerApenasFavoritos(false);
-                setFiltroModalidade('Todas');
-              }}
-            >
-              <span className="tab-icon">🌟</span>
-              <span className="tab-label">Todo o Acervo</span>
-              <span className="tab-badge">{estoque.length}</span>
-            </button>
-
-            <button 
-              type="button"
-              className={`modalidade-tab-btn ${filtroModalidade === 'Pegue e Monte' && !verApenasFavoritos ? 'active' : ''}`}
-              onClick={() => {
-                setVerApenasFavoritos(false);
-                setFiltroModalidade('Pegue e Monte');
-              }}
-            >
-              <span className="tab-icon">📦</span>
-              <span className="tab-label">Pegue & Monte</span>
-              <span className="tab-badge">{qtdPegueMonte}</span>
-            </button>
-
-            <button 
-              type="button"
-              className={`modalidade-tab-btn ${filtroModalidade === 'Decoração Completa' && !verApenasFavoritos ? 'active' : ''}`}
-              onClick={() => {
-                setVerApenasFavoritos(false);
-                setFiltroModalidade('Decoração Completa');
-              }}
-            >
-              <span className="tab-icon">✨</span>
-              <span className="tab-label">Decorações Completas</span>
-              <span className="tab-badge">{qtdDecoracao}</span>
-            </button>
-          </div>
           
           {/* 🔍 BARRA DE CONTROLES: BUSCA, DATA DISPONIBILIDADE E ORDENAÇÃO */}
           <div className="cat-top-bar-controls">
+
+            {/* 📱 Botão de Categorias exclusivo para celular */}
+            <button 
+              type="button" 
+              className="btn-trigger-mobile-filter"
+              onClick={() => setMenuMobileAberto(true)}
+              title="Ver Categorias"
+            >
+              <span>🧭</span>
+              <span>Categorias</span>
+            </button>
             
             {/* Campo de Busca */}
             <div className="cat-search-input-wrap">
               <span className="search-icon">🔍</span>
               <input 
                 type="text" 
-                placeholder="O que procura? (Ex: Cilindros, Vasos, Painel...)" 
+                placeholder="O que procura para sua festa? (Ex: Cilindros, Vasos, Painel...)" 
                 value={busca} 
                 onChange={e => setBusca(e.target.value)}
                 className="cat-search-field"
@@ -794,7 +851,7 @@ const Catalogo = () => {
               )}
             </div>
 
-            {/* 📅 1. Campo de Data com Feedback de Disponibilidade */}
+            {/* 📅 Campo de Data com Feedback de Disponibilidade */}
             <div className="cat-date-picker-wrap">
               <span className="date-icon">📅</span>
               <input 
@@ -805,11 +862,24 @@ const Catalogo = () => {
                   setDadosCliente(prev => ({ ...prev, dataEvento: e.target.value }));
                 }}
                 className="cat-date-field"
-                title="Data prevista do evento (checa disponibilidade instantânea)"
+                title="Data prevista da festa (verifica disponibilidade em tempo real)"
               />
+              {dataEventoFiltro && (
+                <button 
+                  type="button" 
+                  className="btn-clear-date-filter" 
+                  onClick={() => {
+                    setDataEventoFiltro('');
+                    setDadosCliente(prev => ({ ...prev, dataEvento: '' }));
+                  }}
+                  title="Limpar filtro de data"
+                >
+                  ✕
+                </button>
+              )}
             </div>
 
-            {/* 🔀 4. Seletor de Ordenação Rápida */}
+            {/* 🔀 Seletor de Ordenação Rápida */}
             <div className="cat-sort-select-wrap">
               <span className="sort-icon">🔀</span>
               <select 
@@ -835,7 +905,7 @@ const Catalogo = () => {
               
               {dataEventoFiltro && (
                 <span className="date-availability-status-tag">
-                  📅 Disponibilidade em tempo real ativa para: <strong>{dataEventoFiltro.split('-').reverse().join('/')}</strong>
+                  📅 Disponibilidade em tempo real para: <strong>{dataEventoFiltro.split('-').reverse().join('/')}</strong>
                 </span>
               )}
 
@@ -855,7 +925,7 @@ const Catalogo = () => {
 
             {(filtroCategoria !== 'Todas' || filtroModalidade !== 'Todas' || filtroTema !== 'Todos' || busca || verApenasFavoritos || dataEventoFiltro) && (
               <button className="btn-reset-active-filters" onClick={limparTodosFiltros}>
-                ✕ Limpar Filtros
+                ✕ Limpar Seleção
               </button>
             )}
           </div>
@@ -867,12 +937,12 @@ const Catalogo = () => {
               <h3>
                 {verApenasFavoritos 
                   ? 'Você ainda não salvou nenhuma peça como favorita' 
-                  : 'Nenhuma peça encontrada com esses filtros'}
+                  : 'Nenhuma peça encontrada nessa seleção'}
               </h3>
               <p>
                 {verApenasFavoritos 
                   ? 'Clique no coraçãozinho das peças para salvar suas ideias preferidas nesta pasta.'
-                  : 'Tente buscar por outro termo ou limpar os filtros de busca.'}
+                  : 'Tente buscar por outro termo ou selecionar outra categoria.'}
               </p>
               <button className="btn-reset-filters" onClick={limparTodosFiltros}>
                 Ver Todo o Acervo
@@ -901,11 +971,15 @@ const Catalogo = () => {
                           className="cat-card-img" 
                           loading="lazy" 
                           crossOrigin="anonymous"
+                          draggable="false"
                         />
                       ) : (
-                        <div className="no-img">
-                          <span>📷</span>
-                          <small>Sem Foto</small>
+                        <div className="cat-no-img-luxury">
+                          <div className="cat-no-img-icon-wrap">
+                            <span className="cat-crown-gold">👑</span>
+                          </div>
+                          <span className="cat-no-img-brand">{empresa.nome || 'CELEBRE'}</span>
+                          <span className="cat-no-img-tag">Foto em Produção</span>
                         </div>
                       )}
 
@@ -938,17 +1012,12 @@ const Catalogo = () => {
                           </span>
                         )}
                       </div>
-
-                      {/* Overlay Hover */}
-                      <div className="product-overlay-action">
-                        <span>🔍 Ver Detalhes</span>
-                      </div>
                     </div>
 
                     {/* Informações da Peça */}
                     <div className="cat-info">
                       <h4 className="cat-title-text" onClick={() => setProdutoDetalhe(item)} title={item.nome}>
-                        {item.nome}
+                        {formatarNomeTitulo(item.nome)}
                       </h4>
 
                       {formatarDimensoes(item.dimensoes) && (
@@ -959,7 +1028,7 @@ const Catalogo = () => {
 
                       <div className="product-card-pricing-row">
                         <div className="pricing-box">
-                          <span className="price-label">Locação:</span>
+                          <span className="price-label">Locação • Diária</span>
                           <div className="cat-price">R$ {preco.toFixed(2)}</div>
                         </div>
 
@@ -1007,14 +1076,14 @@ const Catalogo = () => {
         </main>
       </div>
 
-      {/* 📱 BOTÃO FLUTUANTE DE FILTROS NO CELULAR */}
+      {/* 📱 BOTÃO FLUTUANTE DE CATEGORIAS NO CELULAR */}
       <button 
         type="button"
         className="btn-mobile-filtros-fab" 
         onClick={() => setMenuMobileAberto(!menuMobileAberto)}
-        title="Abrir Filtros"
+        title="Ver Categorias"
       >
-        {menuMobileAberto ? '✕' : '☰ Filtros'}
+        {menuMobileAberto ? '✕' : '☰ Categorias'}
       </button>
 
       {/* 🛍️ 3. CART DRAWER LATERAL */}
@@ -1475,19 +1544,25 @@ const Catalogo = () => {
         </div>
       )}
 
-      {/* 🛍️ 5. BARRA FLUTUANTE INFERIOR DO CARRINHO */}
+      {/* 🛍️ 5. BARRA FLUTUANTE INFERIOR DO CARRINHO (ESTILO IFOOD / LUXURY APP) */}
       {carrinho.length > 0 && (
         <div className="cat-floating-cart-pill" onClick={abrirCarrinho}>
           <div className="floating-cart-info">
-            <span className="floating-cart-bag">🛍️</span>
-            <div>
-              <strong>{carrinho.reduce((a, b) => a + (b.qtd || 1), 0)} itens selecionados</strong>
-              <small>Total: R$ {calcularTotal().toFixed(2)}</small>
+            <div className="floating-cart-bag-wrap">
+              <span className="floating-cart-bag">🛍️</span>
+              <span className="floating-cart-badge-count">{carrinho.reduce((a, b) => a + (b.qtd || 1), 0)}</span>
+            </div>
+            <div className="floating-cart-texts">
+              <strong className="floating-cart-title">
+                {carrinho.reduce((a, b) => a + (b.qtd || 1), 0)} {carrinho.reduce((a, b) => a + (b.qtd || 1), 0) === 1 ? 'peça selecionada' : 'peças selecionadas'}
+              </strong>
+              <small className="floating-cart-sub">Subtotal Estimado: R$ {calcularTotal().toFixed(2)}</small>
             </div>
           </div>
 
-          <button className="btn-floating-view-cart">
-            VER LISTA & ORÇAMENTO ➔
+          <button type="button" className="btn-floating-view-cart">
+            <span>VER ORÇAMENTO</span>
+            <span className="btn-arrow-icon">➔</span>
           </button>
         </div>
       )}
@@ -1551,10 +1626,45 @@ const Catalogo = () => {
             )}
           </div>
 
-          {/* Barra de Copyright */}
+          {/* Selos de Confiança & Garantia */}
+          <div className="cat-trust-guarantees-grid">
+            <div className="trust-item">
+              <span className="trust-icon">✨</span>
+              <div className="trust-texts">
+                <strong>Peças 100% Higienizadas</strong>
+                <small>Revisadas e embaladas com proteção máxima</small>
+              </div>
+            </div>
+            <div className="trust-item">
+              <span className="trust-icon">🚚</span>
+              <div className="trust-texts">
+                <strong>Retirada ou Frete com Montagem</strong>
+                <small>Pegue & Monte no galpão ou entrega no local</small>
+              </div>
+            </div>
+            <div className="trust-item">
+              <span className="trust-icon">💖</span>
+              <div className="trust-texts">
+                <strong>Suporte com Cenógrafa</strong>
+                <small>Ajuda especializada para compor sua festa</small>
+              </div>
+            </div>
+          </div>
+
+          {/* Barra de Copyright e Acesso da Equipe */}
           <div className="cat-bottom-credits-bar">
-            <span>© {new Date().getFullYear()} {empresa.nome}. Todos os direitos reservados.</span>
-            <span className="powered-text">Powered by <strong>Celebre Festas</strong></span>
+            <div className="credits-left">
+              <span>© {new Date().getFullYear()} {empresa.nome}. Todos os direitos reservados.</span>
+              <span className="powered-text">Vitrine Oficial • Celebre Festas</span>
+            </div>
+            <button 
+              type="button" 
+              className="btn-footer-admin-link"
+              onClick={() => navigate(usuarioLogado ? '/dashboard' : '/login')}
+              title="Acesso restrito para equipe interna"
+            >
+              🔒 Área da Equipe
+            </button>
           </div>
 
         </div>

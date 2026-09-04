@@ -612,6 +612,24 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
     );
   };
 
+  // 💳 BADGE ELEGANTE DE FORMA DE PAGAMENTO
+  const renderBadgeFormaPagto = (forma) => {
+    const f = (forma || '').toLowerCase();
+    let icone = '🏷️';
+    if (f.includes('pix')) icone = '⚡';
+    else if (f.includes('cart') || f.includes('crédito') || f.includes('credito') || f.includes('débito') || f.includes('debito')) icone = '💳';
+    else if (f.includes('dinheiro')) icone = '💵';
+    else if (f.includes('transf') || f.includes('ted') || f.includes('doc') || f.includes('banco')) icone = '🏦';
+    else if (f.includes('boleto')) icone = '📄';
+
+    return (
+      <span className="fin-forma-pagto-badge">
+        <span className="fin-forma-icon">{icone}</span>
+        <span className="fin-forma-text">{forma || '—'}</span>
+      </span>
+    );
+  };
+
   // ✅ BAIXA RÁPIDA DE LANÇAMENTO PENDENTE (1 CLIQUE)
   const handleQuitarLancamento = async (transacao) => {
     try {
@@ -917,6 +935,8 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
     }
   };
 
+  const handleLancarContasFixasMesAtual = handleLancarTodasContasFixasDoMes;
+
   // 📊 CÁLCULOS DE CONTAS FIXAS
   const totalCustoFixoGeral = despesasRecorrentes.reduce((acc, c) => acc + (Number(c.valor) || 0), 0);
   const totalEquipeFixa = despesasRecorrentes.filter(c => (c.categoria || '').toLowerCase().includes('equipe') || (c.categoria || '').toLowerCase().includes('salário') || (c.categoria || '').toLowerCase().includes('pessoal')).reduce((acc, c) => acc + (Number(c.valor) || 0), 0);
@@ -1106,7 +1126,7 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
               <button 
                 type="button" 
                 className="btn-lancar-lote-contas"
-                onClick={handleLancarContasFixasMesAtual}
+                onClick={handleLancarTodasContasFixasDoMes}
                 disabled={lancandoContasFixasLote || despesasRecorrentes.length === 0}
                 style={{
                   background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
@@ -1684,17 +1704,17 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
 
           {/* 💻 VISUALIZAÇÃO DESKTOP: TABELA COMPLETA PRO-TABLE */}
           <div className="table-responsive-wrapper fin-desktop-table-view">
-            <table className="pro-table">
+            <table className="pro-table fin-tabela-desktop">
               <thead>
                 <tr>
-                  <th style={{ width: '100px' }}>DATA</th>
-                  <th style={{ width: '150px' }}>CATEGORIA</th>
-                  <th style={{ minWidth: '180px' }}>DESCRIÇÃO</th>
-                  <th style={{ width: '130px' }}>FORMA PAGTO</th>
-                  <th style={{ width: '120px', textAlign: 'center' }}>COMPROVANTE</th>
-                  <th style={{ width: '140px', textAlign: 'right' }}>VALOR (R$)</th>
-                  <th style={{ width: '100px', textAlign: 'center' }}>SITUAÇÃO</th>
-                  <th style={{ width: '110px', textAlign: 'right' }}>AÇÕES</th>
+                  <th className="th-data">DATA</th>
+                  <th className="th-categoria">CATEGORIA</th>
+                  <th className="th-descricao">DESCRIÇÃO</th>
+                  <th className="th-forma-pagto">FORMA PAGTO</th>
+                  <th className="th-comprovante">COMPROVANTE</th>
+                  <th className="th-valor">VALOR (R$)</th>
+                  <th className="th-status">SITUAÇÃO</th>
+                  <th className="th-acoes">AÇÕES</th>
                 </tr>
               </thead>
               <tbody>
@@ -1727,12 +1747,10 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                         </td>
                         
                         <td className="td-forma-pagto">
-                          <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: '600' }}>
-                            {t.formaPagto || '---'}
-                          </span>
+                          {renderBadgeFormaPagto(t.formaPagto)}
                         </td>
 
-                        <td className="td-comprovante" style={{ textAlign: 'center' }}>
+                        <td className="td-comprovante">
                           {t.comprovanteUrl ? (
                             <button 
                               type="button" 
@@ -1749,25 +1767,25 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                               📎 Anexo
                             </button>
                           ) : (
-                            <span style={{ color: '#94a3b8', fontSize: '0.78rem' }}>—</span>
+                            <span className="fin-no-comp">—</span>
                           )}
                         </td>
 
-                        <td className="td-valor" style={{ textAlign: 'right' }}>
+                        <td className="td-valor">
                           <div className={`preco-real ${isEntrada ? 'txt-verde' : 'txt-vermelho'}`}>
                             {isEntrada ? '+ ' : '- '}
                             R$ {Number(t.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                           </div>
                         </td>
 
-                        <td className="td-status" style={{ textAlign: 'center' }}>
+                        <td className="td-status">
                           <span className={`badge ${isPendente ? 'pendente' : 'comprado'}`}>
                             {isPendente ? 'Pendente' : 'Pago'}
                           </span>
                         </td>
 
-                        <td className="td-acoes" style={{ textAlign: 'right' }}>
-                          <div className="table-actions-container" style={{ justifyContent: 'flex-end', gap: '6px' }}>
+                        <td className="td-acoes">
+                          <div className="table-actions-container">
                             {/* ✅ BOTÃO BAIXA RÁPIDA (1 CLIQUE) */}
                             {isPendente && (
                               <button 
@@ -2913,18 +2931,18 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
               </div>
             </div>
 
-            {/* TABELA PRO-TABLE */}
+            {/* TABELA PRO-TABLE CONTAS FIXAS */}
             <div className="table-responsive-wrapper fin-desktop-table-view">
-              <table className="pro-table">
+              <table className="pro-table fin-tabela-desktop fin-tabela-fixas">
                 <thead>
                   <tr>
-                    <th style={{ width: '100px' }}>DIA</th>
-                    <th style={{ width: '150px' }}>CATEGORIA</th>
-                    <th style={{ minWidth: '180px' }}>DESCRIÇÃO</th>
-                    <th style={{ width: '130px' }}>FORMA PAGTO</th>
-                    <th style={{ width: '140px', textAlign: 'right' }}>VALOR (R$)</th>
-                    <th style={{ width: '100px', textAlign: 'center' }}>SITUAÇÃO</th>
-                    <th style={{ width: '110px', textAlign: 'right' }}>AÇÕES</th>
+                    <th className="th-cf-dia">DIA</th>
+                    <th className="th-cf-categoria">CATEGORIA</th>
+                    <th className="th-cf-descricao">DESCRIÇÃO</th>
+                    <th className="th-cf-forma-pagto">FORMA PAGTO</th>
+                    <th className="th-cf-valor">VALOR (R$)</th>
+                    <th className="th-cf-status">SITUAÇÃO</th>
+                    <th className="th-cf-acoes">AÇÕES</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -2936,12 +2954,33 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                     </tr>
                   ) : contasFixasFiltradas.length === 0 ? (
                     <tr>
-                      <td colSpan="7" style={{ textAlign: 'center', padding: '40px 16px', color: '#94a3b8' }}>
-                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>🏢</div>
-                        <strong>Nenhuma conta fixa encontrada</strong>
-                        <p style={{ margin: '4px 0 0 0', fontSize: '0.74rem' }}>
-                          Clique no botão "+ CADASTRAR NOVA CONTA" acima para adicionar custos fixos e salários.
-                        </p>
+                      <td colSpan="7" className="fin-empty-td">
+                        <div className="fin-empty-state-box">
+                          <div className="fin-empty-icon-circle">🏢</div>
+                          <h4 className="fin-empty-title">Nenhuma conta fixa encontrada</h4>
+                          <p className="fin-empty-desc">
+                            Cadastre salários, aluguel, internet e despesas operacionais para automatizar seu fluxo de caixa mensal.
+                          </p>
+                          <button 
+                            type="button" 
+                            className="btn-empty-add-cf"
+                            onClick={() => {
+                              setEditandoContaId(null);
+                              setFormContaFixa({
+                                descricao: '',
+                                categoria: 'Equipe e Pessoal',
+                                valor: 0,
+                                valorFormatado: '',
+                                diaVencimento: '10',
+                                formaPagto: 'Pix',
+                                observacoes: ''
+                              });
+                              setFormContaFixaAberto(true);
+                            }}
+                          >
+                            + Cadastrar Nova Conta Fixa
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ) : (
@@ -2957,13 +2996,13 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
 
                       return (
                         <tr key={item.id}>
-                          <td className="td-data">
+                          <td className="td-cf-dia">
                             <span className="cf-dia-badge">
                               📅 Dia {item.diaVencimento || 10}
                             </span>
                           </td>
 
-                          <td className="td-categoria">
+                          <td className="td-cf-categoria">
                             <span 
                               className="badge-categoria saida"
                               style={{ color: catObj.cor, background: catObj.bg, borderColor: catObj.border }}
@@ -2972,66 +3011,60 @@ const Financeiro = ({ initialAba = 'lancamentos' }) => {
                             </span>
                           </td>
 
-                          <td className="td-item-info">
+                          <td className="td-cf-descricao">
                             <strong className="nome-produto">{item.descricao}</strong>
                             {item.observacoes && (
                               <span className="cf-row-sub">{item.observacoes}</span>
                             )}
                           </td>
 
-                          <td className="td-forma-pagto">
-                            <span style={{ fontSize: '0.82rem', color: '#475569', fontWeight: '600' }}>
-                              {item.formaPagto?.toLowerCase().includes('pix') ? '⚡ ' : item.formaPagto?.toLowerCase().includes('cart') ? '💳 ' : item.formaPagto?.toLowerCase().includes('bol') ? '📄 ' : '💵 '}
-                              {item.formaPagto || 'Pix'}
-                            </span>
+                          <td className="td-cf-forma-pagto">
+                            {renderBadgeFormaPagto(item.formaPagto)}
                           </td>
 
-                          <td style={{ textAlign: 'right' }}>
-                            <strong style={{ color: '#dc2626', fontSize: '0.82rem', fontWeight: '750' }}>
+                          <td className="td-cf-valor">
+                            <strong className="cf-valor-saida">
                               - R$ {Number(item.valor || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </strong>
                           </td>
 
-                          <td style={{ textAlign: 'center' }}>
+                          <td className="td-cf-status">
                             {jaLancado ? (
-                              <span className="badge-status pago" style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', background: '#dcfce7', color: '#166534', border: '1px solid #86efac', display: 'inline-block' }}>
+                              <span className="badge comprado">
                                 PAGO
                               </span>
                             ) : (
-                              <span className="badge-status pendente" style={{ padding: '3px 8px', borderRadius: '6px', fontSize: '0.68rem', fontWeight: '800', background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', display: 'inline-block' }}>
+                              <span className="badge pendente">
                                 PENDENTE
                               </span>
                             )}
                           </td>
 
-                          <td style={{ textAlign: 'right' }}>
-                            <div className="td-actions" style={{ display: 'inline-flex', gap: '4px', justifyContent: 'flex-end' }}>
+                          <td className="td-cf-acoes">
+                            <div className="table-actions-container">
                               {!jaLancado && (
                                 <button 
                                   type="button" 
-                                  className="btn-action-view"
+                                  className="action-btn quit-btn"
                                   onClick={() => handleLancarContaFixaIndividual(item)}
-                                  title="Lançar no fluxo de caixa"
-                                  style={{ background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', borderRadius: '6px', padding: '4px 8px', fontSize: '0.70rem', fontWeight: '750', cursor: 'pointer' }}
+                                  title="Lançar no fluxo de caixa deste mês"
                                 >
                                   ⚡ Lançar
                                 </button>
                               )}
                               <button 
                                 type="button" 
-                                className="btn-action-view"
+                                className="action-btn edit"
                                 onClick={() => handleEditarContaFixa(item)}
-                                title="Editar conta"
-                                style={{ background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', borderRadius: '6px', padding: '4px 8px', fontSize: '0.70rem', cursor: 'pointer' }}
+                                title="Editar conta fixa"
                               >
                                 ✏️
                               </button>
                               <button 
                                 type="button" 
-                                className="btn-action-delete"
+                                className="action-btn delete"
                                 onClick={() => handleExcluirContaFixa(item)}
-                                title="Excluir conta"
-                                style={{ background: '#fef2f2', color: '#dc2626', border: '1px solid #fecdd3', borderRadius: '6px', padding: '4px 8px', fontSize: '0.70rem', cursor: 'pointer' }}
+                                title="Excluir conta fixa"
                               >
                                 🗑️
                               </button>

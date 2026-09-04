@@ -37,6 +37,9 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     styleTag = document.createElement('style');
     styleTag.id = 'celebre-dynamic-theme-style';
     document.head.appendChild(styleTag);
+  } else {
+    // Garante que o styleTag permaneça sempre como o último elemento do <head>, vencendo chunks dinâmicos
+    document.head.appendChild(styleTag);
   }
 
   styleTag.textContent = `
@@ -124,11 +127,34 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
        🎯 ABAS ATIVAS E FILTROS EM DESTAQUE — TODAS AS 16 PÁGINAS
        ══════════════════════════════════════════════════════════════════════ */
     .tab-btn-celebre.active,
+    .financeiro-container .tab-btn-celebre.active,
+    .fin-tabs-bar .tab-btn-celebre.active,
+    .compras-container .tab-btn-celebre.active,
+    .compras-tabs-bar .tab-btn-celebre.active,
     [data-theme^='dark'] .tab-btn-celebre.active,
     [data-theme^='dark'] .financeiro-container .tab-btn-celebre.active,
+    [data-theme^='dark'] .compras-container .tab-btn-celebre.active,
+    .btn-tipo-pill.active,
+    .financeiro-container .btn-tipo-pill.active,
+    .fin-tipo-toggle-bar .btn-tipo-pill.active,
+    [data-theme^='dark'] .financeiro-container .btn-tipo-pill.active,
+    .btn-date-quick.active,
+    .financeiro-container .btn-date-quick.active,
+    .fin-quick-dates .btn-date-quick.active,
+    [data-theme^='dark'] .financeiro-container .btn-date-quick.active,
+    .btn-view-toggle.active,
+    .financeiro-container .btn-view-toggle.active,
     .fin-tab.active,
     .relatorio-tab.active,
     .tabs-relatorios-compacto button.active,
+    .rel-quick-btn.active,
+    [data-theme^='dark'] .rel-quick-btn.active,
+    .rel-subtab-btn.active,
+    [data-theme^='dark'] .rel-subtab-btn.active,
+    .rel-cliente-pill-btn.active,
+    [data-theme^='dark'] .rel-cliente-pill-btn.active,
+    .rel-estoque-pill-btn.active,
+    [data-theme^='dark'] .rel-estoque-pill-btn.active,
     .view-btn.active,
     .sub-btn.active,
     .view-switcher-btn.active,
@@ -141,7 +167,6 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .mobile-etapa-btn.ativa,
     .kanban-filters button.ativo,
     .btn-chip-data.active,
-    .rel-subtab-btn.active,
     .btn-tipo-toggle.active,
     .tipo-desconto-toggle button.active,
     .btn-servico-card.ativo .servico-check-badge,
@@ -159,9 +184,21 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     }
 
     .tab-btn-celebre.active *,
+    .financeiro-container .tab-btn-celebre.active *,
+    .fin-tabs-bar .tab-btn-celebre.active *,
+    .compras-container .tab-btn-celebre.active *,
+    .financeiro-container .btn-tipo-pill.active *,
+    .financeiro-container .btn-date-quick.active *,
     [data-theme^='dark'] .tab-btn-celebre.active *,
     [data-theme^='dark'] .financeiro-container .tab-btn-celebre.active *,
+    [data-theme^='dark'] .compras-container .tab-btn-celebre.active *,
+    [data-theme^='dark'] .financeiro-container .btn-tipo-pill.active *,
+    [data-theme^='dark'] .financeiro-container .btn-date-quick.active *,
     .tabs-relatorios-compacto button.active *,
+    .rel-quick-btn.active *,
+    .rel-subtab-btn.active *,
+    .rel-cliente-pill-btn.active *,
+    .rel-estoque-pill-btn.active *,
     .clientes-container .desktop-pills-only .pill-btn.active *,
     .filter-pills-grid .pill-btn.active *,
     .tabs-container .tab-btn.active * {
@@ -196,6 +233,10 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .btn-servico-card.ativo,
     .btn-toggle-veiculo.ativo {
       border-color: ${accentColor} !important;
+    }
+
+    .kanban-container .segmented-tab.active:not(.tab-atrasados) {
+      border-bottom-color: ${accentColor} !important;
     }
 
     .unified-section-header,

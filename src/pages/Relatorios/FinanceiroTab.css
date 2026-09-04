@@ -340,9 +340,10 @@
 }
 
 .rel-quick-btn.active {
-  background: #0f172a;
-  color: #ffffff;
-  border-color: #0f172a;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, var(--dourado, #a4803c)) 100%) !important;
+  color: #ffffff !important;
+  border-color: transparent !important;
+  box-shadow: 0 3px 10px rgba(15, 23, 42, 0.15) !important;
 }
 
 .rel-subtabs-container {
@@ -387,7 +388,7 @@
 }
 
 .rel-subtab-btn.active {
-  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, var(--dourado, #a4803c)) 100%) !important;
   color: #ffffff !important;
   border-color: transparent !important;
   box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3) !important;
@@ -588,9 +589,9 @@
 }
 
 [data-theme^='dark'] .rel-quick-btn.active {
-  background: #3f3f46 !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, var(--dourado, #a4803c)) 100%) !important;
   color: #ffffff !important;
-  border-color: #52525b !important;
+  border-color: transparent !important;
 }
 
 [data-theme^='dark'] .rel-subtab-btn {
@@ -605,7 +606,7 @@
 }
 
 [data-theme^='dark'] .rel-subtab-btn.active {
-  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, var(--dourado, #a4803c)) 100%) !important;
   color: #ffffff !important;
   border-color: transparent !important;
 }

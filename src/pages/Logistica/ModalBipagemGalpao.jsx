@@ -6,17 +6,19 @@ import { db } from '../../firebaseConfig';
 import './ModalBipagemGalpao.css';
 
 /**
- * ⚡ MODAL DE BIPAGEM CONTÍNUA DE GALPÃO (SCANNER TOUCH & LEITOR USB)
- * Permite bipar peças ou etiquetas com a câmera do celular ou leitor de código de barras.
+ * ⚡ MODAL DE BIPAGEM CONTÍNUA DE GALPÃO / PEDIDO (SCANNER TOUCH & LEITOR USB)
+ * Permite bipar peças de cada locação com a câmera do celular ou leitor de código de barras.
  */
 export const ModalBipagemGalpao = ({
   isOpen,
   onClose,
   locacoes = [],
+  locacaoSelecionada = null,
   onAtualizarLocacoes,
   tenantId
 }) => {
-  const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState('todos');
+  const [pedidoAtual, setPedidoAtual] = useState(locacaoSelecionada);
+  const [pedidoSelecionadoId, setPedidoSelecionadoId] = useState(locacaoSelecionada?.id || 'todos');
   const [codigoInput, setCodigoInput] = useState('');
   const [cameraAtiva, setCameraAtiva] = useState(false);
   const [ultimoItemBipado, setUltimoItemBipado] = useState(null);
@@ -25,6 +27,14 @@ export const ModalBipagemGalpao = ({
 
   const html5QrCodeRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Sincroniza com a locação selecionada quando aberta
+  useEffect(() => {
+    if (locacaoSelecionada) {
+      setPedidoAtual(locacaoSelecionada);
+      setPedidoSelecionadoId(locacaoSelecionada.id);
+    }
+  }, [locacaoSelecionada]);
 
   // 🔊 SINTETIZADOR DE ÁUDIO WEB API (BIPES SEM ARQUIVOS EXTERNOS)
   const tocarBip = (tipo = 'sucesso') => {
@@ -60,17 +70,19 @@ export const ModalBipagemGalpao = ({
     const codigoLimpo = String(codigoRaw).trim().toLowerCase();
     const codigoSemHifen = codigoLimpo.replace(/[-_]/g, '');
 
-    // Filtra lista de pedidos a buscar
-    const pedidosAlvo = pedidoSelecionadoId === 'todos'
-      ? locacoes.filter(l => l.status === 'confirmado' || l.status === 'preparacao')
-      : locacoes.filter(l => l.id === pedidoSelecionadoId);
+    // Determina a lista de pedidos alvo
+    const pedidosAlvo = pedidoAtual
+      ? [pedidoAtual]
+      : (pedidoSelecionadoId === 'todos'
+          ? locacoes.filter(l => l.status === 'confirmado' || l.status === 'preparacao')
+          : locacoes.filter(l => l.id === pedidoSelecionadoId));
 
     let itemEncontrado = null;
     let pedidoEncontrado = null;
     let itemIndex = -1;
 
     for (const ped of pedidosAlvo) {
-      const itens = ped.itens || [];
+      const itens = ped.itens || ped.carrinho || [];
       for (let i = 0; i < itens.length; i++) {
         const it = itens[i];
         const itCod = String(it.codigo || it.sku || '').toLowerCase();
@@ -98,13 +110,19 @@ export const ModalBipagemGalpao = ({
       const numPed = pedidoEncontrado.numeroPedido ? `#${pedidoEncontrado.numeroPedido}` : `#${pedidoEncontrado.id.substring(0, 5)}`;
       const novoChecked = true;
 
-      // Atualiza localmente o item como separado
-      const novosItens = [...pedidoEncontrado.itens];
+      // Atualiza os itens
+      const itensOrig = pedidoEncontrado.itens || pedidoEncontrado.carrinho || [];
+      const novosItens = [...itensOrig];
       novosItens[itemIndex] = {
         ...itemEncontrado,
         checkedSeparacao: novoChecked,
         dataBipagem: new Date().toISOString()
       };
+
+      const pedidoAtualizado = { ...pedidoEncontrado, itens: novosItens };
+      if (pedidoAtual && pedidoAtual.id === pedidoEncontrado.id) {
+        setPedidoAtual(pedidoAtualizado);
+      }
 
       setUltimoItemBipado({
         nome: itemEncontrado.nome || itemEncontrado.descricao,
@@ -127,7 +145,7 @@ export const ModalBipagemGalpao = ({
 
       setMensagemStatus({
         tipo: 'sucesso',
-        texto: `✓ Bipado: ${itemEncontrado.nome} para ${numPed} (${pedidoEncontrado.clienteNome})`
+        texto: `✓ Bipado: ${itemEncontrado.nome || itemEncontrado.descricao}`
       });
 
       // Salva no Firestore
@@ -142,12 +160,47 @@ export const ModalBipagemGalpao = ({
       tocarBip('alerta');
       setMensagemStatus({
         tipo: 'alerta',
-        texto: `⚠️ Peça não encontrada nos pedidos ativos: "${codigoRaw}"`
+        texto: `⚠️ Peça não encontrada neste pedido: "${codigoRaw}"`
       });
     }
 
     setCodigoInput('');
     if (inputRef.current) inputRef.current.focus();
+  };
+
+  // Alterna manualmente o status de conferência de um item
+  const alternarItemManual = async (it, itIdx) => {
+    const alvo = pedidoAtual || (pedidoSelecionadoId !== 'todos' ? locacoes.find(l => l.id === pedidoSelecionadoId) : null);
+    if (!alvo) return;
+
+    const itensOrig = alvo.itens || alvo.carrinho || [];
+    const novosItens = [...itensOrig];
+    const novoStatus = !novosItens[itIdx].checkedSeparacao;
+
+    novosItens[itIdx] = {
+      ...novosItens[itIdx],
+      checkedSeparacao: novoStatus,
+      dataBipagem: novoStatus ? new Date().toISOString() : null
+    };
+
+    const atualizado = { ...alvo, itens: novosItens };
+    setPedidoAtual(atualizado);
+
+    if (novoStatus) {
+      tocarBip('sucesso');
+      setMensagemStatus({
+        tipo: 'sucesso',
+        texto: `✓ Marcado: ${it.nome || it.descricao}`
+      });
+    }
+
+    try {
+      const pedRef = doc(db, 'locacoes', alvo.id);
+      await updateDoc(pedRef, { itens: novosItens });
+      if (onAtualizarLocacoes) onAtualizarLocacoes();
+    } catch (err) {
+      console.error("Erro ao salvar item:", err);
+    }
   };
 
   // 🛡️ PARAR SCANNER COM TOTAL SEGURANÇA CONTRA ERROS
@@ -217,23 +270,34 @@ export const ModalBipagemGalpao = ({
 
   if (!isOpen) return null;
 
-  // Contagem de progresso de separação
-  const pedidosFiltrados = pedidoSelecionadoId === 'todos'
-    ? locacoes.filter(l => l.status === 'confirmado' || l.status === 'preparacao')
-    : locacoes.filter(l => l.id === pedidoSelecionadoId);
-
+  // Itens do pedido ativo
+  const itensAtivos = pedidoAtual?.itens || pedidoAtual?.carrinho || [];
   let totalPecas = 0;
   let totalBipadas = 0;
 
-  pedidosFiltrados.forEach(p => {
-    (p.itens || []).forEach(it => {
+  if (pedidoAtual) {
+    itensAtivos.forEach(it => {
       const q = Number(it.quantidade || it.qtd || 1);
       totalPecas += q;
       if (it.checkedSeparacao) totalBipadas += q;
     });
-  });
+  } else {
+    const pedidosFiltrados = pedidoSelecionadoId === 'todos'
+      ? locacoes.filter(l => l.status === 'confirmado' || l.status === 'preparacao')
+      : locacoes.filter(l => l.id === pedidoSelecionadoId);
+
+    pedidosFiltrados.forEach(p => {
+      (p.itens || p.carrinho || []).forEach(it => {
+        const q = Number(it.quantidade || it.qtd || 1);
+        totalPecas += q;
+        if (it.checkedSeparacao) totalBipadas += q;
+      });
+    });
+  }
 
   const pct = totalPecas > 0 ? Math.round((totalBipadas / totalPecas) * 100) : 0;
+  const numPedidoFormatado = pedidoAtual?.numeroPedido ? `#${pedidoAtual.numeroPedido}` : (pedidoAtual?.id ? `#${pedidoAtual.id.substring(0,6)}` : '');
+  const dataEventoBr = pedidoAtual?.dataRetirada ? pedidoAtual.dataRetirada.split('-').reverse().join('/') : '';
 
   const modalContent = (
     <div className="bipagem-overlay" onClick={onClose}>
@@ -242,38 +306,48 @@ export const ModalBipagemGalpao = ({
         {/* CABEÇALHO */}
         <div className="bipagem-header">
           <div className="bipagem-header-left">
-            <span className="bipagem-badge">⚡ BIPAGEM CONTÍNUA DE GALPÃO</span>
-            <h2>Scanner de Separação &amp; Acervo</h2>
+            <span className="bipagem-badge">
+              {pedidoAtual ? `⚡ BIPAR PEDIDO ${numPedidoFormatado}` : '⚡ SCANNER DE SEPARAÇÃO'}
+            </span>
+            <h2>{pedidoAtual ? `Conferência — ${pedidoAtual.clienteNome || 'Cliente'}` : 'Scanner de Separação de Peças'}</h2>
           </div>
-          <button type="button" className="bipagem-close-btn" onClick={onClose}>✕</button>
+          <button type="button" className="bipagem-close-btn" onClick={onClose} title="Fechar Scanner">✕</button>
         </div>
 
-        {/* CONTROLES DO TOPO: SELETOR DE PEDIDO & BOTÃO CÂMERA */}
+        {/* CONTROLES DO TOPO */}
         <div className="bipagem-top-controls">
-          <div className="bipagem-select-box">
-            <label>Filtrar Pedido:</label>
-            <select
-              value={pedidoSelecionadoId}
-              onChange={(e) => setPedidoSelecionadoId(e.target.value)}
-              className="bipagem-select"
-            >
-              <option value="todos">📦 Todos os Pedidos a Separar ({locacoes.length})</option>
-              {locacoes
-                .filter(l => l.status === 'confirmado' || l.status === 'preparacao')
-                .map(l => (
-                  <option key={l.id} value={l.id}>
-                    #{l.numeroPedido || l.id.substring(0, 5)} - {l.clienteNome} ({l.itens?.length || 0} itens)
-                  </option>
-                ))}
-            </select>
-          </div>
+          {pedidoAtual ? (
+            <div className="bipagem-pedido-info-chip">
+              <span className="chip-cliente">👤 {pedidoAtual.clienteNome}</span>
+              {dataEventoBr && <span className="chip-data">📅 Festa: {dataEventoBr}</span>}
+              {pedidoAtual.tema && <span className="chip-tema">✨ {pedidoAtual.tema}</span>}
+            </div>
+          ) : (
+            <div className="bipagem-select-box">
+              <label>Filtrar Pedido:</label>
+              <select
+                value={pedidoSelecionadoId}
+                onChange={(e) => setPedidoSelecionadoId(e.target.value)}
+                className="bipagem-select"
+              >
+                <option value="todos">📦 Todos os Pedidos a Separar ({locacoes.length})</option>
+                {locacoes
+                  .filter(l => l.status === 'confirmado' || l.status === 'preparacao')
+                  .map(l => (
+                    <option key={l.id} value={l.id}>
+                      #{l.numeroPedido || l.id.substring(0, 5)} - {l.clienteNome} ({l.itens?.length || 0} itens)
+                    </option>
+                  ))}
+              </select>
+            </div>
+          )}
 
           <button
             type="button"
             className={`btn-camera-toggle ${cameraAtiva ? 'ativa' : ''}`}
             onClick={toggleCamera}
           >
-            {cameraAtiva ? '📷 Desativar Câmera' : '📷 Ativar Câmera Scanner'}
+            {cameraAtiva ? '📷 Desativar Câmera' : '📷 Ativar Câmera'}
           </button>
         </div>
 
@@ -316,12 +390,51 @@ export const ModalBipagemGalpao = ({
         {/* BARRA DE PROGRESSO DE SEPARAÇÃO */}
         <div className="bipagem-progress-box">
           <div className="bipagem-progress-info">
-            <span>Progresso da Separação: <strong>{totalBipadas} / {totalPecas} peças ({pct}%)</strong></span>
+            <span>Progresso: <strong>{totalBipadas} / {totalPecas} peças ({pct}%)</strong></span>
+            {pct === 100 && <span className="bipagem-completo-tag">🎉 Tudo Conferido!</span>}
           </div>
           <div className="bipagem-progress-bar">
-            <div className="bipagem-progress-fill" style={{ width: `${pct}%` }}></div>
+            <div className={`bipagem-progress-fill ${pct === 100 ? 'concluido' : ''}`} style={{ width: `${pct}%` }}></div>
           </div>
         </div>
+
+        {/* 📋 LISTAGEM DE PEÇAS DESTE PEDIDO (SELECIONADO) */}
+        {pedidoAtual && itensAtivos.length > 0 && (
+          <div className="bipagem-lista-itens-box">
+            <div className="bipagem-lista-header">
+              <h4>📦 Peças do Pedido ({itensAtivos.length})</h4>
+              <small>Clique na peça para marcar manualmente se não tiver o leitor</small>
+            </div>
+            <div className="bipagem-itens-grid">
+              {itensAtivos.map((it, idx) => {
+                const isSeparado = !!it.checkedSeparacao;
+                const qtd = it.quantidade || it.qtd || 1;
+                return (
+                  <div
+                    key={idx}
+                    className={`bipagem-item-card ${isSeparado ? 'conferido' : 'pendente'}`}
+                    onClick={() => alternarItemManual(it, idx)}
+                    title="Clique para alternar conferência"
+                  >
+                    <div className="bipagem-item-check">
+                      {isSeparado ? '✓' : '○'}
+                    </div>
+                    <div className="bipagem-item-info">
+                      <strong className="bipagem-item-nome">{it.nome || it.descricao}</strong>
+                      <div className="bipagem-item-meta">
+                        <span className="meta-qtd">{qtd}x</span>
+                        {(it.codigo || it.sku) && <span className="meta-cod">Cód: {it.codigo || it.sku}</span>}
+                      </div>
+                    </div>
+                    <span className={`bipagem-item-badge ${isSeparado ? 'ok' : 'pendente'}`}>
+                      {isSeparado ? 'Separado' : 'Pendente'}
+                    </span>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ÚLTIMO ITEM BIPADO EM DESTAQUE */}
         {ultimoItemBipado && (
@@ -338,7 +451,7 @@ export const ModalBipagemGalpao = ({
 
         {/* HISTÓRICO RECENTE DE BIPAGENS */}
         <div className="bipagem-historico-box">
-          <h4>📋 Histórico Recente de Separação ({historicoBipagens.length})</h4>
+          <h4>📋 Histórico Recente de Bipagem ({historicoBipagens.length})</h4>
           {historicoBipagens.length === 0 ? (
             <div className="bipagem-vazio">Nenhum item bipado nesta sessão. Use o leitor ou câmera para começar.</div>
           ) : (

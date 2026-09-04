@@ -13,7 +13,23 @@
 
 html { scroll-behavior: smooth; }
 
+/* 🔒 BLINDAGEM INSTITUCIONAL CELEBRE — A LANDING PAGE É 100% IMUNE A TEMAS DE TENANTS */
 .landing-container {
+  --azul-naval: #0f172a !important;       
+  --azul-naval-hover: #1e293b !important;
+  --dourado: #c5a059 !important;          
+  --dourado-hover: #b48c48 !important;
+  --dourado-claro: #fdf8eb !important;
+  --fundo-branco: #ffffff !important;
+  --fundo-cinza: #f8fafc !important;
+  --texto-escuro: #0f172a !important;
+  --texto-claro: #64748b !important;
+  --borda-suave: #e2e8f0 !important;
+  --cor-destaque: #c5a059 !important;
+  --primary-color: #c5a059 !important;
+  --gold-primary: #c5a059 !important;
+  --gold-dark: #a18042 !important;
+
   font-family: 'Plus Jakarta Sans', sans-serif;
   background-color: var(--fundo-branco);
   color: var(--texto-escuro);
@@ -43,7 +59,7 @@ html { scroll-behavior: smooth; }
 .nav-link { text-decoration: none; color: var(--texto-claro); font-weight: 600; transition: color 0.2s, transform 0.2s; position: relative; }
 .nav-link:hover { color: var(--azul-naval); transform: translateY(-1px); }
 .nav-btn-destaque { background: var(--azul-naval); color: white; padding: 12px 24px; border-radius: 30px; text-decoration: none; font-weight: 700; transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15); }
-.nav-btn-destaque:hover { background: var(--dourado); transform: translateY(-2px); box-shadow: 0 6px 18px rgba(197, 160, 89, 0.3); }
+.landing-container .nav-btn-destaque:hover { background: #c5a059 !important; transform: translateY(-2px); box-shadow: 0 6px 18px rgba(197, 160, 89, 0.3) !important; }
 
 /* =========================================
    🔥 HERO SECTION ESCURO 🔥
@@ -57,22 +73,22 @@ html { scroll-behavior: smooth; }
 .hero-section::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 40px; background: white; border-radius: 40px 40px 0 0; }
 .hero-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; max-width: 1200px; margin: 0 auto; position: relative; z-index: 2; }
 .hero-content-left { text-align: left; }
-.hero-badge { display: inline-block; background: rgba(197, 160, 89, 0.15); color: var(--dourado); padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; margin-bottom: 25px; border: 1px solid rgba(197, 160, 89, 0.3); }
+.landing-container .hero-badge { display: inline-block; background: rgba(197, 160, 89, 0.15) !important; color: #c5a059 !important; padding: 8px 16px; border-radius: 50px; font-size: 0.85rem; font-weight: 700; margin-bottom: 25px; border: 1px solid rgba(197, 160, 89, 0.3) !important; }
 .hero-content-left h1 { font-size: 3.5rem; font-weight: 800; line-height: 1.15; letter-spacing: -1px; margin-bottom: 20px; color: white; }
-.text-highlight {
-  background: linear-gradient(135deg, #c5a059 0%, #fde68a 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
+.landing-container .text-highlight {
+  background: linear-gradient(135deg, #c5a059 0%, #fde68a 100%) !important;
+  -webkit-background-clip: text !important;
+  background-clip: text !important;
+  -webkit-text-fill-color: transparent !important;
   display: inline-block;
 }
 .hero-subtitle { font-size: 1.15rem; color: #cbd5e1; line-height: 1.6; margin-bottom: 30px; font-weight: 400; }
 .hero-benefits { list-style: none; padding: 0; margin-bottom: 40px; }
 .hero-benefits li { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; font-weight: 600; color: #f1f5f9; font-size: 1.05rem; }
-.check-icon { background: var(--dourado); color: var(--azul-naval); border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900;}
+.landing-container .check-icon { background: #c5a059 !important; color: var(--azul-naval) !important; border-radius: 50%; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; font-size: 0.8rem; font-weight: 900;}
 .hero-buttons { display: flex; flex-direction: column; align-items: flex-start; gap: 12px; }
-.btn-primary-large { background: var(--dourado); color: var(--azul-naval); padding: 18px 40px; border-radius: 12px; font-size: 1.1rem; font-weight: 800; text-decoration: none; box-shadow: 0 10px 25px rgba(197, 160, 89, 0.3); transition: all 0.3s; border: 2px solid var(--dourado); }
-.btn-primary-large:hover { background: transparent; color: var(--dourado); transform: translateY(-2px); box-shadow: none; }
+.landing-container .btn-primary-large { background: #c5a059 !important; color: var(--azul-naval) !important; padding: 18px 40px; border-radius: 12px; font-size: 1.1rem; font-weight: 800; text-decoration: none; box-shadow: 0 10px 25px rgba(197, 160, 89, 0.3) !important; transition: all 0.3s; border: 2px solid #c5a059 !important; }
+.landing-container .btn-primary-large:hover { background: transparent !important; color: #c5a059 !important; transform: translateY(-2px); box-shadow: none !important; }
 .hero-disclaimer { font-size: 0.85rem; color: #94a3b8; font-weight: 500; }
 
 .dashboard-wrapper { position: relative; width: 100%; perspective: 1000px; }
@@ -371,7 +387,7 @@ html { scroll-behavior: smooth; }
 .plan-dot.active {
   width: 22px;
   border-radius: 10px;
-  background: var(--dourado);
+  background: #c5a059 !important;
 }
 
 .pricing-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; max-width: 1100px; margin: 0 auto; align-items: stretch; }
@@ -385,15 +401,15 @@ html { scroll-behavior: smooth; }
 .pricing-features { list-style: none; padding: 0; margin: 0 0 24px 0; flex: 1; display: flex; flex-direction: column; gap: 10px;}
 .pricing-features li { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; color: #475569; font-weight: 500;}
 .pricing-features li strong { color: var(--azul-naval); font-weight: 800; }
-.pricing-card.popular { background: linear-gradient(135deg, var(--dourado) 0%, #a18042 100%); transform: scale(1.04); box-shadow: 0 20px 45px rgba(0,0,0,0.4); z-index: 10; border: none;}
-.pricing-card.popular .card-header h3 { color: white; }
-.pricing-card.popular .card-header .pricing-desc { color: #fdf8eb; }
-.pricing-card.popular .price { border-color: rgba(255,255,255,0.2); color: white; }
-.pricing-card.popular .price span { color: #fdf8eb; }
-.pricing-card.popular .pricing-features li { color: white; }
-.pricing-card.popular .pricing-features li strong { color: white; }
-.pricing-card.popular .check-icon { background: white; color: var(--dourado); }
-.popular-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: white; color: var(--dourado); padding: 5px 16px; border-radius: 20px; font-size: 0.74rem; font-weight: 900; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.15); }
+.landing-container .pricing-card.popular { background: linear-gradient(135deg, #c5a059 0%, #a18042 100%) !important; transform: scale(1.04); box-shadow: 0 20px 45px rgba(0,0,0,0.4); z-index: 10; border: none;}
+.landing-container .pricing-card.popular .card-header h3 { color: white; }
+.landing-container .pricing-card.popular .card-header .pricing-desc { color: #fdf8eb; }
+.landing-container .pricing-card.popular .price { border-color: rgba(255,255,255,0.2); color: white; }
+.landing-container .pricing-card.popular .price span { color: #fdf8eb; }
+.landing-container .pricing-card.popular .pricing-features li { color: white; }
+.landing-container .pricing-card.popular .pricing-features li strong { color: white; }
+.landing-container .pricing-card.popular .check-icon { background: white !important; color: #c5a059 !important; }
+.landing-container .popular-badge { position: absolute; top: -12px; left: 50%; transform: translateX(-50%); background: white !important; color: #c5a059 !important; padding: 5px 16px; border-radius: 20px; font-size: 0.74rem; font-weight: 900; text-transform: uppercase; box-shadow: 0 4px 10px rgba(0,0,0,0.15) !important; }
 .btn-pricing-outline { display: block; text-align: center; padding: 13px 18px; border-radius: 10px; border: 2px solid var(--azul-naval); color: var(--azul-naval); font-weight: 800; text-decoration: none; transition: all 0.2s; font-size: 0.92rem; }
 .btn-pricing-outline:hover { background: var(--azul-naval); color: white; }
 .btn-pricing-solid { display: block; text-align: center; padding: 13px 18px; border-radius: 10px; background: white; color: var(--azul-naval); font-weight: 900; text-decoration: none; transition: all 0.2s; font-size: 0.92rem; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }

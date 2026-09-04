@@ -84,11 +84,32 @@ a.btn-primary-celebre {
 
 /* ── ABAS ATIVAS EM TODAS AS TELAS (FLUXO DE CAIXA, DRE, ETC.) ── */
 .tab-btn-celebre.active,
+.financeiro-container .tab-btn-celebre.active,
+.fin-tabs-bar .tab-btn-celebre.active,
+.compras-container .tab-btn-celebre.active,
+.compras-tabs-bar .tab-btn-celebre.active,
 [data-theme^='dark'] .tab-btn-celebre.active,
 [data-theme^='dark'] .financeiro-container .tab-btn-celebre.active,
+[data-theme^='dark'] .compras-container .tab-btn-celebre.active,
+.btn-tipo-pill.active,
+.financeiro-container .btn-tipo-pill.active,
+.fin-tipo-toggle-bar .btn-tipo-pill.active,
+.btn-date-quick.active,
+.financeiro-container .btn-date-quick.active,
+.fin-quick-dates .btn-date-quick.active,
+.btn-view-toggle.active,
+.financeiro-container .btn-view-toggle.active,
 .fin-tab.active,
 .relatorio-tab.active,
 .tabs-relatorios-compacto button.active,
+.rel-quick-btn.active,
+[data-theme^='dark'] .rel-quick-btn.active,
+.rel-subtab-btn.active,
+[data-theme^='dark'] .rel-subtab-btn.active,
+.rel-cliente-pill-btn.active,
+[data-theme^='dark'] .rel-cliente-pill-btn.active,
+.rel-estoque-pill-btn.active,
+[data-theme^='dark'] .rel-estoque-pill-btn.active,
 .view-btn.active,
 .sub-btn.active,
 .view-switcher-btn.active,
@@ -111,8 +132,19 @@ a.btn-primary-celebre {
 }
 
 .tab-btn-celebre.active *,
+.financeiro-container .tab-btn-celebre.active *,
+.fin-tabs-bar .tab-btn-celebre.active *,
+.compras-container .tab-btn-celebre.active *,
+.financeiro-container .btn-tipo-pill.active *,
+.financeiro-container .btn-date-quick.active *,
 [data-theme^='dark'] .tab-btn-celebre.active *,
 [data-theme^='dark'] .financeiro-container .tab-btn-celebre.active *,
+[data-theme^='dark'] .compras-container .tab-btn-celebre.active *,
+.tabs-relatorios-compacto button.active *,
+.rel-quick-btn.active *,
+.rel-subtab-btn.active *,
+.rel-cliente-pill-btn.active *,
+.rel-estoque-pill-btn.active *,
 .clientes-container .desktop-pills-only .pill-btn.active *,
 .filter-pills-grid .pill-btn.active *,
 .tabs-container .tab-btn.active * {
@@ -860,11 +892,155 @@ a.btn-primary-celebre {
 
 
 /* ============================================================
-   🔒 PÁGINA: CATÁLOGO & AUTO-CADASTRO
-   STATUS: CONGELADA em 03/09/2026
+   🔒 PÁGINA: CATÁLOGO ONLINE BOUTIQUE DE LUXO & AUTO-CADASTRO
+   STATUS: CONGELADA em 04/09/2026
    ARQUIVOS DE ORIGEM: Catalago.css, AutoCadastro.css
-   REGRA: Grade de cards responsiva e formulário público blindado
+   REGRA: Vitrine Boutique de Luxo, Menu Lateral Fixo de Categorias,
+          Eliminação de pílulas redundantes no topo, Floating Cart Pill,
+          e Grid Responsivo (2 colunas mobile / autofill desktop).
    ============================================================ */
+
+.catalogo-luxury-page {
+  background-color: #f8fafc !important;
+  min-height: 100vh !important;
+  overflow-x: hidden !important;
+  padding-bottom: 90px !important;
+}
+
+.catalogo-luxury-page .cat-container-main {
+  display: flex !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  padding: 16px 24px !important;
+  gap: 18px !important;
+  align-items: flex-start !important;
+  box-sizing: border-box !important;
+}
+
+/* Sidebar Fixa de Categorias */
+.catalogo-luxury-page .cat-sidebar {
+  width: 230px !important;
+  background: #ffffff !important;
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  padding: 14px 10px !important;
+  position: sticky !important;
+  top: 14px !important;
+  height: calc(100vh - 28px) !important;
+  overflow-y: auto !important;
+  flex-shrink: 0 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 12px !important;
+  box-sizing: border-box !important;
+}
+
+/* Proibição de barra redundante no topo da vitrine */
+.catalogo-luxury-page .cat-modalidades-tabs-bar {
+  display: none !important;
+}
+
+/* Barra de Controles */
+.catalogo-luxury-page .cat-top-bar-controls {
+  display: flex !important;
+  gap: 8px !important;
+  align-items: center !important;
+  background: #ffffff !important;
+  padding: 8px 12px !important;
+  border-radius: 12px !important;
+  border: 1px solid #e2e8f0 !important;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04) !important;
+  margin-bottom: 10px !important;
+}
+
+.catalogo-luxury-page .btn-trigger-mobile-filter {
+  display: none !important;
+}
+
+/* Grid de Produtos Desktop */
+.catalogo-luxury-page .cat-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)) !important;
+  gap: 14px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Floating Cart */
+.catalogo-luxury-page .cat-floating-cart-pill {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background: linear-gradient(135deg, #070a12 0%, #0f172a 100%) !important;
+  border: 1.5px solid #c5a059 !important;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.4), 0 0 20px rgba(197, 160, 89, 0.25) !important;
+  border-radius: 9999px !important;
+  z-index: 9999 !important;
+}
+
+/* Regras Responsivas Mobile (<= 900px) */
+@media (max-width: 900px) {
+  .catalogo-luxury-page .cat-container-main {
+    padding: 10px !important;
+    gap: 0 !important;
+    display: block !important;
+  }
+
+  .catalogo-luxury-page .cat-sidebar {
+    position: fixed !important;
+    top: 0 !important;
+    left: -320px !important;
+    width: 280px !important;
+    height: 100vh !important;
+    z-index: 99999 !important;
+    border-radius: 0 16px 16px 0 !important;
+    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    box-shadow: 10px 0 40px rgba(0, 0, 0, 0.3) !important;
+  }
+
+  .catalogo-luxury-page .cat-sidebar.open {
+    left: 0 !important;
+  }
+
+  .catalogo-luxury-page .btn-trigger-mobile-filter {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 8px !important;
+    width: 100% !important;
+    padding: 9px 14px !important;
+    background: #0f172a !important;
+    color: #fef08a !important;
+    border: 1px solid #c5a059 !important;
+    border-radius: 12px !important;
+    font-size: 0.84rem !important;
+    font-weight: 700 !important;
+  }
+
+  .catalogo-luxury-page .cat-top-bar-controls {
+    flex-direction: column !important;
+    padding: 8px !important;
+    gap: 6px !important;
+  }
+
+  .catalogo-luxury-page .cat-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .catalogo-luxury-page .cat-floating-cart-pill {
+    bottom: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    transform: none !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    border-radius: 18px 18px 0 0 !important;
+  }
+}
 
 .catalogo-container,
 .autocadastro-container {
@@ -874,7 +1050,7 @@ a.btn-primary-celebre {
 
 
 /* ============================================================
-   🔒 SISTEMA 100% CONGELADO E BLINDADO (03/09/2026)
+   🔒 SISTEMA 100% CONGELADO E BLINDADO (04/09/2026)
    TODAS AS PÁGINAS PRINCIPAIS ESTÃO COM STATUS CONGELADA:
    ✅ 🔒 Clientes (Clientes.css, CadastroCliente.css)
    ✅ 🔒 Locações (Locacoes.css)
@@ -887,7 +1063,7 @@ a.btn-primary-celebre {
    ✅ 🔒 Agenda (Agenda.css)
    ✅ 🔒 Logística / Kanban Galpão (Logistica.css)
    ✅ 🔒 Relatórios (Relatorios.css, Tabs)
-   ✅ 🔒 Catálogo & Auto-Cadastro (Catalago.css, AutoCadastro.css)
+   ✅ 🔒 Catálogo Boutique de Luxo & Auto-Cadastro (Catalago.css, AutoCadastro.css)
    ✅ 🔒 Sistema Global de Cards KPI (1 linha desktop / 2 colunas mobile)
    ✅ 🔒 Motor Global de Cores Dinâmicas da Marca (Aparência)
    ============================================================ */

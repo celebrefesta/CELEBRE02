@@ -214,6 +214,23 @@
   color: #fef08a;
   text-decoration: none;
   font-weight: 600;
+  transition: opacity 0.2s ease;
+}
+
+.meta-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
+}
+
+.meta-badge-trust {
+  background: rgba(197, 160, 89, 0.18);
+  color: #fef08a;
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  padding: 2px 10px;
+  border-radius: var(--cat-radius-full);
+  font-weight: 700;
+  font-size: 0.72rem;
+  letter-spacing: 0.3px;
 }
 
 /* ==========================================================================
@@ -361,37 +378,37 @@
   gap: 10px;
 }
 
-/* 🌟 ABAS SEGMENTADAS DE FORMATO (ESTILO BOUTIQUE) */
+/* 🌟 CARROSSEL VISUAL DE CATEGORIAS & TEMAS (STORIES / PÍLULAS BOUTIQUE) */
 .cat-modalidades-tabs-bar {
   display: flex;
-  background: var(--cat-white);
-  padding: 4px;
-  border-radius: var(--cat-radius-md);
-  border: 1px solid var(--cat-slate-200);
-  box-shadow: var(--cat-shadow-sm);
-  gap: 4px;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 4px 2px 12px 2px;
+  width: 100%;
+  overflow: visible;
 }
 
 .modalidade-tab-btn {
-  flex: 1;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 7px;
-  padding: 9px 12px;
-  border: none;
-  background: transparent;
-  border-radius: var(--cat-radius-sm);
+  padding: 8px 16px;
+  border: 1.5px solid var(--cat-slate-200);
+  background: var(--cat-white);
+  border-radius: var(--cat-radius-full);
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+  flex-shrink: 0;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
 .modalidade-tab-btn .tab-icon {
-  font-size: 14px;
+  font-size: 15px;
 }
 
 .modalidade-tab-btn .tab-label {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   font-weight: 700;
   color: var(--cat-slate-700);
 }
@@ -401,27 +418,34 @@
   font-weight: 800;
   background: var(--cat-slate-100);
   color: var(--cat-slate-500);
-  padding: 2px 6px;
+  padding: 2px 7px;
   border-radius: var(--cat-radius-full);
 }
 
 .modalidade-tab-btn:hover {
-  background: var(--cat-slate-50);
+  border-color: var(--cat-gold);
+  transform: translateY(-1px);
+  box-shadow: var(--cat-shadow-sm);
 }
 
 .modalidade-tab-btn.active {
   background: var(--cat-slate-900);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.18);
+  border-color: var(--cat-slate-900);
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.25);
 }
 
 .modalidade-tab-btn.active .tab-label {
   color: #fef08a;
-  font-weight: 900;
+  font-weight: 800;
 }
 
 .modalidade-tab-btn.active .tab-badge {
-  background: rgba(254, 240, 138, 0.2);
+  background: rgba(254, 240, 138, 0.25);
   color: #fef08a;
+}
+
+.btn-trigger-mobile-filter {
+  display: none;
 }
 
 /* 🔍 BARRA DE CONTROLES: BUSCA, DATA & ORDENAÇÃO */
@@ -501,7 +525,7 @@
 }
 
 .cat-date-field {
-  padding: 7px 10px 7px 30px;
+  padding: 7px 28px 7px 30px;
   border-radius: var(--cat-radius-full);
   border: 1.5px solid var(--cat-slate-200);
   background: var(--cat-slate-50);
@@ -516,6 +540,28 @@
 .cat-date-field:focus {
   border-color: var(--cat-gold);
   background: var(--cat-white);
+}
+
+.btn-clear-date-filter {
+  position: absolute;
+  right: 8px;
+  background: var(--cat-slate-200);
+  border: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  font-size: 10px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--cat-slate-600);
+}
+
+.btn-clear-date-filter:hover {
+  background: #fecdd3;
+  color: #e11d48;
 }
 
 /* 🔀 Seletor de Ordenação */
@@ -663,10 +709,13 @@
   padding: 10px;
   box-sizing: border-box;
   transition: transform 0.35s ease;
+  -webkit-touch-callout: none;
+  user-select: none;
+  pointer-events: auto;
 }
 
 .cat-img-wrapper:hover .cat-card-img {
-  transform: scale(1.06);
+  transform: scale(1.05);
 }
 
 /* ❤️ Botão Favorito no Canto do Card */
@@ -674,7 +723,7 @@
   position: absolute;
   top: 6px;
   right: 6px;
-  background: rgba(255, 255, 255, 0.85);
+  background: rgba(255, 255, 255, 0.9);
   border: 1px solid rgba(0, 0, 0, 0.08);
   width: 28px;
   height: 28px;
@@ -699,20 +748,49 @@
   border-color: #fecdd3;
 }
 
-.no-img {
+/* 👑 Placeholder de Alta Costura para Peças sem Foto */
+.cat-no-img-luxury {
   width: 100%;
   height: 100%;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  color: var(--cat-slate-500);
-  font-size: 26px;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+  gap: 6px;
+  padding: 12px;
+  box-sizing: border-box;
+  text-align: center;
 }
 
-.no-img small {
-  font-size: 10px;
-  margin-top: 2px;
+.cat-no-img-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(197, 160, 89, 0.12);
+  border: 1px solid rgba(197, 160, 89, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.15);
+}
+
+.cat-no-img-brand {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--cat-slate-700);
+}
+
+.cat-no-img-tag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--cat-gold-dark);
+  background: rgba(197, 160, 89, 0.15);
+  padding: 2px 8px;
+  border-radius: var(--cat-radius-full);
 }
 
 /* Badges nos Cards */
@@ -1928,60 +2006,120 @@
 }
 
 /* ==========================================================================
-   🛍️ 5. BARRA FLUTUANTE INFERIOR DO CARRINHO
+   🛍️ 5. BARRA FLUTUANTE INFERIOR DO CARRINHO (ESTILO IFOOD / LUXURY APP)
    ========================================================================== */
 .cat-floating-cart-pill {
   position: fixed;
-  bottom: 18px;
+  bottom: 20px;
   left: 50%;
   transform: translateX(-50%);
-  background: linear-gradient(135deg, #0b0f19 0%, #1e293b 100%);
+  background: linear-gradient(135deg, #070a12 0%, #0f172a 100%);
   border: 1.5px solid var(--cat-gold);
   border-radius: var(--cat-radius-full);
-  padding: 8px 16px;
+  padding: 10px 18px;
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 16px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45), var(--cat-shadow-gold);
-  z-index: 999;
+  box-shadow: 0 12px 35px rgba(0, 0, 0, 0.45), 0 0 25px rgba(197, 160, 89, 0.3);
+  z-index: 9999;
   cursor: pointer;
   width: calc(100% - 32px);
-  max-width: 480px;
+  max-width: 520px;
   box-sizing: border-box;
+  animation: slideUpFloatingCart 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cat-floating-cart-pill:hover {
+  transform: translate(-50%, -2px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5), 0 0 30px rgba(197, 160, 89, 0.4);
+}
+
+@keyframes slideUpFloatingCart {
+  from { opacity: 0; transform: translate(-50%, 30px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
 }
 
 .floating-cart-info {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 12px;
+}
+
+.floating-cart-bag-wrap {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  background: rgba(197, 160, 89, 0.2);
+  border: 1px solid var(--cat-gold);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .floating-cart-bag {
-  font-size: 20px;
+  font-size: 19px;
 }
 
-.floating-cart-info strong {
-  display: block;
-  font-size: 0.82rem;
+.floating-cart-badge-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  background: #f43f5e;
   color: #ffffff;
+  font-size: 0.65rem;
+  font-weight: 900;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #0f172a;
 }
 
-.floating-cart-info small {
-  font-size: 0.7rem;
+.floating-cart-texts {
+  display: flex;
+  flex-direction: column;
+}
+
+.floating-cart-title {
+  display: block;
+  font-size: 0.86rem;
+  color: #ffffff;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.floating-cart-sub {
+  font-size: 0.74rem;
   color: #fef08a;
+  font-weight: 700;
 }
 
 .btn-floating-view-cart {
-  margin-left: auto;
   background: linear-gradient(135deg, #c5a059 0%, #dfba73 100%);
   color: var(--cat-slate-900);
   border: none;
-  padding: 7px 14px;
+  padding: 9px 18px;
   border-radius: var(--cat-radius-full);
-  font-size: 0.74rem;
+  font-size: 0.78rem;
   font-weight: 900;
   cursor: pointer;
   white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.4);
+  transition: transform 0.15s ease;
+}
+
+.btn-floating-view-cart:hover {
+  transform: scale(1.04);
 }
 
 /* ==========================================================================
@@ -2146,19 +2284,86 @@
   white-space: nowrap;
 }
 
+/* ✨ SELOS DE CONFIANÇA & GARANTIA NO RODAPÉ */
+.cat-trust-guarantees-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 14px 0 6px 0;
+}
+
+.trust-item {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(197, 160, 89, 0.2);
+  border-radius: var(--cat-radius-sm);
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: all 0.2s ease;
+}
+
+.trust-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(197, 160, 89, 0.4);
+}
+
+.trust-icon {
+  font-size: 22px;
+  flex-shrink: 0;
+}
+
+.trust-texts strong {
+  display: block;
+  font-size: 0.78rem;
+  color: #fef08a;
+}
+
+.trust-texts small {
+  display: block;
+  font-size: 0.68rem;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+
 .cat-bottom-credits-bar {
   border-top: 1px solid rgba(255, 255, 255, 0.06);
-  padding-top: 8px;
+  padding-top: 12px;
   display: flex;
   justify-content: space-between;
+  align-items: center;
   font-size: 0.68rem;
   color: #64748b;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: 8px;
+}
+
+.credits-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
 .powered-text strong {
   color: #c5a059;
+}
+
+.btn-footer-admin-link {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #64748b;
+  padding: 4px 10px;
+  border-radius: var(--cat-radius-full);
+  font-size: 0.66rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-footer-admin-link:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #cbd5e1;
+  border-color: rgba(255, 255, 255, 0.25);
 }
 
 /* Botão FAB no Celular */
@@ -2171,23 +2376,51 @@
    ========================================================================== */
 @media (max-width: 900px) {
   .cat-hero-header {
-    padding: 14px 12px;
+    padding: 14px 14px 18px 14px;
   }
 
   .cat-header-top-bar {
     flex-direction: column;
     align-items: flex-start;
+    gap: 12px;
+  }
+
+  .cat-header-brand {
     gap: 10px;
+  }
+
+  .cat-brand-logo,
+  .cat-brand-avatar {
+    width: 44px;
+    height: 44px;
+  }
+
+  .cat-brand-title {
+    font-size: 1.15rem;
   }
 
   .cat-header-actions {
     width: 100%;
+    display: flex;
     justify-content: space-between;
+    gap: 8px;
+  }
+
+  .btn-header-zap {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .cat-header-meta-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-top: 10px;
   }
 
   .cat-container-main {
-    padding: 12px;
-    gap: 12px;
+    padding: 10px;
+    gap: 10px;
   }
 
   /* Sidebar Mobile Drawer */
@@ -2247,31 +2480,52 @@
     align-items: center;
     justify-content: center;
     position: fixed;
-    bottom: 80px;
+    bottom: 74px;
     right: 14px;
     background: var(--cat-slate-900);
     color: #fef08a;
     border: 1.5px solid var(--cat-gold);
     border-radius: var(--cat-radius-full);
-    padding: 9px 16px;
-    font-size: 0.78rem;
+    padding: 8px 15px;
+    font-size: 0.76rem;
     font-weight: 800;
     cursor: pointer;
-    box-shadow: var(--cat-shadow-gold);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4), var(--cat-shadow-gold);
     z-index: 998;
   }
 
   .cat-modalidades-tabs-bar {
-    flex-direction: row;
-    overflow-x: auto;
+    padding: 4px 0 8px 0;
+    flex-wrap: wrap;
+    gap: 7px;
   }
 
   .modalidade-tab-btn {
-    padding: 8px 10px;
+    padding: 7px 12px;
   }
 
   .modalidade-tab-btn .tab-label {
     font-size: 0.76rem;
+  }
+
+  .cat-floating-cart-pill {
+    bottom: 0;
+    left: 0;
+    right: 0;
+    transform: none;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 18px 18px 0 0;
+    padding: 10px 16px calc(12px + env(safe-area-inset-bottom, 0px)) 16px;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    animation: none;
+  }
+
+  .cat-trust-guarantees-grid {
+    grid-template-columns: 1fr;
+    gap: 8px;
   }
 
   /* Como Funciona no Mobile */
@@ -2308,6 +2562,23 @@
     gap: 6px;
   }
 
+  .btn-trigger-mobile-filter {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 14px;
+    background: var(--cat-slate-900);
+    color: #fef08a;
+    border: 1px solid var(--cat-gold);
+    border-radius: var(--cat-radius-md);
+    font-size: 0.84rem;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
   .cat-date-picker-wrap,
   .cat-sort-select-wrap {
     width: 100%;
@@ -2325,7 +2596,11 @@
   }
 
   .cat-img-wrapper {
-    height: 140px;
+    height: 145px;
+  }
+
+  .cat-card-img {
+    padding: 6px;
   }
 
   .cat-info {
@@ -2334,15 +2609,17 @@
 
   .cat-title-text {
     font-size: 0.78rem;
+    line-height: 1.25;
   }
 
   .cat-price {
-    font-size: 0.9rem;
+    font-size: 0.92rem;
   }
 
   .btn-add-lista {
-    padding: 5px 8px;
-    font-size: 0.68rem;
+    padding: 6px 10px;
+    font-size: 0.7rem;
+    font-weight: 800;
   }
 
   .modal-content-grid {

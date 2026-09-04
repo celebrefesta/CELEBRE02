@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: Agosto / 2026  
+> **Data de Referência**: Setembro / 2026  
 
 ---
 
@@ -312,6 +312,24 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 04/09/2026 — 13h00 às 14h35 (BRT)
+- ✅ **🛍️ Catálogo Online — Transformação Boutique de Luxo (`Catalago.jsx` & `Catalago.css`)**:
+  - **Hero Header de Alto Padrão**: Banner nobre escuro com logotipo emoldurado a ouro, badges de autoridade (*"Peças 100% Higienizadas"*, endereço integrado ao Maps, link oficial do Instagram) e botão VIP de WhatsApp (*"Falar com a Cenógrafa"*).
+  - **Transferência do Acesso Administrativo**: Link restrito de login transferido com discrição e segurança para o rodapé institucional (`/login`).
+  - **Barra Flutuante de Carrinho ("Estilo iFood / E-commerce de Luxo")**: Pill flutuante fixa na base inferior (`.cat-floating-cart-pill`), com totalizador de valor em tempo real e abertura de gaveta lateral (Drawer) de finalização rápida.
+  - **Tratamento Visual dos Cards**: Títulos formatados em *Title Case*, placeholders nobres de foto em produção e sanitização de dados operacionais internos (o cliente público vê apenas status de disponibilidade real, sem ruídos de oficina).
+- ✅ **🧹 Despoluição Visual & Eliminação de Redundâncias**:
+  - Eliminação completa da barra superior duplicada de pílulas horizontais (`cat-modalidades-tabs-bar`), liberando espaço vertical e acabando com a rolagem horizontal indesejada.
+  - A vitrine inicia de forma direta e objetiva na Barra de Busca + Checagem de Data de Disponibilidade em Tempo Real + Ordenação por Preço/Popularidade.
+- ✅ **🧭 Unificação da Navegação sob o Padrão "Categorias"**:
+  - Menu lateral (`cat-sidebar`) oficializado como ponto central de navegação: Todo o Acervo, Formatos (*Pegue & Monte*, *Decorações Completas*) e Categorias reais com contadores dinâmicos.
+  - Alinhamento de todos os botões no mobile para **`🧭 Categorias`** e **`☰ Categorias`** com fechamento automático e suave ao clicar.
+- ✅ **🏷️ Bipagem de Galpão Individualizada por Locação (`Locacoes.jsx`)**:
+  - Remoção do botão de bipagem global e inserção do botão "Bipar" exclusivo por linha de locação.
+- ✅ **🔒 Regras Operacionais de Estoque e Continuidade em Atrasados**:
+  - Trava de devolução e vistoria: peças retidas em pedidos não finalizados permanecem indisponíveis para evitar overbooking real até o check-in integral.
+- ✅ **Build de Produção Verificado**: `npm run build` aprovado com **0 erros** (`built in 15.83s`).
+
 ### 🗓️ Sessão: 30/08/2026 — 13h00 às 16h40 (BRT)
 - ✅ **📱 Arquitetura Dual Desktop / Mobile & Eliminação de Espaço Fantasma (`Compras.jsx`, `Compras.css`)**:
   - Implementação do padrão dual: visualização em tabela no desktop (`.compras-desktop-table-view`) e visualização semântica em cartões no mobile (`.compras-mobile-cards-view`).
@@ -505,5 +523,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 30/08/2026 — 16h40 (BRT)  
+> **⏱️ Última atualização:** 04/09/2026 — 14h35 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

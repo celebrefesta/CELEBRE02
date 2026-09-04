@@ -60,8 +60,22 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
   dadosEmpresa = {},
   acao = 'preview'
 ) => {
-  if (!locacoes || locacoes.length === 0) {
-    alert("⚠️ Não há pedidos na lista para gerar a Folha de Separação.");
+  // 🛡️ REGRA DE OURO DA SEPARAÇÃO:
+  // Galpão só separa pedidos pendentes (A Separar / Em Preparação) e de eventos HOJE ou FUTUROS!
+  const hojeIso = new Date().toISOString().split('T')[0];
+  const pedidosValidos = (locacoes || []).filter(loc => {
+    const st = String(loc.status || '').toLowerCase().trim();
+    if (st.includes('finaliz') || st.includes('devolv') || st.includes('concluid') || st.includes('cancel') || st.includes('orcam')) return false;
+    if (st === 'entregue' || st.includes('transito') || st.includes('rua')) return false;
+
+    const dataSaida = loc.dataRetirada || loc.dataEvento;
+    if (dataSaida && dataSaida < hojeIso && !filtroInfo?.permitirPassados) return false;
+
+    return true;
+  });
+
+  if (!pedidosValidos || pedidosValidos.length === 0) {
+    alert("⚠️ Não há pedidos pendentes de separação ativa (com data hoje ou futura) para gerar a Folha de Separação.");
     return null;
   }
 
@@ -69,11 +83,21 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  const nomeEmpresa = dadosEmpresa?.nomeEmpresa || dadosEmpresa?.nomeFantasia || dadosEmpresa?.nome || 'CELEBRE FESTAS & DECORAÇÕES';
+  const nomeEmpresa = dadosEmpresa?.nomeEmpresa 
+    || dadosEmpresa?.nomeFantasia 
+    || dadosEmpresa?.razaoSocial 
+    || localStorage.getItem('nomeEmpresa') 
+    || 'CELEBRE FESTAS & DECORAÇÕES';
+  const logoEmpresaSrc = dadosEmpresa?.logotipo 
+    || dadosEmpresa?.logoUrl 
+    || dadosEmpresa?.logo 
+    || logoCelebreMarcaDagua;
+  const telEmpresa = dadosEmpresa?.telefone || dadosEmpresa?.whatsapp || '';
+
   const dataHoje = new Date().toLocaleDateString('pt-BR');
   const horaHoje = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
-  // 🎨 PALETA DE CORES
+  // 🎨 PALETA DE CORES LUXURY CELEBRE
   const corDourado = [197, 160, 89];
   const corAzulEscuro = [15, 23, 42];
   const corCinzaBorda = [203, 213, 225];
@@ -98,7 +122,7 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
   let totalEntregas = 0;
   let totalRetiradas = 0;
 
-  locacoes.forEach(loc => {
+  pedidosValidos.forEach(loc => {
     const isEnt = verificarSeEhEntrega(loc);
     if (isEnt) totalEntregas++;
     else totalRetiradas++;
@@ -110,7 +134,7 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
   });
 
   // ═══════════════════════════════════════════════════════════
-  // 1. CABEÇALHO PRINCIPAL DA FOLHA
+  // 1. CABEÇALHO PRINCIPAL DA FOLHA (COM LOGOTIPO OFICIAL)
   // ═══════════════════════════════════════════════════════════
   const desenharCabecalhoPrincipal = () => {
     // Top Bar Dourado
@@ -119,59 +143,131 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
 
     // Barra Superior Azul Navy
     doc.setFillColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
-    doc.rect(0, 3.5, pageWidth, 23, 'F');
+    doc.rect(0, 3.5, pageWidth, 24.5, 'F');
+
+    // Borda inferior dourada fina do Header
+    doc.setFillColor(corDourado[0], corDourado[1], corDourado[2]);
+    doc.rect(0, 28, pageWidth, 1.2, 'F');
+
+    // Logotipo da Empresa
+    let textStartX = 14;
+    if (logoEmpresaSrc) {
+      try {
+        const isJpeg = typeof logoEmpresaSrc === 'string' && (logoEmpresaSrc.includes('image/jpeg') || logoEmpresaSrc.includes('image/jpg'));
+        const format = isJpeg ? 'JPEG' : 'PNG';
+        doc.addImage(logoEmpresaSrc, format, 14, 4.5, 20.5, 20.5);
+        textStartX = 38;
+      } catch (e) {
+        console.warn("Logotipo não pôde ser renderizado no mapa:", e);
+      }
+    }
 
     // Título Principal
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text('MAPA GERAL DE SEPARACAO & EXPEDICAO (GALPAO)', 14, 13);
+    doc.setFontSize(11.5);
+    doc.text('MAPA GERAL DE SEPARACAO & EXPEDICAO (GALPAO)', textStartX, 10.5);
 
     // Subtítulo e Empresa
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(8.5);
     doc.setTextColor(corDourado[0], corDourado[1], corDourado[2]);
-    doc.text(`${nomeEmpresa.toUpperCase()}`, 14, 20.5);
+    doc.text(nomeEmpresa.toUpperCase(), textStartX, 16.5);
 
+    // Metadados
     doc.setFont('helvetica', 'normal');
     doc.setTextColor(203, 213, 225);
+    doc.setFontSize(7);
+    const infoMeta = [`Emissao: ${dataHoje} as ${horaHoje}`, telEmpresa ? `Tel: ${telEmpresa}` : ''].filter(Boolean).join('   •   ');
+    doc.text(infoMeta, textStartX, 22);
+
+    // Canto Direito do Cabeçalho
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(corDourado[0], corDourado[1], corDourado[2]);
+    doc.text('LOGISTICA & GALPAO', pageWidth - 14, 11, { align: 'right' });
+
+    doc.setFontSize(7.2);
+    doc.setTextColor(255, 255, 255);
+    doc.text('CONFERENCIA FISICA DE ACERVO', pageWidth - 14, 16.5, { align: 'right' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.8);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Controle de Saida e Devolucao', pageWidth - 14, 21.5, { align: 'right' });
+  };
+
+  // Mini-Cabeçalho para páginas subsequentes (Página 2, 3, etc.)
+  const desenharMiniCabecalhoPagina = (pageNum) => {
+    doc.setFillColor(corDourado[0], corDourado[1], corDourado[2]);
+    doc.rect(0, 0, pageWidth, 2.5, 'F');
+
+    doc.setFillColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
+    doc.rect(0, 2.5, pageWidth, 9, 'F');
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont('helvetica', 'bold');
     doc.setFontSize(7.5);
-    doc.text(`• Emissao: ${dataHoje} as ${horaHoje}`, 14 + doc.getTextWidth(nomeEmpresa.toUpperCase()) + 3, 20.5);
+    doc.text(`MAPA DE SEPARACAO DE GALPAO  •  ${nomeEmpresa.toUpperCase()}`, 14, 8);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.8);
+    doc.setTextColor(corDourado[0], corDourado[1], corDourado[2]);
+    doc.text(`Continuacao — Pagina ${pageNum}`, pageWidth - 14, 8, { align: 'right' });
   };
 
   desenharCabecalhoPrincipal();
   adicionarMarcaDagua();
 
   // ═══════════════════════════════════════════════════════════
-  // 2. RESUMO EXECUTIVO (KPIS)
+  // 2. RESUMO EXECUTIVO (KPIS EM PÍLULAS MODERNAS)
   // ═══════════════════════════════════════════════════════════
-  let currentY = 30;
-  doc.setFillColor(241, 245, 249);
-  doc.setDrawColor(corCinzaBorda[0], corCinzaBorda[1], corCinzaBorda[2]);
-  doc.setLineWidth(0.3);
-  doc.roundedRect(14, currentY, pageWidth - 28, 12, 2, 2, 'FD');
+  let currentY = 32;
+  const textoFiltro = filtroInfo.data 
+    ? `Data: ${filtroInfo.data}` 
+    : (filtroInfo.motorista ? `Motorista: ${filtroInfo.motorista}` : 'Geral / Todos');
 
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(7.8);
-  doc.setTextColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
-  doc.text(`PEDIDOS: ${locacoes.length}`, 18, currentY + 7.5);
+  const kpiStartX = 14;
+  const kpiTotalWidth = pageWidth - 28; // 182mm
+  const kpiCount = 5;
+  const kpiGap = 2.5;
+  const kpiWidth = (kpiTotalWidth - (kpiGap * (kpiCount - 1))) / kpiCount; // ~34.4mm
+  const kpiHeight = 11.5;
 
-  doc.setTextColor(corDourado[0], corDourado[1], corDourado[2]);
-  doc.text(`TOTAL DE PECAS: ${totalPecasGeral} un.`, 54, currentY + 7.5);
+  const kpis = [
+    { label: 'PEDIDOS', val: `${pedidosValidos.length}`, corVal: [15, 23, 42], bg: [248, 250, 252], border: [203, 213, 225] },
+    { label: 'TOTAL PECAS', val: `${totalPecasGeral} un.`, corVal: [197, 160, 89], bg: [255, 253, 245], border: [253, 230, 138] },
+    { label: 'ENTREGAS', val: `${totalEntregas}`, corVal: [37, 99, 235], bg: [239, 246, 255], border: [191, 219, 254] },
+    { label: 'BALCAO / LOJA', val: `${totalRetiradas}`, corVal: [217, 119, 6], bg: [254, 252, 232], border: [254, 240, 138] },
+    { label: 'FILTRO', val: textoFiltro.length > 14 ? `${textoFiltro.substring(0, 12)}..` : textoFiltro, corVal: [13, 148, 136], bg: [240, 253, 250], border: [153, 246, 228] }
+  ];
 
-  doc.setTextColor(37, 99, 235);
-  doc.text(`MODALIDADE: ${totalEntregas} Entrega(s) | ${totalRetiradas} Balcao`, 108, currentY + 7.5);
+  kpis.forEach((kpi, idx) => {
+    const x = kpiStartX + idx * (kpiWidth + kpiGap);
+    doc.setFillColor(kpi.bg[0], kpi.bg[1], kpi.bg[2]);
+    doc.setDrawColor(kpi.border[0], kpi.border[1], kpi.border[2]);
+    doc.setLineWidth(0.35);
+    doc.roundedRect(x, currentY, kpiWidth, kpiHeight, 1.8, 1.8, 'FD');
 
-  const textoFiltro = filtroInfo.data ? `Data: ${filtroInfo.data}` : (filtroInfo.motorista ? `Motorista: ${filtroInfo.motorista}` : 'Geral / Todos');
-  doc.setTextColor(15, 118, 110);
-  doc.text(`FILTRO: ${textoFiltro}`, pageWidth - 18, currentY + 7.5, { align: 'right' });
+    // Label
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(5.8);
+    doc.setTextColor(100, 116, 139);
+    doc.text(kpi.label, x + (kpiWidth / 2), currentY + 3.8, { align: 'center' });
 
-  currentY += 16;
+    // Valor
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.2);
+    doc.setTextColor(kpi.corVal[0], kpi.corVal[1], kpi.corVal[2]);
+    doc.text(kpi.val, x + (kpiWidth / 2), currentY + 8.8, { align: 'center' });
+  });
+
+  currentY += kpiHeight + 5; // Y = ~48.5
 
   // ═══════════════════════════════════════════════════════════
   // 3. RENDERIZAÇÃO DOS PEDIDOS (AGRUPADO POR CLIENTE / PEDIDO)
   // ═══════════════════════════════════════════════════════════
-  locacoes.forEach((loc, pedIdx) => {
+  pedidosValidos.forEach((loc, pedIdx) => {
     const numPed = loc.numeroPedido ? `#${loc.numeroPedido}` : `PED-${pedIdx + 1}`;
     const clienteNome = loc.clienteNome || 'Cliente nao informado';
     const foneCliente = loc.clienteTelefone || loc.telefone || '';
@@ -196,14 +292,17 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
 
     // Calcular altura necessária para o cabeçalho do pedido
     const temInfoTransporte = motorista || caixasQtd > 0 || sacolasQtd > 0 || capasQtd > 0;
-    let cardHeaderHeight = 20;
+    let cardHeaderHeight = 22;
     if (temInfoTransporte) cardHeaderHeight += 5;
     if (observacoes) cardHeaderHeight += 5;
 
-    // Checagem de quebra de página antes do pedido
-    if (currentY + cardHeaderHeight + 25 > pageHeight - 15) {
+    // 🔒 PREVENÇÃO DE CABEÇALHO ÓRFÃO:
+    // Garante que o cabeçalho do pedido só seja desenhado se houver espaço para ele E para o início da tabela!
+    const alturaMinimaNecessaria = cardHeaderHeight + 26;
+    if (currentY + alturaMinimaNecessaria > pageHeight - 16) {
       doc.addPage();
       adicionarMarcaDagua();
+      desenharMiniCabecalhoPagina(doc.internal.getNumberOfPages());
       currentY = 16;
     }
 
@@ -212,39 +311,39 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
 
     doc.setFillColor(corCinzaFundo[0], corCinzaFundo[1], corCinzaFundo[2]);
     doc.setDrawColor(corCinzaBorda[0], corCinzaBorda[1], corCinzaBorda[2]);
-    doc.setLineWidth(0.3);
+    doc.setLineWidth(0.35);
     doc.roundedRect(14, cardHeaderY, pageWidth - 28, cardHeaderHeight, 2, 2, 'FD');
 
-    // Faixa esquerda indicadora de modalidade
+    // Faixa esquerda indicadora de modalidade (Azul Safira para Entrega / Âmbar Dourado para Balcão)
     doc.setFillColor(isEntrega ? 37 : 217, isEntrega ? 99 : 119, isEntrega ? 235 : 6);
-    doc.roundedRect(14, cardHeaderY, 3, cardHeaderHeight, 1, 1, 'F');
+    doc.roundedRect(14, cardHeaderY, 3.5, cardHeaderHeight, 1, 1, 'F');
 
     // Linha 1: Pedido #, Cliente e Tag de Frete
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9.5);
     doc.setTextColor(corAzulEscuro[0], corAzulEscuro[1], corAzulEscuro[2]);
     const textoClienteHeader = `${numPed} — ${clienteNome.toUpperCase()}${foneCliente ? ` (Tel: ${foneCliente})` : ''}`;
-    doc.text(textoClienteHeader.length > 60 ? `${textoClienteHeader.substring(0, 58)}...` : textoClienteHeader, 20, cardHeaderY + 5.5);
+    doc.text(textoClienteHeader.length > 58 ? `${textoClienteHeader.substring(0, 56)}...` : textoClienteHeader, 21, cardHeaderY + 5.8);
 
-    // Tag Frete no Canto Direito
-    const tagTxt = isEntrega ? '[ ENTREGA ]' : '[ RETIRADA NO BALCAO ]';
+    // Tag Frete no Canto Direito (Pílula moderna sem colchetes)
+    const tagTxt = isEntrega ? 'ENTREGA PROGRAMADA' : 'RETIRADA NO BALCAO';
     const tagBg = isEntrega ? [239, 246, 255] : [254, 252, 232];
     const tagBorder = isEntrega ? [191, 219, 254] : [254, 240, 138];
     const tagColor = isEntrega ? [29, 78, 216] : [161, 98, 7];
 
-    const tagWidth = 44;
-    const tagX = pageWidth - 14 - tagWidth - 2;
+    const tagWidth = 46;
+    const tagX = pageWidth - 14 - tagWidth - 2.5;
     doc.setFillColor(tagBg[0], tagBg[1], tagBg[2]);
     doc.setDrawColor(tagBorder[0], tagBorder[1], tagBorder[2]);
-    doc.roundedRect(tagX, cardHeaderY + 1.8, tagWidth, 5.5, 1, 1, 'FD');
+    doc.roundedRect(tagX, cardHeaderY + 2, tagWidth, 5.5, 1.2, 1.2, 'FD');
 
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(6.8);
     doc.setTextColor(tagColor[0], tagColor[1], tagColor[2]);
-    doc.text(tagTxt, tagX + (tagWidth / 2), cardHeaderY + 5.5, { align: 'center' });
+    doc.text(tagTxt, tagX + (tagWidth / 2), cardHeaderY + 5.7, { align: 'center' });
 
     // Linha 2: Datas de Saída / Retorno e Tema
-    let linha2Y = cardHeaderY + 10.5;
+    let linha2Y = cardHeaderY + 11;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(7.2);
     doc.setTextColor(corTextoEscuro[0], corTextoEscuro[1], corTextoEscuro[2]);
@@ -252,12 +351,12 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
     let textoLinha2 = `SAIDA: ${dataSaidaBr} ${horaSaida}`;
     if (dataDevBr) textoLinha2 += `   |   RETORNO: ${dataDevBr} ${horaDev}`;
     if (tema) textoLinha2 += `   |   TEMA: ${tema}`;
-    doc.text(textoLinha2, 20, linha2Y);
+    doc.text(textoLinha2, 21, linha2Y);
 
     // Linha 3: Local / Endereço
     let linha3Y = linha2Y + 5;
-    const localExibir = isEntrega ? (endereco || 'Endereco nao informado') : 'Retirada no Galpao / Loja';
-    doc.text(`LOCAL: ${localExibir.length > 85 ? `${localExibir.substring(0, 82)}...` : localExibir}`, 20, linha3Y);
+    const localExibir = isEntrega ? (endereco || 'Endereco de entrega nao informado') : 'Retirada no Galpao / Loja';
+    doc.text(`LOCAL: ${localExibir.length > 85 ? `${localExibir.substring(0, 82)}...` : localExibir}`, 21, linha3Y);
 
     // Linha 4 (Opcional): Transporte e Embalagens
     let proximaLinhaY = linha3Y;
@@ -274,7 +373,7 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(7);
       doc.setTextColor(30, 41, 59);
-      doc.text(partesTransp.join('   |   '), 20, proximaLinhaY);
+      doc.text(partesTransp.join('   |   '), 21, proximaLinhaY);
     }
 
     // Linha 5 (Opcional): Observações
@@ -283,7 +382,7 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(6.8);
       doc.setTextColor(180, 83, 9);
-      doc.text(`OBSERVACOES: ${observacoes.length > 88 ? `${observacoes.substring(0, 85)}...` : observacoes}`, 20, proximaLinhaY);
+      doc.text(`OBSERVACOES: ${observacoes.length > 88 ? `${observacoes.substring(0, 85)}...` : observacoes}`, 21, proximaLinhaY);
     }
 
     currentY += cardHeaderHeight + 2;
@@ -293,14 +392,16 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
       const qtd = String(it.quantidade || it.qtd || 1);
       const cod = it.codigo || it.sku || '-';
       const nome = it.nome || it.descricao || 'Item sem nome';
+      const localizacao = it.localizacao || it.prateleira || '';
+      const nomeComLocal = localizacao ? `${nome}\n[Local: ${localizacao}]` : nome;
       const cat = it.categoria || 'Geral';
       const obsItem = it.observacoes || it.obs || (it.checkedSeparacao ? '[Pre-separado]' : '-');
 
       return [
-        '[   ]',
+        '', // Coluna 0: Checkbox vetorial renderizado via didDrawCell
         qtd,
         cod,
-        nome,
+        nomeComLocal,
         cat,
         obsItem
       ];
@@ -309,7 +410,7 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
     autoTable(doc, {
       startY: currentY,
       head: [['CONF', 'QTD', 'CODIGO / SKU', 'DESCRICAO DA PECA / ACERVO', 'CATEGORIA', 'OBSERVACOES DE SEPARACAO']],
-      body: tabelaItensPedido.length > 0 ? tabelaItensPedido : [['[   ]', '0', '-', 'Nenhuma peca cadastrada neste pedido', '-', '-']],
+      body: tabelaItensPedido.length > 0 ? tabelaItensPedido : [['', '0', '-', 'Nenhuma peca cadastrada neste pedido', '-', '-']],
       theme: 'grid',
       styles: {
         fontSize: 7.5,
@@ -317,7 +418,7 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
         valign: 'middle',
         textColor: [15, 23, 42],
         lineColor: [226, 232, 240],
-        lineWidth: 0.1
+        lineWidth: 0.15
       },
       headStyles: {
         fillColor: [15, 23, 42],
@@ -328,43 +429,72 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
         cellPadding: 2.5
       },
       columnStyles: {
-        0: { cellWidth: 14, halign: 'center', fontStyle: 'bold', textColor: [100, 116, 139] },
-        1: { cellWidth: 14, halign: 'center', fontStyle: 'bold' },
+        0: { cellWidth: 13, halign: 'center' },
+        1: { cellWidth: 13, halign: 'center', fontStyle: 'bold' },
         2: { cellWidth: 26, halign: 'center', fontStyle: 'bold', textColor: [15, 23, 42] },
         3: { cellWidth: 'auto', fontStyle: 'bold' },
         4: { cellWidth: 32 },
-        5: { cellWidth: 42, fontSize: 7, textColor: [71, 85, 105] }
+        5: { cellWidth: 44, fontSize: 7, textColor: [71, 85, 105] }
       },
       alternateRowStyles: {
         fillColor: [248, 250, 252]
       },
       margin: { left: 14, right: 14 },
+      didDrawCell: (data) => {
+        // Desenha quadradinho vetorial de checkbox elegante para conferência a caneta
+        if (data.section === 'body' && data.column.index === 0) {
+          const dim = 4.2;
+          const x = data.cell.x + (data.cell.width - dim) / 2;
+          const y = data.cell.y + (data.cell.height - dim) / 2;
+          doc.saveGraphicsState();
+          doc.setDrawColor(148, 163, 184); // Slate 400
+          doc.setFillColor(255, 255, 255);
+          doc.setLineWidth(0.35);
+          doc.roundedRect(x, y, dim, dim, 0.8, 0.8, 'FD');
+          doc.restoreGraphicsState();
+        }
+      },
       didDrawPage: () => {
         adicionarMarcaDagua();
       }
     });
 
-    // Subtotal do pedido
+    // ── SUBTOTAL DO PEDIDO COM CHECK DE SEPARAÇÃO & VISTO ──
     const finalTableY = doc.lastAutoTable.finalY;
-    doc.setFillColor(248, 250, 252);
-    doc.setDrawColor(226, 232, 240);
-    doc.rect(14, finalTableY, pageWidth - 28, 5, 'FD');
+    doc.setFillColor(241, 245, 249);
+    doc.setDrawColor(203, 213, 225);
+    doc.rect(14, finalTableY, pageWidth - 28, 6.5, 'FD');
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(7);
+    // Mini checkbox de conferência do pedido no subtotal
+    doc.setDrawColor(148, 163, 184);
+    doc.setFillColor(255, 255, 255);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(18, finalTableY + 1.4, 3.8, 3.8, 0.6, 0.6, 'FD');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.8);
     doc.setTextColor(71, 85, 105);
-    doc.text(`Subtotal do Pedido ${numPed}: ${totalPecasPedido} peca(s) a separar`, pageWidth - 16, finalTableY + 3.5, { align: 'right' });
+    doc.text('Separacao Concluida', 23.5, finalTableY + 4.2);
 
-    currentY = finalTableY + 8;
+    doc.text('Conferido por: _________________________________', 55, finalTableY + 4.2);
+
+    // Total de peças à direita
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.2);
+    doc.setTextColor(15, 23, 42);
+    doc.text(`Subtotal do Pedido ${numPed}: ${totalPecasPedido} peca(s)`, pageWidth - 18, finalTableY + 4.2, { align: 'right' });
+
+    currentY = finalTableY + 9;
   });
 
   // ═══════════════════════════════════════════════════════════
   // 4. ÁREA DE EXPEDIÇÃO & ASSINATURAS (RODAPÉ FINAL)
   // ═══════════════════════════════════════════════════════════
-  if (currentY + 30 > pageHeight - 12) {
+  if (currentY + 34 > pageHeight - 14) {
     doc.addPage();
     adicionarMarcaDagua();
-    currentY = 20;
+    desenharMiniCabecalhoPagina(doc.internal.getNumberOfPages());
+    currentY = 18;
   }
 
   // Box de Orientação de Galpão
@@ -429,7 +559,7 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
 
   // Nome do arquivo e Título
   const nomeArquivo = `Mapa_Separacao_Galpao_${dataHoje.replace(/\//g, '-')}.pdf`;
-  const titulo = `Mapa de Separacao de Galpao (${locacoes.length} pedidos)`;
+  const titulo = `Mapa de Separacao de Galpao (${pedidosValidos.length} pedidos)`;
 
   if (acao === 'download') {
     doc.save(nomeArquivo);
@@ -440,4 +570,3 @@ export const gerarFolhaSeparacaoGalpaoPDF = (
   const url = URL.createObjectURL(blob);
   return { doc, blob, url, nomeArquivo, titulo };
 };
-

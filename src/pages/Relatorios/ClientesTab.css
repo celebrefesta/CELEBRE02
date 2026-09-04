@@ -129,9 +129,9 @@
 }
 
 .rel-cliente-pill-btn.active {
-  background: #0f172a !important;
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, var(--dourado, #a4803c)) 100%) !important;
   color: #ffffff !important;
-  border-color: #0f172a !important;
+  border-color: transparent !important;
   font-weight: 600 !important;
 }
 

@@ -811,6 +811,19 @@
   box-shadow: 0 4px 10px rgba(22, 163, 74, 0.3);
 }
 
+.btn-quick-checkin.bipar {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border-color: #bfdbfe;
+}
+
+.btn-quick-checkin.bipar:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #1d4ed8;
+  box-shadow: 0 4px 10px rgba(37, 99, 235, 0.3);
+}
+
 .btn-quick-checkin.ida {
   background: #fef3c7;
   color: #92400e;
@@ -2674,6 +2687,16 @@
 
 [data-theme^='dark'] .actions-cell {
   border-top-color: #27272a !important;
+}
+
+[data-theme^='dark'] .btn-quick-checkin.bipar {
+  background: rgba(59, 130, 246, 0.15) !important;
+  color: #60a5fa !important;
+  border-color: rgba(59, 130, 246, 0.3) !important;
+}
+
+[data-theme^='dark'] .btn-quick-checkin.bipar:hover {
+  background: rgba(59, 130, 246, 0.25) !important;
 }
 
 [data-theme^='dark'] .btn-quick-checkin.ida,

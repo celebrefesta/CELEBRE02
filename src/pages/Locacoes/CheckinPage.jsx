@@ -596,17 +596,17 @@ const CheckinPage = () => {
   const qtdConferidos = itensState.filter(i => i.qtdConferida >= i.quantidade).length;
 
   return (
-    <div className="clientes-container fade-in">
+    <div className="checkin-page-container clientes-container fade-in">
       
-      {/* 🚀 CABEÇALHO PADRÃO DO SISTEMA CELEBRE (EXPEDIÇÃO) */}
+      {/* 🚀 CABEÇALHO PADRÃO DO SISTEMA CELEBRE */}
       <div className="clientes-hero-header">
         <div className="header-title-row">
           <div className="header-icon-badge">
-            🛫
+            {isIda ? '📦' : '🔄'}
           </div>
           <div className="welcome-text">
-            <h1>Check-in de Saída (Expedição)</h1>
-            <p>Vistoria quantitativa, conferência física e emissão de comprovante de entrega/retirada.</p>
+            <h1>{isIda ? 'Check-in de Saída (Expedição / IDA)' : 'Check-in de Devolução (Retorno / VOLTA)'}</h1>
+            <p>{isIda ? 'Vistoria quantitativa, conferência física e liberação de itens para o cliente.' : 'Conferência de retorno, checagem de avarias, faltas e fechamento do pedido.'}</p>
           </div>
         </div>
         <div className="header-actions">
@@ -1186,7 +1186,7 @@ const CheckinPage = () => {
               🖨️ PDF Comprovante
             </button>
             <button type="button" className="btn-primary-celebre" onClick={handleSalvarCheckin} disabled={salvando}>
-              {salvando ? '💾 SALVANDO...' : '🛫 FINALIZAR CHECK-IN (EXPEDIÇÃO)'}
+              {salvando ? '💾 SALVANDO...' : isIda ? '🛫 FINALIZAR CHECK-IN (EXPEDIÇÃO)' : '🔄 FINALIZAR CHECK-IN (DEVOLUÇÃO)'}
             </button>
           </div>
         </div>

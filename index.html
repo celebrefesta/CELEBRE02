@@ -31,9 +31,14 @@
     <script>
       (function() {
         try {
-          var savedTheme = localStorage.getItem('theme') || 'light';
-          var savedAccent = localStorage.getItem('accentColor') || '#c5a059';
-          var savedDarkStyle = localStorage.getItem('darkStyle') || 'gray';
+          var pathname = window.location.pathname || '';
+          var isLanding = pathname === '/' || pathname === '';
+          var tenantId = localStorage.getItem('tenantId');
+
+          // 🔒 Se for a Landing Page ou se NÃO houver usuário/tenant logado, SEMPRE utiliza o Dourado Celebre padrão (#c5a059)
+          var savedAccent = (!isLanding && tenantId) ? (localStorage.getItem('accentColor') || '#c5a059') : '#c5a059';
+          var savedTheme = (!isLanding && tenantId) ? (localStorage.getItem('theme') || 'light') : 'light';
+          var savedDarkStyle = (!isLanding && tenantId) ? (localStorage.getItem('darkStyle') || 'gray') : 'none';
           var isDark = savedTheme.indexOf('dark') !== -1;
           document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
           document.documentElement.setAttribute('data-dark-style', isDark ? savedDarkStyle : 'none');
