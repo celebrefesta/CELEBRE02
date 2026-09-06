@@ -157,7 +157,7 @@ const Cadastro = () => {
                 <p style="font-size: 16px; line-height: 1.6; color: #475569;">Com o Celebre você poderá cadastrar seus itens, gerenciar orçamentos, emitir contratos digitais e acompanhar seu faturamento de forma simples e intuitiva.</p>
 
                 <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://celebreapp.com/login" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 14px 28px; border-radius: 8px; font-weight: bold; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(15,23,42,0.15);">Acessar Meu Painel</a>
+                  <a href="https://celebrefesta.com.br/login" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 14px 28px; border-radius: 8px; font-weight: bold; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(15,23,42,0.15);">Acessar Meu Painel</a>
                 </div>
 
                 <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />

@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "br.com.celebrefesta.app",
+        "sha256_cert_fingerprints": ["97:3C:1B:C4:04:65:0A:12:79:32:9A:65:E5:C7:50:05:92:8A:2B:2C:1A:0B:68:B3:77:05:6D:32:BD:65:F7:F3"]
+      }
+    }]

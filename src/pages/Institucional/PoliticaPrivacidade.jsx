@@ -190,6 +190,21 @@ const PoliticaPrivacidade = () => {
             </ul>
           </section>
 
+          {/* SEÇÃO 8 */}
+          <section className="doc-section">
+            <h2 className="doc-section-title">
+              <span className="doc-section-number">8</span>
+              Exclusão de Conta e Eliminação de Dados (Google Play & LGPD)
+            </h2>
+            <p>
+              Em cumprimento ao Art. 18 da LGPD e aos requisitos de segurança do Google Play, qualquer usuário cadastrado pode solicitar ou efetuar a exclusão integral de sua conta e dos dados vinculados:
+            </p>
+            <ul>
+              <li><strong>Pelo Aplicativo:</strong> Acesse <em>Configurações &gt; Segurança &gt; Excluir Minha Conta Definitivamente</em>.</li>
+              <li><strong>Pela Web / Sem o Aplicativo:</strong> Acesse nossa página pública de <Link to="/excluir-conta" style={{ color: '#0284c7', fontWeight: 'bold' }}>Exclusão de Conta e Dados</Link> para registrar sua solicitação direta online.</li>
+            </ul>
+          </section>
+
           {/* RODAPÉ DO DOCUMENTO */}
           <div className="doc-contact-footer">
             <div className="doc-contact-text">

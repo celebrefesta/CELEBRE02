@@ -1,5 +1,5 @@
 // Celebre Service Worker - PWA & Offline Support
-const CACHE_NAME = 'celebre-cache-v3';
+const CACHE_NAME = 'celebre-cache-v4';
 const ASSETS_TO_CACHE = [
   '/',
   '/index.html',
@@ -82,6 +82,13 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     fetch(event.request)
       .then((networkResponse) => {
+        const contentType = networkResponse.headers.get('content-type') || '';
+        // Evita gravar páginas HTML (ex: 404 rewrite) como se fossem scripts JS/CSS
+        const isAsset = url.pathname.startsWith('/assets/');
+        if (isAsset && contentType.includes('text/html')) {
+          return new Response(null, { status: 404, statusText: 'Asset not found' });
+        }
+
         if (networkResponse && networkResponse.status === 200 && networkResponse.type === 'basic') {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -95,7 +102,6 @@ self.addEventListener('fetch', (event) => {
         if (cachedResponse) {
           return cachedResponse;
         }
-        // Fallback seguro: NUNCA retorna undefined para evitar TypeError no Service Worker
         return new Response(null, { status: 404, statusText: 'Resource not found in cache' });
       })
   );

@@ -93,6 +93,30 @@
   box-shadow: 0 4px 12px rgba(197, 160, 89, 0.45);
 }
 
+.btn-pwa-apk-download {
+  background: rgba(197, 160, 89, 0.15);
+  border: 1px solid rgba(197, 160, 89, 0.5);
+  color: #c5a059;
+  padding: 8px 12px;
+  border-radius: 20px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  transition: all 0.2s ease;
+}
+
+.btn-pwa-apk-download:hover {
+  background: rgba(197, 160, 89, 0.28);
+  border-color: #c5a059;
+  color: #ffffff;
+  transform: scale(1.04);
+}
+
 .btn-pwa-dismiss {
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.15);

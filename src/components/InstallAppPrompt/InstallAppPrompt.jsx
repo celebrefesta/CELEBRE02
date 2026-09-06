@@ -5,6 +5,7 @@ const InstallAppPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isInstallable, setIsInstallable] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isAndroid, setIsAndroid] = useState(false);
   const [showIOSTip, setShowIOSTip] = useState(false);
   const [isDismissed, setIsDismissed] = useState(() => {
     return sessionStorage.getItem('celebre_pwa_dismissed') === 'true';
@@ -14,16 +15,19 @@ const InstallAppPrompt = () => {
     // Detecta se já está rodando como PWA/App Instalado (standalone)
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
     if (isStandalone) {
-      return; // Já está no App!
+      return; // Já está rodando dentro do App!
     }
 
-    // Detecta iOS Safari
     const userAgent = window.navigator.userAgent.toLowerCase();
     const isIosDevice = /iphone|ipad|ipod/.test(userAgent);
+    const isAndroidDevice = /android/.test(userAgent);
     const isSafari = /safari/.test(userAgent) && !/chrome|crios|fxios/.test(userAgent);
-    
-    if (isIosDevice && isSafari) {
+
+    if (isIosDevice) {
       setIsIOS(true);
+      setIsInstallable(true);
+    } else if (isAndroidDevice) {
+      setIsAndroid(true);
       setIsInstallable(true);
     }
 
@@ -52,14 +56,19 @@ const InstallAppPrompt = () => {
       return;
     }
 
-    if (!deferredPrompt) return;
-
-    deferredPrompt.prompt();
-    const { outcome } = await deferredPrompt.userChoice;
-    if (outcome === 'accepted') {
-      setIsInstallable(false);
+    if (deferredPrompt) {
+      deferredPrompt.prompt();
+      const { outcome } = await deferredPrompt.userChoice;
+      if (outcome === 'accepted') {
+        setIsInstallable(false);
+      }
+      setDeferredPrompt(null);
+    } else if (isAndroid) {
+      // Fallback para download direto do APK no Android
+      window.location.href = '/celebre.apk';
+    } else {
+      alert("Para instalar no seu dispositivo: abra o menu do navegador (3 pontinhos) e clique em 'Instalar aplicativo' ou 'Adicionar à tela inicial'.");
     }
-    setDeferredPrompt(null);
   };
 
   if (!isInstallable || isDismissed) {
@@ -75,7 +84,7 @@ const InstallAppPrompt = () => {
           </div>
           <div className="pwa-banner-texts">
             <strong>Instale o App Celebre</strong>
-            <small>Acesso rápido, modo offline e tela cheia no seu celular ou PC</small>
+            <small>Acesso rápido, tela cheia e alta performance no celular</small>
           </div>
         </div>
 
@@ -87,6 +96,17 @@ const InstallAppPrompt = () => {
           >
             📲 Instalar App
           </button>
+
+          {/* Botão direto de APK para Android */}
+          <a
+            href="/celebre.apk"
+            download="Celebre.apk"
+            className="btn-pwa-apk-download"
+            title="Baixar APK direto para Android"
+          >
+            🤖 Baixar APK
+          </a>
+
           <button 
             type="button" 
             className="btn-pwa-dismiss"

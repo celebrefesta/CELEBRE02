@@ -8,6 +8,7 @@ import { verificarELimparMidiasBackground } from './utils/limpezaMidiaService';
 // --- MENU & TOPBAR ---
 import Navbar from './components/Navbar';
 import Topbar from './components/Topbar'; 
+import InstallAppPrompt from './components/InstallAppPrompt/InstallAppPrompt';
 import './App.css';
 import './styles/design-lock.css'; /* 🔒 DESIGN LOCK — importado por último, vence toda a cascata */
 import { aplicarCorDestaqueGlobal } from './utils/themeUtils';
@@ -19,6 +20,7 @@ import RotaAdmin from './components/RotaAdmin';
 const LandingPage = lazy(() => import('./pages/LandingPage/LandingPage')); 
 const TermosDeUso = lazy(() => import('./pages/Institucional/TermosDeUso'));
 const PoliticaPrivacidade = lazy(() => import('./pages/Institucional/PoliticaPrivacidade'));
+const ExcluirConta = lazy(() => import('./pages/Institucional/ExcluirConta'));
 const Login = lazy(() => import('./pages/Auth/Login'));
 const Cadastro = lazy(() => import('./pages/Auth/Cadastro'));
 const RedefinirSenha = lazy(() => import('./pages/Auth/RedefinirSenha'));
@@ -452,7 +454,7 @@ const AppContent = () => {
     };
   }, [location.pathname]);
 
-  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade'];
+  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade', '/excluir-conta'];
 
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
@@ -462,6 +464,7 @@ const AppContent = () => {
 
   return (
     <div className={`App ${!showNavbar ? 'no-navbar' : ''}`}>
+      <InstallAppPrompt />
       {showNavbar && <Navbar />}
       
       <main className="main-content">
@@ -477,6 +480,7 @@ const AppContent = () => {
             <Route path="/" element={<LandingPage />} />
             <Route path="/termos" element={<TermosDeUso />} />
             <Route path="/privacidade" element={<PoliticaPrivacidade />} />
+            <Route path="/excluir-conta" element={<ExcluirConta />} />
 
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
