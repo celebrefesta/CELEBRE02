@@ -85,6 +85,13 @@
       "description": "Fluxo de caixa, recebimentos e despesas",
       "url": "/financeiro",
       "icons": [{ "src": "/icon-96.png", "sizes": "96x96", "type": "image/png" }]
+    },
+    {
+      "name": "Logística & Galpão",
+      "short_name": "Galpão",
+      "description": "Conferência, esteira e bipagem rápida de galpão",
+      "url": "/logistica",
+      "icons": [{ "src": "/icon-96.png", "sizes": "96x96", "type": "image/png" }]
     }
   ]
 }

@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: Setembro / 2026  
+> **Data de Referência**: 06 de Setembro / 2026  
 
 ---
 
@@ -312,6 +312,22 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 06/09/2026 — 08h40 às 09h35 (BRT)
+- ✅ **📱 Refinamento Completo do Modo Galpão & PWA Mobile (`ModalBipagemGalpao.jsx`, `ModalBipagemGalpao.css`, `public/manifest.json`)**:
+  - **Atalho PWA no Smartphone**: Adição do shortcut oficial **"Logística & Galpão"** (`/logistica`) no `manifest.json`, permitindo acesso instantâneo na tela inicial do celular com 1 toque no ícone do aplicativo.
+  - **📳 Feedback Háptico (Vibração)**: Implementação de vibração via `navigator.vibrate` com feedback tátil diferenciado: 80ms para bip bem-sucedido, vibração dupla (100ms - 60ms - 100ms) para alertas/itens não encontrados e padrão comemorativo na conclusão de pedidos.
+  - **🔦 Lanterna (Torch / Flash da Câmera)**: Botão dedicado `🔦 Lanterna` acionando diretamente o LED da câmera traseira através de `MediaStreamTrack.applyConstraints({ advanced: [{ torch: true }] })` para leitura ágil em cantos escuros de prateleiras, caixas e baú de caminhão.
+  - **🔊 Alternador de Áudio (Mudo / Ativo)**: Controle rápido de áudio no cabeçalho do scanner com persistência local em `localStorage`.
+  - **⏱️ Debounce Anti-Duplo Bip**: Intervalo de proteção de 1.300ms impedindo leituras repetidas acidentais enquanto o operador movimenta a peça na frente da lente.
+  - **🔢 Suporte a Quantidades Fracionadas & Botão `+1`**: Peças múltiplas (ex.: 5x Cadeiras) incrementam progressivamente a cada bip (`1/5`, `2/5`...) e bloqueiam over-bipagem, com botão tátil `+1` direto no card da peça.
+  - **🚚 Conclusão & Avanço Rápido 100%**: Ao atingir 100% dos itens conferidos, exibição de banner comemorativo com botão direto `🚚 Mover para "Na Rua / Pronto"` no Firestore.
+  - **Ergonomia PWA Mobile**: Layout tela cheia imersivo (`100dvh`), sem margens perdidas no smartphone e botões táteis ampliados (`min-height: 44px` a `48px`).
+- ✅ **🚚 Integração Oficial na Esteira de Logística (`Logistica.jsx` e `Logistica.css`)**:
+  - **Botão Superior de Ações**: Inclusão de `⚡ Bipar Carga` no topo da tela de Logística, junto aos botões de PDF de Romaneio e Folha de Separação.
+  - **Bipagem Individual no Kanban**: Botão `⚡ Bipar` nos cards das colunas `1. A Separar` e `2. Em Separação`, abrindo o scanner já focado no pedido selecionado.
+  - **Sincronização em Tempo Real**: Atualização instantânea dos dados do pedido no Kanban ao bipar cada peça.
+- ✅ **Build de Produção Verificado**: `npm run build` aprovado com **0 erros** (`built in 20.04s`).
+
 ### 🗓️ Sessão: 04/09/2026 — 13h00 às 14h35 (BRT)
 - ✅ **🛍️ Catálogo Online — Transformação Boutique de Luxo (`Catalago.jsx` & `Catalago.css`)**:
   - **Hero Header de Alto Padrão**: Banner nobre escuro com logotipo emoldurado a ouro, badges de autoridade (*"Peças 100% Higienizadas"*, endereço integrado ao Maps, link oficial do Instagram) e botão VIP de WhatsApp (*"Falar com a Cenógrafa"*).
@@ -512,16 +528,16 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 🔮 10. ROADMAP ESTRATÉGICO E PRÓXIMOS PASSOS
 
-1. **🧹 Módulo de Limpeza Automática de Mídia (Cron / Cloud Function)**:
+1. **💬 Notificação Financeira Integrada (WhatsApp em 1 Clique)**:
+   - Atalho 1-click no Financeiro para envio de cobrança amigável via WhatsApp de lançamentos gerados por avarias, atrasos ou faltas apontadas no check-in/checkout.
+2. **🔔 Lembretes Operacionais Automáticos de Retirada/Devolução**:
+   - Disparo de alertas via WhatsApp 24h antes da data de retirada ou devolução do acervo, informando horários e endereço do galpão.
+3. **🧹 Módulo de Limpeza Automática de Mídia (Cron / Cloud Function)**:
    - Execução de rotina de limpeza para remover fotos temporárias cuja data `expirarFotosEm` seja anterior a hoje.
-2. **💬 Notificação Financeira Integrada**:
-   - Atalho 1-click no Financeiro para envio de cobrança via WhatsApp de lançamentos pendentes de ressarcimento.
-3. **🔔 Lembretes Automáticos de Retirada/Devolução**:
-   - Disparo de alertas via WhatsApp 24h antes da data de retirada ou devolução do acervo.
-4. **📱 App Mobile PWA de Galpão**:
-   - Leitor de QR Code para conferência acelerada na entrada e saída do caminhão de entregas.
+4. **📱 App Mobile PWA de Galpão & Scanner Contínuo**:
+   - 🟢 **Concluído e Entregue (06/09/2026)**: Atalho PWA no celular (`manifest.json`), feedback háptico por vibração, lanterna/torch, áudio mudo/ligado, debounce anti-duplo bip, quantidades fracionadas e integração na esteira Kanban de Logística.
 
 ---
 
-> **⏱️ Última atualização:** 04/09/2026 — 14h35 (BRT)  
+> **⏱️ Última atualização:** 06/09/2026 — 09h35 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  

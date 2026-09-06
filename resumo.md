@@ -1,35 +1,30 @@
 # 🔒 CELEBRE SYSTEM — RESUMO EXECUTIVO & STATUS DO SISTEMA
-**Data:** 04 de Setembro de 2026  
+**Data:** 06 de Setembro de 2026  
 **Status do Sistema:** 🟢 100% Estável, Blindado e Compilado (Zero Erros)  
 **Repositório Sagrado de Design:** `src/styles/design-lock.css`  
 **Motor Dinâmico de Cores:** `src/utils/themeUtils.js`  
-**Módulos Refinados na Sessão:** `Catalago.jsx`, `Catalago.css`, `Locacoes.jsx`, `Logistica.jsx`
+**Módulos Refinados na Sessão:** `ModalBipagemGalpao.jsx`, `ModalBipagemGalpao.css`, `Logistica.jsx`, `Logistica.css`, `manifest.json`
 
 ---
 
-## 1. 📋 Objetivos Atendidos na Sessão Atual (04/09/2026)
+## 1. 📋 Objetivos Atendidos na Sessão Atual (06/09/2026)
 
-1. **Transformação Completa do Catálogo Online — Padrão Boutique de Luxo**:
-   - **Hero Header Premium**: Banner de autoridade com logotipo com moldura dourada, dados institucionais (*"Peças 100% Higienizadas"*, endereço integrado ao Google Maps, link oficial do Instagram) e botão direto de atendimento VIP no WhatsApp (*"Falar com a Cenógrafa"*).
-   - **Transferência do Acesso Admin**: O link administrativo foi retirado do topo da vitrine pública de clientes e realocado com discrição e segurança no rodapé institucional (`/login`).
-   - **Barra Flutuante de Carrinho ("Estilo iFood / E-commerce de Luxo")**: Pill flutuante fixa na base inferior com animação suave, totalizador de valor em tempo real e abertura de gaveta lateral (Drawer) de finalização rápida.
-   - **Cards de Produtos Reestilizados**: Títulos formatados em *Title Case*, placeholders nobres de foto em produção e sanitização de avisos operacionais de oficina (o cliente público vê apenas status de disponibilidade real, sem ruídos técnicos).
+1. **📱 Refinamento Completo do Modo Galpão & PWA Mobile**:
+   - **Atalho PWA no Celular**: Inclusão do shortcut oficial **"Logística & Galpão"** (`/logistica`) no `manifest.json`, permitindo acesso imediato com 1 toque a partir do ícone do aplicativo na tela inicial do smartphone.
+   - **📳 Feedback Háptico (Vibração)**: Implementação de respostas táteis com `navigator.vibrate` (80ms no sucesso, padrão duplo em erros e comemorativo em conclusões), crucial para galpões barulhentos.
+   - **🔦 Botão de Lanterna (Torch / Flash)**: Acionamento direto do LED da câmera via `MediaStreamTrack.applyConstraints` para iluminar cantos escuros de prateleiras, caixas e caçambas de caminhão.
+   - **🔊 Controle de Áudio (Mudo / Ativo)**: Alternador de som no cabeçalho do scanner com persistência em `localStorage`.
+   - **⏱️ Debounce Anti-Duplo Bip**: Intervalo de proteção de 1,3s para impedir que o scanner registre a mesma etiqueta múltiplas vezes consecutivas sem intenção do operador.
+   - **🔢 Suporte a Quantidades Fracionadas**: Para peças com múltiplas unidades (ex.: 5x Cadeiras), cada bip incrementa a contagem progressiva (`1/5`, `2/5`...) e alerta quando o total for atingido. Inclui botão tátil `+1` direto no card da peça.
+   - **🚚 Avanço Rápido 100%**: Ao conferir todas as peças do pedido, exibição de banner comemorativo com botão direto para mover o pedido para "Na Rua / Pronto" no Firestore.
 
-2. **Eliminação de Redundâncias & Unificação em "Categorias"**:
-   - **Fim da Barra Duplicada**: Remoção completa da barra horizontal superior de pílulas repetidas que ocupava espaço vertical valioso e gerava rolagem horizontal indesejada.
-   - **Menu Lateral como Fonte Única e Oficial**: Todo o acervo, formatos (*Pegue & Monte*, *Decorações Completas*) e categorias reais do estoque foram consolidados na barra lateral (`cat-sidebar`).
-   - **Padronização da Nomenclatura**: Unificação de 100% dos termos sob o padrão **"Categorias"** (botão na barra de busca, botão flutuante inferior, títulos e ações de limpeza de seleção), acabando com ambiguidades entre "Filtro" e "Categoria".
-   - **Experiência Mobile Perfeita**: Menu gaveta lateral com deslizamento fluido, backdrop escurecido e fechamento automático inteligente ao selecionar qualquer categoria.
+2. **🚚 Integração Oficial na Esteira de Logística (`Logistica.jsx` e `Logistica.css`)**:
+   - **Botão Superior**: Inclusão de `⚡ Bipar Carga` no grupo de ações do topo da esteira Kanban.
+   - **Botão nos Cards de Kanban**: Adição de `⚡ Bipar` nos cards das colunas `1. A Separar` e `2. Em Separação`, abrindo o scanner já focado no pedido selecionado.
+   - Sincronização em tempo real das locações ao salvar bipagens.
 
-3. **Bipagem Individual de Galpão por Pedido (`Locacoes.jsx`)**:
-   - Remoção do botão de bipagem global solto no galpão.
-   - Implementação do botão **"Bipar" individualizado** em cada card/linha de locação, permitindo conferência e expedição cirúrgica pedido por pedido.
-
-4. **Regras Operacionais de Estoque, Vistoria e Atrasados**:
-   - Definição e revisão das travas operacionais: pedidos com peças em atraso mantêm o estoque comprometido até a realização da vistoria e check-in/devolução completa, impedindo overbooking acidental na vitrine e forçando o fluxo operacional correto.
-
-5. **Validação Rigorosa de Build**:
-   - `npm run build` executado com sucesso e **zero erros** (`built in 15.83s`).
+3. **Validação Rigorosa de Build**:
+   - `npm run build` executado com sucesso e **zero erros** (`built in 20.04s`).
 
 ---
 

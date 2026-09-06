@@ -13,6 +13,7 @@ import { ModalAssinaturaEntrega } from './ModalAssinaturaEntrega';
 import { ModalDesignarMotorista } from './ModalDesignarMotorista';
 import TimelineLogistica from './TimelineLogistica';
 import ModalLightboxFotos from './ModalLightboxFotos';
+import ModalBipagemGalpao from './ModalBipagemGalpao';
 
 // 🟢 ÍCONE OFICIAL DO WHATSAPP VETORIAL
 export const IconeWhatsApp = ({ size = 16, color = "#25D366" }) => (
@@ -42,8 +43,16 @@ const Logistica = () => {
   const [modalAssinaturaLoc, setModalAssinaturaLoc] = useState(null);
   const [modalDesignarLoc, setModalDesignarLoc] = useState(null);
   const [modalEmbalagensAberta, setModalEmbalagensAberta] = useState(false);
+  const [modalBipagemAberta, setModalBipagemAberta] = useState(false);
+  const [pedidoBipagemSelecionado, setPedidoBipagemSelecionado] = useState(null);
   const [parametros, setParametros] = useState(null);
   const [textoRelatorio, setTextoRelatorio] = useState('');
+
+  // ⚡ ABRIR SCANNER DE BIPAGEM CONTÍNUA DE GALPÃO
+  const abrirBipagemGalpao = (loc = null) => {
+    setPedidoBipagemSelecionado(loc);
+    setModalBipagemAberta(true);
+  };
 
   // 📸 LIGHTBOX FULLSCREEN DE FOTOS DE VISTORIA
   const [lightboxState, setLightboxState] = useState({
@@ -569,6 +578,16 @@ const Logistica = () => {
 
         <div className="kanban-header-actions">
           <div className="kanban-pdf-btn-group">
+            {/* ⚡ BOTÃO PRIMÁRIO DE GALPÃO: SCANNER DE BIPAGEM CONTÍNUA */}
+            <button 
+              type="button" 
+              className="btn-log-bipar"
+              onClick={() => abrirBipagemGalpao(null)}
+              title="Abrir Scanner de Câmera ou Leitor USB de Bipagem Contínua de Peças"
+            >
+              ⚡ Bipar Carga
+            </button>
+
             {/* 📄 BOTÃO SECUNDÁRIO: ROMANEIO DE ROTA */}
             <button 
               type="button" 
@@ -1036,6 +1055,7 @@ const Logistica = () => {
                       else if (etapaMobileAtiva === 'entregue' || etapaMobileAtiva === 'finalizado') abrirCheckin(loc, 'VOLTA');
                       else setChecklistModalId(loc.id);
                     }} 
+                    onAbrirBipagem={() => abrirBipagemGalpao(loc)}
                     onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
                     onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
                     onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
@@ -1076,6 +1096,7 @@ const Logistica = () => {
                       onAbrirDesignar={() => setModalDesignarLoc(loc)}
                       btnTxt="Separar ➔" btnCor="#3b82f6" 
                       onAbrirChecklist={() => setChecklistModalId(loc.id)} 
+                      onAbrirBipagem={() => abrirBipagemGalpao(loc)}
                       onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
                       onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
                       onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
@@ -1113,6 +1134,7 @@ const Logistica = () => {
                       onAbrirDesignar={() => setModalDesignarLoc(loc)}
                       btnTxt="Enviar ➔" btnCor="#f59e0b" 
                       onAbrirChecklist={() => abrirCheckin(loc, 'IDA')} 
+                      onAbrirBipagem={() => abrirBipagemGalpao(loc)}
                       onAbrirRelatorio={() => setRelatorioModalLoc(loc)} 
                       onAbrirCheckinIda={() => abrirCheckin(loc, 'IDA')}
                       onAbrirCheckinVolta={() => abrirCheckin(loc, 'VOLTA')}
@@ -1267,6 +1289,21 @@ const Logistica = () => {
         initialIndex={lightboxState.initialIndex}
       />
 
+      {/* ⚡ MODAL DE BIPAGEM CONTÍNUA DE GALPÃO (SCANNER & LEITOR USB) */}
+      {modalBipagemAberta && (
+        <ModalBipagemGalpao
+          isOpen={modalBipagemAberta}
+          onClose={() => {
+            setModalBipagemAberta(false);
+            setPedidoBipagemSelecionado(null);
+          }}
+          locacoes={locacoes}
+          locacaoSelecionada={pedidoBipagemSelecionado}
+          onAtualizarLocacoes={carregarDados}
+          tenantId={tenantId}
+        />
+      )}
+
       {/* 🧺 MODAL DE DETALHES DE EMBALAGENS EM CAMPO */}
       {modalEmbalagensAberta && (
         <div className="modal-overlay" onClick={() => setModalEmbalagensAberta(false)}>
@@ -1326,6 +1363,7 @@ const CartaoKanban = ({
   btnCor, 
   isFinal, 
   onAbrirChecklist, 
+  onAbrirBipagem,
   onAbrirRelatorio, 
   onAbrirCheckinIda,
   onAbrirCheckinVolta,
@@ -1591,15 +1629,27 @@ const CartaoKanban = ({
         /* AÇÕES PRINCIPAIS (QUANDO NÃO ESTÁ EM ATRASO CRÍTICO) */
         <div className="k-card-actions-main">
           {checklistBloqueiaBotao ? (
-            /* BOTÃO ÚNICO DE CONFERÊNCIA OBRIGATÓRIA */
-            <button 
-              type="button"
-              className="k-btn-itens-toggle pulse-btn" 
-              onClick={onAbrirChecklist}
-              style={{ width: '100%', justifyContent: 'center' }}
-            >
-              📝 Conferir Itens ({itensCheckados}/{totalItens}) ➔
-            </button>
+            /* BOTÃO DE CONFERÊNCIA OBRIGATÓRIA COM ATALHO DE BIPAGEM */
+            <div style={{ display: 'flex', gap: '6px', width: '100%' }}>
+              {onAbrirBipagem && (
+                <button 
+                  type="button"
+                  className="k-btn-bipar" 
+                  onClick={(e) => { e.stopPropagation(); onAbrirBipagem(); }}
+                  title="Abrir Scanner de Bipagem Contínua deste Pedido"
+                >
+                  ⚡ Bipar
+                </button>
+              )}
+              <button 
+                type="button"
+                className="k-btn-itens-toggle pulse-btn" 
+                onClick={onAbrirChecklist}
+                style={{ flex: 1, justifyContent: 'center' }}
+              >
+                📝 Conferir Itens ({itensCheckados}/{totalItens}) ➔
+              </button>
+            </div>
           ) : isFinal ? (
             /* 🌟 CARDS FINALIZADOS / DEVOLVIDOS: VISUAL ELEGANTE E EQUILIBRADO */
             <div className="k-card-actions-final">
@@ -1625,13 +1675,25 @@ const CartaoKanban = ({
           ) : (
             <>
               {hasItens && (isFaseSeparacao || isFaseDevolucao) && (
-                <button 
-                  type="button" 
-                  className="k-btn-itens-toggle" 
-                  onClick={onAbrirChecklist}
-                >
-                  📝 {btnChecklistTxt}
-                </button>
+                <>
+                  {onAbrirBipagem && isFaseSeparacao && (
+                    <button 
+                      type="button"
+                      className="k-btn-bipar" 
+                      onClick={(e) => { e.stopPropagation(); onAbrirBipagem(); }}
+                      title="Abrir Scanner de Bipagem Contínua deste Pedido"
+                    >
+                      ⚡ Bipar
+                    </button>
+                  )}
+                  <button 
+                    type="button" 
+                    className="k-btn-itens-toggle" 
+                    onClick={onAbrirChecklist}
+                  >
+                    📝 {btnChecklistTxt}
+                  </button>
+                </>
               )}
 
               <button 
