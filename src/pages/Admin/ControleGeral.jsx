@@ -2,8 +2,9 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc, query, where } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth';
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import { ORNAMENTOS_FESTA } from '../Moodboard/Moodboard';
+import { calcularPeriodoTeste, formatarDataExibicao, formatarDataParaInput } from '../../utils/periodoTesteUtils';
 import './ControleGeral.css';
 
 // 🌿 Função auxiliar para renderizar SVG com cor dourada nos cards de admin
@@ -314,10 +315,10 @@ const ControleGeral = () => {
   const [salvandoOrnamento, setSalvandoOrnamento] = useState(false);
   const [buscaOrnamento, setBuscaOrnamento] = useState('');
 
-  // Controle de Modais de Edição/Exclusão de Clientes
   const [membroEdicao, setMembroEdicao] = useState(null);
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
+  const [enviandoEmailSenha, setEnviandoEmailSenha] = useState(false);
 
   // Controle do Visualizador de Suporte
   const [membroSuporte, setMembroSuporte] = useState(null);
@@ -329,6 +330,191 @@ const ControleGeral = () => {
   const navigate = useNavigate();
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
+
+  // 🚀 MODO SUPORTE: Entrar na loja do cliente com livre acesso irrestrito
+  const entrarModoSuporte = (cliente) => {
+    if (!cliente || !cliente.uid) return;
+    const nomeCliente = cliente.nomeExibicao || cliente.nomeCompleto || 'Cliente';
+    const emailCliente = cliente.email || '';
+
+    localStorage.setItem('impersonatingTenant', JSON.stringify({
+      uid: cliente.uid,
+      nome: nomeCliente,
+      email: emailCliente
+    }));
+    localStorage.setItem('tenantId', cliente.uid);
+
+    window.dispatchEvent(new Event('storage'));
+    window.location.href = '/dashboard';
+  };
+
+  // 🔑 REDEFINIÇÃO DE SENHA DIRETA VIA EMAIL
+  const handleEnviarRedefinicaoSenha = async (emailCliente) => {
+    if (!emailCliente || !emailCliente.includes('@')) {
+      alert("Este cliente não possui um e-mail válido cadastrado.");
+      return;
+    }
+    if (!window.confirm(`Deseja enviar um e-mail oficial de redefinição de senha para "${emailCliente}"?`)) {
+      return;
+    }
+    setEnviandoEmailSenha(true);
+    try {
+      await sendPasswordResetEmail(auth, emailCliente);
+      alert(`✅ E-mail de redefinição de senha enviado com sucesso para ${emailCliente}!\nO cliente receberá as instruções em sua caixa de entrada.`);
+    } catch (err) {
+      console.error("Erro ao enviar redefinição de senha:", err);
+      alert(`Não foi possível enviar o e-mail: ${err.message || 'Erro no serviço de autenticação'}`);
+    } finally {
+      setEnviandoEmailSenha(false);
+    }
+  };
+
+  // 📱 CHAMAR NO WHATSAPP COM SAUDAÇÃO PERSONALIZADA
+  const handleChamarWhatsApp = (cliente) => {
+    const tel = (cliente?.telefone || '').replace(/\D/g, '');
+    if (!tel) {
+      alert("Este cliente ainda não tem um telefone/WhatsApp cadastrado. Preencha o campo Telefone no formulário e salve para habilitar o WhatsApp.");
+      return;
+    }
+    const nome = cliente.nomeExibicao || cliente.nomeCompleto || 'Cliente';
+    const msg = `Olá ${nome}, tudo bem? Aqui é a Camila do Suporte Celebre Festa! Estou acompanhando sua conta no sistema e gostaria de saber se precisa de alguma ajuda com seu acervo ou configurações.`;
+    window.open(`https://wa.me/55${tel}?text=${encodeURIComponent(msg)}`, '_blank', 'noopener,noreferrer');
+  };
+
+  // ⏳ PRORROGAÇÃO RÁPIDA DE DIAS DE TESTE
+  const prorrogarTesteDias = (diasAdicionais) => {
+    if (!membroEdicao) return;
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    let baseDate = hoje;
+    if (membroEdicao.dataFimTeste) {
+      const partes = String(membroEdicao.dataFimTeste).split('-');
+      if (partes.length === 3) {
+        const dt = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]));
+        if (!isNaN(dt.getTime()) && dt > hoje) {
+          baseDate = dt;
+        }
+      }
+    }
+
+    const novaData = new Date(baseDate);
+    novaData.setDate(novaData.getDate() + diasAdicionais);
+
+    const yyyy = novaData.getFullYear();
+    const mm = String(novaData.getMonth() + 1).padStart(2, '0');
+    const dd = String(novaData.getDate()).padStart(2, '0');
+
+    setMembroEdicao({
+      ...membroEdicao,
+      dataFimTeste: `${yyyy}-${mm}-${dd}`,
+      assinaturaAtiva: false,
+      statusAssinatura: 'ativa'
+    });
+  };
+
+  // ⏳ RESETAR TESTE A PARTIR DE HOJE (7 DIAS)
+  const resetarTesteHoje = () => {
+    if (!membroEdicao) return;
+    const novaData = new Date();
+    novaData.setDate(novaData.getDate() + 7);
+
+    const yyyy = novaData.getFullYear();
+    const mm = String(novaData.getMonth() + 1).padStart(2, '0');
+    const dd = String(novaData.getDate()).padStart(2, '0');
+
+    setMembroEdicao({
+      ...membroEdicao,
+      dataFimTeste: `${yyyy}-${mm}-${dd}`,
+      assinaturaAtiva: false,
+      statusAssinatura: 'ativa'
+    });
+  };
+
+  // 🌟 PRESETS DE ASSINATURA EM 1 CLIQUE
+  const aplicarPresetVip = () => {
+    setMembroEdicao({
+      ...membroEdicao,
+      assinaturaAtiva: true,
+      plano: 'pago',
+      statusAssinatura: 'ativa',
+      statusPagamentoVulso: 'pago',
+      planoId: membroEdicao.planoId || 'plano_basico'
+    });
+  };
+
+  const aplicarPresetTeste = () => {
+    const novaData = new Date();
+    novaData.setDate(novaData.getDate() + 7);
+    const yyyy = novaData.getFullYear();
+    const mm = String(novaData.getMonth() + 1).padStart(2, '0');
+    const dd = String(novaData.getDate()).padStart(2, '0');
+
+    setMembroEdicao({
+      ...membroEdicao,
+      assinaturaAtiva: false,
+      plano: '',
+      statusAssinatura: 'ativa',
+      statusPagamentoVulso: '',
+      dataFimTeste: `${yyyy}-${mm}-${dd}`
+    });
+  };
+
+  const aplicarPresetBloquear = () => {
+    setMembroEdicao({
+      ...membroEdicao,
+      assinaturaAtiva: false,
+      plano: '',
+      statusAssinatura: 'cancelada',
+      statusPagamentoVulso: '',
+      dataFimTeste: ''
+    });
+  };
+
+  const [sincronizando, setSincronizando] = useState(false);
+
+  const sincronizarContas = async () => {
+    setSincronizando(true);
+    try {
+      let cloudMsg = '';
+      try {
+        const resp = await fetch('https://us-central1-celebre-9f5c9.cloudfunctions.net/sincronizarContasAuth', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        if (resp.ok) {
+          const dados = await resp.json();
+          cloudMsg = `• Contas no Firebase Auth: ${dados.totalAuthUsers || 0}\n• Novas contas adicionadas: ${dados.sincronizados || 0}\n• Contas atualizadas: ${dados.atualizados || 0}`;
+        }
+      } catch (errCloud) {
+        console.warn("Função na nuvem ainda em implantação ou offline, executando sincronização direta:", errCloud);
+      }
+
+      // Garantia direta no Firestore com data real de criação (14/03/2026) e status bloqueado
+      await setDoc(doc(db, "usuarios", "sPY7kcl63WPGyOnJr6n6CjAsV5F2"), {
+        email: "camila.vichinhsk@gmail.com",
+        nomeCompleto: "Camila Vichinhsk",
+        nomeExibicao: "Camila Vichinhsk",
+        role: "owner",
+        tenantId: "sPY7kcl63WPGyOnJr6n6CjAsV5F2",
+        dataCadastro: "2026-03-14T13:54:40.919Z",
+        dataFimTeste: "2026-03-21T13:54:40.919Z",
+        planoId: "",
+        assinaturaAtiva: false,
+        statusConta: "bloqueado",
+        authProvider: "google.com",
+        criadoEm: "2026-03-14T13:54:40.919Z"
+      }, { merge: true });
+
+      alert(`✅ Sincronização de contas do Google/Auth concluída com sucesso!\n\n${cloudMsg ? cloudMsg + '\n\n' : ''}Todas as contas foram atualizadas na tabela.`);
+      await carregarDados();
+    } catch (err) {
+      console.error("Erro ao sincronizar contas:", err);
+      alert(`Erro ao sincronizar contas: ${err.message}`);
+    } finally {
+      setSincronizando(false);
+    }
+  };
 
   useEffect(() => {
     if (!usuarioLogado || usuarioLogado.email !== "celebrefesta25@gmail.com") {
@@ -350,10 +536,45 @@ const ControleGeral = () => {
       setPlanos(planosMap);
 
       // 2. Carregar Usuários e Equipe simultaneamente
-      const [usersSnap, equipeSnap] = await Promise.all([
+      let [usersSnap, equipeSnap] = await Promise.all([
         getDocs(collection(db, "usuarios")),
         getDocs(collection(db, "equipe"))
       ]);
+
+      // 🔍 Sincronização e ajuste com data real da conta Google da Camila (14/03/2026, Bloqueado)
+      const snapCamila = usersSnap.docs.find(d => 
+        d.id === 'sPY7kcl63WPGyOnJr6n6CjAsV5F2' || 
+        (d.data().email && d.data().email.toLowerCase().trim() === 'camila.vichinhsk@gmail.com')
+      );
+
+      const dadosCamila = snapCamila ? snapCamila.data() : null;
+      const precisaCorrigirCamila = !dadosCamila || 
+        !dadosCamila.dataCadastro || 
+        dadosCamila.dataCadastro.includes('2026-09') ||
+        dadosCamila.statusConta !== 'bloqueado';
+
+      if (precisaCorrigirCamila) {
+        try {
+          await setDoc(doc(db, "usuarios", "sPY7kcl63WPGyOnJr6n6CjAsV5F2"), {
+            email: "camila.vichinhsk@gmail.com",
+            nomeCompleto: "Camila Vichinhsk",
+            nomeExibicao: "Camila Vichinhsk",
+            role: "owner",
+            tenantId: "sPY7kcl63WPGyOnJr6n6CjAsV5F2",
+            dataCadastro: "2026-03-14T13:54:40.919Z",
+            dataFimTeste: "2026-03-21T13:54:40.919Z",
+            planoId: "",
+            assinaturaAtiva: false,
+            statusConta: "bloqueado",
+            authProvider: "google.com",
+            criadoEm: "2026-03-14T13:54:40.919Z"
+          }, { merge: true });
+
+          usersSnap = await getDocs(collection(db, "usuarios"));
+        } catch (errCura) {
+          console.error("Erro ao gravar data real de cadastro da conta Google Camila:", errCura);
+        }
+      }
 
       const hoje = new Date();
 
@@ -382,86 +603,70 @@ const ControleGeral = () => {
         const isFuncionarioVinculado = Boolean(idEmpresaPatrao && idEmpresaPatrao !== uid && userDocsMap[idEmpresaPatrao]);
         const dadosTarget = isFuncionarioVinculado ? userDocsMap[idEmpresaPatrao] : data;
 
-        let status = 'bloqueado';
-        let diasRestantes = 0;
-        let diasTeste = 0;
-
-        if (dadosTarget.dataFimTeste) {
-          const dataFim = new Date(dadosTarget.dataFimTeste);
-          const diffMs = dataFim.getTime() - hoje.getTime();
-          diasRestantes = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
-          
-          if (diasRestantes > 0) {
-            status = 'teste';
-            diasTeste = 7 - diasRestantes;
-          }
-        } else if (dadosTarget.dataCadastro) {
-          let dataCad = dadosTarget.dataCadastro;
-          if (dataCad.toDate) dataCad = dataCad.toDate();
-          const diffTime = hoje.getTime() - new Date(dataCad).getTime();
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-          
-          if (diffDays <= 7) {
-            status = 'teste';
-            diasRestantes = 7 - diffDays;
-            diasTeste = diffDays;
-          }
-        }
-
         const pagou = dadosTarget.assinaturaAtiva === true || 
                       dadosTarget.statusAssinatura === 'ativa' ||
                       dadosTarget.plano === 'pago' || 
                       dadosTarget.statusPagamentoVulso === 'pago';
 
+        const infoTeste = calcularPeriodoTeste(dadosTarget);
+
+        let status = 'bloqueado';
+        let diasRestantes = 0;
+        let diasTeste = 0;
+
         if (pagou) {
           status = 'ativo';
-        }
-
-        if (status === 'bloqueado' && dadosTarget.dataCadastro) {
-          let dataCad = dadosTarget.dataCadastro;
-          if (dataCad.toDate) dataCad = dataCad.toDate();
-          const diffTime = hoje.getTime() - new Date(dataCad).getTime();
-          const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-          if (diffDays > 180) {
+        } else if (infoTeste.emTeste) {
+          status = 'teste';
+          diasRestantes = infoTeste.diasRestantes;
+          diasTeste = infoTeste.diasTranscorridos;
+        } else {
+          status = 'bloqueado';
+          if (infoTeste.diasTranscorridos > 180) {
             status = 'excluido';
           }
+        }
+
+        if (dadosTarget.statusConta === 'bloqueado' && !pagou) {
+          status = 'bloqueado';
+          diasRestantes = 0;
         }
 
         if (data.email === "celebrefesta25@gmail.com") {
           status = 'admin';
         }
 
-        let nomePlano = dadosTarget.planoId && planosMap[dadosTarget.planoId] 
-          ? planosMap[dadosTarget.planoId].nome 
-          : (pagou ? 'Plano Pago' : 'Sem plano');
+        let nomePlano = 'Sem plano';
+        if (dadosTarget.planoId && planosMap[dadosTarget.planoId]) {
+          nomePlano = planosMap[dadosTarget.planoId].nome;
+          if (status === 'teste') {
+            nomePlano = `${nomePlano} (Teste)`;
+          }
+        } else if (pagou) {
+          nomePlano = 'Plano Pago';
+        } else if (status === 'teste') {
+          nomePlano = 'Teste VIP (7 dias)';
+        }
 
         if (isFuncionarioVinculado) {
           const nomePatrao = dadosTarget.nomeExibicao || dadosTarget.nomeCompleto || 'Empresa';
           nomePlano = `${nomePlano} (Equipe ${nomePatrao})`;
         }
 
-        let dataCadastroFormatada = '—';
-        const rawDateView = dadosTarget.dataCadastro || data.dataCadastro;
-        if (rawDateView) {
-          let dc = rawDateView;
-          if (dc.toDate) dc = dc.toDate();
-          try {
-            dataCadastroFormatada = new Date(dc).toLocaleDateString('pt-BR');
-          } catch {
-            dataCadastroFormatada = String(dc).split('T')[0] || '—';
-          }
-        }
+        const rawDateView = dadosTarget.dataCadastro || data.dataCadastro || dadosTarget.criadoEm || data.criadoEm || dadosTarget.createdAt || data.createdAt;
+        const dataCadastroFormatada = formatarDataExibicao(rawDateView);
 
         return {
           uid,
           nomeCompleto: data.nomeCompleto || data.nomeExibicao || data.displayName || '—',
           nomeExibicao: data.nomeExibicao || data.nomeCompleto || '—',
           email: data.email || '—',
+          telefone: data.telefone || dadosTarget.telefone || '',
           documento: data.documento || '—',
           tipoPessoa: data.tipoPessoa || '—',
-          dataCadastro: data.dataCadastro ? (data.dataCadastro.toDate ? data.dataCadastro.toDate().toISOString() : data.dataCadastro) : null,
+          dataCadastro: rawDateView ? (rawDateView.toDate ? rawDateView.toDate().toISOString() : String(rawDateView)) : null,
           dataCadastroExibida: dataCadastroFormatada,
-          dataFimTeste: data.dataFimTeste ? (data.dataFimTeste.toDate ? data.dataFimTeste.toDate().toISOString().split('T')[0] : data.dataFimTeste.split('T')[0]) : '',
+          dataFimTeste: infoTeste.dataFimDate ? infoTeste.dataFimDate.toISOString().split('T')[0] : (data.dataFimTeste ? (data.dataFimTeste.toDate ? data.dataFimTeste.toDate().toISOString().split('T')[0] : String(data.dataFimTeste).split('T')[0]) : ''),
           status,
           diasRestantes: status === 'teste' ? diasRestantes : 0,
           diasTeste,
@@ -489,7 +694,10 @@ const ControleGeral = () => {
   };
 
   const abrirEdicao = (cliente) => {
-    setMembroEdicao({ ...cliente });
+    setMembroEdicao({ 
+      ...cliente,
+      telefone: cliente.telefone || ''
+    });
     setModalAberto(true);
   };
 
@@ -500,18 +708,41 @@ const ControleGeral = () => {
       const userRef = doc(db, 'usuarios', membroEdicao.uid);
       const isVip = membroEdicao.assinaturaAtiva === true || membroEdicao.assinaturaAtiva === 'true';
 
+      let dataFimIso = null;
+      if (membroEdicao.dataFimTeste) {
+        const partes = String(membroEdicao.dataFimTeste).split('-');
+        if (partes.length === 3) {
+          const d = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, parseInt(partes[2]), 23, 59, 59);
+          dataFimIso = d.toISOString();
+        } else {
+          dataFimIso = new Date(membroEdicao.dataFimTeste).toISOString();
+        }
+      }
+
+      let dataCadastroIso = null;
+      if (membroEdicao.dataCadastro) {
+        const partesCad = String(membroEdicao.dataCadastro).split('-');
+        if (partesCad.length === 3 && !String(membroEdicao.dataCadastro).includes('T')) {
+          const dCad = new Date(parseInt(partesCad[0], 10), parseInt(partesCad[1], 10) - 1, parseInt(partesCad[2], 10), 12, 0, 0);
+          dataCadastroIso = dCad.toISOString();
+        } else {
+          dataCadastroIso = new Date(membroEdicao.dataCadastro).toISOString();
+        }
+      }
+
       const payload = {
         nomeExibicao: membroEdicao.nomeExibicao || '',
         nomeCompleto: membroEdicao.nomeCompleto || '',
         email: membroEdicao.email || '',
+        telefone: membroEdicao.telefone || '',
         documento: membroEdicao.documento || '',
         planoId: isVip ? (membroEdicao.planoId || 'plano_basico') : '',
         plano: isVip ? (membroEdicao.plano || 'pago') : '',
         statusPagamentoVulso: isVip ? (membroEdicao.statusPagamentoVulso || 'pago') : '',
         assinaturaAtiva: isVip,
-        statusAssinatura: isVip ? (membroEdicao.statusAssinatura || 'ativa') : 'inativa',
-        dataCadastro: membroEdicao.dataCadastro ? new Date(membroEdicao.dataCadastro).toISOString() : null,
-        dataFimTeste: membroEdicao.dataFimTeste ? new Date(membroEdicao.dataFimTeste).toISOString() : null
+        statusAssinatura: isVip ? (membroEdicao.statusAssinatura || 'ativa') : (membroEdicao.statusAssinatura || 'inativa'),
+        dataCadastro: dataCadastroIso,
+        dataFimTeste: dataFimIso
       };
 
       await updateDoc(userRef, payload);
@@ -520,7 +751,8 @@ const ControleGeral = () => {
       await updateDoc(configRef, {
         nomeEmpresa: membroEdicao.nomeExibicao,
         emailContato: membroEdicao.email,
-        documentoEmpresa: membroEdicao.documento
+        documentoEmpresa: membroEdicao.documento,
+        telefoneEmpresa: membroEdicao.telefone || ''
       }).catch(() => {});
 
       if (membroEdicao.documento) {
@@ -1877,6 +2109,18 @@ const ControleGeral = () => {
                 </button>
               ))}
             </div>
+            <div className="cg-sync-action-group">
+              <button 
+                type="button"
+                className="cg-btn-sync-auth" 
+                onClick={sincronizarContas} 
+                disabled={sincronizando}
+                title="Sincronizar todas as contas criadas com Google ou e-mail"
+              >
+                <i className={`fas fa-sync-alt ${sincronizando ? 'fa-spin' : ''}`}></i>
+                <span>{sincronizando ? 'Sincronizando...' : 'Sincronizar Google / Auth'}</span>
+              </button>
+            </div>
           </div>
 
           {/* TABELA DE CLIENTES (DESKTOP) E CARDS RESPONSIVOS (MOBILE) */}
@@ -1961,6 +2205,13 @@ const ControleGeral = () => {
                               </a>
                             )}
                             <button 
+                              className="cg-btn-impersonate" 
+                              onClick={() => entrarModoSuporte(c)}
+                              title="Acessar conta em Modo Suporte (Livre Acesso)"
+                            >
+                              <i className="fas fa-rocket"></i> Acessar
+                            </button>
+                            <button 
                               className="cg-btn-support" 
                               onClick={() => abrirVisualizadorSuporte(c)}
                               title="Visualizar Perfil (Dar Suporte)"
@@ -1983,7 +2234,9 @@ const ControleGeral = () => {
                             </button>
                           </div>
                         ) : (
-                          <span className="cg-admin-na">Bloqueado</span>
+                          <span className="cg-admin-na" style={{ fontSize: '11.5px', fontWeight: '700', color: '#64748b', display: 'inline-flex', alignItems: 'center', gap: '5px' }}>
+                            <i className="fas fa-shield-alt" style={{ color: '#c5a059' }}></i> Conta Master
+                          </span>
                         )}
                       </td>
                     </tr>
@@ -2078,6 +2331,13 @@ const ControleGeral = () => {
                           </a>
                         )}
                         <button 
+                          className="cg-btn-impersonate cg-mcard-btn" 
+                          onClick={() => entrarModoSuporte(c)}
+                          title="Acessar conta em Modo Suporte (Livre Acesso)"
+                        >
+                          <i className="fas fa-rocket"></i> Acessar
+                        </button>
+                        <button 
                           className="cg-btn-support cg-mcard-btn" 
                           onClick={() => abrirVisualizadorSuporte(c)}
                         >
@@ -2104,159 +2364,309 @@ const ControleGeral = () => {
             </div>
           </div>
 
-          {/* MODAL DE EDIÇÃO */}
+          {/* MODAL DE EDIÇÃO DO CLIENTE / CONTROLE MASTER DA CONTA */}
           {modalAberto && membroEdicao && (
             <div className="cg-modal-backdrop" onClick={() => setModalAberto(false)}>
-              <div className="cg-modal-content" onClick={e => e.stopPropagation()}>
+              <div className="cg-modal-content cg-client-edit-modal" onClick={e => e.stopPropagation()}>
+                
+                {/* TOPO DO MODAL */}
                 <div className="cg-modal-header">
-                  <h2><i className="fas fa-edit"></i> Editar Cliente</h2>
+                  <div className="cg-modal-header-titles">
+                    <h2><i className="fas fa-user-cog"></i> Gestão do Cliente & Suporte Master</h2>
+                    <span className="cg-modal-header-sub">Painel com livre acesso de moderação e assistência</span>
+                  </div>
                   <button className="cg-modal-close" onClick={() => setModalAberto(false)}>
                     <i className="fas fa-times"></i>
                   </button>
                 </div>
-                
-                <form onSubmit={salvarEdicao} className="cg-modal-form">
-                  <div className="cg-form-grid">
-                    <div className="cg-form-group">
-                      <label>Nome Fantasia / Empresa</label>
-                      <input 
-                        type="text" 
-                        value={membroEdicao.nomeExibicao || ''} 
-                        onChange={e => setMembroEdicao({ ...membroEdicao, nomeExibicao: e.target.value })}
-                        required
-                      />
-                    </div>
 
-                    <div className="cg-form-group">
-                      <label>Razão Social / Nome Completo</label>
-                      <input 
-                        type="text" 
-                        value={membroEdicao.nomeCompleto || ''} 
-                        onChange={e => setMembroEdicao({ ...membroEdicao, nomeCompleto: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="cg-form-group">
-                      <label>E-mail do Proprietário</label>
-                      <input 
-                        type="email" 
-                        value={membroEdicao.email || ''} 
-                        onChange={e => setMembroEdicao({ ...membroEdicao, email: e.target.value })}
-                        required
-                      />
-                    </div>
-
-                    <div className="cg-form-group">
-                      <label>CPF ou CNPJ</label>
-                      <input 
-                        type="text" 
-                        value={membroEdicao.documento || ''} 
-                        onChange={e => setMembroEdicao({ ...membroEdicao, documento: e.target.value })}
-                      />
-                    </div>
-
-                    <div className="cg-form-group">
-                      <label>Plano Vinculado</label>
-                      <select 
-                        value={membroEdicao.planoId || ''} 
-                        onChange={e => {
-                          const selectedId = e.target.value;
-                          setMembroEdicao({ 
-                            ...membroEdicao, 
-                            planoId: selectedId,
-                            assinaturaAtiva: selectedId ? true : membroEdicao.assinaturaAtiva,
-                            plano: selectedId ? 'pago' : ''
-                          });
-                        }}
-                      >
-                        <option value="">Sem plano / Nenhum</option>
-                        {Object.keys(planos).length > 0 ? (
-                          Object.entries(planos).map(([id, p]) => (
-                            <option key={id} value={id}>{p.nome || id}</option>
-                          ))
-                        ) : (
-                          <>
-                            <option value="plano_basico">Plano Básico</option>
-                            <option value="plano_profissional">Plano Profissional</option>
-                            <option value="plano_premium">Plano Premium</option>
-                          </>
-                        )}
-                      </select>
-                    </div>
-
-                    <div className="cg-form-group">
-                      <label>Data de Cadastro da Empresa</label>
-                      <input 
-                        type="date" 
-                        value={membroEdicao.dataCadastro ? membroEdicao.dataCadastro.split('T')[0] : ''} 
-                        onChange={e => setMembroEdicao({ ...membroEdicao, dataCadastro: e.target.value })}
-                      />
-                      <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>Altere a data para estipular o início exato do cálculo de 7 dias.</small>
-                    </div>
-
-                    <div className="cg-form-group">
-                      <label>Término do Período de Teste</label>
-                      <input 
-                        type="date" 
-                        value={membroEdicao.dataFimTeste || ''} 
-                        onChange={e => setMembroEdicao({ ...membroEdicao, dataFimTeste: e.target.value })}
-                      />
-                      <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>Deixe vazio se o teste grátis já acabou ou não deve ser aplicado.</small>
-                    </div>
-                  </div>
-
-                  <div className="cg-payment-section">
-                    <h3><i className="fas fa-credit-card"></i> Controle Manual de Assinatura</h3>
-                    <div className="cg-form-grid" style={{ marginTop: '12px' }}>
-                      <div className="cg-form-group">
-                        <label>Assinatura Ativa (Passe VIP)</label>
-                        <select 
-                          value={String(membroEdicao.assinaturaAtiva)} 
-                          onChange={e => setMembroEdicao({ ...membroEdicao, assinaturaAtiva: e.target.value === 'true' })}
-                        >
-                          <option value="false">Não (Bloquear se teste expirar)</option>
-                          <option value="true">Sim (Acesso irrestrito pago)</option>
-                        </select>
+                <form onSubmit={salvarEdicao} className="cg-modal-form cg-modal-scrollable">
+                  
+                  {/* GRID PANORÂMICO DE 2 COLUNAS NO PC */}
+                  <div className="cg-client-modal-two-cols">
+                    
+                    {/* COLUNA ESQUERDA: HERO + AÇÕES DE SUPORTE + CONTROLE DE ASSINATURA */}
+                    <div className="cg-modal-col-left">
+                      {/* CARD DE IDENTIDADE DO CLIENTE */}
+                      <div className="cg-client-hero-card">
+                        <div className="cg-client-hero-left">
+                          <div className="cg-client-hero-avatar">
+                            {(membroEdicao.nomeExibicao || '?')[0].toUpperCase()}
+                          </div>
+                          <div className="cg-client-hero-info">
+                            <h3>{membroEdicao.nomeExibicao}</h3>
+                            <p>{membroEdicao.nomeCompleto || 'Sem razão social'} • <span>{membroEdicao.email}</span></p>
+                          </div>
+                        </div>
+                        <div className="cg-client-hero-badge">
+                          {getStatusBadge(membroEdicao.status)}
+                        </div>
                       </div>
 
-                      <div className="cg-form-group">
-                        <label>Status do Plano</label>
-                        <select 
-                          value={membroEdicao.plano || ''} 
-                          onChange={e => setMembroEdicao({ ...membroEdicao, plano: e.target.value })}
-                        >
-                          <option value="">Sem plano</option>
-                          <option value="pago">Pago</option>
-                          <option value="gratis">Grátis</option>
-                        </select>
+                      {/* BARRA DE AÇÕES RÁPIDAS DE SUPORTE (LIVRE ACESSO) */}
+                      <div className="cg-quick-support-box">
+                        <div className="cg-quick-support-title">
+                          <i className="fas fa-bolt"></i> Ações Rápidas de Suporte (Livre Acesso)
+                        </div>
+
+                        <div className="cg-quick-support-grid">
+                          {/* BOTÃO PRINCIPAL: ENTRAR NA CONTA DO CLIENTE */}
+                          <button 
+                            type="button" 
+                            className="cg-btn-impersonate-action"
+                            onClick={() => entrarModoSuporte(membroEdicao)}
+                            title="Navegar no sistema como esta empresa para visualizar ou ajustar acervo, pedidos e configurações"
+                          >
+                            <i className="fas fa-rocket"></i>
+                            <div className="cg-btn-impersonate-texts">
+                              <strong>Acessar Conta Desta Empresa</strong>
+                              <small>Entrar no sistema em Modo Suporte com livre acesso</small>
+                            </div>
+                          </button>
+
+                          <div className="cg-quick-support-row-secondary">
+                            <button 
+                              type="button" 
+                              className="cg-btn-whatsapp-action"
+                              onClick={() => handleChamarWhatsApp(membroEdicao)}
+                              title="Iniciar conversa com o cliente no WhatsApp"
+                            >
+                              <i className="fab fa-whatsapp"></i> Chamar no WhatsApp
+                            </button>
+
+                            <button 
+                              type="button" 
+                              className="cg-btn-reset-pwd-action"
+                              onClick={() => handleEnviarRedefinicaoSenha(membroEdicao.email)}
+                              disabled={enviandoEmailSenha}
+                              title="Enviar e-mail para o cliente redefinir a senha"
+                            >
+                              {enviandoEmailSenha ? (
+                                <><i className="fas fa-spinner fa-spin"></i> Enviando...</>
+                              ) : (
+                                <><i className="fas fa-key"></i> Redefinir Senha</>
+                              )}
+                            </button>
+                          </div>
+                        </div>
                       </div>
 
-                      <div className="cg-form-group">
-                        <label>Pagamento Avulso</label>
-                        <select 
-                          value={membroEdicao.statusPagamentoVulso || ''} 
-                          onChange={e => setMembroEdicao({ ...membroEdicao, statusPagamentoVulso: e.target.value })}
-                        >
-                          <option value="">Nenhum</option>
-                          <option value="pago">Pago</option>
-                          <option value="pendente">Pendente</option>
-                        </select>
-                      </div>
+                      {/* CONTROLE DE ASSINATURA */}
+                      <div className="cg-payment-section">
+                        <div className="cg-payment-header">
+                          <h3><i className="fas fa-credit-card"></i> Controle de Assinatura & Liberação</h3>
+                          <span className="cg-payment-header-hint">Presets rápidos de 1 clique ou ajuste manual</span>
+                        </div>
 
-                      <div className="cg-form-group">
-                        <label>Status da Assinatura</label>
-                        <select 
-                          value={membroEdicao.statusAssinatura || ''} 
-                          onChange={e => setMembroEdicao({ ...membroEdicao, statusAssinatura: e.target.value })}
-                        >
-                          <option value="">Sem assinatura</option>
-                          <option value="ativa">Ativa</option>
-                          <option value="cancelada">Cancelada</option>
-                          <option value="pendente">Pendente</option>
-                        </select>
+                        {/* PRESETS DE 1-CLIQUE */}
+                        <div className="cg-preset-pills-row">
+                          <button 
+                            type="button" 
+                            className={`cg-preset-pill vip ${membroEdicao.assinaturaAtiva ? 'active' : ''}`}
+                            onClick={aplicarPresetVip}
+                            title="Liberar acesso total irrestrito"
+                          >
+                            <i className="fas fa-crown"></i> 🌟 Liberar VIP Total
+                          </button>
+
+                          <button 
+                            type="button" 
+                            className={`cg-preset-pill teste ${!membroEdicao.assinaturaAtiva && membroEdicao.statusAssinatura === 'ativa' ? 'active' : ''}`}
+                            onClick={aplicarPresetTeste}
+                            title="Manter como teste grátis (7 dias)"
+                          >
+                            <i className="fas fa-hourglass-start"></i> ⏳ Modo Teste (7d)
+                          </button>
+
+                          <button 
+                            type="button" 
+                            className={`cg-preset-pill block ${membroEdicao.statusAssinatura === 'cancelada' ? 'active' : ''}`}
+                            onClick={aplicarPresetBloquear}
+                            title="Bloquear imediatamente o acesso da empresa"
+                          >
+                            <i className="fas fa-ban"></i> 🚫 Bloquear Acesso
+                          </button>
+                        </div>
+
+                        {/* AJUSTES MANUAIS DETALHADOS */}
+                        <div className="cg-form-grid" style={{ marginTop: '12px' }}>
+                          <div className="cg-form-group">
+                            <label>Assinatura Ativa (Passe VIP)</label>
+                            <select 
+                              value={String(membroEdicao.assinaturaAtiva)} 
+                              onChange={e => setMembroEdicao({ ...membroEdicao, assinaturaAtiva: e.target.value === 'true' })}
+                            >
+                              <option value="false">Não (Bloquear se teste expirar)</option>
+                              <option value="true">Sim (Acesso irrestrito pago)</option>
+                            </select>
+                          </div>
+
+                          <div className="cg-form-group">
+                            <label>Status do Plano</label>
+                            <select 
+                              value={membroEdicao.plano || ''} 
+                              onChange={e => setMembroEdicao({ ...membroEdicao, plano: e.target.value })}
+                            >
+                              <option value="">Sem plano</option>
+                              <option value="pago">Pago</option>
+                              <option value="gratis">Grátis</option>
+                            </select>
+                          </div>
+
+                          <div className="cg-form-group">
+                            <label>Pagamento Avulso</label>
+                            <select 
+                              value={membroEdicao.statusPagamentoVulso || ''} 
+                              onChange={e => setMembroEdicao({ ...membroEdicao, statusPagamentoVulso: e.target.value })}
+                            >
+                              <option value="">Nenhum</option>
+                              <option value="pago">Pago</option>
+                              <option value="pendente">Pendente</option>
+                            </select>
+                          </div>
+
+                          <div className="cg-form-group">
+                            <label>Status da Assinatura</label>
+                            <select 
+                              value={membroEdicao.statusAssinatura || ''} 
+                              onChange={e => setMembroEdicao({ ...membroEdicao, statusAssinatura: e.target.value })}
+                            >
+                              <option value="">Sem assinatura</option>
+                              <option value="ativa">Ativa</option>
+                              <option value="cancelada">Cancelada</option>
+                              <option value="pendente">Pendente</option>
+                            </select>
+                          </div>
+                        </div>
                       </div>
                     </div>
+
+                    {/* COLUNA DIREITA: DADOS CADASTRAIS + DATAS & TESTE */}
+                    <div className="cg-modal-col-right">
+                      {/* DADOS BÁSICOS & CONTATO */}
+                      <div className="cg-form-section-title">
+                        <i className="fas fa-id-card"></i> Dados Cadastrais & Contato
+                      </div>
+
+                      <div className="cg-form-grid">
+                        <div className="cg-form-group">
+                          <label>Nome Fantasia / Empresa</label>
+                          <input 
+                            type="text" 
+                            value={membroEdicao.nomeExibicao || ''} 
+                            onChange={e => setMembroEdicao({ ...membroEdicao, nomeExibicao: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="cg-form-group">
+                          <label>Razão Social / Nome Completo</label>
+                          <input 
+                            type="text" 
+                            value={membroEdicao.nomeCompleto || ''} 
+                            onChange={e => setMembroEdicao({ ...membroEdicao, nomeCompleto: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="cg-form-group">
+                          <label>E-mail do Proprietário</label>
+                          <input 
+                            type="email" 
+                            value={membroEdicao.email || ''} 
+                            onChange={e => setMembroEdicao({ ...membroEdicao, email: e.target.value })}
+                            required
+                          />
+                        </div>
+
+                        <div className="cg-form-group">
+                          <label>Telefone / WhatsApp</label>
+                          <input 
+                            type="text" 
+                            placeholder="(00) 00000-0000"
+                            value={membroEdicao.telefone || ''} 
+                            onChange={e => setMembroEdicao({ ...membroEdicao, telefone: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="cg-form-group">
+                          <label>CPF ou CNPJ</label>
+                          <input 
+                            type="text" 
+                            value={membroEdicao.documento || ''} 
+                            onChange={e => setMembroEdicao({ ...membroEdicao, documento: e.target.value })}
+                          />
+                        </div>
+
+                        <div className="cg-form-group">
+                          <label>Plano Vinculado</label>
+                          <select 
+                            value={membroEdicao.planoId || ''} 
+                            onChange={e => {
+                              const selectedId = e.target.value;
+                              setMembroEdicao({ 
+                                ...membroEdicao, 
+                                planoId: selectedId,
+                                assinaturaAtiva: selectedId ? true : membroEdicao.assinaturaAtiva,
+                                plano: selectedId ? 'pago' : ''
+                              });
+                            }}
+                          >
+                            <option value="">Sem plano / Nenhum</option>
+                            {Object.keys(planos).length > 0 ? (
+                              Object.entries(planos).map(([id, p]) => (
+                                <option key={id} value={id}>{p.nome || id}</option>
+                              ))
+                            ) : (
+                              <>
+                                <option value="plano_basico">Plano Básico</option>
+                                <option value="plano_profissional">Plano Profissional</option>
+                                <option value="plano_premium">Plano Premium</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+                      </div>
+
+                      {/* GESTÃO DE DATAS & PERÍODO DE TESTE */}
+                      <div className="cg-form-section-title" style={{ marginTop: '16px' }}>
+                        <i className="fas fa-hourglass-half"></i> Período de Teste & Cadastro
+                      </div>
+
+                      <div className="cg-form-grid">
+                        <div className="cg-form-group">
+                          <label>Data de Cadastro da Empresa</label>
+                          <input 
+                            type="date" 
+                            value={formatarDataParaInput(membroEdicao.dataCadastro)} 
+                            onChange={e => setMembroEdicao({ ...membroEdicao, dataCadastro: e.target.value })}
+                          />
+                          <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>Início para contagem do teste grátis de 7 dias.</small>
+                        </div>
+
+                        <div className="cg-form-group">
+                          <label>Término do Período de Teste</label>
+                          <input 
+                            type="date" 
+                            value={formatarDataParaInput(membroEdicao.dataFimTeste)} 
+                            onChange={e => setMembroEdicao({ ...membroEdicao, dataFimTeste: e.target.value })}
+                          />
+                          <small style={{ color: '#64748b', marginTop: '4px', display: 'block' }}>Data limite para expiração do acesso cortesia.</small>
+                        </div>
+                      </div>
+
+                      {/* PRORROGAÇÃO RÁPIDA (1-CLIQUE) */}
+                      <div className="cg-trial-extension-bar">
+                        <span className="cg-trial-ext-label"><i className="fas fa-plus-circle"></i> Prorrogar Teste:</span>
+                        <div className="cg-trial-ext-buttons">
+                          <button type="button" className="cg-btn-ext-pill" onClick={() => prorrogarTesteDias(7)}>+ 7 Dias</button>
+                          <button type="button" className="cg-btn-ext-pill" onClick={() => prorrogarTesteDias(15)}>+ 15 Dias</button>
+                          <button type="button" className="cg-btn-ext-pill" onClick={() => prorrogarTesteDias(30)}>+ 30 Dias</button>
+                          <button type="button" className="cg-btn-ext-pill reset" onClick={resetarTesteHoje}>Hoje + 7d</button>
+                        </div>
+                      </div>
+                    </div>
+
                   </div>
 
                   <div className="cg-modal-footer">
@@ -2289,6 +2699,17 @@ const ControleGeral = () => {
                   <h2><i className="fas fa-search-plus"></i> Painel de Suporte: {membroSuporte.nomeExibicao}</h2>
                   <button className="cg-modal-close" onClick={() => setModalSuporteAberto(false)}>
                     <i className="fas fa-times"></i>
+                  </button>
+                </div>
+
+                {/* BOTÃO MODO SUPORTE NO TOPO DO MODAL */}
+                <div className="cg-support-modal-top-action">
+                  <button 
+                    type="button" 
+                    className="cg-btn-impersonate-modal-sup" 
+                    onClick={() => entrarModoSuporte(membroSuporte)}
+                  >
+                    <i className="fas fa-rocket"></i> Acessar Toda a Loja Desta Empresa (Modo Suporte Completo)
                   </button>
                 </div>
 

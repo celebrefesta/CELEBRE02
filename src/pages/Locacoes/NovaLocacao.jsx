@@ -7,6 +7,7 @@ import { getAuth } from 'firebase/auth';
 import { CATALOGO_TEMAS } from '../../catalogoDeTemas';
 import { gerarPropostaPDF } from '../../utils/gerarPropostaPDF';
 import { calcularDistanciaGoogleMaps } from '../../utils/googleMapsService';
+import { validarCpfCnpj, formatCpfCnpj } from '../../utils/mascaras';
 import ModalCalendarioDisponibilidade from './ModalCalendarioDisponibilidade';
 
 // 🏷️ TIPOS DE EVENTO (mesmos da tela de Locações)
@@ -98,6 +99,13 @@ const NovaLocacao = () => {
     if (!formNovoCliente.nome.trim() || !formNovoCliente.celular.trim()) {
       alert("⚠️ Preencha pelo menos o Nome e Celular/WhatsApp do cliente.");
       return;
+    }
+    const docLimpo = (formNovoCliente.cpfCnpj || '').replace(/\D/g, '');
+    if (docLimpo) {
+      if (!validarCpfCnpj(docLimpo)) {
+        alert("⚠️ CPF ou CNPJ inválido!\n\nOs dígitos informados não conferem com o padrão oficial da Receita Federal. Verifique o número digitado ou deixe em branco se não possuir.");
+        return;
+      }
     }
     try {
       setSalvandoNovoCliente(true);
@@ -3410,12 +3418,25 @@ const NovaLocacao = () => {
 
               <div className="form-row mb-12">
                 <div className="form-group flex-1">
-                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b' }}>CPF / CNPJ (Opcional)</label>
+                  <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span>CPF / CNPJ (Opcional)</span>
+                    {(() => {
+                      const d = (formNovoCliente.cpfCnpj || '').replace(/\D/g, '');
+                      if (d.length === 11 || d.length === 14) {
+                        return validarCpfCnpj(d) ? (
+                          <span style={{ color: '#16a34a', fontWeight: '700' }}>✓ Válido</span>
+                        ) : (
+                          <span style={{ color: '#ef4444', fontWeight: '700' }}>✗ Inválido</span>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </label>
                   <input 
                     type="text" 
-                    placeholder="000.000.000-00"
+                    placeholder="000.000.000-00 ou CNPJ"
                     value={formNovoCliente.cpfCnpj}
-                    onChange={e => setFormNovoCliente({ ...formNovoCliente, cpfCnpj: e.target.value })}
+                    onChange={e => setFormNovoCliente({ ...formNovoCliente, cpfCnpj: formatCpfCnpj(e.target.value) })}
                     style={{ padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1' }}
                   />
                 </div>

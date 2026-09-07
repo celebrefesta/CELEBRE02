@@ -1,115 +1,153 @@
-# 🔒 CELEBRE SYSTEM — RESUMO EXECUTIVO & STATUS DO SISTEMA
-**Data:** 06 de Setembro de 2026  
-**Status Geral:** 🟢 100% Estável, Aprovado no Google Play e Publicado em Produção (Zero Erros)  
+# 🔒 CELEBRE SYSTEM — RESUMO EXECUTIVO DETALHADO DO SISTEMA
+**Data de Atualização:** 07 de Setembro de 2026  
+**Status Geral:** 🟢 100% Estável, Build de Produção Limpo (Zero Erros) e Aprovado no Google Play  
 **Domínio Oficial Autenticado:** `celebrefesta.com.br`  
-**Google Play Package:** `br.com.celebrefesta.app` (Versão 2 / 1.0.1 - Ativo)  
+**Google Play Package:** `br.com.celebrefesta.app` (Versão 2 / 1.0.1 - Ativo em 177 países)  
 **Repositório Sagrado de Design:** `src/styles/design-lock.css`  
-**Motor Dinâmico de Cores:** `src/utils/themeUtils.js`  
+**Motor Global de Cores:** `src/utils/themeUtils.js`  
 
 ---
 
-## 1. 📱 Publicação no Google Play Console (Marco Histórico)
-
-1. **Geração do Pacote de Produção v2**:
-   - Resolvido o conflito de versão anterior criando o bundle com `versionCode: 2` e `versionName: 1.0.1` utilizando a keystore de assinatura oficial (`signing.keystore`, alias `celebre`).
-   - Arquivo oficial gerado: `playstore-bundle/Celebre - Gestão de Locação & Festas.aab` e cópia direta em `C:\Users\camil\Desktop\Celebre.aab`.
-
-2. **Aprovação Oficial pelo Google**:
-   - A versão **2 (1.0.1)** foi submetida, revisada e **APROVADA** pelo Google.
-   - Status no painel: **`✓ Disponível para os testadores no Google Play • Lançamento completo`** (Ativo em 177 países).
-   - Trilha: **Teste Fechado - Alpha**.
-
-3. **Roadmap para Produção Pública (Acesso Total na Loja)**:
-   - Política do Google Play para contas pessoa física: 12 testadores devem aceitar o convite e manter o app instalado durante 14 dias corridos.
-   - Link de convite oficial: gerado e pronto na aba *Testadores* do Google Play Console.
-   - Após 14 dias com 12 testadores ativos, o botão **"Solicitar a produção"** é liberado para publicação aberta mundial.
+## 📑 ÍNDICE DETALHADO
+1. [Evolução Recente: Nova Barra Lateral / Menu de Navegação VIP](#1-evolução-recente-nova-barra-lateral--menu-de-navegação-vip)
+2. [Evolução Recente: Reestruturação Completa da Página de Planos](#2-evolução-recente-reestruturação-completa-da-página-de-planos)
+3. [Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)](#3-diagnóstico--solução-da-tela-opaca-conflito-dark-mode-vs-fundo-claro)
+4. [Publicação no Google Play Console & Distribuição Mobile](#4-publicação-no-google-play-console--distribuição-mobile)
+5. [Infraestrutura Transacional de E-mails (Resend + Hostinger)](#5-infraestrutura-transacional-de-e-mails-resend--hostinger)
+6. [Conformidade Legal LGPD (Art. 18) & Exclusão de Contas](#6-conformidade-legal-lgpd-art-18--exclusão-de-contas)
+7. [Inventário de Módulos & Blindagem de Layout (AGENTS.md)](#7-inventário-de-módulos--blindagem-de-layout-agentsmd)
+8. [Auditoria de Build e Qualidade de Código](#8-auditoria-de-build-e-qualidade-de-código)
 
 ---
 
-## 2. ✉️ Infraestrutura Oficial de E-mails Transacionais (Resend + Hostinger)
+## 1. 🌟 Evolução Recente: Nova Barra Lateral / Menu de Navegação VIP
 
-1. **Autenticação do Domínio Oficial `celebrefesta.com.br`**:
-   - Identificado que o antigo domínio `celebreapp.com` (registrado na Cloudflare em 23/04/2026) não era mais desejado.
-   - Desativada a renovação automática do `celebreapp.com` na Cloudflare para evitar cobranças futuras.
-   - Cadastrado o domínio oficial **`celebrefesta.com.br`** no **Resend**.
-   - Inseridos e validados com sucesso os 3 registros DNS na **Hostinger**:
-     - `TXT` `resend._domainkey` (DKIM Criptográfico de Autenticidade)
-     - `CNAME` `rsend` (Rota Segura de Envio)
-     - `CNAME` `send` (Servidor de Entrega)
-   - Status no Resend: 🟢 **Verificado** com entrega imediata em milissegundos.
+A barra de navegação lateral (`Navbar.jsx` e `Navbar.css`) foi completamente reformulada para oferecer ergonomia executiva tanto no desktop quanto no mobile:
 
-2. **Cloud Function de Comprovante de Exclusão (LGPD & Google Play)**:
-   - Endpoint ativo no Google Cloud: `https://us-central1-celebre-9f5c9.cloudfunctions.net/enviarComprovanteExclusao`
-   - Remetente oficial: **`Celebre Segurança <seguranca@celebrefesta.com.br>`**
-   - Endereço de resposta (`reply_to`): **`celebrefesta25@gmail.com`**
-   - Template de e-mail corporativo de luxo (fundo escuro `#0f172a`, detalhes dourados `#c5a059`, tabela discriminada de dados expurgados e base legal Art. 18 da LGPD).
-   - Geração automática de protocolo de auditoria registrado no Firestore: `CEL-EXCL-2026-XXXXX`.
+### 1.1. Identidade Visual Oficial Celebre
+- **Logotipo Oficial Integrado:** Substituição do antigo ícone genérico de coroa pela logomarca oficial Celebre (`src/assets/LOGO_CELEBRE.png`), com proporções nítidas e elegantes.
+- **Paleta Midnight Slate com Acentos Dourados:** Fundo em `#090e18` com bordas sutis em `rgba(255, 255, 255, 0.07)` e realces em ouro nobre (`#c5a059`).
 
----
-
-## 3. ⚖️ Conformidade Legal & Exclusão de Conta (LGPD Art. 18)
-
-1. **Página Pública Web de Exclusão**:
-   - Rota ativa: `https://celebrefesta.com.br/excluir-conta` ([ExcluirConta.jsx](src/pages/Institucional/ExcluirConta.jsx)).
-   - Formulário público para clientes que desinstalaram o app ou perderam acesso solicitarem a eliminação de dados.
-   - Disparo automático do comprovante com número de protocolo exibido na tela e enviado por e-mail.
-
-2. **Exclusão e Desativação Direta pelo App**:
-   - Módulo em [AbaSeguranca.jsx](src/pages/Configuracoes/AbaSeguranca.jsx) com "Zona de Perigo":
-     - **Desativação Temporária**: Pausa o acesso da conta sem apagar dados.
-     - **Exclusão Definitiva**: Exige reautenticação com senha atual, digitação da palavra "EXCLUIR", expurgo no Firestore, envio de comprovante com protocolo e `deleteUser` no Firebase Auth.
-
-3. **Atualização da Política de Privacidade**:
-   - Seção 8 de [PoliticaPrivacidade.jsx](src/pages/Institucional/PoliticaPrivacidade.jsx) linkada diretamente para `/excluir-conta`.
+### 1.2. Organização e Ergonomia Mobile
+- **Botão Dedicado de Fechamento Mobile:** Adicionado botão tátil `✕` no canto superior direito do menu mobile (`.sidebar-mobile-close-btn`), facilitando o fechamento com apenas um toque sem depender exclusivamente do clique no backdrop.
+- **Hierarquia Visual por Seções:** Itens divididos em blocos semânticos com divisores sutis:
+  - `GERAL`: Início (Dashboard), Agenda, Clientes, Catálogo Digital.
+  - `OPERACIONAL`: Locações, Estoque & Acervo, Galpão (Logística/Kanban), Contratos.
+  - `GESTÃO`: Financeiro, Compras & Pedidos, Fornecedores, Relatórios Gerenciais.
+- **Remoção de Bordas Tracejadas:** Itens bloqueados por plano agora contam com insígnias discretas (*Lock Pill*), mantendo a elegância visual sem poluição de linhas tracejadas.
+- **Otimização de Altura Vertical (Anti-Scroll Desnecessário):** Aplicação de media queries verticais (`@media (max-height: 800px)`) para compactar paddings e fontes proporcionalmente, garantindo que o menu caiba na tela sem exigir barra de rolagem forçada.
+- **Rodapé Executivo:** Área inferior com identificação do plano ativo, status de sincronização em tempo real e botão rápido de configurações.
 
 ---
 
-## 4. 📲 Instalação Mobile & Download Direto de APK
+## 2. 💎 Evolução Recente: Reestruturação Completa da Página de Planos
 
-1. **Banner Reativo PWA + APK ([InstallAppPrompt.jsx](src/components/InstallAppPrompt/InstallAppPrompt.jsx))**:
-   - Reativado em todas as telas com design escuro e dourado.
-   - Botão **`📲 Instalar App`**: Instalação PWA nativa com 1 toque na tela inicial do celular.
-   - Botão **`🤖 Baixar APK`**: Download do arquivo compilado do Android para testes manuais.
-   - Modal interativo para Safari no iPhone com instruções passo a passo.
+A página de Planos e Assinaturas (`Planos.jsx` e `Planos.css`) passou por uma reformulação profunda de experiência do usuário (UX):
 
-2. **Download Público do APK**:
-   - Disponível no link direto: `https://celebrefesta.com.br/celebre.apk` (1.77 MB).
+### 2.1. Coerência entre Desktop e Mobile
+- **No Desktop:** Cards alinhados lado a lado (3 colunas proporcionais) com comparativo detalhado unificado abaixo, permitindo análise visual imediata dos planos Essencial, Pro e Premium.
+- **No Mobile (1 Card em Foco por Vez):** Os cards agora ocupam `100%` da largura da tela com efeito *Scroll Snap* suave. O usuário visualiza um card por vez com total clareza, sem cortes laterais que poluam a visualização.
+- **Eliminação de Redundâncias:** Removida a exibição duplicada de tabelas comparativas no mobile. Os recursos detalhados agora aparecem em uma gaveta inteligente logo abaixo do plano selecionado.
+
+### 2.2. Controles de Navegação no Mobile
+- **Navegador `< • ▬ • >` Reposicionado:** O seletor de navegação com setas e indicadores de bolinha/pílula foi transferido para o topo dos cards (logo acima dos valores), permitindo que o usuário alterne de plano instantaneamente sem precisar rolar a tela.
+- **Sincronização Bidirecional:** Tocar nas bolinhas rola suavemente para o card correspondente; deslizar o card com o dedo atualiza automaticamente o indicador ativo e a lista de recursos inclusos abaixo.
+
+### 2.3. Recursos e Credibilidade
+- **Letreiro Rotativo Infinito (Marquee Ticker):** Barra interativa contendo selos de confiança com rolagem contínua: *Ativação Instantânea*, *Pagamento Seguro Mercado Pago*, *Suporte Dedicado*, *Sem Fidelidade ou Multas*, *100% em Nuvem* e *Dados Criptografados*. O letreiro pausa ao toque ou passagem do mouse.
+- **Auditoria de Upgrade em Tempo Real:** Toda seleção de plano registra um log de intenção no Firestore (`logs_atividades`) com data/hora, e-mail do solicitante e identificador de tenant, alimentando o painel administrativo master.
 
 ---
 
-## 5. 🔒 Inventário de Módulos & Blindagem de Layout
+## 3. 🔍 Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)
 
-| Página / Módulo | Arquivos Principais | Status de Lock |
+### 3.1. Causa Raiz Identificada
+Ao carregar a página de planos em um ambiente com o **Modo Escuro** ativado (`data-theme="dark"` no elemento `<html>`):
+1. As regras globais em `src/App.css` forçam todos os títulos (`h1`, `h2`, `h3`, `h4`), `strong` e `label` para a cor **branca/prata** (`#f4f4f5 !important`) e textos secundários para cinza claro (`#a1a1aa !important`).
+2. A estilização de `Planos.css` possuía fundos claros estáticos (`background: #f8fafc` na página e `#ffffff` nos cards).
+3. **Efeito Visual:** Títulos como *"Escolha o plano ideal para acelerar o seu acervo"*, *"PREMIUM"* e *"O que está incluso no Premium:"* foram desenhados em **branco sobre fundo branco**, gerando a impressão de tela lavada, leitosa ou opaca.
+
+### 3.2. Solução Definitiva Implantada
+1. **Suporte Integral ao Modo Escuro (`[data-theme^='dark'] .planos-public-wrapper`):**
+   - Fundo da página adaptado para o tom escuro nobre: `#090d16 !important`.
+   - Cards de planos e caixas de recursos convertidos para cartões de luxo: `#111827 !important` com bordas em `#1f293d !important`.
+   - Card ativo/destaque realçado com borda em ouro nobre `#c5a059` e sombra suave.
+   - Textos e títulos em branco de alto contraste (`#ffffff !important`), com rótulos em `#94a3b8`.
+   - Botão de retorno, pílulas de confiança e botões de seta adaptados com contraste impecável.
+2. **Blindagem de Alto Contraste no Modo Claro:**
+   - Proteção com seletores explícitos (`:root:not([data-theme='dark']) .planos-public-wrapper`) forçando os títulos para o azul-carvão escuro (`#0f172a !important`), garantindo que em qualquer circunstância o contraste permaneça perfeito.
+
+---
+
+## 4. 📱 Publicação no Google Play Console & Distribuição Mobile
+
+1. **Aprovação Oficial pelo Google Play:**
+   - Pacote: `br.com.celebrefesta.app` (Versão 2 / 1.0.1).
+   - Assinado com a keystore oficial de produção (`signing.keystore`, alias `celebre`).
+   - Status: **`✓ Disponível para os testadores no Google Play • Lançamento completo`** (177 países).
+2. **Roadmap para Produção Aberta:**
+   - 12 testadores cadastrados na lista de teste fechado cumprindo os 14 dias de retenção exigidos pelo Google Play Console para liberação do botão definitivo de Produção Pública.
+3. **Instalação PWA & Download Direto:**
+   - Banner reativo [InstallAppPrompt.jsx](src/components/InstallAppPrompt/InstallAppPrompt.jsx) disponível no site para instalação com 1 toque na tela inicial.
+   - APK direto de produção compilado e hospedado em `https://celebrefesta.com.br/celebre.apk`.
+
+---
+
+## 5. ✉️ Infraestrutura Transacional de E-mails (Resend + Hostinger)
+
+1. **Domínio Oficial Verificado:**
+   - Migração concluída do antigo domínio temporário para o oficial **`celebrefesta.com.br`**.
+   - Registros DNS validados na Hostinger:
+     - `TXT` `resend._domainkey` (Assinatura criptográfica DKIM).
+     - `CNAME` `rsend` (Roteamento de envio autenticado).
+     - `CNAME` `send` (Entregabilidade imediata).
+   - Status no Resend: 🟢 **Verificado e ativo**.
+2. **Cloud Function de Notificações de Segurança:**
+   - Endpoint: `https://us-central1-celebre-9f5c9.cloudfunctions.net/enviarComprovanteExclusao`
+   - Remetente: `Celebre Segurança <seguranca@celebrefesta.com.br>`
+   - Resposta: `celebrefesta25@gmail.com`
+   - Disparo de comprovantes com protocolo de auditoria registrado no Firestore (`CEL-EXCL-2026-XXXXX`).
+
+---
+
+## 6. ⚖️ Conformidade Legal LGPD (Art. 18) & Exclusão de Contas
+
+1. **Página Pública Web:** Rota ativa `/excluir-conta` ([ExcluirConta.jsx](src/pages/Institucional/ExcluirConta.jsx)) para autoatendimento de ex-usuários.
+2. **Painel Interno de Segurança:** Módulo em [AbaSeguranca.jsx](src/pages/Configuracoes/AbaSeguranca.jsx) com dupla confirmação:
+   - Desativação temporária (bloqueia o login e preserva histórico).
+   - Exclusão definitiva com expurgo total no Firestore e Firebase Auth.
+
+---
+
+## 7. 🔒 Inventário de Módulos & Blindagem de Layout (AGENTS.md)
+
+Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS e a regra de ouro dos cards de KPI (1 linha no Desktop / 2 colunas no Mobile):
+
+| Módulo / Funcionalidade | Arquivos Principais | Status de Blindagem |
 | :--- | :--- | :---: |
-| 🛡️ **Segurança & Exclusão LGPD** | `AbaSeguranca.jsx`, `ExcluirConta.jsx` | 🟢 Atualizado & 100% Funcional |
-| ✉️ **Serviço de E-mails Resend** | `emailExclusaoService.js`, `functions/index.js` | 🟢 Ativo (`celebrefesta.com.br`) |
-| 📲 **Instalador PWA & APK** | `InstallAppPrompt.jsx`, `InstallAppPrompt.css` | 🟢 Ativo no site |
+| 🧭 **Menu Lateral & Navegação** | `Navbar.jsx`, `Navbar.css` | 🟢 Modernizado VIP |
+| 💎 **Planos & Assinaturas SaaS** | `Planos.jsx`, `Planos.css` | 🟢 Responsivo & Dark/Light OK |
 | 🛍️ **Catálogo Boutique de Luxo** | `Catalago.jsx`, `Catalago.css` | 🔒 CONGELADA / Estável |
-| 📅 **Locações & Bipagem Individual** | `Locacoes.jsx`, `Locacoes.css` | 🔒 CONGELADA / Estável |
-| 🚚 **Logística & Separação (Galpão)** | `Logistica.jsx`, `Logistica.css` | 🔒 CONGELADA / Estável |
-| 📦 **Estoque & Acervo** | `Estoque.jsx`, `Estoque.css` | 🔒 CONGELADA |
-| 🏷️ **Novo Item de Estoque** | `CadastroEstoque.jsx`, `CadastroEstoque.css` | 🔒 CONGELADA |
-| 👥 **Clientes & Novo Cliente** | `Clientes.jsx`, `CadastroCliente.jsx` | 🔒 CONGELADA |
-| ➕ **Nova Locação** | `NovaLocacao.jsx`, `NovaLocacao.css` | 🔒 CONGELADA |
-| 🛒 **Compras & Nova Solicitação** | `Compras.jsx`, `NovaCompra.jsx` | 🔒 CONGELADA |
-| 💰 **Financeiro & Novo Lançamento** | `Financeiro.jsx`, `NovoLancamento.jsx` | 🔒 CONGELADA |
-| 📊 **Relatórios Gerenciais** | `Relatorios.jsx`, Tabs | 🔒 CONGELADA |
-| 📜 **Contratos & Assinatura** | `Contratos.jsx`, `NovoContrato.jsx` | 🔒 CONGELADA |
-| 📆 **Agenda de Eventos** | `Agenda.jsx`, `Agenda.css` | 🔒 CONGELADA |
-| 🏠 **Dashboard Geral** | `Dashboard.jsx`, `Dashboard.css` | 🔒 CONGELADA |
-| 📈 **Sistema Global de Cards KPI** | 1 linha no Desktop / 2 colunas no Mobile | 🔒 CONGELADA |
-| 🎨 **Motor Global de Cores da Marca** | `themeUtils.js` | 🔒 CONGELADA |
+| 📅 **Locações & Bipagem QR/Barras** | `Locacoes.jsx`, `Locacoes.css` | 🔒 CONGELADA / Estável |
+| 🚚 **Logística & Kanban Galpão** | `Logistica.jsx`, `Logistica.css` | 🔒 CONGELADA / Estável |
+| 📦 **Estoque & Cadastro de Acervo** | `Estoque.jsx`, `CadastroEstoque.jsx` | 🔒 CONGELADA / Estável |
+| 👥 **Clientes & Auto-Cadastro** | `Clientes.jsx`, `CadastroCliente.jsx` | 🔒 CONGELADA / Estável |
+| 💰 **Financeiro & Lançamentos** | `Financeiro.jsx`, `NovoLancamento.jsx` | 🔒 CONGELADA / Estável |
+| 🛒 **Compras & Fornecedores** | `Compras.jsx`, `Fornecedores.jsx` | 🔒 CONGELADA / Estável |
+| 📊 **Relatórios Gerenciais & DRE** | `Relatorios.jsx`, Tabs | 🔒 CONGELADA / Estável |
+| 📜 **Contratos & Assinatura Touch** | `Contratos.jsx`, `NovoContrato.jsx` | 🔒 CONGELADA / Estável |
+| 📆 **Agenda de Eventos** | `Agenda.jsx`, `Agenda.css` | 🔒 CONGELADA / Estável |
+| 🏠 **Dashboard Principal** | `Dashboard.jsx`, `Dashboard.css` | 🔒 CONGELADA / Estável |
+| 📈 **Cards de KPI Globais** | 1 Linha no Desktop / 2 Colunas Mobile | 🔒 CONGELADA / SAGRADO |
+| 🎨 **Motor Dinâmico de Temas** | `themeUtils.js`, `design-lock.css` | 🔒 CONGELADA / SAGRADO |
 
 ---
 
-## 6. 🚀 Próximos Passos Imediatos
+## 8. 🛠️ Auditoria de Build e Qualidade de Código
 
-1. **Convite dos 12 Testadores no Google Play**:
-   - Cadastrar os e-mails Gmail na lista de teste fechado do Google Play Console.
-   - Compartilhar o link de teste para que os 12 aceitem e instalem pela loja.
-   - Manter instalado por 14 dias para desbloquear o botão final de Produção Pública.
-2. **Uso Imediato no Celular**:
-   - Qualquer usuário já pode usar instalando pelo PWA (`celebrefesta.com.br`) ou baixando o APK direto (`celebrefesta.com.br/celebre.apk`).
+- **Build de Produção (Vite 7):** Validado com sucesso via `npm run build` em **15.98 segundos**.
+- **Módulos Compilados:** 1.178 módulos transformados sem nenhum erro de lint ou empacotamento.
+- **Isolamento de Estilos:** Conformidade total com a Regra 5 do `AGENTS.md` (todos os estilos novos escopados em `.planos-public-wrapper` e `.sidebar`).
 
 ---
-*Celebre Sistema de Gestão para Locação de Decorações & Festas — Todos os direitos reservados.*
+*Documentação técnica oficial do Sistema Celebre — Gestão de Locação de Acervo & Festas.*

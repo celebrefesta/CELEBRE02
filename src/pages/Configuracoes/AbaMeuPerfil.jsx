@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig'; 
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
+import { formatarDataExibicao } from '../../utils/periodoTesteUtils';
 
 // 🔤 Helper: Capitaliza primeira letra de cada palavra (Title Case)
 const capitalize = (str) => {
@@ -44,7 +45,7 @@ const formatCEP = (value) => {
   return digits.replace(/(\d{5})(\d)/, '$1-$2');
 };
 
-const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, nomeEmpresa, registrarLog }) => {
+const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, nomeEmpresa, registrarLog, dataCriacaoConta }) => {
   const [dadosPerfil, setDadosPerfil] = useState({
     nome: '', 
     sobrenome: '', 
@@ -52,6 +53,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
     telefone: '', 
     cargo: '',
     aniversario: '',
+    dataCriacao: '',
     bio: '',
     fotoUrl: '',
     cep: '',
@@ -79,8 +81,12 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
         const userRef = doc(db, 'usuarios', usuarioLogado.uid);
         const userSnap = await getDoc(userRef);
 
+        let dataCriacaoFinal = dataCriacaoConta || '';
         if (userSnap.exists()) {
           const uData = userSnap.data();
+          const rawCad = uData.dataCadastro || uData.criadoEm || usuarioLogado.metadata?.creationTime;
+          dataCriacaoFinal = formatarDataExibicao(rawCad) || dataCriacaoFinal || '—';
+
           setDadosPerfil(prev => ({
             ...prev,
             nome: capitalize(uData.nomeCompleto || uData.nomeExibicao || usuarioLogado.displayName || (isCollaborator ? 'Colaborador' : 'Admin')),
@@ -89,6 +95,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
             telefone: formatTelefone(uData.telefone || ''),
             cargo: capitalize(uData.cargo || (isSuperAdmin ? 'Administrador Geral' : (isOwner ? 'Proprietário(a)' : 'Gestor(a)'))),
             aniversario: uData.aniversario || '',
+            dataCriacao: dataCriacaoFinal,
             bio: uData.bio || '',
             fotoUrl: uData.fotoUrl || uData.photoURL || usuarioLogado.photoURL || '',
             cep: formatCEP(uData.cep || ''),
@@ -395,6 +402,9 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               <i className="fas fa-envelope" style={{ color: 'var(--texto-secundario)' }}></i> {dadosPerfil.email}
             </p>
             <p style={{ fontSize: '12.5px', color: 'var(--texto-secundario)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <i className="fas fa-calendar-alt" style={{ color: '#c5a059' }}></i> Criação da Conta: <strong style={{ color: 'var(--texto-principal)' }}>{dadosPerfil.dataCriacao || dataCriacaoConta || '—'}</strong>
+            </p>
+            <p style={{ fontSize: '12.5px', color: 'var(--texto-secundario)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
               <i className="fas fa-check-circle" style={{ color: '#10b981' }}></i> Status: <strong style={{ color: 'var(--texto-principal)' }}>Conta Ativa</strong>
             </p>
             <p style={{ fontSize: '12.5px', color: 'var(--texto-secundario)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -512,6 +522,20 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   value={dadosPerfil.aniversario} 
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, aniversario: e.target.value })} 
                   style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+                  <i className="fas fa-calendar-alt" style={{ color: '#c5a059', marginRight: '6px' }}></i> Data de Criação da Conta
+                </label>
+                <input 
+                  type="text" 
+                  value={dadosPerfil.dataCriacao || dataCriacaoConta || '—'} 
+                  readOnly 
+                  disabled
+                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontWeight: '800', cursor: 'not-allowed', fontSize: '14px', boxSizing: 'border-box' }}
+                  title="Data oficial de criação da conta no sistema"
                 />
               </div>
             </div>

@@ -250,7 +250,10 @@ As partes contratantes reconhecem a plena validade jurídica deste contrato form
 
     const cpfFinal = clienteEncontrado?.cpf || clienteEncontrado?.cnpj || clienteEncontrado?.documento || pedido.clienteCpf || pedido.cpf || "";
     const telFinal = clienteEncontrado?.celular || clienteEncontrado?.telefone || clienteEncontrado?.whatsapp || pedido.clienteCelular || pedido.celular || pedido.telefone || "";
-    const endFinal = clienteEncontrado?.endereco || clienteEncontrado?.enderecoCompleto || pedido.enderecoCompleto || pedido.endereco || (pedido.logistica?.endereco) || "";
+    const endClienteFmt = clienteEncontrado?.logradouro 
+      ? `${clienteEncontrado.logradouro}, ${clienteEncontrado.numero || 'S/N'}${clienteEncontrado.complemento ? ' - ' + clienteEncontrado.complemento : ''}, ${clienteEncontrado.bairro || ''}, ${clienteEncontrado.cidade || ''}/${clienteEncontrado.uf || ''}` 
+      : (clienteEncontrado?.rua ? `${clienteEncontrado.rua}, ${clienteEncontrado.numero || ''}${clienteEncontrado.complemento ? ' - ' + clienteEncontrado.complemento : ''} - ${clienteEncontrado.bairro || ''} ${clienteEncontrado.cidade || ''}` : '');
+    const endFinal = clienteEncontrado?.endereco || clienteEncontrado?.enderecoCompleto || endClienteFmt || pedido.enderecoCompleto || pedido.endereco || (pedido.logistica?.endereco) || "";
     const nomeFinal = clienteEncontrado?.nome || clienteEncontrado?.nomeFantasia || pedido.clienteNome || pedido.cliente || "Cliente";
 
     const novosDados = {
@@ -348,7 +351,10 @@ As partes contratantes reconhecem a plena validade jurídica deste contrato form
     const nomeFinal = clienteAchado?.nome || clienteAchado?.nomeFantasia || clienteAchado?.nomeCompleto || nomeClienteSelecionado;
     const cpfFinal = clienteAchado?.cpf || clienteAchado?.cnpj || clienteAchado?.documento || "";
     const telFinal = clienteAchado?.celular || clienteAchado?.telefone || clienteAchado?.whatsapp || "";
-    const endFinal = clienteAchado?.endereco || clienteAchado?.enderecoCompleto || (clienteAchado?.rua ? `${clienteAchado.rua}, ${clienteAchado.numero || ''} - ${clienteAchado.bairro || ''} ${clienteAchado.cidade || ''}` : "");
+    const endClienteFmt = clienteAchado?.logradouro 
+      ? `${clienteAchado.logradouro}, ${clienteAchado.numero || 'S/N'}${clienteAchado.complemento ? ' - ' + clienteAchado.complemento : ''}, ${clienteAchado.bairro || ''}, ${clienteAchado.cidade || ''}/${clienteAchado.uf || ''}` 
+      : (clienteAchado?.rua ? `${clienteAchado.rua}, ${clienteAchado.numero || ''}${clienteAchado.complemento ? ' - ' + clienteAchado.complemento : ''} - ${clienteAchado.bairro || ''} ${clienteAchado.cidade || ''}` : '');
+    const endFinal = clienteAchado?.endereco || clienteAchado?.enderecoCompleto || endClienteFmt || "";
 
     // 2. Procura orçamentos ou locações ativas vinculadas a ESTE CLIENTE ESPECÍFICO
     const nBusca = nomeFinal.toLowerCase().trim();

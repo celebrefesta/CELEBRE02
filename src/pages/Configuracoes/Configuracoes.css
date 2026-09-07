@@ -2141,5 +2141,1018 @@
   cursor: not-allowed;
 }
 
+/* =========================================
+   🧭 SUBNAV PILLS: BACKUP & GOVERNANÇA LGPD
+   ========================================= */
+.backup-subnav-pills {
+  display: flex;
+  gap: 12px;
+  background: var(--fundo-card);
+  padding: 8px;
+  border-radius: 14px;
+  border: 1px solid var(--borda);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.btn-subnav-pill {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px 20px;
+  border-radius: 10px;
+  border: none;
+  background: transparent;
+  color: var(--texto-secundario);
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.btn-subnav-pill:hover {
+  background: var(--fundo-hover);
+  color: var(--texto-principal);
+}
+
+.btn-subnav-pill.active {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2);
+}
+
+.btn-subnav-pill i {
+  font-size: 16px;
+}
+
+.pill-status-dot {
+  font-size: 10px;
+  background: rgba(16, 185, 129, 0.2);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.btn-subnav-pill.active .pill-status-dot {
+  background: rgba(16, 185, 129, 0.3);
+  color: #34d399;
+}
+
+/* =========================================
+   🛡️ ESTILOS DO MÓDULO DE GOVERNANÇA LGPD
+   ========================================= */
+.lgpd-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.lgpd-hero-banner {
+  background: linear-gradient(135deg, #091e3a 0%, #1e3a8a 50%, #172554 100%);
+  border-radius: 16px;
+  padding: 28px 32px;
+  color: #ffffff;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.2);
+  position: relative;
+  overflow: hidden;
+}
+
+.lgpd-hero-banner::after {
+  content: '';
+  position: absolute;
+  right: -30px;
+  top: -30px;
+  width: 220px;
+  height: 220px;
+  background: radial-gradient(circle, rgba(56, 189, 248, 0.15) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.lgpd-badge-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #93c5fd;
+  margin-bottom: 12px;
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.lgpd-hero-text h2 {
+  font-size: 24px;
+  font-weight: 800;
+  margin: 0 0 8px 0;
+  color: #ffffff;
+  letter-spacing: -0.5px;
+}
+
+.lgpd-hero-text p {
+  font-size: 14px;
+  margin: 0;
+  color: #cbd5e1;
+  max-width: 680px;
+  line-height: 1.6;
+}
+
+.lgpd-hero-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  color: #60a5fa;
+  flex-shrink: 0;
+  box-shadow: inset 0 0 12px rgba(255, 255, 255, 0.1);
+}
+
+/* STATUS GRID */
+.lgpd-status-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.lgpd-status-card {
+  background: var(--fundo-card);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  color: var(--texto-secundario);
+}
+
+.status-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: #cbd5e1;
+}
+
+.status-dot.active {
+  background: #10b981;
+  box-shadow: 0 0 8px rgba(16, 185, 129, 0.5);
+}
+
+.status-dot.warn {
+  background: #f59e0b;
+  box-shadow: 0 0 8px rgba(245, 158, 11, 0.5);
+}
+
+.status-val {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--texto-principal);
+}
+
+.lgpd-status-card small {
+  font-size: 11px;
+  color: var(--texto-secundario);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* CARDS PADRÃO LGPD */
+.lgpd-card-box {
+  background: var(--fundo-card);
+  border: 1px solid var(--borda);
+  border-radius: 16px;
+  padding: 24px 28px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.lgpd-card-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.icon-badge {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  flex-shrink: 0;
+}
+
+.icon-badge.amber { background: #fef3c7; color: #d97706; }
+.icon-badge.blue { background: #dbeafe; color: #2563eb; }
+.icon-badge.indigo { background: #e0e7ff; color: #4f46e5; }
+.icon-badge.cyan { background: #cffafe; color: #0891b2; }
+
+.lgpd-card-header h3 {
+  margin: 0 0 4px 0;
+  font-size: 17px;
+  font-weight: 800;
+  color: var(--texto-principal);
+}
+
+.lgpd-card-header p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--texto-secundario);
+  line-height: 1.5;
+}
+
+/* FORMULÁRIO DPO */
+.lgpd-form-dpo {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.lgpd-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+
+.lgpd-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.lgpd-form-group label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.lgpd-form-group input,
+.lgpd-form-group select {
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--borda);
+  background: var(--fundo-input, #ffffff);
+  color: var(--texto-principal);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.lgpd-form-group input:focus,
+.lgpd-form-group select:focus {
+  border-color: #2563eb;
+}
+
+.lgpd-form-group small {
+  font-size: 11.5px;
+  color: var(--texto-secundario);
+}
+
+.lgpd-btn-actions-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.btn-lgpd-save {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border: none;
+  padding: 12px 24px;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.25);
+}
+
+.btn-lgpd-save:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(37, 99, 235, 0.35);
+}
+
+.lgpd-success-tag {
+  font-size: 13px;
+  font-weight: 700;
+  color: #10b981;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* FERRAMENTAS PRÁTICAS */
+.lgpd-tools-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+}
+
+.lgpd-tool-card {
+  background: var(--fundo-cinza, #f8fafc);
+  border: 1px solid var(--borda);
+  border-radius: 14px;
+  padding: 22px 20px;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.25s ease;
+}
+
+.lgpd-tool-card:hover {
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.tool-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  margin-bottom: 12px;
+}
+
+.tool-icon.purple { background: #f3e8ff; color: #9333ea; }
+.tool-icon.red { background: #fee2e2; color: #dc2626; }
+.tool-icon.green { background: #dcfce7; color: #16a34a; }
+
+.lgpd-tool-card h4 {
+  margin: 0 0 4px 0;
+  font-size: 15.5px;
+  font-weight: 800;
+  color: var(--texto-principal);
+}
+
+.article-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.lgpd-tool-card p {
+  font-size: 12.5px;
+  color: var(--texto-secundario);
+  line-height: 1.5;
+  margin: 0 0 16px 0;
+  flex: 1;
+}
+
+.btn-tool-action {
+  width: 100%;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  transition: all 0.2s;
+}
+
+.purple-btn {
+  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(147, 51, 234, 0.25);
+}
+
+.red-btn {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(220, 38, 38, 0.25);
+}
+
+.green-btn {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(22, 163, 74, 0.25);
+}
+
+.btn-tool-action:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* 🔒 BLOQUEIO DE ETAPAS LGPD */
+.lgpd-container .lgpd-step-lock-banner {
+  background: #fffbeb;
+  border: 1px solid #fef08a;
+  border-left: 4px solid #eab308;
+  border-radius: 10px;
+  padding: 14px 18px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  color: #854d0e;
+}
+
+.lgpd-container .lgpd-step-lock-banner i {
+  font-size: 24px;
+  color: #ca8a04;
+}
+
+.lgpd-container .lgpd-step-lock-banner strong {
+  display: block;
+  font-size: 14.5px;
+  margin-bottom: 2px;
+  color: #854d0e;
+}
+
+.lgpd-container .lgpd-step-lock-banner p {
+  margin: 0;
+  font-size: 13px;
+  color: #a16207;
+  line-height: 1.4;
+}
+
+.lgpd-container .lgpd-tool-card.locked {
+  opacity: 0.65;
+  background: #f8fafc;
+  border-style: dashed;
+}
+
+.lgpd-container .lgpd-tool-card.locked:hover {
+  transform: none;
+  border-color: #cbd5e1;
+  box-shadow: none;
+}
+
+.lgpd-container .btn-tool-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed !important;
+  background: #94a3b8 !important;
+  color: #ffffff !important;
+  box-shadow: none !important;
+  transform: none !important;
+  filter: none !important;
+}
+
+.lgpd-container .step-badge-unlocked {
+  background: #dcfce7;
+  color: #15803d;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #bbf7d0;
+}
+
+.lgpd-container .step-badge-locked {
+  background: #fef2f2;
+  color: #dc2626;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 20px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #fecaca;
+}
+
+/* CLÁUSULA BOX */
+.lgpd-clause-box {
+  background: var(--fundo-cinza, #f8fafc);
+  border: 1px solid var(--borda);
+  border-left: 4px solid #4f46e5;
+  border-radius: 10px;
+  padding: 16px 20px;
+}
+
+.lgpd-clause-box p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--texto-principal);
+  line-height: 1.6;
+}
+
+.btn-copy-clause {
+  background: #e0e7ff;
+  color: #4338ca;
+  border: 1px solid #c7d2fe;
+  padding: 8px 16px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 12.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-copy-clause:hover {
+  background: #c7d2fe;
+}
+
+.btn-copy-clause.copied {
+  background: #dcfce7;
+  color: #15803d;
+  border-color: #bbf7d0;
+}
+
+/* TABELA DE AUDITORIA LGPD */
+.lgpd-table-container {
+  overflow-x: auto;
+  margin-top: 12px;
+}
+
+.lgpd-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.lgpd-table th {
+  background: var(--fundo-cinza, #f8fafc);
+  padding: 10px 14px;
+  text-align: left;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: var(--texto-secundario);
+  text-transform: uppercase;
+  border-bottom: 1px solid var(--borda);
+}
+
+.lgpd-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--borda);
+  color: var(--texto-principal);
+}
+
+.protocolo-code {
+  font-family: monospace;
+  color: #2563eb;
+  background: rgba(37, 99, 235, 0.08);
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.pill-tipo {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+}
+
+.pill-tipo.purple { background: #f3e8ff; color: #7e22ce; }
+.pill-tipo.red { background: #fee2e2; color: #b91c1c; }
+
+.badge-status-concluido {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: #16a34a;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.lgpd-empty-box {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--texto-secundario);
+}
+
+.lgpd-empty-box i {
+  font-size: 42px;
+  color: #cbd5e1;
+  margin-bottom: 12px;
+}
+
+.lgpd-empty-box h4 {
+  margin: 0 0 6px 0;
+  font-size: 16px;
+  color: var(--texto-principal);
+}
+
+.lgpd-empty-box p {
+  margin: 0;
+  font-size: 13px;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+/* =========================================
+   MODAIS DA CENTRAL LGPD
+   ========================================= */
+.modal-overlay-lgpd {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.modal-card-lgpd {
+  background: var(--fundo-card, #ffffff);
+  border-radius: 16px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+  border: 1px solid var(--borda);
+}
+
+.modal-card-lgpd.modal-danger {
+  max-width: 580px;
+}
+
+.modal-header-lgpd {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--borda);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header-lgpd h3 {
+  margin: 0;
+  font-size: 17px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--texto-principal);
+}
+
+.modal-header-lgpd.danger-header {
+  background: #fee2e2;
+  border-color: #fecaca;
+}
+
+.modal-header-lgpd.danger-header h3 {
+  color: #991b1b;
+}
+
+.modal-body-lgpd {
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.modal-footer-lgpd {
+  padding: 16px 24px;
+  border-top: 1px solid var(--borda);
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  background: var(--fundo-cinza, #f8fafc);
+}
+
+.btn-modal-sec {
+  background: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda);
+  color: var(--texto-principal);
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.btn-modal-pri {
+  background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-modal-danger {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  color: #ffffff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-weight: 800;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-modal-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* DETALHES DO DOSSIÊ */
+.dossie-selector-step {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-group-dossie {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.form-group-dossie label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--texto-principal);
+}
+
+.form-group-dossie select,
+.form-group-dossie input {
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1.5px solid var(--borda);
+  background: var(--fundo-input, #ffffff);
+  font-size: 13.5px;
+  color: var(--texto-principal);
+  outline: none;
+}
+
+.dossie-info-notice {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  color: #1e40af;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.dossie-info-notice i {
+  font-size: 18px;
+  margin-top: 2px;
+}
+
+.btn-exec-dossie {
+  background: linear-gradient(135deg, #9333ea 0%, #7e22ce 100%);
+  color: #ffffff;
+  border: none;
+  padding: 13px 20px;
+  border-radius: 9px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-exec-dossie:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.dossie-sheet-view {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+}
+
+.dossie-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  border-bottom: 2px solid #0f172a;
+  padding-bottom: 14px;
+  margin-bottom: 16px;
+}
+
+.dossie-sheet-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 900;
+  color: #0f172a;
+}
+
+.dossie-sub {
+  font-size: 12px;
+  color: #64748b;
+  display: block;
+}
+
+.dossie-stamp {
+  text-align: right;
+  background: #f8fafc;
+  border: 1px solid #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 8px;
+}
+
+.dossie-stamp span {
+  font-size: 10px;
+  font-weight: 800;
+  color: #64748b;
+  display: block;
+}
+
+.dossie-stamp strong {
+  font-size: 14px;
+  color: #2563eb;
+  font-family: monospace;
+}
+
+.dossie-grid-info {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.dossie-sec h4 {
+  margin: 0 0 8px 0;
+  font-size: 13px;
+  font-weight: 800;
+  color: #1e293b;
+  border-bottom: 1px solid #e2e8f0;
+  padding-bottom: 4px;
+}
+
+.dossie-sec p {
+  margin: 3px 0;
+  font-size: 12.5px;
+  color: #334155;
+}
+
+.dossie-mini-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+  margin-top: 6px;
+}
+
+.dossie-mini-table th {
+  background: #f1f5f9;
+  padding: 6px 10px;
+  text-align: left;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+}
+
+.dossie-mini-table td {
+  padding: 6px 10px;
+  border: 1px solid #e2e8f0;
+  color: #1e293b;
+}
+
+.dossie-sheet-footer {
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px dashed #cbd5e1;
+  text-align: center;
+  color: #64748b;
+  font-size: 11px;
+}
+
+/* AVISOS DE PERIGO & FISCAL */
+.lgpd-danger-warning-box {
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  color: #991b1b;
+}
+
+.lgpd-danger-warning-box i {
+  font-size: 24px;
+  margin-top: 2px;
+}
+
+.lgpd-danger-warning-box strong {
+  display: block;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.lgpd-danger-warning-box p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+.fiscal-safeguard-notice {
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 10px;
+  padding: 12px 14px;
+  display: flex;
+  gap: 10px;
+  color: #166534;
+  font-size: 12px;
+  line-height: 1.5;
+  margin-top: 14px;
+}
+
+.confirm-type-box {
+  background: #fff1f2;
+  border: 1px solid #ffe4e6;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.confirm-type-box label {
+  display: block;
+  font-size: 12.5px;
+  color: #9f1239;
+  margin-bottom: 8px;
+}
+
+.confirm-type-box input {
+  width: 100%;
+  padding: 10px;
+  border: 1.5px solid #fda4af;
+  border-radius: 6px;
+  font-weight: 800;
+  font-size: 14px;
+  letter-spacing: 1px;
+  color: #9f1239;
+}
+
+/* RESPONSIVIDADE */
+@media (max-width: 900px) {
+  .lgpd-status-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .lgpd-tools-grid {
+    grid-template-columns: 1fr;
+  }
+  .lgpd-form-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .backup-subnav-pills {
+    flex-direction: column;
+  }
+  .lgpd-hero-banner {
+    flex-direction: column;
+    text-align: center;
+    gap: 16px;
+    padding: 20px;
+  }
+  .lgpd-status-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+
 
 

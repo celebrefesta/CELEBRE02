@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom';
 import { db } from '../../firebaseConfig'; 
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { validarCPF, validarCNPJ } from '../../utils/validadores';
 import './AutoCadastro.css';
 
 const AutoCadastro = () => {
@@ -102,6 +103,28 @@ const AutoCadastro = () => {
 
     try {
       const isJuridica = tipoPessoa === 'juridica' || form.documento.replace(/\D/g, '').length > 11;
+      const docLimpo = (form.documento || '').replace(/\D/g, '');
+
+      if (!docLimpo) {
+        alert("Por favor, preencha o seu " + (isJuridica ? "CNPJ" : "CPF") + "!");
+        setLoading(false);
+        return;
+      }
+
+      if (isJuridica) {
+        if (docLimpo.length !== 14 || !validarCNPJ(docLimpo)) {
+          alert("⚠️ CNPJ inválido! Por favor, informe um CNPJ oficial com 14 dígitos válido na Receita Federal.");
+          setLoading(false);
+          return;
+        }
+      } else {
+        if (docLimpo.length !== 11 || !validarCPF(docLimpo)) {
+          alert("⚠️ CPF inválido! Por favor, informe um CPF oficial com 11 dígitos válido na Receita Federal.");
+          setLoading(false);
+          return;
+        }
+      }
+
       const idDaLoja = idEmpresa || empresa.userId || empresa.id || (auth.currentUser ? auth.currentUser.uid : null);
       
       if (!idDaLoja) {
@@ -361,7 +384,27 @@ const AutoCadastro = () => {
           
           <div className="form-row-dupla">
             <div className="form-group-custom">
-              <label>{tipoPessoa === 'juridica' ? 'CNPJ *' : 'CPF *'}</label>
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{tipoPessoa === 'juridica' ? 'CNPJ *' : 'CPF *'}</span>
+                {(() => {
+                  const dLimpo = (form.documento || '').replace(/\D/g, '');
+                  if (tipoPessoa === 'fisica' && dLimpo.length === 11) {
+                    return validarCPF(dLimpo) ? (
+                      <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.72rem' }}>✓ VÁLIDO</span>
+                    ) : (
+                      <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.72rem' }}>✗ INVÁLIDO</span>
+                    );
+                  }
+                  if (tipoPessoa === 'juridica' && dLimpo.length === 14) {
+                    return validarCNPJ(dLimpo) ? (
+                      <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.72rem' }}>✓ VÁLIDO</span>
+                    ) : (
+                      <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.72rem' }}>✗ INVÁLIDO</span>
+                    );
+                  }
+                  return null;
+                })()}
+              </label>
               <div className="input-with-icon">
                 <i className="fas fa-address-card input-icon"></i>
                 <input 

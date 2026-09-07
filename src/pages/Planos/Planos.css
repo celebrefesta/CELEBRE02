@@ -1,185 +1,1591 @@
+/* ==========================================================================
+   🔒 CELEBRE - PÁGINA DE PLANOS & ASSINATURAS (SAAS PREMIUM)
+   Isolamento Total: Todos os estilos escopados em .planos-public-wrapper
+   ========================================================================== */
+
 .planos-public-wrapper {
-    padding: 50px 30px;
-    background: #f8fafc;
-    min-height: 100vh;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    transition: margin-left 0.3s ease;
+  padding: 40px 24px 80px 24px;
+  background-color: var(--fundo-principal, #f8fafc);
+  min-height: 100vh;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: margin-left 0.3s ease, background-color 0.25s ease;
+  box-sizing: border-box;
+  color: var(--texto-principal, #1e293b);
 }
 
-/* 🔥 SE O NAVBAR ESTIVER PRESENTE (Telas grandes) 🔥 */
 @media (min-width: 851px) {
-    .planos-public-wrapper.com-sidebar {
-        margin-left: 260px; /* Mesma largura do seu Navbar */
-    }
+  .planos-public-wrapper.com-sidebar {
+    margin-left: 260px;
+  }
 }
 
-.planos-public-header {
-    text-align: center;
-    margin-bottom: 40px;
-    position: relative;
+/* ==========================================================================
+   1. HERO SECTION
+   ========================================================================== */
+
+.planos-public-wrapper .planos-hero {
+  max-width: 900px;
+  margin: 0 auto 48px auto;
+  text-align: center;
+  position: relative;
+  padding-top: 10px;
 }
 
-.btn-voltar-painel {
-    position: absolute;
-    left: 0;
-    top: 0;
-    padding: 10px 16px;
-    background: #e2e8f0;
+.planos-public-wrapper .btn-voltar-painel {
+  position: absolute;
+  left: 0;
+  top: 0;
+  padding: 10px 18px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
+}
+
+.planos-public-wrapper .btn-voltar-painel:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  transform: translateX(-2px);
+}
+
+.planos-public-wrapper .planos-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(197, 160, 89, 0.12);
+  color: #926f2d;
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 20px;
+  border: 1px solid rgba(197, 160, 89, 0.3);
+}
+
+.planos-public-wrapper .planos-hero-badge i {
+  color: #c5a059;
+}
+
+.planos-public-wrapper .planos-hero-title {
+  font-size: 38px;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  margin: 0 0 16px 0;
+}
+
+.planos-public-wrapper .planos-hero-subtitle {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #64748b;
+  max-width: 680px;
+  margin: 0 auto 30px auto;
+}
+
+/* ==========================================================================
+   LETREIRO INTERATIVO ROTATIVO (MARQUEE TICKER)
+   ========================================================================== */
+
+.planos-public-wrapper .planos-letreiro-container {
+  position: relative;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto 36px auto;
+  overflow: hidden;
+  padding: 6px 0;
+  display: flex;
+  align-items: center;
+  mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  -webkit-mask-image: linear-gradient(to right, transparent, black 8%, black 92%, transparent);
+  cursor: grab;
+}
+
+.planos-public-wrapper .planos-letreiro-container:active {
+  cursor: grabbing;
+}
+
+.planos-public-wrapper .planos-letreiro-track {
+  display: flex;
+  gap: 14px;
+  width: max-content;
+  animation: letreiroScroll 30s linear infinite;
+  will-change: transform;
+}
+
+/* Pausa interativa ao passar o mouse ou segurar com o dedo */
+.planos-public-wrapper .planos-letreiro-container:hover .planos-letreiro-track,
+.planos-public-wrapper .planos-letreiro-container:active .planos-letreiro-track {
+  animation-play-state: paused;
+}
+
+.planos-public-wrapper .planos-letreiro-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-shrink: 0;
+}
+
+.planos-public-wrapper .trust-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  padding: 8px 18px;
+  border-radius: 30px;
+  border: 1px solid #e2e8f0;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  white-space: nowrap;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+  user-select: none;
+}
+
+.planos-public-wrapper .trust-pill:hover {
+  transform: translateY(-2px);
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.planos-public-wrapper .trust-pill i {
+  color: #10b981;
+  font-size: 13px;
+}
+
+.planos-public-wrapper .trust-pill i.fa-bolt {
+  color: #c5a059;
+}
+
+.planos-public-wrapper .trust-pill i.fa-shield-alt {
+  color: #3b82f6;
+}
+
+.planos-public-wrapper .trust-pill i.fab {
+  color: #25d366;
+}
+
+.planos-public-wrapper .trust-pill i.fa-cloud {
+  color: #6366f1;
+}
+
+.planos-public-wrapper .trust-pill i.fa-lock {
+  color: #c5a059;
+}
+
+@keyframes letreiroScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+/* ==========================================================================
+   2. CARDS EM DESTAQUE (HERO CARDS)
+   ========================================================================== */
+
+.planos-public-wrapper .planos-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto 48px auto;
+  align-items: stretch;
+}
+
+.planos-public-wrapper .plano-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 36px 28px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.planos-public-wrapper .plano-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.08);
+}
+
+/* Destaque VIP (Premium) */
+.planos-public-wrapper .plano-card.is-destaque {
+  border: 2px solid #c5a059;
+  box-shadow: 0 16px 40px rgba(197, 160, 89, 0.16);
+  transform: scale(1.02);
+}
+
+.planos-public-wrapper .plano-card.is-destaque:hover {
+  transform: scale(1.02) translateY(-4px);
+  box-shadow: 0 22px 48px rgba(197, 160, 89, 0.24);
+}
+
+.planos-public-wrapper .plano-card-ribbon {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%);
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 6px 18px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.planos-public-wrapper .plano-card-header {
+  margin-bottom: 20px;
+}
+
+.planos-public-wrapper .plano-card-tipo {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  display: block;
+  margin-bottom: 6px;
+}
+
+.planos-public-wrapper .plano-card.is-destaque .plano-card-tipo {
+  color: #c5a059;
+}
+
+.planos-public-wrapper .plano-card-nome {
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 10px 0;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+}
+
+.planos-public-wrapper .plano-card-desc {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #64748b;
+  margin: 0;
+  min-height: 40px;
+}
+
+.planos-public-wrapper .plano-card-preco-box {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-bottom: 24px;
+  padding: 16px 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.planos-public-wrapper .plano-card-preco-box .moeda {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.planos-public-wrapper .plano-card-preco-box .valor {
+  font-size: 46px;
+  font-weight: 800;
+  color: #0f172a;
+  line-height: 1;
+  letter-spacing: -1.5px;
+}
+
+.planos-public-wrapper .plano-card-preco-box .periodo {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+/* Botões de Ação do Card */
+.planos-public-wrapper .btn-card-assinar {
+  width: 100%;
+  padding: 14px 20px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  border: 1px solid #0f172a;
+  background: #0f172a;
+  color: #ffffff;
+  margin-bottom: 0;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+}
+
+.planos-public-wrapper .btn-card-assinar:hover {
+  background: #1e293b;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.25);
+}
+
+/* Botão do Plano Destaque */
+.planos-public-wrapper .btn-card-assinar.btn-destaque {
+  background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%);
+  color: #0f172a;
+  border: none;
+  box-shadow: 0 6px 20px rgba(197, 160, 89, 0.35);
+}
+
+.planos-public-wrapper .btn-card-assinar.btn-destaque:hover {
+  background: linear-gradient(135deg, #b8914b 0%, #d4a859 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(197, 160, 89, 0.5);
+}
+
+/* Elementos exclusivos do modo mobile (ocultos no desktop) */
+.planos-public-wrapper .planos-mobile-nav-bar,
+.planos-public-wrapper .plano-mobile-features-box {
+  display: none;
+}
+
+.planos-public-wrapper .plano-card-divisor {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #94a3b8;
+  margin-bottom: 16px;
+}
+
+.planos-public-wrapper .plano-card-beneficios {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.planos-public-wrapper .plano-card-beneficios li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+}
+
+.planos-public-wrapper .plano-card-beneficios li i {
+  color: #10b981;
+  font-size: 14px;
+  width: 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.planos-public-wrapper .plano-card.is-destaque .plano-card-beneficios li i {
+  color: #c5a059;
+}
+
+/* ==========================================================================
+   3. TOGGLE E COMPARATIVO DETALHADO (MATRIZ)
+   ========================================================================== */
+
+.planos-public-wrapper .toggle-matriz-wrapper {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.planos-public-wrapper .btn-toggle-matriz {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 24px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 30px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+}
+
+.planos-public-wrapper .btn-toggle-matriz:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
+}
+
+.planos-public-wrapper .btn-toggle-matriz i:first-child {
+  color: #c5a059;
+}
+
+.planos-public-wrapper .matrix-public-container {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  max-width: 1180px;
+  margin: 0 auto 60px auto;
+  overflow: hidden;
+}
+
+.planos-public-wrapper .matrix-header-info {
+  padding: 24px 30px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.planos-public-wrapper .matrix-header-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.planos-public-wrapper .matrix-header-info h3 i {
+  color: #c5a059;
+}
+
+.planos-public-wrapper .matrix-header-info p {
+  margin: 0;
+  font-size: 13.5px;
+  color: #64748b;
+}
+
+.planos-public-wrapper .matrix-table-scroll {
+  overflow-x: auto;
+}
+
+.planos-public-wrapper .matrix-public-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.planos-public-wrapper .th-recursos-public {
+  background: #0f172a;
+  color: #ffffff;
+  text-align: left;
+  padding: 24px 28px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  vertical-align: middle;
+  width: 320px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.planos-public-wrapper .th-plano-public {
+  padding: 24px 20px;
+  border-bottom: 2px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  background: #ffffff;
+  position: relative;
+  vertical-align: top;
+  min-width: 220px;
+}
+
+.planos-public-wrapper .th-plano-public.is-destaque {
+  background: rgba(197, 160, 89, 0.04);
+}
+
+.planos-public-wrapper .th-plano-public h4 {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 6px 0;
+  text-transform: uppercase;
+}
+
+.planos-public-wrapper .th-preco-mini {
+  font-size: 15px;
+  color: #0f172a;
+  margin-bottom: 12px;
+}
+
+.planos-public-wrapper .th-preco-mini strong {
+  font-size: 18px;
+  font-weight: 800;
+}
+
+.planos-public-wrapper .th-preco-mini span {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+.planos-public-wrapper .btn-tabela-assinar {
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.planos-public-wrapper .th-plano-public.is-destaque .btn-tabela-assinar {
+  background: #c5a059;
+  color: #0f172a;
+  font-weight: 800;
+}
+
+.planos-public-wrapper .btn-tabela-assinar:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+/* Linha de Categoria Separadora */
+.planos-public-wrapper .tr-categoria-header td {
+  background: #f1f5f9;
+  padding: 14px 28px;
+  text-align: left;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.planos-public-wrapper .categoria-titulo {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.planos-public-wrapper .tr-item-recurso:hover {
+  background: #f8fafc;
+}
+
+.planos-public-wrapper .td-recurso-nome {
+  text-align: left;
+  padding: 16px 28px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #e2e8f0;
+}
+
+.planos-public-wrapper .td-check-public {
+  padding: 16px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f8fafc;
+  vertical-align: middle;
+}
+
+.planos-public-wrapper .td-valor-numerico {
+  font-size: 14px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.planos-public-wrapper .badge-check-sim {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+  font-size: 12px;
+}
+
+.planos-public-wrapper .badge-check-nao {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  color: #cbd5e1;
+  font-size: 12px;
+}
+
+/* ==========================================================================
+   4. FAQ ACCORDION
+   ========================================================================== */
+
+.planos-public-wrapper .planos-faq-section {
+  max-width: 860px;
+  margin: 0 auto 60px auto;
+}
+
+.planos-public-wrapper .faq-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.planos-public-wrapper .faq-badge {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  color: #c5a059;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+
+.planos-public-wrapper .faq-header h2 {
+  font-size: 28px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0 0 8px 0;
+  letter-spacing: -0.5px;
+}
+
+.planos-public-wrapper .faq-header p {
+  color: #64748b;
+  font-size: 15px;
+  margin: 0;
+}
+
+.planos-public-wrapper .faq-accordion-grid {
+  display: flex;
+  flex-direction: column;
+  background: #ffffff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  gap: 0;
+}
+
+.planos-public-wrapper .faq-card {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #f1f5f9;
+  border-radius: 0;
+  padding: 13px 18px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: none;
+}
+
+.planos-public-wrapper .faq-card:last-child {
+  border-bottom: none;
+}
+
+.planos-public-wrapper .faq-card:hover {
+  background: #f8fafc;
+  box-shadow: none;
+}
+
+.planos-public-wrapper .faq-card.aberto {
+  background: #fcfdfd;
+  box-shadow: none;
+}
+
+.planos-public-wrapper .faq-question {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.planos-public-wrapper .faq-question h4 {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #1e293b;
+  line-height: 1.35;
+}
+
+.planos-public-wrapper .faq-icon {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9.5px;
+  flex-shrink: 0;
+  transition: all 0.2s ease;
+}
+
+.planos-public-wrapper .faq-card.aberto .faq-icon {
+  background: #c5a059;
+  color: #ffffff;
+}
+
+.planos-public-wrapper .faq-answer {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.planos-public-wrapper .faq-answer p {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #475569;
+}
+
+/* ==========================================================================
+   5. BANNER FINAL DE ATENDIMENTO
+   ========================================================================== */
+
+.planos-public-wrapper .planos-cta-banner {
+  max-width: 1180px;
+  margin: 0 auto;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+  border-radius: 20px;
+  padding: 36px 40px;
+  color: #ffffff;
+  border-bottom: 3px solid #c5a059;
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.15);
+}
+
+.planos-public-wrapper .cta-banner-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  flex-wrap: wrap;
+}
+
+.planos-public-wrapper .cta-banner-text h3 {
+  margin: 0 0 6px 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #ffffff;
+}
+
+.planos-public-wrapper .cta-banner-text p {
+  margin: 0;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+.planos-public-wrapper .btn-cta-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  background: #25d366;
+  color: #ffffff;
+  text-decoration: none;
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 800;
+  transition: all 0.25s ease;
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.35);
+  flex-shrink: 0;
+}
+
+.planos-public-wrapper .btn-cta-whatsapp:hover {
+  background: #20ba59;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 22px rgba(37, 211, 102, 0.45);
+}
+
+.planos-public-wrapper .btn-cta-whatsapp i {
+  font-size: 18px;
+}
+
+/* ==========================================================================
+   6. LOADING SCREEN
+   ========================================================================== */
+
+.planos-loading-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  gap: 16px;
+  color: #64748b;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.planos-loading-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #c5a059;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   7. RESPONSIVIDADE (TABLETS E CELULARES)
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .planos-public-wrapper .planos-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .planos-public-wrapper .plano-card.is-destaque {
+    transform: none;
+  }
+  .planos-public-wrapper .plano-card.is-destaque:hover {
+    transform: translateY(-4px);
+  }
+}
+
+@media (max-width: 768px) {
+  .planos-public-wrapper {
+    padding: 20px 14px 60px 14px;
+  }
+
+  .planos-public-wrapper .btn-voltar-painel {
+    position: static;
+    margin-bottom: 20px;
+    display: inline-flex;
+    font-size: 13px;
+    padding: 8px 14px;
+  }
+
+  .planos-public-wrapper .planos-hero {
+    margin-bottom: 30px;
+  }
+
+  .planos-public-wrapper .planos-hero-badge {
+    font-size: 10px;
+    padding: 5px 12px;
+  }
+
+  .planos-public-wrapper .planos-hero-title {
+    font-size: 24px;
+    line-height: 1.3;
+    margin-bottom: 12px;
+  }
+
+  .planos-public-wrapper .planos-hero-subtitle {
+    font-size: 13.5px;
+    line-height: 1.55;
+    margin-bottom: 20px;
+  }
+
+  .planos-public-wrapper .planos-letreiro-container {
+    margin-bottom: 24px;
+    padding: 4px 0;
+  }
+
+  .planos-public-wrapper .planos-letreiro-track {
+    animation-duration: 22s;
+  }
+
+  .planos-public-wrapper .trust-pill {
+    padding: 7px 14px;
+    font-size: 11.5px;
+  }
+
+  /* Barra de Navegação e Indicadores (Dots) NO TOPO (EM CIMA DO VALOR) */
+  .planos-public-wrapper .planos-mobile-nav-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 12px;
+  }
+
+  .planos-public-wrapper .btn-arrow-mobile {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
     color: #0f172a;
-    border: none;
-    border-radius: 8px;
-    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
     cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+    transition: all 0.2s ease;
+  }
+
+  .planos-public-wrapper .btn-arrow-mobile:disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+  }
+
+  .planos-public-wrapper .mobile-dots-wrapper {
     display: flex;
     align-items: center;
     gap: 8px;
-    transition: 0.2s;
-}
+  }
 
-.btn-voltar-painel:hover {
+  .planos-public-wrapper .dot-indicator {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
     background: #cbd5e1;
-}
+    border: none;
+    cursor: pointer;
+    transition: all 0.25s ease;
+    padding: 0;
+  }
 
-.planos-public-header h1 {
-    font-size: 32px; 
-    color: #0f172a; 
-    font-weight: 800;
-}
+  .planos-public-wrapper .dot-indicator.active {
+    width: 22px;
+    border-radius: 10px;
+    background: #c5a059;
+  }
 
-.planos-public-header p {
-    color: #64748b; 
-    font-size: 16px; 
-    margin-top: 10px;
-}
-
-.matrix-public-container {
+  /* Grid de Cards no Mobile: CARROSSEL DESLIZANTE (1 CARD LIMPO POR VEZ) */
+  .planos-public-wrapper .planos-cards-grid {
+    display: flex;
+    flex-direction: row;
     overflow-x: auto;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
+    scroll-snap-type: x mandatory;
+    gap: 16px;
+    padding: 4px 0 10px 0;
+    margin: 0;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+    width: 100%;
+  }
+
+  .planos-public-wrapper .planos-cards-grid::-webkit-scrollbar {
+    display: none;
+  }
+
+  .planos-public-wrapper .plano-card {
+    flex: 0 0 100%;
+    min-width: 100%;
+    max-width: 100%;
+    scroll-snap-align: center;
+    scroll-snap-stop: always;
+    padding: 24px 20px 20px 20px;
+    border-radius: 18px;
+    box-sizing: border-box;
+  }
+
+  .planos-public-wrapper .plano-card.is-destaque {
+    transform: none;
+  }
+
+  .planos-public-wrapper .plano-card.is-active-mobile {
+    border-color: #c5a059;
+    box-shadow: 0 12px 30px rgba(197, 160, 89, 0.18);
+  }
+
+  .planos-public-wrapper .plano-card-tipo {
+    font-size: 10.5px;
+  }
+
+  .planos-public-wrapper .plano-card-nome {
+    font-size: 22px;
+  }
+
+  .planos-public-wrapper .plano-card-preco-box {
+    margin-bottom: 16px;
+  }
+
+  .planos-public-wrapper .plano-card-preco-box .valor {
+    font-size: 38px;
+  }
+
+  .planos-public-wrapper .btn-card-assinar {
+    padding: 13px 20px;
+    font-size: 14px;
+  }
+
+  /* DETALHES COERENTES ABAIXO DO PLANO ATIVO NO MOBILE */
+  .planos-public-wrapper .plano-mobile-features-box {
+    display: block;
+    background: #ffffff;
+    border-radius: 18px;
     border: 1px solid #e2e8f0;
-    max-width: 1200px;
-    margin: 0 auto;
-}
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+    padding: 16px 16px;
+    margin-top: 4px;
+    margin-bottom: 28px;
+  }
 
-.matrix-public-table {
-    width: 100%; 
-    border-collapse: collapse; 
+  .planos-public-wrapper .mobile-features-header {
     text-align: center;
-}
+    padding-bottom: 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #f1f5f9;
+  }
 
-.th-recursos-public {
-    background: #0f172a;
-    color: white;
-    text-align: left;
-    padding: 20px;
+  .planos-public-wrapper .features-badge-tipo {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 9.5px;
+    font-weight: 800;
+    letter-spacing: 0.8px;
+    color: #c5a059;
+    text-transform: uppercase;
+    margin-bottom: 4px;
+  }
+
+  .planos-public-wrapper .mobile-features-header h4 {
+    margin: 0;
+    font-size: 15.5px;
+    font-weight: 800;
+    color: #0f172a;
+  }
+
+  .planos-public-wrapper .mobile-features-header h4 strong {
+    color: #c5a059;
+  }
+
+  .planos-public-wrapper .mobile-cat-group {
+    margin-bottom: 20px;
+  }
+
+  .planos-public-wrapper .mobile-cat-header {
+    background: #f8fafc;
+    border-radius: 8px;
+    padding: 8px 12px;
     font-size: 12px;
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-right: 1px solid #e2e8f0;
-    vertical-align: bottom;
-    width: 250px;
-}
-
-.th-plano-public {
-    padding: 30px 20px;
-    border-bottom: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
-    background: #ffffff;
-    position: relative;
-    vertical-align: top;
-    min-width: 250px;
-}
-
-.th-plano-public h3 {
-    font-size: 20px; 
-    font-weight: 800; 
-    color: #0f172a; 
-    margin-bottom: 15px; 
-    text-transform: uppercase;
-}
-
-.tag-destaque {
-    position: absolute; 
-    top: 0; 
-    left: 50%; 
-    transform: translateX(-50%);
-    background: #c5a059; 
-    color: white; 
-    font-size: 10px; 
-    font-weight: 800;
-    padding: 4px 12px; 
-    border-radius: 0 0 8px 8px; 
-    letter-spacing: 1px;
-}
-
-.preco-box {
-    display: flex; 
-    justify-content: center; 
-    align-items: baseline; 
-    gap: 2px; 
-    margin-bottom: 20px;
-}
-
-.preco-box .moeda { 
-    font-size: 16px; 
-    font-weight: 800; 
-    color: #0f172a; 
-    transform: translateY(-2px); 
-}
-
-.preco-box .valor { 
-    font-size: 42px; 
-    font-weight: 800; 
-    color: #0f172a; 
-    letter-spacing: -1px; 
-}
-
-.preco-box .periodo { 
-    font-size: 14px; 
-    color: #94a3b8; 
-    font-weight: 600; 
-}
-
-.btn-selecionar {
-    background: #0f172a; 
-    color: white; 
-    border: none; 
-    padding: 12px 20px; 
-    width: 100%;
-    border-radius: 8px; 
-    font-weight: 700; 
-    cursor: pointer; 
-    transition: 0.3s;
-}
-
-.btn-selecionar:hover { 
-    background: #c5a059; 
-}
-
-.td-recurso-nome {
-    text-align: left; 
-    padding: 18px 20px; 
-    font-size: 15px; 
-    font-weight: 600; 
     color: #334155;
-    border-bottom: 1px solid #f1f5f9; 
-    border-right: 1px solid #e2e8f0;
+    margin-bottom: 10px;
+    border-left: 3px solid #c5a059;
+  }
+
+  .planos-public-wrapper .mobile-cat-items-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0 4px;
+  }
+
+  .planos-public-wrapper .mobile-feature-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 6px 0;
+    font-size: 12.5px;
+    color: #334155;
+    border-bottom: 1px dashed #f1f5f9;
+  }
+
+  .planos-public-wrapper .mobile-feature-row i.icon-ok {
+    color: #10b981;
+    font-size: 14px;
+    flex-shrink: 0;
+  }
+
+  .planos-public-wrapper .mobile-feature-row i.icon-no {
+    color: #cbd5e1;
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .planos-public-wrapper .mobile-feature-row .feature-title {
+    flex: 1;
+    font-weight: 600;
+  }
+
+  .planos-public-wrapper .mobile-feature-row .feature-limit-tag {
+    font-size: 11px;
+    font-weight: 800;
+    background: #eff6ff;
+    color: #2563eb;
+    padding: 3px 8px;
+    border-radius: 6px;
+  }
+
+  .planos-public-wrapper .mobile-feature-row .feature-status-tag {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
+
+  .planos-public-wrapper .mobile-feature-row .feature-status-tag.ok {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+  }
+
+  .planos-public-wrapper .mobile-feature-row .feature-status-tag.no {
+    background: #f1f5f9;
+    color: #94a3b8;
+  }
+
+  .planos-public-wrapper .mobile-features-footer {
+    margin-top: 24px;
+    padding-top: 18px;
+    border-top: 1px solid #f1f5f9;
+  }
+
+  .planos-public-wrapper .btn-mobile-assinar-direto {
+    width: 100%;
+    padding: 13px 20px;
+    background: #0f172a;
+    color: #ffffff;
+    border: none;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 13.5px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.2);
+    transition: all 0.2s ease;
+  }
+
+  .planos-public-wrapper .btn-mobile-assinar-direto:hover {
+    background: #1e293b;
+    transform: translateY(-1px);
+  }
+
+  /* Oculta a tabela geral e seu botão no celular para eliminar a duplicação */
+  .planos-public-wrapper .toggle-matriz-wrapper,
+  .planos-public-wrapper .matrix-public-container {
+    display: none !important;
+  }
+
+  /* FAQ Compacto em Gaveta Única no Mobile */
+  .planos-public-wrapper .planos-faq-section {
+    margin-bottom: 32px;
+  }
+
+  .planos-public-wrapper .faq-header {
+    margin-bottom: 18px;
+  }
+
+  .planos-public-wrapper .faq-header h2 {
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .planos-public-wrapper .faq-header p {
+    font-size: 12px;
+  }
+
+  .planos-public-wrapper .faq-accordion-grid {
+    border-radius: 14px;
+  }
+
+  .planos-public-wrapper .faq-card {
+    padding: 11px 13px;
+  }
+
+  .planos-public-wrapper .faq-question h4 {
+    font-size: 12.5px;
+    line-height: 1.3;
+  }
+
+  .planos-public-wrapper .faq-icon {
+    width: 20px;
+    height: 20px;
+    font-size: 8.5px;
+  }
+
+  .planos-public-wrapper .faq-answer p {
+    font-size: 11.5px;
+    line-height: 1.45;
+  }
+
+  /* Banner WhatsApp */
+  .planos-public-wrapper .planos-cta-banner {
+    padding: 24px 20px;
+    border-radius: 16px;
+  }
+
+  .planos-public-wrapper .cta-banner-content {
+    flex-direction: column;
+    text-align: center;
+    gap: 18px;
+  }
+
+  .planos-public-wrapper .cta-banner-text h3 {
+    font-size: 18px;
+  }
+
+  .planos-public-wrapper .cta-banner-text p {
+    font-size: 13px;
+  }
+
+  .planos-public-wrapper .btn-cta-whatsapp {
+    width: 100%;
+    justify-content: center;
+    padding: 12px 20px;
+    font-size: 13.5px;
+  }
 }
 
-.td-check-public {
-    padding: 18px; 
-    border-bottom: 1px solid #f1f5f9; 
-    border-right: 1px solid #f8fafc;
+@media (max-width: 480px) {
+  .planos-public-wrapper {
+    padding: 16px 10px 50px 10px;
+  }
+
+  .planos-public-wrapper .planos-hero-title {
+    font-size: 21px;
+  }
+
+  .planos-public-wrapper .plano-card-preco-box .valor {
+    font-size: 34px;
+  }
 }
 
-.check-sim { 
-    color: #10b981; 
-    font-size: 20px; 
+/* ==========================================================================
+   🛡️ BLINDAGEM DE ALTO CONTRASTE NO MODO CLARO (LIGHT THEME PROTECTION)
+   Garante legibilidade absoluta e impede que títulos fiquem brancos/opacos
+   ========================================================================== */
+:root:not([data-theme='dark']) .planos-public-wrapper .planos-hero-title,
+[data-theme='light'] .planos-public-wrapper .planos-hero-title {
+  color: #0f172a !important;
 }
 
-.check-nao { 
-    color: #e2e8f0; 
-    font-size: 20px; 
+:root:not([data-theme='dark']) .planos-public-wrapper .planos-hero-subtitle,
+[data-theme='light'] .planos-public-wrapper .planos-hero-subtitle {
+  color: #475569 !important;
+}
+
+:root:not([data-theme='dark']) .planos-public-wrapper .plano-card-nome,
+[data-theme='light'] .planos-public-wrapper .plano-card-nome {
+  color: #0f172a !important;
+}
+
+:root:not([data-theme='dark']) .planos-public-wrapper .mobile-features-header h4,
+[data-theme='light'] .planos-public-wrapper .mobile-features-header h4 {
+  color: #0f172a !important;
+}
+
+:root:not([data-theme='dark']) .planos-public-wrapper .btn-voltar-painel,
+[data-theme='light'] .planos-public-wrapper .btn-voltar-painel {
+  background: #ffffff !important;
+  color: #1e293b !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+:root:not([data-theme='dark']) .planos-public-wrapper .trust-pill,
+[data-theme='light'] .planos-public-wrapper .trust-pill {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+:root:not([data-theme='dark']) .planos-public-wrapper .plano-card-preco-box .moeda,
+:root:not([data-theme='dark']) .planos-public-wrapper .plano-card-preco-box .valor,
+[data-theme='light'] .planos-public-wrapper .plano-card-preco-box .moeda,
+[data-theme='light'] .planos-public-wrapper .plano-card-preco-box .valor {
+  color: #0f172a !important;
+}
+
+
+/* ==========================================================================
+   🌙 MODO ESCURO EXECUTIVO VIP (SAAS LUXURY DARK THEME)
+   Ativado automaticamente quando o sistema está com tema escuro
+   Elimina qualquer sensação de tela desbotada / opaca
+   ========================================================================== */
+[data-theme^='dark'] .planos-public-wrapper {
+  background-color: var(--bg-main, #0b0f19) !important;
+  color: #f1f5f9 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .btn-voltar-painel {
+  background: #111827 !important;
+  color: #f8fafc !important;
+  border: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .btn-voltar-painel:hover {
+  background: #1e293b !important;
+  border-color: #c5a059 !important;
+  color: #c5a059 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .planos-hero-badge {
+  background: rgba(197, 160, 89, 0.16) !important;
+  color: #fbbf24 !important;
+  border: 1px solid rgba(197, 160, 89, 0.4) !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .planos-hero-title {
+  color: #ffffff !important;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+[data-theme^='dark'] .planos-public-wrapper .planos-hero-subtitle {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .trust-pill {
+  background: #111827 !important;
+  color: #cbd5e1 !important;
+  border: 1px solid #1f293d !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35) !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .trust-pill:hover {
+  background: #162032 !important;
+  border-color: #334155 !important;
+  color: #ffffff !important;
+}
+
+/* CARDS NO MODO ESCURO */
+[data-theme^='dark'] .planos-public-wrapper .plano-card {
+  background: #111827 !important;
+  border: 1px solid #1f293d !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card:hover {
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.6) !important;
+  border-color: #334155 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card.is-destaque {
+  border: 2px solid #c5a059 !important;
+  box-shadow: 0 16px 40px rgba(197, 160, 89, 0.18) !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card.is-active-mobile {
+  border-color: #c5a059 !important;
+  box-shadow: 0 12px 30px rgba(197, 160, 89, 0.25) !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-tipo {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card.is-destaque .plano-card-tipo {
+  color: #fbbf24 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-nome {
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-desc {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-preco-box {
+  border-top: 1px solid #1f293d !important;
+  border-bottom: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-preco-box .moeda,
+[data-theme^='dark'] .planos-public-wrapper .plano-card-preco-box .valor {
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-preco-box .periodo {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-divisor {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .plano-card-beneficios li {
+  color: #cbd5e1 !important;
+}
+
+/* NAVEGAÇÃO MOBILE NO MODO ESCURO */
+[data-theme^='dark'] .planos-public-wrapper .btn-arrow-mobile {
+  background: #111827 !important;
+  border: 1px solid #1f293d !important;
+  color: #f8fafc !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .btn-arrow-mobile:hover:not(:disabled) {
+  background: #1e293b !important;
+  border-color: #c5a059 !important;
+  color: #c5a059 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .dot-indicator {
+  background: #334155 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .dot-indicator.active {
+  background: #c5a059 !important;
+}
+
+/* BOX DE RECURSOS MOBILE NO MODO ESCURO */
+[data-theme^='dark'] .planos-public-wrapper .plano-mobile-features-box {
+  background: #111827 !important;
+  border: 1px solid #1f293d !important;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3) !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-features-header {
+  border-bottom: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .features-badge-tipo {
+  color: #fbbf24 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-features-header h4 {
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-cat-header {
+  background: #162032 !important;
+  color: #f8fafc !important;
+  border-left: 3px solid #c5a059 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-feature-row {
+  color: #cbd5e1 !important;
+  border-bottom: 1px dashed #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-feature-row .feature-title {
+  color: #cbd5e1 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-feature-row .feature-limit-tag {
+  background: #1e293b !important;
+  color: #60a5fa !important;
+  border: 1px solid #2563eb !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-feature-row .feature-status-tag.ok {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #34d399 !important;
+  border: 1px solid rgba(16, 185, 129, 0.3) !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .mobile-feature-row .feature-status-tag.no {
+  background: rgba(239, 68, 68, 0.12) !important;
+  color: #f87171 !important;
+  border: 1px solid rgba(239, 68, 68, 0.25) !important;
+}
+
+/* TOGGLE MATRIZ & MATRIZ NO MODO ESCURO */
+[data-theme^='dark'] .planos-public-wrapper .btn-toggle-matriz {
+  background: #111827 !important;
+  border: 1px solid #1f293d !important;
+  color: #f8fafc !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .btn-toggle-matriz:hover {
+  background: #162032 !important;
+  border-color: #c5a059 !important;
+  color: #fbbf24 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .matrix-public-container {
+  background: #111827 !important;
+  border: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .matrix-header-info {
+  border-bottom: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .matrix-header-info h3 {
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .matrix-header-info p {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .matrix-public-table th {
+  background: #0d1322 !important;
+  color: #f8fafc !important;
+  border-bottom: 2px solid #1f293d !important;
+  border-right: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .matrix-public-table td {
+  border-bottom: 1px solid #1f293d !important;
+  border-right: 1px solid #1f293d !important;
+  color: #cbd5e1 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .tr-categoria-header td {
+  background: #162032 !important;
+  color: #fbbf24 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .td-recurso-nome span {
+  color: #e2e8f0 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .td-valor-numerico {
+  color: #ffffff !important;
+}
+
+/* FAQ NO MODO ESCURO */
+[data-theme^='dark'] .planos-public-wrapper .faq-header h2 {
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .faq-header p {
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .faq-card {
+  background: #111827 !important;
+  border: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .faq-question h4 {
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .faq-icon {
+  background: #1e293b !important;
+  color: #94a3b8 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .faq-card.aberto {
+  border-color: #c5a059 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .faq-card.aberto .faq-icon {
+  background: #c5a059 !important;
+  color: #090d16 !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .faq-answer p {
+  color: #94a3b8 !important;
+}
+
+/* BANNER FINAL VIP NO MODO ESCURO */
+[data-theme^='dark'] .planos-public-wrapper .planos-cta-banner {
+  background: linear-gradient(135deg, #111827 0%, #162032 100%) !important;
+  border: 1px solid #1f293d !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .cta-banner-text h3 {
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .planos-public-wrapper .cta-banner-text p {
+  color: #94a3b8 !important;
 }

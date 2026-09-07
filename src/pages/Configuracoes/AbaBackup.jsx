@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { db } from '../../firebaseConfig';
 import { collection, query, where, getDocs, doc, getDoc, writeBatch, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
+import AbaLGPD from './AbaLGPD';
 
-const AbaBackup = ({ tenantId, usuarioLogado, registrarLog }) => {
+const AbaBackup = ({ tenantId, usuarioLogado, registrarLog, configEmpresa = {} }) => {
+  const [secaoAtiva, setSecaoAtiva] = useState('backup'); // 'backup' ou 'lgpd'
   const [loadingStats, setLoadingStats] = useState(true);
   const [gerandoBackup, setGerandoBackup] = useState(false);
   const [progresso, setProgresso] = useState('');
@@ -82,6 +84,7 @@ const AbaBackup = ({ tenantId, usuarioLogado, registrarLog }) => {
         'TELEFONE / WHATSAPP': 'celular',
         'E-MAIL': 'email',
         'ENDEREÇO COMPLETO': 'logradouro',
+        'COMPLEMENTO': 'complemento',
         'ESTADO (UF)': 'uf',
         'Nº CONTRATO / PEDIDO': 'numeroContrato',
         'STATUS DO PEDIDO': 'status',
@@ -585,22 +588,53 @@ const AbaBackup = ({ tenantId, usuarioLogado, registrarLog }) => {
   return (
     <div className="backup-container fade-in">
       
-      {/* HEADER LGPD & SEGURANÇA */}
-      <div className="backup-hero-card">
-        <div className="hero-content">
-          <div className="hero-badge">
-            <i className="fas fa-shield-alt"></i> Conformidade LGPD • Art. 18, V
-          </div>
-          <h2>Backup Completo e Portabilidade dos Dados</h2>
-          <p>
-            Baixe a qualquer momento uma cópia integral de 100% da base de dados da sua empresa. 
-            Você possui soberania total sobre seus dados de clientes, acervo de estoque, contratos e finanças.
-          </p>
-        </div>
-        <div className="hero-icon-box">
+      {/* 🧭 SELETOR DE SUB-ABA: BACKUP OU GOVERNANÇA LGPD */}
+      <div className="backup-subnav-pills">
+        <button 
+          type="button" 
+          className={`btn-subnav-pill ${secaoAtiva === 'backup' ? 'active' : ''}`}
+          onClick={() => setSecaoAtiva('backup')}
+        >
           <i className="fas fa-database"></i>
-        </div>
+          <span>Backup & Restauração</span>
+        </button>
+
+        <button 
+          type="button" 
+          className={`btn-subnav-pill ${secaoAtiva === 'lgpd' ? 'active' : ''}`}
+          onClick={() => setSecaoAtiva('lgpd')}
+        >
+          <i className="fas fa-shield-halved"></i>
+          <span>Governança & LGPD</span>
+          <span className="pill-status-dot">Oficial</span>
+        </button>
       </div>
+
+      {secaoAtiva === 'lgpd' ? (
+        <AbaLGPD 
+          tenantId={tenantId}
+          usuarioLogado={usuarioLogado}
+          registrarLog={registrarLog}
+          configEmpresa={configEmpresa}
+        />
+      ) : (
+        <>
+          {/* HEADER BACKUP & SEGURANÇA */}
+          <div className="backup-hero-card">
+            <div className="hero-content">
+              <div className="hero-badge">
+                <i className="fas fa-server"></i> Soberania de Dados & Continuidade do Negócio
+              </div>
+              <h2>Backup Completo e Restauração dos Dados</h2>
+              <p>
+                Baixe a qualquer momento uma cópia integral de 100% da base da sua empresa (Acervo, Locações, Finanças e Estoque). 
+                Você possui soberania total sobre seus dados para salvaguarda em HD externo ou migração.
+              </p>
+            </div>
+            <div className="hero-icon-box">
+              <i className="fas fa-database"></i>
+            </div>
+          </div>
 
       {/* BOTÕES DE BACKUP E RESTAURAÇÃO INTEGRAL */}
       <div className="backup-actions-row">
@@ -899,6 +933,9 @@ const AbaBackup = ({ tenantId, usuarioLogado, registrarLog }) => {
             </div>
           </div>
         </div>
+      )}
+
+        </>
       )}
 
     </div>

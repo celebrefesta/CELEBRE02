@@ -4,6 +4,7 @@ import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../firebaseConfig';
 import { aplicarCorDestaqueGlobal } from '../utils/themeUtils';
+import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
 import SininhoNotificacoes from './SininhoNotificacoes';
 import './Topbar.css';
 
@@ -14,6 +15,7 @@ const Topbar = () => {
   const [usuario, setUsuario] = useState(null); 
   const [userAuthObj, setUserAuthObj] = useState(null);
   const [isAdminConta, setIsAdminConta] = useState(false);
+  const [isContaExpirada, setIsContaExpirada] = useState(false);
   const menuRef = useRef(null);
   const temaRef = useRef(null);
 
@@ -93,8 +95,36 @@ const Topbar = () => {
           
           if (userSnap.exists()) {
             setIsAdminConta(true); 
+
+            // Checagem de expiração da conta
+            const emailAdmin = "celebrefesta25@gmail.com";
+            if (user.email !== emailAdmin) {
+              const uData = userSnap.data();
+              const tenantId = uData.tenantId || user.uid;
+              let empresaData = uData;
+              if (tenantId !== user.uid) {
+                const empSnap = await getDoc(doc(db, 'usuarios', tenantId));
+                if (empSnap.exists()) empresaData = empSnap.data();
+              }
+
+              const assinaturaAtiva = 
+                empresaData.assinaturaAtiva === true || 
+                empresaData.statusAssinatura === 'ativa' || 
+                empresaData.plano === 'pago' || 
+                empresaData.statusPagamentoVulso === 'pago';
+
+              if (!assinaturaAtiva) {
+                const infoT = calcularPeriodoTeste(empresaData);
+                setIsContaExpirada(!infoT.emTeste);
+              } else {
+                setIsContaExpirada(false);
+              }
+            } else {
+              setIsContaExpirada(false);
+            }
           } else {
             setIsAdminConta(false); 
+            setIsContaExpirada(false);
           }
         } catch (error) {
           console.error("Erro ao verificar nível de acesso do topbar:", error);
@@ -327,16 +357,44 @@ const Topbar = () => {
               </div>
               
               {/* 🔥 BOTAO CENTRAL DE CONFIGURAÇÕES (Para todos) 🔥 */}
-              <button className="dropdown-item" onClick={() => irPara('/configuracoes')}>
-                <i className="fas fa-cog"></i> 
-                Configurações
+              <button 
+                className="dropdown-item" 
+                onClick={() => {
+                  if (isContaExpirada) {
+                    alert("⏳ Seu período de teste expirou! Para acessar ou alterar as Configurações, assine um plano ativo no Celebre.");
+                    irPara('/planos');
+                    return;
+                  }
+                  irPara('/configuracoes');
+                }}
+                style={isContaExpirada ? { opacity: 0.7 } : {}}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                  <i className="fas fa-cog"></i> 
+                  <span>Configurações</span>
+                </div>
+                {isContaExpirada && <i className="fas fa-lock" style={{ color: '#ef4444', fontSize: '11px', marginLeft: 'auto' }}></i>}
               </button>
               
-              {/* 🔥 EQUPIE (Apenas para a Dona da Conta) 🔥 */}
+              {/* 🔥 EQUIPE (Apenas para a Dona da Conta) 🔥 */}
               {isAdminConta && (
-                <button className="dropdown-item" onClick={() => irPara('/usuarios')}>
-                  <i className="fas fa-users-cog"></i> 
-                  Equipe
+                <button 
+                  className="dropdown-item" 
+                  onClick={() => {
+                    if (isContaExpirada) {
+                      alert("⏳ Seu período de teste expirou! Para gerenciar sua Equipe e colaboradores, assine um plano ativo no Celebre.");
+                      irPara('/planos');
+                      return;
+                    }
+                    irPara('/usuarios');
+                  }}
+                  style={isContaExpirada ? { opacity: 0.7 } : {}}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flex: 1 }}>
+                    <i className="fas fa-users-cog"></i> 
+                    <span>Equipe</span>
+                  </div>
+                  {isContaExpirada && <i className="fas fa-lock" style={{ color: '#ef4444', fontSize: '11px', marginLeft: 'auto' }}></i>}
                 </button>
               )}
               

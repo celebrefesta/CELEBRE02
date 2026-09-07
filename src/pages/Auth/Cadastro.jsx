@@ -3,6 +3,7 @@ import { useNavigate, Link, useSearchParams } from 'react-router-dom'; // 🔥 I
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
+import { validarCPF, validarCNPJ } from '../../utils/validadores';
 import './Auth.css'; 
 
 import logoImage from '../../assets/LOGO_CELEBRE.png';
@@ -82,6 +83,22 @@ const Cadastro = () => {
     const docLimpo = documento.replace(/\D/g, "");
     if (!docLimpo) {
       return setErro('Por favor, preencha o seu CPF ou CNPJ.');
+    }
+
+    if (tipoPessoa === 'fisica') {
+      if (docLimpo.length !== 11) {
+        return setErro('CPF incompleto. O CPF deve conter exatamente 11 dígitos.');
+      }
+      if (!validarCPF(docLimpo)) {
+        return setErro('CPF inválido! Os dígitos informados não conferem com o cálculo oficial da Receita Federal.');
+      }
+    } else {
+      if (docLimpo.length !== 14) {
+        return setErro('CNPJ incompleto. O CNPJ deve conter exatamente 14 dígitos.');
+      }
+      if (!validarCNPJ(docLimpo)) {
+        return setErro('CNPJ inválido! Os dígitos informados não conferem com o cálculo oficial da Receita Federal.');
+      }
     }
 
     try {
@@ -232,7 +249,27 @@ const Cadastro = () => {
             </div>
 
             <div className="input-group">
-              <label>{tipoPessoa === 'fisica' ? 'CPF' : 'CNPJ'}</label>
+              <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span>{tipoPessoa === 'fisica' ? 'CPF' : 'CNPJ'}</span>
+                {(() => {
+                  const dLimpo = documento.replace(/\D/g, '');
+                  if (tipoPessoa === 'fisica' && dLimpo.length === 11) {
+                    return validarCPF(dLimpo) ? (
+                      <span style={{ color: '#16a34a', fontWeight: '700', fontSize: '0.72rem' }}>✓ CPF Válido</span>
+                    ) : (
+                      <span style={{ color: '#ef4444', fontWeight: '700', fontSize: '0.72rem' }}>✗ CPF Inválido</span>
+                    );
+                  }
+                  if (tipoPessoa === 'juridica' && dLimpo.length === 14) {
+                    return validarCNPJ(dLimpo) ? (
+                      <span style={{ color: '#16a34a', fontWeight: '700', fontSize: '0.72rem' }}>✓ CNPJ Válido</span>
+                    ) : (
+                      <span style={{ color: '#ef4444', fontWeight: '700', fontSize: '0.72rem' }}>✗ CNPJ Inválido</span>
+                    );
+                  }
+                  return null;
+                })()}
+              </label>
               <input type="text" placeholder={tipoPessoa === 'fisica' ? "000.000.000-00" : "00.000.000/0001-00"} value={documento} onChange={handleDocumentoChange} required />
             </div>
 

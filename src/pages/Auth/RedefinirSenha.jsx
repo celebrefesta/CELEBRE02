@@ -1,22 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation, Link } from 'react-router-dom';
 import { 
   getAuth, 
   verifyPasswordResetCode, 
   confirmPasswordReset,
   sendPasswordResetEmail
 } from 'firebase/auth';
+import { anonimizarEmail } from '../../utils/mascaras';
 import './Auth.css';
 import logoImage from '../../assets/LOGO_CELEBRE.png';
 
 const RedefinirSenha = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const location = useLocation();
   const auth = getAuth();
 
   const oobCode = searchParams.get('oobCode');
 
   // Modo Solicitação por E-mail (quando não tem oobCode)
+  const emailParam = (searchParams.get('email') || location.state?.email || '').trim();
+  const [emailReferencia, setEmailReferencia] = useState(emailParam);
   const [emailSolicitacao, setEmailSolicitacao] = useState('');
   const [enviandoEmail, setEnviandoEmail] = useState(false);
   const [emailEnviadoSucesso, setEmailEnviadoSucesso] = useState(false);
@@ -80,6 +84,35 @@ const RedefinirSenha = () => {
 
     setEnviandoEmail(true);
     try {
+      // 🚀 Tenta envio pelo Resend (entrega garantida na Caixa de Entrada sem cair no Spam)
+      try {
+        const URL_RESEND_REDEFINIR = 'https://enviarlinkredefinicaosenha-yfhz7t44jq-uc.a.run.app';
+        const resp = await fetch(URL_RESEND_REDEFINIR, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: emailLimpo })
+        });
+
+        if (resp.status === 404) {
+          const errData = await resp.json().catch(() => ({}));
+          let msgErro = errData.error || 'Nenhuma conta cadastrada foi encontrada com este e-mail no Celebre.';
+          if (emailLimpo.includes('@hotmail.com') || emailLimpo.includes('@outlook.com')) {
+            msgErro += ' (Dica: Se a sua conta foi criada pelo botão do Google, tente com o seu e-mail @gmail.com)';
+          }
+          setErroSolicitacao(msgErro);
+          setEmailReferencia('');
+          return;
+        }
+
+        if (resp.ok) {
+          setEmailEnviadoSucesso(true);
+          return;
+        }
+      } catch (errResend) {
+        console.warn("Função Resend em atualização, utilizando fallback nativo:", errResend);
+      }
+
+      // Fallback nativo do Firebase Auth
       auth.languageCode = 'pt-BR';
       await sendPasswordResetEmail(auth, emailLimpo);
       setEmailEnviadoSucesso(true);
@@ -179,39 +212,122 @@ const RedefinirSenha = () => {
             )}
 
             {emailEnviadoSucesso ? (
-              <div style={{ textAlign: 'center', padding: '10px 0' }}>
-                <div style={{ background: '#ecfdf5', border: '1.5px solid #6ee7b7', borderRadius: '16px', padding: '22px 18px', marginBottom: '20px', color: '#065f46' }}>
-                  <i className="fas fa-paper-plane" style={{ fontSize: '38px', marginBottom: '10px', display: 'block', color: '#10b981' }}></i>
-                  <strong style={{ fontSize: '16px', display: 'block', marginBottom: '6px' }}>Link Enviado!</strong>
-                  <p style={{ margin: 0, fontSize: '12.5px', lineHeight: '1.5' }}>
-                    Enviamos um e-mail para <strong>{emailSolicitacao}</strong> com as instruções para criar sua nova senha. Verifique sua caixa de entrada e spam.
+              <div style={{ textAlign: 'center', padding: '6px 0' }}>
+                <div style={{ background: '#f0fdf4', border: '1.5px solid #86efac', borderRadius: '18px', padding: '24px 20px', marginBottom: '18px', color: '#166534', textAlign: 'left' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '14px' }}>
+                    <div style={{ width: '42px', height: '42px', borderRadius: '50%', background: '#dcfce7', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                      <i className="fas fa-paper-plane" style={{ fontSize: '20px', color: '#16a34a' }}></i>
+                    </div>
+                    <div>
+                      <strong style={{ fontSize: '17px', color: '#14532d', display: 'block' }}>Solicitação Enviada!</strong>
+                      <span style={{ fontSize: '12px', color: '#15803d' }}>Instruções de redefinição encaminhadas</span>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#ffffff', border: '1.5px solid #bbf7d0', borderRadius: '12px', padding: '14px', marginBottom: '14px', textAlign: 'center', boxShadow: '0 2px 6px rgba(0,0,0,0.03)' }}>
+                    <span style={{ fontSize: '11px', color: '#64748b', fontWeight: 800, display: 'block', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '4px' }}>
+                      E-mail de Redefinição
+                    </span>
+                    <strong style={{ fontSize: '16.5px', color: '#0f172a', fontFamily: 'monospace', letterSpacing: '0.5px' }}>
+                      {anonimizarEmail(emailSolicitacao)}
+                    </strong>
+                  </div>
+
+                  <p style={{ margin: '0 0 12px 0', fontSize: '13px', lineHeight: '1.5', color: '#166534' }}>
+                    Se esta conta estiver cadastrada, enviamos um link seguro para o e-mail acima.
                   </p>
+
+                  <div style={{ background: 'rgba(255, 255, 255, 0.75)', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '12px 14px', fontSize: '12px', color: '#334155', lineHeight: '1.45' }}>
+                    <p style={{ margin: '0 0 6px 0', fontWeight: 700 }}>
+                      📬 Informações importantes:
+                    </p>
+                    <ul style={{ margin: 0, paddingLeft: '18px' }}>
+                      <li>Verifique a caixa de entrada e a pasta de <strong>Spam / Lixo Eletrônico</strong>.</li>
+                      <li>Se a conta foi criada pelo botão <strong>"Entrar com Google"</strong>, você não precisa de senha — pode logar diretamente via Google.</li>
+                    </ul>
+                  </div>
                 </div>
-                <button 
-                  type="button" 
-                  onClick={() => navigate('/login')}
-                  style={{ width: '100%', background: '#0f172a', color: 'white', border: 'none', padding: '13px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13.5px' }}
-                >
-                  Voltar para o Login
-                </button>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setEmailEnviadoSucesso(false);
+                      setErroSolicitacao('');
+                    }}
+                    style={{ width: '100%', background: '#ffffff', color: '#0f172a', border: '1.5px solid #cbd5e1', padding: '12px', borderRadius: '12px', fontWeight: 700, cursor: 'pointer', fontSize: '13px' }}
+                  >
+                    <i className="fas fa-edit" style={{ marginRight: '6px' }}></i> Digitar outro e-mail
+                  </button>
+
+                  <button 
+                    type="button" 
+                    onClick={() => navigate('/login')}
+                    style={{ width: '100%', background: '#0f172a', color: 'white', border: 'none', padding: '13px', borderRadius: '12px', fontWeight: 800, cursor: 'pointer', fontSize: '13.5px' }}
+                  >
+                    Voltar para o Login
+                  </button>
+                </div>
               </div>
             ) : (
               <form onSubmit={handleEnviarEmailRecuperacao} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                {!erroSolicitacao && emailReferencia && emailReferencia.includes('@') && (
+                  <div style={{
+                    background: 'linear-gradient(135deg, rgba(197, 160, 89, 0.08) 0%, rgba(197, 160, 89, 0.16) 100%)',
+                    border: '1.5px solid rgba(197, 160, 89, 0.4)',
+                    borderRadius: '14px',
+                    padding: '14px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '12px'
+                  }}>
+                    <div style={{
+                      width: '38px',
+                      height: '38px',
+                      borderRadius: '10px',
+                      background: 'linear-gradient(135deg, #c5a059, #dfb76c)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      color: '#0f172a',
+                      fontSize: '16px',
+                      flexShrink: 0,
+                      boxShadow: '0 2px 8px rgba(197, 160, 89, 0.25)'
+                    }}>
+                      <i className="fas fa-shield-alt"></i>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <span style={{ fontSize: '10.5px', textTransform: 'uppercase', letterSpacing: '0.6px', fontWeight: 800, color: '#854d0e', display: 'block', marginBottom: '2px' }}>
+                        Conta a ser recuperada
+                      </span>
+                      <strong style={{ fontSize: '14.5px', color: '#0f172a', fontFamily: 'monospace', letterSpacing: '0.4px', wordBreak: 'break-all' }}>
+                        {anonimizarEmail(emailReferencia)}
+                      </strong>
+                    </div>
+                    <span style={{ fontSize: '10.5px', background: '#ecfdf5', color: '#047857', padding: '4px 10px', borderRadius: '20px', fontWeight: 800, border: '1px solid #a7f3d0', whiteSpace: 'nowrap' }}>
+                      <i className="fas fa-lock" style={{ marginRight: '4px' }}></i> Protegido
+                    </span>
+                  </div>
+                )}
+
                 <div>
                   <label style={{ fontSize: '11.5px', fontWeight: 800, color: '#475569', display: 'block', marginBottom: '6px' }}>
-                    E-MAIL CADASTRADO <span style={{ color: '#ef4444' }}>*</span>
+                    CONFIRME O E-MAIL CADASTRADO <span style={{ color: '#ef4444' }}>*</span>
                   </label>
                   <input 
                     type="email" 
                     value={emailSolicitacao} 
                     onChange={e => setEmailSolicitacao(e.target.value)} 
-                    placeholder="seuemail@exemplo.com" 
+                    placeholder="Digite o e-mail completo para confirmar" 
                     autoCapitalize="none"
                     autoCorrect="off"
                     spellCheck="false"
                     required
                     style={{ width: '100%', padding: '12px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '14px', boxSizing: 'border-box' }}
                   />
+                  <small style={{ color: '#64748b', fontSize: '11.5px', marginTop: '6px', display: 'block', lineHeight: '1.4' }}>
+                    Por segurança, digite o endereço de e-mail completo correspondente à conta protegida acima.
+                  </small>
                 </div>
 
                 <button 

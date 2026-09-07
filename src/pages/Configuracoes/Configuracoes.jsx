@@ -13,6 +13,7 @@ import AbaAssinaturaUso from './AbaAssinaturaUso';
 import AbaSeguranca from './AbaSeguranca';
 import AbaAparencia from './AbaAparencia';
 import AbaBackup from './AbaBackup';
+import { calcularPeriodoTeste, formatarDataExibicao } from '../../utils/periodoTesteUtils';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -25,6 +26,8 @@ const Configuracoes = () => {
 
   const [abaAtiva, setAbaAtiva] = useState('meu_perfil'); 
   const [loading, setLoading] = useState(true);
+  const [dataCriacaoConta, setDataCriacaoConta] = useState('');
+  const [isContaExpirada, setIsContaExpirada] = useState(false);
 
   // ==========================================
   // ESTADOS DO RESTO DO SISTEMA
@@ -99,10 +102,21 @@ const Configuracoes = () => {
             dbCatVitrine = CATALOGO_TEMAS;
             precisaAtualizarDB = true;
         }
+        const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', tenantId);
+        const contaAlvoSnap = await getDoc(contaAlvoRef);
+        
+        let rawDataCriacao = usuarioLogado?.metadata?.creationTime;
+        if (contaAlvoSnap.exists()) {
+          const cData = contaAlvoSnap.data();
+          rawDataCriacao = cData.dataCadastro || cData.criadoEm || rawDataCriacao;
+        }
+        const dataFormatada = formatarDataExibicao(rawDataCriacao);
+        setDataCriacaoConta(dataFormatada);
 
         const newState = {
             ...dadosConf, userId: tenantId, categoriasFisicas: dbCatFis, subcategoriasFisicas: dbSubCatFis,
-            tamanhosPorCategoria: dbTamCat, catalogoVitrine: dbCatVitrine || {}
+            tamanhosPorCategoria: dbTamCat, catalogoVitrine: dbCatVitrine || {},
+            dataCadastro: dataFormatada
         };
 
         if (precisaAtualizarDB || !docSnap.exists()) {
@@ -111,19 +125,24 @@ const Configuracoes = () => {
         if (dadosConf.nomeEmpresa) {
           localStorage.setItem('nomeEmpresa', dadosConf.nomeEmpresa);
         }
-        setConfig(prev => ({ ...prev, ...newState }));
+        setConfig(prev => ({ ...prev, ...newState, dataCadastro: dataFormatada }));
 
         if (!isCollaborator) {
-            const contaAlvoRef = isSuperAdmin ? doc(db, 'usuarios', usuarioLogado.uid) : doc(db, 'usuarios', tenantId);
-            const contaAlvoSnap = await getDoc(contaAlvoRef);
-            
             let statusReal = "Inativa / Sem Plano", corBg = "#fef2f2", corTexto = "#991b1b", textoMetodo = "Nenhum método cadastrado";
             let isActive = false, nomeDoPlano = "Básico (Gratuito)", precoDoPlano = "0,00", limiteAtual = 1;
             let emailCobranca = usuarioLogado.email, subId = null;
 
             if (contaAlvoSnap.exists()) {
                 const cData = contaAlvoSnap.data();
-                let testeAtivo = cData.dataFimTeste ? new Date() <= new Date(cData.dataFimTeste) : false;
+                const infoT = calcularPeriodoTeste(cData);
+                let testeAtivo = infoT.emTeste;
+                const assinaturaAtiva = cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago';
+
+                if (!isSuperAdmin && !testeAtivo && !assinaturaAtiva) {
+                    setIsContaExpirada(true);
+                } else {
+                    setIsContaExpirada(false);
+                }
 
                 if (cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago') {
                     statusReal = "Assinatura Ativa"; corBg = "#f0fdf4"; corTexto = "#166534"; 
@@ -151,7 +170,7 @@ const Configuracoes = () => {
             setAssinatura({
                 planoNome: nomeDoPlano, precoMensal: precoDoPlano, status: statusReal, corBg: corBg,
                 corTexto: corTexto, metodoPagamento: textoMetodo, emailCobranca: emailCobranca,
-                subscriptionId: subId, isActive: isActive
+                subscriptionId: subId, isActive: isActive, dataCriacao: dataFormatada
             });
 
             const qEquipe = query(collection(db, 'equipe'), where('empresaId', '==', tenantId));
@@ -272,6 +291,26 @@ const Configuracoes = () => {
 
   if (loading) return <div className="loading-config">Carregando painel de controle...</div>;
   
+  if (isContaExpirada) {
+    return (
+      <div className="config-container fade-in" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '70vh' }}>
+        <div style={{ background: 'var(--branco)', padding: '40px 32px', borderRadius: '16px', border: '1px solid var(--borda)', textAlign: 'center', maxWidth: '480px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '46px', marginBottom: '14px' }}>⏳</div>
+          <h2 style={{ fontSize: '22px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '10px' }}>Seu período de teste expirou!</h2>
+          <p style={{ color: 'var(--texto-secundario)', fontSize: '14px', lineHeight: '1.6', marginBottom: '24px' }}>
+            Para gerenciar ou alterar as configurações da sua empresa, escolha um plano ativo no Celebre.
+          </p>
+          <button 
+            type="button" 
+            onClick={() => navigate('/planos')} 
+            style={{ width: '100%', padding: '14px', background: 'var(--dourado)', color: '#0f172a', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(197, 160, 89, 0.4)' }}
+          >
+            Ver Planos e Assinar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="config-container fade-in">
@@ -384,6 +423,7 @@ const Configuracoes = () => {
             isOwner={isOwner}
             nomeEmpresa={config.nomeEmpresa}
             registrarLog={registrarLog}
+            dataCriacaoConta={dataCriacaoConta}
           />
         )}
 
@@ -401,6 +441,7 @@ const Configuracoes = () => {
             removerAssinaturaGlobal={removerAssinaturaGlobal}
             salvarTudo={salvarConfiguracoesCompletas}
             salvandoTudo={salvandoTudo}
+            dataCriacaoConta={dataCriacaoConta}
           />
         )}
 
@@ -424,6 +465,7 @@ const Configuracoes = () => {
             usoPlano={usoPlano}
             cancelando={cancelando}
             handleCancelarAssinatura={handleCancelarAssinatura}
+            dataCriacaoConta={dataCriacaoConta}
           />
         )}
 
@@ -443,6 +485,7 @@ const Configuracoes = () => {
             tenantId={tenantId}
             usuarioLogado={usuarioLogado}
             registrarLog={registrarLog}
+            configEmpresa={config}
           />
         )}
 

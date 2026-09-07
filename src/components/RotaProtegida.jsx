@@ -3,6 +3,7 @@ import { Navigate } from 'react-router-dom';
 import { auth, db } from '../firebaseConfig';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { onAuthStateChanged } from 'firebase/auth';
+import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
 
 const parseFirestoreDate = (dateVal) => {
   if (!dateVal) return null;
@@ -97,29 +98,11 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                         dadosUsuario.plano === 'pago' || 
                         dadosUsuario.statusPagamentoVulso === 'pago';
 
-                    // LÓGICA SIMPLES DE TESTE: 7 dias a partir de dataCadastro da empresa
+                    // LÓGICA SIMPLES DE TESTE: 7 dias a partir de dataCadastro da empresa (Centralizado e Unificado)
                     let testeAtivo = false;
                     if (!assinaturaAtiva) {
-                        const rawDateCompany = dadosUsuario.dataCadastro 
-                            || dadosUsuario.criadoEm 
-                            || dadosUsuario.createdAt 
-                            || dadosUsuario.dataInicioTeste 
-                            || (!isFuncionarioReal ? user.metadata?.creationTime : null);
-
-                        const dataCadastroDate = parseFirestoreDate(rawDateCompany);
-
-                        if (dataCadastroDate) {
-                            const cadastroMeia = new Date(dataCadastroDate);
-                            cadastroMeia.setHours(0,0,0,0);
-                            
-                            const dataFimTeste = new Date(cadastroMeia);
-                            dataFimTeste.setDate(dataFimTeste.getDate() + 7);
-
-                            const hojeNormalizado = new Date();
-                            hojeNormalizado.setHours(0,0,0,0);
-
-                            testeAtivo = hojeNormalizado < dataFimTeste;
-                        }
+                        const infoT = calcularPeriodoTeste(dadosUsuario);
+                        testeAtivo = infoT.emTeste;
                     } else {
                         testeAtivo = true;
                     }

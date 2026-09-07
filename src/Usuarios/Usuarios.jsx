@@ -4,6 +4,7 @@ import './Usuarios.css';
 import { db } from '../firebaseConfig'; 
 import { collection, getDocs, doc, query, where, getDoc, setDoc, updateDoc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
 
 const Usuarios = () => {
   const navigate = useNavigate();
@@ -13,6 +14,7 @@ const Usuarios = () => {
 
   const [loading, setLoading] = useState(true);
   const [temAcesso, setTemAcesso] = useState(false);
+  const [isContaExpirada, setIsContaExpirada] = useState(false);
   const [limiteUsuarios, setLimiteUsuarios] = useState(1);
   const [equipe, setEquipe] = useState([]);
   
@@ -60,9 +62,16 @@ const Usuarios = () => {
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
+        const infoT = calcularPeriodoTeste(userData);
+        const testeAtivo = infoT.emTeste;
+        const assinaturaAtiva = userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa';
+
         if (userData.email === "celebrefesta25@gmail.com") {
              acessoLiberado = true; limite = 9999; planoEhPro = true;
-        } else if (userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa') {
+        } else if (!testeAtivo && !assinaturaAtiva) {
+          setIsContaExpirada(true);
+          acessoLiberado = false;
+        } else if (assinaturaAtiva) {
           if (userData.planoId) {
             const planoSnap = await getDoc(doc(db, "planos", userData.planoId));
             if (planoSnap.exists()) {
@@ -174,6 +183,37 @@ const Usuarios = () => {
   };
 
   if (loading) return <div style={{ padding: '50px', textAlign: 'center', color: 'var(--texto-secundario)' }}>Verificando permissões...</div>;
+
+  if (isContaExpirada) {
+    return (
+      <div style={{ padding: '60px', textAlign: 'center', backgroundColor: 'var(--fundo-principal)', minHeight: '80vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ background: 'var(--branco)', padding: '40px', borderRadius: '16px', border: '1px solid var(--borda)', maxWidth: '500px', boxSizing: 'border-box', boxShadow: '0 8px 30px rgba(0,0,0,0.1)' }}>
+          <div style={{ fontSize: '48px', marginBottom: '15px' }}>⏳</div>
+          <h2 style={{ color: 'var(--texto-principal)', marginBottom: '15px', fontWeight: '800' }}>Seu período de teste expirou!</h2>
+          <p style={{ color: 'var(--texto-secundario)', lineHeight: '1.6', marginBottom: '25px', fontSize: '14px' }}>
+            Para gerenciar sua equipe e permissões de colaboradores, escolha um plano ativo no Celebre.
+          </p>
+          <button 
+            onClick={() => navigate('/planos')} 
+            style={{ 
+              width: '100%', 
+              padding: '14px 24px', 
+              background: 'var(--dourado)', 
+              color: '#ffffff', 
+              border: 'none', 
+              borderRadius: '8px', 
+              fontWeight: '800', 
+              fontSize: '14px', 
+              cursor: 'pointer',
+              boxShadow: '0 4px 14px rgba(0,0,0,0.15)' 
+            }}
+          >
+            Ver Planos e Assinar
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   if (!temAcesso) {
     return (

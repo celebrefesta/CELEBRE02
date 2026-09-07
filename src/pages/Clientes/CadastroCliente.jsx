@@ -1,9 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation, Link } from 'react-router-dom';
 import './CadastroCliente.css';
 import { db } from '../../firebaseConfig';
 import { collection, addDoc, updateDoc, doc, query, getDocs, getDoc, where, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
+import { validarCPF, validarCNPJ } from '../../utils/validadores';
 
 const formatarNomeCapitalizado = (nomeBruto) => {
   if (!nomeBruto) return '';
@@ -241,7 +242,12 @@ const CadastroCliente = () => {
       if (!clienteEditando?.id || !usuarioLogado) return; 
       
       try {
-        const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
+        // 🚀 OTIMIZAÇÃO MOBILE: Busca direcionada apenas das locações deste cliente específico
+        const qLocacoes = query(
+          collection(db, "locacoes"), 
+          where("userId", "==", tenantId), 
+          where("clienteId", "==", clienteEditando.id)
+        );
         const snap = await getDocs(qLocacoes);
         
         let temDividaVencida = false;
@@ -253,28 +259,25 @@ const CadastroCliente = () => {
 
         snap.docs.forEach(docSnap => {
           const loc = docSnap.data();
-          
-          if (loc.clienteId === clienteEditando.id || loc.cliente?.id === clienteEditando.id) {
-            locsDoCliente.push({ id: docSnap.id, ...loc });
+          locsDoCliente.push({ id: docSnap.id, ...loc });
 
-            const statusLoc = String(loc.status || '').toLowerCase();
-            const valorTotalLoc = Number(loc.valorTotal || loc.total || 0);
+          const statusLoc = String(loc.status || '').toLowerCase();
+          const valorTotalLoc = Number(loc.valorTotal || loc.total || 0);
 
-            if (!statusLoc.includes('cancelado') && !statusLoc.includes('orcam')) {
-                somaGasto += valorTotalLoc;
-            }
+          if (!statusLoc.includes('cancelado') && !statusLoc.includes('orcam')) {
+              somaGasto += valorTotalLoc;
+          }
 
-            if (!statusLoc.includes('cancelado') && !statusLoc.includes('orcam')) {
-              const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
-              if (dataStr) {
-                const dataEvento = new Date(dataStr + 'T00:00:00');
-                const pagStatus = (loc.statusPagamento || '').toLowerCase();
-                const vPago = Number(loc.valorPago || 0);
-                const saldoDevedor = valorTotalLoc - vPago;
+          if (!statusLoc.includes('cancelado') && !statusLoc.includes('orcam')) {
+            const dataStr = loc.dataRetirada || loc.dataEvento || loc.dataDevolucao;
+            if (dataStr) {
+              const dataEvento = new Date(dataStr + 'T00:00:00');
+              const pagStatus = (loc.statusPagamento || '').toLowerCase();
+              const vPago = Number(loc.valorPago || 0);
+              const saldoDevedor = valorTotalLoc - vPago;
 
-                if (dataEvento < hoje && saldoDevedor > 0.01 && !pagStatus.includes('pago') && !pagStatus.includes('quitado')) {
-                  temDividaVencida = true;
-                }
+              if (dataEvento < hoje && saldoDevedor > 0.01 && !pagStatus.includes('pago') && !pagStatus.includes('quitado')) {
+                temDividaVencida = true;
               }
             }
           }
@@ -326,17 +329,31 @@ const CadastroCliente = () => {
     else if (name === 'celular' || name === 'telefoneFixo') newValue = maskPhone(value);
     else if (name === 'email') newValue = value.toLowerCase();
     else if (name === 'uf') newValue = value.toUpperCase().substring(0, 2);
-    else {
-      if (['nome', 'razaoSocial', 'nomeFantasia', 'nomeContato', 'cargo', 'logradouro', 'complemento', 'bairro', 'cidade'].includes(name)) {
-        newValue = formatarNomeCapitalizado(value);
+
+    setFormData(prev => ({ ...prev, [name]: newValue }));
+  };
+
+  // 🚀 OTIMIZAÇÃO KEYSTROKE: Capitalização suave apenas ao sair do campo (onBlur), eliminando 100% do lag no teclado do celular!
+  const handleBlurCapitalize = (e) => {
+    const { name, value } = e.target;
+    if (['nome', 'razaoSocial', 'nomeFantasia', 'nomeContato', 'cargo', 'logradouro', 'complemento', 'bairro', 'cidade'].includes(name)) {
+      const formatado = formatarNomeCapitalizado(value);
+      if (formatado !== value) {
+        setFormData(prev => ({ ...prev, [name]: formatado }));
       }
     }
-    setFormData({ ...formData, [name]: newValue });
   };
 
   const consultarCnpjNaReceita = async (cnpjEntrada) => {
     const cnpjLimpo = String(cnpjEntrada || '').replace(/\D/g, '');
-    if (cnpjLimpo.length !== 14) return;
+    if (cnpjLimpo.length !== 14) {
+      alert(`⚠️ CNPJ incompleto (${cnpjLimpo.length}/14 dígitos).\n\nDigite os 14 números do CNPJ para pesquisar na Receita Federal.`);
+      return;
+    }
+    if (!validarCNPJ(cnpjLimpo)) {
+      alert("⚠️ CNPJ inválido!\n\nOs dígitos informados não conferem com o cálculo oficial da Receita Federal. Verifique o número digitado.");
+      return;
+    }
 
     setBuscandoCnpj(true);
     let dados = null;
@@ -368,6 +385,7 @@ const CadastroCliente = () => {
               nome_fantasia: res3.estabelecimento?.nome_fantasia || res3.razao_social,
               logradouro: res3.estabelecimento?.logradouro,
               numero: res3.estabelecimento?.numero,
+              complemento: res3.estabelecimento?.complemento || '',
               bairro: res3.estabelecimento?.bairro,
               municipio: res3.estabelecimento?.cidade?.nome,
               uf: res3.estabelecimento?.estado?.sigla,
@@ -389,6 +407,7 @@ const CadastroCliente = () => {
 
         const logr = formatarNomeCapitalizado(dados.logradouro || '');
         const num = dados.numero || '';
+        const comp = formatarNomeCapitalizado(dados.complemento || '');
         const brm = formatarNomeCapitalizado(dados.bairro || '');
         const cid = formatarNomeCapitalizado(dados.municipio || dados.localidade || '');
         const ufSigla = (dados.uf || '').toUpperCase();
@@ -406,6 +425,7 @@ const CadastroCliente = () => {
           nomeContato: prev.nomeContato || nomeProprietarioContato,
           logradouro: logr || prev.logradouro,
           numero: num || prev.numero,
+          complemento: comp || prev.complemento,
           bairro: brm || prev.bairro,
           cidade: cid || prev.cidade,
           uf: ufSigla || prev.uf,
@@ -494,10 +514,15 @@ const CadastroCliente = () => {
         const dados = await resposta.json();
         if (!dados.erro) {
           setFormData(prev => ({ 
-            ...prev, cep: cepMascarado, logradouro: formatarNomeCapitalizado(dados.logradouro), 
-            bairro: formatarNomeCapitalizado(dados.bairro), cidade: formatarNomeCapitalizado(dados.localidade), uf: dados.uf.toUpperCase() 
+            ...prev, 
+            cep: cepMascarado, 
+            logradouro: formatarNomeCapitalizado(dados.logradouro || ''), 
+            bairro: formatarNomeCapitalizado(dados.bairro || ''), 
+            cidade: formatarNomeCapitalizado(dados.localidade || ''), 
+            uf: (dados.uf || '').toUpperCase(),
+            complemento: prev.complemento || (dados.complemento ? formatarNomeCapitalizado(dados.complemento) : '')
           }));
-          document.getElementById('numeroInput').focus();
+          document.getElementById('numeroInput')?.focus();
         }
       } catch (error) {}
     }
@@ -505,44 +530,80 @@ const CadastroCliente = () => {
 
   const verificarDuplicidade = async () => {
       if (!usuarioLogado) return false;
-      const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
-      const snap = await getDocs(qClientes);
-      const todosClientes = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
       const meuCelular = formData.celular ? formData.celular.replace(/\D/g, '') : '';
       const meuCpf = formData.cpf ? formData.cpf.replace(/\D/g, '') : '';
       const meuCnpj = formData.cnpj ? formData.cnpj.replace(/\D/g, '') : '';
       const meuNome = (formData.nome || formData.nomeFantasia || '').trim().toLowerCase();
 
-      for (let c of todosClientes) {
-          if (clienteEditando && c.id === clienteEditando.id) continue;
-          
-          const bancoCelular = c.celular ? c.celular.replace(/\D/g, '') : '';
-          const bancoCpf = c.cpf ? c.cpf.replace(/\D/g, '') : '';
-          const bancoCnpj = c.cnpj ? c.cnpj.replace(/\D/g, '') : '';
-          const bancoNome = (c.nome || c.nomeFantasia || '').trim().toLowerCase();
-
-          if (tipoPessoa === 'fisica' && meuCpf.length === 11 && meuCpf === bancoCpf) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com este mesmo CPF!\n\nNome: ${c.nome || c.nomeFantasia}`);
-              return true; 
-          }
-          if (tipoPessoa === 'juridica' && meuCnpj.length === 14 && meuCnpj === bancoCnpj) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe uma empresa com este mesmo CNPJ!\n\nNome: ${c.nomeFantasia || c.razaoSocial}`);
-              return true; 
-          }
-          if (meuNome && meuNome === bancoNome && meuCelular.length > 8 && meuCelular === bancoCelular) {
-              alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!`);
-              return true; 
-          }
+      // 1. Verificação ultra-rápida direcionada por CPF (0ms a 50ms)
+      if (tipoPessoa === 'fisica' && meuCpf.length === 11) {
+        const qCpf = query(collection(db, "clientes"), where("userId", "==", tenantId), where("cpf", "==", formData.cpf));
+        const snapCpf = await getDocs(qCpf);
+        for (let d of snapCpf.docs) {
+          if (clienteEditando && d.id === clienteEditando.id) continue;
+          const c = d.data();
+          alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com este mesmo CPF!\n\nNome: ${c.nome || c.nomeFantasia}`);
+          return true;
+        }
       }
+
+      // 2. Verificação ultra-rápida direcionada por CNPJ (0ms a 50ms)
+      if (tipoPessoa === 'juridica' && meuCnpj.length === 14) {
+        const qCnpj = query(collection(db, "clientes"), where("userId", "==", tenantId), where("cnpj", "==", formData.cnpj));
+        const snapCnpj = await getDocs(qCnpj);
+        for (let d of snapCnpj.docs) {
+          if (clienteEditando && d.id === clienteEditando.id) continue;
+          const c = d.data();
+          alert(`⚠️ AÇÃO BLOQUEADA: Já existe uma empresa com este mesmo CNPJ!\n\nNome: ${c.nomeFantasia || c.razaoSocial}`);
+          return true;
+        }
+      }
+
+      // 3. Verificação de Celular duplicado
+      if (meuCelular.length > 8) {
+        const qCel = query(collection(db, "clientes"), where("userId", "==", tenantId), where("celular", "==", formData.celular));
+        const snapCel = await getDocs(qCel);
+        for (let d of snapCel.docs) {
+          if (clienteEditando && d.id === clienteEditando.id) continue;
+          const c = d.data();
+          const bancoNome = (c.nome || c.nomeFantasia || '').trim().toLowerCase();
+          if (meuNome && meuNome === bancoNome) {
+            alert(`⚠️ AÇÃO BLOQUEADA: Já existe um cliente com o exato mesmo NOME e CELULAR!`);
+            return true;
+          }
+        }
+      }
+
       return false; 
   };
 
   const salvarCliente = async (e) => {
     e.preventDefault();
     if (!usuarioLogado) return alert("Sessão expirada. Faça login novamente.");
-    if (tipoPessoa === 'fisica' && !formData.nome) return alert("O Nome é obrigatório!");
-    if (tipoPessoa === 'juridica' && !formData.nomeFantasia) return alert("O Nome Fantasia é obrigatório!");
+    if (tipoPessoa === 'fisica') {
+      if (!formData.nome) return alert("O Nome é obrigatório!");
+      const cpfLimpo = (formData.cpf || '').replace(/\D/g, '');
+      if (cpfLimpo) {
+        if (cpfLimpo.length !== 11) {
+          return alert(`⚠️ CPF incompleto (${cpfLimpo.length}/11 dígitos)!\n\nPor favor, digite todos os 11 números do CPF.`);
+        }
+        if (!validarCPF(cpfLimpo)) {
+          return alert("⚠️ CPF inválido!\n\nOs dígitos informados não conferem com o cálculo oficial da Receita Federal. Verifique o número digitado.");
+        }
+      }
+    } else {
+      if (!formData.nomeFantasia) return alert("O Nome Fantasia é obrigatório!");
+      const cnpjLimpo = (formData.cnpj || '').replace(/\D/g, '');
+      if (cnpjLimpo) {
+        if (cnpjLimpo.length !== 14) {
+          return alert(`⚠️ CNPJ incompleto (${cnpjLimpo.length}/14 dígitos)!\n\nPor favor, digite todos os 14 números do CNPJ.`);
+        }
+        if (!validarCNPJ(cnpjLimpo)) {
+          return alert("⚠️ CNPJ inválido!\n\nOs dígitos informados não conferem com o cálculo oficial da Receita Federal. Verifique o número digitado.");
+        }
+      }
+    }
     
     setSalvando(true);
     try {
@@ -550,9 +611,16 @@ const CadastroCliente = () => {
 
       const dadosLimpos = {
         ...formData,
-        nome: formData.nome.trim(),
-        razaoSocial: formData.razaoSocial.trim(),
-        nomeFantasia: formData.nomeFantasia.trim()
+        nome: formatarNomeCapitalizado(formData.nome.trim()),
+        razaoSocial: formatarNomeCapitalizado(formData.razaoSocial.trim()),
+        nomeFantasia: formatarNomeCapitalizado(formData.nomeFantasia.trim()),
+        nomeContato: formatarNomeCapitalizado((formData.nomeContato || '').trim()),
+        cargo: formatarNomeCapitalizado((formData.cargo || '').trim()),
+        logradouro: formatarNomeCapitalizado((formData.logradouro || '').trim()),
+        complemento: formatarNomeCapitalizado((formData.complemento || '').trim()),
+        bairro: formatarNomeCapitalizado((formData.bairro || '').trim()),
+        cidade: formatarNomeCapitalizado((formData.cidade || '').trim()),
+        email: (formData.email || '').trim().toLowerCase()
       };
 
       const dadosParaSalvar = { 
@@ -630,6 +698,7 @@ const CadastroCliente = () => {
             { id: 'nomeFantasia', nomeAmigavel: 'Nome Fantasia' },
             { id: 'celular', nomeAmigavel: 'Celular' }, 
             { id: 'email', nomeAmigavel: 'E-mail' },
+            { id: 'complemento', nomeAmigavel: 'Complemento' },
             { id: 'statusCadastro', nomeAmigavel: 'Status do Cadastro' }, 
             { id: 'tags', nomeAmigavel: 'Tag/Perfil' },
             { id: 'observacoes', nomeAmigavel: 'Observações' }
@@ -679,11 +748,11 @@ const CadastroCliente = () => {
     }
   };
 
-  const tagsParaExibir = [...new Set([...TAGS_PERFIL, formData.tags])].filter(Boolean);
+  const tagsParaExibir = useMemo(() => [...new Set([...TAGS_PERFIL, formData.tags])].filter(Boolean), [formData.tags]);
   const ehTagAntiga = formData.tags && !TAGS_PERFIL.includes(formData.tags);
-  const tagColorida = formData.tags ? getTagStyle(formData.tags) : null;
-  const tagIcon = formData.tags ? getTagIcon(formData.tags) : '🏷️';
-  const infoAniversario = calcularDiasAteAniversario(formData.nascimento);
+  const tagColorida = useMemo(() => formData.tags ? getTagStyle(formData.tags) : null, [formData.tags]);
+  const tagIcon = useMemo(() => formData.tags ? getTagIcon(formData.tags) : '🏷️', [formData.tags]);
+  const infoAniversario = useMemo(() => calcularDiasAteAniversario(formData.nascimento), [formData.nascimento]);
 
   return (
     <div className="form-page-container fade-in">
@@ -910,11 +979,24 @@ const CadastroCliente = () => {
                     <label htmlFor="nome">NOME COMPLETO *</label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="far fa-user"></i></span>
-                      <input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} required placeholder="Ex: Rosa Maria Vichinhsk" />
+                      <input id="nome" type="text" name="nome" autoComplete="name" value={formData.nome} onChange={handleChange} onBlur={handleBlurCapitalize} required placeholder="Ex: Rosa Maria Vichinhsk" />
                     </div>
                   </div>
                   <div className="form-group span-2 col-mobile-half">
-                    <label htmlFor="cpf">CPF</label>
+                    <label htmlFor="cpf" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>CPF</span>
+                      {(() => {
+                        const cLimpo = (formData.cpf || '').replace(/\D/g, '');
+                        if (cLimpo.length === 11) {
+                          return validarCPF(cLimpo) ? (
+                            <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.62rem' }}>✓ VÁLIDO</span>
+                          ) : (
+                            <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.62rem' }}>✗ INVÁLIDO</span>
+                          );
+                        }
+                        return null;
+                      })()}
+                    </label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="far fa-id-badge"></i></span>
                       <input id="cpf" type="text" name="cpf" autoComplete="off" placeholder="000.000.000-00" value={formData.cpf} onChange={handleChange} />
@@ -965,8 +1047,19 @@ const CadastroCliente = () => {
               ) : (
                 <div className="form-grid-4">
                   <div className="form-group span-2">
-                    <label htmlFor="cnpj">
-                      CNPJ {buscandoCnpj ? <span style={{color: '#c5a059', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px'}}>⏳ Buscando na Receita Federal...</span> : null}
+                    <label htmlFor="cnpj" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>CNPJ {buscandoCnpj ? <span style={{color: '#c5a059', fontWeight: 'bold', fontSize: '0.68rem', marginLeft: '6px'}}>⏳ Buscando...</span> : null}</span>
+                      {(() => {
+                        const cLimpo = (formData.cnpj || '').replace(/\D/g, '');
+                        if (cLimpo.length === 14) {
+                          return validarCNPJ(cLimpo) ? (
+                            <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.62rem' }}>✓ VÁLIDO</span>
+                          ) : (
+                            <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.62rem' }}>✗ INVÁLIDO</span>
+                          );
+                        }
+                        return null;
+                      })()}
                     </label>
                     <div className="input-icon-wrapper">
                       <span className="input-left-icon"><i className="fas fa-building"></i></span>
@@ -993,11 +1086,11 @@ const CadastroCliente = () => {
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="nomeFantasia">NOME FANTASIA *</label>
-                    <input id="nomeFantasia" type="text" name="nomeFantasia" autoComplete="organization" value={formData.nomeFantasia} onChange={handleChange} required placeholder="Nome de exibição da empresa" />
+                    <input id="nomeFantasia" type="text" name="nomeFantasia" autoComplete="organization" value={formData.nomeFantasia} onChange={handleChange} onBlur={handleBlurCapitalize} required placeholder="Nome de exibição da empresa" />
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="razaoSocial">RAZÃO SOCIAL</label>
-                    <input id="razaoSocial" type="text" name="razaoSocial" autoComplete="organization" value={formData.razaoSocial} onChange={handleChange} placeholder="Razão Social completa" />
+                    <input id="razaoSocial" type="text" name="razaoSocial" autoComplete="organization" value={formData.razaoSocial} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Razão Social completa" />
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="inscricaoEstadual">INSCRIÇÃO ESTADUAL</label>
@@ -1005,11 +1098,11 @@ const CadastroCliente = () => {
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="nomeContato">NOME DO CONTATO</label>
-                    <input id="nomeContato" type="text" name="nomeContato" autoComplete="name" value={formData.nomeContato} onChange={handleChange} placeholder="Pessoa de contato" />
+                    <input id="nomeContato" type="text" name="nomeContato" autoComplete="name" value={formData.nomeContato} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Pessoa de contato" />
                   </div>
                   <div className="form-group span-2">
                     <label htmlFor="cargo">CARGO / DEPTO</label>
-                    <input id="cargo" type="text" name="cargo" autoComplete="organization-title" value={formData.cargo} onChange={handleChange} placeholder="Ex: Gerente de Eventos" />
+                    <input id="cargo" type="text" name="cargo" autoComplete="organization-title" value={formData.cargo} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Ex: Gerente de Eventos" />
                   </div>
                   <div className="form-group span-4">
                     <label htmlFor="datasComemorativas">🎁 EVENTOS ANUAIS / DATAS COMEMORATIVAS DA EMPRESA</label>
@@ -1096,24 +1189,28 @@ const CadastroCliente = () => {
                   <label htmlFor="logradouro">LOGRADOURO / RUA</label>
                   <div className="input-icon-wrapper">
                     <span className="input-left-icon"><i className="fas fa-road"></i></span>
-                    <input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} placeholder="Rua, Avenida, Alameda..." />
+                    <input id="logradouro" type="text" name="logradouro" autoComplete="address-line1" value={formData.logradouro} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Rua, Avenida, Alameda..." />
                   </div>
                 </div>
-                <div className="form-group span-2 col-mobile-half">
+                <div className="form-group span-1 col-mobile-half">
                   <label htmlFor="numeroInput">NÚMERO</label>
                   <input id="numeroInput" type="text" name="numero" autoComplete="address-line2" value={formData.numero} onChange={handleChange} placeholder="Ex: 123" />
                 </div>
-                <div className="form-group span-2 col-mobile-half">
-                  <label htmlFor="uf">UF</label>
-                  <input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="SP" value={formData.uf} onChange={handleChange} />
+                <div className="form-group span-1 col-mobile-half">
+                  <label htmlFor="complemento">COMPLEMENTO</label>
+                  <input id="complemento" type="text" name="complemento" autoComplete="address-line2" value={formData.complemento} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Apto, Bloco, Casa..." />
                 </div>
-                <div className="form-group span-2 col-mobile-half">
+                <div className="form-group span-2">
                   <label htmlFor="bairro">BAIRRO</label>
-                  <input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} placeholder="Nome do Bairro" />
+                  <input id="bairro" type="text" name="bairro" autoComplete="address-level3" value={formData.bairro} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Nome do Bairro" />
                 </div>
-                <div className="form-group span-2 col-mobile-half">
+                <div className="form-group span-3 col-mobile-half">
                   <label htmlFor="cidade">CIDADE</label>
-                  <input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} placeholder="Cidade" />
+                  <input id="cidade" type="text" name="cidade" autoComplete="address-level2" value={formData.cidade} onChange={handleChange} onBlur={handleBlurCapitalize} placeholder="Cidade" />
+                </div>
+                <div className="form-group span-1 col-mobile-half">
+                  <label htmlFor="uf">UF</label>
+                  <input id="uf" type="text" name="uf" autoComplete="address-level1" placeholder="SP" value={formData.uf} onChange={handleChange} maxLength="2" />
                 </div>
               </div>
 

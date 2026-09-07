@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import SignatureCanvas from 'react-signature-canvas';
-import { formatCpfCnpj, formatCEP, formatTelefone } from '../../utils/mascaras';
+import { formatCpfCnpj, formatCEP, formatTelefone, validarCpfCnpj } from '../../utils/mascaras';
 import { testarChaveGoogleMaps } from '../../utils/googleMapsService';
 
 const AbaEmpresa = ({ 
@@ -14,7 +14,8 @@ const AbaEmpresa = ({
   salvarAssinaturaGlobal,
   removerAssinaturaGlobal,
   salvarTudo,
-  salvandoTudo
+  salvandoTudo,
+  dataCriacaoConta
 }) => {
   const [testandoGoogle, setTestandoGoogle] = useState(false);
   const [resultadoTesteGoogle, setResultadoTesteGoogle] = useState(null);
@@ -117,6 +118,12 @@ const AbaEmpresa = ({
           <div>
             <h3>Identidade Visual</h3>
             <p className="subtext">A marca da sua empresa nos catálogos, contratos e orçamentos.</p>
+            {(dataCriacaoConta || config?.dataCadastro) && (
+              <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', marginTop: '6px', background: 'rgba(197, 160, 89, 0.12)', border: '1px solid rgba(197, 160, 89, 0.3)', padding: '4px 12px', borderRadius: '20px', fontSize: '12px', fontWeight: '700', color: 'var(--texto-principal, #0f172a)' }}>
+                <i className="fas fa-calendar-check" style={{ color: '#c5a059' }}></i>
+                <span>Data de Criação da Conta: <strong style={{ color: 'var(--dourado, #c5a059)' }}>{dataCriacaoConta || config?.dataCadastro}</strong></span>
+              </div>
+            )}
           </div>
         </div>
         
@@ -329,7 +336,20 @@ const AbaEmpresa = ({
 
           {/* CNPJ / CPF */}
           <div className="f-group span-1-col">
-            <label><i className="fas fa-id-card"></i> CNPJ / CPF</label>
+            <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span><i className="fas fa-id-card"></i> CNPJ / CPF</span>
+              {(() => {
+                const c = (config.cnpj || '').replace(/\D/g, '');
+                if (c.length === 11 || c.length === 14) {
+                  return validarCpfCnpj(c) ? (
+                    <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '0.68rem' }}>✓ Válido</span>
+                  ) : (
+                    <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '0.68rem' }}>✗ Inválido</span>
+                  );
+                }
+                return null;
+              })()}
+            </label>
             <div className="input-with-icon">
               <i className="fas fa-file-invoice input-icon"></i>
               <input 
@@ -342,6 +362,10 @@ const AbaEmpresa = ({
                 }} 
                 onBlur={(e) => {
                   const val = formatCpfCnpj(e.target.value);
+                  const limpo = val.replace(/\D/g, '');
+                  if (limpo && !validarCpfCnpj(limpo)) {
+                    alert("⚠️ Documento da Empresa (CNPJ ou CPF) inválido!\n\nOs números informados não conferem com o cálculo oficial da Receita Federal. Verifique o número digitado.");
+                  }
                   salvarConfigTextual('cnpj', val);
                 }} 
                 placeholder="00.000.000/0001-00 ou 000.000.000-00" 

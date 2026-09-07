@@ -84,6 +84,11 @@ service cloud.firestore {
                   || souDonoOuFuncionario(resource.data.userId);
     }
 
+    // solicitacoes_lgpd/{docId}
+    match /solicitacoes_lgpd/{docId} {
+      allow read, write: if logado();
+    }
+
     // planos/{docId}
     match /planos/{docId} {
       allow read: if true;

@@ -4,6 +4,7 @@ import './Perfil.css';
 import { db } from '../../firebaseConfig';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs, serverTimestamp, addDoc } from 'firebase/firestore';
 import { getAuth, updatePassword, reauthenticateWithCredential, EmailAuthProvider, updateProfile } from 'firebase/auth';
+import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
 
 const Perfil = () => {
   const navigate = useNavigate();
@@ -96,7 +97,7 @@ const Perfil = () => {
 
                 if (contaAlvoSnap.exists()) {
                     const cData = contaAlvoSnap.data();
-                    let testeAtivo = cData.dataFimTeste ? new Date() <= new Date(cData.dataFimTeste) : false;
+                    let testeAtivo = calcularPeriodoTeste(cData).emTeste;
 
                     if (cData.assinaturaAtiva || cData.statusAssinatura === 'ativa' || cData.plano === 'pago') {
                         statusReal = "Assinatura Ativa"; corBg = "#f0fdf4"; corTexto = "#166534"; 

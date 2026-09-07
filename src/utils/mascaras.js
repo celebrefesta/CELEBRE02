@@ -70,3 +70,29 @@ export const capitalize = (str) => {
     .map(word => word ? word.charAt(0).toUpperCase() + word.slice(1) : '')
     .join(' ');
 };
+
+// 🔒 Anonimização Profissional de E-mail (ex: camila.vichinhsk@hotmail.com -> ca••••••••••sk@hotmail.com)
+export const anonimizarEmail = (email) => {
+  if (!email || typeof email !== 'string' || !email.includes('@')) return '';
+  const partes = email.trim().toLowerCase().split('@');
+  const user = partes[0];
+  const domain = partes.slice(1).join('@');
+  
+  if (user.length <= 2) {
+    return `${user.charAt(0)}•@${domain}`;
+  }
+  if (user.length <= 4) {
+    return `${user.slice(0, 1)}••${user.slice(-1)}@${domain}`;
+  }
+  
+  const visivelInicio = user.slice(0, 2);
+  const visivelFim = user.slice(-2);
+  const qtdMascara = Math.min(10, Math.max(4, user.length - 4));
+  const asteriscos = '•'.repeat(qtdMascara);
+  
+  return `${visivelInicio}${asteriscos}${visivelFim}@${domain}`;
+};
+
+// 🔒 Re-export de Validação Oficial de Documentos (CPF / CNPJ)
+export { validarCPF, validarCNPJ, validarCpfCnpj, obterMensagemErroDocumento } from './validadores';
+

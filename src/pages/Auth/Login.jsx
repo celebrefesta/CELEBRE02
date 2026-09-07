@@ -72,18 +72,29 @@ const Login = () => {
           localStorage.setItem('userRole', dadosFunc.cargo || 'Funcionário');
         } else {
           // Não é funcionário e nem dono pré-existente (ex: novo cadastro via Google ou email novo)
-          // Criamos o perfil básico de owner
+          // Criamos o perfil básico de owner com 7 dias de teste VIP garantidos
+          const dataAtual = new Date();
+          const dataFimTeste = new Date(dataAtual);
+          dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+          const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+          const nomePadrao = user.displayName || emailLimpo.split('@')[0] || 'Usuário';
+
           await setDoc(doc(db, "usuarios", user.uid), {
-            email: user.email,
-            nomeCompleto: user.displayName || user.email || 'Usuário',
+            email: emailLimpo,
+            nomeCompleto: nomePadrao,
+            nomeExibicao: nomePadrao,
             role: 'owner',
             tenantId: user.uid,
-            dataCadastro: new Date().toISOString(),
-            assinaturaAtiva: false
-          });
+            dataCadastro: dataAtual.toISOString(),
+            dataFimTeste: dataFimTeste.toISOString(),
+            planoId: 'plano_basico',
+            statusConta: 'ativo',
+            assinaturaAtiva: false,
+            criadoEm: serverTimestamp()
+          }, { merge: true });
           
           localStorage.setItem('tenantId', user.uid);
-          localStorage.setItem('funcName', user.displayName || user.email || 'Usuário');
+          localStorage.setItem('funcName', nomePadrao);
           localStorage.setItem('userRole', 'owner');
         }
       }
@@ -143,8 +154,36 @@ const Login = () => {
     } catch (error) {
       console.error("Erro no login:", error);
       const code = error.code || '';
-      if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
-        setErro('E-mail ou senha incorretos.');
+      if (code === 'auth/user-not-found') {
+        setErro('Nenhuma conta cadastrada foi encontrada com este e-mail no Celebre.');
+      } else if (code === 'auth/wrong-password') {
+        setErro('Senha incorreta. Verifique os dados digitados ou clique em "Esqueceu a senha?".');
+      } else if (code === 'auth/invalid-credential') {
+        // Checagem inteligente para identificar se a conta não existe ou se foi apenas senha errada
+        try {
+          const resp = await fetch('https://enviarlinkredefinicaosenha-yfhz7t44jq-uc.a.run.app', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: emailLimpo, verificarApenas: true })
+          });
+
+          if (resp.status === 404) {
+            setErro('Nenhuma conta cadastrada foi encontrada com este e-mail no Celebre.');
+            return;
+          }
+
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.isGoogleOnly) {
+              setErro('Esta conta foi cadastrada com o Google. Clique no botão "Entrar com o Google" abaixo.');
+              return;
+            }
+          }
+        } catch (checkErr) {
+          console.warn("Falha ao checar existência da conta:", checkErr);
+        }
+
+        setErro('Senha incorreta. Verifique os dados digitados ou clique em "Esqueceu a senha?".');
       } else if (code === 'auth/invalid-email') {
         setErro('Formato de e-mail inválido.');
       } else if (code === 'auth/too-many-requests') {
@@ -169,12 +208,14 @@ const Login = () => {
     try {
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
+      const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+      const nomeGoogle = user.displayName || emailLimpo.split('@')[0] || 'Usuário Google';
 
       // 🔍 Busca tenantId existente para o usuário
       let tenantIdParaSalvar = user.uid;
 
       try {
-        const qEquipe = query(collection(db, "equipe"), where("email", "==", user.email));
+        const qEquipe = query(collection(db, "equipe"), where("email", "==", emailLimpo));
         const snapEquipe = await getDocs(qEquipe);
         if (!snapEquipe.empty) {
           tenantIdParaSalvar = snapEquipe.docs[0].data().empresaId;
@@ -186,16 +227,48 @@ const Login = () => {
       const userDocRef = doc(db, 'usuarios', user.uid);
       const userDocSnap = await getDoc(userDocRef);
 
+      const dataAtual = new Date();
+      const dataFimTeste = new Date(dataAtual);
+      dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+
       if (!userDocSnap.exists()) {
         await setDoc(userDocRef, {
-          email: user.email,
-          nomeCompleto: user.displayName || 'Usuário Google',
+          email: emailLimpo,
+          nomeCompleto: nomeGoogle,
+          nomeExibicao: nomeGoogle,
           role: 'owner',
           tenantId: tenantIdParaSalvar,
-          dataCadastro: new Date().toISOString().split('T')[0],
+          dataCadastro: dataAtual.toISOString(),
+          dataFimTeste: dataFimTeste.toISOString(),
+          planoId: 'plano_basico',
+          statusConta: 'ativo',
           assinaturaAtiva: false,
+          authProvider: 'google.com',
           criadoEm: serverTimestamp()
-        });
+        }, { merge: true });
+
+        // Garante configurações da empresa
+        try {
+          const cfgRef = doc(db, 'configuracoes_empresa', tenantIdParaSalvar);
+          const cfgSnap = await getDoc(cfgRef);
+          if (!cfgSnap.exists()) {
+            await setDoc(cfgRef, {
+              nomeFantasia: nomeGoogle,
+              email: emailLimpo,
+              criadoEm: dataAtual.toISOString()
+            }, { merge: true });
+          }
+        } catch (eCfg) {}
+      } else {
+        const existingData = userDocSnap.data();
+        const updates = {};
+        if (!existingData.email || existingData.email !== emailLimpo) updates.email = emailLimpo;
+        if (!existingData.dataFimTeste && !existingData.assinaturaAtiva) {
+          updates.dataFimTeste = dataFimTeste.toISOString();
+        }
+        if (Object.keys(updates).length > 0) {
+          await setDoc(userDocRef, updates, { merge: true });
+        }
       }
 
       await finalizarLogin(user);
@@ -246,7 +319,11 @@ const Login = () => {
             <div className="input-group">
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
                 <label style={{ margin: 0 }}>SENHA</label>
-                <Link to="/redefinir-senha" style={{ fontSize: '0.78rem', color: 'var(--dourado)', fontWeight: '600', textDecoration: 'none' }}>
+                <Link 
+                  to={email ? `/redefinir-senha?email=${encodeURIComponent(email.trim())}` : '/redefinir-senha'} 
+                  state={{ email: email ? email.trim() : '' }}
+                  style={{ fontSize: '0.78rem', color: 'var(--dourado)', fontWeight: '600', textDecoration: 'none' }}
+                >
                   Esqueceu a senha?
                 </Link>
               </div>

@@ -1,215 +1,971 @@
-.admin-planos-container {
-    padding: 50px 30px;
-    background: #f8fafc;
-    min-height: 100vh;
-    font-family: 'Plus Jakarta Sans', sans-serif;
+/* ==========================================================================
+   🔒 CELEBRE - EDITOR DE MATRIZ DE PLANOS (ADMIN MASTER)
+   Isolamento Total: Todos os estilos escopados em .admin-planos-wrapper
+   ========================================================================== */
+
+.admin-planos-wrapper {
+  padding: 40px 24px 120px 24px;
+  background: #f8fafc;
+  min-height: 100vh;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  transition: margin-left 0.3s ease;
+  box-sizing: border-box;
+  color: #1e293b;
 }
 
-.matrix-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    max-width: 1400px;
-    margin: 0 auto 30px;
+@media (min-width: 851px) {
+  .admin-planos-wrapper.com-sidebar {
+    margin-left: 260px;
+  }
 }
 
-.header-titles h1 { font-size: 28px; color: #0f172a; font-weight: 800; margin-bottom: 5px; }
-.header-titles p { color: #64748b; font-size: 14px; }
+/* ==========================================================================
+   1. HERO SECTION DO EDITOR
+   ========================================================================== */
 
-.header-actions { display: flex; gap: 15px; }
-
-/* Botões do Topo */
-.btn-add-plano {
-    background: #ffffff; color: #0f172a; border: 1px solid #e2e8f0;
-    padding: 12px 20px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.2s;
-}
-.btn-add-plano:hover { background: #f1f5f9; }
-
-.btn-save-matrix {
-    background: #0f172a; color: white; border: none;
-    padding: 12px 25px; border-radius: 10px; font-weight: 700; cursor: pointer; transition: 0.3s;
-}
-.btn-save-matrix:hover { background: #c5a059; }
-
-/* Estrutura da Tabela */
-.matrix-container {
-    overflow-x: auto;
-    background: white;
-    border-radius: 16px;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.04);
-    border: 1px solid #e2e8f0;
-    max-width: 1400px;
-    margin: 0 auto;
+.admin-planos-wrapper .admin-planos-hero {
+  max-width: 1180px;
+  margin: 0 auto 40px auto;
+  text-align: center;
+  position: relative;
+  padding-top: 10px;
 }
 
-.matrix-table { width: 100%; border-collapse: collapse; }
-
-/* =========================================
-   CABEÇALHOS (A primeira linha)
-   ========================================= */
-
-.th-recursos {
-    width: 280px; min-width: 280px;
-    background: #ffffff; position: sticky; left: 0; z-index: 10;
-    border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;
-    font-size: 12px; font-weight: 800; color: #64748b; text-align: left;
-    padding: 20px; vertical-align: bottom; text-transform: uppercase; letter-spacing: 1px;
+.admin-planos-wrapper .admin-hero-top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
 }
 
-.th-plano {
-    padding: 20px 15px;
-    border-bottom: 1px solid #e2e8f0;
-    border-right: 1px solid #e2e8f0;
-    vertical-align: top;
-    min-width: 240px;
-    background: #f1f5f9; 
-    border-top: 4px solid transparent; 
-    transition: 0.3s background-color;
+.admin-planos-wrapper .btn-voltar-master,
+.admin-planos-wrapper .btn-ver-publico {
+  padding: 10px 18px;
+  background: #ffffff;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.04);
 }
 
-/* O PLANO EM DESTAQUE */
-.th-plano.is-destaque { 
-    background: #ffffff; 
-    border-top: 4px solid #0f172a;
+.admin-planos-wrapper .btn-voltar-master:hover,
+.admin-planos-wrapper .btn-ver-publico:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  transform: translateY(-1px);
 }
 
-/* =========================================
-   CONTROLES DENTRO DO CABEÇALHO DO PLANO
-   ========================================= */
-
-.th-top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-
-.pos-control { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; color: #94a3b8; }
-
-/* Atualizado para Select em vez de Input */
-.pos-control select {
-    width: 45px; padding: 4px; border: 1px solid #e2e8f0; border-radius: 6px;
-    text-align: center; color: #0f172a; font-weight: bold; background: white; outline: none; cursor: pointer;
-}
-.th-plano.is-destaque .pos-control select { 
-    background: #1e293b; color: #ffffff; border-color: #334155; 
-}
-
-.btn-trash-col { background: #fff1f2; color: #f43f5e; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; transition: 0.2s; }
-.btn-trash-col:hover { background: #f43f5e; color: white; }
-
-.plano-nome-input {
-    width: 100%; text-align: center; font-size: 22px; font-weight: 800; color: #0f172a;
-    border: none; background: transparent; outline: none; margin-bottom: 5px;
-}
-.plano-nome-input:focus { border-bottom: 2px solid #c5a059; }
-
-/* 💎 BLOCO DE PREÇOS CORRIGIDO */
-.plano-preco-wrapper { 
-    display: flex; 
-    justify-content: center; 
-    align-items: baseline; 
-    gap: 2px; 
-    margin-bottom: 15px; 
+.admin-planos-wrapper .admin-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(197, 160, 89, 0.12);
+  color: #926f2d;
+  padding: 6px 16px;
+  border-radius: 30px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+  border: 1px solid rgba(197, 160, 89, 0.3);
 }
 
-.cifrao { 
-    font-size: 16px; 
-    font-weight: 800; 
-    color: #0f172a; 
-    transform: translateY(-2px); 
+.admin-planos-wrapper .admin-hero-title {
+  font-size: 34px;
+  line-height: 1.25;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.5px;
+  margin: 0 0 12px 0;
 }
 
-.mes { 
-    font-size: 14px; 
-    color: #94a3b8; 
-    font-weight: 600; 
+.admin-planos-wrapper .admin-hero-subtitle {
+  font-size: 15px;
+  line-height: 1.6;
+  color: #64748b;
+  max-width: 720px;
+  margin: 0 auto 28px auto;
 }
 
-.plano-preco-input {
-    width: 160px; /* 👈 Aumentado para garantir espaço */
-    padding: 0; /* 👈 Removido o espaço interno */
-    text-align: center; 
-    font-size: 38px; 
-    font-weight: 800; 
-    color: #0f172a;
-    border: none; 
-    background: transparent; 
-    outline: none;
-    letter-spacing: -1px; 
-}
-.plano-preco-input:focus { border-bottom: 2px solid #c5a059; }
-
-.plano-destaque-wrapper { display: flex; justify-content: center; align-items: center; gap: 8px; font-size: 11px; font-weight: 700; color: #94a3b8; }
-.plano-destaque-wrapper select { border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px; font-weight: 600; color: #0f172a; outline: none; background: white; }
-
-
-/* =========================================
-   CORPO DA TABELA (Funcionalidades e Checks)
-   ========================================= */
-
-.td-recurso {
-    background: #ffffff; position: sticky; left: 0; z-index: 10;
-    border-right: 1px solid #e2e8f0; border-bottom: 1px solid #f1f5f9; padding: 0;
+.admin-planos-wrapper .admin-hero-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  flex-wrap: wrap;
 }
 
-.td-recurso-content { display: flex; align-items: center; width: 100%; padding: 15px 20px; }
-
-.recurso-nome-input {
-    flex-grow: 1; 
-    border: none !important; 
-    background: transparent !important; 
-    outline: none !important;
-    font-size: 15px; font-weight: 600; color: #334155; 
-    font-family: 'Plus Jakarta Sans', sans-serif;
-}
-.recurso-nome-input:focus { border-bottom: 1px solid #c5a059 !important; padding-bottom: 2px; }
-
-.btn-trash-row { background: transparent; border: none; color: #cbd5e1; cursor: pointer; padding: 5px; font-size: 14px; transition: 0.2s; }
-.btn-trash-row:hover { color: #f43f5e; }
-
-.td-check {
-    text-align: center; padding: 15px; border-bottom: 1px solid #f1f5f9; border-right: 1px solid #f8fafc;
-    cursor: pointer; transition: 0.2s; background: #ffffff;
-}
-.td-check:hover { background: #f8fafc; }
-
-.check-on { color: #10b981; font-size: 24px; }
-.check-off { color: #e2e8f0; font-size: 20px; }
-
-/* 🔢 NOVOS INPUTS NUMÉRICOS (LIMITES) */
-.td-numerico {
-    padding: 10px 15px;
-    cursor: default; 
+.admin-planos-wrapper .btn-action-add,
+.admin-planos-wrapper .btn-action-add-rec {
+  padding: 12px 20px;
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+  border-radius: 12px;
+  font-weight: 700;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.03);
 }
 
-.input-limite {
-    width: 110px; 
-    padding: 8px;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    text-align: center;
-    font-family: 'Plus Jakarta Sans', sans-serif;
-    font-weight: 700;
-    color: #0f172a;
-    outline: none;
-    transition: 0.2s;
+.admin-planos-wrapper .btn-action-add:hover,
+.admin-planos-wrapper .btn-action-add-rec:hover {
+  background: #f1f5f9;
+  border-color: #94a3b8;
+  transform: translateY(-1px);
 }
 
-.input-limite:focus {
-    border-color: #c5a059;
-    box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.1);
+.admin-planos-wrapper .btn-action-save {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%);
+  color: #0f172a;
+  border: none;
+  border-radius: 12px;
+  font-weight: 800;
+  font-size: 14px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.25s ease;
+  box-shadow: 0 4px 16px rgba(197, 160, 89, 0.35);
 }
 
-.input-limite::placeholder {
-    color: #94a3b8;
-    font-weight: 600;
+.admin-planos-wrapper .btn-action-save:hover {
+  background: linear-gradient(135deg, #b8914b 0%, #d4a859 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 22px rgba(197, 160, 89, 0.5);
+}
+
+/* ==========================================================================
+   2. CARDS EDITÁVEIS (IDÊNTICOS A PLANOS.JSX)
+   ========================================================================== */
+
+.admin-planos-wrapper .admin-cards-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+  max-width: 1180px;
+  margin: 0 auto 48px auto;
+  align-items: stretch;
+}
+
+.admin-planos-wrapper .admin-card {
+  background: #ffffff;
+  border-radius: 20px;
+  padding: 30px 24px;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-planos-wrapper .admin-card:hover {
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
+}
+
+.admin-planos-wrapper .admin-card.is-destaque {
+  border: 2px solid #c5a059;
+  box-shadow: 0 16px 40px rgba(197, 160, 89, 0.16);
+}
+
+.admin-planos-wrapper .admin-card-ribbon {
+  position: absolute;
+  top: -14px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%);
+  color: #0f172a;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  padding: 5px 16px;
+  border-radius: 20px;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.4);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.admin-planos-wrapper .admin-card-top-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding-bottom: 16px;
+  margin-bottom: 16px;
+  border-bottom: 1px dashed #e2e8f0;
+}
+
+.admin-planos-wrapper .pos-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  color: #64748b;
+}
+
+.admin-planos-wrapper .pos-badge select {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-weight: 800;
+  color: #0f172a;
+  background: #f8fafc;
+  cursor: pointer;
+  outline: none;
+}
+
+.admin-planos-wrapper .destaque-selector {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+}
+
+.admin-planos-wrapper .destaque-selector select {
+  padding: 4px 8px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-weight: 700;
+  color: #0f172a;
+  background: #f8fafc;
+  cursor: pointer;
+  outline: none;
+}
+
+.admin-planos-wrapper .btn-trash-plano {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  border: none;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 12px;
+}
+
+.admin-planos-wrapper .btn-trash-plano:hover {
+  background: #ef4444;
+  color: #ffffff;
+}
+
+.admin-planos-wrapper .admin-card-header {
+  margin-bottom: 18px;
+}
+
+.admin-planos-wrapper .admin-card-tipo {
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: #94a3b8;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.admin-planos-wrapper .admin-card.is-destaque .admin-card-tipo {
+  color: #c5a059;
+}
+
+.admin-planos-wrapper .admin-input-nome {
+  width: 100%;
+  box-sizing: border-box;
+  font-size: 24px;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: -0.5px;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 8px;
+  border-radius: 8px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.admin-planos-wrapper .admin-input-nome:focus {
+  background: #f8fafc;
+  border-color: #c5a059;
+  outline: none;
+}
+
+.admin-planos-wrapper .admin-card-preco-box {
+  display: flex;
+  align-items: baseline;
+  gap: 3px;
+  margin-bottom: 20px;
+  padding: 14px 0;
+  border-top: 1px solid #f1f5f9;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.admin-planos-wrapper .admin-card-preco-box .moeda {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.admin-planos-wrapper .admin-input-preco {
+  width: 140px;
+  font-size: 42px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -1.5px;
+  line-height: 1;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.admin-planos-wrapper .admin-input-preco:focus {
+  background: #f8fafc;
+  border-color: #c5a059;
+  outline: none;
+}
+
+.admin-planos-wrapper .admin-card-preco-box .periodo {
+  font-size: 14px;
+  font-weight: 600;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+.admin-planos-wrapper .admin-card-badge-status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  background: rgba(16, 185, 129, 0.08);
+  border: 1px solid rgba(16, 185, 129, 0.25);
+  border-radius: 10px;
+  color: #047857;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.admin-planos-wrapper .admin-card-badge-status i {
+  color: #10b981;
+}
+
+/* ==========================================================================
+   3. MATRIZ COMPARATIVA EDITÁVEL
+   ========================================================================== */
+
+.admin-planos-wrapper .admin-matrix-container {
+  background: #ffffff;
+  border-radius: 20px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
+  border: 1px solid #e2e8f0;
+  max-width: 1180px;
+  margin: 0 auto;
+  overflow: hidden;
+}
+
+.admin-planos-wrapper .admin-matrix-header-info {
+  padding: 24px 30px;
+  background: #f8fafc;
+  border-bottom: 1px solid #e2e8f0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.admin-planos-wrapper .admin-matrix-header-info h3 {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-planos-wrapper .admin-matrix-header-info h3 i {
+  color: #c5a059;
+}
+
+.admin-planos-wrapper .admin-matrix-header-info p {
+  margin: 0;
+  font-size: 13.5px;
+  color: #64748b;
+}
+
+.admin-planos-wrapper .btn-add-func-inline {
+  padding: 9px 18px;
+  background: #0f172a;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.admin-planos-wrapper .btn-add-func-inline:hover {
+  background: #1e293b;
+}
+
+.admin-planos-wrapper .admin-matrix-table-scroll {
+  overflow-x: auto;
+}
+
+.admin-planos-wrapper .admin-matrix-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: center;
+}
+
+.admin-planos-wrapper .th-recursos-admin {
+  background: #0f172a;
+  color: #ffffff;
+  text-align: left;
+  padding: 22px 28px;
+  font-size: 13px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  vertical-align: middle;
+  width: 320px;
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.admin-planos-wrapper .th-plano-admin {
+  padding: 22px 20px;
+  border-bottom: 2px solid #e2e8f0;
+  border-right: 1px solid #f1f5f9;
+  background: #ffffff;
+  position: relative;
+  vertical-align: top;
+  min-width: 220px;
+}
+
+.admin-planos-wrapper .th-plano-admin.is-destaque {
+  background: rgba(197, 160, 89, 0.04);
+}
+
+.admin-planos-wrapper .tag-destaque-admin {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #c5a059;
+  color: #ffffff;
+  font-size: 9px;
+  font-weight: 800;
+  padding: 3px 10px;
+  border-radius: 0 0 6px 6px;
+  letter-spacing: 1px;
+}
+
+.admin-planos-wrapper .th-plano-admin h4 {
+  font-size: 17px;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 6px 0 4px 0;
+  text-transform: uppercase;
+}
+
+.admin-planos-wrapper .th-preco-mini-admin {
+  font-size: 14px;
+  color: #0f172a;
+}
+
+.admin-planos-wrapper .th-preco-mini-admin strong {
+  font-size: 17px;
+  font-weight: 800;
+}
+
+.admin-planos-wrapper .th-preco-mini-admin span {
+  font-size: 11px;
+  color: #94a3b8;
+  margin-left: 2px;
+}
+
+/* Categorias de Recursos */
+.admin-planos-wrapper .tr-categoria-admin td {
+  background: #f1f5f9;
+  padding: 13px 28px;
+  text-align: left;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.admin-planos-wrapper .categoria-titulo-admin {
+  font-size: 12.5px;
+  font-weight: 800;
+  color: #0f172a;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+}
+
+.admin-planos-wrapper .tr-item-admin:hover {
+  background: #f8fafc;
+}
+
+.admin-planos-wrapper .td-recurso-admin {
+  text-align: left;
+  padding: 12px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #e2e8f0;
+}
+
+.admin-planos-wrapper .recurso-edit-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.admin-planos-wrapper .recurso-nome-edit-input {
+  flex: 1;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #334155;
+  border: 1px solid transparent;
+  background: transparent;
+  padding: 4px 6px;
+  border-radius: 6px;
+  font-family: inherit;
+  outline: none;
+}
+
+.admin-planos-wrapper .recurso-nome-edit-input:focus {
+  background: #ffffff;
+  border-color: #c5a059;
+}
+
+.admin-planos-wrapper .btn-remover-recurso {
+  background: transparent;
+  border: none;
+  color: #cbd5e1;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.admin-planos-wrapper .btn-remover-recurso:hover {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+.admin-planos-wrapper .td-check-admin {
+  padding: 12px 20px;
+  border-bottom: 1px solid #f1f5f9;
+  border-right: 1px solid #f8fafc;
+  vertical-align: middle;
+}
+
+.admin-planos-wrapper .td-toggle-admin {
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.admin-planos-wrapper .td-toggle-admin:hover {
+  background: rgba(197, 160, 89, 0.08);
+}
+
+.admin-planos-wrapper .badge-check-sim-admin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  font-size: 13px;
+  transition: transform 0.15s ease;
+}
+
+.admin-planos-wrapper .td-toggle-admin:hover .badge-check-sim-admin {
+  transform: scale(1.15);
+}
+
+.admin-planos-wrapper .badge-check-nao-admin {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #f1f5f9;
+  color: #cbd5e1;
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+
+.admin-planos-wrapper .td-toggle-admin:hover .badge-check-nao-admin {
+  transform: scale(1.15);
+  color: #94a3b8;
+}
+
+.admin-planos-wrapper .input-limite-admin {
+  width: 120px;
+  padding: 8px 12px;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #0f172a;
+  text-align: center;
+  background: #ffffff;
+  outline: none;
+  font-family: inherit;
+  transition: all 0.2s ease;
+}
+
+.admin-planos-wrapper .input-limite-admin:focus {
+  border-color: #c5a059;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.12);
+}
+
+/* ==========================================================================
+   4. BARRA FLUTUANTE DE SALVAMENTO INFERIOR
+   ========================================================================== */
+
+.admin-planos-wrapper .admin-bottom-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #0f172a;
+  color: #ffffff;
+  padding: 16px 30px;
+  border-top: 2px solid #c5a059;
+  box-shadow: 0 -8px 25px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  box-sizing: border-box;
+}
+
+@media (min-width: 851px) {
+  .admin-planos-wrapper .admin-bottom-bar {
+    left: 260px;
+  }
+}
+
+.admin-planos-wrapper .bottom-bar-content {
+  max-width: 1180px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.admin-planos-wrapper .bottom-bar-text {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  color: #cbd5e1;
+}
+
+.admin-planos-wrapper .bottom-bar-text i {
+  color: #c5a059;
+  font-size: 18px;
+}
+
+.admin-planos-wrapper .bottom-bar-buttons {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-planos-wrapper .btn-bottom-add {
+  padding: 10px 18px;
+  background: #1e293b;
+  color: #ffffff;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.admin-planos-wrapper .btn-bottom-add:hover {
+  background: #334155;
+}
+
+.admin-planos-wrapper .btn-bottom-save {
+  padding: 12px 24px;
+  background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%);
+  color: #0f172a;
+  border: none;
+  border-radius: 10px;
+  font-weight: 800;
+  font-size: 13.5px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.4);
+  transition: all 0.2s ease;
+}
+
+.admin-planos-wrapper .btn-bottom-save:hover {
+  background: linear-gradient(135deg, #b8914b 0%, #d4a859 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(197, 160, 89, 0.5);
+}
+
+/* ==========================================================================
+   5. LOADING SCREEN
+   ========================================================================== */
+
+.admin-planos-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 70vh;
+  gap: 16px;
+  color: #64748b;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+}
+
+.admin-planos-spinner {
+  width: 44px;
+  height: 44px;
+  border: 3px solid #e2e8f0;
+  border-top-color: #c5a059;
+  border-radius: 50%;
+  animation: spinAdmin 0.8s linear infinite;
+}
+
+@keyframes spinAdmin {
+  to { transform: rotate(360deg); }
+}
+
+/* ==========================================================================
+   6. RESPONSIVIDADE
+   ========================================================================== */
+
+@media (max-width: 1024px) {
+  .admin-planos-wrapper .admin-cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .admin-planos-wrapper {
+    padding: 20px 12px 140px 12px;
+  }
+
+  .admin-planos-wrapper .admin-hero-top-nav {
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
+  }
+
+  .admin-planos-wrapper .btn-voltar-master,
+  .admin-planos-wrapper .btn-ver-publico {
+    width: 100%;
+    justify-content: center;
+    font-size: 12.5px;
+    padding: 9px 14px;
+  }
+
+  .admin-planos-wrapper .admin-hero-title {
+    font-size: 22px;
+    line-height: 1.3;
+  }
+
+  .admin-planos-wrapper .admin-hero-subtitle {
+    font-size: 13.5px;
+  }
+
+  .admin-planos-wrapper .admin-hero-actions {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .admin-planos-wrapper .btn-action-add,
+  .admin-planos-wrapper .btn-action-add-rec,
+  .admin-planos-wrapper .btn-action-save {
+    width: 100%;
+    justify-content: center;
     font-size: 13px;
+    padding: 11px 16px;
+  }
+
+  /* Grid de Cards */
+  .admin-planos-wrapper .admin-cards-grid {
+    grid-template-columns: 1fr;
+    gap: 18px;
+    margin-bottom: 36px;
+  }
+
+  .admin-planos-wrapper .admin-card {
+    padding: 24px 16px;
+    border-radius: 16px;
+  }
+
+  .admin-planos-wrapper .admin-input-nome {
+    font-size: 20px;
+  }
+
+  .admin-planos-wrapper .admin-input-preco {
+    font-size: 28px;
+    width: 90px;
+  }
+
+  /* Matriz no Mobile */
+  .admin-planos-wrapper .admin-matrix-container {
+    border-radius: 16px;
+    margin-bottom: 36px;
+  }
+
+  .admin-planos-wrapper .admin-matrix-header-info {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+    padding: 18px 16px;
+  }
+
+  .admin-planos-wrapper .btn-add-func-inline {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .admin-planos-wrapper .admin-matrix-table-scroll {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Coluna Fixa no Scroll */
+  .admin-planos-wrapper .th-recursos-admin,
+  .admin-planos-wrapper .td-recurso-admin {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    width: 140px;
+    min-width: 140px;
+    max-width: 150px;
+    box-shadow: 2px 0 6px rgba(0, 0, 0, 0.06);
+  }
+
+  .admin-planos-wrapper .th-recursos-admin {
+    background: #0f172a;
+    font-size: 11px;
+    padding: 14px 10px;
+    z-index: 10;
+  }
+
+  .admin-planos-wrapper .td-recurso-admin {
+    background: #ffffff;
+    padding: 10px 8px;
+  }
+
+  .admin-planos-wrapper .tr-item-admin:nth-child(even) .td-recurso-admin {
+    background: #f8fafc;
+  }
+
+  .admin-planos-wrapper .recurso-nome-edit-input {
+    font-size: 11.5px;
+    padding: 4px 6px;
+  }
+
+  .admin-planos-wrapper .tr-categoria-admin td {
+    position: sticky;
+    left: 0;
+    padding: 10px 12px;
+    font-size: 11.5px;
+  }
+
+  .admin-planos-wrapper .th-plano-admin {
+    min-width: 105px;
+    max-width: 115px;
+    padding: 14px 8px;
+  }
+
+  .admin-planos-wrapper .th-plano-admin h4 {
+    font-size: 13.5px;
+  }
+
+  .admin-planos-wrapper .input-limite-admin {
+    font-size: 11px;
+    padding: 4px 6px;
+    width: 90%;
+  }
+
+  .admin-planos-wrapper .badge-check-sim-admin,
+  .admin-planos-wrapper .badge-check-nao-admin {
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+  }
+
+  /* Barra Flutuante */
+  .admin-planos-wrapper .admin-bottom-bar {
+    padding: 10px 14px;
+  }
+
+  .admin-planos-wrapper .bottom-bar-text {
+    display: none;
+  }
+
+  .admin-planos-wrapper .bottom-bar-content {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .admin-planos-wrapper .bottom-bar-buttons {
+    width: 100%;
+    display: flex;
+    gap: 8px;
+  }
+
+  .admin-planos-wrapper .btn-bottom-add,
+  .admin-planos-wrapper .btn-bottom-save {
+    flex: 1;
+    justify-content: center;
+    font-size: 12px;
+    padding: 11px 8px;
+  }
 }
 
+@media (max-width: 480px) {
+  .admin-planos-wrapper {
+    padding: 16px 10px 130px 10px;
+  }
 
-/* =========================================
-   RODAPÉ
-   ========================================= */
+  .admin-planos-wrapper .admin-hero-title {
+    font-size: 20px;
+  }
 
-.td-add-recurso { padding: 15px 20px; background: #ffffff; position: sticky; left: 0; border-right: 1px solid #e2e8f0; }
-.btn-add-recurso {
-    width: 100%; background: #f8fafc; border: 1px dashed #cbd5e1; color: #64748b;
-    padding: 12px; border-radius: 8px; font-weight: 700; cursor: pointer; transition: 0.2s;
+  .admin-planos-wrapper .admin-input-preco {
+    font-size: 24px;
+    width: 75px;
+  }
 }
-.btn-add-recurso:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }

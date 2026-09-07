@@ -5,6 +5,7 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import AuditoriaEstoque from './AuditoriaEstoque';
+import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -160,17 +161,16 @@ const Dashboard = () => {
                     return;
                 }
 
-                let dataCriacao = null;
-                if (userData.dataCadastro) dataCriacao = parseFirestoreDate(userData.dataCadastro);
-                else if (userData.criadoEm) dataCriacao = parseFirestoreDate(userData.criadoEm);
+                const infoTeste = calcularPeriodoTeste(userData);
+                setDiasTeste(infoTeste.diaAtual);
 
-                if (dataCriacao) {
-                    const agora = new Date();
-                    const diffTime = Math.abs(agora - dataCriacao);
-                    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-                    setDiasTeste(diffDays);
+                const assinaturaAtiva = userData.assinaturaAtiva === true || 
+                                        userData.statusAssinatura === 'ativa' || 
+                                        userData.plano === 'pago' || 
+                                        userData.statusPagamentoVulso === 'pago';
 
-                    if (diffDays > 180 && !userData.assinaturaAtiva) {
+                if (!assinaturaAtiva) {
+                    if (infoTeste.diasTranscorridos > 180) {
                         setStatusConta('excluido');
                         try {
                             await updateDoc(doc(db, "usuarios", usuarioLogado.uid), { statusConta: 'excluido' });
@@ -179,8 +179,7 @@ const Dashboard = () => {
                         return;
                     }
 
-                    const testeExpirou = diffDays > 7 && !userData.assinaturaAtiva && userData.statusAssinatura !== 'ativa';
-                    if (testeExpirou) {
+                    if (!infoTeste.emTeste) {
                         setStatusConta('bloqueado');
                         setLoading(false);
                         return;

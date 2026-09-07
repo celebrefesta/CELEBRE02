@@ -10,6 +10,7 @@ import { getAuth } from 'firebase/auth';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { CATEGORIAS_FISICAS } from '../../catalogoDeTemas'; 
+import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils'; 
 
 // Page component for Estoque Management
 const Estoque = () => {
@@ -167,20 +168,8 @@ const Estoque = () => {
               limiteMaximo = 99999;
           } else {
           // 🔥 VERIFICAÇÃO DO PERÍODO DE TESTE GRÁTIS (7 DIAS) 🔥
-          let testeAtivo = false;
-          if (userData.dataFimTeste) {
-              const dataFim = new Date(userData.dataFimTeste);
-              if (new Date() <= dataFim) testeAtivo = true;
-          } else if (userData.dataCadastro) {
-              let dataCad = userData.dataCadastro;
-              if (dataCad.toDate) dataCad = dataCad.toDate();
-              const diffTime = new Date().getTime() - new Date(dataCad).getTime();
-              const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24)) + 1;
-              if (diffDays <= 7) testeAtivo = true;
-          } else {
-              // Fallback: se não encontrar data, libera para não travar o cliente
-              testeAtivo = true;
-          }
+          const infoT = calcularPeriodoTeste(userData);
+          let testeAtivo = infoT.emTeste;
 
           // Se está no teste grátis, acesso total com limite máximo
           if (testeAtivo) {

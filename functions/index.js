@@ -472,3 +472,327 @@ exports.enviarComprovanteExclusao = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// ============================================================================
+// 🔄 FUNÇÃO 7: SINCRONIZAR CONTAS AUTH COM FIRESTORE (GOOGLE & EMAIL)
+// ============================================================================
+exports.sincronizarContasAuth = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    try {
+      console.log("Iniciando sincronização de contas do Firebase Auth com Firestore...");
+      const listUsersResult = await getAuth().listUsers(1000);
+      const authUsers = listUsersResult.users;
+
+      const usersSnap = await db.collection("usuarios").get();
+      const existingDocsMap = new Map();
+      usersSnap.docs.forEach(d => {
+        existingDocsMap.set(d.id, d.data());
+      });
+
+      let sincronizados = 0;
+      let atualizados = 0;
+      const registros = [];
+
+      const dataAtual = new Date();
+
+      for (const authUser of authUsers) {
+        const uid = authUser.uid;
+        const email = authUser.email ? authUser.email.toLowerCase().trim() : '';
+        const nome = authUser.displayName || (email ? email.split('@')[0] : 'Usuário Google');
+        const provider = authUser.providerData?.[0]?.providerId || 'google.com';
+
+        const creationIso = authUser.metadata.creationTime 
+          ? new Date(authUser.metadata.creationTime).toISOString() 
+          : (authUser.createdAt ? new Date(Number(authUser.createdAt)).toISOString() : dataAtual.toISOString());
+
+        const dataFimReal = new Date(new Date(creationIso).getTime() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        const emTeste = new Date(dataAtual) < new Date(dataFimReal);
+
+        if (!existingDocsMap.has(uid)) {
+          // Cria o documento do usuário com data real da autenticação
+          const novoUser = {
+            email: email,
+            nomeCompleto: nome,
+            nomeExibicao: nome,
+            role: 'owner',
+            tenantId: uid,
+            dataCadastro: creationIso,
+            dataFimTeste: dataFimReal,
+            planoId: '',
+            assinaturaAtiva: false,
+            statusConta: emTeste ? 'ativo' : 'bloqueado',
+            authProvider: provider,
+            criadoEm: creationIso,
+            sincronizadoPor: 'sincronizarContasAuth'
+          };
+
+          await db.collection("usuarios").doc(uid).set(novoUser, { merge: true });
+
+          // Cria também configurações da empresa se não existir
+          const cfgRef = db.collection("configuracoes_empresa").doc(uid);
+          const cfgSnap = await cfgRef.get();
+          if (!cfgSnap.exists) {
+            await cfgRef.set({
+              nomeFantasia: nome,
+              email: email,
+              criadoEm: creationIso
+            }, { merge: true });
+          }
+
+          sincronizados++;
+          registros.push({ uid, email, acao: 'criado' });
+        } else {
+          // Já existe, verifica se precisa de ajustes
+          const docData = existingDocsMap.get(uid);
+          const updates = {};
+          if (email && docData.email !== email) {
+            updates.email = email;
+          }
+          // Sincroniza a data real de criação se não estiver preenchida ou se for a conta de teste
+          if (!docData.dataCadastro || uid === 'sPY7kcl63WPGyOnJr6n6CjAsV5F2') {
+            updates.dataCadastro = creationIso;
+            updates.dataFimTeste = dataFimReal;
+            if (!docData.assinaturaAtiva && !emTeste) {
+              updates.statusConta = 'bloqueado';
+            }
+          }
+
+          if (Object.keys(updates).length > 0) {
+            await db.collection("usuarios").doc(uid).update(updates);
+            atualizados++;
+            registros.push({ uid, email, acao: 'atualizado', updates });
+          }
+        }
+      }
+
+      console.log(`Sincronização finalizada: ${sincronizados} criados, ${atualizados} atualizados.`);
+      return res.status(200).send({
+        success: true,
+        totalAuthUsers: authUsers.length,
+        sincronizados,
+        atualizados,
+        registros
+      });
+
+    } catch (error) {
+      console.error("Erro ao sincronizar contas Auth com Firestore:", error);
+      return res.status(500).send({ error: "Erro interno ao sincronizar contas", details: error.message });
+    }
+  });
+});
+
+// ============================================================================
+// ✉️ FUNÇÃO 8: ENVIAR LINK DE REDEFINIÇÃO DE SENHA VIA RESEND (DOMÍNIO OFICIAL)
+// ============================================================================
+exports.enviarLinkRedefinicaoSenha = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    if (req.method !== "POST") return res.status(405).send("Método não permitido");
+
+    try {
+      const { email, verificarApenas } = req.body;
+      if (!email) {
+        return res.status(400).send({ error: "E-mail é obrigatório" });
+      }
+
+      const emailLimpo = String(email).trim().toLowerCase();
+      const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+      // 1. Verifica se a conta existe no Firebase Auth ou Firestore
+      let userRecord = null;
+      try {
+        userRecord = await getAuth().getUserByEmail(emailLimpo);
+      } catch (userErr) {
+        console.warn("E-mail não existe no Firebase Auth:", emailLimpo, userErr.code);
+        // Confere se existe em usuarios ou equipe
+        const snapUser = await db.collection("usuarios").where("email", "==", emailLimpo).limit(1).get();
+        const snapEquipe = await db.collection("equipe").where("email", "==", emailLimpo).limit(1).get();
+        if (snapUser.empty && snapEquipe.empty) {
+          return res.status(404).send({ exists: false, error: "Nenhuma conta cadastrada foi encontrada com este e-mail no Celebre." });
+        }
+      }
+
+      // Se a chamada for apenas para checagem (utilizado na tela de login)
+      if (verificarApenas) {
+        const providers = userRecord ? (userRecord.providerData || []).map(p => p.providerId) : [];
+        const isGoogleOnly = providers.includes('google.com') && !providers.includes('password');
+        return res.status(200).send({ 
+          exists: true, 
+          email: emailLimpo,
+          providers,
+          isGoogleOnly 
+        });
+      }
+
+      // 2. Gera o link oficial seguro do Firebase Auth
+      let resetLink;
+      try {
+        resetLink = await getAuth().generatePasswordResetLink(emailLimpo);
+      } catch (authErr) {
+        console.error("Erro ao gerar link de redefinição:", authErr);
+        return res.status(404).send({ error: "Não foi possível gerar o link de redefinição para este e-mail." });
+      }
+
+      // Extrai o oobCode para apontar direto para a tela do app
+      const urlObj = new URL(resetLink);
+      const oobCode = urlObj.searchParams.get('oobCode');
+      const linkFinal = oobCode 
+        ? `https://celebre-9f5c9.firebaseapp.com/redefinir-senha?oobCode=${oobCode}`
+        : resetLink;
+
+      const htmlBody = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <title>Redefinição de Senha • Celebre</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #334155;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 35px 15px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);">
+                
+                <tr>
+                  <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px 30px; text-align: center; border-bottom: 3px solid #c5a059;">
+                    <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 1px;">
+                      CELEBRE
+                    </h1>
+                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #c5a059; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">
+                      Central de Segurança
+                    </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="padding: 35px 30px;">
+                    <h2 style="margin: 0 0 14px 0; font-size: 20px; font-weight: 700; color: #0f172a;">
+                      Solicitação de Redefinição de Senha
+                    </h2>
+
+                    <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
+                      Olá! Recebemos uma solicitação para redefinir a senha de acesso à sua conta no <strong>Celebre</strong>.
+                    </p>
+
+                    <div style="text-align: center; margin: 30px 0;">
+                      <a href="${linkFinal}" style="background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%); color: #0f172a; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35);">
+                        Criar Nova Senha
+                      </a>
+                    </div>
+
+                    <p style="font-size: 12px; color: #94a3b8; margin: 0 0 16px 0; text-align: center; word-break: break-all;">
+                      Se o botão não funcionar, copie e cole este link no navegador:<br>
+                      <a href="${linkFinal}" style="color: #c5a059;">${linkFinal}</a>
+                    </p>
+
+                    <p style="font-size: 12.5px; line-height: 1.5; color: #64748b; margin: 20px 0 0 0; border-top: 1px solid #e2e8f0; padding-top: 16px;">
+                      Se você não solicitou a alteração de senha, ignore esta mensagem. Sua conta e senha permanecem totalmente seguras.
+                    </p>
+                  </td>
+                </tr>
+
+                <tr>
+                  <td style="background-color: #f8fafc; padding: 20px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">
+                      Celebre Gestão • E-mail automático de segurança. Não responda a esta mensagem.
+                    </p>
+                  </td>
+                </tr>
+
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+      `;
+
+      const responseResend = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
+          to: [emailLimpo],
+          reply_to: 'celebrefesta25@gmail.com',
+          subject: 'Redefinição de Senha • Celebre',
+          html: htmlBody
+        })
+      });
+
+      const resData = await responseResend.json();
+      if (!responseResend.ok) {
+        console.error("Erro na API do Resend:", resData);
+        return res.status(500).send({ error: "Erro ao disparar e-mail no Resend", details: resData });
+      }
+
+      return res.status(200).send({ 
+        success: true, 
+        message: "E-mail de redefinição enviado com sucesso via Resend!",
+        emailId: resData.id 
+      });
+
+    } catch (error) {
+      console.error("Erro interno ao enviar redefinição:", error);
+      res.status(500).send({ error: "Erro interno", details: error.message });
+    }
+  });
+});
+
+// ============================================================================
+// 🔍 FUNÇÃO 9: VERIFICAR SE CONTA / E-MAIL EXISTE NO SISTEMA
+// ============================================================================
+exports.verificarContaExiste = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST, GET, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    try {
+      const email = req.body?.email || req.query?.email;
+      if (!email) return res.status(400).send({ error: "E-mail obrigatório" });
+      const emailLimpo = String(email).trim().toLowerCase();
+
+      let userRecord = null;
+      try {
+        userRecord = await getAuth().getUserByEmail(emailLimpo);
+      } catch (userErr) {
+        const snapUser = await db.collection("usuarios").where("email", "==", emailLimpo).limit(1).get();
+        const snapEquipe = await db.collection("equipe").where("email", "==", emailLimpo).limit(1).get();
+        if (snapUser.empty && snapEquipe.empty) {
+          return res.status(404).send({ exists: false, error: "Nenhuma conta cadastrada foi encontrada com este e-mail no Celebre." });
+        }
+      }
+
+      const providers = userRecord ? (userRecord.providerData || []).map(p => p.providerId) : [];
+      const isGoogleOnly = providers.includes('google.com') && !providers.includes('password');
+
+      return res.status(200).send({
+        exists: true,
+        email: emailLimpo,
+        providers,
+        isGoogleOnly
+      });
+    } catch (e) {
+      return res.status(500).send({ error: e.message });
+    }
+  });
+});

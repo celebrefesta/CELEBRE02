@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore'; 
 import { db } from '../firebaseConfig';
+import { calcularPeriodoTeste } from '../utils/periodoTesteUtils';
+import logoCelebre from '../assets/LOGO_CELEBRE.png';
 import "./Navbar.css";
 
 const parseFirestoreDate = (dateVal) => {
@@ -44,6 +46,7 @@ const parseFirestoreDate = (dateVal) => {
 };
 
 const Navbar = () => {
+  const navigate = useNavigate();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [permissoesAtivas, setPermissoesAtivas] = useState(null); 
   const [isDonoDaConta, setIsDonoDaConta] = useState(localStorage.getItem('userRole') !== 'funcionario'); 
@@ -157,32 +160,14 @@ const Navbar = () => {
                       dados.plano === 'pago' || 
                       dados.statusPagamentoVulso === 'pago';
 
-                  // LÓGICA SIMPLES: 7 dias a partir do cadastro da empresa
+                  // LÓGICA SIMPLES: 7 dias a partir do cadastro da empresa (Centralizado e Unificado)
                   let testeAtivo = false;
                   if (!assinaturaAtiva) {
-                      const rawDateCompany = dados.dataCadastro 
-                          || dados.criadoEm 
-                          || dados.createdAt 
-                          || dados.dataInicioTeste 
-                          || (!isFuncionarioReal ? user.metadata?.creationTime : null);
-
-                      const dataCadastroDate = parseFirestoreDate(rawDateCompany);
-                          
-                          if (dataCadastroDate) {
-                              const cadastroMeia = new Date(dataCadastroDate);
-                              cadastroMeia.setHours(0,0,0,0);
-                              
-                              const dataFimTeste = new Date(cadastroMeia);
-                              dataFimTeste.setDate(dataFimTeste.getDate() + 7);
-
-                              const hojeNormalizado = new Date();
-                              hojeNormalizado.setHours(0,0,0,0);
-
-                              testeAtivo = hojeNormalizado < dataFimTeste;
-                          }
-                      } else {
-                          testeAtivo = true;
-                      }
+                      const infoT = calcularPeriodoTeste(dados);
+                      testeAtivo = infoT.emTeste;
+                  } else {
+                      testeAtivo = true;
+                  }
                       
                       let beneficios = [];
                       if (dados.planoId && assinaturaAtiva) {
@@ -260,14 +245,17 @@ const Navbar = () => {
       return false; 
   };
 
+  const nomeExibicao = localStorage.getItem('funcName') || usuarioLogado?.displayName || (usuarioLogado?.email ? usuarioLogado.email.split('@')[0] : "Usuário");
+  const cargoExibicao = isSuperAdmin ? "Super Admin" : (isDonoDaConta ? "Administrador" : (localStorage.getItem('userRole') || "Colaborador"));
+  const fotoPerfil = usuarioLogado?.photoURL || null;
+  const primeiraLetra = (nomeExibicao || 'U').charAt(0).toUpperCase();
+
   const ItemMenuProtegido = ({ to, icon, label, recurso }) => {
       const funcPodeVer = verificarAcessoFuncionario(label);
       const empresaPagou = verificarPermissaoPlano(recurso, label);
 
-      // 🔥 LÓGICA DE CORES: Se NÃO tem permissão ou a empresa NÃO pagou, mostra o cadeado!
+      // 🔥 LÓGICA DE CORES E BLOQUEIO:
       if (!funcPodeVer || !empresaPagou) {
-          const corCadeado = !empresaPagou ? '#ef4444' : '#ffffff';
-
           const mensagemBloqueio = !empresaPagou 
               ? "A sua empresa precisa de um plano ativo para acessar esta área."
               : "Você não tem permissão para acessar esta área. Solicite liberação ao administrador.";
@@ -285,86 +273,196 @@ const Navbar = () => {
                           alert("🔒 Seu perfil de colaborador não possui acesso a esta área. Solicite ao administrador da empresa para liberar em Equipe.");
                       }
                   }}
-                  style={{ cursor: 'pointer' }}
+                  role="button"
+                  tabIndex={0}
               >
-                  <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <i className={icon}></i> <span style={{ opacity: 0.6 }}>{label}</span>
+                  <div className="menu-item-main">
+                      <div className="menu-icon-box">
+                          <i className={icon}></i>
+                      </div>
+                      <span className="menu-label">{label}</span>
                   </div>
-                  <i className="fas fa-lock lock-icon" style={{ color: corCadeado }}></i>
+                  <span className={`menu-locked-badge ${!empresaPagou ? 'plan-expired' : 'role-locked'}`} title={!empresaPagou ? 'Requer Plano' : 'Sem Permissão'}>
+                      <i className="fas fa-lock"></i>
+                  </span>
               </div>
           );
       }
 
       // Tudo liberado e pago!
       return (
-          <NavLink to={to} onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-              <i className={icon}></i> <span>{label}</span>
+          <NavLink 
+              to={to} 
+              onClick={closeMenu} 
+              className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}
+          >
+              <div className="menu-item-main">
+                  <div className="menu-icon-box">
+                      <i className={icon}></i>
+                  </div>
+                  <span className="menu-label">{label}</span>
+              </div>
+              <span className="menu-active-pill"></span>
           </NavLink>
       );
   };
 
   return (
     <>
-      <button className="mobile-menu-btn" onClick={toggleMenu}>
+      <button 
+        type="button"
+        className={`mobile-menu-btn ${isMobileMenuOpen ? "open" : ""}`} 
+        onClick={toggleMenu}
+        aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
+      >
         <i className={isMobileMenuOpen ? "fas fa-times" : "fas fa-bars"}></i>
       </button>
 
-      <div className={`sidebar-overlay ${isMobileMenuOpen ? "active" : ""}`} onClick={closeMenu}></div>
+      <div 
+        className={`sidebar-overlay ${isMobileMenuOpen ? "active" : ""}`} 
+        onClick={closeMenu}
+        aria-hidden="true"
+      ></div>
 
-      <div className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`}>
+      <aside className={`sidebar ${isMobileMenuOpen ? "mobile-open" : ""}`} aria-label="Navegação Lateral">
         
-        <div className="sidebar-logo">
-          <h1>CELEBRE</h1>
-          <p className="brand-subtitle">Sistema Integrado</p>
+        {/* CABEÇALHO COM LOGO E BOTÃO FECHAR MOBILE */}
+        <div className="sidebar-header">
+          <div className="sidebar-brand">
+            <img src={logoCelebre} alt="Celebre" className="sidebar-brand-logo-img" />
+            <div className="brand-text">
+              <h1 className="brand-title">CELEBRE</h1>
+              <span className="brand-subtitle">SISTEMA INTEGRADO</span>
+            </div>
+          </div>
+
+          <button 
+            type="button" 
+            className="sidebar-mobile-close-btn" 
+            onClick={closeMenu}
+            aria-label="Fechar menu"
+          >
+            <i className="fas fa-times"></i>
+          </button>
         </div>
 
-        <nav className="sidebar-nav">
+        {/* NAVEGAÇÃO ORGANIZADA POR SEÇÕES */}
+        <nav className="sidebar-nav custom-scrollbar">
           
-          <ItemMenuProtegido to="/dashboard" icon="fas fa-th-large" label="Início" />
+          {/* SEÇÃO 1: PRINCIPAL */}
+          <div className="sidebar-section">
+            <span className="nav-section-title">Visão Geral</span>
+            <ItemMenuProtegido to="/dashboard" icon="fas fa-th-large" label="Início" />
+          </div>
 
-          <div className="sidebar-divider"></div>
+          {/* SEÇÃO 2: OPERAÇÃO & GESTÃO */}
+          <div className="sidebar-section">
+            <span className="nav-section-title">Gestão & Acervo</span>
+            <ItemMenuProtegido to="/agenda" icon="fas fa-calendar-alt" label="Agenda" recurso="Agenda" />
+            <ItemMenuProtegido to="/clientes" icon="fas fa-users" label="Clientes" recurso="Gestão Clientes" />
+            <ItemMenuProtegido to="/locacoes" icon="fas fa-hand-holding-heart" label="Locações" recurso="Gestão de Pedidos/ Orçamentos" />
+            <ItemMenuProtegido to="/estoque" icon="fas fa-boxes" label="Estoque" recurso="Gestão de Estoque" />
+          </div>
 
-          <ItemMenuProtegido to="/agenda" icon="fas fa-calendar-alt" label="Agenda" recurso="Agenda" />
-          <ItemMenuProtegido to="/clientes" icon="fas fa-users" label="Clientes" recurso="Gestão Clientes" />
-          <ItemMenuProtegido to="/locacoes" icon="fas fa-hand-holding-heart" label="Locações" recurso="Gestão de Pedidos/ Orçamentos" />
-          <ItemMenuProtegido to="/estoque" icon="fas fa-boxes" label="Estoque" recurso="Gestão de Estoque" />
+          {/* SEÇÃO 3: FINANCEIRO */}
+          <div className="sidebar-section">
+            <span className="nav-section-title">Financeiro & Controle</span>
+            <ItemMenuProtegido to="/compras" icon="fas fa-shopping-cart" label="Compras" recurso="Gestão Fornecedores" />
+            <ItemMenuProtegido to="/financeiro" icon="fas fa-money-bill-wave" label="Financeiro" recurso="Gestão Financeira" />
+            <ItemMenuProtegido to="/relatorios" icon="fas fa-chart-line" label="Relatórios" recurso="Gestão de Relatórios" />
+          </div>
 
-          <div className="sidebar-divider"></div>
+          {/* SEÇÃO 4: LOGÍSTICA & CONTRATOS */}
+          <div className="sidebar-section">
+            <span className="nav-section-title">Serviços & Expansão</span>
+            <ItemMenuProtegido to="/logistica" icon="fas fa-truck" label="Logística" recurso="Gestão de Logística" />
+            <ItemMenuProtegido to="/contratos" icon="fas fa-file-contract" label="Contratos" recurso="Gestão de Contratos" />
+            <ItemMenuProtegido to="/moodboard" icon="fas fa-palette" label="Moodboard" recurso="Moodboard- Projeto Digital" />
+            <ItemMenuProtegido 
+                to={usuarioLogado ? `/catalogo/${localStorage.getItem('tenantId') || usuarioLogado?.uid}` : "/catalogo"} 
+                icon="fas fa-store" 
+                label="Catálogo" 
+                recurso="Catalago Digital" 
+            />
+          </div>
 
-          <ItemMenuProtegido to="/compras" icon="fas fa-shopping-cart" label="Compras" recurso="Gestão Fornecedores" />
-          <ItemMenuProtegido to="/financeiro" icon="fas fa-money-bill-wave" label="Financeiro" recurso="Gestão Financeira" />
-          <ItemMenuProtegido to="/relatorios" icon="fas fa-chart-line" label="Relatórios" recurso="Gestão de Relatórios" />
-
-          <div className="sidebar-divider"></div>
-
-          <ItemMenuProtegido to="/logistica" icon="fas fa-truck" label="Logística" recurso="Gestão de Logística" />
-          <ItemMenuProtegido to="/contratos" icon="fas fa-file-contract" label="Contratos" recurso="Gestão de Contratos" />
-          <ItemMenuProtegido to="/moodboard" icon="fas fa-palette" label="Moodboard" recurso="Moodboard- Projeto Digital" />
-          
-          <ItemMenuProtegido 
-              to={usuarioLogado ? `/catalogo/${localStorage.getItem('tenantId') || usuarioLogado?.uid}` : "/catalogo"} 
-              icon="fas fa-store" 
-              label="Catálogo" 
-              recurso="Catalago Digital" 
-          />
-
+          {/* SEÇÃO 5: PAINEL MASTER (SUPER ADMIN) */}
           {isSuperAdmin && (
-            <>
-              <div className="sidebar-divider" style={{ borderTop: '2px solid #c5a059' }}></div>
-              <p style={{ color: '#c5a059', fontSize: '11px', marginLeft: '20px', fontWeight: 'bold' }}>PAINEL MASTER</p>
+            <div className="sidebar-section master-section">
+              <span className="nav-section-title master-title">
+                <i className="fas fa-shield-alt"></i> Painel Master
+              </span>
               
-              <NavLink to="/admin-planos" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-                <i className="fas fa-tools"></i> <span>Gerenciar Planos</span>
+              <NavLink 
+                to="/admin-planos" 
+                onClick={closeMenu} 
+                className={({ isActive }) => isActive ? "menu-item active master-item" : "menu-item master-item"}
+              >
+                <div className="menu-item-main">
+                  <div className="menu-icon-box master-icon">
+                    <i className="fas fa-tools"></i>
+                  </div>
+                  <span className="menu-label">Gerenciar Planos</span>
+                </div>
+                <span className="menu-active-pill"></span>
               </NavLink>
 
-              <NavLink to="/gestao-usuarios" onClick={closeMenu} className={({ isActive }) => isActive ? "menu-item active" : "menu-item"}>
-                <i className="fas fa-user-shield"></i> <span>Controle Geral</span>
+              <NavLink 
+                to="/gestao-usuarios" 
+                onClick={closeMenu} 
+                className={({ isActive }) => isActive ? "menu-item active master-item" : "menu-item master-item"}
+              >
+                <div className="menu-item-main">
+                  <div className="menu-icon-box master-icon">
+                    <i className="fas fa-user-shield"></i>
+                  </div>
+                  <span className="menu-label">Controle Geral</span>
+                </div>
+                <span className="menu-active-pill"></span>
               </NavLink>
-            </>
+            </div>
           )}
 
         </nav>
-      </div>
+
+        {/* RODAPÉ EXECUTIVO (USUÁRIO E STATUS) */}
+        <div className="sidebar-footer">
+          <div 
+            className="sidebar-user-card" 
+            onClick={() => { closeMenu(); navigate('/perfil'); }}
+            title="Ver meu perfil"
+          >
+            <div className="sidebar-user-avatar">
+              {fotoPerfil ? (
+                <img src={fotoPerfil} alt={nomeExibicao} />
+              ) : (
+                <span>{primeiraLetra}</span>
+              )}
+            </div>
+            <div className="sidebar-user-info">
+              <span className="sidebar-user-name">{nomeExibicao}</span>
+              <span className="sidebar-user-role">
+                <span className="user-status-dot"></span>
+                {cargoExibicao}
+              </span>
+            </div>
+            <button 
+              type="button" 
+              className="btn-sidebar-gear"
+              onClick={(e) => {
+                e.stopPropagation();
+                closeMenu();
+                navigate('/configuracoes');
+              }}
+              title="Configurações do Sistema"
+              aria-label="Configurações"
+            >
+              <i className="fas fa-cog"></i>
+            </button>
+          </div>
+        </div>
+
+      </aside>
     </>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, lazy, Suspense } from 'react';
-import { BrowserRouter as Router, Routes, Route, useLocation, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, Navigate, useNavigate } from 'react-router-dom';
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
 import { collection, query, where, getDocs, doc, getDoc, setDoc } from 'firebase/firestore'; 
 import { db } from './firebaseConfig'; 
@@ -12,6 +12,7 @@ import InstallAppPrompt from './components/InstallAppPrompt/InstallAppPrompt';
 import './App.css';
 import './styles/design-lock.css'; /* 🔒 DESIGN LOCK — importado por último, vence toda a cascata */
 import { aplicarCorDestaqueGlobal } from './utils/themeUtils';
+import { calcularPeriodoTeste } from './utils/periodoTesteUtils';
 
 import RotaPrivada from './components/RotaPrivada'; 
 import RotaAdmin from './components/RotaAdmin'; 
@@ -118,14 +119,29 @@ const parseFirestoreDate = (dateVal) => {
   return null;
 };
 
-// 🛡️🔥 BLINDAGEM MÁXIMA DE ROTA (Dupla Verificação em Tempo Real)
+// ⚡ Cache de segurança em memória para transição instantânea entre páginas (0ms de espera)
+const cachePermissoesRotas = new Map();
+
+// 🛡️🔥 BLINDAGEM MÁXIMA DE ROTA (Dupla Verificação em Tempo Real com Cache Rápido)
 const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
-  const [statusAcesso, setStatusAcesso] = useState('verificando'); 
+  const auth = getAuth();
+  const usuarioAtual = auth.currentUser;
+  const uid = usuarioAtual?.uid || localStorage.getItem('tenantId') || 'guest';
+  const cacheKey = `${uid}_${modulo || 'todos'}_${recursoExigido || 'geral'}`;
+
+  const [statusAcesso, setStatusAcesso] = useState(() => {
+    const emCache = cachePermissoesRotas.get(cacheKey);
+    // Se já foi validado nesta sessão nos últimos 10 minutos, entra instantaneamente
+    if (emCache && (Date.now() - emCache.timestamp < 1000 * 60 * 10)) {
+      return emCache.status;
+    }
+    return 'verificando';
+  });
 
   useEffect(() => {
-    const auth = getAuth();
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (!user) {
+        cachePermissoesRotas.set(cacheKey, { status: 'bloqueado', timestamp: Date.now() });
         setStatusAcesso('bloqueado');
         return;
       }
@@ -133,12 +149,12 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
       try {
         const emailAdmin = "celebrefesta25@gmail.com";
         if (user.email === emailAdmin) {
+            cachePermissoesRotas.set(cacheKey, { status: 'permitido', timestamp: Date.now() });
             setStatusAcesso('permitido');
             return;
         }
 
-        // RESOLUÇÃO CORRETA: Verifica doc próprio primeiro (é dono ou funcionário?)
-        const ownDocSnap = await getDoc(doc(db, "usuarios", user.uid));
+        let ownDocSnap = await getDoc(doc(db, "usuarios", user.uid));
 
         let tenantId = user.uid;
         let isFuncionarioReal = false;
@@ -166,65 +182,81 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
                 tenantId = dadosFunc.empresaId || user.uid;
                 permissoesFuncionario = dadosFunc.permissoes || {};
                 isFuncionarioReal = true;
+            } else {
+                // Auto-cura instantânea para novas contas do Google ou e-mail
+                const dataAtual = new Date();
+                const dataFimTeste = new Date(dataAtual);
+                dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+                const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+                const nomePadrao = user.displayName || (emailLimpo ? emailLimpo.split('@')[0] : 'Usuário');
+
+                await setDoc(doc(db, "usuarios", user.uid), {
+                  email: emailLimpo,
+                  nomeCompleto: nomePadrao,
+                  nomeExibicao: nomePadrao,
+                  role: 'owner',
+                  tenantId: user.uid,
+                  dataCadastro: dataAtual.toISOString(),
+                  dataFimTeste: dataFimTeste.toISOString(),
+                  planoId: 'plano_basico',
+                  statusConta: 'ativo',
+                  assinaturaAtiva: false,
+                  authProvider: user.providerData?.[0]?.providerId || 'google.com',
+                  criadoEm: dataAtual.toISOString()
+                }, { merge: true });
+
+                ownDocSnap = await getDoc(doc(db, "usuarios", user.uid));
             }
         }
 
-        // VERIFICAÇÃO DO PLANO DA EMPRESA (Trava o Cadeado Vermelho na Rota)
-        if (recursoExigido) {
-            const userSnap = await getDoc(doc(db, "usuarios", tenantId));
-            let empresaPagou = false;
+        // 2. VERIFICAÇÃO DO PLANO E TESTE DA EMPRESA (Trava Geral para Contas Expiradas)
+        const userSnap = await getDoc(doc(db, "usuarios", tenantId));
+        if (userSnap.exists()) {
+            const dadosUsr = userSnap.data();
+            
+            const assinaturaAtiva = 
+                dadosUsr.assinaturaAtiva === true || 
+                dadosUsr.statusAssinatura === 'ativa' || 
+                dadosUsr.plano === 'pago' || 
+                dadosUsr.statusPagamentoVulso === 'pago';
 
-            if (userSnap.exists()) {
-                const dadosUsr = userSnap.data();
-                
-                const assinaturaAtiva = 
-                    dadosUsr.assinaturaAtiva === true || 
-                    dadosUsr.statusAssinatura === 'ativa' || 
-                    dadosUsr.plano === 'pago' || 
-                    dadosUsr.statusPagamentoVulso === 'pago';
+            // LÓGICA SIMPLES: 7 dias a partir de dataCadastro da empresa (Centralizado e Unificado)
+            let testeAtivo = false;
+            if (!assinaturaAtiva) {
+                const infoT = calcularPeriodoTeste(dadosUsr);
+                testeAtivo = infoT.emTeste;
+            } else {
+                testeAtivo = true;
+            }
 
-                // LÓGICA SIMPLES: 7 dias a partir de dataCadastro da empresa
-                let testeAtivo = false;
-                if (!assinaturaAtiva) {
-                    const rawDateCompany = dadosUsr.dataCadastro 
-                        || dadosUsr.criadoEm 
-                        || dadosUsr.createdAt 
-                        || dadosUsr.dataInicioTeste 
-                        || (!isFuncionarioReal ? user.metadata?.creationTime : null);
+            // 🚫 CONTA EXPIRADA: Se o período de teste expirou e não possui plano pago ativo,
+            // NENHUMA rota interna (nem configurações, nem equipe, nem operacional) pode ser acessada!
+            if (!testeAtivo && !assinaturaAtiva) {
+                cachePermissoesRotas.set(cacheKey, { status: 'bloqueado', timestamp: Date.now() });
+                setStatusAcesso('bloqueado');
+                return;
+            }
 
-                    const dataCadastroDate = parseFirestoreDate(rawDateCompany);
-                    if (dataCadastroDate) {
-                        const cadastroMeia = new Date(dataCadastroDate);
-                        cadastroMeia.setHours(0,0,0,0);
-                        
-                        const dataFimTeste = new Date(cadastroMeia);
-                        dataFimTeste.setDate(dataFimTeste.getDate() + 7);
-
-                        const hojeNormalizado = new Date();
-                        hojeNormalizado.setHours(0,0,0,0);
-
-                        testeAtivo = hojeNormalizado < dataFimTeste;
-                    }
-                } else {
-                    testeAtivo = true;
-                }
-
+            // Se o módulo exige benefício específico contratado no plano
+            if (recursoExigido) {
+                let temBeneficio = false;
                 if (testeAtivo) {
-                    empresaPagou = true;
+                    temBeneficio = true;
                 } else if (assinaturaAtiva && dadosUsr.planoId) {
                     const planoSnap = await getDoc(doc(db, "planos", dadosUsr.planoId));
                     if (planoSnap.exists()) {
                         const beneficios = planoSnap.data().beneficios || [];
-                        empresaPagou = beneficios.some(b => b.toLowerCase().includes(recursoExigido.toLowerCase()));
+                        temBeneficio = beneficios.some(b => b.toLowerCase().includes(recursoExigido.toLowerCase()));
                     }
                 } else if (assinaturaAtiva) {
-                    empresaPagou = true; 
+                    temBeneficio = true; 
                 }
-            }
 
-            if (!empresaPagou) {
-                setStatusAcesso('bloqueado');
-                return;
+                if (!temBeneficio) {
+                    cachePermissoesRotas.set(cacheKey, { status: 'bloqueado', timestamp: Date.now() });
+                    setStatusAcesso('bloqueado');
+                    return;
+                }
             }
         }
 
@@ -232,6 +264,7 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
         if (isFuncionarioReal && modulo) {
             // Áreas expressamente proibidas para funcionários (Finanças, Relatórios, etc)
             if (['Financeiro', 'Relatorios', 'Assinatura', 'Equipe'].includes(modulo)) {
+                cachePermissoesRotas.set(cacheKey, { status: 'bloqueado', timestamp: Date.now() });
                 setStatusAcesso('bloqueado');
                 return;
             }
@@ -255,16 +288,19 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
 
             // Se o funcionário não tiver permissão para esse módulo, bloqueia a URL!
             if (!valorEncontrado) {
+                cachePermissoesRotas.set(cacheKey, { status: 'bloqueado', timestamp: Date.now() });
                 setStatusAcesso('bloqueado');
                 return;
             }
         }
 
         // Passou nos dois seguranças! Pode entrar.
+        cachePermissoesRotas.set(cacheKey, { status: 'permitido', timestamp: Date.now() });
         setStatusAcesso('permitido');
 
       } catch (error) {
         console.error("Erro na blindagem de rota:", error);
+        cachePermissoesRotas.set(cacheKey, { status: 'bloqueado', timestamp: Date.now() });
         setStatusAcesso('bloqueado'); 
       }
     });
@@ -287,7 +323,42 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
 
 const AppContent = () => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [usuarioLogado, setUsuarioLogado] = useState(null);
+  const [impersonatedTenant, setImpersonatedTenant] = useState(() => {
+    try {
+      const raw = localStorage.getItem('impersonatingTenant');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  useEffect(() => {
+    const syncImpersonate = () => {
+      try {
+        const raw = localStorage.getItem('impersonatingTenant');
+        setImpersonatedTenant(raw ? JSON.parse(raw) : null);
+      } catch {
+        setImpersonatedTenant(null);
+      }
+    };
+    syncImpersonate();
+    window.addEventListener('storage', syncImpersonate);
+    return () => window.removeEventListener('storage', syncImpersonate);
+  }, [location.pathname]);
+
+  const handleSairModoSuporte = () => {
+    localStorage.removeItem('impersonatingTenant');
+    const auth = getAuth();
+    if (auth.currentUser) {
+      localStorage.setItem('tenantId', auth.currentUser.uid);
+    } else {
+      localStorage.removeItem('tenantId');
+    }
+    setImpersonatedTenant(null);
+    window.location.href = '/gestao-usuarios';
+  };
 
   useEffect(() => {
     localStorage.removeItem('simulatingName');
@@ -297,6 +368,16 @@ const AppContent = () => {
       if (user) {
         // Ignora bypass do Super Admin e garante que seu tenantId está correto
         if (user.email === "celebrefesta25@gmail.com") {
+          const impersonating = localStorage.getItem('impersonatingTenant');
+          if (impersonating) {
+            try {
+              const impData = JSON.parse(impersonating);
+              if (impData && impData.uid) {
+                localStorage.setItem('tenantId', impData.uid);
+                return;
+              }
+            } catch (e) {}
+          }
           localStorage.setItem('tenantId', user.uid);
           return;
         }
@@ -354,16 +435,50 @@ const AppContent = () => {
               role = userData.role || 'owner';
               tenantId = userData.tenantId || user.uid;
               nomeExibido = userData.nomeExibicao || userData.nomeCompleto || nomeExibido;
+
+              // Garante que o email está preenchido e minúsculo
+              const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+              const updates = {};
+              if (emailLimpo && (!userData.email || userData.email !== emailLimpo)) {
+                updates.email = emailLimpo;
+              }
+              if (Object.keys(updates).length > 0) {
+                await setDoc(userDocRef, updates, { merge: true });
+              }
             } else {
-              // Se não existe, cria um perfil de owner padrão
+              // Se não existe, cria um perfil de owner padrão com 7 dias VIP
+              const dataAtual = new Date();
+              const dataFimTeste = new Date(dataAtual);
+              dataFimTeste.setDate(dataFimTeste.getDate() + 7);
+              const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+
               await setDoc(userDocRef, {
-                email: user.email,
+                email: emailLimpo,
                 nomeCompleto: nomeExibido,
+                nomeExibicao: nomeExibido,
                 role: 'owner',
                 tenantId: user.uid,
-                dataCadastro: new Date().toISOString().split('T')[0],
-                assinaturaAtiva: false
-              });
+                dataCadastro: dataAtual.toISOString(),
+                dataFimTeste: dataFimTeste.toISOString(),
+                planoId: 'plano_basico',
+                statusConta: 'ativo',
+                assinaturaAtiva: false,
+                authProvider: user.providerData?.[0]?.providerId || 'google.com',
+                criadoEm: dataAtual.toISOString()
+              }, { merge: true });
+
+              // Garante configurações da empresa
+              try {
+                const cfgRef = doc(db, 'configuracoes_empresa', user.uid);
+                const cfgSnap = await getDoc(cfgRef);
+                if (!cfgSnap.exists()) {
+                  await setDoc(cfgRef, {
+                    nomeFantasia: nomeExibido,
+                    email: emailLimpo,
+                    criadoEm: dataAtual.toISOString()
+                  }, { merge: true });
+                }
+              } catch (eCfg) {}
             }
           }
 
@@ -468,6 +583,35 @@ const AppContent = () => {
       {showNavbar && <Navbar />}
       
       <main className="main-content">
+        {impersonatedTenant && usuarioLogado?.email === 'celebrefesta25@gmail.com' && (
+          <div className="celebre-support-mode-banner">
+            <div className="support-banner-left">
+              <span className="support-shield-badge">
+                <i className="fas fa-shield-alt"></i> MODO SUPORTE ATIVO
+              </span>
+              <div className="support-banner-desc">
+                <span>Você está operando como: <strong>{impersonatedTenant.nome}</strong> ({impersonatedTenant.email})</span>
+                <small>Livre acesso administrativo para auxiliar o cliente. As alterações refletem na conta desta empresa.</small>
+              </div>
+            </div>
+            <div className="support-banner-right">
+              <button 
+                type="button" 
+                className="btn-banner-controle" 
+                onClick={() => navigate('/gestao-usuarios')}
+              >
+                <i className="fas fa-sliders-h"></i> Painel Master
+              </button>
+              <button 
+                type="button" 
+                className="btn-banner-exit" 
+                onClick={handleSairModoSuporte}
+              >
+                <i className="fas fa-sign-out-alt"></i> Sair do Modo Suporte
+              </button>
+            </div>
+          </div>
+        )}
         {showNavbar && <Topbar />}
 
         <Suspense fallback={
@@ -545,9 +689,9 @@ const AppContent = () => {
             {/* 📊 GESTÃO */}
             <Route path="/relatorios" element={<RotaPrivada><TravaSeguranca modulo="Relatorios" recursoExigido="Relatórios"><Relatorios /></TravaSeguranca></RotaPrivada>} />
             <Route path="/moodboard" element={<RotaPrivada><TravaSeguranca modulo="Moodboard" recursoExigido="Moodboard"><Moodboard /></TravaSeguranca></RotaPrivada>} />
-            <Route path="/configuracoes" element={<RotaPrivada><TravaSeguranca modulo="Equipe"><Configuracoes /></TravaSeguranca></RotaPrivada>} />
-            <Route path="/perfil" element={<RotaPrivada><Perfil /></RotaPrivada>} />
-            <Route path="/notificacoes" element={<RotaPrivada><Notificacoes /></RotaPrivada>} /> 
+            <Route path="/configuracoes" element={<RotaPrivada><TravaSeguranca modulo="Configuracoes"><Configuracoes /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/perfil" element={<RotaPrivada><TravaSeguranca modulo="Perfil"><Perfil /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/notificacoes" element={<RotaPrivada><TravaSeguranca modulo="Notificacoes"><Notificacoes /></TravaSeguranca></RotaPrivada>} /> 
             
             {/* 👥 GESTÃO DE EQUIPE E RH */}
             <Route path="/usuarios" element={<RotaPrivada><TravaSeguranca modulo="Equipe" recursoExigido="Equipe"><Usuarios /></TravaSeguranca></RotaPrivada>} />

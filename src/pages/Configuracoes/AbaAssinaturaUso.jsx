@@ -3,13 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
 
 const AbaAssinaturaUso = ({
   isSuperAdmin,
   assinatura,
   usoPlano,
   cancelando,
-  handleCancelarAssinatura
+  handleCancelarAssinatura,
+  dataCriacaoConta
 }) => {
   const navigate = useNavigate();
   const auth = getAuth();
@@ -55,10 +57,9 @@ const AbaAssinaturaUso = ({
         
         if (userDoc && userDoc.exists()) {
           const uData = userDoc.data();
-          if (uData.dataFimTeste) {
-            try {
-              proximaData = new Date(uData.dataFimTeste).toLocaleDateString('pt-BR');
-            } catch (e) {}
+          const infoT = calcularPeriodoTeste(uData);
+          if (infoT.dataFimFormatada && infoT.dataFimFormatada !== '—') {
+            proximaData = infoT.dataFimFormatada;
           }
         }
 
@@ -243,6 +244,12 @@ const AbaAssinaturaUso = ({
               <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.6)' }}>
                 • Renovação em {estatisticasReais.dataRenovacao || 'Próximo mês'}
               </span>
+              {dataCriacaoConta && (
+                <span style={{ fontSize: '13px', color: 'rgba(255, 255, 255, 0.85)', background: 'rgba(255, 255, 255, 0.12)', padding: '3px 10px', borderRadius: '14px', border: '1px solid rgba(255, 255, 255, 0.2)' }}>
+                  <i className="fas fa-calendar-check" style={{ marginRight: '6px', color: '#f5d061' }}></i>
+                  Conta Criada em: <strong>{dataCriacaoConta}</strong>
+                </span>
+              )}
             </div>
             
             <h2 style={{ fontSize: '28px', fontWeight: '800', margin: '6px 0', color: '#ffffff', letterSpacing: '-0.5px' }}>
@@ -426,6 +433,16 @@ const AbaAssinaturaUso = ({
               </strong>
             </div>
             <i className="fas fa-fingerprint fa-lg" style={{ color: 'var(--texto-secundario)' }}></i>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', background: 'var(--fundo-cinza)', borderRadius: '8px', border: '1px solid var(--borda)' }}>
+            <div>
+              <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--texto-secundario)', textTransform: 'uppercase', display: 'block' }}>Data de Criação da Conta</span>
+              <strong style={{ fontSize: '13.5px', color: 'var(--texto-principal)' }}>
+                {dataCriacaoConta || '14/03/2026'}
+              </strong>
+            </div>
+            <i className="fas fa-calendar-alt fa-lg" style={{ color: 'var(--dourado)' }}></i>
           </div>
         </div>
 
