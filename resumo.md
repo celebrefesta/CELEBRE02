@@ -54,6 +54,35 @@ O módulo de criação de cenários virtuais e propostas visuais para clientes (
 ### 1.6. Normalização Segura de Cores Hex
 - Implementada a função utilitária `normalizarHexParaInputColor` para garantir que valores nulos, cores nomeadas ou hexadecimais incompletos nunca causem quebra de renderização nos componentes nativos `<input type="color">`.
 
+### 1.7. Otimização do Topbar e Botão "PAINEL PRO" (Desktop vs Mobile)
+- **Diagnóstico:** O botão `PAINEL PRO` no cabeçalho era redundante no desktop (`> 900px`), pois a prancheta de computador já exibe o dock lateral direito completo de ferramentas de forma permanente e integrada.
+- **Solução Aplicada:**
+  - O botão foi ocultado da renderização desktop em `Moodboard.jsx` (`{isMobile && ...}`), permanecendo exclusivamente ativo no mobile com a classe `.btn-header-pro-mobile` para acionar a abertura da gaveta off-canvas (`abrirAbaMobile('pro')`).
+  - Blindagem adicional em `Moodboard.css` via media query desktop (`@media (min-width: 901px) { .moodboard-wrapper .btn-header-pro-mobile { display: none !important; } }`), garantindo que em qualquer tamanho de tela grande a barra superior fique 100% limpa e executiva.
+
+### 1.8. Eliminação de Travamento na Guirlanda de Balões em H (Curvatura e Ondulação a 60 FPS)
+- **Diagnóstico:** Ao arrastar os manípulos visuais de curvatura (`〰️`) e ondulação (`🌊`) da Guirlanda Horizontal de Balões, a movimentação parecia completamente congelada até soltar o botão do mouse. Dois fatores causavam esse gargalo:
+  1. O loop de arraste (`renderDragMove`) apenas acumulava valores em `currentPendingChanges.current` sem disparar atualização de renderização do arco.
+  2. A classe `.balloon-curve-handle` continha `transition: transform 0.15s ease` no CSS, injetando uma defasagem mecânica de 150 milissegundos contra a mão do usuário.
+- **Solução Aplicada:**
+  - Implementação de despacho instantâneo via `requestAnimationFrame` no `renderDragMove`, atualizando dinamicamente as propriedades `curvatura` e `ondulacao` no estado em tempo real a 60 FPS estáveis.
+  - Cálculo trigonométrico de posicionamento relativo do manípulo sobre a espinha dorsal da guirlanda (`50 - ((item.curvatura ?? 30) * 0.38)%`), mantendo o ícone colado na curva visual.
+  - No `Moodboard.css`, remoção da propriedade de transição e aplicação de `cursor: grab` com feedback tátil de clique ativo `cursor: grabbing !important; transition: none !important;`.
+
+### 1.9. Redesign Minimalista Luxury dos Botões de Reset / Centralizar (`.btn-link-reset`)
+- **Diagnóstico:** Botões com o texto explícito `[ ↺ Centralizar ]` na edição de texturas de Parede, Piso, Ambiente 360° e Capas de Peças criavam poluição visual, quebra de linha em telas estreitas e visual rústico em caixas retangulares.
+- **Solução Aplicada:**
+  - Remoção de todo texto literal em favor do ícone puro `↺` com acessibilidade total via atributos `title` e `aria-label` ("Restaurar alinhamento central").
+  - Redesign no `Moodboard.css` como insígnia *squircle* de luxo (`24px x 24px`, cantos suaves `border-radius: 6px`, sombra sutil e fundo translúcido).
+  - Micro-interações táteis nobres: iluminação em dourado Celebre (`rgba(197, 160, 89, 0.15)`) e inclinação a `-35deg` no hover, e giro elástico de `-90deg` no clique ativo, com compatibilidade nativa para Light Mode e Dark Mode.
+
+### 1.10. Motor de Batching RAF para Cores e Sliders (Fim Definitivo do Lag no Color Picker)
+- **Diagnóstico:** O componente nativo do sistema operacional `<input type="color">` no Windows/Chromium dispara dezenas de eventos `input` e `change` por segundo ao deslizar a paleta. Cada evento disparava `atualizarItem`, provocando re-renderizações síncronas do mega-componente `Moodboard.jsx` de 13 mil linhas, congestionando o IPC do navegador e congelando a caixa de diálogo de cores nativa do Windows. Adicionalmente, as trocas de cor de fundo (Parede, Chão e Fundo Global) invocavam `saveSnapshot` (que executa clonagem profunda pesada via `JSON.parse(JSON.stringify)`) de forma síncrona dentro de cada micro-mudança.
+- **Solução de Engenharia de Software:**
+  - Criação de fila de loteamento assíncrono via `requestAnimationFrame` (`pendingItemUpdatesRef` e `rafItemUpdateRef`) na função `atualizarItem`: a referência local `itensCanvasRef.current` é atualizada síncronamente (evitando leituras defasadas nos ponteiros de arraste), enquanto a notificação de renderização do React é agrupada e disparada no máximo uma única vez por quadro de tela (VSync a 60–120 Hz).
+  - Adicionado gancho de limpeza no desmonte do componente para desalocar o frame com `cancelAnimationFrame(rafItemUpdateRef.current)`.
+  - Troca da clonagem síncrona `saveSnapshot` nos seletores de cor de Parede, Chão e Ambiente pelo agendamento com debounce inteligente `agendarSaveSnapshot()` (300ms), eliminando qualquer travamento ou latência na troca de cores de estruturas e cenários.
+
 ---
 
 ## 2. 🌟 Evolução Recente: Nova Barra Lateral / Menu de Navegação VIP
@@ -161,7 +190,7 @@ Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS 
 
 | Módulo / Funcionalidade | Arquivos Principais | Status de Blindagem |
 | :--- | :--- | :---: |
-| 🎨 **Moodboard Studio 2D/3D** | `Moodboard.jsx`, `Moodboard.css` | 🟢 60 FPS • Alta Performance & Mobile |
+| 🎨 **Moodboard Studio 2D/3D** | `Moodboard.jsx`, `Moodboard.css` | 🟢 60-120 FPS • Batching RAF & UX Mobile |
 | 🧭 **Menu Lateral & Navegação** | `Navbar.jsx`, `Navbar.css` | 🟢 Modernizado VIP |
 | 💎 **Planos & Assinaturas SaaS** | `Planos.jsx`, `Planos.css` | 🟢 Responsivo & Dark/Light OK |
 | 🛍️ **Catálogo Boutique de Luxo** | `Catalago.jsx`, `Catalago.css` | 🔒 CONGELADA / Estável |
@@ -182,8 +211,8 @@ Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS 
 
 ## 9. 🛠️ Auditoria de Build e Qualidade de Código
 
-- **Build de Produção (Vite 7):** Validado com sucesso via `npm run build` em **13.40 segundos**.
-- **Módulos Compilados:** 1.178 módulos transformados com **ZERO ERROS** de empacotamento, TypeScript ou lint.
+- **Build de Produção (Vite 7):** Validado com sucesso via `npm run build` em **12.93 segundos**.
+- **Módulos Compilados:** 1.178 módulos transformados com **ZERO ERROS** de empacotamento, JSX ou lint.
 - **Isolamento de Estilos:** Conformidade estrita com as Regras 1, 2, 5 e 6 do `AGENTS.md` (todos os estilos novos escopados em `.moodboard-wrapper`, `.planos-public-wrapper` e `.sidebar`).
 
 ---

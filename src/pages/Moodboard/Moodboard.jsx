@@ -3506,6 +3506,8 @@ const Moodboard = () => {
   const currentPendingChanges = useRef({});
   const itensCanvasRef = useRef(itensCanvas);
   itensCanvasRef.current = itensCanvas;
+  const pendingItemUpdatesRef = useRef(new Map());
+  const rafItemUpdateRef = useRef(null);
 
   // 🎛️ Painel Direito Studio Pro (Estilo Photoshop / Figma)
   const [painelDireitoAberto, setPainelDireitoAberto] = useState(() => typeof window !== 'undefined' && window.innerWidth > 900);
@@ -3849,6 +3851,14 @@ const Moodboard = () => {
       }
     };
   }, [fitCanvasToMobile]);
+
+  useEffect(() => {
+    return () => {
+      if (rafItemUpdateRef.current) {
+        cancelAnimationFrame(rafItemUpdateRef.current);
+      }
+    };
+  }, []);
 
   // 📱 SWIPE DOWN PARA FECHAR O BOTTOM SHEET (PROTEGIDO CONTRA ROLAGEM DE CONTEÚDO)
   const handlePainelTouchStart = useCallback((e) => {
@@ -5907,21 +5917,33 @@ const Moodboard = () => {
         return;
       }
 
-      // 5. MODELAGEM DE CURVATURA DO ARCO DIRETO NO CANVAS (INTERATIVO)
+      // 5. MODELAGEM DE CURVATURA DO ARCO DIRETO NO CANVAS (INTERATIVO & FLUIDO)
       if (interactionMode.current === 'curve') {
         const deltaCurv = Math.round(-totalDy * 0.95);
-        const newCurv = Math.max(-100, Math.min(100, (s.curvatura || 0) + deltaCurv));
+        const newCurv = Math.max(-70, Math.min(70, (s.curvatura ?? 30) + deltaCurv));
         currentPendingChanges.current = { curvatura: newCurv };
-        updateRotacaoTooltipDirectDom(`Curvatura: ${newCurv}%`);
+        updateRotacaoTooltipDirectDom(`Curvatura: ${newCurv}°`);
+
+        // ✨ Atualização instantânea e fluida no canvas em tempo real (60 FPS, sem travamentos)
+        const targetId = activeItemId.current;
+        if (targetId) {
+          setItensCanvas(prev => prev.map(it => it.uniqueId === targetId ? { ...it, curvatura: newCurv } : it));
+        }
         return;
       }
 
-      // 6. MODELAGEM DE ONDULAÇÃO 'S' DIRETO NO CANVAS (INTERATIVO)
+      // 6. MODELAGEM DE ONDULAÇÃO 'S' DIRETO NO CANVAS (INTERATIVO & FLUIDO)
       if (interactionMode.current === 'wave') {
         const deltaOnd = Math.round((totalDx - totalDy) * 0.8);
-        const newOnd = Math.max(0, Math.min(100, (s.ondulacao || 0) + deltaOnd));
+        const newOnd = Math.max(0, Math.min(80, (s.ondulacao ?? 25) + deltaOnd));
         currentPendingChanges.current = { ondulacao: newOnd };
         updateRotacaoTooltipDirectDom(`Ondulação: ${newOnd}%`);
+
+        // ✨ Atualização instantânea e fluida no canvas em tempo real (60 FPS, sem travamentos)
+        const targetId = activeItemId.current;
+        if (targetId) {
+          setItensCanvas(prev => prev.map(it => it.uniqueId === targetId ? { ...it, ondulacao: newOnd } : it));
+        }
         return;
       }
     };
@@ -5971,14 +5993,47 @@ const Moodboard = () => {
     closeContextMenu();
   };
 
+  // 🚀 MOTOR DE ATUALIZAÇÃO ULTRA-RÁPIDO COM BATCHING EM REQUEST ANIMATION FRAME (0ms LAG EM CORES & SLIDERS)
   const atualizarItem = useCallback((id, alt, deveSalvarHistorico = true) => {
-    setItensCanvas(prev => {
-      const updated = prev.map(i => i.uniqueId === id ? { ...i, ...alt } : i);
-      if (deveSalvarHistorico) {
-        agendarSaveSnapshot(updated);
-      }
-      return updated;
+    // 1. Atualiza imediatamente a ref de consulta rápida para consistência síncrona
+    if (itensCanvasRef.current) {
+      itensCanvasRef.current = itensCanvasRef.current.map(i => i.uniqueId === id ? { ...i, ...alt } : i);
+    }
+
+    // 2. Acumula alterações pendentes por id
+    const current = pendingItemUpdatesRef.current.get(id) || {};
+    pendingItemUpdatesRef.current.set(id, {
+      ...current,
+      ...alt,
+      deveSalvarHistorico: deveSalvarHistorico || current.deveSalvarHistorico
     });
+
+    // 3. Batching fluido em RequestAnimationFrame (~60-120 FPS sem travar o event loop)
+    if (!rafItemUpdateRef.current) {
+      rafItemUpdateRef.current = requestAnimationFrame(() => {
+        rafItemUpdateRef.current = null;
+        const updatesMap = new Map(pendingItemUpdatesRef.current);
+        pendingItemUpdatesRef.current.clear();
+
+        if (updatesMap.size === 0) return;
+
+        let salvarHist = false;
+        setItensCanvas(prev => {
+          const updated = prev.map(item => {
+            const up = updatesMap.get(item.uniqueId);
+            if (!up) return item;
+            if (up.deveSalvarHistorico) salvarHist = true;
+            const { deveSalvarHistorico: _, ...changes } = up;
+            return { ...item, ...changes };
+          });
+
+          if (salvarHist) {
+            agendarSaveSnapshot(updated);
+          }
+          return updated;
+        });
+      });
+    }
   }, [agendarSaveSnapshot]);
 
   const deleteItem = useCallback((id) => {
@@ -7851,7 +7906,7 @@ const Moodboard = () => {
                           setGradienteAtivoParede(false);
                           setWallBackground(e.target.value);
                           setModoCenario('duplo');
-                          saveSnapshot(itensCanvas, e.target.value, floorBackground);
+                          agendarSaveSnapshot(itensCanvas, e.target.value, floorBackground);
                         }}
                       />
                       <span>🎨</span>
@@ -7998,9 +8053,10 @@ const Moodboard = () => {
                           type="button"
                           className="btn-link-reset"
                           onClick={() => { setPosicaoParedeY(50); setPosicaoParedeX(50); setZoomParede(100); setModoTileParede(false); setTileSizeParede(300); }}
-                          title="Resetar posição"
+                          title="Centralizar e resetar enquadramento da parede"
+                          aria-label="Centralizar"
                         >
-                          ↺ Centralizar
+                          ↺
                         </button>
                       </div>
 
@@ -8185,7 +8241,7 @@ const Moodboard = () => {
                         onChange={(e) => {
                           setFloorBackground(e.target.value);
                           setModoCenario('duplo');
-                          saveSnapshot(itensCanvas, wallBackground, e.target.value);
+                          agendarSaveSnapshot(itensCanvas, wallBackground, e.target.value);
                         }}
                       />
                       <span>🎨</span>
@@ -8245,9 +8301,10 @@ const Moodboard = () => {
                           type="button"
                           className="btn-link-reset"
                           onClick={() => { setPosicaoPisoY(50); setPosicaoPisoX(50); setZoomPiso(100); }}
-                          title="Resetar posição"
+                          title="Centralizar e resetar enquadramento do piso"
+                          aria-label="Centralizar"
                         >
-                          ↺ Centralizar
+                          ↺
                         </button>
                       </div>
                       <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
@@ -8369,7 +8426,7 @@ const Moodboard = () => {
                         />
                       ))}
                     <label className="fast-color-picker-label" title="Escolher cor livre">
-                      <input type="color" className="invisible-color-input" onChange={(e) => { setModoCenario('unico'); setWallBackground(e.target.value); saveSnapshot(itensCanvas, e.target.value, floorBackground); }} />
+                      <input type="color" className="invisible-color-input" onChange={(e) => { setModoCenario('unico'); setWallBackground(e.target.value); agendarSaveSnapshot(itensCanvas, e.target.value, floorBackground); }} />
                       <span>🎨</span>
                     </label>
                   </div>
@@ -8419,9 +8476,10 @@ const Moodboard = () => {
                           type="button"
                           className="btn-link-reset"
                           onClick={() => { setPosicaoAmbienteY(50); setPosicaoAmbienteX(50); setZoomAmbiente(100); }}
-                          title="Resetar posição"
+                          title="Centralizar e resetar enquadramento da foto"
+                          aria-label="Centralizar"
                         >
-                          ↺ Centralizar
+                          ↺
                         </button>
                       </div>
                       <p className="hint-text" style={{ margin: '0 0 8px 0', fontSize: '11px' }}>
@@ -8597,14 +8655,18 @@ const Moodboard = () => {
                       <Icons.UploadCloud width={14} height={14} />
                       <span className="btn-text">UPLOAD</span>
                     </button>
+                  </>
+                )}
 
+                {isMobile && (
+                  <>
                     <div className="header-divider"></div>
 
-                    {/* Alternador do Painel Direito Pro */}
+                    {/* Alternador do Painel Direito Pro (Exclusivo Mobile) */}
                     <button
-                      className={`btn-header-action ${painelDireitoAberto ? 'luxury-gold' : ''}`}
-                      onClick={() => setPainelDireitoAberto(!painelDireitoAberto)}
-                      title="Alternar Painel Lateral Pro (Camadas & Inspetor Photoshop)"
+                      className={`btn-header-action btn-header-pro-mobile ${painelDireitoAberto ? 'luxury-gold' : ''}`}
+                      onClick={() => abrirAbaMobile('pro')}
+                      title="Alternar Painel Lateral Pro (Camadas & Inspetor)"
                     >
                       <Icons.Sliders width={14} height={14} />
                       <span className="btn-text">PAINEL PRO</span>
@@ -9191,17 +9253,24 @@ const Moodboard = () => {
                           <>
                             <div
                               className="balloon-curve-handle"
-                              style={unflipHandle}
+                              style={{
+                                ...unflipHandle,
+                                top: `${Math.max(15, Math.min(85, 50 - ((item.curvatura ?? 30) * 0.38)))}%`
+                              }}
                               onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'curve')}
-                              title="🎈 Puxe para cima/baixo para curvar o arco"
+                              title="🎈 Puxe para cima ou para baixo para modelar a curvatura do arco"
                             >
                               <span>〰️</span>
                             </div>
                             <div
                               className="balloon-wave-handle"
-                              style={unflipHandle}
+                              style={{
+                                ...unflipHandle,
+                                top: `${Math.max(15, Math.min(85, 50 + ((item.ondulacao ?? 25) * 0.25)))}%`,
+                                left: '80%'
+                              }}
                               onPointerDown={e => handlePointerDown(e, item.uniqueId, item.type, 'wave')}
-                              title="🌊 Puxe para os lados para ondular o arco"
+                              title="🌊 Puxe para os lados para modelar a ondulação em 'S'"
                             >
                               <span>🌊</span>
                             </div>
@@ -11902,11 +11971,12 @@ const Moodboard = () => {
                                   <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#0f172a' }}>🖐️ Ajuste & Enquadramento da Imagem:</span>
                                   <button
                                     type="button"
+                                    className="btn-link-reset"
                                     onClick={() => atualizarItem(selecionadoId, { capaPosX: 50, capaPosY: 50, capaScale: 1 })}
-                                    style={{ fontSize: '9.5px', fontWeight: '700', color: '#c5a059', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
-                                    title="Restaurar posição original"
+                                    title="Centralizar e restaurar posição da capa"
+                                    aria-label="Centralizar"
                                   >
-                                    🎯 Centralizar
+                                    ↺
                                   </button>
                                 </div>
 

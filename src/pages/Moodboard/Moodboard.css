@@ -1164,20 +1164,60 @@
   border-radius: 10px;
   padding: 12px;
 }
-.btn-link-reset {
-  background: none;
-  border: none;
-  color: #c5a059;
-  font-size: 11px;
-  font-weight: 750;
+/* 🔄 Botão Micro-Reset / Centralizar Luxury (Ícone Minimalista VIP) */
+.moodboard-wrapper .btn-link-reset {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid rgba(203, 213, 225, 0.9);
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
   cursor: pointer;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  padding: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  user-select: none;
 }
-.btn-link-reset:hover {
-  background: rgba(197, 160, 89, 0.12);
-  color: #92400e;
+
+.moodboard-wrapper .btn-link-reset:hover {
+  background: rgba(197, 160, 89, 0.15);
+  border-color: rgba(197, 160, 89, 0.65);
+  color: #b45309;
+  transform: translateY(-1px) rotate(-35deg);
+  box-shadow: 0 3px 8px rgba(197, 160, 89, 0.25);
+}
+
+.moodboard-wrapper .btn-link-reset:active {
+  transform: translateY(0) scale(0.92) rotate(-90deg);
+  background: #c5a059;
+  color: #0f172a;
+  border-color: #c5a059;
+}
+
+[data-theme='dark'] .moodboard-wrapper .btn-link-reset,
+.moodboard-wrapper .studio-right-panel .btn-link-reset,
+.moodboard-wrapper .dark .btn-link-reset {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.12);
+  color: #94a3b8;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme='dark'] .moodboard-wrapper .btn-link-reset:hover,
+.moodboard-wrapper .studio-right-panel .btn-link-reset:hover,
+.moodboard-wrapper .dark .btn-link-reset:hover {
+  background: rgba(197, 160, 89, 0.22);
+  border-color: #c5a059;
+  color: #fef08a;
+  box-shadow: 0 3px 10px rgba(197, 160, 89, 0.35);
 }
 .transicao-title-row {
   display: flex;
@@ -1430,7 +1470,7 @@
   font-size: 13px;
   z-index: 106;
   transform: translate(-50%, -50%);
-  transition: transform 0.15s ease, background 0.15s ease, border-color 0.15s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
   user-select: none;
   touch-action: none;
 }
@@ -1453,18 +1493,22 @@
 
 .balloon-curve-handle:hover,
 .balloon-wave-handle:hover {
-  transform: translate(-50%, -50%) scale(1.25);
   background: #1e293b;
+  filter: brightness(1.2);
+}
+
+.balloon-curve-handle:active,
+.balloon-wave-handle:active {
+  cursor: grabbing !important;
+  transition: none !important;
 }
 
 .balloon-curve-handle:active {
-  transform: translate(-50%, -50%) scale(1.15);
   background: #f59e0b;
   color: #0f172a;
 }
 
 .balloon-wave-handle:active {
-  transform: translate(-50%, -50%) scale(1.15);
   background: #38bdf8;
   color: #0f172a;
 }
@@ -2696,6 +2740,13 @@ input[type=range]::-webkit-slider-runnable-track {
   height: 20px; 
   background: rgba(255, 255, 255, 0.15); 
   margin: 0 2px; 
+}
+
+/* 📱 Botão Painel Pro no Topo (Exclusivo Mobile / Oculto no Computador) */
+@media (min-width: 901px) {
+  .moodboard-wrapper .btn-header-pro-mobile {
+    display: none !important;
+  }
 }
 
 /* 🛍️ PÍLULA FLUTUANTE COMERCIAL NO RODAPÉ */
@@ -5476,23 +5527,6 @@ input[type=range]::-webkit-slider-runnable-track {
   font-variant-numeric: tabular-nums;
 }
 
-.btn-link-reset {
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 4px;
-  color: #64748b;
-  font-size: 10.5px;
-  cursor: pointer;
-  padding: 1px 5px;
-  line-height: 1;
-  transition: all 0.15s ease;
-}
-
-.btn-link-reset:hover {
-  background: #e2e8f0;
-  color: #0f172a;
-  border-color: #94a3b8;
-}
 
 .effect-tone-swatch {
   width: 100%;

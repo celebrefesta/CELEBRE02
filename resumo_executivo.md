@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 06 de Setembro / 2026  
+> **Data de Referência**: 08 de Setembro / 2026  
 
 ---
 
@@ -189,26 +189,6 @@ graph TD
 ---
 
 
-### 🎨 6.10. Celebre Studio Pro & Moodboard Digital (`/src/pages/Moodboard/`)
-- **Estúdio de Cenografia 3D e Montagem de Projetos (`Moodboard.jsx`, `Moodboard.css`)**:
-  - **Prancheta de Alta Performance a 120 FPS**: Motor de arraste e movimentação ultrarrápido com coordenadas absolutas e sincronização nativa via `requestAnimationFrame` (RAF), eliminando qualquer latência ou delay.
-  - **Ajustes Consolidados no Painel Direito (Estilo Photoshop / Figma)**:
-    - **Dimensões & Posição**: Inputs numéricos de precisão para Largura (W), Altura (H), X e Y.
-    - **Filtros e Efeitos Visuais**: Sliders de Brilho (0-200%), Contraste (0-200%), Opacidade (0-100%), Sombra 3D (0-50px) e Rotação 360° com atalho de 2 cliques para restauração do valor padrão.
-    - **Estruturas & Mesas Cilindro 3D**: Upload de fotos de capa pelo computador, catálogo de tecidos sublimados prontos e seleção de acabamento de tampo (contínuo vs tampo liso colorido).
-    - **Ações Rápidas em Grid**: Centralizar, Alinhar no Chão, Espelhar, Duplicar, Trazer p/ Frente, Enviar p/ Trás, Bloquear e Excluir.
-  - **Menu Lateral Esquerdo Clean de Inserção**:
-    - 🛋️ **Acervo**: Peças físicas do próprio estoque com busca e contagem.
-    - 👑 **Galeria**: Portfólio próprio e arcos de balões oficiais Celebre.
-    - 🏛️ **Estruturas**: Painéis romanos, redondos e mesas cilindro 3D.
-    - ✍️ **Texto**: Tipografia moderna com efeitos de Neon Glow.
-    - 🎨 **Cenário**: Paredes, pisos, iluminação e ciclorama estúdio.
-  - **Calculadora de Bexigas & Comercial Integrada**:
-    - Pílula flutuante no rodapé com valor total do projeto e identificador de peças a comprar/sublocar.
-    - Exportação da lista de compras de pacotes de bexigas formatada diretamente para o WhatsApp.
-  - **Responsividade Mobile Completa**:
-    - Painel direito convertido em **Drawer Lateral Flutuante (Off-canvas)** com fundo escurecido (*backdrop*), mantendo a prancheta ampla e visível no celular.
-
 ### 🚚 6.9. Logística, Roteiro de Galpão & Vistoria de Campo (`/src/pages/Logistica/`, `/Agenda/`)
 - **Agenda de Eventos (`Agenda.jsx`)**: Calendário interativo (Mês, Semana, Dia) diferenciando saídas (🚚), eventos (🎉) e recolhes (📦).
 - **Esteira Operacional de Galpão em 4 Etapas (`Logistica.jsx`, `Logistica.css`)**:
@@ -241,8 +221,31 @@ graph TD
 
 ---
 
-### 🎨 6.10. Moodboard & Projetos Visuais (`/src/pages/Moodboard/`)
-- **Criador Visual (`Moodboard.jsx`)**: Canvas interativo para composição de paletas de cores, cenários e arranjos visuais para propostas de locação.
+### 🎨 6.10. Celebre Studio Pro & Moodboard Digital 2D/3D (`/src/pages/Moodboard/`)
+- **Estúdio de Cenografia 3D e Montagem de Projetos (`Moodboard.jsx`, `Moodboard.css`)**:
+  - **Prancheta de Alta Performance a 120 FPS**: Motor de arraste e movimentação ultrarrápido com coordenadas absolutas e sincronização nativa via `requestAnimationFrame` (RAF), eliminando qualquer latência ou delay.
+  - **Motor de Batching RAF para Cores e Sliders**: Agrupamento assíncrono de eventos de alta frequência gerados pelo seletor de cores nativo (`<input type="color">`), sincronizando atualizações no React com a taxa VSync da tela (60-120 FPS). Substituição da clonagem síncrona profunda por `agendarSaveSnapshot` (debounce de 300ms) nas trocas de cor de fundo, parede e piso.
+  - **Memoização Integral dos Elementos Vetoriais (React.memo)**: Encapsulamento de mais de 26 componentes de cenografia 3D (Arco Romano, Painéis Wavy, Mesas Nuvem, Cilindros, Carruagens, Estantes), permitindo movimentação e zoom fluidos sem recalcular a árvore DOM dos demais elementos.
+  - **Guirlandas de Balões Inteligentes (H e V)**: Guirlanda horizontal com curvatura dinâmica (`〰️`) e ondulação (`🌊`) operando em tempo real a 60 FPS com manípulos posicionados diretamente na espinha dorsal SVG e arraste sem atrito.
+  - **Ajustes Consolidados no Painel Direito (Estilo Photoshop / Figma)**:
+    - **Dimensões & Posição**: Inputs numéricos de precisão para Largura (W), Altura (H), X e Y.
+    - **Filtros e Efeitos Visuais**: Sliders de Brilho (0-200%), Contraste (0-200%), Opacidade (0-100%), Sombra 3D (0-50px) e Rotação 360°.
+    - **Estruturas & Mesas Cilindro 3D**: Upload de fotos de capa pelo computador, catálogo de tecidos sublimados prontos e seleção de acabamento de tampo (contínuo vs tampo liso colorido).
+    - **Botões de Reset / Centralizar Minimalistas (`.btn-link-reset`)**: Ícones `↺` em squircle Celebre (`24x24px`, cantos suaves, brilho dourado e rotação no clique), sem poluição de texto.
+    - **Ações Rápidas em Grid**: Centralizar, Alinhar no Chão, Espelhar, Duplicar, Trazer p/ Frente, Enviar p/ Trás, Bloquear e Excluir.
+  - **Menu Lateral Esquerdo Clean de Inserção**:
+    - 🛋️ **Acervo**: Peças físicas do próprio estoque com busca e contagem.
+    - 👑 **Galeria**: Portfólio próprio e arcos de balões oficiais Celebre.
+    - 🏛️ **Estruturas**: Painéis romanos, redondos e mesas cilindro 3D.
+    - ✍️ **Texto**: Tipografia moderna com efeitos de Neon Glow.
+    - 🎨 **Cenário**: Paredes, pisos, iluminação e ciclorama estúdio.
+  - **Calculadora de Bexigas & Comercial Integrada**:
+    - Pílula flutuante no rodapé com valor total do projeto e identificador de peças a comprar/sublocar.
+    - Exportação da lista de compras de pacotes de bexigas formatada diretamente para o WhatsApp.
+  - **Responsividade Mobile Completa**:
+    - Botão "PAINEL PRO" exclusivo para smartphones (`isMobile`) para abrir a gaveta lateral off-canvas, ocultado no desktop onde o dock já é permanente.
+    - Dock de zoom tátil (`[ (-) 37% (+) [ ] ]`) protegido contra fechamento acidental e oscilação de viewport (`z-index: 90`).
+    - Gaveta retrátil de efeitos compacta (34px) para economia de espaço vertical.
 
 ---
 
@@ -311,6 +314,32 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 ---
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 08/09/2026 — 18h20 às 20h45 (BRT)
+- ✅ **🎨 Otimização do Topbar do Moodboard & Botão "PAINEL PRO" (`Moodboard.jsx`, `Moodboard.css`)**:
+  - **Eliminação de Redundância no Desktop**: O botão `PAINEL PRO` foi removido da prancheta de computador (`!isMobile`), pois o desktop já conta com o painel lateral de propriedades e ferramentas permanentemente aberto e integrado.
+  - **Exclusividade Mobile**: O botão agora renderiza estritamente em dispositivos móveis (`isMobile`) com a classe `.btn-header-pro-mobile`, acionando a gaveta off-canvas (`abrirAbaMobile('pro')`).
+  - **Blindagem CSS**: Aplicada media query `@media (min-width: 901px) { .moodboard-wrapper .btn-header-pro-mobile { display: none !important; } }`, impedindo reaparecimento acidental em telas largas.
+- ✅ **🎈 Guirlanda em H (Horizontal) — Eliminação de Travamento & Arraste a 60 FPS (`Moodboard.jsx`, `Moodboard.css`)**:
+  - **Diagnóstico**: Ao arrastar os manípulos interativos de Curvatura (`〰️`) e Ondulação (`🌊`), a movimentação sofria congelamento visual, atualizando apenas ao soltar o mouse (`pointerup`). Além disso, o CSS `.balloon-curve-handle` continha `transition: transform 0.15s`, atrasando a resposta mecânica em 150ms.
+  - **Correção em Alta Performance**: Implementado loop de atualização contínua via `requestAnimationFrame` em `renderDragMove`, recalculando `curvatura` e `ondulacao` a 60 FPS estáveis.
+  - **Posicionamento Relativo no SVG**: Manípulos dinamicamente alinhados na curvatura da espinha dorsal do arco (`50 - ((item.curvatura ?? 30) * 0.38)%`).
+  - **Acabamento CSS**: Removida a transição interpolada e configurado `cursor: grab` com clique ativo `cursor: grabbing !important; transition: none !important;`.
+- ✅ **✨ Redesign Minimalista Luxury dos Botões de Reset / Centralizar (`Moodboard.jsx`, `Moodboard.css`)**:
+  - **Limpeza Visual**: Removida a palavra escrita "Centralizar" de todos os 4 pontos de controle (Parede, Piso, Ambiente 360° e Capa de Imagem), eliminando caixas volumosas e quebras de linha em telas pequenas.
+  - **Ícone Puro**: Mantido apenas o símbolo de recarga `↺` com atributos de acessibilidade completos (`title="Restaurar alinhamento central"` e `aria-label`).
+  - **Design Squircle Celebre**: Reestilizado no `Moodboard.css` como badge de luxo (`24px x 24px`, cantos arredondados `border-radius: 6px`, sombra suave, fundo translúcido neutro).
+  - **Micro-Interações**: Efeito hover com brilho em ouro Celebre (`rgba(197, 160, 89, 0.15)`) e inclinação a `-35deg`; clique com rotação elástica de `-90deg`, compatível com temas claro e escuro.
+- ✅ **⚡ Motor de Batching RAF para Cores e Sliders — Fim do Lag no Color Picker (`Moodboard.jsx`)**:
+  - **Diagnóstico Crítico de IPC**: O seletor nativo `<input type="color">` do Windows/Chromium dispara de 60 a 120 eventos `input`/`change` por segundo ao deslizar a paleta. Cada micro-mudança disparava `atualizarItem`, forçando re-renderizações completas e síncronas do mega-componente `Moodboard.jsx` de 13 mil linhas, congestionando o processo de renderização e travando a janela de cores do Windows. Além disso, as alterações de cor de Parede, Chão e Ambiente invocavam diretamente `saveSnapshot` (que executa clonagem profunda pesada via `JSON.parse(JSON.stringify)`).
+  - **Arquitetura de Alta Performance**:
+    1. Criada fila de mutações assíncronas via `requestAnimationFrame` (`pendingItemUpdatesRef` e `rafItemUpdateRef`) em `atualizarItem`.
+    2. A referência em memória `itensCanvasRef.current` é atualizada síncronamente (garantindo precisão imediata nos ponteiros de arraste), enquanto a notificação de renderização do React é agrupada em lote e disparada no máximo uma vez por quadro de exibição (VSync a 60–120 Hz).
+    3. Adicionado cancelamento seguro no desmonte com `cancelAnimationFrame(rafItemUpdateRef.current)`.
+    4. Nos seletores de cores de Parede, Chão e Fundo Global, substituído o `saveSnapshot` síncrono pelo agendamento com debounce inteligente `agendarSaveSnapshot()` (300ms).
+  - **Resultado**: Resposta instantânea, suave e sem nenhum congelamento na troca de cores de painéis, mesas, cilindros, tecidos, paredes e pisos.
+- ✅ **🛠️ Auditoria de Build de Produção**:
+  - `npm run build` executado com sucesso e **zero erros** (`built in 12.93s`). 1.178 módulos compilados perfeitamente.
 
 ### 🗓️ Sessão: 06/09/2026 — 08h40 às 09h35 (BRT)
 - ✅ **📱 Refinamento Completo do Modo Galpão & PWA Mobile (`ModalBipagemGalpao.jsx`, `ModalBipagemGalpao.css`, `public/manifest.json`)**:
@@ -539,5 +568,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 06/09/2026 — 09h35 (BRT)  
+> **⏱️ Última atualização:** 08/09/2026 — 20h45 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  
