@@ -524,20 +524,6 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                  <i className="fas fa-calendar-alt" style={{ color: '#c5a059', marginRight: '6px' }}></i> Data de Criação da Conta
-                </label>
-                <input 
-                  type="text" 
-                  value={dadosPerfil.dataCriacao || dataCriacaoConta || '—'} 
-                  readOnly 
-                  disabled
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontWeight: '800', cursor: 'not-allowed', fontSize: '14px', boxSizing: 'border-box' }}
-                  title="Data oficial de criação da conta no sistema"
-                />
-              </div>
             </div>
           </div>
 

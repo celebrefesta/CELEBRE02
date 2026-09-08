@@ -245,10 +245,7 @@ const Navbar = () => {
       return false; 
   };
 
-  const nomeExibicao = localStorage.getItem('funcName') || usuarioLogado?.displayName || (usuarioLogado?.email ? usuarioLogado.email.split('@')[0] : "Usuário");
-  const cargoExibicao = isSuperAdmin ? "Super Admin" : (isDonoDaConta ? "Administrador" : (localStorage.getItem('userRole') || "Colaborador"));
-  const fotoPerfil = usuarioLogado?.photoURL || null;
-  const primeiraLetra = (nomeExibicao || 'U').charAt(0).toUpperCase();
+
 
   const ItemMenuProtegido = ({ to, icon, label, recurso }) => {
       const funcPodeVer = verificarAcessoFuncionario(label);
@@ -347,7 +344,7 @@ const Navbar = () => {
         </div>
 
         {/* NAVEGAÇÃO ORGANIZADA POR SEÇÕES */}
-        <nav className="sidebar-nav custom-scrollbar">
+        <nav className="sidebar-nav">
           
           {/* SEÇÃO 1: PRINCIPAL */}
           <div className="sidebar-section">
@@ -424,43 +421,6 @@ const Navbar = () => {
           )}
 
         </nav>
-
-        {/* RODAPÉ EXECUTIVO (USUÁRIO E STATUS) */}
-        <div className="sidebar-footer">
-          <div 
-            className="sidebar-user-card" 
-            onClick={() => { closeMenu(); navigate('/perfil'); }}
-            title="Ver meu perfil"
-          >
-            <div className="sidebar-user-avatar">
-              {fotoPerfil ? (
-                <img src={fotoPerfil} alt={nomeExibicao} />
-              ) : (
-                <span>{primeiraLetra}</span>
-              )}
-            </div>
-            <div className="sidebar-user-info">
-              <span className="sidebar-user-name">{nomeExibicao}</span>
-              <span className="sidebar-user-role">
-                <span className="user-status-dot"></span>
-                {cargoExibicao}
-              </span>
-            </div>
-            <button 
-              type="button" 
-              className="btn-sidebar-gear"
-              onClick={(e) => {
-                e.stopPropagation();
-                closeMenu();
-                navigate('/configuracoes');
-              }}
-              title="Configurações do Sistema"
-              aria-label="Configurações"
-            >
-              <i className="fas fa-cog"></i>
-            </button>
-          </div>
-        </div>
 
       </aside>
     </>

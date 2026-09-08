@@ -66,7 +66,6 @@ const VisualizarContrato = lazy(() => import('./pages/Contratos/VisualizarContra
 // --- GESTÃO ---
 const Relatorios = lazy(() => import('./pages/Relatorios/Relatorios'));
 const Configuracoes = lazy(() => import('./pages/Configuracoes/Configuracoes'));
-const Perfil = lazy(() => import('./pages/Perfil/Perfil'));
 const Moodboard = lazy(() => import('./pages/Moodboard/Moodboard'));
 const Catalogo = lazy(() => import('./pages/Catalago/Catalago')); 
 const Notificacoes = lazy(() => import('./pages/Notificacoes/Notificacoes'));
@@ -690,7 +689,7 @@ const AppContent = () => {
             <Route path="/relatorios" element={<RotaPrivada><TravaSeguranca modulo="Relatorios" recursoExigido="Relatórios"><Relatorios /></TravaSeguranca></RotaPrivada>} />
             <Route path="/moodboard" element={<RotaPrivada><TravaSeguranca modulo="Moodboard" recursoExigido="Moodboard"><Moodboard /></TravaSeguranca></RotaPrivada>} />
             <Route path="/configuracoes" element={<RotaPrivada><TravaSeguranca modulo="Configuracoes"><Configuracoes /></TravaSeguranca></RotaPrivada>} />
-            <Route path="/perfil" element={<RotaPrivada><TravaSeguranca modulo="Perfil"><Perfil /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/perfil" element={<Navigate to="/configuracoes" replace />} />
             <Route path="/notificacoes" element={<RotaPrivada><TravaSeguranca modulo="Notificacoes"><Notificacoes /></TravaSeguranca></RotaPrivada>} /> 
             
             {/* 👥 GESTÃO DE EQUIPE E RH */}

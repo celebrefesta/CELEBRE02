@@ -22,12 +22,26 @@
   transition: transform 0.32s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.32s ease;
   user-select: none;
   box-sizing: border-box;
-  overflow: hidden;
+  overflow: hidden !important;
+}
+
+/* Blindagem absoluta contra barras de rolagem residuais na sidebar */
+.sidebar,
+.sidebar * {
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
+}
+
+.sidebar::-webkit-scrollbar,
+.sidebar *::-webkit-scrollbar {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ── CABEÇALHO COM LOGOTIPO OFICIAL CELEBRE ── */
 .sidebar-header {
-  padding: 16px 18px 14px 18px;
+  padding: 15px 18px 13px 18px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -43,7 +57,7 @@
 }
 
 .sidebar-brand-logo-img {
-  height: 32px;
+  height: 30px;
   width: auto;
   object-fit: contain;
   filter: drop-shadow(0 2px 6px rgba(197, 160, 89, 0.4));
@@ -57,13 +71,14 @@
 }
 
 .brand-title {
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 800;
-  letter-spacing: 2.5px;
+  letter-spacing: 2.4px;
   margin: 0;
   line-height: 1.1;
   background: linear-gradient(135deg, #fce9b8 0%, #c5a059 50%, #9e7a32 100%);
   -webkit-background-clip: text;
+  background-clip: text;
   -webkit-text-fill-color: transparent;
   text-transform: uppercase;
 }
@@ -109,31 +124,36 @@
 .sidebar-nav {
   display: flex;
   flex-direction: column;
-  padding: 8px 0 10px 0;
+  padding: 6px 0 8px 0;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
-  -ms-overflow-style: none;
-  scrollbar-width: none;
+  min-height: 0;
+  -ms-overflow-style: none !important;
+  scrollbar-width: none !important;
 }
 
 .sidebar-nav::-webkit-scrollbar {
-  display: none;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* ── SEÇÕES / AGRUPAMENTOS EQUILIBRADOS ── */
 .sidebar-section {
   display: flex;
   flex-direction: column;
-  margin-bottom: 6px;
+  margin-bottom: 5px;
+  flex-shrink: 0;
 }
 
 .nav-section-title {
-  font-size: 9px;
+  font-size: 8.5px;
   font-weight: 800;
   letter-spacing: 1.2px;
   text-transform: uppercase;
   color: rgba(197, 160, 89, 0.7);
-  padding: 7px 16px 3px 16px;
+  padding: 5px 16px 3px 16px;
   margin: 0;
   display: flex;
   align-items: center;
@@ -146,16 +166,16 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 7.5px 11px;
+  padding: 6px 11px;
   margin: 1.5px 10px;
   color: rgba(255, 255, 255, 0.65);
   text-decoration: none;
   font-size: 13px;
   font-weight: 600;
-  border-radius: 10px;
+  border-radius: 9px;
   border: 1px solid transparent;
   background: transparent;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
   cursor: pointer;
   box-sizing: border-box;
 }
@@ -169,13 +189,13 @@
 }
 
 .menu-icon-box {
-  width: 28px;
-  height: 28px;
+  width: 27px;
+  height: 27px;
   border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: 11.5px;
   background: rgba(255, 255, 255, 0.035);
   color: rgba(255, 255, 255, 0.45);
   border: 1px solid rgba(255, 255, 255, 0.03);
@@ -296,8 +316,9 @@
   background: rgba(197, 160, 89, 0.03);
   border-top: 1px dashed rgba(197, 160, 89, 0.2);
   border-bottom: 1px dashed rgba(197, 160, 89, 0.2);
-  padding: 6px 0;
-  margin-top: 6px;
+  padding: 5px 0;
+  margin-top: 4px;
+  flex-shrink: 0;
 }
 
 .nav-section-title.master-title {
@@ -309,145 +330,39 @@
   color: #f5d77f;
 }
 
-/* ── RODAPÉ EXECUTIVO EQUILIBRADO ── */
-.sidebar-footer {
-  padding: 10px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  background: rgba(0, 0, 0, 0.25);
-  margin-top: auto;
-  flex-shrink: 0;
-  box-sizing: border-box;
-}
 
-.sidebar-user-card {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 9px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
 
-.sidebar-user-card:hover {
-  background: rgba(255, 255, 255, 0.055);
-  border-color: rgba(197, 160, 89, 0.25);
-}
-
-.sidebar-user-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: 1.5px solid rgba(197, 160, 89, 0.5);
-  background: #0f172a;
-  color: #c5a059;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 800;
-  font-size: 12px;
-  flex-shrink: 0;
-  overflow: hidden;
-}
-
-.sidebar-user-avatar img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.sidebar-user-info {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-  flex: 1;
-  gap: 2px;
-}
-
-.sidebar-user-name {
-  font-size: 12px;
-  font-weight: 700;
-  color: #ffffff;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  line-height: 1.2;
-}
-
-.sidebar-user-role {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.45);
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  line-height: 1.2;
-}
-
-.user-status-dot {
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: #10b981;
-  box-shadow: 0 0 6px #10b981;
-  flex-shrink: 0;
-}
-
-.btn-sidebar-gear {
-  background: transparent;
-  border: none;
-  color: rgba(255, 255, 255, 0.4);
-  padding: 5px;
-  font-size: 13px;
-  border-radius: 6px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.btn-sidebar-gear:hover {
-  color: #dfb76c;
-  background: rgba(197, 160, 89, 0.12);
-  transform: rotate(30deg);
-}
-
-/* ── RESPONSIVIDADE VERTICAL: EM TELAS MAIORES (>= 850px), ESPAÇAMENTO RESPIRA AINDA MELHOR ── */
-@media (min-height: 850px) {
+/* ── RESPONSIVIDADE VERTICAL: EM TELAS MUITO ALTAS (>= 1020px), ESPAÇAMENTO RESPIRA AINDA MAIS ── */
+@media (min-height: 1020px) {
   .sidebar-header {
-    padding: 18px 20px 16px 20px;
+    padding: 18px 20px 15px 20px;
   }
   .sidebar-nav {
-    padding: 10px 0 14px 0;
+    padding: 10px 0 16px 0;
   }
   .sidebar-section {
-    margin-bottom: 8px;
+    margin-bottom: 7px;
   }
   .nav-section-title {
-    padding: 8px 18px 4px 18px;
-    font-size: 9.5px;
+    padding: 6px 18px 4px 18px;
+    font-size: 9px;
   }
   .menu-item {
-    padding: 8.5px 12px;
-    margin: 2px 12px;
-  }
-  .menu-icon-box {
-    width: 30px;
-    height: 30px;
+    padding: 7px 12px;
+    margin: 2px 10px;
     font-size: 13px;
   }
-  .sidebar-footer {
-    padding: 12px 16px;
+  .menu-icon-box {
+    width: 29px;
+    height: 29px;
+    font-size: 12.5px;
   }
 }
 
-/* ── RESPONSIVIDADE VERTICAL: SE TELA FOR BAIXA (< 700px), COMPACTA AUTOMATICAMENTE ── */
-@media (max-height: 700px) {
+/* ── RESPONSIVIDADE VERTICAL: SE TELA FOR INTERMEDIÁRIA/BAIXA (< 840px), SUAVEMENTE COMPACTA ── */
+@media (max-height: 840px) {
   .sidebar-header {
-    padding: 10px 16px 8px 16px;
+    padding: 11px 16px 9px 16px;
   }
   .sidebar-brand-logo-img {
     height: 26px;
@@ -456,17 +371,17 @@
     font-size: 15px;
   }
   .sidebar-nav {
-    padding: 2px 0 4px 0;
+    padding: 3px 0 6px 0;
   }
   .sidebar-section {
     margin-bottom: 2px;
   }
   .nav-section-title {
-    padding: 4px 14px 2px 14px;
+    padding: 3.5px 14px 2px 14px;
     font-size: 8px;
   }
   .menu-item {
-    padding: 5.5px 9px;
+    padding: 4.5px 10px;
     margin: 1px 8px;
     font-size: 12px;
   }
@@ -475,12 +390,40 @@
     height: 24px;
     font-size: 11px;
   }
-  .sidebar-footer {
-    padding: 6px 10px;
+}
+
+/* ── RESPONSIVIDADE VERTICAL: SE TELA FOR MUITO BAIXA (< 720px), COMPACTA AUTOMATICAMENTE ── */
+@media (max-height: 720px) {
+  .sidebar-header {
+    padding: 8px 14px 6px 14px;
   }
-  .sidebar-user-avatar {
-    width: 26px;
-    height: 26px;
+  .sidebar-brand-logo-img {
+    height: 24px;
+  }
+  .brand-title {
+    font-size: 14px;
+  }
+  .brand-subtitle {
+    font-size: 7px;
+  }
+  .sidebar-nav {
+    padding: 2px 0 4px 0;
+  }
+  .sidebar-section {
+    margin-bottom: 1px;
+  }
+  .nav-section-title {
+    padding: 3px 12px 1px 12px;
+    font-size: 7.5px;
+  }
+  .menu-item {
+    padding: 3.5px 8px;
+    margin: 1px 6px;
+    font-size: 11.5px;
+  }
+  .menu-icon-box {
+    width: 22px;
+    height: 22px;
     font-size: 10px;
   }
 }
@@ -511,7 +454,7 @@
 
   /* Espaçamento Inferior Seguro no Mobile */
   .sidebar-nav {
-    padding-bottom: 70px !important;
+    padding-bottom: 40px !important;
   }
 
   /* Película Escura com Efeito Vidro Fosco */

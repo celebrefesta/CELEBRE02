@@ -115,6 +115,34 @@ const PALETA_CORES_MOODBOARD = [
   { id: 'roxo', label: 'Roxo', cor: '#7e22ce' }
 ];
 
+// 🎨 Helper utilitário para normalizar qualquer cor para o formato estrito de 7 caracteres (#rrggbb) exigido pelo HTML5 <input type="color">
+const normalizarHexParaInputColor = (hex, fallback = '#ffffff') => {
+  if (!hex || typeof hex !== 'string') return fallback;
+  let str = hex.trim().toLowerCase();
+  if (!str.startsWith('#')) str = '#' + str;
+  if (str.length === 4) {
+    return `#${str[1]}${str[1]}${str[2]}${str[2]}${str[3]}${str[3]}`;
+  }
+  if (/^#[0-9a-f]{6}$/.test(str)) {
+    return str;
+  }
+  return fallback;
+};
+
+// 🏛️ Paleta de Cores Elegantes para Peças e Estruturas Cenográficas
+const CORES_PALETA_ESTRUTURAS = [
+  { label: 'Branco Neve', hex: '#ffffff' },
+  { label: 'Off-White Suave', hex: '#f8fafc' },
+  { label: 'Nude Areia', hex: '#f5ebe0' },
+  { label: 'Bege Amadeirado', hex: '#d7b899' },
+  { label: 'Ouro Real', hex: '#c5a059' },
+  { label: 'Rose Gold Terracota', hex: '#b76e79' },
+  { label: 'Rosa Bebê', hex: '#fce7f3' },
+  { label: 'Azul Céu', hex: '#e0f2fe' },
+  { label: 'Verde Sálvia', hex: '#d1fae5' },
+  { label: 'Grafite Nobre', hex: '#1e293b' }
+];
+
 // 🧱 Presets Nativos de Cenografia & Texturas de Alta Definição
 const PRESETS_PAREDE_PADRAO = [];
 
@@ -165,7 +193,7 @@ export const TEMAS_MOODBOARD_SUGESTOES = [
 // 🎈 Galeria de Arcos & Cenografia carregada dinamicamente do Firestore (moodboard_elementos)
 
 // 🎈 Componente SVG de Guirlanda & Arcos de Balões 3D Realistas (Clássico, Orgânico & Modelável)
-const GuirlandaBaloesRealista = ({
+const GuirlandaBaloesRealista = React.memo(({
   tipo = 'lateral_l',
   cores = ['#b76e79', '#dfb6b2', '#f4e6d4', '#c5a059', '#ffffff'],
   curvatura = 30,
@@ -827,10 +855,10 @@ const GuirlandaBaloesRealista = ({
       })}
     </svg>
   );
-};
+});
 
 // 🎈 Componente Balão Unitário / Individual 3D com Acabamentos e Texturas Realistas
-const BalaoUnitario3D = ({ item }) => {
+const BalaoUnitario3D = React.memo(({ item }) => {
   const cor = item.color || item.coresBalao?.[0] || '#c5a059';
   const acabamento = item.acabamentoBalao || 'glossy'; // 'glossy' | 'double_stuffed' | 'matte' | 'chrome' | 'perolado'
   const temFitilho = item.temFitilho ?? false;
@@ -959,10 +987,10 @@ const BalaoUnitario3D = ({ item }) => {
       )}
     </svg>
   );
-};
+});
 
 // 🫧 Componente Mini Cluster 3D de Balões (Trio ou Quarteto 5" para Acabamento Rápido)
-const MiniClusterBaloes3D = ({ item }) => {
+const MiniClusterBaloes3D = React.memo(({ item }) => {
   const cores = item.coresBalao?.length ? item.coresBalao : ['#b76e79', '#dfb6b2', '#f4e6d4', '#c5a059'];
   const qtd = item.qtdCluster || 3; // 3 ou 4 bexigas
   const acabamento = item.acabamentoBalao || 'glossy';
@@ -1036,10 +1064,10 @@ const MiniClusterBaloes3D = ({ item }) => {
       <circle cx="60" cy="60" r="3.5" fill="rgba(0,0,0,0.4)" />
     </svg>
   );
-};
+});
 
 // 🏛️ Componente Mesa Cilindro 3D Hiper-Realista de Festa com Capa
-const CilindroMesa3D = ({ item }) => {
+const CilindroMesa3D = React.memo(({ item }) => {
   const cor = item.color || '#e2e8f0';
   const capaUrl = item.capaUrl;
   const posX = item.capaPosX ?? 50;
@@ -1105,10 +1133,10 @@ const CilindroMesa3D = ({ item }) => {
       </div>
     </div>
   );
-};
+});
 
 // 🪑 Componente Mesa Retangular 3D de Festa com Pés Realistas & Tampo Chanfrado
-const MesaRetangular3D = ({ item }) => {
+const MesaRetangular3D = React.memo(({ item }) => {
   const cor = item.color || '#8B6914';
   const tampoCor = item.tampoCor || item.color || '#8B6914';
   const capaUrl = item.capaUrl;
@@ -1168,10 +1196,10 @@ const MesaRetangular3D = ({ item }) => {
       </div>
     </div>
   );
-};
+});
 
 // 🛋️ Componente Mesa Provençal / Clássica com Pés Torneados
-const MesaProvencal3D = ({ item }) => {
+const MesaProvencal3D = React.memo(({ item }) => {
   const cor = item.color || '#ffffff';
   const tampoCor = item.tampoCor || item.color || '#ffffff';
   const capaUrl = item.capaUrl;
@@ -1199,10 +1227,10 @@ const MesaProvencal3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🔲 Componente Mesa Cubo Aramada / Tubular Minimalista
-const MesaCuboAramada3D = ({ item }) => {
+const MesaCuboAramada3D = React.memo(({ item }) => {
   const cor = item.color || '#c5a059';
   const tampoCor = item.tampoCor || '#ffffff';
   const capaUrl = item.capaUrl;
@@ -1227,10 +1255,10 @@ const MesaCuboAramada3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🪵 Componente Painel Ripado Madeira
-const PainelRipado3D = ({ item }) => {
+const PainelRipado3D = React.memo(({ item }) => {
   const cor = item.color || '#ba8249';
   const ripas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
   return (
@@ -1259,10 +1287,10 @@ const PainelRipado3D = ({ item }) => {
       ))}
     </div>
   );
-};
+});
 
 // ✨ Componente Painel Shimmer Wall (Paetê / Lantejoulas)
-const PainelShimmer3D = ({ item }) => {
+const PainelShimmer3D = React.memo(({ item }) => {
   const cor = item.color || '#d4af37';
   const grid = Array.from({ length: 48 });
   return (
@@ -1294,10 +1322,10 @@ const PainelShimmer3D = ({ item }) => {
       ))}
     </div>
   );
-};
+});
 
 // 🪟 Componente Biombo 3 Folhas Articulado
-const PainelBiombo3D = ({ item }) => {
+const PainelBiombo3D = React.memo(({ item }) => {
   const cor = item.color || '#ffffff';
   return (
     <div style={{ width: '100%', height: '100%', display: 'flex', gap: '4px', filter: 'drop-shadow(0 12px 25px rgba(0,0,0,0.22))' }}>
@@ -1321,10 +1349,10 @@ const PainelBiombo3D = ({ item }) => {
       ))}
     </div>
   );
-};
+});
 
 // 🏛️ Componente Arco Romano Duplo Metálico com Suporte a Capa Sublimada
-const ArcoDuplo3D = ({ item }) => {
+const ArcoDuplo3D = React.memo(({ item }) => {
   const cor = item.color || '#c5a059';
   const capaUrl = item.capaUrl;
   const posX = item.capaPosX ?? 50;
@@ -1417,10 +1445,10 @@ const ArcoDuplo3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🪑 Componente Cômoda Vintage 3 Gavetas
-const ComodaVintage3D = ({ item }) => {
+const ComodaVintage3D = React.memo(({ item }) => {
   const cor = item.color || '#ffffff';
   return (
     <div style={{
@@ -1453,10 +1481,10 @@ const ComodaVintage3D = ({ item }) => {
       ))}
     </div>
   );
-};
+});
 
 // 🛒 Componente Carrinho Gourmet / Chá / Doces
-const CarrinhoGourmet3D = ({ item }) => {
+const CarrinhoGourmet3D = React.memo(({ item }) => {
   const cor = item.color || '#c5a059';
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
@@ -1481,10 +1509,10 @@ const CarrinhoGourmet3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🏛️ Componente Portal Romano Triplo 3D em Camadas Escalonadas (Foto 3)
-const ArcoRomanoTriplo3D = ({ item }) => {
+const ArcoRomanoTriplo3D = React.memo(({ item }) => {
   const c1 = item.color || '#ffffff';
   const c2 = item.multiColor ? (item.corCamada2 || '#f1f5f9') : c1;
   const c3 = item.multiColor ? (item.corCamada3 || '#e2e8f0') : c1;
@@ -1541,10 +1569,10 @@ const ArcoRomanoTriplo3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🌀 Componente Portal / Arco Orgânico Triplo 3D em Camadas Fluidas (Foto 2)
-const ArcoOrganicoTriplo3D = ({ item }) => {
+const ArcoOrganicoTriplo3D = React.memo(({ item }) => {
   const c1 = item.color || '#ffffff';
   const c2 = item.multiColor ? (item.corCamada2 || '#f1f5f9') : c1;
   const c3 = item.multiColor ? (item.corCamada3 || '#e2e8f0') : c1;
@@ -1651,10 +1679,10 @@ const ArcoOrganicoTriplo3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // ☁️ Componente Painel Nuvem Totem com Borda Ondulada em Gomos
-const PainelNuvemGomos3D = ({ item }) => {
+const PainelNuvemGomos3D = React.memo(({ item }) => {
   const cor = item.color || '#ffffff';
   const capaUrl = item.capaUrl;
   const clipId = `painel-nuvem-clip-${item.uniqueId || 'def'}`;
@@ -1716,10 +1744,10 @@ const PainelNuvemGomos3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🦴 Componente Mesa Osso Pet/Infantil com Tampo Superior e Rebaixo
-const MesaOsso3D = ({ item }) => {
+const MesaOsso3D = React.memo(({ item }) => {
   const corBorda = item.color || '#ffffff';
   const corCentro = item.corCentro || (item.multiColor ? '#f8fafc' : corBorda);
   const corTampo = item.tampoCor || '#ffffff';
@@ -1804,10 +1832,10 @@ const MesaOsso3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🚙 Componente Mesa Jeep Safari / Carro Infantil 3D
-const MesaJeep3D = ({ item }) => {
+const MesaJeep3D = React.memo(({ item }) => {
   const corCarroceria = item.color || '#ffffff';
   const corPneus = item.corPneus || '#334155';
   const corDetalhes = item.corDetalhes || '#facc15';
@@ -1893,10 +1921,10 @@ const MesaJeep3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🏠 Componente Painel Casinha / Torre Colonial com Janela em Arco 3D
-const PainelCasinhaColonial3D = ({ item }) => {
+const PainelCasinhaColonial3D = React.memo(({ item }) => {
   const corParede = item.color || '#ffffff';
   const corTelhado = item.corTelhado || corParede;
   const corJanela = item.corJanela || (item.multiColor ? (item.corDetalhes || '#ffffff') : corParede);
@@ -2005,10 +2033,10 @@ const PainelCasinhaColonial3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🦋 Componente Borboleta Vetorial Vazada em Alto Relevo
-const BorboletaVazada = ({ cx, cy, scale = 1, rotate = 0, corPrincipal, corAsas }) => {
+const BorboletaVazada = React.memo(({ cx, cy, scale = 1, rotate = 0, corPrincipal, corAsas }) => {
   return (
     <g transform={`translate(${cx}, ${cy}) rotate(${rotate}) scale(${scale})`}>
       <g stroke="rgba(0,0,0,0.15)" strokeWidth="1">
@@ -2036,10 +2064,10 @@ const BorboletaVazada = ({ cx, cy, scale = 1, rotate = 0, corPrincipal, corAsas 
       </g>
     </g>
   );
-};
+});
 
 // 🦋 Componente Painel Arco Romano Vazado com Borboletas 3D
-const PainelArcoBorboletas3D = ({ item }) => {
+const PainelArcoBorboletas3D = React.memo(({ item }) => {
   const corArco = item.color || '#ffffff';
   const corBorboletas = item.corBorboletas || (item.multiColor ? (item.corDetalhes || '#ffffff') : corArco);
   const corAsas = item.corAsasDetalhes || (item.multiColor ? (item.corCentro || '#f1f5f9') : '#ffffff');
@@ -2103,10 +2131,10 @@ const PainelArcoBorboletas3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🌾 Componente Painel Moinho / Celeiro Fazendinha com Pás Giratórias e Porta 'X' 3D
-const PainelMoinhoFazendinha3D = ({ item }) => {
+const PainelMoinhoFazendinha3D = React.memo(({ item }) => {
   const corCorpo = item.color || '#ffffff';
   const corTelhado = item.corTelhado || (item.multiColor ? (item.corCamada2 || '#f8fafc') : corCorpo);
   const corPas = item.corPasMoinho || (item.multiColor ? (item.corDetalhes || '#ffffff') : corCorpo);
@@ -2235,10 +2263,10 @@ const PainelMoinhoFazendinha3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🌊 Componente Painel Totem Orgânico com Borda Ondulada / Wavy 3D (Foto 1)
-const PainelOrganicoWavy3D = ({ item }) => {
+const PainelOrganicoWavy3D = React.memo(({ item }) => {
   const corParede = item.color || '#ffffff';
   const corBorda = item.corBorda || corParede;
   const corPes = item.corPes || corParede;
@@ -2315,10 +2343,10 @@ const PainelOrganicoWavy3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🏰 Componente Painel Castelo de Princesas 3D
-const PainelCasteloPrincesas3D = ({ item }) => {
+const PainelCasteloPrincesas3D = React.memo(({ item }) => {
   const corParede = item.color || '#ffffff';
   const corTelhado = item.multiColor ? (item.corTelhados || '#fbcfe8') : corParede;
   const corPortaJanela = item.multiColor ? (item.corPortaJanelas || '#ffffff') : corParede;
@@ -2451,10 +2479,10 @@ const PainelCasteloPrincesas3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // ☁️ Componente Mesa Nuvem Cenográfica 3D
-const MesaNuvem3D = ({ item }) => {
+const MesaNuvem3D = React.memo(({ item }) => {
   const corTampo = item.color || '#ffffff';
   const corBorda = item.multiColor ? (item.corBorda || '#f1f5f9') : corTampo;
   const corPes = item.multiColor ? (item.corPes || '#d7b899') : '#d7b899';
@@ -2514,10 +2542,10 @@ const MesaNuvem3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 👑 Componente Mesa Carruagem de Princesas 3D
-const MesaCarruagem3D = ({ item }) => {
+const MesaCarruagem3D = React.memo(({ item }) => {
   const corCorpo = item.color || '#ffffff';
   const corRodas = item.multiColor ? (item.corRodas || '#eab308') : '#eab308';
   const corCoroa = item.multiColor ? (item.corCoroa || '#eab308') : '#eab308';
@@ -2609,10 +2637,10 @@ const MesaCarruagem3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🪜 Componente Estante Escadinha de Lembrancinhas 3D
-const EstanteEscadinha3D = ({ item }) => {
+const EstanteEscadinha3D = React.memo(({ item }) => {
   const corLaterais = item.color || '#ffffff';
   const corPrateleiras = item.multiColor ? (item.corPrateleiras || '#d7b899') : '#d7b899';
 
@@ -2663,7 +2691,7 @@ const EstanteEscadinha3D = ({ item }) => {
       </svg>
     </div>
   );
-};
+});
 
 // 🌿 CATÁLOGO DE ÍCONES & ENFEITES DE FESTA VETORIAIS (PARA COMPOSIÇÃO MANUAL)
 export const ORNAMENTOS_FESTA = {
@@ -2893,7 +2921,7 @@ const renderSvgWithFill = (element, fill, stroke, mdfStroke) => {
 };
 
 // 🌿 Componente de Renderização de Enfeite / Ícone Vetorial
-const ElementoOrnamentoSVG = ({ item, customOrnaments = {} }) => {
+const ElementoOrnamentoSVG = React.memo(({ item, customOrnaments = {} }) => {
   const allOrnaments = { ...ORNAMENTOS_FESTA, ...customOrnaments };
   const ornamentoData = allOrnaments[item.ornamentType] || ORNAMENTOS_FESTA.ramo_folhas;
   const material = item.material || 'gold_mirror';
@@ -2975,10 +3003,10 @@ const ElementoOrnamentoSVG = ({ item, customOrnaments = {} }) => {
       </g>
     </svg>
   );
-};
+});
 
 // ✍️ Componente Avançado de Tipografia, Letreiros, Texto Curvo & Materiais de Festa
-const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, onBlur }) => {
+const ElementoTextoPersonalizado = React.memo(({ item, isEditing, onDoubleClick, onChange, onBlur }) => {
   const material = item.material || 'none';
   const textureUrl = item.textureUrl || '';
   const textureScale = Number(item.textureScale || 100);
@@ -3004,7 +3032,7 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
 
   // 🌈 Renderizador de Texto Curvo SVG (Com Fórmula Bézier Precisa, Sem Inversão e Sem Espaço Vazio)
   const renderCurvedText = () => {
-    const content = item.content || 'Texto';
+    const content = (item.content !== undefined && item.content !== null && item.content !== '') ? item.content : ' ';
     const textLen = Math.max(content.length, 3);
     const textPixelWidth = textLen * fontSize * 0.6;
     const span = Math.max(textPixelWidth + 30, 160);
@@ -3216,7 +3244,7 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
           ...customTexStyle
         }}
       >
-        {item.content || <span style={{ opacity: 0, paddingLeft: '50px' }}>_</span>}
+        {item.content ? item.content : <span style={{ opacity: 0.35, fontStyle: 'italic', fontSize: '0.65em', padding: '0 8px' }}>(Texto vazio)</span>}
       </div>
     );
   };
@@ -3231,10 +3259,10 @@ const ElementoTextoPersonalizado = ({ item, isEditing, onDoubleClick, onChange, 
   }
 
   return renderTextBody();
-};
+});
 
 // 🚶‍♀️ Componente de Silhueta Humana Vetorial para Escala Real
-const SilhuetaHumanaSVG = ({ tipo = 'mulher', heightPx = 204 }) => {
+const SilhuetaHumanaSVG = React.memo(({ tipo = 'mulher', heightPx = 204 }) => {
   if (tipo === 'homem') {
     return (
       <svg width={heightPx * 0.42} height={heightPx} viewBox="0 0 100 240" fill="currentColor" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.35))' }}>
@@ -3298,7 +3326,7 @@ const SilhuetaHumanaSVG = ({ tipo = 'mulher', heightPx = 204 }) => {
       <path d="M 53 229 C 51 230, 52 236, 63 236 C 64 236, 64 230, 61 229 Z" />
     </svg>
   );
-};
+});
 
 const PLACEHOLDER_IMG_DATA_URI = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Crect width='100%25' height='100%25' fill='%231e293b'/%3E%3Ctext x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle' fill='%2394a3b8' font-family='sans-serif' font-size='12'%3ESem Foto%3C/text%3E%3C/svg%3E";
 
@@ -3332,9 +3360,52 @@ const Moodboard = () => {
   const [filtroCategoriaEstoque, setFiltroCategoriaEstoque] = useState('todas');
   const [expandedCats, setExpandedCats] = useState({});
 
-  // 🧲 Alinhamento Magnético & Guias
+  // 🧲 Alinhamento Magnético & Guias (Renderizadas em DOM Direto para 60fps sem lag)
   const [snappingAtivo, setSnappingAtivo] = useState(false);
-  const [activeSnapGuides, setActiveSnapGuides] = useState([]);
+  const snapGuidesOverlayRef = useRef(null);
+  const rotacaoTooltipDomRef = useRef(null);
+
+  const updateSnapGuidesDirectDom = useCallback((guides = []) => {
+    if (!snapGuidesOverlayRef.current) return;
+    const vLine = snapGuidesOverlayRef.current.querySelector('.snap-guide-v');
+    const hLine = snapGuidesOverlayRef.current.querySelector('.snap-guide-h');
+    const vGuide = guides.find(g => g.type === 'vertical');
+    const hGuide = guides.find(g => g.type === 'horizontal');
+    if (vLine) {
+      if (vGuide) {
+        vLine.style.display = 'block';
+        vLine.style.left = `${vGuide.pos}px`;
+        const lbl = vLine.querySelector('.snap-guide-label');
+        if (lbl) lbl.textContent = vGuide.label || '';
+      } else {
+        vLine.style.display = 'none';
+      }
+    }
+    if (hLine) {
+      if (hGuide) {
+        hLine.style.display = 'block';
+        hLine.style.top = `${hGuide.pos}px`;
+        const lbl = hLine.querySelector('.snap-guide-label');
+        if (lbl) lbl.textContent = hGuide.label || '';
+      } else {
+        hLine.style.display = 'none';
+      }
+    }
+  }, []);
+
+  const updateRotacaoTooltipDirectDom = useCallback((text) => {
+    if (!rotacaoTooltipDomRef.current) {
+      rotacaoTooltipDomRef.current = document.querySelector('.rotation-degree-badge');
+    }
+    if (rotacaoTooltipDomRef.current) {
+      if (text) {
+        rotacaoTooltipDomRef.current.style.display = 'block';
+        rotacaoTooltipDomRef.current.textContent = text;
+      } else {
+        rotacaoTooltipDomRef.current.style.display = 'none';
+      }
+    }
+  }, []);
 
   // 🚶‍♀️ Silhueta de Proporção Humana & Escala Real (Altura)
   const [escalaHumanaAtiva, setEscalaHumanaAtiva] = useState(false);
@@ -3354,7 +3425,6 @@ const Moodboard = () => {
   // 🔍 Zoom & Visualização
   const [zoom, setZoom] = useState(1);
   const [isPanCapaMode, setIsPanCapaMode] = useState(false);
-  const [rotacaoTooltip, setRotacaoTooltip] = useState(null);
 
   // 🪄 Remoção de Fundo & Upload Rápido
   const [removendoFundo, setRemovendoFundo] = useState(false);
@@ -3368,6 +3438,7 @@ const Moodboard = () => {
   const [categoriaImagemRapida, setCategoriaImagemRapida] = useState('Outros');
   const [uploadOrigem, setUploadOrigem] = useState('geral');
   const fileUploadInputRef = useRef(null);
+  const inputTextoLetreiroRef = useRef(null);
 
   // 📱 MOBILE: Bottom Sheet State
   const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth <= 900);
@@ -3416,7 +3487,10 @@ const Moodboard = () => {
   // 🔄 Histórico de Ações (Undo / Redo)
   const [history, setHistory] = useState([]);
   const [historyStep, setHistoryStep] = useState(-1);
+  const historyStepRef = useRef(-1);
+  historyStepRef.current = historyStep;
   const isHistoryAction = useRef(false);
+  const timerDebounceHistory = useRef(null);
 
   // 🕹️ Refs de Interação Ultrarrápida (Zero Delay / 120 FPS)
   const activeItemId = useRef(null);
@@ -3436,6 +3510,7 @@ const Moodboard = () => {
   // 🎛️ Painel Direito Studio Pro (Estilo Photoshop / Figma)
   const [painelDireitoAberto, setPainelDireitoAberto] = useState(() => typeof window !== 'undefined' && window.innerWidth > 900);
   const [abaDireita, setAbaDireita] = useState('camadas'); // 'camadas' | 'propriedades' | 'baloes'
+  const [painelExpandidoMobile, setPainelExpandidoMobile] = useState(false); // Alternar altura compacta vs expandida no celular
 
   // 🧮 CALCULADORA DE BALÕES & LISTA DE COMPRAS
   const [modalCalculadoraBaloesAberto, setModalCalculadoraBaloesAberto] = useState(false);
@@ -3455,6 +3530,7 @@ const Moodboard = () => {
   // 🎈 Formas & Cenografia
   const [corEstrutura, setCorEstrutura] = useState('#ffffff');
   const [paletaBalaoAtiva, setPaletaBalaoAtiva] = useState(PALETAS_BALOES[0]);
+  const [gavetaEfeitosAberta, setGavetaEfeitosAberta] = useState(false);
 
   // 📁 Modais & Gestão de Projetos Integrada
   const [modalSalvarAberto, setModalSalvarAberto] = useState(false);
@@ -3479,28 +3555,283 @@ const Moodboard = () => {
   const [filtroStatusGaleria, setFiltroStatusGaleria] = useState('todos');
   const [temaSugestaoAtivo, setTemaSugestaoAtivo] = useState('');
 
+  // 🎨 CORES EXTRAÍDAS AUTOMATICAMENTE DA DECORAÇÃO (Atualiza sozinho conforme peças são adicionadas ou editadas)
+  const coresDaDecoracao = useMemo(() => {
+    const setCores = new Set();
+
+    // 1. Itens adicionados ao canvas (estruturas, balões, mesas, letreiros, painéis, formas)
+    if (Array.isArray(itensCanvas)) {
+      itensCanvas.forEach(item => {
+        if (typeof item.color === 'string' && item.color.startsWith('#') && item.color.length >= 4) {
+          setCores.add(item.color.toLowerCase());
+        }
+        if (typeof item.tampoCor === 'string' && item.tampoCor.startsWith('#') && item.tampoCor.length >= 4) {
+          setCores.add(item.tampoCor.toLowerCase());
+        }
+        if (Array.isArray(item.coresBalao)) {
+          item.coresBalao.forEach(c => {
+            if (typeof c === 'string' && c.startsWith('#') && c.length >= 4) {
+              setCores.add(c.toLowerCase());
+            }
+          });
+        }
+        if (typeof item.corEstrutura === 'string' && item.corEstrutura.startsWith('#') && item.corEstrutura.length >= 4) {
+          setCores.add(item.corEstrutura.toLowerCase());
+        }
+      });
+    }
+
+    // 2. Cores da paleta base do evento (se houver)
+    if (Array.isArray(paletaEvento)) {
+      paletaEvento.forEach(c => {
+        if (typeof c === 'string' && c.startsWith('#') && c.length >= 4) {
+          setCores.add(c.toLowerCase());
+        }
+      });
+    }
+
+    return Array.from(setCores);
+  }, [itensCanvas, paletaEvento]);
+
   const boardRef = useRef(null);
+  const zoomWrapperRef = useRef(null);
   const [contextMenu, setContextMenu] = useState({ visible: false, x: 0, y: 0, itemId: null });
 
-  // 📱 DETECTAR MOBILE E AUTO-FIT ZOOM DA PRANCHETA (PORTRAIT & LANDSCAPE)
-  const fitCanvasToMobile = useCallback(() => {
+  // 🗺️ PAN / MOVIMENTAÇÃO LIVRE DO CENÁRIO (TOUCH & DESKTOP)
+  const [canvasPan, setCanvasPan] = useState({ x: 0, y: 0 });
+  const canvasPanRef = useRef({ x: 0, y: 0 });
+  const touchPanStartRef = useRef(null);
+  const isMouseDownCanvas = useRef(false);
+  const mousePanStartRef = useRef(null);
+  const lastTapTimeRef = useRef(0);
+  const lastViewportRef = useRef({ w: 0, h: 0 });
+
+  // 📱 DETECTAR MOBILE E AUTO-FIT ZOOM DA PRANCHETA (PORTRAIT & LANDSCAPE - ESTÁVEL SEM LOOP DE ZOOM)
+  const fitCanvasToMobile = useCallback((force = false) => {
     if (typeof window === 'undefined') return;
-    const mobile = window.innerWidth <= 900;
+    const curW = window.innerWidth;
+    const curH = window.innerHeight;
+    const mobile = curW <= 900;
     setIsMobile(mobile);
+
+    // Evita recalcular e resetar o zoom do usuário por oscilações menores da barra de URL mobile (< 30px W e < 70px H)
+    if (!force && lastViewportRef.current.w > 0) {
+      const dw = Math.abs(curW - lastViewportRef.current.w);
+      const dh = Math.abs(curH - lastViewportRef.current.h);
+      if (dw < 30 && dh < 70) {
+        return;
+      }
+    }
+    lastViewportRef.current = { w: curW, h: curH };
+
+    let targetZoom = 1;
     if (mobile) {
-      const isLandscape = window.innerWidth > window.innerHeight;
+      const isLandscape = curW > curH;
       // No celular deitado (landscape), otimiza o espaço vertical
       const padW = isLandscape ? 32 : 20;
       const padH = isLandscape ? 90 : 150;
-      const availW = window.innerWidth - padW;
-      const availH = window.innerHeight - padH;
+      const availW = curW - padW;
+      const availH = curH - padH;
       const boardW = 1000;
       const boardH = 600;
       const scaleW = availW / boardW;
       const scaleH = availH / boardH;
       const autoScale = Math.min(scaleW, scaleH, isLandscape ? 1.05 : 0.95);
-      setZoom(Math.max(0.28, Math.min(1.4, Number(autoScale.toFixed(2)))));
+      targetZoom = Math.max(0.25, Math.min(1.4, Number(autoScale.toFixed(2))));
+      setZoom(targetZoom);
+      if (boardRef.current) {
+        boardRef.current.style.transform = `scale(${targetZoom})`;
+      }
+      if (zoomWrapperRef.current) {
+        zoomWrapperRef.current.style.width = `${Math.round(1000 * targetZoom)}px`;
+        zoomWrapperRef.current.style.height = `${Math.round(600 * targetZoom)}px`;
+        zoomWrapperRef.current.style.transform = 'translate3d(0px, 0px, 0)';
+      }
+    } else {
+      setZoom(1);
+      if (zoomWrapperRef.current) {
+        zoomWrapperRef.current.style.transform = 'scale(1) translate3d(0px, 0px, 0)';
+      }
     }
+    // Reseta posição do cenário para o centro
+    canvasPanRef.current = { x: 0, y: 0 };
+    setCanvasPan({ x: 0, y: 0 });
+  }, []);
+
+  // 🔍 CONTROLE DE ZOOM MOBILE RESPONSIVO & IMEDIATO (DESACOPLADO DO EFEITO DE RESIZE)
+  const handleZoomMobile = useCallback((delta) => {
+    setZoom(prev => {
+      const next = Math.max(0.2, Math.min(2.0, Number((prev + delta).toFixed(2))));
+      if (boardRef.current) {
+        boardRef.current.style.transform = `scale(${next})`;
+      }
+      if (zoomWrapperRef.current) {
+        zoomWrapperRef.current.style.width = `${Math.round(1000 * next)}px`;
+        zoomWrapperRef.current.style.height = `${Math.round(600 * next)}px`;
+      }
+      return next;
+    });
+  }, []);
+
+  // 🖐️ GESTOS DE ARRASTE / PAN & PINCH DO CENÁRIO NO CELULAR
+  const handleCanvasTouchStart = useCallback((e) => {
+    if (e.target.closest('.canvas-object') || e.target.closest('.resize-handle') || e.target.closest('.mobile-zoom-dock') || e.target.closest('.canvas-header-overlay') || e.target.closest('.floating-object-action-bar') || e.target.closest('.studio-right-panel') || e.target.closest('.bottom-sheet-panel')) {
+      return;
+    }
+
+    const now = Date.now();
+    // Duplo toque no fundo do cenário: recentraliza suavemente
+    if (now - lastTapTimeRef.current < 320) {
+      fitCanvasToMobile();
+      lastTapTimeRef.current = 0;
+      touchPanStartRef.current = null;
+      return;
+    }
+    lastTapTimeRef.current = now;
+
+    if (e.touches.length === 1) {
+      touchPanStartRef.current = {
+        mode: 'pan',
+        startX: e.touches[0].clientX,
+        startY: e.touches[0].clientY,
+        initialPanX: canvasPanRef.current.x,
+        initialPanY: canvasPanRef.current.y,
+        time: now
+      };
+    } else if (e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      touchPanStartRef.current = {
+        mode: 'pinch',
+        startDist: dist,
+        startZoom: zoom,
+        initialPanX: canvasPanRef.current.x,
+        initialPanY: canvasPanRef.current.y
+      };
+    }
+  }, [fitCanvasToMobile, zoom]);
+
+  const rafTouchPanId = useRef(null);
+  const handleCanvasTouchMove = useCallback((e) => {
+    if (!touchPanStartRef.current) return;
+
+    if (touchPanStartRef.current.mode === 'pan' && e.touches.length === 1) {
+      const touchX = e.touches[0].clientX;
+      const touchY = e.touches[0].clientY;
+      if (!rafTouchPanId.current) {
+        rafTouchPanId.current = requestAnimationFrame(() => {
+          rafTouchPanId.current = null;
+          if (!touchPanStartRef.current) return;
+          const dx = touchX - touchPanStartRef.current.startX;
+          const dy = touchY - touchPanStartRef.current.startY;
+          const nextX = Math.round(touchPanStartRef.current.initialPanX + dx);
+          const nextY = Math.round(touchPanStartRef.current.initialPanY + dy);
+
+          canvasPanRef.current = { x: nextX, y: nextY };
+          if (zoomWrapperRef.current) {
+            zoomWrapperRef.current.style.transform = isMobile
+              ? `translate3d(${nextX}px, ${nextY}px, 0)`
+              : `scale(${zoom}) translate3d(${nextX}px, ${nextY}px, 0)`;
+          }
+        });
+      }
+    } else if (touchPanStartRef.current.mode === 'pinch' && e.touches.length === 2) {
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleFactor = dist / touchPanStartRef.current.startDist;
+      const newZoom = Math.max(0.2, Math.min(2.0, Number((touchPanStartRef.current.startZoom * scaleFactor).toFixed(2))));
+      touchPanStartRef.current.pendingZoom = newZoom;
+      if (zoomWrapperRef.current) {
+        zoomWrapperRef.current.style.transform = `scale(${newZoom}) translate3d(${canvasPanRef.current.x}px, ${canvasPanRef.current.y}px, 0)`;
+      }
+    }
+  }, [isMobile, zoom]);
+
+  const handleCanvasTouchEnd = useCallback((e) => {
+    if (!touchPanStartRef.current) return;
+    if (rafTouchPanId.current) {
+      cancelAnimationFrame(rafTouchPanId.current);
+      rafTouchPanId.current = null;
+    }
+
+    if (touchPanStartRef.current.pendingZoom) {
+      setZoom(touchPanStartRef.current.pendingZoom);
+    }
+
+    if (touchPanStartRef.current.mode === 'pan' && e.changedTouches?.length === 1) {
+      const dx = Math.abs(e.changedTouches[0].clientX - touchPanStartRef.current.startX);
+      const dy = Math.abs(e.changedTouches[0].clientY - touchPanStartRef.current.startY);
+      const dt = Date.now() - touchPanStartRef.current.time;
+      if (dx < 6 && dy < 6 && dt < 250) {
+        setSelecionadoId(null);
+      }
+    }
+
+    touchPanStartRef.current = null;
+    setCanvasPan({ ...canvasPanRef.current });
+  }, [setZoom]);
+
+  // 🖱️ PAN COM O MOUSE NO DESKTOP (COM REQUESTANIMATIONFRAME)
+  const rafMousePanId = useRef(null);
+  const handleCanvasMouseDown = useCallback((e) => {
+    if (e.button !== 0 && e.button !== 1) return;
+    if (e.target.closest('.canvas-object') || e.target.closest('.resize-handle') || e.target.closest('.mobile-zoom-dock') || e.target.closest('.canvas-header-overlay') || e.target.closest('.floating-object-action-bar') || e.target.closest('.studio-right-panel') || e.target.closest('.bottom-sheet-panel')) {
+      return;
+    }
+    isMouseDownCanvas.current = true;
+    mousePanStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initialPanX: canvasPanRef.current.x,
+      initialPanY: canvasPanRef.current.y,
+      time: Date.now()
+    };
+  }, []);
+
+  const handleCanvasMouseMove = useCallback((e) => {
+    if (!isMouseDownCanvas.current || !mousePanStartRef.current) return;
+    const clientX = e.clientX;
+    const clientY = e.clientY;
+    if (!rafMousePanId.current) {
+      rafMousePanId.current = requestAnimationFrame(() => {
+        rafMousePanId.current = null;
+        if (!mousePanStartRef.current) return;
+        const dx = clientX - mousePanStartRef.current.startX;
+        const dy = clientY - mousePanStartRef.current.startY;
+        const nextX = Math.round(mousePanStartRef.current.initialPanX + dx);
+        const nextY = Math.round(mousePanStartRef.current.initialPanY + dy);
+
+        canvasPanRef.current = { x: nextX, y: nextY };
+        if (zoomWrapperRef.current) {
+          zoomWrapperRef.current.style.transform = isMobile
+            ? `translate3d(${nextX}px, ${nextY}px, 0)`
+            : `scale(${zoom}) translate3d(${nextX}px, ${nextY}px, 0)`;
+        }
+      });
+    }
+  }, [isMobile, zoom]);
+
+  const handleCanvasMouseUp = useCallback((e) => {
+    if (rafMousePanId.current) {
+      cancelAnimationFrame(rafMousePanId.current);
+      rafMousePanId.current = null;
+    }
+    if (!isMouseDownCanvas.current) return;
+    isMouseDownCanvas.current = false;
+    if (mousePanStartRef.current) {
+      const dx = Math.abs(e.clientX - mousePanStartRef.current.startX);
+      const dy = Math.abs(e.clientY - mousePanStartRef.current.startY);
+      const dt = Date.now() - mousePanStartRef.current.time;
+      if (dx < 5 && dy < 5 && dt < 200) {
+        setSelecionadoId(null);
+      }
+    }
+    mousePanStartRef.current = null;
+    setCanvasPan({ ...canvasPanRef.current });
   }, []);
 
   useEffect(() => {
@@ -3519,16 +3850,72 @@ const Moodboard = () => {
     };
   }, [fitCanvasToMobile]);
 
-  // 📱 SWIPE DOWN PARA FECHAR O BOTTOM SHEET
+  // 📱 SWIPE DOWN PARA FECHAR O BOTTOM SHEET (PROTEGIDO CONTRA ROLAGEM DE CONTEÚDO)
   const handlePainelTouchStart = useCallback((e) => {
     swipeTouchStart.current = { y: e.touches[0].clientY, time: Date.now() };
   }, []);
   const handlePainelTouchEnd = useCallback((e) => {
+    if (!swipeTouchStart.current) return;
+    // Não fecha se o toque foi dentro da área rolável de conteúdo (evita fechar ao navegar nas listas)
+    if (e.target.closest('.panel-content') || e.target.closest('.panel-body')) return;
     const dy = e.changedTouches[0].clientY - swipeTouchStart.current.y;
     const dt = Date.now() - swipeTouchStart.current.time;
-    // Swipe down rápido (>50px em <350ms) fecha o painel
-    if (dy > 50 && dt < 350) setPainelMobileAberto(false);
-  }, []);
+    // Swipe down rápido (>50px em <350ms) fora da rolagem de conteúdo
+    if (dy > 50 && dt < 350) {
+      if (painelExpandidoMobile) {
+        setPainelExpandidoMobile(false);
+      } else {
+        setPainelMobileAberto(false);
+      }
+    }
+  }, [painelExpandidoMobile]);
+
+  // 📱 GESTO TÁTIL NA ALÇA (PUXAR PARA CIMA SUBIR / PUXAR PARA BAIXO DESCER OU FECHAR)
+  const dragHandleTouchRef = useRef(null);
+  const handleDragHandleTouchStart = useCallback((e) => {
+    dragHandleTouchRef.current = {
+      startY: e.touches[0].clientY,
+      expanded: painelExpandidoMobile,
+      time: Date.now()
+    };
+  }, [painelExpandidoMobile]);
+
+  const handleDragHandleTouchMove = useCallback((e) => {
+    if (!dragHandleTouchRef.current) return;
+    const dy = e.touches[0].clientY - dragHandleTouchRef.current.startY;
+    // Se puxou para cima mais de 25px -> sobe / expande na hora
+    if (dy < -25 && !painelExpandidoMobile) {
+      setPainelExpandidoMobile(true);
+      dragHandleTouchRef.current = null;
+    } else if (dy > 30 && painelExpandidoMobile) {
+      // Se puxou para baixo mais de 30px enquanto expandido -> desce / reduz
+      setPainelExpandidoMobile(false);
+      dragHandleTouchRef.current = null;
+    }
+  }, [painelExpandidoMobile]);
+
+  const handleDragHandleTouchEnd = useCallback((e) => {
+    if (!dragHandleTouchRef.current) return;
+    const dy = e.changedTouches[0].clientY - dragHandleTouchRef.current.startY;
+    const dt = Date.now() - dragHandleTouchRef.current.time;
+    dragHandleTouchRef.current = null;
+
+    if (dy < -20) {
+      // Puxou para cima: sobe / expande
+      setPainelExpandidoMobile(true);
+    } else if (dy > 35) {
+      // Puxou para baixo
+      if (painelExpandidoMobile) {
+        setPainelExpandidoMobile(false);
+      } else {
+        setPainelDireitoAberto(false);
+        setPainelMobileAberto(false);
+      }
+    } else if (Math.abs(dy) < 8 && dt < 300) {
+      // Toque simples rápido: alterna subir / descer
+      setPainelExpandidoMobile(prev => !prev);
+    }
+  }, [painelExpandidoMobile]);
 
   // 📱 ABRIR / RECOLHER ABA LATERAL (DESKTOP & MOBILE)
   const abrirAbaMobile = useCallback((aba) => {
@@ -3545,6 +3932,12 @@ const Moodboard = () => {
       } else {
         setAbaAtiva(aba);
         setPainelMobileAberto(true);
+        if (aba === 'texto') {
+          const ultimoTexto = [...itensCanvas].reverse().find(i => i.type === 'text');
+          if (ultimoTexto) {
+            setSelecionadoId(ultimoTexto.uniqueId);
+          }
+        }
       }
     } else {
       if (painelEsquerdoAberto && abaAtiva === aba) {
@@ -3552,9 +3945,15 @@ const Moodboard = () => {
       } else {
         setAbaAtiva(aba);
         setPainelEsquerdoAberto(true);
+        if (aba === 'texto') {
+          const ultimoTexto = [...itensCanvas].reverse().find(i => i.type === 'text');
+          if (ultimoTexto) {
+            setSelecionadoId(ultimoTexto.uniqueId);
+          }
+        }
       }
     }
-  }, [isMobile, painelMobileAberto, painelEsquerdoAberto, abaAtiva]);
+  }, [isMobile, painelMobileAberto, painelEsquerdoAberto, abaAtiva, itensCanvas]);
 
   const fontesDisponiveis = [
     // Caligrafia & Script (Festas / Casamentos / 15 Anos)
@@ -3639,7 +4038,7 @@ const Moodboard = () => {
     };
   }, [itensCanvas]);
 
-  // 🏷️ CATEGORIAS EXTRAÍDAS DO ESTOQUE
+  // 🏷️ CATEGORIAS EXTRAÍDAS DINAMICAMENTE DO ESTOQUE
   const categoriasDoEstoque = useMemo(() => {
     const setCats = new Set();
     estoqueReal.forEach(item => {
@@ -3650,6 +4049,18 @@ const Moodboard = () => {
     return Array.from(setCats).sort();
   }, [estoqueReal]);
 
+  // 🎭 TEMAS EXTRAÍDOS DINAMICAMENTE DO ESTOQUE REAL (Apenas temas que realmente existem nas peças cadastradas)
+  const temasDoEstoque = useMemo(() => {
+    const setTemas = new Set();
+    estoqueReal.forEach(item => {
+      const t = (item.tema || item.categoriaTema || item.grupoTema || '').trim();
+      if (t && t.toLowerCase() !== 'geral' && t.toLowerCase() !== 'todos' && t.toLowerCase() !== 'sem tema') {
+        setTemas.add(t);
+      }
+    });
+    return Array.from(setTemas).sort();
+  }, [estoqueReal]);
+
   // 🔍 ACERVO FILTRADO POR BUSCA, CATEGORIA E TEMA (ESTOQUE FÍSICO)
   const estoqueFiltrado = useMemo(() => {
     let list = estoqueReal;
@@ -3657,20 +4068,21 @@ const Moodboard = () => {
       list = list.filter(item => (item.categoria || '').toLowerCase() === filtroCategoriaEstoque.toLowerCase());
     }
     if (temaSugestaoAtivo) {
-      const temaObj = TEMAS_MOODBOARD_SUGESTOES.find(t => t.tema === temaSugestaoAtivo);
-      if (temaObj && Array.isArray(temaObj.tags)) {
-        list = list.filter(item => {
-          const txt = `${item.nome || ''} ${item.categoria || ''} ${item.descricao || ''} ${item.tags || ''}`.toLowerCase();
-          return temaObj.tags.some(tag => txt.includes(tag.toLowerCase()));
-        });
-      }
+      const tLower = temaSugestaoAtivo.toLowerCase();
+      list = list.filter(item => {
+        const itemTema = (item.tema || item.categoriaTema || item.grupoTema || '').toLowerCase();
+        const itemNome = (item.nome || '').toLowerCase();
+        const itemTags = (item.tags || '').toLowerCase();
+        return itemTema.includes(tLower) || itemNome.includes(tLower) || itemTags.includes(tLower);
+      });
     }
     if (!termoBusca.trim()) return list;
     const t = termoBusca.toLowerCase();
     return list.filter(item =>
       (item.nome && item.nome.toLowerCase().includes(t)) ||
       (item.codigo && item.codigo.toLowerCase().includes(t)) ||
-      (item.categoria && item.categoria.toLowerCase().includes(t))
+      (item.categoria && item.categoria.toLowerCase().includes(t)) ||
+      (item.tema && item.tema.toLowerCase().includes(t))
     );
   }, [estoqueReal, termoBusca, filtroCategoriaEstoque, temaSugestaoAtivo]);
 
@@ -3920,24 +4332,37 @@ const Moodboard = () => {
     return resultado;
   }, [elementosCenografia, tenantId]);
 
-  // 📜 SISTEMA DE HISTÓRICO (UNDO / REDO)
+  // 📜 SISTEMA DE HISTÓRICO (UNDO / REDO) COM DEBOUNCE E PROTEÇÃO CONTRA CONGELAMENTO
   const saveSnapshot = useCallback((novosItens, wall = wallBackground, floor = floorBackground) => {
     if (isHistoryAction.current) {
       isHistoryAction.current = false;
       return;
     }
-    const snapshot = {
-      itens: JSON.parse(JSON.stringify(novosItens)),
-      wall,
-      floor
-    };
-    setHistory(prev => {
-      const trimmed = prev.slice(0, historyStep + 1);
-      if (trimmed.length > 30) trimmed.shift();
-      return [...trimmed, snapshot];
-    });
-    setHistoryStep(prev => Math.min(prev + 1, 30));
-  }, [wallBackground, floorBackground, historyStep]);
+    try {
+      const snapshot = {
+        itens: JSON.parse(JSON.stringify(novosItens || [])),
+        wall,
+        floor
+      };
+      setHistory(prev => {
+        const step = historyStepRef.current;
+        const trimmed = prev.slice(0, step + 1);
+        if (trimmed.length >= 30) trimmed.shift();
+        return [...trimmed, snapshot];
+      });
+      setHistoryStep(prev => Math.min(prev + 1, 30));
+    } catch (err) {
+      console.warn("Erro ao salvar snapshot de histórico:", err);
+    }
+  }, [wallBackground, floorBackground]);
+
+  // Agendador com debounce: evita clones em excesso durante operações de alta frequência (seletores de cor, sliders)
+  const agendarSaveSnapshot = useCallback((novosItens, wall = wallBackground, floor = floorBackground) => {
+    if (timerDebounceHistory.current) clearTimeout(timerDebounceHistory.current);
+    timerDebounceHistory.current = setTimeout(() => {
+      saveSnapshot(novosItens, wall, floor);
+    }, 300);
+  }, [saveSnapshot, wallBackground, floorBackground]);
 
   const handleUndo = useCallback(() => {
     if (historyStep <= 0) return;
@@ -4154,7 +4579,7 @@ const Moodboard = () => {
             }
             return item;
           });
-          saveSnapshot(updated);
+          agendarSaveSnapshot(updated);
           return updated;
         });
       }
@@ -4162,7 +4587,7 @@ const Moodboard = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selecionadoId, itensCanvas, handleUndo, handleRedo, saveSnapshot]);
+  }, [selecionadoId, itensCanvas, handleUndo, handleRedo, agendarSaveSnapshot]);
 
   // 📑 DUPLICAR ITEM
   const duplicarItem = (id) => {
@@ -5052,11 +5477,11 @@ const Moodboard = () => {
     saveSnapshot(updated);
   };
 
-  const adicionarTexto = (preset = {}) => {
+  const adicionarTexto = (preset = {}, manterPainelAberto = false) => {
     const idUnico = `txt_${Date.now()}`;
     const itemTexto = {
       type: 'text',
-      content: preset.content || "Nome da Festa",
+      content: (preset.content !== undefined && preset.content !== null) ? preset.content : "Nome da Festa",
       color: preset.color || (preset.neon ? "#ffffff" : "#c5a059"),
       neonColor: preset.neonColor || "#c5a059",
       fontSize: preset.fontSize || (preset.neon ? 52 : 48),
@@ -5088,10 +5513,11 @@ const Moodboard = () => {
     setItensCanvas(updated);
     setSelecionadoId(idUnico);
     setAbaDireita('propriedades');
-    if (isMobile) {
+    if (isMobile && !manterPainelAberto) {
       setPainelMobileAberto(false);
     }
     saveSnapshot(updated);
+    return idUnico;
   };
 
   const handleUploadTexturaTexto = (targetId = null) => {
@@ -5220,37 +5646,54 @@ const Moodboard = () => {
     }, 200);
   };
 
-  // 🚶‍♀️ DRAG DA SILHUETA DE PROPORÇÃO HUMANA NO CHÃO
+  // 🚶‍♀️ DRAG DA SILHUETA DE PROPORÇÃO HUMANA NO CHÃO (DOM DIRETO + RAF)
   const handlePointerDownSilhueta = (e) => {
     e.stopPropagation();
     const startX = e.clientX;
     const startPosX = silhuetaPosX;
+    const targetEl = e.currentTarget;
+    const scale = zoom || 1;
+
+    let rafId = null;
+    let currentX = startPosX;
 
     const handlePointerMove = (moveEvent) => {
-      const deltaX = moveEvent.clientX - startX;
-      setSilhuetaPosX(Math.max(20, Math.min(1300, startPosX + deltaX)));
+      const deltaX = (moveEvent.clientX - startX) / scale;
+      currentX = Math.max(20, Math.min(1300, Math.round(startPosX + deltaX)));
+      if (!rafId) {
+        rafId = requestAnimationFrame(() => {
+          rafId = null;
+          if (targetEl) {
+            targetEl.style.left = `${currentX}px`;
+          }
+        });
+      }
     };
 
     const handlePointerUp = () => {
+      if (rafId) cancelAnimationFrame(rafId);
       window.removeEventListener('pointermove', handlePointerMove);
       window.removeEventListener('pointerup', handlePointerUp);
+      setSilhuetaPosX(currentX);
     };
 
-    window.addEventListener('pointermove', handlePointerMove);
-    window.addEventListener('pointerup', handlePointerUp);
+    window.addEventListener('pointermove', handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', handlePointerUp, { passive: false });
   };
 
   // 🕹️ POINTER DOWN: DISPARADOR DE DRAG / RESIZE / ROTATE / PAN_CAPA (DIRETO NO DOM, 0ms LATÊNCIA, 120 FPS REAL)
   const handlePointerDown = (e, id, type, dir = null) => {
     e.stopPropagation();
 
-    setSelecionadoId(id);
-
-    // Foca automaticamente no painel de propriedades do lado direito
-    if (typeof window !== 'undefined' && window.innerWidth > 900) {
-      setPainelDireitoAberto(true);
+    if (selecionadoId !== id) {
+      setSelecionadoId(id);
+      if (typeof window !== 'undefined' && window.innerWidth > 900 && !painelDireitoAberto) {
+        setPainelDireitoAberto(true);
+      }
+      if (abaDireita !== 'propriedades') {
+        setAbaDireita('propriedades');
+      }
     }
-    setAbaDireita('propriedades');
 
     const item = itensCanvasRef.current.find(i => i.uniqueId === id);
     if (!item || item.locked || id === editingTextId) return;
@@ -5273,6 +5716,19 @@ const Moodboard = () => {
     };
     currentPendingChanges.current = {};
 
+    // Cacheia escala e dimensões do board 1 única vez no início do toque para evitar Layout Thrashing
+    let canvasScale = zoom || 1;
+    let boardW = 1000;
+    let boardH = 600;
+    if (boardRef.current) {
+      boardW = boardRef.current.offsetWidth || 1000;
+      boardH = boardRef.current.offsetHeight || 600;
+      const bRect = boardRef.current.getBoundingClientRect();
+      if (bRect.width && boardW) {
+        canvasScale = bRect.width / boardW;
+      }
+    }
+
     // Localiza o elemento DOM da peça no canvas
     const targetDom = (e.currentTarget.classList?.contains('canvas-object')
       ? e.currentTarget
@@ -5283,9 +5739,8 @@ const Moodboard = () => {
       interactionMode.current = 'rotate';
       if (boardRef.current) {
         const bRect = boardRef.current.getBoundingClientRect();
-        const scale = (bRect.width / (boardRef.current.offsetWidth || 1000));
-        const itemCenterX = bRect.left + ((item.x || 0) + (item.width || 100) / 2) * scale;
-        const itemCenterY = bRect.top + ((item.y || 0) + (item.height || 100) / 2) * scale;
+        const itemCenterX = bRect.left + ((item.x || 0) + (item.width || 100) / 2) * canvasScale;
+        const itemCenterY = bRect.top + ((item.y || 0) + (item.height || 100) / 2) * canvasScale;
         startCenter.current = { x: itemCenterX, y: itemCenterY };
         const initialRad = Math.atan2(e.clientY - itemCenterY, e.clientX - itemCenterX);
         startAngle.current = (initialRad * (180 / Math.PI)) - (item.rotation || 0);
@@ -5303,22 +5758,18 @@ const Moodboard = () => {
 
     document.body.style.userSelect = 'none';
 
-    const onWindowMove = (moveEvt) => {
-      if (interactionMode.current === 'none' || !activeItemId.current) return;
+    let rafId = null;
+    let latestMoveEvt = null;
+
+    const renderDragMove = () => {
+      rafId = null;
+      if (!latestMoveEvt || interactionMode.current === 'none' || !activeItemId.current) return;
 
       const el = dragTargetDom.current;
       if (!el) return;
 
-      let scale = zoom || 1;
-      if (boardRef.current) {
-        const bRect = boardRef.current.getBoundingClientRect();
-        if (bRect.width && boardRef.current.offsetWidth) {
-          scale = bRect.width / boardRef.current.offsetWidth;
-        }
-      }
-
-      const totalDx = (moveEvt.clientX - startPointerPos.current.x) / scale;
-      const totalDy = (moveEvt.clientY - startPointerPos.current.y) / scale;
+      const totalDx = (latestMoveEvt.clientX - startPointerPos.current.x) / canvasScale;
+      const totalDy = (latestMoveEvt.clientY - startPointerPos.current.y) / canvasScale;
       const s = startItemPos.current;
 
       // 1. ARRASTE ULTRARRÁPIDO DIRETO NO DOM (0ms LATÊNCIA COM ALINHAMENTO MAGNÉTICO)
@@ -5327,9 +5778,7 @@ const Moodboard = () => {
         let newY = Math.round(s.y + totalDy);
 
         const guides = [];
-        if (snappingAtivo && boardRef.current) {
-          const boardW = boardRef.current.offsetWidth || 1000;
-          const boardH = boardRef.current.offsetHeight || 600;
+        if (snappingAtivo) {
           const itemW = s.width || 100;
           const itemH = s.height || 100;
           const snapDist = 9;
@@ -5348,13 +5797,12 @@ const Moodboard = () => {
             guides.push({ type: 'horizontal', pos: newY + itemH, label: 'Linha do Chão' });
           }
 
-          // 3. Snap com outras peças no canvas (Mesma base de piso, centros e laterais)
+          // 3. Snap com outras peças no canvas
           const otherItems = itensCanvasRef.current.filter(it => it.uniqueId !== activeItemId.current && !it.locked);
           for (const other of otherItems) {
             const otherW = other.width || 100;
             const otherH = other.height || 100;
 
-            // Alinhar Base no mesmo nível (Bottom-to-Bottom)
             const otherBottom = other.y + otherH;
             const myBottomTarget = otherBottom - itemH;
             if (Math.abs(newY - myBottomTarget) < snapDist) {
@@ -5362,7 +5810,6 @@ const Moodboard = () => {
               guides.push({ type: 'horizontal', pos: otherBottom, label: 'Nível do Piso' });
             }
 
-            // Alinhar Centro X com outro item
             const otherCenterX = other.x + otherW / 2;
             const myCenterXTarget = otherCenterX - itemW / 2;
             if (Math.abs(newX - myCenterXTarget) < snapDist) {
@@ -5370,7 +5817,6 @@ const Moodboard = () => {
               guides.push({ type: 'vertical', pos: otherCenterX, label: 'Centro Alinhado' });
             }
 
-            // Encostar Lado a Lado (Esquerda ou Direita)
             if (Math.abs(newX - (other.x + otherW)) < snapDist) {
               newX = other.x + otherW;
               guides.push({ type: 'vertical', pos: newX, label: 'Encosto' });
@@ -5381,7 +5827,7 @@ const Moodboard = () => {
           }
         }
 
-        setActiveSnapGuides(guides);
+        updateSnapGuidesDirectDom(guides);
 
         currentPendingChanges.current = { x: newX, y: newY };
         el.style.left = `${newX}px`;
@@ -5401,7 +5847,7 @@ const Moodboard = () => {
 
       // 3. ROTAÇÃO DIRETA NO DOM
       if (interactionMode.current === 'rotate') {
-        const currentRad = Math.atan2(moveEvt.clientY - startCenter.current.y, moveEvt.clientX - startCenter.current.x);
+        const currentRad = Math.atan2(latestMoveEvt.clientY - startCenter.current.y, latestMoveEvt.clientX - startCenter.current.x);
         let angleDeg = Math.round((currentRad * (180 / Math.PI)) - startAngle.current);
         angleDeg = ((angleDeg % 360) + 360) % 360;
         if (angleDeg < 4 || angleDeg > 356) angleDeg = 0;
@@ -5411,7 +5857,7 @@ const Moodboard = () => {
 
         currentPendingChanges.current = { rotation: angleDeg };
         el.style.transform = `rotate(${angleDeg}deg) scaleX(${s.flipH ? -1 : 1}) scaleY(${s.flipV ? -1 : 1})`;
-        setRotacaoTooltip(`${angleDeg}°`);
+        updateRotacaoTooltipDirectDom(`${angleDeg}°`);
         return;
       }
 
@@ -5427,7 +5873,8 @@ const Moodboard = () => {
 
           const newFontSize = Math.max(14, Math.min(220, Math.round((s.fontSize || 48) + scaleFactor)));
           currentPendingChanges.current = { fontSize: newFontSize };
-          atualizarItem(activeItemId.current, { fontSize: newFontSize });
+          const textEl = el.querySelector('.text-render-element') || el.querySelector('text') || el;
+          if (textEl) textEl.style.fontSize = `${newFontSize}px`;
           return;
         } else {
           let newW = s.width;
@@ -5465,8 +5912,7 @@ const Moodboard = () => {
         const deltaCurv = Math.round(-totalDy * 0.95);
         const newCurv = Math.max(-100, Math.min(100, (s.curvatura || 0) + deltaCurv));
         currentPendingChanges.current = { curvatura: newCurv };
-        atualizarItem(activeItemId.current, { curvatura: newCurv });
-        setRotacaoTooltip(`Curvatura: ${newCurv}%`);
+        updateRotacaoTooltipDirectDom(`Curvatura: ${newCurv}%`);
         return;
       }
 
@@ -5475,18 +5921,26 @@ const Moodboard = () => {
         const deltaOnd = Math.round((totalDx - totalDy) * 0.8);
         const newOnd = Math.max(0, Math.min(100, (s.ondulacao || 0) + deltaOnd));
         currentPendingChanges.current = { ondulacao: newOnd };
-        atualizarItem(activeItemId.current, { ondulacao: newOnd });
-        setRotacaoTooltip(`Ondulação: ${newOnd}%`);
+        updateRotacaoTooltipDirectDom(`Ondulação: ${newOnd}%`);
         return;
       }
     };
 
+    const onWindowMove = (moveEvt) => {
+      latestMoveEvt = moveEvt;
+      if (!rafId) {
+        rafId = requestAnimationFrame(renderDragMove);
+      }
+    };
+
     const onWindowUp = (upEvt) => {
+      if (rafId) cancelAnimationFrame(rafId);
       window.removeEventListener('pointermove', onWindowMove);
       window.removeEventListener('pointerup', onWindowUp);
       document.body.style.userSelect = '';
 
-      setActiveSnapGuides([]);
+      updateSnapGuidesDirectDom([]);
+      updateRotacaoTooltipDirectDom(null);
 
       const changes = { ...currentPendingChanges.current };
       const targetId = activeItemId.current;
@@ -5494,7 +5948,7 @@ const Moodboard = () => {
       if (targetId && Object.keys(changes).length > 0) {
         setItensCanvas(prev => {
           const updated = prev.map(it => it.uniqueId === targetId ? { ...it, ...changes } : it);
-          saveSnapshot(updated);
+          setTimeout(() => saveSnapshot(updated), 0);
           return updated;
         });
       }
@@ -5504,7 +5958,6 @@ const Moodboard = () => {
       resizeDir.current = null;
       dragTargetDom.current = null;
       currentPendingChanges.current = {};
-      setRotacaoTooltip(null);
     };
 
     window.addEventListener('pointermove', onWindowMove, { passive: false });
@@ -5518,22 +5971,24 @@ const Moodboard = () => {
     closeContextMenu();
   };
 
-  const atualizarItem = (id, alt) => {
+  const atualizarItem = useCallback((id, alt, deveSalvarHistorico = true) => {
     setItensCanvas(prev => {
       const updated = prev.map(i => i.uniqueId === id ? { ...i, ...alt } : i);
-      saveSnapshot(updated);
+      if (deveSalvarHistorico) {
+        agendarSaveSnapshot(updated);
+      }
       return updated;
     });
-  };
+  }, [agendarSaveSnapshot]);
 
-  const deleteItem = (id) => {
+  const deleteItem = useCallback((id) => {
     setItensCanvas(prev => {
       const updated = prev.filter(i => i.uniqueId !== id);
-      saveSnapshot(updated);
+      setTimeout(() => saveSnapshot(updated), 0);
       return updated;
     });
     setSelecionadoId(null);
-  };
+  }, [saveSnapshot]);
 
   // 🎯 GESTÃO DE DRAG AND DROP DIRETO DO ACERVO PARA O PALCO
   const handleDragStartAcervo = (e, item) => {
@@ -6008,15 +6463,33 @@ const Moodboard = () => {
       {/* 🎛️ PAINEL LATERAL (DESKTOP) / BOTTOM SHEET (MOBILE) */}
       {!modoApresentacao && (isMobile ? painelMobileAberto : painelEsquerdoAberto) && (
         <div
-          className={`studio-panel ${isMobile ? 'bottom-sheet-panel' : ''} ${isMobile && painelMobileAberto ? 'bottom-sheet-open' : ''}`}
+          className={`studio-panel ${isMobile ? 'bottom-sheet-panel' : ''} ${isMobile && painelMobileAberto ? 'bottom-sheet-open' : ''} ${isMobile && painelExpandidoMobile ? 'panel-expanded' : ''}`}
           onClick={e => e.stopPropagation()}
           onTouchStart={isMobile ? handlePainelTouchStart : undefined}
           onTouchEnd={isMobile ? handlePainelTouchEnd : undefined}
         >
-          {/* ALÇA DE DRAG (MOBILE ONLY) */}
+          {/* 📱 ALÇA TÁTIL DE PUXAR / SUBIR / DESCER (MOBILE ONLY) */}
           {isMobile && (
-            <div className="bottom-sheet-handle-wrap" onClick={() => setPainelMobileAberto(false)}>
-              <div className="bottom-sheet-handle" />
+            <div
+              className="studio-mobile-drag-handle bottom-sheet-drag-handle"
+              onTouchStart={handleDragHandleTouchStart}
+              onTouchMove={handleDragHandleTouchMove}
+              onTouchEnd={handleDragHandleTouchEnd}
+              onClick={() => setPainelExpandidoMobile(prev => !prev)}
+              title="Puxe para cima para subir ou para baixo para descer"
+            >
+              <span className="drag-indicator-pill" />
+            </div>
+          )}
+
+          {/* CABEÇALHO DO BOTTOM SHEET COM TÍTULO, BOTÃO SUBIR/DESCER E FECHAR (MOBILE ONLY) */}
+          {isMobile && (
+            <div
+              className="bottom-sheet-handle-wrap"
+              onTouchStart={handleDragHandleTouchStart}
+              onTouchMove={handleDragHandleTouchMove}
+              onTouchEnd={handleDragHandleTouchEnd}
+            >
               <span className="bottom-sheet-handle-label">
                 {abaAtiva === 'fundo' && '🏞️ Cenário & Ambiente'}
                 {abaAtiva === 'formas' && '🏛️ Estruturas & Painéis'}
@@ -6025,7 +6498,19 @@ const Moodboard = () => {
                 {abaAtiva === 'baloes' && '🎈 Bexigas & Cenografia'}
                 {abaAtiva === 'texto' && '✍️ Letreiros & Texto'}
               </span>
-              <span style={{ fontSize: '10px', color: '#94a3b8', marginLeft: 'auto' }}>▼ fechar</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginLeft: 'auto' }}>
+                <button
+                  type="button"
+                  className="btn-close-bottom-sheet"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPainelMobileAberto(false);
+                  }}
+                  title="Fechar painel"
+                >
+                  <span>✕ Fechar</span>
+                </button>
+              </div>
             </div>
           )}
 
@@ -6094,16 +6579,21 @@ const Moodboard = () => {
                     )}
                   </div>
 
-                  {/* Filtros em Menus Suspensos: Categoria e Tema */}
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', marginBottom: '8px' }}>
-                    <div className="mb-category-select-wrapper">
+                  {/* Filtros em Menus Suspensos: Categoria e Tema (Dinâmicos do Acervo) */}
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: temasDoEstoque.length > 0 ? 'repeat(2, 1fr)' : '1fr',
+                    gap: '6px',
+                    marginBottom: '8px'
+                  }}>
+                    <div className="mb-category-select-wrapper" style={{ margin: 0 }}>
                       <select
                         className="mb-category-select-modern"
                         value={filtroCategoriaEstoque}
                         onChange={e => setFiltroCategoriaEstoque(e.target.value)}
                       >
                         <option value="todas">
-                          🏷️ Todas as Categorias ({estoqueReal.length})
+                          🏷️ Categorias ({categoriasDoEstoque.length})
                         </option>
                         {categoriasDoEstoque.map(cat => {
                           const count = estoqueReal.filter(i => (i.categoria || '').trim() === cat).length;
@@ -6119,28 +6609,36 @@ const Moodboard = () => {
                       </div>
                     </div>
 
-                    <div className="mb-category-select-wrapper">
-                      <select
-                        className="mb-category-select-modern"
-                        value={temaSugestaoAtivo}
-                        onChange={e => {
-                          setTemaSugestaoAtivo(e.target.value);
-                          setTermoBusca('');
-                        }}
-                      >
-                        <option value="">
-                          🎭 Todos os Temas / Geral
-                        </option>
-                        {TEMAS_MOODBOARD_SUGESTOES.map(t => (
-                          <option key={t.tema} value={t.tema}>
-                            {t.icon} Tema: {t.tema}
+                    {temasDoEstoque.length > 0 && (
+                      <div className="mb-category-select-wrapper" style={{ margin: 0 }}>
+                        <select
+                          className="mb-category-select-modern"
+                          value={temaSugestaoAtivo}
+                          onChange={e => {
+                            setTemaSugestaoAtivo(e.target.value);
+                            setTermoBusca('');
+                          }}
+                        >
+                          <option value="">
+                            🎭 Temas ({temasDoEstoque.length})
                           </option>
-                        ))}
-                      </select>
-                      <div className="mb-select-custom-arrow">
-                        <i className="fas fa-chevron-down"></i>
+                          {temasDoEstoque.map(tema => {
+                            const count = estoqueReal.filter(i => {
+                              const itemTema = (i.tema || i.categoriaTema || i.grupoTema || '').trim().toLowerCase();
+                              return itemTema === tema.toLowerCase();
+                            }).length;
+                            return (
+                              <option key={tema} value={tema}>
+                                ✨ {tema} ({count})
+                              </option>
+                            );
+                          })}
+                        </select>
+                        <div className="mb-select-custom-arrow">
+                          <i className="fas fa-chevron-down"></i>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Grid Direto de Peças do Estoque */}
@@ -6326,67 +6824,7 @@ const Moodboard = () => {
               </div>
               <p className="hint-text" style={{ margin: '0 0 10px 0' }}>Clique para adicionar a estrutura branca ao cenário e personalizar as cores:</p>
 
-              {/* 🚶‍♀️ CARD DE PROPORÇÃO REAL & SILHUETAS */}
-              <div style={{
-                background: escalaHumanaAtiva ? 'linear-gradient(135deg, rgba(197, 160, 89, 0.15), rgba(15, 23, 42, 0.05))' : '#f8fafc',
-                border: escalaHumanaAtiva ? '1.5px solid #c5a059' : '1px solid #e2e8f0',
-                borderRadius: '8px', padding: '10px', marginBottom: '14px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: escalaHumanaAtiva ? '8px' : '0' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    🚶‍♀️ Silhueta de Altura & Proporção
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setEscalaHumanaAtiva(!escalaHumanaAtiva)}
-                    style={{
-                      fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '12px',
-                      background: escalaHumanaAtiva ? '#c5a059' : '#e2e8f0',
-                      color: escalaHumanaAtiva ? '#0f172a' : '#64748b',
-                      border: 'none', cursor: 'pointer'
-                    }}
-                  >
-                    {escalaHumanaAtiva ? 'ATIVA (ON)' : 'ATIVAR'}
-                  </button>
-                </div>
 
-                {escalaHumanaAtiva && (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '6px' }}>
-                      {[
-                        { id: 'mulher', label: '👩 Mulher', m: '1,65m' },
-                        { id: 'homem', label: '👨 Homem', m: '1,75m' },
-                        { id: 'crianca', label: '👧 Criança', m: '1,10m' }
-                      ].map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => setTipoSilhueta(s.id)}
-                          style={{
-                            padding: '5px 2px', fontSize: '9.5px', fontWeight: '700', borderRadius: '5px',
-                            background: tipoSilhueta === s.id ? '#0f172a' : '#ffffff',
-                            color: tipoSilhueta === s.id ? '#fef08a' : '#334155',
-                            border: tipoSilhueta === s.id ? '1px solid #c5a059' : '1px solid #cbd5e1',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <div>{s.label}</div>
-                          <div style={{ fontSize: '8.5px', opacity: 0.8 }}>{s.m}</div>
-                        </button>
-                      ))}
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#475569', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={mostrarReguaMetrica}
-                        onChange={e => setMostrarReguaMetrica(e.target.checked)}
-                        style={{ accentColor: '#c5a059' }}
-                      />
-                      <span>Mostrar Régua Métrica Lateral</span>
-                    </label>
-                  </>
-                )}
-              </div>
 
               {/* 🏛️ PAINÉIS & ARCOS */}
               <div className="estruturas-section-label">🏛️ Painéis & Arcos</div>
@@ -6893,7 +7331,7 @@ const Moodboard = () => {
                     <button
                       type="button"
                       onClick={() => {
-                        const novoId = adicionarTexto({ content: 'Novo Nome' });
+                        const novoId = adicionarTexto({ content: 'Novo Nome' }, true);
                         setTextoNovoInput('Novo Nome');
                       }}
                       style={{
@@ -6918,76 +7356,231 @@ const Moodboard = () => {
 
                   {/* 1. Digitar Texto / Nome em Tempo Real */}
                   <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                      ✍️ Digite o Texto / Nome / Frase:
-                    </label>
-                    <input
-                      type="text"
-                      className="text-input-direct"
-                      value={itemSelecionado?.type === 'text' ? (itemSelecionado.content ?? '') : textoNovoInput}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setTextoNovoInput(val);
-                        if (itemSelecionado?.type === 'text' && selecionadoId) {
-                          atualizarItem(selecionadoId, { content: val });
-                        } else {
-                          adicionarTexto({ content: val });
-                        }
-                      }}
-                      placeholder="Ex: Sophia 15 Anos, Bem-Vindos..."
-                      style={{ width: '100%', padding: '10px 12px', fontSize: '13px', borderRadius: '8px', border: '1.5px solid #cbd5e1', boxSizing: 'border-box' }}
-                    />
-                  </div>
-
-                  {/* 2. Efeitos & Materiais de Acabamento */}
-                  <div>
-                    <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                      🪞 Efeitos & Materiais de Acabamento:
-                    </label>
-                    <div className="texture-swatches-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px' }}>
-                      {[
-                        { id: 'none', nome: 'Sólido / Normal', tipo: 'cor', bg: '#0f172a' },
-                        { id: 'gold_mirror', nome: 'Acrílico Ouro', tipo: 'grad', bg: 'linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #b38728 55%, #aa771c 100%)' },
-                        { id: 'rose_gold', nome: 'Rose Gold', tipo: 'grad', bg: 'linear-gradient(135deg, #b76e79 0%, #ffd1dc 30%, #e0a9af 55%, #9c4f5a 100%)' },
-                        { id: 'silver_mirror', nome: 'Prata Espelho', tipo: 'grad', bg: 'linear-gradient(135deg, #8a8a8a 0%, #ffffff 30%, #a6a6a6 55%, #737373 100%)' },
-                        { id: 'mdf_wood', nome: 'MDF 3D Laser', tipo: 'grad', bg: 'linear-gradient(170deg, #e6be8a 0%, #caa070 30%, #dfb582 60%, #b88652 100%)' },
-                        { id: 'glitter_gold', nome: 'Glitter Dourado', tipo: 'grad', bg: 'radial-gradient(circle at 50% 50%, #fff7cc 10%, #d4af37 40%, #996515 80%, #ffd700 100%)' },
-                        { id: 'neon', nome: 'Letreiro Neon LED', tipo: 'neon', bg: '#0f172a' }
-                      ].map(efeito => {
-                        const isAtivo = itemSelecionado?.type === 'text'
-                          ? (efeito.id === 'neon' ? itemSelecionado.neon : (itemSelecionado.material || 'none') === efeito.id)
-                          : efeitoTextoAtivo === efeito.id;
-
-                        return (
-                          <div
-                            key={efeito.id}
-                            className={`texture-swatch-card ${isAtivo ? 'active' : ''}`}
-                            onClick={() => {
-                              setEfeitoTextoAtivo(efeito.id);
-                              if (itemSelecionado?.type === 'text' && selecionadoId) {
-                                if (efeito.id === 'neon') {
-                                  atualizarItem(selecionadoId, { neon: true, neonColor: itemSelecionado.neonColor || '#ec4899', color: '#ffffff', material: 'none' });
-                                } else if (efeito.id === 'none') {
-                                  atualizarItem(selecionadoId, { material: 'none', neon: false });
-                                } else {
-                                  atualizarItem(selecionadoId, { material: efeito.id, neon: false });
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px', gap: '6px', flexWrap: 'wrap' }}>
+                      <label style={{ fontSize: '11px', fontWeight: '800', color: '#334155', textTransform: 'uppercase', margin: 0 }}>
+                        ✍️ Digite o Texto / Nome / Frase:
+                      </label>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <button
+                          type="button"
+                          className="text-input-quick-btn"
+                          onClick={() => {
+                            if (inputTextoLetreiroRef.current) {
+                              inputTextoLetreiroRef.current.focus();
+                              inputTextoLetreiroRef.current.select();
+                              try {
+                                inputTextoLetreiroRef.current.setSelectionRange(0, inputTextoLetreiroRef.current.value.length);
+                              } catch (_) {}
+                            }
+                          }}
+                          title="Selecionar todo o texto da caixa para apagar ou substituir"
+                        >
+                          <span>🔤 Selecionar Tudo</span>
+                        </button>
+                        <button
+                          type="button"
+                          className="text-input-quick-btn"
+                          onClick={async () => {
+                            try {
+                              if (navigator.clipboard && navigator.clipboard.readText) {
+                                const clip = await navigator.clipboard.readText();
+                                if (clip !== undefined && clip !== null) {
+                                  const novoVal = clip;
+                                  setTextoNovoInput(novoVal);
+                                  if (itemSelecionado?.type === 'text' && selecionadoId) {
+                                    atualizarItem(selecionadoId, { content: novoVal });
+                                  } else {
+                                    const novoId = adicionarTexto({ content: novoVal }, true);
+                                    if (novoId) setSelecionadoId(novoId);
+                                  }
+                                  if (inputTextoLetreiroRef.current) inputTextoLetreiroRef.current.focus();
+                                  return;
                                 }
                               }
-                            }}
-                            title={`Aplicar ${efeito.nome}`}
-                          >
-                            <div
-                              className="texture-swatch-thumb"
-                              style={{ background: efeito.bg }}
-                            >
-                              {efeito.tipo === 'cor' && <span style={{ fontSize: '11px', color: '#fff' }}>Aa</span>}
-                              {efeito.tipo === 'neon' && <span style={{ fontSize: '12px', color: '#ec4899', textShadow: '0 0 6px #ec4899' }}>💡</span>}
-                            </div>
-                            <span className="texture-swatch-name">{efeito.nome}</span>
-                          </div>
-                        );
-                      })}
+                            } catch (e) {
+                              console.warn('Clipboard read error:', e);
+                            }
+                            if (inputTextoLetreiroRef.current) {
+                              inputTextoLetreiroRef.current.focus();
+                              inputTextoLetreiroRef.current.select();
+                              try { document.execCommand('paste'); } catch (_) {}
+                            }
+                          }}
+                          title="Colar texto da área de transferência"
+                        >
+                          <span>📋 Colar</span>
+                        </button>
+                      </div>
                     </div>
+
+                    <div className="text-input-field-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+                      <input
+                        ref={inputTextoLetreiroRef}
+                        type="text"
+                        className="text-input-direct"
+                        value={itemSelecionado?.type === 'text' ? (itemSelecionado.content ?? '') : textoNovoInput}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setTextoNovoInput(val);
+                          if (itemSelecionado?.type === 'text' && selecionadoId) {
+                            atualizarItem(selecionadoId, { content: val });
+                          } else {
+                            const novoId = adicionarTexto({ content: val }, true);
+                            if (novoId) setSelecionadoId(novoId);
+                          }
+                        }}
+                        onFocus={(e) => {
+                          try { e.target.select(); } catch (_) {}
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        onKeyDown={(e) => e.stopPropagation()}
+                        onKeyUp={(e) => e.stopPropagation()}
+                        onPaste={(e) => e.stopPropagation()}
+                        onCopy={(e) => e.stopPropagation()}
+                        onCut={(e) => e.stopPropagation()}
+                        placeholder="Ex: Sophia 15 Anos, Bem-Vindos..."
+                        autoComplete="off"
+                        autoCorrect="off"
+                        spellCheck="false"
+                        style={{
+                          width: '100%',
+                          padding: '10px 38px 10px 12px',
+                          fontSize: '13px',
+                          fontWeight: '700',
+                          color: '#0f172a',
+                          borderRadius: '8px',
+                          border: '1.5px solid #cbd5e1',
+                          boxSizing: 'border-box',
+                          background: '#ffffff',
+                          userSelect: 'text',
+                          WebkitUserSelect: 'text'
+                        }}
+                      />
+                      {Boolean(itemSelecionado?.type === 'text' ? (itemSelecionado.content ?? '') : textoNovoInput) && (
+                        <button
+                          type="button"
+                          className="text-clear-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setTextoNovoInput('');
+                            if (itemSelecionado?.type === 'text' && selecionadoId) {
+                              atualizarItem(selecionadoId, { content: '' });
+                            }
+                            if (inputTextoLetreiroRef.current) {
+                              inputTextoLetreiroRef.current.focus();
+                            }
+                          }}
+                          title="Apagar todo o texto (Limpar campo)"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Efeitos & Materiais de Acabamento (Em gaveta expansível no celular para não ocupar espaço) */}
+                  <div className="gaveta-efeitos-container" style={{ marginBottom: '10px' }}>
+                    <button
+                      type="button"
+                      className="gaveta-efeitos-header-btn"
+                      onClick={() => setGavetaEfeitosAberta(prev => !prev)}
+                      title="Clique para abrir ou fechar as opções de acabamento"
+                      style={{
+                        width: '100%',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '7px 10px',
+                        background: '#f8fafc',
+                        border: '1px solid #cbd5e1',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        userSelect: 'none',
+                        touchAction: 'manipulation'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                        <span style={{ fontSize: '12px' }}>🪞</span>
+                        <span style={{ fontSize: '10.5px', fontWeight: '800', color: '#334155', textTransform: 'uppercase' }}>
+                          Acabamento & Efeito:
+                        </span>
+                        <span style={{
+                          background: '#0f172a',
+                          color: '#fef08a',
+                          fontSize: '9.5px',
+                          fontWeight: '800',
+                          padding: '1.5px 6px',
+                          borderRadius: '10px',
+                          border: '1px solid rgba(197, 160, 89, 0.4)'
+                        }}>
+                          {(() => {
+                            const matId = itemSelecionado?.type === 'text'
+                              ? (itemSelecionado.neon ? 'neon' : (itemSelecionado.material || 'none'))
+                              : efeitoTextoAtivo;
+                            const nomes = {
+                              none: 'Sólido',
+                              gold_mirror: 'Acrílico Ouro',
+                              rose_gold: 'Rose Gold',
+                              silver_mirror: 'Prata Espelho',
+                              mdf_wood: 'MDF 3D',
+                              glitter_gold: 'Glitter',
+                              neon: 'Neon LED'
+                            };
+                            return nomes[matId] || 'Sólido';
+                          })()}
+                        </span>
+                      </div>
+                      <span style={{ fontSize: '10px', fontWeight: '700', color: '#c5a059', whiteSpace: 'nowrap' }}>
+                        {(!isMobile || gavetaEfeitosAberta) ? '▲ Recolher' : '▼ Escolher'}
+                      </span>
+                    </button>
+
+                    {(!isMobile || gavetaEfeitosAberta) && (
+                      <div className="texture-swatches-grid" style={{ gridTemplateColumns: 'repeat(3, 1fr)', gap: '6px', marginTop: '6px' }}>
+                        {[
+                          { id: 'none', nome: 'Sólido / Normal', tipo: 'cor', bg: '#0f172a' },
+                          { id: 'gold_mirror', nome: 'Acrílico Ouro', tipo: 'grad', bg: 'linear-gradient(135deg, #bf953f 0%, #fcf6ba 30%, #b38728 55%, #aa771c 100%)' },
+                          { id: 'rose_gold', nome: 'Rose Gold', tipo: 'grad', bg: 'linear-gradient(135deg, #b76e79 0%, #ffd1dc 30%, #e0a9af 55%, #9c4f5a 100%)' },
+                          { id: 'silver_mirror', nome: 'Prata Espelho', tipo: 'grad', bg: 'linear-gradient(135deg, #8a8a8a 0%, #ffffff 30%, #a6a6a6 55%, #737373 100%)' },
+                          { id: 'mdf_wood', nome: 'MDF 3D Laser', tipo: 'grad', bg: 'linear-gradient(170deg, #e6be8a 0%, #caa070 30%, #dfb582 60%, #b88652 100%)' },
+                          { id: 'glitter_gold', nome: 'Glitter Dourado', tipo: 'grad', bg: 'radial-gradient(circle at 50% 50%, #fff7cc 10%, #d4af37 40%, #996515 80%, #ffd700 100%)' },
+                          { id: 'neon', nome: 'Letreiro Neon LED', tipo: 'neon', bg: '#0f172a' }
+                        ].map(efeito => {
+                          const isAtivo = itemSelecionado?.type === 'text'
+                            ? (efeito.id === 'neon' ? itemSelecionado.neon : (itemSelecionado.material || 'none') === efeito.id)
+                            : efeitoTextoAtivo === efeito.id;
+
+                          return (
+                            <div
+                              key={efeito.id}
+                              className={`texture-swatch-card ${isAtivo ? 'active' : ''}`}
+                              onClick={() => {
+                                setEfeitoTextoAtivo(efeito.id);
+                                if (itemSelecionado?.type === 'text' && selecionadoId) {
+                                  if (efeito.id === 'neon') {
+                                    atualizarItem(selecionadoId, { neon: true, neonColor: itemSelecionado.neonColor || '#ec4899', color: '#ffffff', material: 'none' });
+                                  } else if (efeito.id === 'none') {
+                                    atualizarItem(selecionadoId, { material: 'none', neon: false });
+                                  } else {
+                                    atualizarItem(selecionadoId, { material: efeito.id, neon: false });
+                                  }
+                                }
+                              }}
+                              title={`Aplicar ${efeito.nome}`}
+                            >
+                              <div
+                                className="texture-swatch-thumb"
+                                style={{ background: efeito.bg }}
+                              >
+                                {efeito.tipo === 'cor' && <span style={{ fontSize: '11px', color: '#fff' }}>Aa</span>}
+                                {efeito.tipo === 'neon' && <span style={{ fontSize: '12px', color: '#ec4899', textShadow: '0 0 6px #ec4899' }}>💡</span>}
+                              </div>
+                              <span className="texture-swatch-name">{efeito.nome}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* 4. Estilos de Fonte Rápidos & Formatação */}
@@ -7183,116 +7776,45 @@ const Moodboard = () => {
                 </button>
               </div>
 
-              {/* 🎨 PALETA DE CORES DO EVENTO (IDENTIDADE VISUAL) */}
-              <div style={{
-                background: '#ffffff',
-                border: '1.5px solid #c5a059',
-                borderRadius: '8px',
-                padding: '10px',
-                marginBottom: '14px',
-                boxShadow: '0 2px 8px rgba(197, 160, 89, 0.12)'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    🎨 Paleta do Evento ({paletaEvento.length} cores)
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (paletaEvento.length < 6) {
-                        setPaletaEvento(prev => [...prev, '#ffffff']);
-                      }
-                    }}
-                    style={{ fontSize: '9.5px', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px', background: '#f1f5f9', border: '1px solid #cbd5e1', cursor: 'pointer' }}
-                    title="Adicionar mais uma cor à paleta"
-                  >
-                    + Cor
-                  </button>
-                </div>
-
-                {/* Círculos de cores da paleta editáveis */}
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '8px', flexWrap: 'wrap' }}>
-                  {paletaEvento.map((corHex, idx) => (
-                    <div key={idx} style={{ position: 'relative', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                      <label
-                        style={{
-                          width: '28px',
-                          height: '28px',
-                          borderRadius: '50%',
-                          backgroundColor: corHex,
-                          border: '2px solid #0f172a',
-                          boxShadow: '0 2px 4px rgba(0,0,0,0.15)',
-                          cursor: 'pointer',
-                          display: 'block'
-                        }}
-                        title={`Cor ${idx + 1}: ${corHex} (Clique para alterar ou aplicar na peça selecionada)`}
-                        onClick={() => {
-                          if (selecionadoId && itemSelecionado) {
-                            if (itemSelecionado.type === 'shape') {
-                              atualizarItem(selecionadoId, { color: corHex });
-                            } else if (itemSelecionado.type === 'text') {
-                              atualizarItem(selecionadoId, { color: corHex, material: 'none' });
-                            } else if (itemSelecionado.type === 'ornament') {
-                              atualizarItem(selecionadoId, { color: corHex, material: 'none' });
-                            }
-                          }
-                        }}
-                      >
-                        <input
-                          type="color"
-                          value={corHex}
-                          onChange={(e) => {
-                            const novaCor = e.target.value;
-                            setPaletaEvento(prev => prev.map((c, i) => i === idx ? novaCor : c));
-                          }}
-                          style={{ opacity: 0, width: 0, height: 0, position: 'absolute' }}
-                        />
-                      </label>
-                      {paletaEvento.length > 2 && (
-                        <button
-                          type="button"
-                          onClick={() => setPaletaEvento(prev => prev.filter((_, i) => i !== idx))}
-                          style={{ border: 'none', background: 'none', color: '#ef4444', fontSize: '9px', cursor: 'pointer', padding: 0, marginTop: '2px' }}
-                          title="Remover cor"
-                        >
-                          ✕
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                </div>
-
-                {/* Presets Rápidos de Paleta */}
-                <div>
-                  <div style={{ fontSize: '9.5px', fontWeight: '700', color: '#64748b', marginBottom: '4px' }}>✨ Paletas Prontas de Festa:</div>
-                  <select
-                    className="input-modal-luxury"
-                    style={{ fontSize: '11px', padding: '6px 8px', width: '100%', background: '#ffffff', cursor: 'pointer', borderRadius: '6px' }}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (val) {
-                        const p = PALETAS_EVENTO_PRESETS.find(item => item.nome === val);
-                        if (p) setPaletaEvento(p.cores);
-                      }
-                    }}
-                    defaultValue=""
-                  >
-                    <option value="" disabled>✨ Escolha uma combinação pronta...</option>
-                    {PALETAS_EVENTO_PRESETS.map((p, idx) => (
-                      <option key={idx} value={p.nome}>
-                        🎨 {p.nome}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
-
               {/* 1. ABA: PAREDE */}
               {cenarioAba === 'parede' && (
                 <>
-                  {/* Cores Rápidas de Parede */}
-                  <div className="cenario-section-title">🎨 Cores de Parede:</div>
+                  {/* Cores Rápidas de Parede com Paleta da Decoração Primeiro */}
+                  <div className="cenario-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span>🎨 Cores de Parede:</span>
+                    {coresDaDecoracao.length > 0 && (
+                      <span style={{ fontSize: '9.5px', color: '#c5a059', fontWeight: '700' }}>
+                        ✨ Paleta da Decoração
+                      </span>
+                    )}
+                  </div>
                   <div className="fast-colors-palette">
+                    {/* 1. Primeiro as cores da paleta da decoração (automático) */}
+                    {coresDaDecoracao.map((corHex, idx) => (
+                      <div
+                        key={`decor-parede-${idx}-${corHex}`}
+                        className={`fast-color-chip ${wallBackground.toLowerCase() === corHex.toLowerCase() && !gradienteAtivoParede ? 'active' : ''}`}
+                        style={{
+                          backgroundColor: corHex,
+                          border: '2px solid #c5a059',
+                          boxShadow: '0 2px 5px rgba(197, 160, 89, 0.25)'
+                        }}
+                        onClick={() => {
+                          setGradienteAtivoParede(false);
+                          setWallBackground(corHex);
+                          setModoCenario('duplo');
+                          saveSnapshot(itensCanvas, corHex, floorBackground);
+                        }}
+                        title={`Cor da Decoração: ${corHex}`}
+                      />
+                    ))}
+
+                    {/* Divisor sutil entre cores da decoração e tons padrão */}
+                    {coresDaDecoracao.length > 0 && (
+                      <div style={{ width: '1.5px', height: '26px', background: '#cbd5e1', margin: '0 3px', borderRadius: '1px' }} />
+                    )}
+
+                    {/* 2. Cores neutras padrão (sem duplicar as já inclusas na decoração) */}
                     {[
                       { nome: 'Branco Neve', cor: '#ffffff' },
                       { nome: 'Off-White Suave', cor: '#f8fafc' },
@@ -7303,19 +7825,24 @@ const Moodboard = () => {
                       { nome: 'Verde Eucalipto', cor: '#e2ece9' },
                       { nome: 'Grafite Nobre', cor: '#1e293b' },
                       { nome: 'Preto Noite', cor: '#0a0e17' }
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="fast-color-chip"
-                        style={{ backgroundColor: item.cor }}
-                        onClick={() => {
-                          setGradienteAtivoParede(false);
-                          setWallBackground(item.cor);
-                          saveSnapshot(itensCanvas, item.cor, floorBackground);
-                        }}
-                        title={item.nome}
-                      />
-                    ))}
+                    ]
+                      .filter(item => !coresDaDecoracao.includes(item.cor.toLowerCase()))
+                      .map((item, idx) => (
+                        <div
+                          key={`padrao-parede-${idx}`}
+                          className={`fast-color-chip ${wallBackground.toLowerCase() === item.cor.toLowerCase() && !gradienteAtivoParede ? 'active' : ''}`}
+                          style={{ backgroundColor: item.cor }}
+                          onClick={() => {
+                            setGradienteAtivoParede(false);
+                            setWallBackground(item.cor);
+                            setModoCenario('duplo');
+                            saveSnapshot(itensCanvas, item.cor, floorBackground);
+                          }}
+                          title={item.nome}
+                        />
+                      ))}
+
+                    {/* 3. Seletor de cor livre */}
                     <label className="fast-color-picker-label" title="Escolher cor livre">
                       <input
                         type="color"
@@ -7323,6 +7850,7 @@ const Moodboard = () => {
                         onChange={(e) => {
                           setGradienteAtivoParede(false);
                           setWallBackground(e.target.value);
+                          setModoCenario('duplo');
                           saveSnapshot(itensCanvas, e.target.value, floorBackground);
                         }}
                       />
@@ -7417,18 +7945,14 @@ const Moodboard = () => {
                     )}
                   </div>
 
-                  {/* Fundos e Texturas de Parede */}
-                  <div className="adm-header-flex" style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4>Fundos de Parede ({fundosParedeCompletos.length})</h4>
-                    <button
-                      type="button"
-                      className="btn-upload-capa"
-                      style={{ padding: '4px 8px', fontSize: '10px', background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', cursor: 'pointer', borderRadius: '6px' }}
-                      onClick={() => adicionarTextura('wall')}
-                      title="Subir foto de textura/parede do computador"
-                    >
-                      + Subir Parede
-                    </button>
+                  {/* Fundos e Texturas de Parede Oficiais */}
+                  <div className="adm-header-flex" style={{ marginTop: '14px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      Fundos de Parede ({fundosParedeCompletos.length})
+                    </h4>
+                    <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: '4px' }}>
+                      👑 Celebre Oficial
+                    </span>
                   </div>
 
                   {fundosParedeCompletos.length === 0 ? (
@@ -7594,9 +8118,41 @@ const Moodboard = () => {
               {/* 2. ABA: PISO */}
               {cenarioAba === 'piso' && (
                 <>
-                  {/* Cores Rápidas de Piso */}
-                  <div className="cenario-section-title">🎨 Cores de Piso / Chão:</div>
+                  {/* Cores Rápidas de Piso com Paleta da Decoração Primeiro */}
+                  <div className="cenario-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span>🎨 Cores de Piso / Chão:</span>
+                    {coresDaDecoracao.length > 0 && (
+                      <span style={{ fontSize: '9.5px', color: '#c5a059', fontWeight: '700' }}>
+                        ✨ Paleta da Decoração
+                      </span>
+                    )}
+                  </div>
                   <div className="fast-colors-palette">
+                    {/* 1. Cores da Decoração primeiro */}
+                    {coresDaDecoracao.map((corHex, idx) => (
+                      <div
+                        key={`decor-piso-${idx}-${corHex}`}
+                        className={`fast-color-chip ${floorBackground.toLowerCase() === corHex.toLowerCase() ? 'active' : ''}`}
+                        style={{
+                          backgroundColor: corHex,
+                          border: '2px solid #c5a059',
+                          boxShadow: '0 2px 5px rgba(197, 160, 89, 0.25)'
+                        }}
+                        onClick={() => {
+                          setFloorBackground(corHex);
+                          setModoCenario('duplo');
+                          saveSnapshot(itensCanvas, wallBackground, corHex);
+                        }}
+                        title={`Cor da Decoração: ${corHex}`}
+                      />
+                    ))}
+
+                    {/* Divisor sutil */}
+                    {coresDaDecoracao.length > 0 && (
+                      <div style={{ width: '1.5px', height: '26px', background: '#cbd5e1', margin: '0 3px', borderRadius: '1px' }} />
+                    )}
+
+                    {/* 2. Cores neutras padrão de piso (sem duplicar) */}
                     {[
                       { nome: 'Branco Polido', cor: '#ffffff' },
                       { nome: 'Off-White', cor: '#f1f5f9' },
@@ -7605,24 +8161,30 @@ const Moodboard = () => {
                       { nome: 'Grafite Piso', cor: '#475569' },
                       { nome: 'Marrom Tablado', cor: '#78350f' },
                       { nome: 'Preto Noite', cor: '#0a0e17' }
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="fast-color-chip"
-                        style={{ backgroundColor: item.cor }}
-                        onClick={() => {
-                          setFloorBackground(item.cor);
-                          saveSnapshot(itensCanvas, wallBackground, item.cor);
-                        }}
-                        title={item.nome}
-                      />
-                    ))}
+                    ]
+                      .filter(item => !coresDaDecoracao.includes(item.cor.toLowerCase()))
+                      .map((item, idx) => (
+                        <div
+                          key={`padrao-piso-${idx}`}
+                          className={`fast-color-chip ${floorBackground.toLowerCase() === item.cor.toLowerCase() ? 'active' : ''}`}
+                          style={{ backgroundColor: item.cor }}
+                          onClick={() => {
+                            setFloorBackground(item.cor);
+                            setModoCenario('duplo');
+                            saveSnapshot(itensCanvas, wallBackground, item.cor);
+                          }}
+                          title={item.nome}
+                        />
+                      ))}
+
+                    {/* 3. Seletor livre */}
                     <label className="fast-color-picker-label" title="Escolher cor livre">
                       <input
                         type="color"
                         className="invisible-color-input"
                         onChange={(e) => {
                           setFloorBackground(e.target.value);
+                          setModoCenario('duplo');
                           saveSnapshot(itensCanvas, wallBackground, e.target.value);
                         }}
                       />
@@ -7630,18 +8192,14 @@ const Moodboard = () => {
                     </label>
                   </div>
 
-                  {/* Fundos e Texturas de Piso */}
-                  <div className="adm-header-flex" style={{ marginTop: '14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <h4>Fundos de Piso ({fundosPisoCompletos.length})</h4>
-                    <button
-                      type="button"
-                      className="btn-upload-capa"
-                      style={{ padding: '4px 8px', fontSize: '10px', background: '#0f172a', color: '#c5a059', border: '1px solid #c5a059', cursor: 'pointer', borderRadius: '6px' }}
-                      onClick={() => adicionarTextura('floor')}
-                      title="Subir foto de piso do computador"
-                    >
-                      + Subir Piso
-                    </button>
+                  {/* Fundos e Texturas de Piso Oficiais */}
+                  <div className="adm-header-flex" style={{ marginTop: '14px', marginBottom: '8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <h4 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      Fundos de Piso ({fundosPisoCompletos.length})
+                    </h4>
+                    <span style={{ fontSize: '9.5px', fontWeight: '700', color: '#b45309', background: '#fef3c7', padding: '2px 8px', borderRadius: '4px' }}>
+                      👑 Celebre Oficial
+                    </span>
                   </div>
 
                   {fundosPisoCompletos.length === 0 ? (
@@ -7750,28 +8308,66 @@ const Moodboard = () => {
               {cenarioAba === 'ambiente' && (
                 <>
                   {/* Modo Fundo Único */}
-                  <p className="hint-text" style={{ margin: '8px 0 10px 0' }}>
-                    Foto 100% de tela cheia (ideal para fotos de salão de festa, espaço de eventos ou papel de parede contínuo):
+                  <p className="hint-text" style={{ margin: '4px 0 8px 0', fontSize: '11px', color: '#64748b', lineHeight: 1.35 }}>
+                    Foto de tela cheia (salão de festa ou fundo contínuo):
                   </p>
 
-                  {/* Cores Rápidas */}
-                  <div className="cenario-section-title">🎨 Cor Sólida de Fundo:</div>
+                  {/* Cores Rápidas com Paleta da Decoração Primeiro */}
+                  <div className="cenario-section-title" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                    <span>🎨 Cor Sólida de Fundo:</span>
+                    {coresDaDecoracao.length > 0 && (
+                      <span style={{ fontSize: '9.5px', color: '#c5a059', fontWeight: '700' }}>
+                        ✨ Paleta da Decoração
+                      </span>
+                    )}
+                  </div>
                   <div className="fast-colors-palette" style={{ marginBottom: '14px' }}>
+                    {/* 1. Cores da Decoração */}
+                    {coresDaDecoracao.map((corHex, idx) => (
+                      <div
+                        key={`decor-amb-${idx}-${corHex}`}
+                        className={`fast-color-chip ${wallBackground.toLowerCase() === corHex.toLowerCase() && modoCenario === 'unico' ? 'active' : ''}`}
+                        style={{
+                          backgroundColor: corHex,
+                          border: '2px solid #c5a059',
+                          boxShadow: '0 2px 5px rgba(197, 160, 89, 0.25)'
+                        }}
+                        onClick={() => {
+                          setModoCenario('unico');
+                          setWallBackground(corHex);
+                          saveSnapshot(itensCanvas, corHex, floorBackground);
+                        }}
+                        title={`Cor da Decoração: ${corHex}`}
+                      />
+                    ))}
+
+                    {/* Divisor sutil */}
+                    {coresDaDecoracao.length > 0 && (
+                      <div style={{ width: '1.5px', height: '26px', background: '#cbd5e1', margin: '0 3px', borderRadius: '1px' }} />
+                    )}
+
+                    {/* 2. Cores padrão neutras */}
                     {[
                       { nome: 'Branco', cor: '#ffffff' },
                       { nome: 'Off-White', cor: '#f8fafc' },
                       { nome: 'Cinza Claro', cor: '#e2e8f0' },
                       { nome: 'Bege Salão', cor: '#f5ebe0' },
                       { nome: 'Grafite Escuro', cor: '#0f172a' }
-                    ].map((item, idx) => (
-                      <div
-                        key={idx}
-                        className="fast-color-chip"
-                        style={{ backgroundColor: item.cor }}
-                        onClick={() => { setModoCenario('unico'); setWallBackground(item.cor); saveSnapshot(itensCanvas, item.cor, floorBackground); }}
-                        title={item.nome}
-                      />
-                    ))}
+                    ]
+                      .filter(item => !coresDaDecoracao.includes(item.cor.toLowerCase()))
+                      .map((item, idx) => (
+                        <div
+                          key={`padrao-amb-${idx}`}
+                          className={`fast-color-chip ${wallBackground.toLowerCase() === item.cor.toLowerCase() && modoCenario === 'unico' ? 'active' : ''}`}
+                          style={{ backgroundColor: item.cor }}
+                          onClick={() => {
+                            setModoCenario('unico');
+                            setWallBackground(item.cor);
+                            saveSnapshot(itensCanvas, item.cor, floorBackground);
+                          }}
+                          title={item.nome}
+                        />
+                      ))}
                     <label className="fast-color-picker-label" title="Escolher cor livre">
                       <input type="color" className="invisible-color-input" onChange={(e) => { setModoCenario('unico'); setWallBackground(e.target.value); saveSnapshot(itensCanvas, e.target.value, floorBackground); }} />
                       <span>🎨</span>
@@ -7876,74 +8472,7 @@ const Moodboard = () => {
                 </>
               )}
 
-              {/* 🚶‍♀️ CARD DE PROPORÇÃO REAL & SILHUETAS */}
-              <div style={{
-                background: escalaHumanaAtiva ? 'linear-gradient(135deg, rgba(197, 160, 89, 0.15), rgba(15, 23, 42, 0.05))' : '#f8fafc',
-                border: escalaHumanaAtiva ? '1.5px solid #c5a059' : '1px solid #e2e8f0',
-                borderRadius: '8px', padding: '10px', marginTop: '16px'
-              }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: escalaHumanaAtiva ? '8px' : '0' }}>
-                  <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                    🚶‍♀️ Silhueta de Altura & Proporção
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => setEscalaHumanaAtiva(!escalaHumanaAtiva)}
-                    style={{
-                      fontSize: '10px', fontWeight: '800', padding: '3px 8px', borderRadius: '12px',
-                      background: escalaHumanaAtiva ? '#c5a059' : '#e2e8f0',
-                      color: escalaHumanaAtiva ? '#0f172a' : '#64748b',
-                      border: 'none', cursor: 'pointer'
-                    }}
-                  >
-                    {escalaHumanaAtiva ? 'ATIVA (ON)' : 'ATIVAR'}
-                  </button>
-                </div>
 
-                {escalaHumanaAtiva && (
-                  <>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '4px', marginBottom: '6px' }}>
-                      {[
-                        { id: 'mulher', label: '👩 Mulher', m: '1,65m' },
-                        { id: 'homem', label: '👨 Homem', m: '1,75m' },
-                        { id: 'crianca', label: '👧 Criança', m: '1,10m' }
-                      ].map(s => (
-                        <button
-                          key={s.id}
-                          type="button"
-                          onClick={() => setTipoSilhueta(s.id)}
-                          style={{
-                            padding: '5px 2px', fontSize: '9.5px', fontWeight: '700', borderRadius: '5px',
-                            background: tipoSilhueta === s.id ? '#0f172a' : '#ffffff',
-                            color: tipoSilhueta === s.id ? '#fef08a' : '#334155',
-                            border: tipoSilhueta === s.id ? '1px solid #c5a059' : '1px solid #cbd5e1',
-                            cursor: 'pointer'
-                          }}
-                        >
-                          <div>{s.label}</div>
-                          <div style={{ fontSize: '8.5px', opacity: 0.8 }}>{s.m}</div>
-                        </button>
-                      ))}
-                    </div>
-                    <label style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '10px', color: '#475569', cursor: 'pointer' }}>
-                      <input
-                        type="checkbox"
-                        checked={mostrarReguaMetrica}
-                        onChange={e => setMostrarReguaMetrica(e.target.checked)}
-                        style={{ accentColor: '#c5a059' }}
-                      />
-                      <span>Mostrar Régua Métrica Lateral</span>
-                    </label>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-
-          {/* DEMAIS ABAS (FORMAS, ESTOQUE, BALOES, TEXTO) */}
-          {abaAtiva !== 'fundo' && (
-            <div className="panel-content">
-              {/* [Renderiza normalmente de acordo com abaAtiva] */}
             </div>
           )}
         </div>
@@ -7951,7 +8480,14 @@ const Moodboard = () => {
 
       {/* 🎨 ÁREA DA PRANCHETA & STUDIO CANVAS */}
       <div
-        className="studio-canvas"
+        className={`studio-canvas ${isMobile && (painelMobileAberto || painelDireitoAberto) ? 'mobile-sheet-active' : ''}`}
+        onTouchStart={handleCanvasTouchStart}
+        onTouchMove={handleCanvasTouchMove}
+        onTouchEnd={handleCanvasTouchEnd}
+        onTouchCancel={handleCanvasTouchEnd}
+        onMouseDown={handleCanvasMouseDown}
+        onMouseMove={handleCanvasMouseMove}
+        onMouseUp={handleCanvasMouseUp}
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDropCanvas}
         onContextMenu={(e) => { e.preventDefault(); }}
@@ -8082,6 +8618,7 @@ const Moodboard = () => {
 
         {/* 🖼️ O QUADRO DECORATIVO (ARTBOARD) */}
         <div
+          ref={zoomWrapperRef}
           className="artboard-zoom-wrapper"
           style={
             isMobile
@@ -8092,9 +8629,12 @@ const Moodboard = () => {
                   minHeight: `${Math.round(600 * zoom)}px`,
                   margin: 'auto',
                   flexShrink: 0,
-                  position: 'relative'
+                  position: 'relative',
+                  transform: `translate3d(${canvasPan.x}px, ${canvasPan.y}px, 0)`
                 }
-              : { transform: `scale(${zoom})` }
+              : {
+                  transform: `scale(${zoom}) translate3d(${canvasPan.x}px, ${canvasPan.y}px, 0)`
+                }
           }
         >
           <div
@@ -8112,33 +8652,15 @@ const Moodboard = () => {
             }
           >
 
-            {/* 🧲 GUIAS MAGNÉTICAS DE ALINHAMENTO ATIVAS */}
-            {activeSnapGuides.map((guide, idx) => (
-              <div
-                key={idx}
-                className="snap-guide-line"
-                style={guide.type === 'vertical' ? {
-                  left: `${guide.pos}px`,
-                  top: 0,
-                  width: '2px',
-                  height: '100%',
-                } : {
-                  top: `${guide.pos}px`,
-                  left: 0,
-                  height: '2px',
-                  width: '100%',
-                }}
-              >
-                {guide.label && (
-                  <span
-                    className="snap-guide-label"
-                    style={guide.type === 'horizontal' ? { top: '-18px', left: '12px' } : { top: '12px', left: '6px' }}
-                  >
-                    {guide.label}
-                  </span>
-                )}
+            {/* 🧲 GUIAS MAGNÉTICAS DE ALINHAMENTO ATIVAS (RENDERIZADAS EM DOM DIRETO - ZERO RE-RENDERS) */}
+            <div ref={snapGuidesOverlayRef} className="snap-guides-overlay" style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, pointerEvents: 'none', zIndex: 9999 }}>
+              <div className="snap-guide-line snap-guide-v" style={{ display: 'none', position: 'absolute', top: 0, bottom: 0, width: '2px', background: '#3b82f6', boxShadow: '0 0 6px rgba(59,130,246,0.8)' }}>
+                <span className="snap-guide-label" style={{ position: 'absolute', top: '12px', left: '6px', background: '#1e3a8a', color: '#fff', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}></span>
               </div>
-            ))}
+              <div className="snap-guide-line snap-guide-h" style={{ display: 'none', position: 'absolute', left: 0, right: 0, height: '2px', background: '#3b82f6', boxShadow: '0 0 6px rgba(59,130,246,0.8)' }}>
+                <span className="snap-guide-label" style={{ position: 'absolute', top: '-18px', left: '12px', background: '#1e3a8a', color: '#fff', fontSize: '9px', fontWeight: '800', padding: '2px 6px', borderRadius: '4px', whiteSpace: 'nowrap' }}></span>
+              </div>
+            </div>
 
             {/* Camadas do Cenário (Suavização / Ciclorama 3D) */}
             <div className="canvas-layers" style={{
@@ -8298,12 +8820,20 @@ const Moodboard = () => {
                   data-item-id={item.uniqueId}
                   className={`canvas-object ${isSelected ? 'selected' : ''} ${item.locked ? 'locked-item' : ''} ${isPanCapaMode && isSelected ? 'in-pan-mode' : ''}`}
                   style={{
-                    left: item.x,
-                    top: item.y,
-                    width: item.type === 'text' ? 'max-content' : `${item.width}px`,
-                    height: item.type === 'text' ? 'max-content' : `${item.height}px`,
+                    left: (activeItemId.current === item.uniqueId && currentPendingChanges.current.x !== undefined)
+                      ? `${currentPendingChanges.current.x}px`
+                      : item.x,
+                    top: (activeItemId.current === item.uniqueId && currentPendingChanges.current.y !== undefined)
+                      ? `${currentPendingChanges.current.y}px`
+                      : item.y,
+                    width: item.type === 'text'
+                      ? 'max-content'
+                      : `${(activeItemId.current === item.uniqueId && currentPendingChanges.current.width !== undefined) ? currentPendingChanges.current.width : item.width}px`,
+                    height: item.type === 'text'
+                      ? 'max-content'
+                      : `${(activeItemId.current === item.uniqueId && currentPendingChanges.current.height !== undefined) ? currentPendingChanges.current.height : item.height}px`,
                     zIndex: index + 10,
-                    transform: `rotate(${item.rotation || 0}deg) scaleX(${item.flipH ? -1 : 1}) scaleY(${item.flipV ? -1 : 1})`,
+                    transform: `rotate(${(activeItemId.current === item.uniqueId && currentPendingChanges.current.rotation !== undefined) ? currentPendingChanges.current.rotation : (item.rotation || 0)}deg) scaleX(${item.flipH ? -1 : 1}) scaleY(${item.flipV ? -1 : 1})`,
                     display: 'flex', alignItems: 'center', justifyContent: 'center',
                     filter: (item.type !== 'text' && (item.shadow > 0 || (item.brightness && item.brightness !== 100) || (item.contrast && item.contrast !== 100) || (item.saturate && item.saturate !== 100)))
                       ? `brightness(${item.brightness || 100}%) contrast(${item.contrast || 100}%) saturate(${item.saturate || 100}%) ${item.shadow > 0 ? `drop-shadow(5px 5px ${item.shadow}px rgba(0,0,0,0.5))` : ''}`
@@ -8334,7 +8864,6 @@ const Moodboard = () => {
                       onChange={(newVal) => atualizarItem(item.uniqueId, { content: newVal })}
                       onBlur={() => {
                         setEditingTextId(null);
-                        if (!item.content?.trim()) deleteItem(item.uniqueId);
                       }}
                     />
                   )}
@@ -8647,12 +9176,12 @@ const Moodboard = () => {
                           <Icons.Rotate width={12} height={12} />
                         </div>
 
-                        {/* Tooltip de Grau de Rotação */}
-                        {rotacaoTooltip && (
-                          <div className="rotation-degree-badge" style={unflipBar}>
-                            {rotacaoTooltip}
-                          </div>
-                        )}
+                        {/* Tooltip de Grau de Rotação (atualizado direto no DOM sem re-renders) */}
+                        <div
+                          ref={rotacaoTooltipDomRef}
+                          className="rotation-degree-badge"
+                          style={{ ...unflipBar, display: 'none' }}
+                        />
 
                         {/* Borda de Seleção */}
                         <div className="selection-bounding-box" />
@@ -8921,22 +9450,50 @@ const Moodboard = () => {
 
         {/* 📱 CONTROLES FLUTUANTES DE ZOOM NO MOBILE */}
         {isMobile && !modoApresentacao && (
-          <div className="mobile-zoom-dock" onClick={e => e.stopPropagation()}>
+          <div
+            className="mobile-zoom-dock"
+            onClick={e => e.stopPropagation()}
+            onPointerDown={e => e.stopPropagation()}
+            onTouchStart={e => e.stopPropagation()}
+            onTouchEnd={e => e.stopPropagation()}
+          >
             <button
               type="button"
               className="btn-mob-zoom"
-              onClick={() => setZoom(z => Math.max(0.25, Number((z - 0.08).toFixed(2))))}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleZoomMobile(-0.08);
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+              }}
               title="Diminuir Zoom"
             >
               <Icons.ZoomOut width={12} height={12} />
             </button>
-            <span className="mob-zoom-txt" onClick={fitCanvasToMobile} title="Toque para ajustar à tela">
+            <span
+              className="mob-zoom-txt"
+              onClick={(e) => {
+                e.stopPropagation();
+                fitCanvasToMobile(true);
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+              }}
+              title="Toque para ajustar à tela"
+            >
               {Math.round(zoom * 100)}%
             </span>
             <button
               type="button"
               className="btn-mob-zoom"
-              onClick={() => setZoom(z => Math.min(1.8, Number((z + 0.08).toFixed(2))))}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleZoomMobile(0.08);
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+              }}
               title="Aumentar Zoom"
             >
               <Icons.ZoomIn width={12} height={12} />
@@ -8944,7 +9501,13 @@ const Moodboard = () => {
             <button
               type="button"
               className="btn-mob-zoom btn-mob-fit"
-              onClick={fitCanvasToMobile}
+              onClick={(e) => {
+                e.stopPropagation();
+                fitCanvasToMobile(true);
+              }}
+              onTouchEnd={(e) => {
+                e.stopPropagation();
+              }}
               title="Ajustar à Tela"
             >
               <Icons.Maximize width={11} height={11} />
@@ -9774,21 +10337,44 @@ const Moodboard = () => {
           {painelDireitoAberto ? (
             <>
               <div className="studio-right-panel-backdrop" onClick={() => setPainelDireitoAberto(false)} />
-              <div className="studio-right-panel" onClick={e => e.stopPropagation()}>
+              <div
+                className={`studio-right-panel ${isMobile && painelExpandidoMobile ? 'panel-expanded' : ''}`}
+                onClick={e => e.stopPropagation()}
+                onMouseDown={e => e.stopPropagation()}
+                onTouchStart={e => e.stopPropagation()}
+                onTouchMove={e => e.stopPropagation()}
+                onTouchEnd={e => e.stopPropagation()}
+              >
+                {/* 📱 Alça Tátil de Puxar / Recolher no Celular */}
+                {isMobile && (
+                  <div
+                    className="studio-mobile-drag-handle"
+                    onTouchStart={handleDragHandleTouchStart}
+                    onTouchMove={handleDragHandleTouchMove}
+                    onTouchEnd={handleDragHandleTouchEnd}
+                    onClick={() => setPainelExpandidoMobile(prev => !prev)}
+                    title="Puxe para cima para subir ou para baixo para descer"
+                  >
+                    <span className="drag-indicator-pill" />
+                  </div>
+                )}
+
                 {/* Cabeçalho do Painel Direito */}
                 <div className="right-panel-header">
                   <div className="right-panel-title">
                     <Icons.Sparkles width={14} height={14} />
                     <span>ESTÚDIO PRO</span>
                   </div>
-                  <button
-                    className="btn-close-right-panel"
-                    onClick={() => setPainelDireitoAberto(false)}
-                    title="Recolher Painel (Mostrar apenas ícones)"
-                  >
-                    <span>Recolher</span>
-                    <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
-                  </button>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <button
+                      className="btn-close-right-panel"
+                      onClick={() => setPainelDireitoAberto(false)}
+                      title="Recolher Painel (Mostrar apenas ícones)"
+                    >
+                      <span>Recolher</span>
+                      <i className="fas fa-chevron-right" style={{ fontSize: '10px' }}></i>
+                    </button>
+                  </div>
                 </div>
 
                 {/* Abas do Painel Direito */}
@@ -10406,43 +10992,116 @@ const Moodboard = () => {
                             </div>
 
                             {!itemSelecionado.multiColor ? (
-                              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                                <span style={{ fontSize: '10.5px', fontWeight: '600', color: '#334155' }}>Cor do Arco Completo</span>
-                                <input
-                                  type="color"
-                                  value={itemSelecionado.color || '#ffffff'}
-                                  onChange={e => atualizarItem(selecionadoId, { color: e.target.value, corCamada2: e.target.value, corCamada3: e.target.value })}
-                                  style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                                />
+                              <div style={{ background: '#fff', padding: '8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                                  <span style={{ fontSize: '10.5px', fontWeight: '700', color: '#334155' }}>Cor do Arco Completo</span>
+                                  <input
+                                    type="color"
+                                    value={normalizarHexParaInputColor(itemSelecionado.color, '#ffffff')}
+                                    onChange={e => atualizarItem(selecionadoId, { color: e.target.value, corCamada2: e.target.value, corCamada3: e.target.value })}
+                                    style={{ width: '32px', height: '24px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  />
+                                </div>
+                                <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                  {CORES_PALETA_ESTRUTURAS.map(c => (
+                                    <button
+                                      key={c.hex}
+                                      type="button"
+                                      onClick={() => atualizarItem(selecionadoId, { color: c.hex, corCamada2: c.hex, corCamada3: c.hex })}
+                                      title={c.label}
+                                      style={{
+                                        width: '18px', height: '18px', borderRadius: '50%', backgroundColor: c.hex,
+                                        border: (normalizarHexParaInputColor(itemSelecionado.color) === c.hex.toLowerCase()) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                        cursor: 'pointer', padding: 0, flexShrink: 0
+                                      }}
+                                    />
+                                  ))}
+                                </div>
                               </div>
                             ) : (
-                              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                                  <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>1️⃣ Camada Externa (Fundo)</span>
-                                  <input
-                                    type="color"
-                                    value={itemSelecionado.color || '#ffffff'}
-                                    onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                                    style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                                  />
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                {/* 1️⃣ Camada Externa */}
+                                <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#334155' }}>1️⃣ Camada Externa (Fundo)</span>
+                                    <input
+                                      type="color"
+                                      value={normalizarHexParaInputColor(itemSelecionado.color, '#ffffff')}
+                                      onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
+                                      style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                    />
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    {CORES_PALETA_ESTRUTURAS.slice(0, 8).map(c => (
+                                      <button
+                                        key={c.hex}
+                                        type="button"
+                                        onClick={() => atualizarItem(selecionadoId, { color: c.hex })}
+                                        title={c.label}
+                                        style={{
+                                          width: '16px', height: '16px', borderRadius: '50%', backgroundColor: c.hex,
+                                          border: (normalizarHexParaInputColor(itemSelecionado.color) === c.hex.toLowerCase()) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                          cursor: 'pointer', padding: 0, flexShrink: 0
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                                  <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>2️⃣ Camada Meio (Intermediária)</span>
-                                  <input
-                                    type="color"
-                                    value={itemSelecionado.corCamada2 || '#f1f5f9'}
-                                    onChange={e => atualizarItem(selecionadoId, { corCamada2: e.target.value })}
-                                    style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                                  />
+
+                                {/* 2️⃣ Camada Meio */}
+                                <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#334155' }}>2️⃣ Camada Meio (Intermediária)</span>
+                                    <input
+                                      type="color"
+                                      value={normalizarHexParaInputColor(itemSelecionado.corCamada2, '#f1f5f9')}
+                                      onChange={e => atualizarItem(selecionadoId, { corCamada2: e.target.value })}
+                                      style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                    />
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    {CORES_PALETA_ESTRUTURAS.slice(0, 8).map(c => (
+                                      <button
+                                        key={c.hex}
+                                        type="button"
+                                        onClick={() => atualizarItem(selecionadoId, { corCamada2: c.hex })}
+                                        title={c.label}
+                                        style={{
+                                          width: '16px', height: '16px', borderRadius: '50%', backgroundColor: c.hex,
+                                          border: (normalizarHexParaInputColor(itemSelecionado.corCamada2, '#f1f5f9') === c.hex.toLowerCase()) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                          cursor: 'pointer', padding: 0, flexShrink: 0
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
-                                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
-                                  <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>3️⃣ Camada Interna (Portal)</span>
-                                  <input
-                                    type="color"
-                                    value={itemSelecionado.corCamada3 || '#e2e8f0'}
-                                    onChange={e => atualizarItem(selecionadoId, { corCamada3: e.target.value })}
-                                    style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
-                                  />
+
+                                {/* 3️⃣ Camada Interna */}
+                                <div style={{ background: '#fff', padding: '6px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
+                                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                    <span style={{ fontSize: '10px', fontWeight: '700', color: '#334155' }}>3️⃣ Camada Interna (Portal)</span>
+                                    <input
+                                      type="color"
+                                      value={normalizarHexParaInputColor(itemSelecionado.corCamada3, '#e2e8f0')}
+                                      onChange={e => atualizarItem(selecionadoId, { corCamada3: e.target.value })}
+                                      style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                    />
+                                  </div>
+                                  <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
+                                    {CORES_PALETA_ESTRUTURAS.slice(0, 8).map(c => (
+                                      <button
+                                        key={c.hex}
+                                        type="button"
+                                        onClick={() => atualizarItem(selecionadoId, { corCamada3: c.hex })}
+                                        title={c.label}
+                                        style={{
+                                          width: '16px', height: '16px', borderRadius: '50%', backgroundColor: c.hex,
+                                          border: (normalizarHexParaInputColor(itemSelecionado.corCamada3, '#e2e8f0') === c.hex.toLowerCase()) ? '2px solid #0f172a' : '1px solid #cbd5e1',
+                                          cursor: 'pointer', padding: 0, flexShrink: 0
+                                        }}
+                                      />
+                                    ))}
+                                  </div>
                                 </div>
 
                                 {/* Presets Rápidos de Degradê */}
@@ -10486,27 +11145,27 @@ const Moodboard = () => {
                                 <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🦴 Borda / Moldura Externa</span>
                                 <input
                                   type="color"
-                                  value={itemSelecionado.color || '#ffffff'}
+                                  value={normalizarHexParaInputColor(itemSelecionado.color, '#ffffff')}
                                   onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                                 />
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                                 <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>✨ Miolo Central Rebaixado</span>
                                 <input
                                   type="color"
-                                  value={itemSelecionado.corCentro || itemSelecionado.color || '#f8fafc'}
+                                  value={normalizarHexParaInputColor(itemSelecionado.corCentro || itemSelecionado.color, '#f8fafc')}
                                   onChange={e => atualizarItem(selecionadoId, { corCentro: e.target.value, multiColor: true })}
-                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                                 />
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                                 <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo Superior da Mesa</span>
                                 <input
                                   type="color"
-                                  value={itemSelecionado.tampoCor || itemSelecionado.color || '#ffffff'}
+                                  value={normalizarHexParaInputColor(itemSelecionado.tampoCor || itemSelecionado.color, '#ffffff')}
                                   onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
-                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                                 />
                               </div>
                             </div>
@@ -10522,36 +11181,36 @@ const Moodboard = () => {
                                 <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🚙 Carroceria do Jeep</span>
                                 <input
                                   type="color"
-                                  value={itemSelecionado.color || '#ffffff'}
+                                  value={normalizarHexParaInputColor(itemSelecionado.color, '#ffffff')}
                                   onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                                 />
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                                 <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🛞 Pneus / Rodas Tratoradas</span>
                                 <input
                                   type="color"
-                                  value={itemSelecionado.corPneus || '#334155'}
+                                  value={normalizarHexParaInputColor(itemSelecionado.corPneus, '#334155')}
                                   onChange={e => atualizarItem(selecionadoId, { corPneus: e.target.value })}
-                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                                 />
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                                 <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>💡 Faróis & Detalhes</span>
                                 <input
                                   type="color"
-                                  value={itemSelecionado.corDetalhes || '#facc15'}
+                                  value={normalizarHexParaInputColor(itemSelecionado.corDetalhes, '#facc15')}
                                   onChange={e => atualizarItem(selecionadoId, { corDetalhes: e.target.value })}
-                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                                 />
                               </div>
                               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#fff', padding: '5px 8px', borderRadius: '6px', border: '1px solid #cbd5e1' }}>
                                 <span style={{ fontSize: '10px', fontWeight: '600', color: '#334155' }}>🔘 Tampo / Prateleira</span>
                                 <input
                                   type="color"
-                                  value={itemSelecionado.tampoCor || itemSelecionado.color || '#f1f5f9'}
+                                  value={normalizarHexParaInputColor(itemSelecionado.tampoCor || itemSelecionado.color, '#f1f5f9')}
                                   onChange={e => atualizarItem(selecionadoId, { tampoCor: e.target.value })}
-                                  style={{ width: '28px', height: '22px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                  style={{ width: '28px', height: '22px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                                 />
                               </div>
                             </div>
@@ -11116,9 +11775,9 @@ const Moodboard = () => {
                               <span style={{ fontSize: '11px', fontWeight: '800', color: '#0f172a' }}>🎨 Cor da Estrutura</span>
                               <input
                                 type="color"
-                                value={itemSelecionado.color || '#c5a059'}
+                                value={normalizarHexParaInputColor(itemSelecionado.color, '#c5a059')}
                                 onChange={e => atualizarItem(selecionadoId, { color: e.target.value })}
-                                style={{ width: '32px', height: '24px', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
+                                style={{ width: '32px', height: '24px', border: '1px solid #cbd5e1', borderRadius: '4px', cursor: 'pointer', padding: 0 }}
                               />
                             </div>
                             <div style={{ display: 'flex', gap: '4px', flexWrap: 'wrap' }}>
@@ -11846,23 +12505,30 @@ const Moodboard = () => {
                             <Icons.Trash width={12} /> Excluir Elemento
                           </button>
                         </div>
-
-                        {/* Link rápido / Seção de Iluminação da Cena */}
-                        <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid #e2e8f0' }}>
-                          <button
-                            type="button"
-                            className="btn-inspector-action"
-                            style={{ width: '100%', background: '#f8fafc', color: '#0f172a', fontWeight: '700', padding: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
-                            onClick={() => setAbaDireita('iluminacao')}
-                          >
-                            <span>✨</span>
-                            <span>Ajustar Iluminação & Atmosfera da Cena</span>
-                          </button>
-                        </div>
                       </div>
                     ) : (
-                      <div className="inspector-content">
-                        {renderBlocoIluminacaoCena()}
+                      <div className="empty-inspector-box" style={{ padding: '36px 16px', textAlign: 'center', background: '#f8fafc', borderRadius: '12px', border: '1.5px dashed #cbd5e1', margin: '12px 0' }}>
+                        <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#ffffff', border: '1.5px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px auto', fontSize: '22px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)' }}>
+                          📐
+                        </div>
+                        <h4 style={{ margin: '0 0 6px 0', fontSize: '13px', fontWeight: '800', color: '#0f172a' }}>
+                          Nenhuma peça selecionada
+                        </h4>
+                        <p style={{ margin: '0 0 16px 0', fontSize: '11px', color: '#64748b', lineHeight: 1.5, maxWidth: '280px', marginLeft: 'auto', marginRight: 'auto' }}>
+                          Toque ou clique em qualquer elemento do cenário (painel, mesa, arco, balão ou texto) para ajustar suas <strong>propriedades</strong>, cores, tamanhos e efeitos.
+                        </p>
+                        <div style={{ display: 'flex', gap: '8px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (isMobile) abrirAbaMobile('formas');
+                              else { setAbaAtiva('formas'); setPainelEsquerdoAberto(true); }
+                            }}
+                            style={{ padding: '7px 14px', fontSize: '11px', fontWeight: '700', borderRadius: '6px', border: '1px solid #cbd5e1', background: '#ffffff', color: '#0f172a', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '5px' }}
+                          >
+                            <span>🏛️ Adicionar Peça</span>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>

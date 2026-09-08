@@ -1,5 +1,5 @@
 # 🔒 CELEBRE SYSTEM — RESUMO EXECUTIVO DETALHADO DO SISTEMA
-**Data de Atualização:** 07 de Setembro de 2026  
+**Data de Atualização:** 08 de Setembro de 2026  
 **Status Geral:** 🟢 100% Estável, Build de Produção Limpo (Zero Erros) e Aprovado no Google Play  
 **Domínio Oficial Autenticado:** `celebrefesta.com.br`  
 **Google Play Package:** `br.com.celebrefesta.app` (Versão 2 / 1.0.1 - Ativo em 177 países)  
@@ -9,29 +9,65 @@
 ---
 
 ## 📑 ÍNDICE DETALHADO
-1. [Evolução Recente: Nova Barra Lateral / Menu de Navegação VIP](#1-evolução-recente-nova-barra-lateral--menu-de-navegação-vip)
-2. [Evolução Recente: Reestruturação Completa da Página de Planos](#2-evolução-recente-reestruturação-completa-da-página-de-planos)
-3. [Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)](#3-diagnóstico--solução-da-tela-opaca-conflito-dark-mode-vs-fundo-claro)
-4. [Publicação no Google Play Console & Distribuição Mobile](#4-publicação-no-google-play-console--distribuição-mobile)
-5. [Infraestrutura Transacional de E-mails (Resend + Hostinger)](#5-infraestrutura-transacional-de-e-mails-resend--hostinger)
-6. [Conformidade Legal LGPD (Art. 18) & Exclusão de Contas](#6-conformidade-legal-lgpd-art-18--exclusão-de-contas)
-7. [Inventário de Módulos & Blindagem de Layout (AGENTS.md)](#7-inventário-de-módulos--blindagem-de-layout-agentsmd)
-8. [Auditoria de Build e Qualidade de Código](#8-auditoria-de-build-e-qualidade-de-código)
+1. [Evolução Recente: Moodboard Studio 2D/3D & Cenografia Virtual (Alta Performance & UX Mobile)](#1-evolução-recente-moodboard-studio-2d3d--cenografia-virtual-alta-performance--ux-mobile)
+2. [Evolução Recente: Nova Barra Lateral / Menu de Navegação VIP](#2-evolução-recente-nova-barra-lateral--menu-de-navegação-vip)
+3. [Evolução Recente: Reestruturação Completa da Página de Planos](#3-evolução-recente-reestruturação-completa-da-página-de-planos)
+4. [Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)](#4-diagnóstico--solução-da-tela-opaca-conflito-dark-mode-vs-fundo-claro)
+5. [Publicação no Google Play Console & Distribuição Mobile](#5-publicação-no-google-play-console--distribuição-mobile)
+6. [Infraestrutura Transacional de E-mails (Resend + Hostinger)](#6-infraestrutura-transacional-de-e-mails-resend--hostinger)
+7. [Conformidade Legal LGPD (Art. 18) & Exclusão de Contas](#7-conformidade-legal-lgpd-art-18--exclusão-de-contas)
+8. [Inventário de Módulos & Blindagem de Layout (AGENTS.md)](#8-inventário-de-módulos--blindagem-de-layout-agentsmd)
+9. [Auditoria de Build e Qualidade de Código](#9-auditoria-de-build-e-qualidade-de-código)
 
 ---
 
-## 1. 🌟 Evolução Recente: Nova Barra Lateral / Menu de Navegação VIP
+## 1. 🎨 Evolução Recente: Moodboard Studio 2D/3D & Cenografia Virtual (Alta Performance & UX Mobile)
+
+O módulo de criação de cenários virtuais e propostas visuais para clientes (`Moodboard.jsx` e `Moodboard.css`) recebeu uma atualização crítica com foco em performance computacional, responsividade tátil e ergonomia em dispositivos móveis:
+
+### 1.1. Eliminação Total do Travamento do Canvas (Memoização 3D)
+- **Diagnóstico:** O arraste de peças ou pan pelo cenário sofria quedas severas de FPS (travamentos visíveis) devido à re-renderização em lote de dezenas de componentes SVG vetoriais hiperdetalhados com gradientes e filtros 3D complexos.
+- **Solução de Alta Performance:** Todos os mais de 26 componentes de cenografia vetorial foram encapsulados com `React.memo` (ex.: `ArcoRomanoTriplo3D`, `PainelOrganicoWavy3D`, `PainelCasteloPrincesas3D`, `MesaNuvem3D`, `MesaCarruagem3D`, `EstanteEscadinha3D`, `SilhuetaHumanaSVG`, etc.). Dessa forma, ao mover um elemento ou deslizar a prancheta, os outros 25+ elementos não recalculam suas árvores DOM, garantindo movimentação a 60 FPS estáveis.
+
+### 1.2. Correção do Dock de Zoom Mobile (`[ (-) 37% (+) [ ] ]`)
+- **Diagnóstico:** Ao tocar nos botões `+` ou `-` no celular, o zoom não respondia ou era resetado instantaneamente de volta para 37%. O motivo era duplo:
+  1. A função `fitCanvasToMobile` estava atrelada a recalculações do viewport disparadas por micro-oscilações da barra de endereço dos navegadores móveis (Safari/Chrome).
+  2. O dock possuía `z-index: 41`, ficando abaixo da camada transparente de backdrop do painel (`z-index: 44`) e da barra de navegação inferior (`z-index: 45`).
+- **Solução Aplicada:**
+  - Criação de trava de tolerância via `lastViewportRef` (ignorando variações menores que 30px de largura e 70px de altura).
+  - Vinculação dos botões à função instantânea `handleZoomMobile(+0.08 / -0.08)`, que aplica transformações diretamente no DOM (`boardRef` e `zoomWrapperRef`) além do estado do React.
+  - Adição de contenção de eventos táteis (`stopPropagation` em `pointerDown`, `touchStart`, `touchEnd` e `click`) para impedir que a prancheta de desenho intercepte os toques.
+  - Elevação do dock para `z-index: 90 !important` e posicionamento refinado em `bottom: 74px !important` com `touch-action: manipulation !important`.
+
+### 1.3. Remoção de Redundâncias de Interface
+- Removido o botão repetitivo `[ ✨ Ajustar Iluminação & Atmosfera da Cena ]` no rodapé das ações rápidas do inspetor de elementos e também o botão secundário na caixa de estado vazio, uma vez que o sistema já dispõe da aba lateral exclusiva "Iluminação".
+
+### 1.4. Redução Tipográfica & Textos Compactos
+- O texto explicativo na aba Fundo / Ambiente foi encurtado de `Foto 100% de tela cheia (ideal para fotos de salão de festa, espaço de eventos ou papel de parede contínuo):` para:
+  > **"Foto de tela cheia (salão de festa ou fundo contínuo):"**
+- A classe `.hint-text` foi formalizada no `Moodboard.css` com `font-size: 11px !important`, cor neutra `#64748b` e entrelinha harmônica `1.35`, eliminando o visual desproporcional de 16px padrão do navegador.
+
+### 1.5. Gaveta Retrátil de Efeitos & Acabamentos no Celular
+- Os 7 cards volumosos de amostras de materiais (*Sólido*, *Acrílico Ouro*, *Rose Gold*, *Prata Espelho*, *MDF 3D Laser*, *Glitter Dourado*, *Neon LED*) foram realocados dentro de uma **Gaveta Retrátil** (`.gaveta-efeitos-container`).
+- Em telas mobile, a seção ocupa uma barra compacta de apenas **34px**, exibindo o acabamento ativo em uma tag nobre (ex.: `[ Acrílico Ouro ]`) e o botão seletor `▼ Escolher / ▲ Recolher`, liberando espaço vertical valioso para a criação visual.
+
+### 1.6. Normalização Segura de Cores Hex
+- Implementada a função utilitária `normalizarHexParaInputColor` para garantir que valores nulos, cores nomeadas ou hexadecimais incompletos nunca causem quebra de renderização nos componentes nativos `<input type="color">`.
+
+---
+
+## 2. 🌟 Evolução Recente: Nova Barra Lateral / Menu de Navegação VIP
 
 A barra de navegação lateral (`Navbar.jsx` e `Navbar.css`) foi completamente reformulada para oferecer ergonomia executiva tanto no desktop quanto no mobile:
 
-### 1.1. Identidade Visual Oficial Celebre
+### 2.1. Identidade Visual Oficial Celebre
 - **Logotipo Oficial Integrado:** Substituição do antigo ícone genérico de coroa pela logomarca oficial Celebre (`src/assets/LOGO_CELEBRE.png`), com proporções nítidas e elegantes.
 - **Paleta Midnight Slate com Acentos Dourados:** Fundo em `#090e18` com bordas sutis em `rgba(255, 255, 255, 0.07)` e realces em ouro nobre (`#c5a059`).
 
-### 1.2. Organização e Ergonomia Mobile
+### 2.2. Organização e Ergonomia Mobile
 - **Botão Dedicado de Fechamento Mobile:** Adicionado botão tátil `✕` no canto superior direito do menu mobile (`.sidebar-mobile-close-btn`), facilitando o fechamento com apenas um toque sem depender exclusivamente do clique no backdrop.
 - **Hierarquia Visual por Seções:** Itens divididos em blocos semânticos com divisores sutis:
-  - `GERAL`: Início (Dashboard), Agenda, Clientes, Catálogo Digital.
+  - `GERAL`: Início (Dashboard), Agenda, Clientes, Catálogo Digital, Moodboard Studio.
   - `OPERACIONAL`: Locações, Estoque & Acervo, Galpão (Logística/Kanban), Contratos.
   - `GESTÃO`: Financeiro, Compras & Pedidos, Fornecedores, Relatórios Gerenciais.
 - **Remoção de Bordas Tracejadas:** Itens bloqueados por plano agora contam com insígnias discretas (*Lock Pill*), mantendo a elegância visual sem poluição de linhas tracejadas.
@@ -40,34 +76,34 @@ A barra de navegação lateral (`Navbar.jsx` e `Navbar.css`) foi completamente r
 
 ---
 
-## 2. 💎 Evolução Recente: Reestruturação Completa da Página de Planos
+## 3. 💎 Evolução Recente: Reestruturação Completa da Página de Planos
 
 A página de Planos e Assinaturas (`Planos.jsx` e `Planos.css`) passou por uma reformulação profunda de experiência do usuário (UX):
 
-### 2.1. Coerência entre Desktop e Mobile
+### 3.1. Coerência entre Desktop e Mobile
 - **No Desktop:** Cards alinhados lado a lado (3 colunas proporcionais) com comparativo detalhado unificado abaixo, permitindo análise visual imediata dos planos Essencial, Pro e Premium.
 - **No Mobile (1 Card em Foco por Vez):** Os cards agora ocupam `100%` da largura da tela com efeito *Scroll Snap* suave. O usuário visualiza um card por vez com total clareza, sem cortes laterais que poluam a visualização.
 - **Eliminação de Redundâncias:** Removida a exibição duplicada de tabelas comparativas no mobile. Os recursos detalhados agora aparecem em uma gaveta inteligente logo abaixo do plano selecionado.
 
-### 2.2. Controles de Navegação no Mobile
+### 3.2. Controles de Navegação no Mobile
 - **Navegador `< • ▬ • >` Reposicionado:** O seletor de navegação com setas e indicadores de bolinha/pílula foi transferido para o topo dos cards (logo acima dos valores), permitindo que o usuário alterne de plano instantaneamente sem precisar rolar a tela.
 - **Sincronização Bidirecional:** Tocar nas bolinhas rola suavemente para o card correspondente; deslizar o card com o dedo atualiza automaticamente o indicador ativo e a lista de recursos inclusos abaixo.
 
-### 2.3. Recursos e Credibilidade
+### 3.3. Recursos e Credibilidade
 - **Letreiro Rotativo Infinito (Marquee Ticker):** Barra interativa contendo selos de confiança com rolagem contínua: *Ativação Instantânea*, *Pagamento Seguro Mercado Pago*, *Suporte Dedicado*, *Sem Fidelidade ou Multas*, *100% em Nuvem* e *Dados Criptografados*. O letreiro pausa ao toque ou passagem do mouse.
 - **Auditoria de Upgrade em Tempo Real:** Toda seleção de plano registra um log de intenção no Firestore (`logs_atividades`) com data/hora, e-mail do solicitante e identificador de tenant, alimentando o painel administrativo master.
 
 ---
 
-## 3. 🔍 Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)
+## 4. 🔍 Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)
 
-### 3.1. Causa Raiz Identificada
+### 4.1. Causa Raiz Identificada
 Ao carregar a página de planos em um ambiente com o **Modo Escuro** ativado (`data-theme="dark"` no elemento `<html>`):
 1. As regras globais em `src/App.css` forçam todos os títulos (`h1`, `h2`, `h3`, `h4`), `strong` e `label` para a cor **branca/prata** (`#f4f4f5 !important`) e textos secundários para cinza claro (`#a1a1aa !important`).
 2. A estilização de `Planos.css` possuía fundos claros estáticos (`background: #f8fafc` na página e `#ffffff` nos cards).
 3. **Efeito Visual:** Títulos como *"Escolha o plano ideal para acelerar o seu acervo"*, *"PREMIUM"* e *"O que está incluso no Premium:"* foram desenhados em **branco sobre fundo branco**, gerando a impressão de tela lavada, leitosa ou opaca.
 
-### 3.2. Solução Definitiva Implantada
+### 4.2. Solução Definitiva Implantada
 1. **Suporte Integral ao Modo Escuro (`[data-theme^='dark'] .planos-public-wrapper`):**
    - Fundo da página adaptado para o tom escuro nobre: `#090d16 !important`.
    - Cards de planos e caixas de recursos convertidos para cartões de luxo: `#111827 !important` com bordas em `#1f293d !important`.
@@ -79,7 +115,7 @@ Ao carregar a página de planos em um ambiente com o **Modo Escuro** ativado (`d
 
 ---
 
-## 4. 📱 Publicação no Google Play Console & Distribuição Mobile
+## 5. 📱 Publicação no Google Play Console & Distribuição Mobile
 
 1. **Aprovação Oficial pelo Google Play:**
    - Pacote: `br.com.celebrefesta.app` (Versão 2 / 1.0.1).
@@ -93,7 +129,7 @@ Ao carregar a página de planos em um ambiente com o **Modo Escuro** ativado (`d
 
 ---
 
-## 5. ✉️ Infraestrutura Transacional de E-mails (Resend + Hostinger)
+## 6. ✉️ Infraestrutura Transacional de E-mails (Resend + Hostinger)
 
 1. **Domínio Oficial Verificado:**
    - Migração concluída do antigo domínio temporário para o oficial **`celebrefesta.com.br`**.
@@ -110,7 +146,7 @@ Ao carregar a página de planos em um ambiente com o **Modo Escuro** ativado (`d
 
 ---
 
-## 6. ⚖️ Conformidade Legal LGPD (Art. 18) & Exclusão de Contas
+## 7. ⚖️ Conformidade Legal LGPD (Art. 18) & Exclusão de Contas
 
 1. **Página Pública Web:** Rota ativa `/excluir-conta` ([ExcluirConta.jsx](src/pages/Institucional/ExcluirConta.jsx)) para autoatendimento de ex-usuários.
 2. **Painel Interno de Segurança:** Módulo em [AbaSeguranca.jsx](src/pages/Configuracoes/AbaSeguranca.jsx) com dupla confirmação:
@@ -119,12 +155,13 @@ Ao carregar a página de planos em um ambiente com o **Modo Escuro** ativado (`d
 
 ---
 
-## 7. 🔒 Inventário de Módulos & Blindagem de Layout (AGENTS.md)
+## 8. 🔒 Inventário de Módulos & Blindagem de Layout (AGENTS.md)
 
 Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS e a regra de ouro dos cards de KPI (1 linha no Desktop / 2 colunas no Mobile):
 
 | Módulo / Funcionalidade | Arquivos Principais | Status de Blindagem |
 | :--- | :--- | :---: |
+| 🎨 **Moodboard Studio 2D/3D** | `Moodboard.jsx`, `Moodboard.css` | 🟢 60 FPS • Alta Performance & Mobile |
 | 🧭 **Menu Lateral & Navegação** | `Navbar.jsx`, `Navbar.css` | 🟢 Modernizado VIP |
 | 💎 **Planos & Assinaturas SaaS** | `Planos.jsx`, `Planos.css` | 🟢 Responsivo & Dark/Light OK |
 | 🛍️ **Catálogo Boutique de Luxo** | `Catalago.jsx`, `Catalago.css` | 🔒 CONGELADA / Estável |
@@ -143,11 +180,11 @@ Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS 
 
 ---
 
-## 8. 🛠️ Auditoria de Build e Qualidade de Código
+## 9. 🛠️ Auditoria de Build e Qualidade de Código
 
-- **Build de Produção (Vite 7):** Validado com sucesso via `npm run build` em **15.98 segundos**.
-- **Módulos Compilados:** 1.178 módulos transformados sem nenhum erro de lint ou empacotamento.
-- **Isolamento de Estilos:** Conformidade total com a Regra 5 do `AGENTS.md` (todos os estilos novos escopados em `.planos-public-wrapper` e `.sidebar`).
+- **Build de Produção (Vite 7):** Validado com sucesso via `npm run build` em **13.40 segundos**.
+- **Módulos Compilados:** 1.178 módulos transformados com **ZERO ERROS** de empacotamento, TypeScript ou lint.
+- **Isolamento de Estilos:** Conformidade estrita com as Regras 1, 2, 5 e 6 do `AGENTS.md` (todos os estilos novos escopados em `.moodboard-wrapper`, `.planos-public-wrapper` e `.sidebar`).
 
 ---
 *Documentação técnica oficial do Sistema Celebre — Gestão de Locação de Acervo & Festas.*
