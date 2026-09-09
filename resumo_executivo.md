@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 08 de Setembro / 2026  
+> **Data de Referência**: 09 de Setembro / 2026  
 
 ---
 
@@ -315,6 +315,31 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
 
+### 🗓️ Sessão: 09/09/2026 — 10h15 às 14h35 (BRT)
+- ✅ **💎 Centralização & Redesign Luxury dos Estados Vazios (Empty States) em Clientes (`Clientes.jsx`, `Clientes.css`, `design-lock.css`)**:
+  - **Diagnóstico do Desalinhamento**: O elemento de estado vazio mobile (`.empty-state-mobile`) não possuía estilização CSS própria, herdando o comportamento de bloco com alinhamento à esquerda padrão dos navegadores e sem margens ou enquadramento.
+  - **Centralização Geométrica Total**: Aplicado `display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;` com card em borda tracejada, padding respirável de `44px 20px` e cantos arredondados de `18px`.
+  - **Medalhão Circular Ouro Celebre**: Inclusão de container circular (`.clientes-empty-icon-circle`) com tom dourado translúcido e borda sutil (`rgba(197, 160, 89, 0.12)`).
+  - **Tipografia Refinada & Ações Contextuais**: Título com peso equilibrado (`font-weight: 650`) e descrição explicativa contextual (`clientes-empty-desc`). Inclusão do botão de ação inteligente **`🧹 Limpar Filtros`** (quando houver busca ativa) ou **`+ Novo Cliente`** (quando a base estiver vazia).
+  - **Unificação para Desktop & Histórico do Fichário**: O mesmo padrão foi aplicado à célula vazia da tabela tradicional (`.empty-table-cell`) e ao histórico vazio do fichário (`.empty-history`).
+- ✅ **📱 Otimização Responsiva & Despoluição de Filtros em Clientes (`Clientes.jsx`, `Clientes.css`)**:
+  - **Eliminação de Truncamento com Reticências**: Encurtamento de labels dos seletores mobile (ex.: `👥 Todos (0)`, `⏳ Pendentes (0)`), impedindo quebras indevidas de layout no smartphone.
+  - **Alívio Tipográfico Geral**: Substituição de fontes pesadas e agressivas (`font-weight: 850 / 800`) por pesos modernos e suaves (`600`, `650`, `700`).
+  - **Barra Retrátil Opcional de Indicadores (KPIs Mobile)**: Implementado alternador expansível/recolhível para os cards de estatísticas (`Resumo de Indicadores [ ▼ Recolher / ▲ Expandir ]`) com persistência em `localStorage`, iniciando recolhido por padrão no celular para navegação leve e fluida.
+  - **Repaginação de Botões de Ação**: Botões `Link Auto-Cadastro` e `Exportar` reprojetados com bordas arredondadas de `12px`, ícones realçados e micro-sombras.
+- ✅ **👤 Redesign Moderno da Tela Novo Cliente (`CadastroCliente.jsx`, `CadastroCliente.css`, `design-lock.css`)**:
+  - **Segmented Control iOS/Luxury para Tipo de Pessoa**: O antigo alternador de abas retangulares foi transformado em um autêntico controle segmentado moderno (`.tabs-container` e `.tab-btn`) com cantos arredondados, fundo cinza acetinado e pílula de seleção ativa flutuante.
+  - **Harmonização de Rótulos & Campos**: Suavização de títulos de seção, espaçamentos simétricos, redução do peso de labels para `font-weight: 600` e badges de tags refinados.
+  - **Blindagem de Escopo Total**: Inclusão da classe raiz `.cadastro-cliente-container` garantindo 100% de isolamento CSS sem vazamentos para outras páginas.
+- ✅ **📆 Aprimoramento Tipográfico & Visual da Agenda de Eventos (`Agenda.jsx`, `Agenda.css`, `design-lock.css`)**:
+  - **Correção da Visualização Desktop**: Eliminação de quebra irregular de colunas e isolamento do card de data no topo da grade.
+  - **Suavização Tipográfica**: Redução de pesos bold pesados para tipografia executiva contemporânea (`600` a `700`).
+  - **KPIs Mobile Retráteis**: Controle de exibição recolhida/expandida adicionado com persistência local.
+- ✅ **🔒 Blindagem Geral & Design Lock System (`src/styles/design-lock.css`)**:
+  - Sincronização e travamento definitivo dos blocos `🔒 PÁGINA: CLIENTES`, `🔒 PÁGINA: CADASTRO CLIENTE` e `🔒 PÁGINA: AGENDA` no arquivo sagrado de design.
+- ✅ **🛠️ Auditoria de Build de Produção**:
+  - `npm run build` executado com sucesso e **zero erros** (`built in 14.41s`).
+
 ### 🗓️ Sessão: 08/09/2026 — 18h20 às 20h45 (BRT)
 - ✅ **🎨 Otimização do Topbar do Moodboard & Botão "PAINEL PRO" (`Moodboard.jsx`, `Moodboard.css`)**:
   - **Eliminação de Redundância no Desktop**: O botão `PAINEL PRO` foi removido da prancheta de computador (`!isMobile`), pois o desktop já conta com o painel lateral de propriedades e ferramentas permanentemente aberto e integrado.
@@ -568,5 +593,5 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 
 ---
 
-> **⏱️ Última atualização:** 08/09/2026 — 20h45 (BRT)  
+> **⏱️ Última atualização:** 09/09/2026 — 14h35 (BRT)  
 > **✍️ Consolidação e Fusão Executiva por:** Antigravity AI — Workspace CELEBRE02  
