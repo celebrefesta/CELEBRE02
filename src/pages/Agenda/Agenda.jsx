@@ -6,6 +6,7 @@ import { getAuth } from 'firebase/auth';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import './Agenda.css';
+
 const TIPOS = {
   entrega:   { label: 'Entrega',   cor: '#3b82f6', dot: 'blue'   },
   devolucao: { label: 'Devolução', cor: '#f97316', dot: 'orange' },
@@ -21,6 +22,17 @@ const FORM_VAZIO = {
   dataISO: '', horario: '', local: '', observacoes: '', recorrencia: 'nenhuma', 
   status: 'pendente', origem: 'manual',
 };
+
+const LISTA_FILTROS_AGENDA = [
+  { id: 'todos', label: 'Todos', icon: 'fas fa-layer-group', desc: 'Todos os compromissos e eventos' },
+  { id: 'entrega', label: 'Entregas', icon: 'fas fa-truck', desc: 'Saídas de locação e fretes programados' },
+  { id: 'devolucao', label: 'Devoluções', icon: 'fas fa-undo-alt', desc: 'Retornos de materiais e devoluções' },
+  { id: 'reuniao', label: 'Reuniões', icon: 'fas fa-handshake', desc: 'Alinhamentos e reuniões com clientes' },
+  { id: 'visita', label: 'Visitas', icon: 'fas fa-map-marker-alt', desc: 'Visitas técnicas e inspeções no local' },
+  { id: 'pagamento', label: 'Cobranças', icon: 'fas fa-dollar-sign', desc: 'Lembretes financeiros e cobranças' },
+  { id: 'tarefa', label: 'Tarefas', icon: 'fas fa-clipboard-check', desc: 'Tarefas internas e lembretes da equipe' },
+  { id: 'bloqueio', label: 'Bloqueios', icon: 'fas fa-lock', desc: 'Datas bloqueadas e indisponibilidades' },
+];
 
 const isoParaDMA = (iso) => {
   if (!iso || typeof iso !== 'string') return null;
@@ -54,33 +66,31 @@ const Agenda = () => {
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
 
-  // 🔥 IDENTIFICAÇÃO CORPORATIVA (A chave para puxar e salvar dados no cofre da empresa)
+  // 🔥 IDENTIFICAÇÃO CORPORATIVA
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
   const [dataAtual, setDataAtual] = useState(new Date());
+  const [diaSelecionado, setDiaSelecionado] = useState(new Date().getDate());
   const [viewPrincipal, setViewPrincipal] = useState('calendario');
-  const [viewLista, setViewLista] = useState('semana');
+  const [viewLista, setViewLista] = useState('mes');
   const [clientes, setClientes]   = useState([]);
   const [locacoes, setLocacoes]   = useState([]);
-  const [compras, setCompras]     = useState([]);
   const [eventosManual, setEventosManual] = useState([]);
-  const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Ágape Decorações', logotipo: '' });
+  const [dadosEmpresa, setDadosEmpresa] = useState({ nomeEmpresa: 'Celebre Festa', logotipo: '' });
 
   const [loadingFB, setLoadingFB] = useState(true);
   const [salvando, setSalvando]   = useState(false); 
   const [toastMsg, setToastMsg] = useState('');
   
   const [filtroAtivo, setFiltroAtivo] = useState('todos');
+  const [gavetaFiltrosAberta, setGavetaFiltrosAberta] = useState(false);
   const [busca, setBusca] = useState('');
   const [buscaClienteModal, setBuscaClienteModal] = useState('');
   const [mostrarDropdownModal, setMostrarDropdownModal] = useState(false);
 
   const [modalFormAberto, setModalFormAberto] = useState(false);
-  const [modalListaAberto, setModalListaAberto] = useState(false);
-  const [diaSelecionado, setDiaSelecionado] = useState(null);
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
   const [formData, setFormData] = useState(FORM_VAZIO);
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // 🔥 SISTEMA DE AUDITORIA PADRONIZADO
   const registrarLog = async (acao, detalhes) => {
@@ -116,7 +126,6 @@ const Agenda = () => {
     const carregarDados = async () => {
       setLoadingFB(true);
       try {
-        // 🎯 BUSCAS PELO ID DA EMPRESA (TENANT), NÃO PELO ID DO FUNCIONÁRIO
         const qCli = query(collection(db, 'clientes'), where("userId", "==", tenantId));
         const sc = await getDocs(qCli);
         setClientes(sc.docs.map(d => ({ id: d.id, ...d.data() })));
@@ -128,11 +137,6 @@ const Agenda = () => {
         setLocacoes(sl.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (e) { console.error('Erro Locações:', e); }
 
-      try {
-        const qComp = query(collection(db, 'lista_compras'), where("userId", "==", tenantId));
-        const sco = await getDocs(qComp);
-        setCompras(sco.docs.map(d => ({ id: d.id, ...d.data() })));
-      } catch (e) { console.error('Erro Compras:', e); }
 
       try {
         const qAg = query(collection(db, 'agenda_eventos'), where("userId", "==", tenantId));
@@ -218,12 +222,13 @@ const Agenda = () => {
   const getDiasNoMes = (d) => new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
   const getDiaSemanaInicio = (d) => new Date(d.getFullYear(), d.getMonth(), 1).getDay();
 
-  let nomeMes = dataAtual.toLocaleString('pt-BR', { month: 'long', year: 'numeric' });
-  nomeMes = nomeMes.charAt(0).toUpperCase() + nomeMes.slice(1);
+  let mesPuro = dataAtual.toLocaleString('pt-BR', { month: 'long' });
+  mesPuro = mesPuro.charAt(0).toUpperCase() + mesPuro.slice(1);
+  const nomeMes = `${mesPuro} ${dataAtual.getFullYear()}`;
 
   const eventoVisivel = (ev) =>
-    (filtroAtivo === 'todos' || filtroAtivo === 'compras' || ev.tipo === filtroAtivo) &&
-    (!busca.trim() || (ev.titulo || '').toLowerCase().includes(busca.toLowerCase()) || (ev.clienteNome || '').toLowerCase().includes(busca.toLowerCase()));
+    (filtroAtivo === 'todos' || ev.tipo === filtroAtivo) &&
+    (!busca.trim() || (ev.titulo || '').toLowerCase().includes(busca.toLowerCase()) || (ev.clienteNome || '').toLowerCase().includes(busca.toLowerCase()) || (ev.local || '').toLowerCase().includes(busca.toLowerCase()));
 
   const eventosMesAtual = useMemo(() => todosEventos.filter(e => e.mes === dataAtual.getMonth() && e.ano === dataAtual.getFullYear()), [todosEventos, dataAtual]);
 
@@ -233,29 +238,88 @@ const Agenda = () => {
     return c;
   }, [eventosMesAtual]);
 
-  const hojeISO = new Date().toISOString().split('T')[0];
-  const comprasPendentes = useMemo(() => compras.filter(c => c.status !== 'comprado').sort((a, b) => (a.prazo || '9999').localeCompare(b.prazo || '9999')), [compras]);
-
-  const comprasUrgentes = comprasPendentes.filter(c => c.prazo && c.prazo <= hojeISO).length;
-
   const eventosDoDia = (dia, mesOv, anoOv) => {
     const m = mesOv !== undefined ? mesOv : dataAtual.getMonth();
     const a = anoOv !== undefined ? anoOv : dataAtual.getFullYear();
     return todosEventos.filter(e => e.dia === dia && e.mes === m && e.ano === a);
   };
 
+  // 📊 CÁLCULO INTELIGENTE DE KPIS OPERACIONAIS
+  const statsKPI = useMemo(() => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+
+    const evsHoje = todosEventos.filter(e => {
+      return e.dia === hoje.getDate() && e.mes === hoje.getMonth() && e.ano === hoje.getFullYear() && e.tipo !== 'bloqueio';
+    }).length;
+
+    const evsMes = eventosMesAtual.filter(e => e.tipo !== 'bloqueio').length;
+
+    const bloqFuturos = todosEventos.filter(e => {
+      if (e.tipo !== 'bloqueio') return false;
+      const d = new Date(e.ano, e.mes, e.dia);
+      d.setHours(0, 0, 0, 0);
+      return d >= hoje;
+    }).length;
+
+    const diasMes = getDiasNoMes(dataAtual);
+    let totalConflitos = 0;
+    const diasComConflito = new Set();
+
+    for (let d = 1; d <= diasMes; d++) {
+      const evs = eventosDoDia(d);
+      const temBloqueio = evs.some(e => e.tipo === 'bloqueio');
+      const outros = evs.filter(e => e.tipo !== 'bloqueio');
+
+      if (temBloqueio && outros.length > 0) {
+        diasComConflito.add(d);
+        totalConflitos++;
+      } else if (outros.length > 1) {
+        const horarios = outros.filter(e => e.horario && e.horario.trim() !== '').map(e => e.horario.trim());
+        const horariosUnicos = new Set(horarios);
+        if (horarios.length !== horariosUnicos.size) {
+          diasComConflito.add(d);
+          totalConflitos++;
+        }
+      }
+    }
+
+    return {
+      eventosHoje: evsHoje,
+      eventosNoMes: evsMes,
+      bloqueiosFuturos: bloqFuturos,
+      conflitos: totalConflitos,
+      diasComConflito
+    };
+  }, [todosEventos, eventosMesAtual, dataAtual]);
+
+  // 📅 INFORMAÇÕES DA DATA SELECIONADA PARA O PAINEL LATERAL
+  const infoDiaSelecionado = useMemo(() => {
+    const dia = diaSelecionado || new Date().getDate();
+    const d = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dia);
+    const hoje = new Date();
+    const isHoje = hoje.getDate() === dia && hoje.getMonth() === dataAtual.getMonth() && hoje.getFullYear() === dataAtual.getFullYear();
+    
+    let titulo = '';
+    const mesNome = d.toLocaleString('pt-BR', { month: 'long' });
+    if (isHoje) {
+      titulo = `Hoje, ${dia} de ${mesNome}`;
+    } else {
+      let diaSemana = d.toLocaleString('pt-BR', { weekday: 'long' });
+      diaSemana = diaSemana.charAt(0).toUpperCase() + diaSemana.slice(1);
+      titulo = `${dia} de ${mesNome} · ${diaSemana}`;
+    }
+    
+    const evs = eventosDoDia(dia).filter(eventoVisivel);
+    return { dia, isHoje, titulo, eventos: evs };
+  }, [diaSelecionado, dataAtual, todosEventos, filtroAtivo, busca]);
+
   const handleDiaClick = (dia) => {
     setDiaSelecionado(dia);
-    const evs = eventosDoDia(dia).filter(eventoVisivel);
-    if (evs.length > 0) { 
-      setModalListaAberto(true);
-    } else {
-      abrirModalForm(dia);
-    }
   };
 
   const abrirModalForm = (dia, ev = null) => {
-    setModalListaAberto(false);
+    const d = dia || diaSelecionado || new Date().getDate();
     if (ev) {
       setEventoSelecionado(ev);
       const anoEv = ev.ano || dataAtual.getFullYear();
@@ -264,9 +328,22 @@ const Agenda = () => {
       setBuscaClienteModal(ev.clienteNome || ''); 
     } else {
       setEventoSelecionado(null);
-      setFormData({ ...FORM_VAZIO, dataISO: dmaParaISO(dia, dataAtual.getMonth(), dataAtual.getFullYear()) });
+      setFormData({ ...FORM_VAZIO, dataISO: dmaParaISO(d, dataAtual.getMonth(), dataAtual.getFullYear()) });
       setBuscaClienteModal('');
     }
+    setModalFormAberto(true);
+  };
+
+  const abrirModalBloqueio = (dia) => {
+    setEventoSelecionado(null);
+    const d = dia || diaSelecionado || new Date().getDate();
+    setFormData({
+      ...FORM_VAZIO,
+      tipo: 'bloqueio',
+      titulo: 'Bloqueio de Data',
+      dataISO: dmaParaISO(d, dataAtual.getMonth(), dataAtual.getFullYear())
+    });
+    setBuscaClienteModal('');
     setModalFormAberto(true);
   };
 
@@ -289,7 +366,7 @@ const Agenda = () => {
       dia: parseInt(diaStr), 
       mes: parseInt(mesStr) - 1, 
       ano: parseInt(anoStr),
-      userId: tenantId // 🎯 SALVA VINCULADO À EMPRESA
+      userId: tenantId
     };
 
     try {
@@ -298,7 +375,7 @@ const Agenda = () => {
         await updateDoc(docRef, evParaSalvar);
         setEventosManual(prev => prev.map(x => x.id === eventoSelecionado.id ? { id: eventoSelecionado.id, ...evParaSalvar } : x));
         await registrarLog("EDIÇÃO NA AGENDA", `Editou o compromisso: "${evParaSalvar.titulo}".`);
-        mostrarToast('✅ Evento updated!');
+        mostrarToast('✅ Evento atualizado!');
       } else {
         let evsCriados = [];
         const docRef = await addDoc(collection(db, 'agenda_eventos'), evParaSalvar);
@@ -373,70 +450,50 @@ const Agenda = () => {
         tarefa:    { bg: '#f8fafc', text: '#334155' }
       };
 
-      if (filtroAtivo === 'compras') {
-        tituloRelatorio = 'Lista de Compras Pendentes';
-        subtituloRelatorio = `${comprasPendentes.length} itens aguardando compra`;
-        listaExportacao = comprasPendentes.map(c => {
-            const urgente = c.prazo && c.prazo <= hojeISO;
-            return [
-                c.nome || '-', 
-                c.quantidade || '1',
-                c.valorEstimado ? `R$ ${Number(c.valorEstimado).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-',
-                {
-                    content: c.prazo ? new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR') : '-',
-                    styles: urgente ? { textColor: '#ef4444', fontStyle: 'bold' } : {}
-                },
-                c.vinculo || '-'
-            ];
+      let eventosFiltrados = [];
+      if (viewPrincipal === 'calendario' || (viewPrincipal === 'lista' && viewLista === 'mes')) {
+        eventosFiltrados = eventosMesAtual.filter(eventoVisivel);
+        tituloRelatorio = `Agenda Mensal: ${nomeMes}`;
+      } else if (viewPrincipal === 'lista' && viewLista === 'semana') {
+        const diaSemana = dataAtual.getDay();
+        const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
+        const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
+        
+        eventosFiltrados = todosEventos.filter(e => {
+          if (!eventoVisivel(e)) return false;
+          const dataEv = new Date(e.ano, e.mes, e.dia);
+          dataEv.setHours(0,0,0,0); inicio.setHours(0,0,0,0); fim.setHours(23,59,59,999);
+          return dataEv >= inicio && dataEv <= fim;
         });
+        tituloRelatorio = `Agenda Semanal (${inicio.toLocaleDateString('pt-BR')} a ${fim.toLocaleDateString('pt-BR')})`;
       } else {
-        let eventosFiltrados = [];
-        if (viewPrincipal === 'calendario' || (viewPrincipal === 'lista' && viewLista === 'mes')) {
-          eventosFiltrados = eventosMesAtual.filter(eventoVisivel);
-          tituloRelatorio = `Agenda Mensal: ${nomeMes}`;
-        } else if (viewPrincipal === 'lista' && viewLista === 'semana') {
-          const diaSemana = dataAtual.getDay();
-          const inicio = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), dataAtual.getDate() - diaSemana);
-          const fim = new Date(inicio.getFullYear(), inicio.getMonth(), inicio.getDate() + 6);
-          
-          eventosFiltrados = todosEventos.filter(e => {
-            if (!eventoVisivel(e)) return false;
-            const dataEv = new Date(e.ano, e.mes, e.dia);
-            dataEv.setHours(0,0,0,0); inicio.setHours(0,0,0,0); fim.setHours(23,59,59,999);
-            return dataEv >= inicio && dataEv <= fim;
-          });
-          const strInicio = inicio.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' });
-          const strFim = fim.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
-          tituloRelatorio = `Agenda da Semana: ${strInicio} a ${strFim}`;
-        } else if (viewPrincipal === 'lista' && viewLista === 'dia') {
-          eventosFiltrados = eventosDoDia(dataAtual.getDate()).filter(eventoVisivel);
-          tituloRelatorio = `Agenda do Dia: ${dataAtual.toLocaleDateString('pt-BR')}`;
-        } else if (viewPrincipal === 'lista' && viewLista === 'ano') {
-          eventosFiltrados = todosEventos.filter(e => e.ano === dataAtual.getFullYear() && eventoVisivel(e));
-          tituloRelatorio = `Agenda Anual: ${dataAtual.getFullYear()}`;
-        }
-
-        listaExportacao = eventosFiltrados
-          .sort((a, b) => {
-            if (a.ano !== b.ano) return a.ano - b.ano;
-            if (a.mes !== b.mes) return a.mes - b.mes;
-            if (a.dia !== b.dia) return a.dia - b.dia;
-            return (a.horario || '99:99').localeCompare(b.horario || '99:99');
-          })
-          .map(e => {
-            const cor = PDF_COLORS[e.tipo] || { bg: '#f1f5f9', text: '#475569' };
-            return [
-              `${String(e.dia).padStart(2, '0')}/${String(e.mes + 1).padStart(2, '0')}`,
-              e.horario || '--:--',
-              { 
-                  content: TIPOS[e.tipo]?.label || '', 
-                  styles: { fillColor: cor.bg, textColor: cor.text, fontStyle: 'bold', halign: 'center' } 
-              },
-              e.titulo || '', 
-              e.clienteNome || 'Não informado'
-            ];
-          });
+        eventosFiltrados = todosEventos.filter(e => {
+          if (!eventoVisivel(e)) return false;
+          return e.ano === dataAtual.getFullYear() && e.mes === dataAtual.getMonth() && e.dia === dataAtual.getDate();
+        });
+        tituloRelatorio = `Agenda Diária: ${dataAtual.toLocaleDateString('pt-BR')}`;
       }
+
+      listaExportacao = eventosFiltrados
+        .sort((a, b) => {
+          if (a.ano !== b.ano) return a.ano - b.ano;
+          if (a.mes !== b.mes) return a.mes - b.mes;
+          if (a.dia !== b.dia) return a.dia - b.dia;
+          return (a.horario || '99:99').localeCompare(b.horario || '99:99');
+        })
+        .map(e => {
+          const cor = PDF_COLORS[e.tipo] || { bg: '#f1f5f9', text: '#475569' };
+          return [
+            `${String(e.dia).padStart(2, '0')}/${String(e.mes + 1).padStart(2, '0')}`,
+            e.horario || '--:--',
+            { 
+                content: TIPOS[e.tipo]?.label || '', 
+                styles: { fillColor: cor.bg, textColor: cor.text, fontStyle: 'bold', halign: 'center' } 
+            },
+            e.titulo || '', 
+            e.clienteNome || 'Não informado'
+          ];
+        });
 
       let startY = 35; let startXTexto = 14;
       if (dadosEmpresa.logotipo && dadosEmpresa.logotipo.startsWith('data:image')) {
@@ -464,7 +521,6 @@ const Agenda = () => {
       docPDF.line(14, startY - 4, 196, startY - 4);
 
       let colunasDef = [["Data", "Horário", "Tipo", "Título do Evento", "Cliente"]];
-      if (filtroAtivo === 'compras') colunasDef = [["Item", "Qtd", "Valor Est.", "Prazo", "Referência / Vínculo"]];
       
       autoTable(docPDF, {
         startY: startY, head: colunasDef, body: listaExportacao, theme: 'striped',
@@ -559,80 +615,373 @@ const Agenda = () => {
     );
   };
 
+  // 🗓️ RENDER DO CALENDÁRIO COM DIAS COMPLETOS E SELEÇÃO VISUAL
   const renderCalendario = () => {
     const totalDias = getDiasNoMes(dataAtual);
     const diaInicio = getDiaSemanaInicio(dataAtual);
     const hojeD = new Date();
-    const MAX = 3;
-    const dias = [];
-    
-    for (let i = 0; i < diaInicio; i++) dias.push(<div key={`e${i}`} className="day-cell empty" />);
-    
+    const MAX = 2;
+
+    const diasMesAnterior = new Date(dataAtual.getFullYear(), dataAtual.getMonth(), 0).getDate();
+    const diasPrev = [];
+    for (let i = diaInicio - 1; i >= 0; i--) {
+      diasPrev.push(diasMesAnterior - i);
+    }
+
+    const diasAtuais = [];
     for (let dia = 1; dia <= totalDias; dia++) {
-      const evsDia = eventosDoDia(dia).filter(eventoVisivel);
-      const isHoje = hojeD.getDate() === dia && hojeD.getMonth() === dataAtual.getMonth() && hojeD.getFullYear() === dataAtual.getFullYear();
-      const extra  = evsDia.length - MAX;
-      
-      dias.push(
-        <div 
-          key={dia} 
-          className={`day-cell${isHoje ? ' today' : ''}`} 
-          onClick={() => handleDiaClick(dia)}
-        >
-          <div className="day-header-cell">
-            <span className="day-number">{dia}</span>
+      diasAtuais.push(dia);
+    }
+
+    const totalCelulas = diasPrev.length + diasAtuais.length;
+    const diasNextCount = (7 - (totalCelulas % 7)) % 7;
+    const diasNext = [];
+    for (let i = 1; i <= diasNextCount; i++) {
+      diasNext.push(i);
+    }
+
+    return (
+      <div className="agenda-calendar-panel-box">
+        {/* Cabeçalho Interno do Calendário */}
+        <div className="cal-header-bar">
+          <div className="cal-nav-controls">
+            <button className="cal-btn-nav" onClick={() => mudarMes(-1)} title="Mês anterior">
+              <i className="fas fa-chevron-left"></i>
+            </button>
+            <button className="cal-btn-nav" onClick={() => mudarMes(1)} title="Próximo mês">
+              <i className="fas fa-chevron-right"></i>
+            </button>
+            <h3 className="cal-title-month">{nomeMes}</h3>
           </div>
 
-          {/* DOTS VISUAIS PARA CELULAR */}
-          {evsDia.length > 0 && (
-            <div className="day-dots-row-mobile">
-              {evsDia.slice(0, 4).map((ev, idx) => (
-                <span 
-                  key={idx} 
-                  className="day-dot-micro" 
-                  style={{ background: TIPOS[ev.tipo]?.cor || '#3b82f6' }}
-                />
-              ))}
-              {evsDia.length > 4 && <span className="day-dot-more">+{evsDia.length - 4}</span>}
-            </div>
-          )}
+          <button 
+            type="button"
+            className="cal-btn-today" 
+            onClick={() => { 
+              const hoje = new Date();
+              setDataAtual(hoje); 
+              setDiaSelecionado(hoje.getDate()); 
+            }}
+          >
+            Hoje
+          </button>
+        </div>
 
-          {/* EVENTOS EXPANDIDOS NO DESKTOP */}
-          <div className="eventos-container">
-            {evsDia.slice(0, MAX).map(ev => {
-              const totalEv = Number(ev.valorTotal || 0);
-              const pagoEv = Number(ev.valorPago || 0);
-              const saldoEv = ev.origem === 'locacao' ? Math.max(0, totalEv - pagoEv) : null;
+        {/* Legendas e Dicas */}
+        <div className="cal-legend-bar">
+          <span className="cal-legend-item"><span className="cal-dot-legend event-dot"></span> Evento</span>
+          <span className="cal-legend-item"><i className="fas fa-lock cal-icon-legend lock-icon"></i> Bloqueio</span>
+          <span className="cal-legend-item"><i className="fas fa-exclamation-triangle cal-icon-legend alert-icon"></i> Conflito</span>
+          <span className="cal-legend-hint">· No celular, toque e segure uma data para bloquear</span>
+        </div>
+
+        {/* Grade do Calendário */}
+        <div className="cal-grid-outer">
+          <div className="cal-weekdays-row">
+            {['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'].map(d => (
+              <div key={d} className="cal-weekday-name">{d}</div>
+            ))}
+          </div>
+
+          <div className="cal-days-grid">
+            {/* Dias do mês anterior */}
+            {diasPrev.map((diaP, idx) => (
+              <div key={`prev-${idx}`} className="cal-day-cell cal-other-month">
+                <span className="cal-day-num muted">{diaP}</span>
+              </div>
+            ))}
+
+            {/* Dias do mês atual */}
+            {diasAtuais.map(dia => {
+              const evsDia = eventosDoDia(dia).filter(eventoVisivel);
+              const isHoje = hojeD.getDate() === dia && hojeD.getMonth() === dataAtual.getMonth() && hojeD.getFullYear() === dataAtual.getFullYear();
+              const isSelecionado = diaSelecionado === dia;
+              const temConflito = statsKPI.diasComConflito.has(dia);
+              const extra = evsDia.length - MAX;
 
               return (
-                <div key={ev.id} className={`event-tag tag-${ev.tipo}${ev.origem === 'locacao' ? ' tag-locacao-origem' : ''}`} onClick={e => { e.stopPropagation(); abrirModalForm(dia, ev); }}>
-                  {ev.horario && <span className="event-time">{ev.horario}</span>}
-                  <span className="event-titulo" style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>
-                      {ev.status === 'concluido' && '✅ '}
-                      {ev.status === 'cancelado' && '❌ '}
-                      {ev.origem === 'locacao' && totalEv > 0 && (
-                        <span style={{ marginRight: '3px', fontSize: '10px' }} title={saldoEv === 0 ? 'Quitado' : `Resta R$ ${saldoEv.toFixed(2)}`}>
-                          {saldoEv === 0 ? '🟢' : (pagoEv > 0 ? '🟡' : '🔴')}
-                        </span>
-                      )}
-                      {ev.titulo}
-                  </span>
+                <div
+                  key={`cur-${dia}`}
+                  className={`cal-day-cell${isHoje ? ' is-today' : ''}${isSelecionado ? ' is-selected' : ''}${temConflito ? ' has-conflict' : ''}`}
+                  onClick={() => handleDiaClick(dia)}
+                >
+                  <div className="cal-day-cell-top">
+                    <span className="cal-day-num">{dia}</span>
+                    {temConflito && <span className="cal-conflict-tag" title="Conflito de horários nesta data">⚠️</span>}
+                  </div>
+
+                  {/* Tags compactas no desktop */}
+                  <div className="cal-cell-events">
+                    {evsDia.slice(0, MAX).map(ev => (
+                      <div
+                        key={ev.id}
+                        className={`cal-event-pill type-${ev.tipo}${ev.origem === 'locacao' ? ' from-locacao' : ''}`}
+                        title={`${ev.horario ? ev.horario + ' - ' : ''}${ev.titulo}`}
+                      >
+                        {ev.tipo === 'bloqueio' && <i className="fas fa-lock pill-lock-icon"></i>}
+                        <span className="pill-text">{ev.titulo}</span>
+                      </div>
+                    ))}
+                    {extra > 0 && (
+                      <span className="cal-more-pill">+{extra} mais</span>
+                    )}
+                  </div>
+
+                  {/* Pontinhos para celular */}
+                  {evsDia.length > 0 && (
+                    <div className="cal-dots-row-mobile">
+                      {evsDia.slice(0, 4).map((ev, idx) => (
+                        <span 
+                          key={idx} 
+                          className="cal-dot-micro" 
+                          style={{ background: TIPOS[ev.tipo]?.cor || '#3b82f6' }}
+                        />
+                      ))}
+                      {evsDia.length > 4 && <span className="cal-dot-more">+{evsDia.length - 4}</span>}
+                    </div>
+                  )}
                 </div>
               );
             })}
-            {extra > 0 && <div className="event-tag tag-mais" onClick={e => { e.stopPropagation(); setDiaSelecionado(dia); setModalListaAberto(true); }}>+ {extra} a mais</div>}
+
+            {/* Dias do próximo mês */}
+            {diasNext.map((diaN, idx) => (
+              <div key={`next-${idx}`} className="cal-day-cell cal-other-month">
+                <span className="cal-day-num muted">{diaN}</span>
+              </div>
+            ))}
           </div>
         </div>
-      );
-    }
-    
-    return (
-      <div className="calendar-wrapper">
-        <div className="calendar-grid-header">
-          {['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'].map(d => <div key={d} className="weekday-header">{d}</div>)}
-        </div>
-        <div className="calendar-grid">{dias}</div>
       </div>
+    );
+  };
+
+  // 📋 RENDER DO PAINEL LATERAL DEDICADO À DATA CLICADA
+  const renderPainelLateral = () => {
+    const { dia, isHoje, titulo, eventos } = infoDiaSelecionado;
+
+    return (
+      <aside className="agenda-side-panel">
+        <div className="side-panel-header">
+          <div className="side-panel-title-wrap">
+            <h3 className="side-panel-date-title">{titulo}</h3>
+            <span className="side-panel-count-subtitle">
+              {eventos.length === 0 ? 'Nenhum evento' : `${eventos.length} ${eventos.length === 1 ? 'evento' : 'eventos'}`}
+            </span>
+          </div>
+
+          <button
+            type="button"
+            className="btn-side-header-add"
+            onClick={() => abrirModalForm(dia)}
+            title="Novo evento nesta data"
+          >
+            <i className="fas fa-plus"></i> Novo
+          </button>
+        </div>
+
+        <div className="side-panel-body custom-scrollbar">
+          {eventos.length === 0 ? (
+            /* 📅 ESTADO VAZIO: DIA LIVRE (IDÊNTICO AO 1º PRINT) */
+            <div className="side-panel-empty-state">
+              <div className="side-empty-icon-box">
+                <i className="far fa-calendar-alt"></i>
+              </div>
+              <h4 className="side-empty-title">Dia livre</h4>
+              <p className="side-empty-desc">
+                Aproveite para criar um evento ou bloquear esta data.
+              </p>
+
+              <div className="side-empty-buttons-row">
+                <button
+                  type="button"
+                  className="btn-empty-action btn-empty-create"
+                  onClick={() => abrirModalForm(dia)}
+                >
+                  <i className="far fa-calendar-plus"></i> Criar evento
+                </button>
+                <button
+                  type="button"
+                  className="btn-empty-action btn-empty-block"
+                  onClick={() => abrirModalBloqueio(dia)}
+                >
+                  <i className="fas fa-lock"></i> Bloquear esta data
+                </button>
+              </div>
+            </div>
+          ) : (
+            /* 📦 LISTA DE EVENTOS DO DIA (IDÊNTICO AO 2º PRINT) */
+            <div className="side-events-list">
+              {eventos.map(ev => {
+                const saldo = ev.origem === 'locacao' ? Number(ev.valorTotal || 0) - Number(ev.valorPago || 0) : null;
+                const isBloqueio = ev.tipo === 'bloqueio';
+
+                return (
+                  <div
+                    key={ev.id}
+                    className={`side-event-card type-${ev.tipo}${ev.origem === 'locacao' ? ' card-locacao' : ''}`}
+                    onClick={() => abrirModalForm(dia, ev)}
+                  >
+                    <div className="side-card-top-row">
+                      <h4 className="side-card-title">
+                        {isBloqueio && '🔒 '}
+                        {ev.status === 'concluido' && '✅ '}
+                        {ev.status === 'cancelado' && '❌ '}
+                        <span style={{ textDecoration: ev.status === 'cancelado' ? 'line-through' : 'none' }}>
+                          {ev.titulo}
+                        </span>
+                      </h4>
+
+                      {ev.origem === 'locacao' ? (
+                        <span className={`side-status-badge status-${(ev.status || 'pendente').toLowerCase()}`}>
+                          {ev.status ? ev.status.toUpperCase() : 'CONTRATO'}
+                        </span>
+                      ) : (
+                        <span className={`side-status-badge badge-${ev.tipo}`}>
+                          {TIPOS[ev.tipo]?.label || ev.tipo}
+                        </span>
+                      )}
+                    </div>
+
+                    {ev.tipoServico && (
+                      <div className="side-card-tag-pill">
+                        {ev.tipoServico}
+                      </div>
+                    )}
+
+                    <div className="side-card-meta-list">
+                      {ev.horario && (
+                        <div className="side-meta-item">
+                          <i className="far fa-clock"></i>
+                          <span>{ev.horario}</span>
+                        </div>
+                      )}
+
+                      {ev.clienteNome && ev.clienteNome !== ev.titulo && (
+                        <div className="side-meta-item">
+                          <i className="far fa-user"></i>
+                          <span>{ev.clienteNome}</span>
+                        </div>
+                      )}
+
+                      {ev.local && (
+                        <div
+                          className="side-meta-item side-link-maps"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            abrirGoogleMaps(ev.local);
+                          }}
+                          title="Abrir no Google Maps"
+                        >
+                          <i className="fas fa-map-marker-alt"></i>
+                          <span>{ev.local}</span>
+                        </div>
+                      )}
+
+                      {ev.observacoes && (
+                        <div className="side-meta-item side-obs-text">
+                          <i className="far fa-sticky-note"></i>
+                          <span>{ev.observacoes}</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {saldo !== null && Number(ev.valorTotal) > 0 && (
+                      <div className="side-card-finance-box">
+                        <div className="finance-values">
+                          <span>💰 R$ {Number(ev.valorTotal).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          {saldo > 0 ? (
+                            <span className="finance-pending">Falta R$ {saldo.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
+                          ) : (
+                            <span className="finance-paid">✅ Quitado</span>
+                          )}
+                        </div>
+
+                        {saldo > 0 && (
+                          <button
+                            type="button"
+                            className="btn-side-receber"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              navigate('/novo-lancamento', {
+                                state: {
+                                  locacaoId: ev.locacaoId || ev.id,
+                                  clienteNome: ev.clienteNome,
+                                  tipo: 'entrada'
+                                }
+                              });
+                            }}
+                          >
+                            💰 Receber Saldo
+                          </button>
+                        )}
+                      </div>
+                    )}
+
+                    <div className="side-card-actions-bar">
+                      {ev.origem === 'locacao' ? (
+                        <button
+                          type="button"
+                          className="btn-side-action btn-locacao"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            navigate('/locacoes');
+                          }}
+                        >
+                          📋 Ver em Locações
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            className="btn-side-action btn-edit"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              abrirModalForm(dia, ev);
+                            }}
+                          >
+                            ✏️ Editar
+                          </button>
+                          <button
+                            type="button"
+                            className="btn-side-action btn-del"
+                            onClick={async (e) => {
+                              e.stopPropagation();
+                              if (window.confirm('Apagar este compromisso definitivamente?')) {
+                                setSalvando(true);
+                                try {
+                                  await deleteDoc(doc(db, 'agenda_eventos', ev.id));
+                                  await registrarLog("EXCLUSÃO NA AGENDA", `Apagou o compromisso: "${ev.titulo}".`);
+                                  setEventosManual(prev => prev.filter(x => x.id !== ev.id));
+                                  mostrarToast('🗑️ Evento apagado.');
+                                } catch (err) {
+                                  console.error(err);
+                                } finally {
+                                  setSalvando(false);
+                                }
+                              }
+                            }}
+                          >
+                            🗑️ Apagar
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+
+              <button
+                type="button"
+                className="btn-side-add-bottom"
+                onClick={() => abrirModalForm(dia)}
+              >
+                <i className="fas fa-plus"></i> Novo compromisso neste dia
+              </button>
+            </div>
+          )}
+        </div>
+      </aside>
     );
   };
 
@@ -749,121 +1098,30 @@ const Agenda = () => {
     );
   };
 
-  const renderCompras = () => {
-    if (comprasPendentes.length === 0) return <div className="vista-vazia">✅ Nenhuma compra pendente!</div>;
-    
-    return (
-      <div className="list-view-container">
-        <div className="compras-legenda">
-          <span className="compra-badge urgente">🚨 Urgente</span> prazo vencido ·
-          <span className="compra-badge normal" style={{marginLeft:8}}>📅 Pendente</span> a comprar
-        </div>
-        {comprasPendentes.map(c => {
-          const urgente = c.prazo && c.prazo <= hojeISO;
-          const subtotal = (Number(c.quantidade) || 1) * (Number(c.valorEstimado) || 0);
-          return (
-            <div key={c.id} className={`compra-card${urgente ? ' compra-card-urgente' : ''}`}>
-              <div className="compra-card-left">
-                <div className={`compra-urgencia-bar ${urgente ? 'urgente' : 'normal'}`} />
-                <div className="compra-info">
-                  <div className="compra-header">
-                    <span className="compra-nome">{c.nome}</span>
-                    {urgente && <span className="compra-badge urgente">🚨 URGENTE</span>}
-                  </div>
-                  <div className="compra-meta">
-                    {c.vinculo && <span>🔗 {c.vinculo}</span>}
-                    {c.quantidade && <span>📦 Qtd: {c.quantidade}</span>}
-                    {subtotal > 0 && <span>💰 R$ {subtotal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>}
-                    {c.prazo && <span className={urgente ? 'prazo-urgente' : ''}>{urgente ? '🚨' : '📅'} Prazo: {new Date(c.prazo + 'T12:00:00').toLocaleDateString('pt-BR')}</span>}
-                  </div>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  };
-
-  const renderHeader = () => {
-    const btnNav = (label, onClick) => <button className="btn-nav" onClick={onClick}>{label}</button>;
-    
-    let titulo = ''; let navEsq, navDir;
-
-    if (filtroAtivo === 'compras') {
-      titulo = 'Lista de Compras';
-      navEsq = () => {}; navDir = () => {};
-    } else if (viewPrincipal === 'calendario') {
-      titulo = nomeMes; navEsq = () => mudarMes(-1);
-      navDir = () => mudarMes(1);
-    } else {
-      if (viewLista === 'ano') {
-        titulo = dataAtual.getFullYear().toString();
-        navEsq = () => mudarAno(-1); navDir = () => mudarAno(1);
-      } else if (viewLista === 'mes') {
-        titulo = nomeMes;
-        navEsq = () => mudarMes(-1); navDir = () => mudarMes(1);
-      } else if (viewLista === 'semana') {
-        const hojeD = new Date(dataAtual);
-        const dom = new Date(hojeD.getFullYear(), hojeD.getMonth(), hojeD.getDate() - hojeD.getDay());
-        const sab = new Date(dom.getFullYear(), dom.getMonth(), dom.getDate() + 6);
-        titulo = `${dom.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' })} – ${sab.toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}`;
-        navEsq = () => mudarSemana(-1); navDir = () => mudarSemana(1);
-      } else if (viewLista === 'dia') {
-        titulo = dataAtual.toLocaleDateString('pt-BR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-        navEsq = () => mudarDia(-1); navDir = () => mudarDia(1);
-      }
-    }
-
-    return (
-      <div className="agenda-header">
-        <div className="nav-datas">
-          {filtroAtivo !== 'compras' && btnNav('◀', navEsq)}
-          <span className="mes-ano-titulo">{titulo}</span>
-          {filtroAtivo !== 'compras' && btnNav('▶', navDir)}
-          {filtroAtivo !== 'compras' && <button className="btn-nav btn-hoje" onClick={() => setDataAtual(new Date())}>Hoje</button>}
-        </div>
-
-        <div className="header-right">
-          <div className="view-switcher-wrapper">
-            <div className="view-switcher primary">
-              <button className={`view-btn ${viewPrincipal === 'calendario' ? 'active' : ''}`} onClick={() => {setViewPrincipal('calendario'); setFiltroAtivo('todos');}}>
-                Calendário
-              </button>
-              <button className={`view-btn ${viewPrincipal === 'lista' ? 'active' : ''}`} onClick={() => {setViewPrincipal('lista'); setFiltroAtivo('todos');}}>
-                Lista
-              </button>
-            </div>
-
-            {viewPrincipal === 'lista' && filtroAtivo !== 'compras' && (
-              <div className="view-switcher secondary fade-in">
-                <button className={`view-btn sub-btn ${viewLista === 'ano' ? 'active' : ''}`} onClick={() => setViewLista('ano')}>Ano</button>
-                <button className={`view-btn sub-btn ${viewLista === 'mes' ? 'active' : ''}`} onClick={() => setViewLista('mes')}>Mês</button>
-                <button className={`view-btn sub-btn ${viewLista === 'semana' ? 'active' : ''}`} onClick={() => setViewLista('semana')}>Semana</button>
-                <button className={`view-btn sub-btn ${viewLista === 'dia' ? 'active' : ''}`} onClick={() => setViewLista('dia')}>Dia</button>
-              </div>
-            )}
-          </div>
-          
-          <button className="btn-toggle-sidebar" onClick={() => setIsSidebarOpen(true)}>
-            <i className="fas fa-filter"></i> Filtros
-          </button>
-        </div>
-      </div>
-    );
-  };
-
   const renderConteudo = () => {
-    if (filtroAtivo === 'compras') return renderCompras();
-    if (viewPrincipal === 'calendario') return renderCalendario();
-
-    switch (viewLista) {
-      case 'ano':      return renderAno();
-      case 'mes':      return renderMes();
-      case 'semana':   return renderSemana();
-      case 'dia':      return renderDia();
-      default:         return renderMes();
+    if (viewPrincipal === 'calendario') {
+      return (
+        <div className="agenda-workspace-layout">
+          {renderCalendario()}
+          {renderPainelLateral()}
+        </div>
+      );
     }
+
+    return (
+      <div className="agenda-list-wrapper">
+        <div className="list-sub-switcher-bar">
+          <button className={`sub-btn ${viewLista === 'ano' ? 'active' : ''}`} onClick={() => setViewLista('ano')}>Ano</button>
+          <button className={`sub-btn ${viewLista === 'mes' ? 'active' : ''}`} onClick={() => setViewLista('mes')}>Mês</button>
+          <button className={`sub-btn ${viewLista === 'semana' ? 'active' : ''}`} onClick={() => setViewLista('semana')}>Semana</button>
+          <button className={`sub-btn ${viewLista === 'dia' ? 'active' : ''}`} onClick={() => setViewLista('dia')}>Dia</button>
+        </div>
+        {viewLista === 'ano' && renderAno()}
+        {viewLista === 'mes' && renderMes()}
+        {viewLista === 'semana' && renderSemana()}
+        {viewLista === 'dia' && renderDia()}
+      </div>
+    );
   };
 
   const renderModalForm = () => {
@@ -875,7 +1133,7 @@ const Agenda = () => {
         <div className="modal-content modal-form-content" onClick={e => e.stopPropagation()}>
           
           <div className="modal-header">
-            <h3>{ehLocacao ? '🔗 Detalhes da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : '📝 Novo Compromisso')}</h3>
+            <h3>{ehLocacao ? '🔗 Detalhes da Locação' : (eventoSelecionado ? '✏️ Editar Compromisso' : (formData.tipo === 'bloqueio' ? '🔒 Bloqueio de Data' : '📝 Novo Compromisso'))}</h3>
             <button className="btn-close" onClick={() => !salvando && setModalFormAberto(false)}>×</button>
           </div>
 
@@ -904,7 +1162,6 @@ const Agenda = () => {
                 </div>
               )}
 
-              {/* AÇÕES DA LOCAÇÃO DENTRO DA AGENDA */}
               <div style={{ display: 'flex', gap: '8px', marginTop: '16px', flexWrap: 'wrap' }}>
                 {saldo > 0 && (
                   <button 
@@ -964,11 +1221,10 @@ const Agenda = () => {
                 </button>
               </div>
 
-              <p className="locacao-aviso" style={{ marginTop: '12px' }}>⚠️ Entregas e Devoluções só podem ser alteradas na tela de Locações.</p>
+              <p className="locacao-aviso" style={{ marginTop: '12px' }}>⚠️ Entregas e Devoluções são sincronizadas com a tela de Locações.</p>
             </div>
           ) : (
             <form onSubmit={salvarEvento} className="modal-form">
-              {/* LINHA 1: DATA E HORÁRIO */}
               <div className="form-row-2col">
                 <div className="form-group">
                   <label className="form-label-clean">📅 DATA *</label>
@@ -991,7 +1247,6 @@ const Agenda = () => {
                 </div>
               </div>
               
-              {/* LINHA 2: TÍTULO DO COMPROMISSO */}
               <div className="form-group">
                 <label className="form-label-clean">📌 TÍTULO DO COMPROMISSO *</label>
                 <input 
@@ -1005,7 +1260,6 @@ const Agenda = () => {
                 />
               </div>
 
-              {/* LINHA 3: TIPO DE TAREFA E REPETIR LEMBRETE */}
               <div className="form-row-2col">
                 <div className="form-group">
                   <label className="form-label-clean">💼 TIPO DE TAREFA</label>
@@ -1039,7 +1293,6 @@ const Agenda = () => {
                 )}
               </div>
 
-              {/* LINHA 4: CLIENTE E LOCAL */}
               <div className="form-row-2col">
                 <div className="form-group">
                   <label className="form-label-clean">👤 CLIENTE <span className="label-hint-inline">(opcional)</span></label>
@@ -1103,7 +1356,6 @@ const Agenda = () => {
                 </div>
               </div>
 
-              {/* LINHA 5: OBSERVAÇÕES */}
               <div className="form-group">
                 <label className="form-label-clean">📝 OBSERVAÇÕES EXTRA</label>
                 <textarea 
@@ -1128,124 +1380,256 @@ const Agenda = () => {
   };
 
   return (
-    <div className="agenda-container fade-in">
+    <div className="agenda-container clientes-container fade-in">
       {toastMsg && (
         <div className="toast-mensagem fade-in">
           {toastMsg}
         </div>
       )}
 
-      {isSidebarOpen && <div className="sidebar-backdrop" onClick={() => setIsSidebarOpen(false)} />}
-
-      <aside className={`agenda-sidebar custom-scrollbar ${isSidebarOpen ? 'open' : ''}`}>
-        <button className="btn-close-sidebar" onClick={() => setIsSidebarOpen(false)}>&times;</button>
-        <div className="sidebar-header-fixed">
-            <button className="btn-novo-agendamento" onClick={() => abrirModalForm(new Date().getDate())}>
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-                Novo Compromisso
-            </button>
-
-            <div className="busca-box">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="busca-icon"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" placeholder="Buscar na agenda..." value={busca} onChange={e => setBusca(e.target.value)} className="busca-input" />
-                {busca && <button className="busca-clear" onClick={() => setBusca('')}>×</button>}
+      {/* ── HERO CABEÇALHO (PADRÃO OFICIAL CELEBRE) ── */}
+      <header className="clientes-hero-header">
+        <div className="welcome-text">
+          <div className="header-title-row">
+            <span className="header-icon-badge">
+              <i className="fas fa-calendar-alt"></i>
+            </span>
+            <div>
+              <h1>Agenda</h1>
+              <p>Sua central operacional: eventos, bloqueios e conflitos em um só lugar.</p>
             </div>
+          </div>
         </div>
 
-         <nav className="sidebar-menu">
-            <div className={`menu-item highlight ${filtroAtivo === 'todos' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('todos'); if(viewPrincipal === 'calendario' && filtroAtivo === 'compras') setViewPrincipal('lista');}}>
-                <span className="menu-icon"><i className="fas fa-calendar-alt"></i></span>
-                <span className="menu-label">Visão Geral</span>
-            </div>
+        <div className="header-actions">
+          <button
+            type="button"
+            className="btn-secondary-celebre"
+            onClick={() => abrirModalBloqueio(diaSelecionado)}
+          >
+            <i className="fas fa-lock"></i> BLOQUEAR DATA
+          </button>
 
-            <div className="menu-section">
-                <h4 className="menu-section-title">Logística do Sistema</h4>
-                {[
-                  ['entrega',  'blue',   'Entregas',   contadores.entrega,   'fas fa-shipping-fast'],
-                  ['devolucao','orange', 'Devoluções', contadores.devolucao, 'fas fa-undo-alt'],
-                ].map(([tipo, cor, label, count, icon]) => (
-                  <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista'); }}>
-                    <span className="menu-icon"><i className={icon}></i></span>
-                    <span className="menu-label">{label}</span>
-                    {count > 0 && <span className="menu-badge">{count}</span>}
-                  </div>
-                ))}
-            </div>
+          <button
+            type="button"
+            className="btn-secondary-celebre"
+            onClick={exportarPDF}
+            title="Exportar Relatório em PDF"
+          >
+            <i className="fas fa-file-pdf"></i> EXPORTAR
+          </button>
 
-            <div className="menu-section">
-                <h4 className="menu-section-title">Administrativo</h4>
-                {[
-                  ['reuniao',  'purple', 'Reuniões',          contadores.reuniao,   'fas fa-handshake'],
-                  ['visita',   'green',  'Visitas Técnicas',  contadores.visita,    'fas fa-map-marked-alt'],
-                  ['pagamento','yellow', 'Cobranças',         contadores.pagamento, 'fas fa-dollar-sign'],
-                  ['tarefa',   'gray',   'Tarefas Internas',  contadores.tarefa,    'fas fa-tasks'],
-                  ['bloqueio', 'red',    'Bloqueios de Data', contadores.bloqueio,  'fas fa-calendar-times'],
-                ].map(([tipo, cor, label, count, icon]) => (
-                  <div key={tipo} className={`menu-item ${filtroAtivo === tipo ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo(tipo); if(viewPrincipal === 'calendario' && tipo === 'compras') setViewPrincipal('lista');}}>
-                    <span className="menu-icon"><i className={icon}></i></span>
-                    <span className="menu-label">{label}</span>
-                    {count > 0 && <span className="menu-badge">{count}</span>}
-                  </div>
-                ))}
-            </div>
+          <button
+            type="button"
+            className="btn-primary-celebre"
+            onClick={() => abrirModalForm(diaSelecionado)}
+          >
+            + NOVO EVENTO
+          </button>
+        </div>
+      </header>
 
-            <div className="menu-section">
-                <h4 className="menu-section-title">Estoque & Compras</h4>
-                <div className={`menu-item ${filtroAtivo === 'compras' ? 'ativo' : ''}`} onClick={() => {setFiltroAtivo('compras'); setViewPrincipal('lista');}}>
-                  <span className="menu-icon"><i className="fas fa-shopping-basket"></i></span>
-                  <span className="menu-label">Lista de Compras</span>
-                  {comprasPendentes.length > 0 && (
-                    <span className={`menu-badge ${comprasUrgentes > 0 ? 'urgente' : ''}`}>
-                      {comprasPendentes.length}
-                    </span>
-                  )}
-                </div>
-            </div>
-        </nav>
+      {/* ── CARDS DE DASHBOARD KPI (PADRÃO OFICIAL CELEBRE - OPERAÇÃO LOGÍSTICA) ── */}
+      <div className="clientes-stats-grid">
+        <div className="stat-card-pro border-blue">
+          <div className="stat-icon-wrapper icon-blue">
+            <i className="fas fa-truck"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">ENTREGAS NO MÊS</span>
+            <span className="stat-value">{contadores.entrega}</span>
+            <span className="stat-sub">Saídas programadas</span>
+          </div>
+        </div>
 
-        <button className="btn-exportar" onClick={exportarPDF}>
-            <i className="fas fa-file-pdf"></i> Exportar Relatório
-        </button>
-      </aside>
+        <div className="stat-card-pro border-orange">
+          <div className="stat-icon-wrapper icon-orange">
+            <i className="fas fa-undo-alt"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">DEVOLUÇÕES NO MÊS</span>
+            <span className="stat-value">{contadores.devolucao}</span>
+            <span className="stat-sub">Retornos previstos</span>
+          </div>
+        </div>
 
-      <main className="agenda-main">
-        {renderHeader()}
-        {loadingFB ? <div className="loading-agenda">Sincronizando calendário...</div> : renderConteudo()}
-      </main>
+        <div className="stat-card-pro border-purple">
+          <div className="stat-icon-wrapper icon-purple">
+            <i className="fas fa-handshake"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">VISITAS & REUNIÕES</span>
+            <span className="stat-value">{(contadores.visita || 0) + (contadores.reuniao || 0)}</span>
+            <span className="stat-sub">Atendimentos no mês</span>
+          </div>
+        </div>
 
-      {modalListaAberto && (
-        <div className="modal-overlay modal-agenda-overlay fade-in" onClick={() => setModalListaAberto(false)}>
-          <div className="modal-content modal-agenda-lista-content" onClick={e => e.stopPropagation()}>
-            <div className="modal-header">
-              <div>
-                <h3 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 800 }}>📅 {diaSelecionado} de {dataAtual.toLocaleString('pt-BR', { month: 'long' })}</h3>
-                <p style={{ margin: '2px 0 0 0', fontSize: '0.72rem', color: 'var(--texto-secundario, #64748b)', fontWeight: 600 }}>
-                  {eventosDoDia(diaSelecionado).filter(eventoVisivel).length} {eventosDoDia(diaSelecionado).filter(eventoVisivel).length === 1 ? 'compromisso agendado' : 'compromissos agendados'}
-                </p>
-              </div>
-              <button className="btn-close" onClick={() => setModalListaAberto(false)}>×</button>
-            </div>
+        <div className="stat-card-pro border-red">
+          <div className="stat-icon-wrapper icon-red">
+            <i className="fas fa-exclamation-triangle"></i>
+          </div>
+          <div className="stat-content">
+            <span className="stat-title">CONFLITOS</span>
+            <span className="stat-value" style={{ color: statsKPI.conflitos > 0 ? '#dc2626' : 'inherit' }}>
+              {statsKPI.conflitos}
+            </span>
+            <span className="stat-sub">Sobreposição de horários</span>
+          </div>
+        </div>
+      </div>
 
-            <div className="modal-lista-items custom-scrollbar" style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '60vh', overflowY: 'auto', padding: '12px 2px' }}>
-              {eventosDoDia(diaSelecionado).filter(eventoVisivel).sort((a, b) => (a.horario || '99:99').localeCompare(b.horario || '99:99')).map(ev => renderCardEvento(ev))}
-            </div>
+      {/* ── PAINEL DE FILTROS E BUSCA (PADRÃO OFICIAL CELEBRE) ── */}
+      <div className="advanced-filter-bar agenda-filter-bar">
+        <div className="filter-top-row">
+          <div className="search-input-box">
+            <i className="fas fa-search search-box-icon"></i>
+            <input
+              type="text"
+              placeholder="Buscar por evento, cliente ou local..."
+              value={busca}
+              onChange={e => setBusca(e.target.value)}
+              className="search-input-field"
+            />
+            {busca && (
+              <button type="button" className="btn-clear-input" onClick={() => setBusca('')}>✕</button>
+            )}
+          </div>
 
-            <div style={{ marginTop: '12px', paddingTop: '10px', borderTop: '1px solid var(--borda, #e2e8f0)' }}>
-              <button 
-                type="button" 
-                className="btn-add-no-dia" 
-                onClick={() => {
-                  setModalListaAberto(false);
-                  abrirModalForm(diaSelecionado);
-                }}
+          <div className="filter-controls-group">
+            <div className="view-toggle-group">
+              <button
+                type="button"
+                className={`btn-view-toggle ${viewPrincipal === 'calendario' ? 'active' : ''}`}
+                onClick={() => setViewPrincipal('calendario')}
               >
-                + Novo Compromisso Neste Dia
+                📅 Calendário
+              </button>
+              <button
+                type="button"
+                className={`btn-view-toggle ${viewPrincipal === 'lista' ? 'active' : ''}`}
+                onClick={() => setViewPrincipal('lista')}
+              >
+                📋 Lista
               </button>
             </div>
           </div>
         </div>
-      )}
 
+        {/* 📱 GAVETA DE FILTROS INLINE NO PRÓPRIO LOCAL (EXCLUSIVO MOBILE) */}
+        <div className="mobile-filter-accordion-box">
+          <button
+            type="button"
+            className={`btn-trigger-gaveta-filtros ${gavetaFiltrosAberta ? 'aberta' : ''}`}
+            onClick={() => setGavetaFiltrosAberta(!gavetaFiltrosAberta)}
+            aria-expanded={gavetaFiltrosAberta}
+          >
+            <div className="trigger-gaveta-left">
+              <span className={`trigger-icon-circle type-${filtroAtivo}`}>
+                <i className={LISTA_FILTROS_AGENDA.find(f => f.id === filtroAtivo)?.icon || 'fas fa-layer-group'}></i>
+              </span>
+              <div className="trigger-text-group">
+                <span className="trigger-subtitle">Filtrar Categoria</span>
+                <span className="trigger-current-name">
+                  {LISTA_FILTROS_AGENDA.find(f => f.id === filtroAtivo)?.label || 'Todos'}
+                </span>
+              </div>
+            </div>
+            <div className="trigger-gaveta-right">
+              <span className={`trigger-count-badge ${(contadores[filtroAtivo] || 0) > 0 ? 'has-items' : ''}`}>
+                {contadores[filtroAtivo] || 0}
+              </span>
+              <span className="trigger-chevron">
+                <i className={`fas fa-chevron-${gavetaFiltrosAberta ? 'up' : 'down'}`}></i>
+              </span>
+            </div>
+          </button>
+
+          {/* 📂 CONTEÚDO DA GAVETA EXPANSÍVEL NO PRÓPRIO LOCAL */}
+          {gavetaFiltrosAberta && (
+            <div className="agenda-inline-gaveta-panel fade-in">
+              <div className="agenda-inline-gaveta-grid">
+                {LISTA_FILTROS_AGENDA.map(f => {
+                  const isAtivo = filtroAtivo === f.id;
+                  const qtd = contadores[f.id] || 0;
+                  return (
+                    <button
+                      key={f.id}
+                      type="button"
+                      className={`agenda-inline-filter-btn type-${f.id} ${isAtivo ? 'ativo' : ''}`}
+                      onClick={() => {
+                        setFiltroAtivo(f.id);
+                        setGavetaFiltrosAberta(false);
+                      }}
+                    >
+                      <span className={`inline-btn-icon type-${f.id}`}>
+                        <i className={f.icon}></i>
+                      </span>
+                      <span className="inline-btn-label">{f.label}</span>
+                      <span className={`inline-btn-badge ${qtd > 0 ? 'has-items' : ''}`}>
+                        {qtd}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="agenda-inline-gaveta-actions">
+                {filtroAtivo !== 'todos' && (
+                  <button
+                    type="button"
+                    className="btn-inline-limpar"
+                    onClick={() => {
+                      setFiltroAtivo('todos');
+                      setGavetaFiltrosAberta(false);
+                    }}
+                  >
+                    <i className="fas fa-undo"></i> Mostrar Todos
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="btn-inline-fechar"
+                  onClick={() => setGavetaFiltrosAberta(false)}
+                >
+                  <i className="fas fa-chevron-up"></i> Recolher
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 💻 PÍLULAS DE FILTRO EXCLUSIVAS PARA DESKTOP */}
+        <div className="desktop-pills-only custom-scrollbar">
+          {LISTA_FILTROS_AGENDA.map(f => (
+            <button
+              key={f.id}
+              type="button"
+              className={`agenda-filter-chip type-${f.id} ${filtroAtivo === f.id ? 'active' : ''}`}
+              onClick={() => setFiltroAtivo(f.id)}
+            >
+              <span className="chip-icon-box">
+                <i className={f.icon}></i>
+              </span>
+              <span className="chip-label">{f.label}</span>
+              <span className={`chip-badge ${(contadores[f.id] || 0) > 0 ? 'has-items' : ''}`}>
+                {contadores[f.id] || 0}
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+
+      {/* ── ÁREA PRINCIPAL: CALENDÁRIO + PAINEL DO DIA LADO A LADO ── */}
+      <div className="agenda-main-area">
+        {loadingFB ? (
+          <div className="loading-agenda">Sincronizando compromissos...</div>
+        ) : (
+          renderConteudo()
+        )}
+      </div>
+
+      {/* MODAL DE NOVO / EDITAR EVENTO */}
       {modalFormAberto && renderModalForm()}
     </div>
   );

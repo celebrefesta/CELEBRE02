@@ -755,7 +755,7 @@ const CadastroCliente = () => {
   const infoAniversario = useMemo(() => calcularDiasAteAniversario(formData.nascimento), [formData.nascimento]);
 
   return (
-    <div className="form-page-container fade-in">
+    <div className="form-page-container cadastro-cliente-container fade-in">
       
       {/* HERO ENTERPRISE REPAGINADO */}
       <header className="cadastro-hero-header">

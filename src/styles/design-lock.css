@@ -308,7 +308,7 @@ a.btn-primary-celebre {
 
 
 /* ============================================================
-   🔒 PÁGINA: CLIENTES — STATUS: CONGELADA em 03/09/2026
+   🔒 PÁGINA: CLIENTES — STATUS: CONGELADA em 09/09/2026
    Arquivos de origem: Clientes.css, CadastroCliente.css
    ============================================================ */
 
@@ -317,12 +317,6 @@ a.btn-primary-celebre {
   padding: 30px 40px !important;
   box-sizing: border-box !important;
   min-height: calc(100vh - 60px) !important;
-}
-
-@media (max-width: 900px) {
-  .clientes-container {
-    padding: 14px 12px 24px 12px !important;
-  }
 }
 
 .clientes-container .clientes-hero-header {
@@ -334,12 +328,251 @@ a.btn-primary-celebre {
   gap: 20px !important;
 }
 
+/* Filtros Desktop Clientes */
+.clientes-container .select-pill-filter {
+  height: 44px !important;
+  border-radius: 30px !important;
+  padding: 0 16px !important;
+  font-size: 0.80rem !important;
+  font-weight: 700 !important;
+  border: 1.5px solid var(--borda, #cbd5e1) !important;
+  background: var(--fundo-card, #ffffff) !important;
+  color: var(--texto-principal, #0f172a) !important;
+  box-sizing: border-box !important;
+}
+
+.clientes-container .mobile-status-select {
+  display: none !important;
+}
+
+.clientes-container .kpi-mobile-toggle-wrapper {
+  display: none !important;
+}
+
 @media (max-width: 900px) {
+  .clientes-container {
+    padding: 14px 12px 24px 12px !important;
+  }
+
+  .clientes-container .clientes-hero-header { 
+    flex-direction: column !important; 
+    align-items: flex-start !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .clientes-container .header-icon-badge {
+    width: 42px !important;
+    height: 42px !important;
+    font-size: 18px !important;
+    border-radius: 12px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .clientes-container .welcome-text h1 {
+    font-size: 1.35rem !important;
+    font-weight: 750 !important;
+    letter-spacing: -0.4px !important;
+    margin-bottom: 2px !important;
+  }
+
+  .clientes-container .welcome-text p {
+    font-size: 0.76rem !important;
+    font-weight: 450 !important;
+    line-height: 1.35 !important;
+    color: var(--texto-secundario, #64748b) !important;
+  }
+
+  .clientes-container .header-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .clientes-container .btn-primary-celebre {
+    grid-column: span 2 !important;
+    width: 100% !important;
+    justify-content: center !important;
+    height: 40px !important;
+    padding: 0 16px !important;
+    font-size: 0.80rem !important;
+    font-weight: 650 !important;
+    letter-spacing: 0.5px !important;
+    border-radius: 12px !important;
+    order: -1 !important;
+    box-shadow: 0 4px 14px rgba(197, 160, 89, 0.3) !important;
+  }
+
+  .clientes-container .btn-secondary-celebre,
+  .clientes-container .btn-export-celebre {
+    width: 100% !important;
+    justify-content: center !important;
+    height: 38px !important;
+    padding: 0 12px !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.1px !important;
+    border-radius: 12px !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+    background: var(--fundo-card, #ffffff) !important;
+    color: var(--texto-principal, #1e293b) !important;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.04) !important;
+    white-space: nowrap !important;
+    box-sizing: border-box !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 7px !important;
+  }
+
+  .clientes-container .btn-secondary-celebre i {
+    color: #c5a059 !important;
+    font-size: 0.80rem !important;
+  }
+
+  .clientes-container .btn-export-celebre i {
+    color: #6366f1 !important;
+    font-size: 0.80rem !important;
+  }
+
+  .clientes-container .export-dropdown-wrapper {
+    width: 100% !important;
+  }
+
+  /* 📱 CONTROLE DE RECOLHER / EXPANDIR CARDS KPI NO CELULAR */
+  .clientes-container .kpi-mobile-toggle-wrapper {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  .clientes-container .btn-toggle-kpi-mobile {
+    width: 100% !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 9px 12px !important;
+    background: var(--fundo-card, #ffffff) !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+    border-radius: 12px !important;
+    cursor: pointer !important;
+    box-shadow: 0 1px 4px rgba(15, 23, 42, 0.04) !important;
+    transition: all 0.2s ease !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-container .toggle-kpi-left {
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .clientes-container .toggle-kpi-icon {
+    font-size: 15px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .clientes-container .toggle-kpi-title {
+    font-size: 0.74rem !important;
+    font-weight: 650 !important;
+    color: var(--texto-principal, #0f172a) !important;
+    letter-spacing: -0.2px !important;
+  }
+
+  .clientes-container .toggle-kpi-summary {
+    font-size: 0.72rem !important;
+    color: var(--texto-secundario, #475569) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .clientes-container .toggle-kpi-summary strong {
+    color: var(--texto-principal, #0f172a) !important;
+    font-weight: 700 !important;
+  }
+
+  .clientes-container .toggle-kpi-badge {
+    font-size: 0.65rem !important;
+    font-weight: 650 !important;
+    padding: 3px 8px !important;
+    border-radius: 20px !important;
+    background: #f1f5f9 !important;
+    color: #64748b !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    flex-shrink: 0 !important;
+    border: 1px solid #e2e8f0 !important;
+    transition: all 0.2s ease !important;
+  }
+
+  .clientes-container .btn-toggle-kpi-mobile.is-collapsed .toggle-kpi-badge {
+    background: rgba(161, 116, 56, 0.12) !important;
+    color: #b45309 !important;
+    border-color: rgba(161, 116, 56, 0.25) !important;
+  }
+
+  .clientes-container .clientes-stats-grid.kpi-hidden-mobile {
+    display: none !important;
+  }
+
+  /* 🔒 REGRA DE OURO 2: CARDS KPI EM 2 COLUNAS NO CELULAR */
+  .clientes-container .clientes-stats-grid { 
+    grid-template-columns: repeat(2, 1fr) !important; 
+    gap: 8px !important; 
+    margin-bottom: 16px !important;
+  }
+
+  .clientes-container .stat-card-pro {
+    padding: 10px 10px !important;
+    gap: 8px !important;
+    border-radius: 14px !important;
+  }
+
+  .clientes-container .stat-icon-wrapper {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 14px !important;
+    border-radius: 10px !important;
+    flex-shrink: 0 !important;
+  }
+
+  .clientes-container .stat-title {
+    font-size: 0.62rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.3px !important;
+    text-transform: uppercase !important;
+    line-height: 1.25 !important;
+  }
+
+  .clientes-container .stat-value,
+  .clientes-container .stat-number {
+    font-size: 1.25rem !important;
+    font-weight: 700 !important;
+    margin: 2px 0 1px 0 !important;
+    letter-spacing: -0.3px !important;
+  }
+
+  .clientes-container .stat-sub,
+  .clientes-container .stat-desc {
+    font-size: 0.62rem !important;
+    font-weight: 450 !important;
+    opacity: 0.9 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
   .clientes-container .advanced-filter-bar {
-    padding: 12px !important;
+    padding: 10px 12px !important;
     border-radius: 16px !important;
     margin-bottom: 16px !important;
-    gap: 10px !important;
+    gap: 8px !important;
+    border: 1px solid var(--borda, #e2e8f0) !important;
+    box-shadow: 0 2px 10px rgba(15, 23, 42, 0.03) !important;
   }
 
   .clientes-container .filter-top-row {
@@ -352,13 +585,112 @@ a.btn-primary-celebre {
     width: 100% !important;
     min-width: 100% !important;
     flex: 1 1 100% !important;
+    position: relative !important;
+  }
+
+  .clientes-container .search-input-field {
+    width: 100% !important;
+    height: 38px !important;
+    padding-left: 36px !important;
+    font-size: 0.78rem !important;
+    font-weight: 500 !important;
+    border-radius: 20px !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-container .filter-controls-group {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .clientes-container .desktop-pills-only {
+    display: none !important;
+  }
+
+  .clientes-container .mobile-status-select {
+    display: block !important;
+    width: 100% !important;
+    height: 38px !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    padding: 0 24px 0 10px !important;
+    border-radius: 20px !important;
+    border: 1.5px solid var(--borda, #cbd5e1) !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    background-position: right 8px center !important;
+    background-size: 10px 10px !important;
+  }
+
+  .clientes-container .select-pill-filter {
+    width: 100% !important;
+    height: 38px !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    padding: 0 10px !important;
+    border-radius: 20px !important;
+    border: 1.5px solid var(--borda, #cbd5e1) !important;
+    box-sizing: border-box !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .clientes-container select.select-pill-filter {
+    padding-right: 24px !important;
+    background-position: right 8px center !important;
+    background-size: 10px 10px !important;
+  }
+
+  .clientes-container .filter-controls-group .btn-sort-celebre:last-child:nth-child(odd) {
+    grid-column: 1 / -1 !important;
+    width: 100% !important;
+    height: 36px !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.2px !important;
+    border-radius: 20px !important;
+    border: 1px solid var(--borda, #e2e8f0) !important;
+    justify-content: center !important;
+    background: var(--fundo-card, #ffffff) !important;
+  }
+
+  .clientes-container .table-desktop-view {
+    display: none !important;
+  }
+
+  .clientes-container .clientes-mobile-cards-list {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .clientes-container .card-client-name {
+    font-size: 0.84rem !important;
+    font-weight: 700 !important;
+  }
+
+  .clientes-container .card-phone-text {
+    font-weight: 600 !important;
+  }
+
+  .clientes-container .card-btn-zap {
+    font-weight: 650 !important;
+    font-size: 0.68rem !important;
+  }
+
+  .clientes-container .card-status-badge {
+    font-weight: 650 !important;
+    font-size: 0.62rem !important;
   }
 }
 
-
-
 /* ============================================================
-   🔒 PÁGINA: LOCAÇÕES — STATUS: CONGELADA em 03/09/2026
+   🔒 PÁGINA: LOCAÇÕES — STATUS: CONGELADA em 09/09/2026
    Arquivos de origem: Locacoes.css
    ============================================================ */
 
@@ -367,35 +699,57 @@ a.btn-primary-celebre {
   box-sizing: border-box !important;
 }
 
+/* 🔒 Sub-filtros Locações no Desktop: 4 Colunas Perfeitas */
+@media (min-width: 901px) {
+  .locacoes-container .filter-sub-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 12px !important;
+    width: 100% !important;
+    align-items: center !important;
+  }
+
+  .locacoes-container .date-input-wrapper {
+    width: 100% !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+
+  .locacoes-container .select-pill-filter {
+    width: 100% !important;
+    height: 42px !important;
+    border-radius: 12px !important;
+  }
+
+  .locacoes-container .filter-pills-grid {
+    display: grid !important;
+    grid-template-columns: repeat(5, 1fr) !important;
+    gap: 10px !important;
+    width: 100% !important;
+  }
+}
+
+/* 🔒 Sub-filtros Locações no Mobile: 2x2 Simétrico */
 @media (max-width: 900px) {
-  .locacoes-container .table-filter-bar {
+  .locacoes-container .filter-sub-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-  }
-
-  .locacoes-container .table-filter-bar .search-input-wrapper {
-    grid-column: 1 / -1 !important;
-  }
-
-  .locacoes-container .header-actions-row {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 8px !important;
-    width: 100% !important;
-  }
-
-  .locacoes-container .chips-operacionais-row {
-    display: grid !important;
-    grid-template-columns: repeat(3, 1fr) !important;
     gap: 6px !important;
     width: 100% !important;
   }
 
-  .locacoes-container .status-pills-row {
-    display: grid !important;
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 6px !important;
+  .locacoes-container .date-input-wrapper {
+    width: 100% !important;
+    height: 38px !important;
+    border-radius: 10px !important;
+  }
+
+  .locacoes-container .select-pill-filter {
+    width: 100% !important;
+    height: 38px !important;
+    border-radius: 10px !important;
   }
 }
 
@@ -649,9 +1003,60 @@ a.btn-primary-celebre {
 
 
 /* ============================================================
-   🔒 PÁGINA: CADASTRO CLIENTE — STATUS: CONGELADA em 03/09/2026
+   🔒 PÁGINA: CADASTRO CLIENTE — STATUS: CONGELADA em 09/09/2026
    Arquivos de origem: CadastroCliente.css
    ============================================================ */
+
+.cadastro-cliente-container .tabs-container {
+  display: flex !important;
+  gap: 4px !important;
+  background: var(--fundo-cinza, #f1f5f9) !important;
+  padding: 4px !important;
+  border-radius: 12px !important;
+  border: 1px solid var(--borda, #e2e8f0) !important;
+  width: fit-content !important;
+  box-shadow: inset 0 1px 2px rgba(15, 23, 42, 0.04) !important;
+}
+
+.cadastro-cliente-container .tab-btn {
+  background: transparent !important;
+  border: none !important;
+  padding: 8px 20px !important;
+  border-radius: 9px !important;
+  font-size: 0.78rem !important;
+  font-weight: 600 !important;
+  color: var(--texto-secundario, #64748b) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+}
+
+.cadastro-cliente-container .tab-btn.active,
+.cadastro-cliente-container .tabs-container .tab-btn.active {
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
+  color: #ffffff !important;
+  font-weight: 650 !important;
+  box-shadow: 0 3px 10px rgba(197, 160, 89, 0.35) !important;
+}
+
+.cadastro-cliente-container .form-group label {
+  font-size: 0.70rem !important;
+  font-weight: 600 !important;
+  color: var(--texto-secundario, #475569) !important;
+  letter-spacing: 0.3px !important;
+}
+
+.cadastro-cliente-container .btn-salvar-celebre-gold {
+  font-weight: 650 !important;
+  font-size: 0.80rem !important;
+  border-radius: 12px !important;
+}
+
+.cadastro-cliente-container .btn-cancelar-celebre {
+  font-weight: 600 !important;
+  font-size: 0.76rem !important;
+  border-radius: 12px !important;
+}
 
 @media (min-width: 769px) {
   .cadastro-cliente-container .form-row-2col,
@@ -665,6 +1070,28 @@ a.btn-primary-celebre {
     display: grid !important;
     grid-template-columns: 180px 1fr !important;
     gap: 16px !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .cadastro-cliente-container .tabs-container {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 4px !important;
+    padding: 4px !important;
+    border-radius: 12px !important;
+  }
+
+  .cadastro-cliente-container .tab-btn {
+    width: 100% !important;
+    justify-content: center !important;
+    height: 38px !important;
+    padding: 0 8px !important;
+    font-size: 0.76rem !important;
+    font-weight: 600 !important;
+    border-radius: 9px !important;
+    gap: 6px !important;
   }
 }
 
@@ -871,22 +1298,100 @@ a.btn-primary-celebre {
 
 
 /* ============================================================
-   🔒 PÁGINA: AGENDA
-   STATUS: CONGELADA em 03/09/2026
-   ARQUIVO DE ORIGEM: src/pages/Agenda/Agenda.css
-   REGRA: Grade de calendário flexível e barra lateral executiva
+   🔒 PÁGINA: AGENDA OPERACIONAL & CALENDÁRIO
+   STATUS: CONGELADA em 09/09/2026
+   ARQUIVOS DE ORIGEM: src/pages/Agenda/Agenda.css, Agenda.jsx
+   REGRA: Layout da Agenda com KPIs em 1 linha horizontal no desktop
+          e 2 colunas simétricas no mobile; Botões de ação com orientação
+          horizontal (sem quebra vertical de ícone); Gaveta de filtros
+          inline expansível no próprio local da barra de busca no mobile;
+          Área de trabalho em 2 colunas no desktop e empilhada no mobile.
    ============================================================ */
 
-.agenda-layout {
-  display: flex !important;
-  width: 100% !important;
-  min-height: calc(100vh - 65px) !important;
+.agenda-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
   box-sizing: border-box !important;
+  width: 100% !important;
+  max-width: 100% !important;
 }
 
+/* 🔒 REGRA #1: CARDS KPI EM LINHA ÚNICA NO DESKTOP */
+@media (min-width: 901px) {
+  .agenda-container .clientes-stats-grid {
+    display: flex !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin-bottom: 16px !important;
+  }
+
+  .agenda-container .clientes-stats-grid .stat-card-pro {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+  }
+
+  .agenda-container .agenda-workspace-layout {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 330px !important;
+    gap: 16px !important;
+    width: 100% !important;
+  }
+
+  .agenda-container .desktop-pills-only {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 8px !important;
+  }
+
+  .agenda-container .mobile-filter-accordion-box {
+    display: none !important;
+  }
+}
+
+/* 🔒 REGRA #2: CARDS KPI EM 2 COLUNAS NO MOBILE & GAVETA DE FILTROS INLINE */
 @media (max-width: 900px) {
-  .agenda-layout {
+  .agenda-container .clientes-stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .agenda-container .header-actions {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .agenda-container .header-actions button {
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    white-space: nowrap !important;
+  }
+
+  .agenda-container .desktop-pills-only {
+    display: none !important;
+  }
+
+  .agenda-container .mobile-filter-accordion-box {
+    display: block !important;
+    width: 100% !important;
+  }
+
+  .agenda-container .agenda-inline-gaveta-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+  }
+
+  .agenda-container .agenda-workspace-layout {
+    display: flex !important;
     flex-direction: column !important;
+    gap: 12px !important;
   }
 }
 
@@ -1048,6 +1553,61 @@ a.btn-primary-celebre {
   box-sizing: border-box !important;
 }
 
+/* ============================================================
+   🔒 PÁGINA: AGENDA — STATUS: CONGELADA em 09/09/2026
+   Arquivos de origem: Agenda.css
+   ============================================================ */
+
+.agenda-container {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+  box-sizing: border-box !important;
+}
+
+@media (min-width: 901px) {
+  .agenda-container .agenda-workspace-layout {
+    display: grid !important;
+    grid-template-columns: 1fr 380px !important;
+    gap: 20px !important;
+    align-items: start !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .agenda-container .agenda-workspace-layout {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  .agenda-container .agenda-calendar-panel-box {
+    padding: 12px 10px !important;
+    border-radius: 14px !important;
+  }
+
+  .agenda-container .cal-cell-events {
+    display: none !important;
+  }
+
+  .agenda-container .cal-dots-row-mobile {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 2px !important;
+    margin-top: 2px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .agenda-container .cal-dot-micro {
+    width: 5px !important;
+    height: 5px !important;
+    border-radius: 50% !important;
+  }
+
+  .agenda-container .agenda-side-panel {
+    padding: 14px 12px !important;
+    border-radius: 14px !important;
+    min-height: auto !important;
+  }
+}
 
 /* ============================================================
    🔒 SISTEMA 100% CONGELADO E BLINDADO (04/09/2026)

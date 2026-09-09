@@ -73,6 +73,28 @@ const Locacoes = () => {
   const [loading, setLoading] = useState(true);
   const [menuAberto, setMenuAberto] = useState(null);
 
+  // 📱 CONTROLE DE EXIBIÇÃO OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR)
+  const [mostrarKpiMobile, setMostrarKpiMobile] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_locacoes_show_kpi_mobile');
+      return salvo !== null ? JSON.parse(salvo) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleKpiMobile = () => {
+    setMostrarKpiMobile(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('celebre_locacoes_show_kpi_mobile', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
   // 📅 MODAL CALENDÁRIO & ESTOQUE / CONFIG
   const [modalCalendarioAberto, setModalCalendarioAberto] = useState(false);
   const [estoque, setEstoque] = useState([]);
@@ -885,8 +907,37 @@ const Locacoes = () => {
         </div>
       </header>
 
+      {/* 📱 CONTROLE OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR) */}
+      <div className="kpi-mobile-toggle-wrapper">
+        <button 
+          type="button" 
+          className={`btn-toggle-kpi-mobile ${!mostrarKpiMobile ? 'is-collapsed' : ''}`}
+          onClick={toggleKpiMobile}
+          aria-expanded={mostrarKpiMobile}
+          title={mostrarKpiMobile ? "Recolher cards de indicadores no celular" : "Expandir cards de indicadores no celular"}
+        >
+          <div className="toggle-kpi-left">
+            <span className="toggle-kpi-icon">📊</span>
+            {mostrarKpiMobile ? (
+              <span className="toggle-kpi-title">Resumo de Indicadores</span>
+            ) : (
+              <span className="toggle-kpi-summary">
+                <strong>{countAtivos}</strong> ativas • <strong>R$ {totalAReceber.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong> a receber
+              </span>
+            )}
+          </div>
+          <span className="toggle-kpi-badge">
+            {mostrarKpiMobile ? (
+              <>Ocultar <i className="fas fa-chevron-up"></i></>
+            ) : (
+              <>Expandir <i className="fas fa-chevron-down"></i></>
+            )}
+          </span>
+        </button>
+      </div>
+
       {/* CARDS DE DASHBOARD (KPIs 4 COLUNAS NA MESMA LINHA - IDÊNTICO A CLIENTES) */}
-      <div className="clientes-stats-grid">
+      <div className={`clientes-stats-grid ${!mostrarKpiMobile ? 'kpi-hidden-mobile' : ''}`}>
         <div className="stat-card-pro border-green">
           <div className="stat-icon-wrapper icon-green">
             <i className="fas fa-check-circle"></i>
@@ -934,7 +985,7 @@ const Locacoes = () => {
 
       {/* 📈 TAXA DE CONVERSÃO */}
       {totalParaConversao > 0 && (
-        <div className="conversao-strip">
+        <div className={`conversao-strip ${!mostrarKpiMobile ? 'kpi-hidden-mobile' : ''}`}>
           <div className="conversao-left">
             <span className="conversao-strip-icon">📈</span>
             <div className="conversao-strip-text">
@@ -1019,31 +1070,76 @@ const Locacoes = () => {
 
         {/* NÍVEL 2: PÍLULAS DE STATUS 100% APARENTES (SEM BARRA DE ROLAGEM) */}
         <div className="filter-pills-grid">
-          <button type="button" className={`pill-btn ${filtroStatus === 'todos' ? 'active' : ''}`} onClick={() => setFiltroStatus('todos')}>
-            Em Processo <span className="pill-badge">{chipCountEmProcesso}</span>
+          <button 
+            type="button" 
+            className={`pill-btn status-em-processo ${filtroStatus === 'todos' ? 'active' : ''}`} 
+            onClick={() => setFiltroStatus('todos')}
+          >
+            <span className="pill-icon-box">
+              <i className="fas fa-sync-alt"></i>
+            </span>
+            <span className="pill-label">Em Processo</span>
+            <span className="pill-badge">{chipCountEmProcesso}</span>
           </button>
-          <button type="button" className={`pill-btn ${filtroStatus === 'orcamentos' ? 'active' : ''}`} onClick={() => setFiltroStatus('orcamentos')}>
-            Orçamentos <span className="pill-badge">{chipCountOrcamentos}</span>
+
+          <button 
+            type="button" 
+            className={`pill-btn status-orcamentos ${filtroStatus === 'orcamentos' ? 'active' : ''}`} 
+            onClick={() => setFiltroStatus('orcamentos')}
+          >
+            <span className="pill-icon-box">
+              <i className="fas fa-file-invoice"></i>
+            </span>
+            <span className="pill-label">Orçamentos</span>
+            <span className="pill-badge">{chipCountOrcamentos}</span>
           </button>
-          <button type="button" className={`pill-btn ${filtroStatus === 'confirmados' ? 'active' : ''}`} onClick={() => setFiltroStatus('confirmados')}>
-            Confirmados <span className="pill-badge">{chipCountConfirmados}</span>
+
+          <button 
+            type="button" 
+            className={`pill-btn status-confirmados ${filtroStatus === 'confirmados' ? 'active' : ''}`} 
+            onClick={() => setFiltroStatus('confirmados')}
+          >
+            <span className="pill-icon-box">
+              <i className="fas fa-check-circle"></i>
+            </span>
+            <span className="pill-label">Confirmados</span>
+            <span className="pill-badge">{chipCountConfirmados}</span>
           </button>
-          <button type="button" className={`pill-btn ${filtroStatus === 'finalizados' ? 'active' : ''}`} onClick={() => setFiltroStatus('finalizados')}>
-            Finalizados <span className="pill-badge">{chipCountArquivados}</span>
+
+          <button 
+            type="button" 
+            className={`pill-btn status-finalizados ${filtroStatus === 'finalizados' ? 'active' : ''}`} 
+            onClick={() => setFiltroStatus('finalizados')}
+          >
+            <span className="pill-icon-box">
+              <i className="fas fa-flag-checkered"></i>
+            </span>
+            <span className="pill-label">Finalizados</span>
+            <span className="pill-badge">{chipCountArquivados}</span>
           </button>
-          <button type="button" className={`pill-btn ${filtroStatus === 'cancelados' ? 'active' : ''}`} onClick={() => setFiltroStatus('cancelados')}>
-            Lixeira / Perdidos <span className="pill-badge">{chipCountCancelados}</span>
+
+          <button 
+            type="button" 
+            className={`pill-btn status-cancelados ${filtroStatus === 'cancelados' ? 'active' : ''}`} 
+            onClick={() => setFiltroStatus('cancelados')}
+          >
+            <span className="pill-icon-box">
+              <i className="fas fa-trash-alt"></i>
+            </span>
+            <span className="pill-label">Lixeira / Perdidos</span>
+            <span className="pill-badge">{chipCountCancelados}</span>
           </button>
         </div>
 
         {/* NÍVEL 3: SUB-FILTROS DE DATA, PERÍODO, SERVIÇO E ORDENAÇÃO */}
         <div className="filter-sub-grid">
           <div className="date-input-wrapper">
+            <span className="date-input-prefix">📅 Data:</span>
             <input 
               type="date" 
               value={filtroDataEvento} 
               onChange={e => setFiltroDataEvento(e.target.value)} 
-              className="select-pill-filter"
+              className="select-pill-filter date-input-field"
               title="Filtrar por data do evento"
             />
             {filtroDataEvento && (

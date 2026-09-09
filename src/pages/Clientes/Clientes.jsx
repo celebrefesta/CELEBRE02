@@ -82,6 +82,28 @@ const Clientes = () => {
   const [clienteVisualizacao, setClienteVisualizacao] = useState(null);
   const [abaAtiva, setAbaAtiva] = useState('dados');
 
+  // 📱 CONTROLE DE EXIBIÇÃO OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR)
+  const [mostrarKpiMobile, setMostrarKpiMobile] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_clientes_show_kpi_mobile');
+      return salvo !== null ? JSON.parse(salvo) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleKpiMobile = () => {
+    setMostrarKpiMobile(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('celebre_clientes_show_kpi_mobile', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
   // ESTADOS DA MODAL DE SELEÇÃO DE MENSAGEM E ANEXO DO WHATSAPP
   const [modalZapCliente, setModalZapCliente] = useState(null);
   const [tipoMensagemZap, setTipoMensagemZap] = useState('atendimento');
@@ -898,8 +920,37 @@ const Clientes = () => {
         </div>
       )}
 
+      {/* 📱 CONTROLE OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR) */}
+      <div className="kpi-mobile-toggle-wrapper">
+        <button 
+          type="button" 
+          className={`btn-toggle-kpi-mobile ${!mostrarKpiMobile ? 'is-collapsed' : ''}`}
+          onClick={toggleKpiMobile}
+          aria-expanded={mostrarKpiMobile}
+          title={mostrarKpiMobile ? "Recolher cards de indicadores no celular" : "Expandir cards de indicadores no celular"}
+        >
+          <div className="toggle-kpi-left">
+            <span className="toggle-kpi-icon">📊</span>
+            {mostrarKpiMobile ? (
+              <span className="toggle-kpi-title">Resumo de Indicadores</span>
+            ) : (
+              <span className="toggle-kpi-summary">
+                <strong>{clientes.length}</strong> clientes • <strong>{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</strong> pendências
+              </span>
+            )}
+          </div>
+          <span className="toggle-kpi-badge">
+            {mostrarKpiMobile ? (
+              <>Ocultar <i className="fas fa-chevron-up"></i></>
+            ) : (
+              <>Expandir <i className="fas fa-chevron-down"></i></>
+            )}
+          </span>
+        </button>
+      </div>
+
       {/* KPI CARDS (MÉTRICAS DA CARTEIRA) */}
-      <div className="clientes-stats-grid">
+      <div className={`clientes-stats-grid ${!mostrarKpiMobile ? 'kpi-hidden-mobile' : ''}`}>
         <div className="stat-card-pro border-purple">
           <div className="stat-icon-wrapper icon-purple">
             <i className="fas fa-address-book"></i>
@@ -972,11 +1023,11 @@ const Clientes = () => {
               onChange={(e) => setFiltroStatus(e.target.value)} 
               className="select-pill-filter mobile-status-select"
             >
-              <option value="todos">👥 Todos os Clientes ({clientes.length})</option>
-              {numPendentesAprovacao > 0 && <option value="pendentes">⏳ Aguardando Aprovação ({numPendentesAprovacao})</option>}
+              <option value="todos">👥 Todos ({clientes.length})</option>
+              {numPendentesAprovacao > 0 && <option value="pendentes">⏳ Pendentes ({numPendentesAprovacao})</option>}
               <option value="adimplentes">✅ Adimplentes ({clientes.filter(c => c.situacaoFinanceira === 'adimplente').length})</option>
               <option value="inadimplentes">⚠️ Pendências ({clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length})</option>
-              <option value="aniversariantes">🎂 Aniversariantes ({numAniversariantes})</option>
+              <option value="aniversariantes">🎂 Níver ({numAniversariantes})</option>
               <option value="vip">👑 VIPs ({clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length})</option>
             </select>
 
@@ -1073,7 +1124,6 @@ const Clientes = () => {
         </div>
       ) : (
         <>
-          {/* TABELA TRADICIONAL PARA DESKTOP */}
           <div className="table-responsive-card table-desktop-view">
             <table className="custom-table-pro">
               <thead>
@@ -1087,12 +1137,38 @@ const Clientes = () => {
               </thead>
               <tbody>
                 {clientesFiltrados.length === 0 ? (
-                   <tr>
-                     <td colSpan="5" className="empty-table-cell">
-                       <i className="fas fa-folder-open empty-icon"></i>
-                       <p>Nenhum cliente encontrado para os filtros selecionados.</p>
-                     </td>
-                   </tr>
+                  <tr>
+                    <td colSpan="5" className="empty-table-cell">
+                      <div className="clientes-empty-state-card clientes-empty-table-wrap">
+                        <div className="clientes-empty-icon-circle">
+                          <i className="fas fa-folder-open"></i>
+                        </div>
+                        <h4 className="clientes-empty-title">Nenhum cliente encontrado</h4>
+                        <p className="clientes-empty-desc">
+                          {busca || filtroStatus !== 'todos'
+                            ? 'Não encontramos nenhum cliente correspondente aos filtros ou busca aplicados.'
+                            : 'Você ainda não possui clientes cadastrados na sua base.'}
+                        </p>
+                        {busca || filtroStatus !== 'todos' ? (
+                          <button 
+                            type="button" 
+                            className="btn-clientes-empty-action" 
+                            onClick={() => { setBusca(''); setFiltroStatus('todos'); }}
+                          >
+                            <i className="fas fa-filter-circle-xmark"></i> Limpar Filtros
+                          </button>
+                        ) : (
+                          <button 
+                            type="button" 
+                            className="btn-clientes-empty-action btn-clientes-empty-primary" 
+                            onClick={() => navigate('/novo-cliente')}
+                          >
+                            <i className="fas fa-user-plus"></i> Novo Cliente
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
                 ) : (
                   clientesFiltrados.map(c => {
                     const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
@@ -1294,9 +1370,33 @@ const Clientes = () => {
           {/* LISTA DE CARDS DEDICADOS EXCLUSIVA PARA CELULAR */}
           <div className="clientes-mobile-cards-list">
             {clientesFiltrados.length === 0 ? (
-              <div className="empty-state-mobile">
-                <i className="fas fa-folder-open empty-icon"></i>
-                <p>Nenhum cliente encontrado.</p>
+              <div className="clientes-empty-state-card empty-state-mobile">
+                <div className="clientes-empty-icon-circle">
+                  <i className="fas fa-folder-open"></i>
+                </div>
+                <h4 className="clientes-empty-title">Nenhum cliente encontrado</h4>
+                <p className="clientes-empty-desc">
+                  {busca || filtroStatus !== 'todos'
+                    ? 'Não encontramos resultados para os filtros ou busca informada.'
+                    : 'Você ainda não possui clientes cadastrados na sua base.'}
+                </p>
+                {busca || filtroStatus !== 'todos' ? (
+                  <button 
+                    type="button" 
+                    className="btn-clientes-empty-action" 
+                    onClick={() => { setBusca(''); setFiltroStatus('todos'); }}
+                  >
+                    <i className="fas fa-filter-circle-xmark"></i> Limpar Filtros
+                  </button>
+                ) : (
+                  <button 
+                    type="button" 
+                    className="btn-clientes-empty-action btn-clientes-empty-primary" 
+                    onClick={() => navigate('/novo-cliente')}
+                  >
+                    <i className="fas fa-user-plus"></i> Novo Cliente
+                  </button>
+                )}
               </div>
             ) : (
               clientesFiltrados.map(c => {
