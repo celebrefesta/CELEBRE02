@@ -29,6 +29,7 @@
     opacity: 0;
     transform: translateY(8px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
@@ -193,10 +194,25 @@
   flex-shrink: 0;
 }
 
-.agenda-container .icon-blue   { background: #eff6ff; color: #2563eb; }
-.agenda-container .icon-purple { background: #f3e8ff; color: #7e22ce; }
-.agenda-container .icon-orange { background: #fff7ed; color: #ea580c; }
-.agenda-container .icon-red    { background: #fee2e2; color: #b91c1c; }
+.agenda-container .icon-blue {
+  background: #eff6ff;
+  color: #2563eb;
+}
+
+.agenda-container .icon-purple {
+  background: #f3e8ff;
+  color: #7e22ce;
+}
+
+.agenda-container .icon-orange {
+  background: #fff7ed;
+  color: #ea580c;
+}
+
+.agenda-container .icon-red {
+  background: #fee2e2;
+  color: #b91c1c;
+}
 
 .agenda-container .stat-content {
   display: flex;
@@ -234,10 +250,21 @@
   line-height: 1.1;
 }
 
-.agenda-container .border-blue:hover   { border-color: #60a5fa; }
-.agenda-container .border-purple:hover { border-color: #c084fc; }
-.agenda-container .border-orange:hover { border-color: #fb923c; }
-.agenda-container .border-red:hover    { border-color: #f87171; }
+.agenda-container .border-blue:hover {
+  border-color: #60a5fa;
+}
+
+.agenda-container .border-purple:hover {
+  border-color: #c084fc;
+}
+
+.agenda-container .border-orange:hover {
+  border-color: #fb923c;
+}
+
+.agenda-container .border-red:hover {
+  border-color: #f87171;
+}
 
 /* ==========================================================================
    ── PAINEL DE FILTROS E BUSCA (PADRÃO OFICIAL CELEBRE) ──
@@ -433,30 +460,37 @@
   background: #f1f5f9;
   color: #334155;
 }
+
 .agenda-container .agenda-filter-chip.type-entrega .chip-icon-box {
   background: #eff6ff;
   color: #2563eb;
 }
+
 .agenda-container .agenda-filter-chip.type-devolucao .chip-icon-box {
   background: #fff7ed;
   color: #ea580c;
 }
+
 .agenda-container .agenda-filter-chip.type-reuniao .chip-icon-box {
   background: #faf5ff;
   color: #7c3aed;
 }
+
 .agenda-container .agenda-filter-chip.type-visita .chip-icon-box {
   background: #f0fdf4;
   color: #16a34a;
 }
+
 .agenda-container .agenda-filter-chip.type-pagamento .chip-icon-box {
   background: #fefce8;
   color: #d97706;
 }
+
 .agenda-container .agenda-filter-chip.type-tarefa .chip-icon-box {
   background: #eef2ff;
   color: #4f46e5;
 }
+
 .agenda-container .agenda-filter-chip.type-bloqueio .chip-icon-box {
   background: #fef2f2;
   color: #dc2626;
@@ -517,30 +551,37 @@
   background: rgba(255, 255, 255, 0.18) !important;
   color: #ffffff !important;
 }
+
 .agenda-container .agenda-filter-chip.type-entrega.active .chip-icon-box {
   background: #2563eb !important;
   color: #ffffff !important;
 }
+
 .agenda-container .agenda-filter-chip.type-devolucao.active .chip-icon-box {
   background: #ea580c !important;
   color: #ffffff !important;
 }
+
 .agenda-container .agenda-filter-chip.type-reuniao.active .chip-icon-box {
   background: #7c3aed !important;
   color: #ffffff !important;
 }
+
 .agenda-container .agenda-filter-chip.type-visita.active .chip-icon-box {
   background: #16a34a !important;
   color: #ffffff !important;
 }
+
 .agenda-container .agenda-filter-chip.type-pagamento.active .chip-icon-box {
   background: #d97706 !important;
   color: #ffffff !important;
 }
+
 .agenda-container .agenda-filter-chip.type-tarefa.active .chip-icon-box {
   background: #4f46e5 !important;
   color: #ffffff !important;
 }
+
 .agenda-container .agenda-filter-chip.type-bloqueio.active .chip-icon-box {
   background: #dc2626 !important;
   color: #ffffff !important;
@@ -1152,13 +1193,40 @@
   color: #991b1b;
 }
 
-.agenda-container .side-status-badge.badge-entrega   { background: #eff6ff; color: #1e40af; }
-.agenda-container .side-status-badge.badge-devolucao { background: #fff7ed; color: #9a3412; }
-.agenda-container .side-status-badge.badge-visita    { background: #f0fdf4; color: #166534; }
-.agenda-container .side-status-badge.badge-bloqueio  { background: #fef2f2; color: #991b1b; }
-.agenda-container .side-status-badge.badge-reuniao   { background: #faf5ff; color: #6b21a8; }
-.agenda-container .side-status-badge.badge-pagamento { background: #fefce8; color: #854d0e; }
-.agenda-container .side-status-badge.badge-tarefa    { background: #f8fafc; color: #334155; }
+.agenda-container .side-status-badge.badge-entrega {
+  background: #eff6ff;
+  color: #1e40af;
+}
+
+.agenda-container .side-status-badge.badge-devolucao {
+  background: #fff7ed;
+  color: #9a3412;
+}
+
+.agenda-container .side-status-badge.badge-visita {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.agenda-container .side-status-badge.badge-bloqueio {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.agenda-container .side-status-badge.badge-reuniao {
+  background: #faf5ff;
+  color: #6b21a8;
+}
+
+.agenda-container .side-status-badge.badge-pagamento {
+  background: #fefce8;
+  color: #854d0e;
+}
+
+.agenda-container .side-status-badge.badge-tarefa {
+  background: #f8fafc;
+  color: #334155;
+}
 
 .agenda-container .side-card-tag-pill {
   display: inline-flex;
@@ -1414,13 +1482,33 @@
   flex-shrink: 0;
 }
 
-.agenda-container .bar-entrega   { background: #3b82f6; }
-.agenda-container .bar-devolucao { background: #f97316; }
-.agenda-container .bar-reuniao   { background: #8b5cf6; }
-.agenda-container .bar-visita    { background: #22c55e; }
-.agenda-container .bar-pagamento { background: #eab308; }
-.agenda-container .bar-tarefa    { background: #64748b; }
-.agenda-container .bar-bloqueio  { background: #ef4444; }
+.agenda-container .bar-entrega {
+  background: #3b82f6;
+}
+
+.agenda-container .bar-devolucao {
+  background: #f97316;
+}
+
+.agenda-container .bar-reuniao {
+  background: #8b5cf6;
+}
+
+.agenda-container .bar-visita {
+  background: #22c55e;
+}
+
+.agenda-container .bar-pagamento {
+  background: #eab308;
+}
+
+.agenda-container .bar-tarefa {
+  background: #64748b;
+}
+
+.agenda-container .bar-bloqueio {
+  background: #ef4444;
+}
 
 .agenda-container .list-info {
   flex: 1;
@@ -2160,14 +2248,45 @@
     flex-shrink: 0 !important;
   }
 
-  .agenda-container .trigger-icon-circle.type-todos { background: #f1f5f9; color: #0f172a; }
-  .agenda-container .trigger-icon-circle.type-entrega { background: #eff6ff; color: #2563eb; }
-  .agenda-container .trigger-icon-circle.type-devolucao { background: #fff7ed; color: #ea580c; }
-  .agenda-container .trigger-icon-circle.type-reuniao { background: #faf5ff; color: #7c3aed; }
-  .agenda-container .trigger-icon-circle.type-visita { background: #ecfdf5; color: #059669; }
-  .agenda-container .trigger-icon-circle.type-pagamento { background: #fefce8; color: #d97706; }
-  .agenda-container .trigger-icon-circle.type-tarefa { background: #eef2ff; color: #4f46e5; }
-  .agenda-container .trigger-icon-circle.type-bloqueio { background: #fef2f2; color: #dc2626; }
+  .agenda-container .trigger-icon-circle.type-todos {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .agenda-container .trigger-icon-circle.type-entrega {
+    background: #eff6ff;
+    color: #2563eb;
+  }
+
+  .agenda-container .trigger-icon-circle.type-devolucao {
+    background: #fff7ed;
+    color: #ea580c;
+  }
+
+  .agenda-container .trigger-icon-circle.type-reuniao {
+    background: #faf5ff;
+    color: #7c3aed;
+  }
+
+  .agenda-container .trigger-icon-circle.type-visita {
+    background: #ecfdf5;
+    color: #059669;
+  }
+
+  .agenda-container .trigger-icon-circle.type-pagamento {
+    background: #fefce8;
+    color: #d97706;
+  }
+
+  .agenda-container .trigger-icon-circle.type-tarefa {
+    background: #eef2ff;
+    color: #4f46e5;
+  }
+
+  .agenda-container .trigger-icon-circle.type-bloqueio {
+    background: #fef2f2;
+    color: #dc2626;
+  }
 
   .agenda-container .trigger-text-group {
     display: flex !important;
@@ -2275,14 +2394,45 @@
     flex-shrink: 0 !important;
   }
 
-  .agenda-container .inline-btn-icon.type-todos { background: #f1f5f9; color: #0f172a; }
-  .agenda-container .inline-btn-icon.type-entrega { background: #eff6ff; color: #2563eb; }
-  .agenda-container .inline-btn-icon.type-devolucao { background: #fff7ed; color: #ea580c; }
-  .agenda-container .inline-btn-icon.type-reuniao { background: #faf5ff; color: #7c3aed; }
-  .agenda-container .inline-btn-icon.type-visita { background: #ecfdf5; color: #059669; }
-  .agenda-container .inline-btn-icon.type-pagamento { background: #fefce8; color: #d97706; }
-  .agenda-container .inline-btn-icon.type-tarefa { background: #eef2ff; color: #4f46e5; }
-  .agenda-container .inline-btn-icon.type-bloqueio { background: #fef2f2; color: #dc2626; }
+  .agenda-container .inline-btn-icon.type-todos {
+    background: #f1f5f9;
+    color: #0f172a;
+  }
+
+  .agenda-container .inline-btn-icon.type-entrega {
+    background: #eff6ff;
+    color: #2563eb;
+  }
+
+  .agenda-container .inline-btn-icon.type-devolucao {
+    background: #fff7ed;
+    color: #ea580c;
+  }
+
+  .agenda-container .inline-btn-icon.type-reuniao {
+    background: #faf5ff;
+    color: #7c3aed;
+  }
+
+  .agenda-container .inline-btn-icon.type-visita {
+    background: #ecfdf5;
+    color: #059669;
+  }
+
+  .agenda-container .inline-btn-icon.type-pagamento {
+    background: #fefce8;
+    color: #d97706;
+  }
+
+  .agenda-container .inline-btn-icon.type-tarefa {
+    background: #eef2ff;
+    color: #4f46e5;
+  }
+
+  .agenda-container .inline-btn-icon.type-bloqueio {
+    background: #fef2f2;
+    color: #dc2626;
+  }
 
   .agenda-container .agenda-inline-filter-btn.ativo .inline-btn-icon {
     background: rgba(255, 255, 255, 0.2) !important;

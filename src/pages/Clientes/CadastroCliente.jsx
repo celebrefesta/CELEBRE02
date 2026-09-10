@@ -631,7 +631,8 @@ const CadastroCliente = () => {
           foto: fotoBase64, 
           posicaoFoto, 
           atualizadoEm: new Date().toISOString(),
-          userId: tenantId 
+          userId: tenantId,
+          tenantId: tenantId 
       };
 
       if (clienteEditando) {

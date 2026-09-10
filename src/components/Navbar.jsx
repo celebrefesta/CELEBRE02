@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useNavigate, useLocation } from "react-router-dom";
 import { getAuth, onAuthStateChanged } from 'firebase/auth'; 
 import { doc, getDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore'; 
 import { db } from '../firebaseConfig';
@@ -47,6 +47,7 @@ const parseFirestoreDate = (dateVal) => {
 
 const Navbar = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [permissoesAtivas, setPermissoesAtivas] = useState(null); 
   const [isDonoDaConta, setIsDonoDaConta] = useState(localStorage.getItem('userRole') !== 'funcionario'); 
@@ -64,10 +65,50 @@ const Navbar = () => {
   const [nomeUsuario, setNomeUsuario] = useState('');
   
   const emailAdmin = "celebrefesta25@gmail.com";
-  const isSuperAdmin = usuarioLogado?.email === emailAdmin;
+  const rawImpNavbar = localStorage.getItem('impersonatingTenant');
+  let impDataNavbar = null;
+  if (rawImpNavbar) {
+    try { impDataNavbar = JSON.parse(rawImpNavbar); } catch (e) {}
+  }
+  const isImpersonating = Boolean(impDataNavbar?.uid);
+  const isSuperAdmin = !isImpersonating && (usuarioLogado?.email === emailAdmin);
 
-  const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
+  const toggleMenu = () => setIsMobileMenuOpen(prev => !prev);
   const closeMenu = () => setIsMobileMenuOpen(false);
+
+  // Fecha menu ao mudar de rota
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [location.pathname]);
+
+  // Bloqueia rolagem do fundo e rebaixa elementos da página quando a gaveta mobile estiver aberta
+  useEffect(() => {
+    if (isMobileMenuOpen) {
+      document.body.classList.add('sidebar-mobile-open');
+    } else {
+      document.body.classList.remove('sidebar-mobile-open');
+    }
+    return () => {
+      document.body.classList.remove('sidebar-mobile-open');
+    };
+  }, [isMobileMenuOpen]);
+
+  // Escuta evento global de abertura do menu pelo Topbar
+  useEffect(() => {
+    const handleToggle = () => setIsMobileMenuOpen(prev => !prev);
+    const handleClose = () => setIsMobileMenuOpen(false);
+    const handleOpen = () => setIsMobileMenuOpen(true);
+
+    window.addEventListener('toggle-celebre-sidebar', handleToggle);
+    window.addEventListener('close-celebre-sidebar', handleClose);
+    window.addEventListener('open-celebre-sidebar', handleOpen);
+
+    return () => {
+      window.removeEventListener('toggle-celebre-sidebar', handleToggle);
+      window.removeEventListener('close-celebre-sidebar', handleClose);
+      window.removeEventListener('open-celebre-sidebar', handleOpen);
+    };
+  }, []);
 
   let permissoesCache = {};
   try {
@@ -87,10 +128,47 @@ const Navbar = () => {
               return;
           }
 
-          if (user.email === "celebrefesta25@gmail.com") {
+          if (user.email === "celebrefesta25@gmail.com" && !isImpersonating) {
               setAcesso({ carregando: false, testeAtivo: true, assinaturaAtiva: true, beneficios: [], congelado: false });
               setIsDonoDaConta(true);
               setNomeUsuario("Super Admin");
+              return;
+          }
+
+          if (isImpersonating) {
+              setNomeUsuario(impDataNavbar.nome || 'Cliente');
+              setIsDonoDaConta(impDataNavbar.role !== 'funcionario');
+              const targetUid = impDataNavbar.uid;
+
+              try {
+                  const userSnap = await getDoc(doc(db, "usuarios", targetUid));
+                  if (userSnap.exists()) {
+                      const dados = userSnap.data();
+                      const assinaturaAtiva = 
+                          dados.assinaturaAtiva === true || 
+                          dados.statusAssinatura === 'ativa' || 
+                          dados.plano === 'pago' || 
+                          dados.statusPagamentoVulso === 'pago';
+
+                      let emTeste = false;
+                      if (!assinaturaAtiva) {
+                          const infoT = calcularPeriodoTeste(dados);
+                          emTeste = infoT.emTeste;
+                      }
+
+                      setAcesso({
+                          carregando: false,
+                          testeAtivo: emTeste,
+                          assinaturaAtiva: assinaturaAtiva,
+                          beneficios: dados.beneficios || [],
+                          congelado: !assinaturaAtiva && !emTeste
+                      });
+                  } else {
+                      setAcesso({ carregando: false, testeAtivo: true, assinaturaAtiva: true, beneficios: [], congelado: false });
+                  }
+              } catch (e) {
+                  setAcesso({ carregando: false, testeAtivo: true, assinaturaAtiva: true, beneficios: [], congelado: false });
+              }
               return;
           }
 
@@ -199,7 +277,7 @@ const Navbar = () => {
 
   // 🛡️ REGRA 1: A EMPRESA TEM ESSE RECURSO NO PLANO DELA?
   const verificarPermissaoPlano = (recursoExigido, label) => {
-      if (isSuperAdmin) return true;
+      if (isSuperAdmin || usuarioLogado?.email === emailAdmin) return true;
       // Início e Assinatura nunca ficam bloqueados para a empresa
       if (label === 'Início' || label === 'Assinatura') return true;
       if (acesso.congelado) return false;
@@ -211,7 +289,7 @@ const Navbar = () => {
 
   // 🛡️ REGRA 2: O FUNCIONÁRIO PODE CLICAR AQUI?
   const verificarAcessoFuncionario = (label) => {
-      if (isSuperAdmin || isDonoDaConta) return true;
+      if (isSuperAdmin || usuarioLogado?.email === emailAdmin || isDonoDaConta) return true;
       
       if (label === 'Financeiro' || label === 'Relatórios' || label === 'Assinatura') return false;
       if (label === 'Início') return true;
@@ -306,15 +384,6 @@ const Navbar = () => {
 
   return (
     <>
-      <button 
-        type="button"
-        className={`mobile-menu-btn ${isMobileMenuOpen ? "open" : ""}`} 
-        onClick={toggleMenu}
-        aria-label={isMobileMenuOpen ? "Fechar menu" : "Abrir menu"}
-      >
-        <i className={isMobileMenuOpen ? "fas fa-times" : "fas fa-bars"}></i>
-      </button>
-
       <div 
         className={`sidebar-overlay ${isMobileMenuOpen ? "active" : ""}`} 
         onClick={closeMenu}
@@ -383,8 +452,8 @@ const Navbar = () => {
             />
           </div>
 
-          {/* SEÇÃO 5: PAINEL MASTER (SUPER ADMIN) */}
-          {isSuperAdmin && (
+          {/* SEÇÃO 5: PAINEL MASTER (SUPER ADMIN / MODO SUPORTE) */}
+          {(isSuperAdmin || (usuarioLogado?.email === emailAdmin)) && (
             <div className="sidebar-section master-section">
               <span className="nav-section-title master-title">
                 <i className="fas fa-shield-alt"></i> Painel Master
@@ -417,6 +486,32 @@ const Navbar = () => {
                 </div>
                 <span className="menu-active-pill"></span>
               </NavLink>
+
+              {isImpersonating && (
+                <div 
+                  className="menu-item master-item"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => {
+                    closeMenu();
+                    localStorage.removeItem('impersonatingTenant');
+                    if (auth.currentUser) {
+                      localStorage.setItem('tenantId', auth.currentUser.uid);
+                      localStorage.setItem('funcName', auth.currentUser.displayName || 'Celebre Festa');
+                      localStorage.setItem('userRole', 'owner');
+                    }
+                    window.location.href = '/gestao-usuarios';
+                  }}
+                  style={{ cursor: 'pointer', marginTop: '6px' }}
+                >
+                  <div className="menu-item-main">
+                    <div className="menu-icon-box" style={{ background: 'rgba(239, 68, 68, 0.2)', color: '#f87171' }}>
+                      <i className="fas fa-sign-out-alt"></i>
+                    </div>
+                    <span className="menu-label" style={{ color: '#fca5a5', fontWeight: 700 }}>Sair do Modo Suporte</span>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

@@ -1,6 +1,6 @@
 import { initializeApp } from "firebase/app";
 import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager } from "firebase/firestore";
-import { getAuth, GoogleAuthProvider } from "firebase/auth";
+import { getAuth, setPersistence, browserLocalPersistence, GoogleAuthProvider } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
 const firebaseConfig = {
@@ -22,5 +22,11 @@ export const db = initializeFirestore(app, {
 });
 
 export const auth = getAuth(app); 
+
+// 🛡️ Salva a sessão de autenticação permanentemente no navegador e no celular (estilo Instagram / Facebook)
+setPersistence(auth, browserLocalPersistence).catch((err) => {
+  console.warn("Aviso ao ativar persistência local do Firebase Auth:", err);
+});
+
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();

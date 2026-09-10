@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom'; // 🔥 IMPORTAÇÃO CORRIGIDA AQUI
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, onAuthStateChanged } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
 import { validarCPF, validarCNPJ } from '../../utils/validadores';
@@ -12,6 +12,20 @@ const Cadastro = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const planoEscolhido = searchParams.get('plano');
+
+  // 🚀 Se o usuário já estiver logado no aparelho, pula cadastro e entra direto (estilo Instagram/Facebook)
+  useEffect(() => {
+    if (auth.currentUser) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        navigate('/dashboard', { replace: true });
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
   const [tipoPessoa, setTipoPessoa] = useState('fisica');
   const [nome, setNome] = useState('');
@@ -112,7 +126,8 @@ const Cadastro = () => {
         return setErro('Este CPF/CNPJ já possui uma conta cadastrada no Celebre.');
       }
 
-      const userCredential = await createUserWithEmailAndPassword(auth, email, senha);
+      const emailLimpo = (email || '').trim().toLowerCase();
+      const userCredential = await createUserWithEmailAndPassword(auth, emailLimpo, senha);
       const user = userCredential.user;
 
       await updateProfile(user, { displayName: nomeExibicao || nome });
@@ -126,11 +141,12 @@ const Cadastro = () => {
 
       await setDoc(doc(db, 'usuarios', user.uid), {
         uid: user.uid,
+        tenantId: user.uid,
         nomeCompleto: nome,
         nomeExibicao: nomeExibicao,
         tipoPessoa: tipoPessoa,
         documento: documento,
-        email: email,
+        email: emailLimpo,
         dataCadastro: dataAtual.toISOString(),
         dataFimTeste: dataFimTeste.toISOString(), 
         role: 'owner',

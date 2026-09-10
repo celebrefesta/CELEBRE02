@@ -267,6 +267,68 @@
   border: 1px solid #e2e8f0;
 }
 
+/* 🔥 CHECKBOX: LEMBRAR ACESSO NESTE APARELHO (ESTILO INSTAGRAM/FACEBOOK) 🔥 */
+.auth-remember-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin: 4px 0 10px 0;
+  user-select: none;
+}
+
+.auth-remember-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  cursor: pointer;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #475569;
+  line-height: 1.2;
+}
+
+.auth-remember-label input[type="checkbox"] {
+  display: none;
+}
+
+.auth-remember-custom-check {
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  border: 1.5px solid #cbd5e1;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  flex-shrink: 0;
+}
+
+.auth-remember-custom-check i {
+  font-size: 10px;
+  color: transparent;
+  transition: all 0.2s ease;
+}
+
+.auth-remember-label input[type="checkbox"]:checked + .auth-remember-custom-check {
+  background: linear-gradient(135deg, #c5a059 0%, #b48c48 100%);
+  border-color: #b48c48;
+  box-shadow: 0 2px 6px rgba(197, 160, 89, 0.35);
+}
+
+.auth-remember-label input[type="checkbox"]:checked + .auth-remember-custom-check i {
+  color: #ffffff;
+}
+
+[data-theme^='dark'] .auth-remember-label {
+  color: #cbd5e1;
+}
+
+[data-theme^='dark'] .auth-remember-custom-check {
+  background: #1e293b;
+  border-color: #475569;
+}
+
 /* BOTÃO DE CADASTRO / LOGIN */
 .btn-auth {
   background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);

@@ -1,6 +1,6 @@
 .topbar-container {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
   align-items: center;
   padding: 10px 30px;
   background-color: var(--branco);
@@ -10,6 +10,15 @@
   z-index: 99;
   height: 60px;
   box-sizing: border-box;
+}
+
+.topbar-esquerda {
+  display: flex;
+  align-items: center;
+}
+
+.topbar-btn-menu-mobile {
+  display: none;
 }
 
 .topbar-direita {
@@ -174,9 +183,39 @@
 @media (max-width: 768px) {
   .topbar-container {
     height: 56px;
-    padding: 0 12px 0 60px; /* Espaço para o botão hambúrguer fixo à esquerda */
+    padding: 0 12px;
     z-index: 1000;
   }
+
+  .topbar-btn-menu-mobile {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #090e18 0%, #1e293b 100%) !important;
+    color: var(--dourado, #c5a059) !important;
+    border: 1.5px solid rgba(197, 160, 89, 0.45) !important;
+    font-size: 16px;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25);
+    transition: all 0.2s ease;
+    padding: 0;
+    flex-shrink: 0;
+  }
+
+  .topbar-btn-menu-mobile:hover {
+    background: linear-gradient(135deg, #0f172a 0%, #334155 100%) !important;
+    border-color: var(--dourado, #dfb76c) !important;
+    color: #dfb76c !important;
+    transform: scale(1.04);
+  }
+
+  .topbar-btn-menu-mobile:active {
+    transform: scale(0.92);
+  }
+
   .perfil-nome { 
     display: none; 
   }

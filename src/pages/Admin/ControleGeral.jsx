@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, doc, getDoc, updateDoc, deleteDoc, setDoc, addDoc, query, where } from 'firebase/firestore';
 import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import { ORNAMENTOS_FESTA } from '../Moodboard/Moodboard';
-import { calcularPeriodoTeste, formatarDataExibicao, formatarDataParaInput } from '../../utils/periodoTesteUtils';
+import { calcularPeriodoTeste, formatarDataExibicao, formatarDataParaInput, calcularSeEhNovo } from '../../utils/periodoTesteUtils';
 import './ControleGeral.css';
 
 // 🌿 Função auxiliar para renderizar SVG com cor dourada nos cards de admin
@@ -272,6 +273,28 @@ const ControleGeral = () => {
   const [busca, setBusca] = useState('');
   const [filtroStatus, setFiltroStatus] = useState('todos');
 
+  // 📊 Controle de Exibição / Alternância dos Cards KPI (Recolher / Expandir)
+  const [mostrarKpi, setMostrarKpi] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_cg_show_kpi');
+      return salvo !== null ? JSON.parse(salvo) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleKpi = () => {
+    setMostrarKpi(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('celebre_cg_show_kpi', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
+
   // 🎨 Controle do Acervo Global do Moodboard
   const [itensMoodboard, setItensMoodboard] = useState([]);
   const [loadingMoodboard, setLoadingMoodboard] = useState(false);
@@ -319,6 +342,8 @@ const ControleGeral = () => {
   const [modalAberto, setModalAberto] = useState(false);
   const [salvando, setSalvando] = useState(false);
   const [enviandoEmailSenha, setEnviandoEmailSenha] = useState(false);
+  const [unificando, setUnificando] = useState(false);
+  const [duplicatasDetectadas, setDuplicatasDetectadas] = useState([]);
 
   // Controle do Visualizador de Suporte
   const [membroSuporte, setMembroSuporte] = useState(null);
@@ -332,17 +357,70 @@ const ControleGeral = () => {
   const usuarioLogado = auth.currentUser;
 
   // 🚀 MODO SUPORTE: Entrar na loja do cliente com livre acesso irrestrito
-  const entrarModoSuporte = (cliente) => {
+  const entrarModoSuporte = async (cliente) => {
     if (!cliente || !cliente.uid) return;
-    const nomeCliente = cliente.nomeExibicao || cliente.nomeCompleto || 'Cliente';
-    const emailCliente = cliente.email || '';
+    const emailCliente = (cliente.email || '').toLowerCase().trim();
+    let targetTenantId = cliente.tenantId || cliente.uid;
+    let nomeCliente = cliente.nomeExibicao || cliente.nomeCompleto || cliente.nomeEmpresa || cliente.nome || 'Cliente';
+    let roleCliente = cliente.role || 'owner';
+
+    const allUidsSet = new Set([cliente.uid]);
+    if (cliente.tenantId) allUidsSet.add(cliente.tenantId);
+
+    // Se houver contas vinculadas/duplicadas com o mesmo e-mail, mapeia todos os UIDs
+    if (emailCliente) {
+      try {
+        const snapAll = await getDocs(collection(db, "usuarios"));
+        snapAll.docs.forEach(dSnap => {
+          const d = dSnap.data();
+          const dEmail = (d.email || '').toLowerCase().trim();
+          if (
+            dEmail === emailCliente ||
+            dSnap.id === cliente.uid ||
+            d.tenantId === cliente.uid ||
+            (cliente.tenantId && d.tenantId === cliente.tenantId) ||
+            d.contaVinculadaDe === cliente.uid
+          ) {
+            allUidsSet.add(dSnap.id);
+            if (d.tenantId) allUidsSet.add(d.tenantId);
+            if (d.contaVinculadaDe) allUidsSet.add(d.contaVinculadaDe);
+            if (d.nomeExibicao || d.nomeCompleto) {
+              nomeCliente = d.nomeExibicao || d.nomeCompleto;
+            }
+          }
+        });
+      } catch (e) {
+        console.warn("Aviso ao mapear contas para modo suporte:", e);
+      }
+    }
+
+    // 🔍 Prioriza o UID que de fato possui dados (clientes ou estoque cadastrados)
+    for (const uId of allUidsSet) {
+      try {
+        const snapCli = await getDocs(query(collection(db, "clientes"), where("userId", "==", uId)));
+        if (!snapCli.empty) {
+          targetTenantId = uId;
+          break;
+        }
+      } catch (eCli) {}
+    }
+
+    const allUidsList = Array.from(allUidsSet);
 
     localStorage.setItem('impersonatingTenant', JSON.stringify({
-      uid: cliente.uid,
+      uid: targetTenantId,
+      originalUid: cliente.uid,
+      allUids: allUidsList,
       nome: nomeCliente,
-      email: emailCliente
+      email: emailCliente,
+      role: roleCliente,
+      dataFimTeste: cliente.dataFimTeste || null,
+      plano: cliente.plano || '',
+      planoId: cliente.planoId || ''
     }));
-    localStorage.setItem('tenantId', cliente.uid);
+    localStorage.setItem('tenantId', targetTenantId);
+    localStorage.setItem('funcName', nomeCliente);
+    localStorage.setItem('userRole', roleCliente);
 
     window.dispatchEvent(new Event('storage'));
     window.location.href = '/dashboard';
@@ -591,17 +669,39 @@ const ControleGeral = () => {
         userDocsMap[docSnap.id] = docSnap.data();
       });
 
-      const listaClientes = usersSnap.docs.map(docSnap => {
-        const data = docSnap.data();
-        const uid = docSnap.id;
+      // 🔍 Mapeamento de contagem de e-mails para identificar duplicidades
+      const emailCountMap = {};
+      usersSnap.docs.forEach(docSnap => {
+        const d = docSnap.data();
+        if (d.isAlias) return; // Alias não conta como duplicata na listagem de empresas
+        const em = (d.email || '').toLowerCase().trim();
+        if (em) {
+          emailCountMap[em] = (emailCountMap[em] || 0) + 1;
+        }
+      });
 
-        const regEquipe = equipeMap[data.email ? data.email.toLowerCase().trim() : ''];
-        const idEmpresaPatrao = (data.role && data.role !== 'owner' && data.tenantId && data.tenantId !== uid) 
-          ? data.tenantId 
-          : (regEquipe ? regEquipe.empresaId : null);
+      const dups = Object.keys(emailCountMap).filter(em => emailCountMap[em] > 1);
+      setDuplicatasDetectadas(dups);
 
-        const isFuncionarioVinculado = Boolean(idEmpresaPatrao && idEmpresaPatrao !== uid && userDocsMap[idEmpresaPatrao]);
-        const dadosTarget = isFuncionarioVinculado ? userDocsMap[idEmpresaPatrao] : data;
+      const listaClientes = usersSnap.docs
+        .filter(docSnap => {
+          const d = docSnap.data();
+          // Não lista como empresa separada os logins secundários que são alias
+          return !d.isAlias;
+        })
+        .map(docSnap => {
+          const data = docSnap.data();
+          const uid = docSnap.id;
+          const emailNorm = (data.email || '').toLowerCase().trim();
+          const isDuplicado = Boolean(emailNorm && emailCountMap[emailNorm] > 1);
+
+          const regEquipe = equipeMap[data.email ? data.email.toLowerCase().trim() : ''];
+          const idEmpresaPatrao = (data.role && data.role !== 'owner' && data.tenantId && data.tenantId !== uid) 
+            ? data.tenantId 
+            : (regEquipe ? regEquipe.empresaId : null);
+
+          const isFuncionarioVinculado = Boolean(idEmpresaPatrao && idEmpresaPatrao !== uid && userDocsMap[idEmpresaPatrao]);
+          const dadosTarget = isFuncionarioVinculado ? userDocsMap[idEmpresaPatrao] : data;
 
         const pagou = dadosTarget.assinaturaAtiva === true || 
                       dadosTarget.statusAssinatura === 'ativa' ||
@@ -645,7 +745,7 @@ const ControleGeral = () => {
         } else if (pagou) {
           nomePlano = 'Plano Pago';
         } else if (status === 'teste') {
-          nomePlano = 'Teste VIP (7 dias)';
+          nomePlano = `Teste VIP (${infoTeste.totalDiasTeste || 7} dias)`;
         }
 
         if (isFuncionarioVinculado) {
@@ -655,9 +755,12 @@ const ControleGeral = () => {
 
         const rawDateView = dadosTarget.dataCadastro || data.dataCadastro || dadosTarget.criadoEm || data.criadoEm || dadosTarget.createdAt || data.createdAt;
         const dataCadastroFormatada = formatarDataExibicao(rawDateView);
+        const infoNovo = calcularSeEhNovo(rawDateView);
 
         return {
           uid,
+          tenantId: data.tenantId || uid,
+          rawUserData: data,
           nomeCompleto: data.nomeCompleto || data.nomeExibicao || data.displayName || '—',
           nomeExibicao: data.nomeExibicao || data.nomeCompleto || '—',
           email: data.email || '—',
@@ -666,6 +769,9 @@ const ControleGeral = () => {
           tipoPessoa: data.tipoPessoa || '—',
           dataCadastro: rawDateView ? (rawDateView.toDate ? rawDateView.toDate().toISOString() : String(rawDateView)) : null,
           dataCadastroExibida: dataCadastroFormatada,
+          isNovo: infoNovo.isNovo,
+          rotuloNovo: infoNovo.rotulo,
+          diffDiasCadastro: infoNovo.diffDias,
           dataFimTeste: infoTeste.dataFimDate ? infoTeste.dataFimDate.toISOString().split('T')[0] : (data.dataFimTeste ? (data.dataFimTeste.toDate ? data.dataFimTeste.toDate().toISOString().split('T')[0] : String(data.dataFimTeste).split('T')[0]) : ''),
           status,
           diasRestantes: status === 'teste' ? diasRestantes : 0,
@@ -678,7 +784,9 @@ const ControleGeral = () => {
           assinaturaAtiva: dadosTarget.assinaturaAtiva || false,
           statusPagamentoVulso: dadosTarget.statusPagamentoVulso || '',
           plano: dadosTarget.plano || '',
-          statusAssinatura: dadosTarget.statusAssinatura || ''
+          statusAssinatura: dadosTarget.statusAssinatura || '',
+          totalDiasTeste: infoTeste.totalDiasTeste || 7,
+          isDuplicado
         };
       });
 
@@ -746,6 +854,31 @@ const ControleGeral = () => {
       };
 
       await updateDoc(userRef, payload);
+
+      // 🔥 SINCRONIA 100% GARANTIDA:
+      // Se houver qualquer outra conta com o mesmo e-mail (ex: login Google e login por senha)
+      // propaga imediatamente os dias de teste, plano e status para que ambos fiquem idênticos!
+      if (membroEdicao.email) {
+        try {
+          const qEmail = query(collection(db, "usuarios"), where("email", "==", membroEdicao.email.toLowerCase().trim()));
+          const snapEmail = await getDocs(qEmail);
+          for (const docSnap of snapEmail.docs) {
+            if (docSnap.id !== membroEdicao.uid) {
+              await updateDoc(doc(db, "usuarios", docSnap.id), {
+                dataCadastro: dataCadastroIso,
+                dataFimTeste: dataFimIso,
+                planoId: payload.planoId,
+                plano: payload.plano,
+                statusPagamentoVulso: payload.statusPagamentoVulso,
+                assinaturaAtiva: payload.assinaturaAtiva,
+                statusAssinatura: payload.statusAssinatura
+              });
+            }
+          }
+        } catch (eSyncEmail) {
+          console.warn("Aviso ao propagar edições para contas vinculadas por e-mail:", eSyncEmail);
+        }
+      }
 
       const configRef = doc(db, 'configuracoes_empresa', membroEdicao.uid);
       await updateDoc(configRef, {
@@ -823,6 +956,115 @@ const ControleGeral = () => {
     }
   };
 
+  // 🔗 UNIFICAÇÃO INTELIGENTE DE CONTAS COM O MESMO E-MAIL (GOOGLE + SENHA)
+  const unificarContasDuplicadas = async (emailAlvo) => {
+    if (!emailAlvo) return;
+    const emailLimpo = emailAlvo.toLowerCase().trim();
+    
+    if (!window.confirm(`⚠️ DESEJA UNIFICAR AS CONTAS DUPLICADAS DE:\n"${emailLimpo}"?\n\nA conta original será mantida como a empresa principal e receberá todos os dados. A conta secundária será unificada a ela para que ambos os acessos compartilhem o mesmo acervo, clientes e contratos, eliminando a duplicidade.`)) {
+      return;
+    }
+
+    setUnificando(true);
+    try {
+      // 🔍 Busca abrangente ignorando maiúsculas e espaços residuais no banco
+      const allUsersSnap = await getDocs(collection(db, "usuarios"));
+      const snapMatchingDocs = allUsersSnap.docs.filter(d => (d.data().email || '').toLowerCase().trim() === emailLimpo);
+      
+      if (snapMatchingDocs.length < 2) {
+        alert(`Não foram encontradas contas duplicadas para o e-mail "${emailLimpo}".`);
+        await carregarDados();
+        return;
+      }
+
+      // Ordena: Conta original primeiro (prioriza a conta que possui dados ou CPF/CNPJ cadastrado)
+      const docs = snapMatchingDocs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Checa contagem de itens existentes em cada conta para não perder nada
+      const docsComContagem = await Promise.all(docs.map(async (docUser) => {
+        const [cliSnap, estSnap, locSnap] = await Promise.all([
+          getDocs(query(collection(db, "clientes"), where("userId", "==", docUser.id))).catch(() => ({ size: 0 })),
+          getDocs(query(collection(db, "estoque"), where("userId", "==", docUser.id))).catch(() => ({ size: 0 })),
+          getDocs(query(collection(db, "locacoes"), where("userId", "==", docUser.id))).catch(() => ({ size: 0 }))
+        ]);
+        return {
+          ...docUser,
+          totalItensExistentes: (cliSnap.size || 0) + (estSnap.size || 0) + (locSnap.size || 0)
+        };
+      }));
+
+      docsComContagem.sort((a, b) => {
+        if (a.totalItensExistentes !== b.totalItensExistentes) {
+          return b.totalItensExistentes - a.totalItensExistentes;
+        }
+        if (a.documento && !b.documento) return -1;
+        if (!a.documento && b.documento) return 1;
+        const dataA = new Date(a.dataCadastro || a.criadoEm || 0).getTime();
+        const dataB = new Date(b.dataCadastro || b.criadoEm || 0).getTime();
+        return dataA - dataB;
+      });
+
+      const contaOriginal = docsComContagem[0];
+      const contasSecundarias = docsComContagem.slice(1);
+      const targetTenantId = contaOriginal.tenantId || contaOriginal.id;
+
+      // Migrar coleções criadas na secundária para a original
+      const colecoes = ["estoque", "locacoes", "clientes", "compras", "financeiro", "contratos"];
+      for (const sec of contasSecundarias) {
+        for (const colName of colecoes) {
+          try {
+            const [qItensU, qItensT] = await Promise.all([
+              getDocs(query(collection(db, colName), where("userId", "==", sec.id))).catch(() => ({ docs: [] })),
+              getDocs(query(collection(db, colName), where("tenantId", "==", sec.id))).catch(() => ({ docs: [] }))
+            ]);
+            const itensMigrar = new Map();
+            [...qItensU.docs, ...qItensT.docs].forEach(d => itensMigrar.set(d.id, d));
+            for (const [itemId] of itensMigrar) {
+              await updateDoc(doc(db, colName, itemId), {
+                userId: targetTenantId,
+                tenantId: targetTenantId
+              });
+            }
+          } catch (eCol) {
+            console.warn(`Erro ao migrar dados de ${colName}:`, eCol);
+          }
+        }
+
+        // Atualiza a conta secundária para ser alias vinculado da original e limpa espaços no e-mail
+        await updateDoc(doc(db, "usuarios", sec.id), {
+          tenantId: targetTenantId,
+          role: contaOriginal.role || 'owner',
+          isAlias: true,
+          contaVinculadaDe: contaOriginal.id,
+          email: emailLimpo,
+          nomeCompleto: contaOriginal.nomeCompleto || sec.nomeCompleto,
+          nomeExibicao: contaOriginal.nomeExibicao || sec.nomeExibicao
+        });
+
+        // Limpa configurações de empresa duplicada se existirem
+        try {
+          if (sec.id !== targetTenantId) {
+            await deleteDoc(doc(db, "configuracoes_empresa", sec.id));
+          }
+        } catch (eCfg) {}
+      }
+
+      // Garante que o documento principal também esteja com o e-mail limpo sem espaços
+      await updateDoc(doc(db, "usuarios", contaOriginal.id), {
+        email: emailLimpo,
+        tenantId: targetTenantId
+      });
+
+      alert(`✅ Sucesso! As contas de ${emailLimpo} foram unificadas.\n\nA conta principal é "${contaOriginal.nomeExibicao || contaOriginal.nomeCompleto}". Agora, tanto o login por Google quanto por e-mail e senha acessarão exatamente a mesma empresa e acervo.`);
+      await carregarDados();
+    } catch (err) {
+      console.error("Erro ao unificar contas:", err);
+      alert("Erro ao unificar contas: " + err.message);
+    } finally {
+      setUnificando(false);
+    }
+  };
+
   const abrirVisualizadorSuporte = async (cliente) => {
     setMembroSuporte(cliente);
     setTabSuporteActive('resumo');
@@ -830,19 +1072,57 @@ const ControleGeral = () => {
     setLoadingSuporte(true);
     
     try {
-      const qEstoque = query(collection(db, "estoque"), where("userId", "==", cliente.uid));
-      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", cliente.uid));
-      const qClientes = query(collection(db, "clientes"), where("userId", "==", cliente.uid));
+      const emailCliente = (cliente.email || '').toLowerCase().trim();
+      const uidsAlvoSet = new Set([cliente.tenantId, cliente.uid].filter(Boolean));
 
-      const [snapEst, snapLoc, snapCli] = await Promise.all([
-        getDocs(qEstoque),
-        getDocs(qLocacoes),
-        getDocs(qClientes)
-      ]);
+      // Busca completa de todas as contas que compartilham o mesmo e-mail ou tenant
+      try {
+        const snapUsers = await getDocs(collection(db, "usuarios"));
+        snapUsers.docs.forEach(dSnap => {
+          const d = dSnap.data();
+          const dEmail = (d.email || '').toLowerCase().trim();
+          if (
+            (emailCliente && dEmail === emailCliente) ||
+            dSnap.id === cliente.uid ||
+            d.tenantId === cliente.uid ||
+            (cliente.tenantId && d.tenantId === cliente.tenantId) ||
+            (cliente.tenantId && dSnap.id === cliente.tenantId) ||
+            d.contaVinculadaDe === cliente.uid ||
+            (cliente.tenantId && d.contaVinculadaDe === cliente.tenantId)
+          ) {
+            uidsAlvoSet.add(dSnap.id);
+            if (d.tenantId) uidsAlvoSet.add(d.tenantId);
+            if (d.contaVinculadaDe) uidsAlvoSet.add(d.contaVinculadaDe);
+          }
+        });
+      } catch (eEmail) {
+        console.warn("Aviso ao buscar contas por e-mail para suporte:", eEmail);
+      }
 
-      const estoque = snapEst.docs.map(d => ({ id: d.id, ...d.data() }));
-      const locacoes = snapLoc.docs.map(d => ({ id: d.id, ...d.data() }));
-      const clientes = snapCli.docs.map(d => ({ id: d.id, ...d.data() }));
+      const uidsAlvo = Array.from(uidsAlvoSet);
+      const mapEstoque = new Map();
+      const mapLocacoes = new Map();
+      const mapClientes = new Map();
+
+      for (const uId of uidsAlvo) {
+        // Busca por userId e por tenantId
+        const [sEstU, sEstT, sLocU, sLocT, sCliU, sCliT] = await Promise.all([
+          getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "clientes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "clientes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+        ]);
+
+        [...sEstU.docs, ...sEstT.docs].forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
+        [...sLocU.docs, ...sLocT.docs].forEach(d => mapLocacoes.set(d.id, { id: d.id, ...d.data() }));
+        [...sCliU.docs, ...sCliT.docs].forEach(d => mapClientes.set(d.id, { id: d.id, ...d.data() }));
+      }
+
+      const estoque = Array.from(mapEstoque.values());
+      const locacoes = Array.from(mapLocacoes.values());
+      const clientes = Array.from(mapClientes.values());
 
       setDadosSuporte({ estoque, locacoes, clientes });
     } catch (err) {
@@ -1262,6 +1542,7 @@ const ControleGeral = () => {
   }, [itensMoodboard, buscaMoodboard, filtroStatusMoodboard, filtroCatMoodboard, filtroSubtipoMoodboard, filtroCorMoodboard, ordenacaoMoodboard]);
 
   // 🔍 Filtros de Clientes
+  const totalNovos = clientes.filter(c => c.isNovo && c.status !== 'admin').length;
   const totalVencendo = clientes.filter(c => c.status === 'teste' && c.diasRestantes <= 2).length;
 
   const clientesFiltrados = clientes.filter(c => {
@@ -1273,9 +1554,11 @@ const ControleGeral = () => {
 
     const matchStatus = filtroStatus === 'todos' 
       ? true 
-      : filtroStatus === 'vencendo' 
-        ? (c.status === 'teste' && c.diasRestantes <= 2)
-        : c.status === filtroStatus;
+      : filtroStatus === 'novos'
+        ? c.isNovo
+        : filtroStatus === 'vencendo' 
+          ? (c.status === 'teste' && c.diasRestantes <= 2)
+          : c.status === filtroStatus;
     
     return matchBusca && matchStatus;
   });
@@ -1343,8 +1626,10 @@ const ControleGeral = () => {
           <span className="cg-tab-text-full">Acervo Global do Moodboard</span>
           <span className="cg-tab-text-short">Moodboard</span>
           <span className="cg-tab-badge gold">
-            {oficiaisTotais} Oficiais
-            {sugestoesPendentes > 0 && ` · ${sugestoesPendentes} Sugestões`}
+            <span className="cg-tab-badge-full">
+              {oficiaisTotais} Oficiais{sugestoesPendentes > 0 && ` · ${sugestoesPendentes} Sugestões`}
+            </span>
+            <span className="cg-tab-badge-short">{oficiaisTotais}</span>
           </span>
         </button>
       </div>
@@ -2012,8 +2297,37 @@ const ControleGeral = () => {
     </div>
   ) : (
         <>
+          {/* BARRA DE ALTERNÂNCIA (EXPANDIR / RECOLHER) DOS CARDS KPI */}
+          <div className="cg-kpi-toggle-wrapper">
+            <button 
+              type="button" 
+              className={`cg-btn-toggle-kpi ${!mostrarKpi ? 'is-collapsed' : ''}`}
+              onClick={toggleKpi}
+              aria-expanded={mostrarKpi}
+              title={mostrarKpi ? "Recolher indicadores gerais" : "Expandir indicadores gerais"}
+            >
+              <div className="cg-toggle-kpi-left">
+                <span className="cg-toggle-kpi-icon">📊</span>
+                {mostrarKpi ? (
+                  <span className="cg-toggle-kpi-title">Indicadores Gerais da Plataforma</span>
+                ) : (
+                  <span className="cg-toggle-kpi-summary">
+                    <strong>{totalClientes}</strong> empresas • <strong>{totalTeste}</strong> em teste • <strong>{totalAtivos}</strong> pagantes • <strong>{totalBloqueados}</strong> bloqueados
+                  </span>
+                )}
+              </div>
+              <span className="cg-toggle-kpi-badge">
+                {mostrarKpi ? (
+                  <>Recolher <i className="fas fa-chevron-up"></i></>
+                ) : (
+                  <>Expandir <i className="fas fa-chevron-down"></i></>
+                )}
+              </span>
+            </button>
+          </div>
+
           {/* KPI CARDS (COM FILTRO DE VENCENDO) */}
-          <div className="cg-kpi-row">
+          <div className={`cg-kpi-row ${!mostrarKpi ? 'cg-kpi-hidden' : ''}`}>
             <div className="cg-kpi-card" onClick={() => setFiltroStatus('todos')}>
               <div className="cg-kpi-icon" style={{ background: 'linear-gradient(135deg, #0f172a, #1e293b)' }}>
                 <i className="fas fa-building"></i>
@@ -2091,9 +2405,29 @@ const ControleGeral = () => {
                 </button>
               )}
             </div>
-            <div className="cg-filter-pills">
+
+            {/* DROPDOWN SELECT PADRÃO DE STATUS (IGUAL AO SEGUNDO PRINT) */}
+            <select
+              value={filtroStatus}
+              onChange={(e) => setFiltroStatus(e.target.value)}
+              className="select-pill-filter cg-status-select"
+              title="Filtrar por Status"
+              aria-label="Filtrar Empresas por Status"
+            >
+              <option value="todos">🏢 Todas as Empresas ({totalClientes})</option>
+              <option value="novos">✨ Novos ({totalNovos})</option>
+              <option value="vencendo">⏳ Vencendo ({totalVencendo})</option>
+              <option value="teste">🧪 Em Teste ({totalTeste})</option>
+              <option value="ativo">💎 Pagantes ({totalAtivos})</option>
+              <option value="bloqueado">🔒 Bloqueados ({totalBloqueados})</option>
+              <option value="excluido">🗑️ Excluídos ({totalExcluidos})</option>
+            </select>
+
+            {/* Filtros em Pílulas no Desktop (Oculto no Celular) */}
+            <div className="cg-filter-pills cg-desktop-only-pills">
               {[
                 { id: 'todos', label: 'Todos' },
+                { id: 'novos', label: `✨ Novos (${totalNovos})` },
                 { id: 'vencendo', label: `⏳ Vencendo (${totalVencendo})` },
                 { id: 'teste', label: 'Em Teste' },
                 { id: 'ativo', label: 'Pagantes' },
@@ -2102,7 +2436,7 @@ const ControleGeral = () => {
               ].map(f => (
                 <button 
                   key={f.id} 
-                  className={`cg-pill ${filtroStatus === f.id ? 'active' : ''} ${f.id === 'vencendo' && totalVencendo > 0 ? 'pill-vencendo' : ''}`}
+                  className={`cg-pill ${filtroStatus === f.id ? 'active' : ''} ${f.id === 'novos' && totalNovos > 0 ? 'pill-novos' : ''} ${f.id === 'vencendo' && totalVencendo > 0 ? 'pill-vencendo' : ''}`}
                   onClick={() => setFiltroStatus(f.id)}
                 >
                   {f.label}
@@ -2118,10 +2452,62 @@ const ControleGeral = () => {
                 title="Sincronizar todas as contas criadas com Google ou e-mail"
               >
                 <i className={`fas fa-sync-alt ${sincronizando ? 'fa-spin' : ''}`}></i>
-                <span>{sincronizando ? 'Sincronizando...' : 'Sincronizar Google / Auth'}</span>
+                <span className="cg-sync-label-desktop">{sincronizando ? 'Sincronizando...' : 'Sincronizar Google / Auth'}</span>
+                <span className="cg-sync-label-mobile">{sincronizando ? 'Sincronizando...' : 'Sincronizar Auth'}</span>
               </button>
             </div>
           </div>
+
+          {/* ⚠️ ALERTA INTELIGENTE DE CONTAS DUPLICADAS POR E-MAIL */}
+          {duplicatasDetectadas.length > 0 && (
+            <div style={{
+              background: '#fffbeb',
+              border: '1px solid #fde68a',
+              borderRadius: '12px',
+              padding: '14px 18px',
+              marginBottom: '16px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              gap: '12px',
+              flexWrap: 'wrap',
+              boxShadow: '0 2px 8px rgba(217, 119, 6, 0.08)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <span style={{ fontSize: '1.4rem' }}>⚠️</span>
+                <div>
+                  <strong style={{ color: '#92400e', fontSize: '0.95rem' }}>
+                    Contas Duplicadas Detectadas ({duplicatasDetectadas.length})
+                  </strong>
+                  <p style={{ margin: '2px 0 0', color: '#b45309', fontSize: '0.82rem' }}>
+                    O e-mail <strong>{duplicatasDetectadas.join(', ')}</strong> possui mais de um cadastro no banco (ex: criado com e-mail e depois acessado via Google).
+                  </p>
+                </div>
+              </div>
+              <button 
+                type="button"
+                onClick={() => unificarContasDuplicadas(duplicatasDetectadas[0])}
+                disabled={unificando}
+                style={{
+                  background: '#d97706',
+                  color: '#ffffff',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '8px 16px',
+                  fontSize: '0.85rem',
+                  fontWeight: '700',
+                  cursor: 'pointer',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: '6px',
+                  boxShadow: '0 2px 6px rgba(217, 119, 6, 0.3)'
+                }}
+              >
+                <i className={`fas fa-link ${unificando ? 'fa-spin' : ''}`}></i>
+                {unificando ? 'Unificando...' : '🔗 Unificar e Resolver Agora'}
+              </button>
+            </div>
+          )}
 
           {/* TABELA DE CLIENTES (DESKTOP) E CARDS RESPONSIVOS (MOBILE) */}
           <div className="cg-table-container">
@@ -2148,13 +2534,33 @@ const ControleGeral = () => {
                   </tr>
                 ) : (
                   clientesFiltrados.map(c => (
-                    <tr key={c.uid} className={`cg-row cg-row-${c.status} ${c.status === 'teste' && c.diasRestantes <= 2 ? 'row-vencendo' : ''}`}>
+                    <tr key={c.uid} className={`cg-row cg-row-${c.status} ${c.isNovo ? 'row-novo' : ''} ${c.status === 'teste' && c.diasRestantes <= 2 ? 'row-vencendo' : ''}`}>
                       <td className="cg-cell-name">
                         <div className="cg-avatar">
                           {(c.nomeExibicao || '?')[0].toUpperCase()}
                         </div>
                         <div className="cg-name-group">
-                          <strong>{c.nomeExibicao}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <strong>{c.nomeExibicao}</strong>
+                            {c.isNovo && (
+                              <span className="cg-badge-novo" title={`Cliente novo! Cadastrado ${c.rotuloNovo.toLowerCase()}`}>
+                                ✨ NOVO • {c.rotuloNovo}
+                              </span>
+                            )}
+                            {c.isDuplicado && (
+                              <span style={{
+                                background: '#fef3c7',
+                                color: '#b45309',
+                                border: '1px solid #fcd34d',
+                                borderRadius: '6px',
+                                fontSize: '0.66rem',
+                                fontWeight: '700',
+                                padding: '1px 6px'
+                              }}>
+                                ⚠️ E-mail Duplicado
+                              </span>
+                            )}
+                          </div>
                           {c.nomeCompleto !== c.nomeExibicao && (
                             <small>{c.nomeCompleto}</small>
                           )}
@@ -2165,7 +2571,16 @@ const ControleGeral = () => {
                         <span className="cg-doc-type">{c.tipoPessoa === 'PJ' ? 'CNPJ' : 'CPF'}</span>
                         {c.documento || '—'}
                       </td>
-                      <td>{c.dataCadastroExibida}</td>
+                      <td>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                          <span>{c.dataCadastroExibida}</span>
+                          {c.isNovo && (
+                            <small style={{ color: '#059669', fontWeight: '800', fontSize: '0.70rem' }}>
+                              🟢 {c.rotuloNovo}
+                            </small>
+                          )}
+                        </div>
+                      </td>
                       <td>
                         <span className="cg-plano-tag">{c.nomePlano}</span>
                       </td>
@@ -2177,7 +2592,7 @@ const ControleGeral = () => {
                               <div 
                                 className="cg-teste-fill" 
                                 style={{ 
-                                  width: `${((7 - c.diasRestantes) / 7) * 100}%`,
+                                  width: `${Math.min(100, Math.max(0, (((c.totalDiasTeste || 7) - c.diasRestantes) / (c.totalDiasTeste || 7)) * 100))}%`,
                                   background: c.diasRestantes <= 2 ? '#ea580c' : '#f59e0b' 
                                 }}
                               ></div>
@@ -2204,6 +2619,28 @@ const ControleGeral = () => {
                                 <i className="fab fa-whatsapp"></i>
                               </a>
                             )}
+                            {c.isDuplicado && (
+                              <button 
+                                className="cg-btn-merge"
+                                onClick={() => unificarContasDuplicadas(c.email)}
+                                title="Unificar contas duplicadas deste e-mail"
+                                style={{
+                                  background: '#d97706',
+                                  color: '#ffffff',
+                                  border: 'none',
+                                  borderRadius: '8px',
+                                  padding: '5px 8px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.72rem',
+                                  fontWeight: '700',
+                                  display: 'inline-flex',
+                                  alignItems: 'center',
+                                  gap: '4px'
+                                }}
+                              >
+                                <i className="fas fa-link"></i> Unificar
+                              </button>
+                            )}
                             <button 
                               className="cg-btn-impersonate" 
                               onClick={() => entrarModoSuporte(c)}
@@ -2214,9 +2651,9 @@ const ControleGeral = () => {
                             <button 
                               className="cg-btn-support" 
                               onClick={() => abrirVisualizadorSuporte(c)}
-                              title="Visualizar Perfil (Dar Suporte)"
+                              title="Visualizar Conta e Dados da Empresa"
                             >
-                              <i className="fas fa-search-plus"></i>
+                              <i className="fas fa-eye"></i>
                             </button>
                             <button 
                               className="cg-btn-edit" 
@@ -2254,12 +2691,34 @@ const ControleGeral = () => {
                 </div>
               ) : (
                 clientesFiltrados.map(c => (
-                  <div className={`cg-mobile-client-card ${c.status === 'teste' && c.diasRestantes <= 2 ? 'card-vencendo' : ''}`} key={c.uid}>
+                  <div className={`cg-mobile-client-card ${c.isNovo ? 'card-novo' : ''} ${c.status === 'teste' && c.diasRestantes <= 2 ? 'card-vencendo' : ''}`} key={c.uid}>
                     <div className="cg-mcard-header">
                       <div className="cg-mcard-user">
                         <div className="cg-avatar">{(c.nomeExibicao || '?')[0].toUpperCase()}</div>
                         <div className="cg-mcard-titles">
-                          <strong className="cg-mcard-name">{c.nomeExibicao}</strong>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+                            <strong className="cg-mcard-name">{c.nomeExibicao}</strong>
+                            {c.isNovo && (
+                              <span className="cg-badge-novo" title={`Cliente novo! Cadastrado ${c.rotuloNovo.toLowerCase()}`}>
+                                ✨ NOVO • {c.rotuloNovo}
+                              </span>
+                            )}
+                          </div>
+                          {c.isDuplicado && (
+                            <span style={{
+                              background: '#fef3c7',
+                              color: '#b45309',
+                              border: '1px solid #fcd34d',
+                              borderRadius: '6px',
+                              fontSize: '0.62rem',
+                              fontWeight: '700',
+                              padding: '1px 5px',
+                              display: 'inline-block',
+                              width: 'fit-content'
+                            }}>
+                              ⚠️ E-mail Duplicado
+                            </span>
+                          )}
                           {c.nomeCompleto && c.nomeCompleto !== c.nomeExibicao && (
                             <small className="cg-mcard-subname">{c.nomeCompleto}</small>
                           )}
@@ -2288,74 +2747,117 @@ const ControleGeral = () => {
                         <span className="cg-mcard-val">{c.documento || '—'} <small>({c.tipoPessoa === 'PJ' ? 'CNPJ' : 'CPF'})</small></span>
                       </div>
 
-                      <div className="cg-mcard-grid-2">
-                        <div className="cg-mcard-col">
-                          <span className="cg-mcard-lbl"><i className="fas fa-crown"></i> Plano:</span>
-                          <span className="cg-plano-tag">{c.nomePlano}</span>
-                        </div>
-                        <div className="cg-mcard-col">
-                          <span className="cg-mcard-lbl"><i className="fas fa-calendar-alt"></i> Cadastro:</span>
-                          <span className="cg-mcard-val">{c.dataCadastroExibida}</span>
-                        </div>
-                      </div>
-
-                      {c.status === 'teste' && (
-                        <div className={`cg-mcard-teste-row ${c.diasRestantes <= 2 ? 'is-expiring' : ''}`}>
-                          <div className="cg-teste-bar">
-                            <div 
-                              className="cg-teste-fill" 
-                              style={{ 
-                                width: `${((7 - c.diasRestantes) / 7) * 100}%`,
-                                background: c.diasRestantes <= 2 ? '#ea580c' : '#f59e0b'
-                              }}
-                            ></div>
+                      {/* CAIXA DE PLANO & VIGÊNCIA DE TESTE */}
+                      <div className="cg-mcard-plan-box">
+                        <div className="cg-mcard-plan-header">
+                          <div className="cg-mcard-plan-item">
+                            <span className="cg-mcard-plan-lbl"><i className="fas fa-crown"></i> Plano:</span>
+                            <span className="cg-plano-tag">{c.nomePlano}</span>
                           </div>
-                          <small className="cg-mcard-dias">
-                            {c.diasRestantes <= 0 ? '⚠️ Período de Teste Vencido' : `⏳ ${c.diasRestantes} dias restantes de teste`}
-                          </small>
+                          <div className="cg-mcard-plan-item" style={{ textAlign: 'right', alignItems: 'flex-end' }}>
+                            <span className="cg-mcard-plan-lbl"><i className="far fa-calendar-alt"></i> Cadastro:</span>
+                            <span className="cg-mcard-date-val">
+                              {c.dataCadastroExibida}
+                              {c.isNovo && <span className="cg-mcard-tag-novo">{c.rotuloNovo}</span>}
+                            </span>
+                          </div>
                         </div>
-                      )}
+
+                        {c.status === 'teste' && (
+                          <div className={`cg-mcard-trial-gauge ${c.diasRestantes <= 2 ? 'is-expiring' : ''}`}>
+                            <div className="cg-trial-gauge-header">
+                              <span className="cg-trial-gauge-title">
+                                <i className="fas fa-hourglass-half"></i> Período de Teste
+                              </span>
+                              <span className="cg-trial-gauge-days">
+                                {c.diasRestantes <= 0 ? '⚠️ Período Vencido' : `⏳ ${c.diasRestantes} dias restantes`}
+                              </span>
+                            </div>
+                            <div className="cg-trial-progress-bar">
+                              <div 
+                                className="cg-trial-progress-fill" 
+                                style={{ 
+                                  width: `${Math.min(100, Math.max(0, (((c.totalDiasTeste || 7) - c.diasRestantes) / (c.totalDiasTeste || 7)) * 100))}%`,
+                                  background: c.diasRestantes <= 2 
+                                    ? 'linear-gradient(90deg, #f97316, #dc2626)' 
+                                    : 'linear-gradient(90deg, #f59e0b, #d97706)'
+                                }}
+                              ></div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
 
                     {c.status !== 'admin' && (
-                      <div className="cg-mcard-actions">
-                        {c.telefone && (
-                          <a 
-                            href={`https://wa.me/55${c.telefone.replace(/\D/g, '')}?text=${encodeURIComponent(`Olá ${c.nomeExibicao}, tudo bem? Sou da equipe Celebre! Gostaria de saber como está sendo sua experiência no sistema Celebre.`)}`}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="cg-btn-whatsapp-mcard"
-                            title="Chamar no WhatsApp"
-                          >
-                            <i className="fab fa-whatsapp"></i> Zap
-                          </a>
-                        )}
+                      <div className="cg-mcard-actions-wrapper">
+                        {/* Botão Primário: Acessar Conta com livre acesso */}
                         <button 
-                          className="cg-btn-impersonate cg-mcard-btn" 
+                          type="button"
+                          className="cg-btn-mcard-access-primary" 
                           onClick={() => entrarModoSuporte(c)}
                           title="Acessar conta em Modo Suporte (Livre Acesso)"
                         >
-                          <i className="fas fa-rocket"></i> Acessar
+                          <i className="fas fa-rocket"></i>
+                          <span>Acessar Conta</span>
+                          <i className="fas fa-arrow-right cg-btn-access-arrow"></i>
                         </button>
-                        <button 
-                          className="cg-btn-support cg-mcard-btn" 
-                          onClick={() => abrirVisualizadorSuporte(c)}
-                        >
-                          <i className="fas fa-search-plus"></i> Suporte
-                        </button>
-                        <button 
-                          className="cg-btn-edit cg-mcard-btn" 
-                          onClick={() => abrirEdicao(c)}
-                        >
-                          <i className="fas fa-edit"></i> Editar
-                        </button>
-                        <button 
-                          className="cg-btn-delete cg-mcard-btn-icon" 
-                          onClick={() => confirmarExclusao(c.uid, c.nomeExibicao)}
-                          title="Excluir"
-                        >
-                          <i className="fas fa-trash-alt"></i>
-                        </button>
+
+                        {/* Linha de Ações Secundárias Simétricas */}
+                        <div className="cg-mcard-secondary-actions">
+                          {c.telefone && (
+                            <button
+                              type="button"
+                              className="cg-btn-mcard-action cg-action-whatsapp"
+                              onClick={() => handleChamarWhatsApp(c)}
+                              title={`Chamar no WhatsApp (${c.telefone})`}
+                            >
+                              <i className="fab fa-whatsapp"></i>
+                              <span>Zap</span>
+                            </button>
+                          )}
+
+                          <button 
+                            type="button"
+                            className="cg-btn-mcard-action cg-action-support" 
+                            onClick={() => abrirVisualizadorSuporte(c)}
+                            title="Visualizar Conta e Dados da Empresa"
+                          >
+                            <i className="fas fa-eye"></i>
+                            <span>Ver Conta</span>
+                          </button>
+
+                          <button 
+                            type="button"
+                            className="cg-btn-mcard-action cg-action-edit" 
+                            onClick={() => abrirEdicao(c)}
+                            title="Editar Cadastro / Plano"
+                          >
+                            <i className="fas fa-edit"></i>
+                            <span>Editar</span>
+                          </button>
+
+                          {c.isDuplicado && (
+                            <button 
+                              type="button"
+                              className="cg-btn-mcard-action cg-action-merge" 
+                              onClick={() => unificarContasDuplicadas(c.email)}
+                              title="Unificar contas deste e-mail"
+                            >
+                              <i className="fas fa-link"></i>
+                              <span>Unificar</span>
+                            </button>
+                          )}
+
+                          <button 
+                            type="button"
+                            className="cg-btn-mcard-delete" 
+                            onClick={() => confirmarExclusao(c.uid, c.nomeExibicao)}
+                            title="Excluir Empresa"
+                          >
+                            <i className="fas fa-trash-alt"></i>
+                          </button>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -2365,7 +2867,7 @@ const ControleGeral = () => {
           </div>
 
           {/* MODAL DE EDIÇÃO DO CLIENTE / CONTROLE MASTER DA CONTA */}
-          {modalAberto && membroEdicao && (
+          {modalAberto && membroEdicao && createPortal(
             <div className="cg-modal-backdrop" onClick={() => setModalAberto(false)}>
               <div className="cg-modal-content cg-client-edit-modal" onClick={e => e.stopPropagation()}>
                 
@@ -2394,7 +2896,14 @@ const ControleGeral = () => {
                             {(membroEdicao.nomeExibicao || '?')[0].toUpperCase()}
                           </div>
                           <div className="cg-client-hero-info">
-                            <h3>{membroEdicao.nomeExibicao}</h3>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                              <h3>{membroEdicao.nomeExibicao}</h3>
+                              {membroEdicao.isNovo && (
+                                <span className="cg-badge-novo" title={`Cadastrado ${membroEdicao.rotuloNovo.toLowerCase()}`}>
+                                  ✨ NOVO • {membroEdicao.rotuloNovo}
+                                </span>
+                              )}
+                            </div>
                             <p>{membroEdicao.nomeCompleto || 'Sem razão social'} • <span>{membroEdicao.email}</span></p>
                           </div>
                         </div>
@@ -2688,15 +3197,26 @@ const ControleGeral = () => {
                   </div>
                 </form>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
 
-          {/* MODAL DE VISUALIZAÇÃO DE SUPORTE */}
-          {modalSuporteAberto && membroSuporte && (
+          {/* MODAL DE VISUALIZAÇÃO DE CONTA / RESUMO EXECUTIVO */}
+          {modalSuporteAberto && membroSuporte && createPortal(
             <div className="cg-modal-backdrop" onClick={() => setModalSuporteAberto(false)}>
               <div className="cg-modal-content support-modal-width" onClick={e => e.stopPropagation()}>
                 <div className="cg-modal-header">
-                  <h2><i className="fas fa-search-plus"></i> Painel de Suporte: {membroSuporte.nomeExibicao}</h2>
+                  <div className="cg-modal-header-titles">
+                    <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                      <span><i className="fas fa-id-card"></i> Visualizar Conta: {membroSuporte.nomeExibicao}</span>
+                      {membroSuporte.isNovo && (
+                        <span className="cg-badge-novo" title={`Cliente novo! Cadastrado ${membroSuporte.rotuloNovo.toLowerCase()}`}>
+                          ✨ NOVO • {membroSuporte.rotuloNovo}
+                        </span>
+                      )}
+                    </h2>
+                    <span className="cg-modal-header-sub">Resumo executivo de acervo, locações e clientes cadastrados</span>
+                  </div>
                   <button className="cg-modal-close" onClick={() => setModalSuporteAberto(false)}>
                     <i className="fas fa-times"></i>
                   </button>
@@ -2929,7 +3449,8 @@ const ControleGeral = () => {
                   </button>
                 </div>
               </div>
-            </div>
+            </div>,
+            document.body
           )}
         </>
       )}

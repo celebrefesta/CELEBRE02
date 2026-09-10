@@ -83,14 +83,23 @@ const Topbar = () => {
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       if (user) {
         setUserAuthObj(user);
+
+        const rawImp = localStorage.getItem('impersonatingTenant');
+        let impData = null;
+        if (rawImp) {
+          try { impData = JSON.parse(rawImp); } catch (e) {}
+        }
+        const isImp = Boolean(impData?.uid);
+
         setUsuario({
-          nome: localStorage.getItem('funcName') || user.displayName || "Admin Celebre",
-          foto: user.photoURL || null,
-          email: user.email
+          nome: isImp ? (impData.nome || "Cliente") : (localStorage.getItem('funcName') || user.displayName || "Admin Celebre"),
+          foto: isImp ? null : (user.photoURL || null),
+          email: isImp ? (impData.email || user.email) : user.email
         });
 
         try {
-          const userRef = doc(db, 'usuarios', user.uid);
+          const targetUid = isImp ? impData.uid : user.uid;
+          const userRef = doc(db, 'usuarios', targetUid);
           const userSnap = await getDoc(userRef);
           
           if (userSnap.exists()) {
@@ -98,11 +107,11 @@ const Topbar = () => {
 
             // Checagem de expiração da conta
             const emailAdmin = "celebrefesta25@gmail.com";
-            if (user.email !== emailAdmin) {
+            if (user.email !== emailAdmin || isImp) {
               const uData = userSnap.data();
-              const tenantId = uData.tenantId || user.uid;
+              const tenantId = uData.tenantId || targetUid;
               let empresaData = uData;
-              if (tenantId !== user.uid) {
+              if (tenantId !== targetUid) {
                 const empSnap = await getDoc(doc(db, 'usuarios', tenantId));
                 if (empSnap.exists()) empresaData = empSnap.data();
               }
@@ -182,6 +191,7 @@ const Topbar = () => {
   const handleSair = async () => {
     try {
       await registrarLogLogout();
+      localStorage.removeItem('impersonatingTenant');
       localStorage.removeItem('tenantId');
       localStorage.removeItem('userRole');
       localStorage.removeItem('userPermissions');
@@ -199,6 +209,19 @@ const Topbar = () => {
 
   return (
     <div className="topbar-container">
+      {/* BOTÃO HAMBÚRGUER MOBILE OFICIAL (Dispara abertura da Sidebar) */}
+      <div className="topbar-esquerda">
+        <button 
+          type="button" 
+          className="topbar-btn-menu-mobile"
+          onClick={() => window.dispatchEvent(new CustomEvent('toggle-celebre-sidebar'))}
+          aria-label="Abrir menu de navegação"
+          title="Menu de Navegação"
+        >
+          <i className="fas fa-bars"></i>
+        </button>
+      </div>
+
       <div className="topbar-direita">
         
         {/* SELETOR DE APARÊNCIA DE 3 OPÇÕES (CLARO, CINZA GRAFITE, AZUL MIDNIGHT) */}

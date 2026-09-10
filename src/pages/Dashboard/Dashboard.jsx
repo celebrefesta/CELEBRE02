@@ -85,15 +85,59 @@ const parseFirestoreDate = (dateVal) => {
   return null;
 };
 
+const extrairMesDia = (dataVal) => {
+  if (!dataVal) return { mes: -1, dia: -1 };
+  try {
+    if (typeof dataVal === 'object' && dataVal !== null) {
+      let d;
+      if (dataVal.toDate) d = dataVal.toDate();
+      else if (dataVal.seconds) d = new Date(dataVal.seconds * 1000);
+      else if (dataVal instanceof Date) d = dataVal;
+      if (d && !isNaN(d.getTime())) return { mes: d.getMonth(), dia: d.getDate() };
+    } else {
+      const str = String(dataVal).trim();
+      if (!str) return { mes: -1, dia: -1 };
+      if (str.includes('-')) {
+        const partes = str.split('T')[0].split('-');
+        if (partes.length === 3) {
+          if (partes[0].length === 4) {
+            return { mes: parseInt(partes[1], 10) - 1, dia: parseInt(partes[2], 10) };
+          } else if (partes[2].length === 4) {
+            return { mes: parseInt(partes[1], 10) - 1, dia: parseInt(partes[0], 10) };
+          }
+        }
+      } else if (str.includes('/')) {
+        const partes = str.split('/');
+        if (partes.length >= 2) {
+          return { mes: parseInt(partes[1], 10) - 1, dia: parseInt(partes[0], 10) };
+        }
+      } else {
+        const d = new Date(str);
+        if (!isNaN(d.getTime())) return { mes: d.getMonth(), dia: d.getDate() };
+      }
+    }
+  } catch (e) {}
+  return { mes: -1, dia: -1 };
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
-  const tenantIdLocal = localStorage.getItem('tenantId') || usuarioLogado?.uid;
-  const nomeUsuario = localStorage.getItem('funcName') || usuarioLogado?.displayName || "Equipe";
+
+  const impersonatingRaw = localStorage.getItem('impersonatingTenant');
+  let impersonatingData = null;
+  if (impersonatingRaw) {
+    try { impersonatingData = JSON.parse(impersonatingRaw); } catch (e) {}
+  }
+  const isImpersonating = Boolean(impersonatingData?.uid);
+
+  const tenantIdLocal = impersonatingData?.uid || localStorage.getItem('tenantId') || usuarioLogado?.uid;
+  const nomeUsuario = impersonatingData?.nome || localStorage.getItem('funcName') || usuarioLogado?.displayName || "Equipe";
 
   const emailAdmin = "celebrefesta25@gmail.com";
-  const isSuperAdmin = usuarioLogado?.email === emailAdmin;
+  // Quando estiver em Modo Suporte, não opera como Super Admin no Dashboard para adotar a identidade do cliente
+  const isSuperAdmin = !isImpersonating && (usuarioLogado?.email === emailAdmin);
   
   const [estatisticas, setEstatisticas] = useState({ acervo: 0, ativas: 0, eventos: 0, aReceber: 0, ticketMedio: 0 });
   const [atividades, setAtividades] = useState([]);
@@ -125,6 +169,9 @@ const Dashboard = () => {
   const [novaMetaInput, setNovaMetaInput] = useState('');
 
   const [diasTeste, setDiasTeste] = useState(1);
+  const [totalDiasTeste, setTotalDiasTeste] = useState(7);
+  const [diasRestantes, setDiasRestantes] = useState(7);
+  const [dataFimFormatada, setDataFimFormatada] = useState('');
   const [statusConta, setStatusConta] = useState('ativo'); 
   const [assinaturaAtiva, setAssinaturaAtiva] = useState(false);
   const [erroCarregamento, setErroCarregamento] = useState(null);
@@ -138,42 +185,72 @@ const Dashboard = () => {
     const carregarDados = async () => {
       try {
         setLoading(true);
-        let idDaEmpresaCorreta = localStorage.getItem('tenantId') || usuarioLogado?.uid;
+        let idDaEmpresaCorreta = impersonatingData?.uid || localStorage.getItem('tenantId') || usuarioLogado?.uid;
 
         if (!isSuperAdmin) {
-            const snapUserDoc = await getDoc(doc(db, "usuarios", usuarioLogado.uid));
+            const uidParaConsultar = isImpersonating ? impersonatingData.uid : usuarioLogado.uid;
+            const snapUserDoc = await getDoc(doc(db, "usuarios", uidParaConsultar));
             let userData = snapUserDoc.exists() ? snapUserDoc.data() : null;
 
-            if (userData?.role === 'funcionario' && userData.tenantId) {
-                idDaEmpresaCorreta = userData.tenantId;
-            } else if (userData?.tenantId) {
-                idDaEmpresaCorreta = userData.tenantId;
+            // Se a conta for vinculada a um tenant diferente ou for funcionário/alias, busca os dados mestres
+            let dadosEmpresa = userData;
+            const tenantAlvo = userData?.tenantId;
+            if (tenantAlvo && tenantAlvo !== uidParaConsultar) {
+                idDaEmpresaCorreta = tenantAlvo;
+                try {
+                    const snapEmp = await getDoc(doc(db, "usuarios", tenantAlvo));
+                    if (snapEmp.exists()) {
+                        dadosEmpresa = snapEmp.data();
+                    }
+                } catch (eEmp) {
+                    console.warn("Erro ao buscar dados da empresa mestre:", eEmp);
+                }
+            } else if (userData?.email) {
+                // Caso existam contas com o mesmo e-mail, prioriza a que tiver a dataFimTeste mais atualizada
+                try {
+                    const qMesmoEmail = query(collection(db, "usuarios"), where("email", "==", userData.email.toLowerCase().trim()));
+                    const snapMesmoEmail = await getDocs(qMesmoEmail);
+                    if (snapMesmoEmail.size > 1) {
+                        snapMesmoEmail.docs.forEach(docE => {
+                            const dData = docE.data();
+                            if (dData.assinaturaAtiva || (dData.dataFimTeste && (!dadosEmpresa?.dataFimTeste || dData.dataFimTeste > dadosEmpresa.dataFimTeste))) {
+                                dadosEmpresa = dData;
+                                if (dData.tenantId || docE.id) {
+                                    idDaEmpresaCorreta = dData.tenantId || docE.id;
+                                }
+                            }
+                        });
+                    }
+                } catch (eDup) {}
             }
 
-            if (userData) {
-                if (userData.assinaturaAtiva === true || userData.statusAssinatura === 'ativa') {
+            if (dadosEmpresa) {
+                if (dadosEmpresa.assinaturaAtiva === true || dadosEmpresa.statusAssinatura === 'ativa') {
                     setAssinaturaAtiva(true);
                 }
 
-                if (userData.statusConta === 'excluido') {
+                if (dadosEmpresa.statusConta === 'excluido' && !isImpersonating) {
                     setStatusConta('excluido');
                     setLoading(false);
                     return;
                 }
 
-                const infoTeste = calcularPeriodoTeste(userData);
+                const infoTeste = calcularPeriodoTeste(dadosEmpresa);
                 setDiasTeste(infoTeste.diaAtual);
+                setTotalDiasTeste(infoTeste.totalDiasTeste || 7);
+                setDiasRestantes(infoTeste.diasRestantes);
+                setDataFimFormatada(infoTeste.dataFimFormatada);
 
-                const assinaturaAtiva = userData.assinaturaAtiva === true || 
-                                        userData.statusAssinatura === 'ativa' || 
-                                        userData.plano === 'pago' || 
-                                        userData.statusPagamentoVulso === 'pago';
+                const assinaturaAtiva = dadosEmpresa.assinaturaAtiva === true || 
+                                        dadosEmpresa.statusAssinatura === 'ativa' || 
+                                        dadosEmpresa.plano === 'pago' || 
+                                        dadosEmpresa.statusPagamentoVulso === 'pago';
 
-                if (!assinaturaAtiva) {
+                if (!assinaturaAtiva && !isImpersonating) {
                     if (infoTeste.diasTranscorridos > 180) {
                         setStatusConta('excluido');
                         try {
-                            await updateDoc(doc(db, "usuarios", usuarioLogado.uid), { statusConta: 'excluido' });
+                            await updateDoc(doc(db, "usuarios", uidParaConsultar), { statusConta: 'excluido' });
                         } catch (eErr) {}
                         setLoading(false);
                         return;
@@ -192,51 +269,82 @@ const Dashboard = () => {
           localStorage.setItem('tenantId', idDaEmpresaCorreta);
         }
 
-        // BUSCA ESTOQUE E LOCAÇÕES COM FALLBACK DE CAMPO (userId ou tenantId)
-        let qEstoque = query(collection(db, "estoque"), where("userId", "==", idDaEmpresaCorreta));
-        let qLocacoes = query(collection(db, "locacoes"), where("userId", "==", idDaEmpresaCorreta));
+        // Constrói lista de UIDs alvo para busca multi-tenant robusta (Modo Suporte / Aliases / Google Auth)
+        const uidsAlvoSet = new Set();
+        if (idDaEmpresaCorreta) uidsAlvoSet.add(idDaEmpresaCorreta);
+        if (usuarioLogado?.uid) uidsAlvoSet.add(usuarioLogado.uid);
 
-        let estSnap = await getDocs(qEstoque);
-        let locSnap = await getDocs(qLocacoes);
-
-        if (estSnap.empty) {
-          const qEstoqueT = query(collection(db, "estoque"), where("tenantId", "==", idDaEmpresaCorreta));
-          const estSnapT = await getDocs(qEstoqueT);
-          if (!estSnapT.empty) estSnap = estSnapT;
+        let emailAlvo = usuarioLogado?.email || '';
+        const rawImp = localStorage.getItem('impersonatingTenant');
+        if (rawImp) {
+          try {
+            const imp = JSON.parse(rawImp);
+            if (imp.targetTenantId) uidsAlvoSet.add(imp.targetTenantId);
+            if (imp.uid) uidsAlvoSet.add(imp.uid);
+            if (imp.originalUid) uidsAlvoSet.add(imp.originalUid);
+            if (Array.isArray(imp.allUids)) {
+              imp.allUids.forEach(u => u && uidsAlvoSet.add(u));
+            }
+            if (imp.email) emailAlvo = imp.email;
+          } catch (e) {}
         }
 
-        if (locSnap.empty) {
-          const qLocsT = query(collection(db, "locacoes"), where("tenantId", "==", idDaEmpresaCorreta));
-          const locSnapT = await getDocs(qLocsT);
-          if (!locSnapT.empty) locSnap = locSnapT;
+        if (emailAlvo) {
+          try {
+            const emailLimpo = emailAlvo.toLowerCase().trim();
+            const qEmail = query(collection(db, "usuarios"), where("email", "==", emailLimpo));
+            const snapEmail = await getDocs(qEmail);
+            snapEmail.docs.forEach(d => {
+              uidsAlvoSet.add(d.id);
+              if (d.data().tenantId) uidsAlvoSet.add(d.data().tenantId);
+            });
+          } catch (e) {}
         }
 
-        const locs = locSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // BUSCA ESTOQUE E LOCAÇÕES MULTI-TENANT
+        const mapEstoque = new Map();
+        const mapLocacoes = new Map();
+        for (const uId of uidsAlvoSet) {
+          const [snapEstU, snapEstT, snapLocU, snapLocT] = await Promise.all([
+            getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+            getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+          ]);
+          [...snapEstU.docs, ...snapEstT.docs].forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
+          [...snapLocU.docs, ...snapLocT.docs].forEach(d => mapLocacoes.set(d.id, { id: d.id, ...d.data() }));
+        }
+
+        const estoqueDocs = Array.from(mapEstoque.values());
+        const estSnap = { docs: estoqueDocs.map(d => ({ data: () => d })), size: estoqueDocs.length };
+        const locs = Array.from(mapLocacoes.values());
         setTodasLocacoes(locs);
 
-        // BUSCA OPCIONAL DE COMPRAS (lista_compras) E LANÇAMENTOS (financeiro_lancamentos)
+        // BUSCA MULTI-TENANT DE COMPRAS (lista_compras) E LANÇAMENTOS (financeiro_lancamentos)
         let comprasDocs = [];
         try {
-          let qCompras = query(collection(db, "lista_compras"), where("userId", "==", idDaEmpresaCorreta));
-          let comprasSnap = await getDocs(qCompras);
-          if (comprasSnap.empty) {
-            const qComprasT = query(collection(db, "lista_compras"), where("tenantId", "==", idDaEmpresaCorreta));
-            const comprasSnapT = await getDocs(qComprasT);
-            if (!comprasSnapT.empty) comprasSnap = comprasSnapT;
+          const mapCompras = new Map();
+          for (const uId of uidsAlvoSet) {
+            const [snapCompU, snapCompT] = await Promise.all([
+              getDocs(query(collection(db, "lista_compras"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+              getDocs(query(collection(db, "lista_compras"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+            ]);
+            [...snapCompU.docs, ...snapCompT.docs].forEach(d => mapCompras.set(d.id, { id: d.id, ...d.data() }));
           }
-          comprasDocs = comprasSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          comprasDocs = Array.from(mapCompras.values());
         } catch (eComp) {}
 
         let lancDocs = [];
         try {
-          let qLancamentos = query(collection(db, "financeiro_lancamentos"), where("userId", "==", idDaEmpresaCorreta));
-          let lancSnap = await getDocs(qLancamentos);
-          if (lancSnap.empty) {
-            const qLancT = query(collection(db, "financeiro_lancamentos"), where("tenantId", "==", idDaEmpresaCorreta));
-            const lancSnapT = await getDocs(qLancT);
-            if (!lancSnapT.empty) lancSnap = lancSnapT;
+          const mapLanc = new Map();
+          for (const uId of uidsAlvoSet) {
+            const [snapLancU, snapLancT] = await Promise.all([
+              getDocs(query(collection(db, "financeiro_lancamentos"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+              getDocs(query(collection(db, "financeiro_lancamentos"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+            ]);
+            [...snapLancU.docs, ...snapLancT.docs].forEach(d => mapLanc.set(d.id, { id: d.id, ...d.data() }));
           }
-          lancDocs = lancSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+          lancDocs = Array.from(mapLanc.values());
         } catch (eLanc) {}
 
         // BUSCA DE PROJETOS DO MOODBOARD
@@ -654,63 +762,48 @@ const Dashboard = () => {
         setCobrancasAtrasadas(atrasados.sort((a, b) => b.valor - a.valor).slice(0, 5));
 
         
+        // BUSCA MULTI-TENANT DE CLIENTES E ANIVERSARIANTES
         try {
-          let snapClientesDash;
-          try {
-            const qClientesDash = query(collection(db, "clientes"), where("userId", "==", idDaEmpresaCorreta));
-            snapClientesDash = await getDocs(qClientesDash);
-          } catch (e1) {
-            const qClientesDashT = query(collection(db, "clientes"), where("tenantId", "==", idDaEmpresaCorreta));
-            snapClientesDash = await getDocs(qClientesDashT);
+          const mapClientesDash = new Map();
+          for (const uId of uidsAlvoSet) {
+            const [snapCliU, snapCliT] = await Promise.all([
+              getDocs(query(collection(db, "clientes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+              getDocs(query(collection(db, "clientes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+            ]);
+            [...snapCliU.docs, ...snapCliT.docs].forEach(d => {
+              mapClientesDash.set(d.id, { ...d.data(), id: d.id });
+            });
           }
-          const todosClientesDash = snapClientesDash ? snapClientesDash.docs.map(d => ({ ...d.data(), id: d.id })) : [];
-
-
-          const extrairMesDia = (dataVal) => {
-            if (!dataVal) return { mes: -1, dia: -1 };
-            try {
-              if (typeof dataVal === 'object' && dataVal !== null) {
-                let d;
-                if (dataVal.toDate) d = dataVal.toDate();
-                else if (dataVal.seconds) d = new Date(dataVal.seconds * 1000);
-                else if (dataVal instanceof Date) d = dataVal;
-                if (d) return { mes: d.getMonth(), dia: d.getDate() };
-              } else {
-                const str = String(dataVal).trim();
-                if (!str) return { mes: -1, dia: -1 };
-                if (str.includes('-')) {
-                  const partes = str.split('T')[0].split('-');
-                  if (partes.length === 3) return { mes: parseInt(partes[1], 10) - 1, dia: parseInt(partes[2], 10) };
-                } else if (str.includes('/')) {
-                  const partes = str.split('/');
-                  if (partes.length >= 2) return { mes: parseInt(partes[1], 10) - 1, dia: parseInt(partes[0], 10) };
-                } else {
-                  const d = new Date(str);
-                  if (!isNaN(d.getTime())) return { mes: d.getMonth(), dia: d.getDate() };
-                }
-              }
-            } catch (e) {}
-            return { mes: -1, dia: -1 };
-          };
+          const todosClientesDash = Array.from(mapClientesDash.values());
 
           const hoje = new Date();
           const mesHoje = hoje.getMonth();
           const diaHoje = hoje.getDate();
 
+          // Filtra todos os aniversariantes do mês atual
           const todosDoMes = todosClientesDash.filter(c => {
-            const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.dataAniversario || c.aniversario;
+            const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.data_nascimento || c.dataAniversario || c.aniversario || c.nasc;
             const { mes } = extrairMesDia(dataVal);
             return mes === mesHoje;
           }).sort((a, b) => {
-            const dA = extrairMesDia(a.nascimento || a.dataNascimento || a.dataNasc || a.dataAniversario || a.aniversario).dia;
-            const dB = extrairMesDia(b.nascimento || b.dataNascimento || b.dataNasc || b.dataAniversario || b.aniversario).dia;
-            return dA - dB;
+            const valA = a.nascimento || a.dataNascimento || a.dataNasc || a.data_nascimento || a.dataAniversario || a.aniversario || a.nasc;
+            const valB = b.nascimento || b.dataNascimento || b.dataNasc || b.data_nascimento || b.dataAniversario || b.aniversario || b.nasc;
+            const diaA = extrairMesDia(valA).dia;
+            const diaB = extrairMesDia(valB).dia;
+            
+            // Prioriza aniversários a partir de hoje (futuros no mês), depois os que já passaram
+            const aFuturo = diaA >= diaHoje;
+            const bFuturo = diaB >= diaHoje;
+            if (aFuturo && !bFuturo) return -1;
+            if (!aFuturo && bFuturo) return 1;
+            return diaA - diaB;
           });
 
+          // Aniversariantes próximos (próximos 7 dias para maior utilidade)
           const proximosAnivs = todosDoMes.filter(c => {
-            const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.dataAniversario || c.aniversario;
+            const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.data_nascimento || c.dataAniversario || c.aniversario || c.nasc;
             const { dia } = extrairMesDia(dataVal);
-            return dia >= diaHoje && dia <= diaHoje + 2;
+            return dia >= diaHoje && dia <= diaHoje + 7;
           });
 
           setAniversariantesDoMes(todosDoMes);
@@ -825,9 +918,9 @@ const Dashboard = () => {
 
   return (
     <div className="dash-wide-container fade-in">
-      {!isSuperAdmin && !assinaturaAtiva && statusConta === 'ativo' && diasTeste <= 7 && (
+      {!isSuperAdmin && !assinaturaAtiva && statusConta !== 'bloqueado' && statusConta !== 'excluido' && diasRestantes > 0 && (
         <div className="dash-trial-banner">
-          ⏳ Você está no dia {diasTeste} de 7 do seu teste gratuito. Aproveite!
+          ⏳ Você está no dia {diasTeste} de {totalDiasTeste} do seu teste gratuito ({diasRestantes} {diasRestantes === 1 ? 'dia restante' : 'dias restantes'}). Aproveite!
         </div>
       )}
 
@@ -1149,42 +1242,49 @@ const Dashboard = () => {
             <section className="dash-card-wide crm-birthday-card-dash">
               <div className="dash-section-header">
                 <h3 style={{ margin: 0 }}>🎂 Aniversários</h3>
-                <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
-                  <span className="birthday-count-pill">{aniversariantesProximos.length} PRÓX.</span>
-                  <button type="button" onClick={() => setModalAniversariantesAberto(true)} className="btn-ver-todos-anivs" style={{ padding: '2px 8px', fontSize: '0.65rem' }}>
-                    <i className="fas fa-eye"></i> {aniversariantesDoMes.length}
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                  <span className="birthday-count-pill" title={`${aniversariantesDoMes.length} clientes aniversariando este mês`}>
+                    {aniversariantesDoMes.length} no mês
+                  </span>
+                  <button 
+                    type="button" 
+                    onClick={() => setModalAniversariantesAberto(true)} 
+                    className="btn-ver-todos-anivs" 
+                    style={{ padding: '2px 8px', fontSize: '0.65rem' }}
+                    title="Ver todos os aniversariantes do mês"
+                  >
+                    <i className="fas fa-eye"></i> Ver Todos
                   </button>
                 </div>
               </div>
               <div className="birthday-grid-compact">
-                {aniversariantesProximos.length > 0 ? (
-                  aniversariantesProximos.slice(0, 5).map((c) => {
+                {aniversariantesDoMes.length > 0 ? (
+                  aniversariantesDoMes.slice(0, 5).map((c) => {
                     const hoje = new Date();
                     const diaHoje = hoje.getDate();
-                    const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.dataAniversario || c.aniversario || '';
-                    const partesDia = String(dataVal).includes('-')
-                      ? parseInt(String(dataVal).split('T')[0].split('-')[2], 10)
-                      : String(dataVal).includes('/')
-                        ? parseInt(String(dataVal).split('/')[0], 10)
-                        : -1;
+                    const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.data_nascimento || c.dataAniversario || c.aniversario || c.nasc || '';
+                    const { dia: partesDia } = extrairMesDia(dataVal);
+                    const ehPassado = partesDia > 0 && partesDia < diaHoje;
                     const ehHoje = partesDia === diaHoje;
                     const ehAmanha = partesDia === diaHoje + 1;
                     const nomeFormat = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente';
                     const fone = c.celular ? c.celular.replace(/\D/g, '') : '';
-                    const msgTexto = encodeURIComponent(`Olá ${nomeFormat}! 🎉 Feliz Aniversário da equipe Celebre! 🎂🎈`);
+                    const msgTexto = encodeURIComponent(`Olá ${nomeFormat}! 🎉 A equipe Celebre deseja um Feliz Aniversário! 🎂🎈 Preparamos uma surpresa especial para o seu próximo evento. Vamos comemorar? ✨`);
                     const zapLink = `https://wa.me/55${fone}?text=${msgTexto}`;
                     return (
-                      <div key={c.id} className="birthday-row-compact">
-                        <div className="birthday-avatar-mini">{nomeFormat.charAt(0)}</div>
-                        <span className="birthday-name-mini">{nomeFormat}</span>
+                      <div key={c.id} className="birthday-row-compact" style={{ opacity: ehPassado ? 0.7 : 1 }}>
+                        <div className="birthday-avatar-mini" style={{ background: ehPassado ? '#94a3b8' : undefined }}>{nomeFormat.charAt(0)}</div>
+                        <span className="birthday-name-mini" title={nomeFormat}>{nomeFormat}</span>
                         {ehHoje
-                          ? <span className="birthday-tag-mini" style={{ background: '#fef3c7', color: '#b45309' }}>🎂 HOJE</span>
+                          ? <span className="birthday-tag-mini" style={{ background: '#fef3c7', color: '#b45309', fontWeight: '800' }}>🎂 HOJE</span>
                           : ehAmanha
-                            ? <span className="birthday-tag-mini" style={{ background: '#eff6ff', color: '#1d4ed8' }}>⏰ Amanhã</span>
-                            : <span className="birthday-tag-mini" style={{ background: '#f1f5f9', color: '#475569' }}>📅 Em 2d</span>
+                            ? <span className="birthday-tag-mini" style={{ background: '#eff6ff', color: '#1d4ed8', fontWeight: '700' }}>⏰ Amanhã</span>
+                            : ehPassado
+                              ? <span className="birthday-tag-mini" style={{ background: '#f1f5f9', color: '#64748b' }}>Passou ({String(partesDia).padStart(2, '0')})</span>
+                              : <span className="birthday-tag-mini" style={{ background: '#ecfdf5', color: '#047857', fontWeight: '700' }}>📅 Dia {partesDia}</span>
                         }
                         {c.celular && (
-                          <a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap" style={{ padding: '2px 6px', fontSize: '0.6rem' }}>
+                          <a href={zapLink} target="_blank" rel="noopener noreferrer" className="btn-dispatch-zap" style={{ padding: '2px 6px', fontSize: '0.6rem' }} title={`Felicitar ${nomeFormat} no WhatsApp`}>
                             <i className="fab fa-whatsapp"></i>
                           </a>
                         )}
@@ -1192,7 +1292,7 @@ const Dashboard = () => {
                     );
                   })
                 ) : (
-                  <p className="empty-feed">✨ Nenhum aniversário próximo.</p>
+                  <p className="empty-feed">✨ Nenhum aniversariante este mês.</p>
                 )}
               </div>
             </section>
@@ -1335,22 +1435,18 @@ const Dashboard = () => {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {aniversariantesDoMes.map(c => {
                     const diaHojeModal = new Date().getDate();
-                    const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.dataAniversario || c.aniversario || '';
-                    const diaAniv = String(dataVal).includes('-')
-                      ? parseInt(String(dataVal).split('T')[0].split('-')[2], 10)
-                      : String(dataVal).includes('/')
-                        ? parseInt(String(dataVal).split('/')[0], 10)
-                        : -1;
+                    const dataVal = c.nascimento || c.dataNascimento || c.dataNasc || c.data_nascimento || c.dataAniversario || c.aniversario || c.nasc || '';
+                    const { dia: diaAniv } = extrairMesDia(dataVal);
                     const ehPassado = diaAniv > 0 && diaAniv < diaHojeModal;
                     const ehHojeM = diaAniv === diaHojeModal;
                     const ehAmanhaM = diaAniv === diaHojeModal + 1;
 
                     let badgeLabel = '';
                     let badgeStyle = {};
-                    if (ehPassado) { badgeLabel = 'Já passou'; badgeStyle = { background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' }; }
+                    if (ehPassado) { badgeLabel = `Já passou (${String(diaAniv).padStart(2, '0')})`; badgeStyle = { background: '#f1f5f9', color: '#94a3b8', border: '1px solid #e2e8f0' }; }
                     else if (ehHojeM) { badgeLabel = '🎂 HOJE!'; badgeStyle = { background: '#fef3c7', color: '#b45309', border: '1px solid #fde68a', fontWeight: '900' }; }
-                    else if (ehAmanhaM) { badgeLabel = '⏰ Amanhã'; badgeStyle = { background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe' }; }
-                    else { badgeLabel = `Dia ${diaAniv}`; badgeStyle = { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0' }; }
+                    else if (ehAmanhaM) { badgeLabel = '⏰ Amanhã'; badgeStyle = { background: '#eff6ff', color: '#1d4ed8', border: '1px solid #bfdbfe', fontWeight: '700' }; }
+                    else { badgeLabel = `📅 Dia ${diaAniv}`; badgeStyle = { background: '#f0fdf4', color: '#166534', border: '1px solid #bbf7d0', fontWeight: '700' }; }
 
                     const nomeFormat = c.nome || c.nomeFantasia || c.razaoSocial || 'Cliente';
                     const fone = c.celular ? c.celular.replace(/\D/g, '') : '';

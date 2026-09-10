@@ -1,6 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
+import { 
+  signInWithEmailAndPassword, 
+  signInWithPopup, 
+  GoogleAuthProvider, 
+  onAuthStateChanged, 
+  setPersistence, 
+  browserLocalPersistence, 
+  browserSessionPersistence 
+} from 'firebase/auth';
 import { doc, getDoc, setDoc, addDoc, collection, serverTimestamp, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '../../firebaseConfig'; 
 import './Auth.css'; 
@@ -9,11 +17,26 @@ import logoImage from '../../assets/LOGO_CELEBRE.png';
 
 const Login = () => {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('celebre_saved_email') || '');
   const [senha, setSenha] = useState('');
   const [mostrarSenha, setMostrarSenha] = useState(false);
+  const [lembrarAcesso, setLembrarAcesso] = useState(() => localStorage.getItem('celebre_lembrar_acesso') !== 'false');
   const [erro, setErro] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // 🚀 Se o usuário já estiver logado no aparelho, pula a tela de login e entra direto (estilo Instagram/Facebook)
+  useEffect(() => {
+    if (auth.currentUser) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        navigate('/dashboard', { replace: true });
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
 
   const handleEmailChange = (e) => {
     setEmail(e.target.value);
@@ -33,17 +56,6 @@ const Login = () => {
       
       if (userDoc.exists()) {
         let userData = userDoc.data();
-        
-        // RECUPERAÇÃO AUTOMÁTICA SE THIAGO FOI SEQUESTRADO COMO FUNCIONÁRIO
-        if (user.email === 'thidovi12@gmail.com' && (userData.role !== 'owner' || userData.tenantId !== user.uid)) {
-            await updateDoc(doc(db, 'usuarios', user.uid), {
-                role: 'owner',
-                tenantId: user.uid
-            });
-            userData.role = 'owner';
-            userData.tenantId = user.uid;
-        }
-
         const tenantIdDaEmpresa = userData.tenantId || user.uid;
         
         localStorage.setItem('tenantId', tenantIdDaEmpresa);
@@ -51,7 +63,8 @@ const Login = () => {
         localStorage.setItem('userRole', userData.role || 'owner');
       } else {
         // Se o documento no /usuarios não existe, vamos checar se ele está cadastrado na equipe
-        const qFunc = query(collection(db, "equipe"), where("email", "==", user.email));
+        const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
+        const qFunc = query(collection(db, "equipe"), where("email", "==", emailLimpo));
         const snapFunc = await getDocs(qFunc);
         
         if (!snapFunc.empty) {
@@ -60,7 +73,7 @@ const Login = () => {
           
           // Criamos o documento /usuarios/{user.uid} para o funcionário ter permissões no firestore rules!
           await setDoc(doc(db, "usuarios", user.uid), {
-            email: user.email,
+            email: emailLimpo,
             nomeCompleto: dadosFunc.nome || user.displayName || 'Funcionário',
             role: dadosFunc.cargo || 'Funcionário',
             tenantId: empresaId,
@@ -71,31 +84,74 @@ const Login = () => {
           localStorage.setItem('funcName', dadosFunc.nome || 'Funcionário');
           localStorage.setItem('userRole', dadosFunc.cargo || 'Funcionário');
         } else {
-          // Não é funcionário e nem dono pré-existente (ex: novo cadastro via Google ou email novo)
-          // Criamos o perfil básico de owner com 7 dias de teste VIP garantidos
+          // Checa se já existe outra conta criada com este mesmo e-mail na coleção /usuarios
+          let tenantIdParaSalvar = user.uid;
+          let roleParaSalvar = 'owner';
+          let nomePadrao = user.displayName || emailLimpo.split('@')[0] || 'Usuário';
+          let isAlias = false;
+          let contaVinculadaUid = null;
+
+          try {
+            const qExistente = query(collection(db, "usuarios"), where("email", "==", emailLimpo));
+            const snapExistente = await getDocs(qExistente);
+            if (!snapExistente.empty) {
+              const outrosDocs = snapExistente.docs
+                .filter(d => d.id !== user.uid)
+                .map(d => ({ id: d.id, ...d.data() }));
+
+              if (outrosDocs.length > 0) {
+                outrosDocs.sort((a, b) => {
+                  if (a.documento && !b.documento) return -1;
+                  if (!a.documento && b.documento) return 1;
+                  const aSelf = (a.tenantId === a.id);
+                  const bSelf = (b.tenantId === b.id);
+                  if (aSelf && !bSelf) return -1;
+                  if (!aSelf && bSelf) return 1;
+                  const dataA = new Date(a.dataCadastro || a.criadoEm || 0).getTime();
+                  const dataB = new Date(b.dataCadastro || b.criadoEm || 0).getTime();
+                  return dataA - dataB;
+                });
+
+                const docPrincipal = outrosDocs[0];
+                tenantIdParaSalvar = docPrincipal.tenantId || docPrincipal.id;
+                roleParaSalvar = docPrincipal.role || 'owner';
+                nomePadrao = docPrincipal.nomeExibicao || docPrincipal.nomeCompleto || nomePadrao;
+                isAlias = true;
+                contaVinculadaUid = docPrincipal.id;
+              }
+            }
+          } catch (errCheckExistente) {
+            console.error("Erro ao verificar conta pré-existente por e-mail:", errCheckExistente);
+          }
+
           const dataAtual = new Date();
           const dataFimTeste = new Date(dataAtual);
           dataFimTeste.setDate(dataFimTeste.getDate() + 7);
-          const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
-          const nomePadrao = user.displayName || emailLimpo.split('@')[0] || 'Usuário';
 
-          await setDoc(doc(db, "usuarios", user.uid), {
+          const novoUsuarioDoc = {
             email: emailLimpo,
             nomeCompleto: nomePadrao,
             nomeExibicao: nomePadrao,
-            role: 'owner',
-            tenantId: user.uid,
+            role: roleParaSalvar,
+            tenantId: tenantIdParaSalvar,
             dataCadastro: dataAtual.toISOString(),
             dataFimTeste: dataFimTeste.toISOString(),
             planoId: 'plano_basico',
             statusConta: 'ativo',
             assinaturaAtiva: false,
             criadoEm: serverTimestamp()
-          }, { merge: true });
+          };
+
+          if (isAlias) {
+            novoUsuarioDoc.isAlias = true;
+            novoUsuarioDoc.contaVinculadaDe = contaVinculadaUid;
+          }
+
+          await setDoc(doc(db, "usuarios", user.uid), novoUsuarioDoc, { merge: true });
           
-          localStorage.setItem('tenantId', user.uid);
+          localStorage.setItem('tenantId', tenantIdParaSalvar);
           localStorage.setItem('funcName', nomePadrao);
-          localStorage.setItem('userRole', 'owner');
+          localStorage.setItem('userRole', roleParaSalvar);
         }
       }
     } catch (errUserDoc) {
@@ -124,6 +180,15 @@ const Login = () => {
       console.error("Erro ao tentar gravar log de login:", logErr);
     }
 
+    // Salva preferências de "Lembrar meu acesso"
+    if (lembrarAcesso) {
+      localStorage.setItem('celebre_saved_email', user.email ? user.email.toLowerCase().trim() : emailLimpo);
+      localStorage.setItem('celebre_lembrar_acesso', 'true');
+    } else {
+      localStorage.removeItem('celebre_saved_email');
+      localStorage.setItem('celebre_lembrar_acesso', 'false');
+    }
+
     navigate('/dashboard');
   };
 
@@ -136,6 +201,12 @@ const Login = () => {
     const senhaOriginal = senha || '';
 
     try {
+      try {
+        await setPersistence(auth, lembrarAcesso ? browserLocalPersistence : browserSessionPersistence);
+      } catch (pErr) {
+        console.warn("Aviso ao definir persistência do auth:", pErr);
+      }
+
       let userCredential;
       try {
         userCredential = await signInWithEmailAndPassword(auth, emailLimpo, senhaOriginal);
@@ -206,22 +277,72 @@ const Login = () => {
     const provider = new GoogleAuthProvider();
     
     try {
+      try {
+        await setPersistence(auth, lembrarAcesso ? browserLocalPersistence : browserSessionPersistence);
+      } catch (pErr) {
+        console.warn("Aviso ao definir persistência do auth Google:", pErr);
+      }
+
       const result = await signInWithPopup(auth, provider);
       const user = result.user;
       const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
       const nomeGoogle = user.displayName || emailLimpo.split('@')[0] || 'Usuário Google';
 
-      // 🔍 Busca tenantId existente para o usuário
+      // 🔍 1. Busca tenantId existente para o usuário (equipe ou conta pré-existente)
       let tenantIdParaSalvar = user.uid;
+      let roleParaSalvar = 'owner';
+      let nomeParaSalvar = nomeGoogle;
+      let isAlias = false;
+      let contaVinculadaUid = null;
+      let docPrincipalExistente = null;
 
       try {
         const qEquipe = query(collection(db, "equipe"), where("email", "==", emailLimpo));
         const snapEquipe = await getDocs(qEquipe);
         if (!snapEquipe.empty) {
-          tenantIdParaSalvar = snapEquipe.docs[0].data().empresaId;
+          const dadosEquipe = snapEquipe.docs[0].data();
+          tenantIdParaSalvar = dadosEquipe.empresaId;
+          roleParaSalvar = dadosEquipe.cargo || 'Funcionário';
+          nomeParaSalvar = dadosEquipe.nome || nomeGoogle;
         }
       } catch (errBusca) {
         console.error("Erro ao verificar vínculo com equipe:", errBusca);
+      }
+
+      // 🔍 2. Se não for de equipe, verifica se já existe uma conta na coleção 'usuarios' com este mesmo e-mail
+      if (tenantIdParaSalvar === user.uid) {
+        try {
+          const qUsuarios = query(collection(db, "usuarios"), where("email", "==", emailLimpo));
+          const snapUsuarios = await getDocs(qUsuarios);
+          if (!snapUsuarios.empty) {
+            const outrosDocs = snapUsuarios.docs
+              .filter(d => d.id !== user.uid)
+              .map(d => ({ id: d.id, ...d.data() }));
+
+            if (outrosDocs.length > 0) {
+              outrosDocs.sort((a, b) => {
+                if (a.documento && !b.documento) return -1;
+                if (!a.documento && b.documento) return 1;
+                const aSelf = (a.tenantId === a.id);
+                const bSelf = (b.tenantId === b.id);
+                if (aSelf && !bSelf) return -1;
+                if (!aSelf && bSelf) return 1;
+                const dataA = new Date(a.dataCadastro || a.criadoEm || 0).getTime();
+                const dataB = new Date(b.dataCadastro || b.criadoEm || 0).getTime();
+                return dataA - dataB;
+              });
+
+              docPrincipalExistente = outrosDocs[0];
+              tenantIdParaSalvar = docPrincipalExistente.tenantId || docPrincipalExistente.id;
+              roleParaSalvar = docPrincipalExistente.role || 'owner';
+              nomeParaSalvar = docPrincipalExistente.nomeExibicao || docPrincipalExistente.nomeCompleto || nomeGoogle;
+              isAlias = true;
+              contaVinculadaUid = docPrincipalExistente.id;
+            }
+          }
+        } catch (errBuscaUser) {
+          console.error("Erro ao verificar conta existente em usuarios:", errBuscaUser);
+        }
       }
 
       const userDocRef = doc(db, 'usuarios', user.uid);
@@ -232,37 +353,55 @@ const Login = () => {
       dataFimTeste.setDate(dataFimTeste.getDate() + 7);
 
       if (!userDocSnap.exists()) {
-        await setDoc(userDocRef, {
+        const dadosNovos = {
           email: emailLimpo,
-          nomeCompleto: nomeGoogle,
-          nomeExibicao: nomeGoogle,
-          role: 'owner',
+          nomeCompleto: nomeParaSalvar,
+          nomeExibicao: nomeParaSalvar,
+          role: roleParaSalvar,
           tenantId: tenantIdParaSalvar,
-          dataCadastro: dataAtual.toISOString(),
-          dataFimTeste: dataFimTeste.toISOString(),
-          planoId: 'plano_basico',
-          statusConta: 'ativo',
-          assinaturaAtiva: false,
+          dataCadastro: docPrincipalExistente?.dataCadastro || dataAtual.toISOString(),
+          dataFimTeste: docPrincipalExistente?.dataFimTeste || dataFimTeste.toISOString(),
+          planoId: docPrincipalExistente?.planoId || 'plano_basico',
+          statusConta: docPrincipalExistente?.statusConta || 'ativo',
+          assinaturaAtiva: docPrincipalExistente?.assinaturaAtiva || false,
           authProvider: 'google.com',
           criadoEm: serverTimestamp()
-        }, { merge: true });
+        };
 
-        // Garante configurações da empresa
-        try {
-          const cfgRef = doc(db, 'configuracoes_empresa', tenantIdParaSalvar);
-          const cfgSnap = await getDoc(cfgRef);
-          if (!cfgSnap.exists()) {
-            await setDoc(cfgRef, {
-              nomeFantasia: nomeGoogle,
-              email: emailLimpo,
-              criadoEm: dataAtual.toISOString()
-            }, { merge: true });
-          }
-        } catch (eCfg) {}
+        if (isAlias) {
+          dadosNovos.isAlias = true;
+          dadosNovos.contaVinculadaDe = contaVinculadaUid;
+        }
+
+        await setDoc(userDocRef, dadosNovos, { merge: true });
+
+        // Garante configurações da empresa apenas se NÃO for alias e for owner
+        if (!isAlias && roleParaSalvar === 'owner') {
+          try {
+            const cfgRef = doc(db, 'configuracoes_empresa', tenantIdParaSalvar);
+            const cfgSnap = await getDoc(cfgRef);
+            if (!cfgSnap.exists()) {
+              await setDoc(cfgRef, {
+                nomeFantasia: nomeParaSalvar,
+                email: emailLimpo,
+                criadoEm: dataAtual.toISOString()
+              }, { merge: true });
+            }
+          } catch (eCfg) {}
+        }
       } else {
         const existingData = userDocSnap.data();
         const updates = {};
         if (!existingData.email || existingData.email !== emailLimpo) updates.email = emailLimpo;
+
+        // Se encontramos uma conta original e esta conta está com tenantId desvinculado:
+        if (isAlias && existingData.tenantId !== tenantIdParaSalvar) {
+          updates.tenantId = tenantIdParaSalvar;
+          updates.role = roleParaSalvar;
+          updates.isAlias = true;
+          updates.contaVinculadaDe = contaVinculadaUid;
+        }
+
         if (!existingData.dataFimTeste && !existingData.assinaturaAtiva) {
           updates.dataFimTeste = dataFimTeste.toISOString();
         }
@@ -300,7 +439,7 @@ const Login = () => {
           
           {erro && <div className="auth-erro">{erro}</div>}
           
-          <form onSubmit={handleLogin} className="auth-form-elements">
+          <form onSubmit={handleLogin} className="auth-form-elements" name="login" autoComplete="on">
             
             <div className="input-group">
               <label>E-MAIL</label>
@@ -312,6 +451,7 @@ const Login = () => {
                 autoCapitalize="none"
                 autoCorrect="off"
                 spellCheck="false"
+                autoComplete="username"
                 required 
               />
             </div>
@@ -336,6 +476,7 @@ const Login = () => {
                       autoCapitalize="none"
                       autoCorrect="off"
                       spellCheck="false"
+                      autoComplete="current-password"
                       required 
                   />
                   <button 
@@ -346,6 +487,21 @@ const Login = () => {
                       <i className={`fas ${mostrarSenha ? "fa-eye-slash" : "fa-eye"}`}></i>
                   </button>
               </div>
+            </div>
+
+            {/* 🛡️ OPÇÃO: LEMBRAR ACESSO NESTE APARELHO (COMO INSTAGRAM / FACEBOOK) */}
+            <div className="auth-remember-row">
+              <label className="auth-remember-label" title="Mantém sua sessão salva neste celular para não precisar logar de novo">
+                <input 
+                  type="checkbox" 
+                  checked={lembrarAcesso} 
+                  onChange={(e) => setLembrarAcesso(e.target.checked)} 
+                />
+                <span className="auth-remember-custom-check">
+                  <i className="fas fa-check"></i>
+                </span>
+                <span>Lembrar meu acesso neste aparelho</span>
+              </label>
             </div>
             
             <button type="submit" disabled={loading} className="btn-auth">

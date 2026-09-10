@@ -139,6 +139,10 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
     dataFimTeste.setDate(dataFimTeste.getDate() + 7);
   }
 
+  // Duração total do teste concedida em dias civis
+  const diffTotalMs = dataFimTeste.getTime() - cadMeia.getTime();
+  const totalDiasTeste = Math.max(1, Math.round(diffTotalMs / (1000 * 60 * 60 * 24)));
+
   // Dias restantes até a data final
   const diffAteFimMs = dataFimTeste.getTime() - hojeMeia.getTime();
   const diasRestantesCalculados = Math.round(diffAteFimMs / (1000 * 60 * 60 * 24));
@@ -147,8 +151,8 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
   // Está em teste ativo enquanto a data atual for anterior à data limite e houver dias restantes
   const emTeste = hojeMeia < dataFimTeste && diasRestantesCalculados > 0;
 
-  // Dia atual do teste (ex: Dia 1 de 7, Dia 2 de 7...)
-  const diaAtual = Math.min(7, diasTranscorridos + 1);
+  // Dia atual do teste relativo ao total (ex: Dia 1 de 15, Dia 2 de 15...)
+  const diaAtual = Math.min(totalDiasTeste, diasTranscorridos + 1);
 
   let dataFimFormatada = '—';
   try {
@@ -159,8 +163,35 @@ export const calcularPeriodoTeste = (usuarioOuDados) => {
     emTeste,
     diasRestantes,
     diaAtual,
+    totalDiasTeste,
     diasTranscorridos,
     dataFimFormatada,
     dataFimDate: dataFimTeste
   };
+};
+
+/**
+ * 🌟 Identifica se uma empresa/cliente é NOVO (cadastrado nos últimos 3 dias: hoje, ontem ou anteontem)
+ */
+export const calcularSeEhNovo = (rawDate) => {
+  if (!rawDate) return { isNovo: false, rotulo: '', diffDias: 999 };
+  const dt = parseDataGenerica(rawDate);
+  if (!dt) return { isNovo: false, rotulo: '', diffDias: 999 };
+
+  const hoje = zerarHorario(new Date());
+  const dtCliente = zerarHorario(dt);
+
+  const diffMs = hoje.getTime() - dtCliente.getTime();
+  const diffDias = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  // Cadastrado hoje, ontem, há 2 dias ou há 3 dias (também cobre eventuais fusos com diff negativo leve)
+  if (diffDias <= 3 && diffDias >= -1) {
+    let rotulo = 'Hoje';
+    if (diffDias === 1) rotulo = 'Ontem';
+    else if (diffDias === 2) rotulo = 'Há 2 dias';
+    else if (diffDias === 3) rotulo = 'Há 3 dias';
+    return { isNovo: true, rotulo, diffDias: Math.max(0, diffDias) };
+  }
+
+  return { isNovo: false, rotulo: '', diffDias };
 };

@@ -352,8 +352,12 @@ const AppContent = () => {
     const auth = getAuth();
     if (auth.currentUser) {
       localStorage.setItem('tenantId', auth.currentUser.uid);
+      localStorage.setItem('funcName', auth.currentUser.displayName || 'Celebre Festa');
+      localStorage.setItem('userRole', 'owner');
     } else {
       localStorage.removeItem('tenantId');
+      localStorage.removeItem('funcName');
+      localStorage.removeItem('userRole');
     }
     setImpersonatedTenant(null);
     window.location.href = '/gestao-usuarios';
@@ -373,11 +377,15 @@ const AppContent = () => {
               const impData = JSON.parse(impersonating);
               if (impData && impData.uid) {
                 localStorage.setItem('tenantId', impData.uid);
+                if (impData.nome) localStorage.setItem('funcName', impData.nome);
+                if (impData.role) localStorage.setItem('userRole', impData.role);
                 return;
               }
             } catch (e) {}
           }
           localStorage.setItem('tenantId', user.uid);
+          localStorage.setItem('funcName', user.displayName || 'Celebre Festa');
+          localStorage.setItem('userRole', 'owner');
           return;
         }
 

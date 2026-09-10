@@ -211,20 +211,40 @@ const Estoque = () => {
           return;
       }
 
-      // 🔥 2. FILTRO BLINDADO NO ESTOQUE (DA EMPRESA)
-      const qEstoque = query(collection(db, "estoque"), where("userId", "==", tenantId));
-      const snapEstoque = await getDocs(qEstoque);
-      let listaEstoque = snapEstoque.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // 🔥 2. FILTRO BLINDADO NO ESTOQUE (DA EMPRESA COM SUPORTE A MULTI-TENANT/ALIAS)
+      const uidsAlvoSet = new Set([tenantId].filter(Boolean));
+      if (usuarioLogado?.uid) uidsAlvoSet.add(usuarioLogado.uid);
+      const rawImp = localStorage.getItem('impersonatingTenant');
+      if (rawImp) {
+        try {
+          const imp = JSON.parse(rawImp);
+          if (imp.uid) uidsAlvoSet.add(imp.uid);
+          if (imp.originalUid) uidsAlvoSet.add(imp.originalUid);
+          if (Array.isArray(imp.allUids)) imp.allUids.forEach(u => u && uidsAlvoSet.add(u));
+        } catch (e) {}
+      }
+
+      const mapEstoque = new Map();
+      const mapLocacoes = new Map();
+      for (const uId of uidsAlvoSet) {
+        const [snapEU, snapET, snapLU, snapLT] = await Promise.all([
+          getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+        ]);
+        [...snapEU.docs, ...snapET.docs].forEach(doc => mapEstoque.set(doc.id, { id: doc.id, ...doc.data() }));
+        [...snapLU.docs, ...snapLT.docs].forEach(doc => mapLocacoes.set(doc.id, { id: doc.id, ...doc.data() }));
+      }
+
+      let listaEstoque = Array.from(mapEstoque.values());
       listaEstoque.sort((a, b) => {
           const tempoA = a.criadoEm?.toMillis ? a.criadoEm.toMillis() : 0;
           const tempoB = b.criadoEm?.toMillis ? b.criadoEm.toMillis() : 0;
           return tempoB - tempoA; 
       });
 
-      // 🔥 3. FILTRO BLINDADO NAS LOCAÇÕES (DA EMPRESA)
-      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
-      const snapLocacoes = await getDocs(qLocacoes);
-      const listaLocacoes = snapLocacoes.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const listaLocacoes = Array.from(mapLocacoes.values());
 
       setItens(listaEstoque);
       setLocacoes(listaLocacoes);

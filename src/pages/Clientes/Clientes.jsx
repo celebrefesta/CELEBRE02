@@ -147,13 +147,54 @@ const Clientes = () => {
         console.warn("Erro ao buscar configuracoes_empresa:", eConf);
       }
 
-      const qClientes = query(collection(db, "clientes"), where("userId", "==", tenantId));
-      const querySnapshot = await getDocs(qClientes);
-      let listaClientes = querySnapshot.docs.map(doc => ({ ...doc.data(), id: doc.id }));
+      // 🎯 BUSCA MULTI-TENANT INTELIGENTE: Suporte a Contas Vinculadas, Alias e Modo Suporte
+      const uidsAlvoSet = new Set([tenantId].filter(Boolean));
+      if (usuarioLogado?.uid) uidsAlvoSet.add(usuarioLogado.uid);
 
-      const qLocacoes = query(collection(db, "locacoes"), where("userId", "==", tenantId));
-      const locacoesSnapshot = await getDocs(qLocacoes);
-      const locs = locacoesSnapshot.docs.map(d => ({ ...d.data(), id: d.id }));
+      const rawImp = localStorage.getItem('impersonatingTenant');
+      let emailAlvo = usuarioLogado?.email || '';
+      if (rawImp) {
+        try {
+          const imp = JSON.parse(rawImp);
+          if (imp.uid) uidsAlvoSet.add(imp.uid);
+          if (imp.originalUid) uidsAlvoSet.add(imp.originalUid);
+          if (Array.isArray(imp.allUids)) {
+            imp.allUids.forEach(u => u && uidsAlvoSet.add(u));
+          }
+          if (imp.email) emailAlvo = imp.email;
+        } catch (e) {}
+      }
+
+      // Se o usuário logado ou impersonado tiver e-mail, busca outros UIDs associados
+      if (emailAlvo) {
+        try {
+          const emailLimpo = emailAlvo.toLowerCase().trim();
+          const qEmail = query(collection(db, "usuarios"), where("email", "==", emailLimpo));
+          const snapEmail = await getDocs(qEmail);
+          snapEmail.docs.forEach(d => {
+            uidsAlvoSet.add(d.id);
+            if (d.data().tenantId) uidsAlvoSet.add(d.data().tenantId);
+          });
+        } catch (e) {}
+      }
+
+      const mapClientes = new Map();
+      const mapLocacoes = new Map();
+
+      for (const uId of uidsAlvoSet) {
+        const [snapCliU, snapCliT, snapLocU, snapLocT] = await Promise.all([
+          getDocs(query(collection(db, "clientes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "clientes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+        ]);
+
+        [...snapCliU.docs, ...snapCliT.docs].forEach(d => mapClientes.set(d.id, { ...d.data(), id: d.id }));
+        [...snapLocU.docs, ...snapLocT.docs].forEach(d => mapLocacoes.set(d.id, { ...d.data(), id: d.id }));
+      }
+
+      let listaClientes = Array.from(mapClientes.values());
+      const locs = Array.from(mapLocacoes.values());
       setAllLocacoes(locs);
 
       const hoje = new Date();
@@ -443,7 +484,13 @@ const Clientes = () => {
     let dataVal = clienteOuDataStr;
 
     if (typeof clienteOuDataStr === 'object' && clienteOuDataStr !== null && !(clienteOuDataStr instanceof Date)) {
-      dataVal = clienteOuDataStr.nascimento || clienteOuDataStr.dataNascimento || clienteOuDataStr.dataNasc || clienteOuDataStr.dataAniversario || clienteOuDataStr.aniversario;
+      dataVal = clienteOuDataStr.nascimento || 
+                clienteOuDataStr.dataNascimento || 
+                clienteOuDataStr.dataNasc || 
+                clienteOuDataStr.data_nascimento || 
+                clienteOuDataStr.dataAniversario || 
+                clienteOuDataStr.aniversario ||
+                clienteOuDataStr.nasc;
     }
     if (!dataVal) return false;
 
@@ -458,7 +505,10 @@ const Clientes = () => {
         if (!str) return false;
         if (str.includes('-')) {
           const partes = str.split('T')[0].split('-');
-          if (partes.length === 3) mesNasc = parseInt(partes[1], 10) - 1;
+          if (partes.length === 3) {
+            if (partes[0].length === 4) mesNasc = parseInt(partes[1], 10) - 1;
+            else if (partes[2].length === 4) mesNasc = parseInt(partes[1], 10) - 1;
+          }
         } else if (str.includes('/')) {
           const partes = str.split('/');
           if (partes.length >= 2) mesNasc = parseInt(partes[1], 10) - 1;
@@ -505,7 +555,7 @@ const Clientes = () => {
     let tipo = tipoInicial;
     if (!tipo) {
       if (cliente.situacaoFinanceira === 'inadimplente') tipo = 'cobranca';
-      else if (isAniversarianteDoMes(cliente.dataNascimento || cliente.dataNasc)) tipo = 'aniversario';
+      else if (isAniversarianteDoMes(cliente)) tipo = 'aniversario';
       else tipo = 'atendimento';
     }
     const textoInicial = gerarTextoModeloWhatsApp(cliente, tipo);
@@ -774,7 +824,7 @@ const Clientes = () => {
     if (filtroStatus === 'inadimplentes') passStatus = c.situacaoFinanceira === 'inadimplente';
     if (filtroStatus === 'pendentes') passStatus = c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente';
     if (filtroStatus === 'vip') passStatus = (c.tags || '').toUpperCase().includes('VIP');
-    if (filtroStatus === 'aniversariantes') passStatus = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
+    if (filtroStatus === 'aniversariantes') passStatus = isAniversarianteDoMes(c);
 
     let passTag = true;
     if (filtroTagCRM !== 'todas') {
@@ -815,7 +865,7 @@ const Clientes = () => {
       perfilTotalGasto = res.totalGasto;
   }
 
-  const numAniversariantes = clientes.filter(c => isAniversarianteDoMes(c.dataNascimento || c.dataNasc)).length;
+  const numAniversariantes = clientes.filter(c => isAniversarianteDoMes(c)).length;
   const numPendentesAprovacao = clientes.filter(c => c.statusAprovacao === 'pendente' || c.situacaoFinanceira === 'pendente').length;
 
   const copiarLinkAutoCadastro = () => {
@@ -888,35 +938,45 @@ const Clientes = () => {
         </div>
       </header>
 
-      {/* BANNER INTERATIVO DE PENDENTES DE APROVAÇÃO (AUTO-CADASTRO) */}
+      {/* BARRA SUTIL DE PENDENTES DE APROVAÇÃO (AUTO-CADASTRO) */}
       {numPendentesAprovacao > 0 && (
-        <div className="crm-birthday-alert-banner fade-in" style={{ background: 'linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%)', borderColor: '#fdba74', marginBottom: '16px' }} onClick={() => setFiltroStatus('pendentes')}>
-          <div className="alert-banner-left">
-            <span className="banner-cake-icon" style={{ background: '#ffedd5', color: '#c2410c' }}>⏳</span>
-            <div>
-              <strong style={{ color: '#9a3412' }}>{numPendentesAprovacao} cadastro{numPendentesAprovacao === 1 ? '' : 's'} de auto-cadastro aguardando sua aprovação!</strong>
-              <p style={{ color: '#c2410c' }}>Revise as informações cadastradas via link público e aprove o perfil com 1 clique.</p>
-            </div>
+        <div 
+          className="crm-birthday-alert-subtle alert-subtle-pending fade-in" 
+          onClick={() => setFiltroStatus(filtroStatus === 'pendentes' ? 'todos' : 'pendentes')}
+          title="Clique para revisar os cadastros pendentes"
+        >
+          <div className="alert-subtle-left">
+            <span className="subtle-cake-emoji">⏳</span>
+            <span className="subtle-text">
+              <strong>{numPendentesAprovacao} {numPendentesAprovacao === 1 ? 'cadastro aguardando sua aprovação' : 'cadastros aguardando sua aprovação'}</strong>
+            </span>
           </div>
-          <button type="button" className="btn-banner-action" style={{ background: '#c2410c', color: '#fff' }}>
-            Aprovar Cadastros <i className="fas fa-arrow-right"></i>
-          </button>
+          <div className="alert-subtle-right">
+            <span className="btn-subtle-pill btn-subtle-pending-pill">
+              {filtroStatus === 'pendentes' ? 'Filtrando Pendentes ✓' : 'Revisar →'}
+            </span>
+          </div>
         </div>
       )}
 
-      {/* BANNER INTERATIVO DE ANIVERSARIANTES DO MÊS */}
+      {/* BARRA SUTIL E ELEGANTE DE ANIVERSARIANTES DO MÊS */}
       {numAniversariantes > 0 && (
-        <div className="crm-birthday-alert-banner fade-in" onClick={() => setFiltroStatus('aniversariantes')}>
-          <div className="alert-banner-left">
-            <span className="banner-cake-icon">🎂</span>
-            <div>
-              <strong style={{ color: '#be185d' }}>{numAniversariantes} cliente{numAniversariantes === 1 ? '' : 's'} faz{numAniversariantes === 1 ? '' : 'em'} aniversário este mês!</strong>
-              <p>Aproveite para enviar felicitações e cupons de desconto para impulsionar novas locações.</p>
-            </div>
+        <div 
+          className="crm-birthday-alert-subtle fade-in" 
+          onClick={() => setFiltroStatus(filtroStatus === 'aniversariantes' ? 'todos' : 'aniversariantes')}
+          title="Clique para filtrar aniversariantes do mês"
+        >
+          <div className="alert-subtle-left">
+            <span className="subtle-cake-emoji">🎂</span>
+            <span className="subtle-text">
+              <strong>{numAniversariantes} {numAniversariantes === 1 ? 'cliente faz aniversário este mês' : 'clientes fazem aniversário este mês'}</strong>
+            </span>
           </div>
-          <button type="button" className="btn-banner-action">
-            Ver Aniversariantes <i className="fas fa-arrow-right"></i>
-          </button>
+          <div className="alert-subtle-right">
+            <span className="btn-subtle-pill">
+              {filtroStatus === 'aniversariantes' ? 'Filtrando Aniversariantes ✓' : 'Ver Aniversariantes →'}
+            </span>
+          </div>
         </div>
       )}
 
@@ -1173,7 +1233,7 @@ const Clientes = () => {
                   clientesFiltrados.map(c => {
                     const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
                     const tagColorida = c.tags ? getTagStyle(c.tags) : null;
-                    const eAniversariante = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
+                    const eAniversariante = isAniversarianteDoMes(c);
                     const isInadimplente = c.situacaoFinanceira === 'inadimplente';
                     const isRecorrente = clientesRecorrentesSet.has(c.id);
 
@@ -1401,7 +1461,7 @@ const Clientes = () => {
             ) : (
               clientesFiltrados.map(c => {
                 const nomeBonito = formatarNomeCapitalizado(c.tipoPessoa === 'juridica' ? c.nomeFantasia : c.nome || '?');
-                const eAniversariante = isAniversarianteDoMes(c.dataNascimento || c.dataNasc);
+                const eAniversariante = isAniversarianteDoMes(c);
                 const isRecorrente = clientesRecorrentesSet.has(c.id);
                 const ultLoc = getUltimaLocacao(c.id);
                 const vip = getSeloVIPCliente(c.id);

@@ -30,20 +30,151 @@
   }
 }
 
-/* --- BANNER INTERATIVO DE ANIVERSARIANTES DO MÊS --- */
-.crm-birthday-alert-banner {
+/* --- BARRA SUTIL E ELEGANTE DE ANIVERSARIANTES E PENDENTES --- */
+.crm-birthday-alert-subtle {
   background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
-  border: 1.5px solid #fbcfe8;
-  border-radius: 18px;
-  padding: 14px 22px;
-  margin-bottom: 24px;
+  border: 1px solid #fbcfe8;
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 16px;
+  gap: 10px;
   cursor: pointer;
-  box-shadow: 0 6px 20px rgba(236, 72, 153, 0.12);
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 6px rgba(236, 72, 153, 0.08);
+  transition: all 0.2s ease;
+}
+
+[data-theme='dark'] .crm-birthday-alert-subtle {
+  background: #28101e;
+  border-color: #831843;
+}
+
+.crm-birthday-alert-subtle:hover {
+  border-color: #f472b6;
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.16);
+  transform: translateY(-1px);
+}
+
+.alert-subtle-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.subtle-cake-emoji {
+  font-size: 16px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.subtle-text {
+  font-size: 0.8rem;
+  color: #9d174d;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+[data-theme='dark'] .subtle-text {
+  color: #f472b6;
+}
+
+.subtle-text strong {
+  color: #be185d;
+  font-weight: 800;
+}
+
+[data-theme='dark'] .subtle-text strong {
+  color: #fb7185;
+}
+
+.btn-subtle-pill {
+  background: #be185d;
+  color: #ffffff;
+  padding: 4px 12px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.btn-subtle-pill:hover {
+  background: #9d174d;
+}
+
+/* Variação para Pendentes de Aprovação */
+.crm-birthday-alert-subtle.alert-subtle-pending {
+  background: linear-gradient(135deg, #fff7ed 0%, #ffedd5 100%);
+  border-color: #fed7aa;
+  box-shadow: 0 2px 6px rgba(194, 65, 12, 0.08);
+}
+
+[data-theme='dark'] .crm-birthday-alert-subtle.alert-subtle-pending {
+  background: #2b1708;
+  border-color: #9a3412;
+}
+
+.alert-subtle-pending .subtle-text {
+  color: #9a3412;
+}
+
+[data-theme='dark'] .alert-subtle-pending .subtle-text {
+  color: #fdba74;
+}
+
+.alert-subtle-pending .subtle-text strong {
+  color: #c2410c;
+}
+
+[data-theme='dark'] .alert-subtle-pending .subtle-text strong {
+  color: #fb923c;
+}
+
+.btn-subtle-pending-pill {
+  background: #c2410c;
+}
+
+.btn-subtle-pending-pill:hover {
+  background: #9a3412;
+}
+
+@media (max-width: 600px) {
+  .crm-birthday-alert-subtle {
+    padding: 7px 10px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+  }
+  .subtle-text {
+    font-size: 0.73rem;
+  }
+  .btn-subtle-pill {
+    padding: 3px 8px;
+    font-size: 0.68rem;
+  }
+}
+
+/* --- BANNER INTERATIVO (LEGADO REDUZIDO) --- */
+.crm-birthday-alert-banner {
+  background: linear-gradient(135deg, #fdf2f8 0%, #fce7f3 100%);
+  border: 1px solid #fbcfe8;
+  border-radius: 12px;
+  padding: 8px 14px;
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(236, 72, 153, 0.08);
+  transition: all 0.2s ease;
 }
 
 [data-theme='dark'] .crm-birthday-alert-banner {
@@ -52,30 +183,30 @@
 }
 
 .crm-birthday-alert-banner:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 10px 28px rgba(236, 72, 153, 0.22);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(236, 72, 153, 0.16);
 }
 
 .alert-banner-left {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 10px;
 }
 
 .banner-cake-icon {
-  font-size: 28px;
+  font-size: 20px;
 }
 
 .alert-banner-left strong {
-  font-size: 0.92rem;
+  font-size: 0.82rem;
   color: #be185d;
-  font-weight: 850;
+  font-weight: 800;
   display: block;
 }
 
 .alert-banner-left p {
-  margin: 2px 0 0 0;
-  font-size: 0.8rem;
+  margin: 1px 0 0 0;
+  font-size: 0.74rem;
   color: #9d174d;
 }
 
@@ -83,21 +214,20 @@
   background: #be185d;
   color: #ffffff;
   border: none;
-  padding: 8px 18px;
-  border-radius: 20px;
-  font-size: 0.76rem;
-  font-weight: 850;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 0.72rem;
+  font-weight: 800;
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.2s ease;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: 4px;
 }
 
 .btn-banner-action:hover {
   background: #9d174d;
-  transform: translateX(2px);
 }
 
 /* --- HERO CABEÇALHO --- */
@@ -2825,7 +2955,6 @@
   .pendencia-actions-row {
     flex-direction: column !important;
   }
-}
 }
 
 /* =========================================================

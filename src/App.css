@@ -1011,7 +1011,7 @@ main,
   display: flex;
   flex-direction: column;
   box-shadow: 4px 0 10px rgba(0, 0, 0, 0.1);
-  z-index: 2200 !important; 
+  z-index: 999999 !important; 
   overflow: hidden; 
   transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -1029,36 +1029,9 @@ main,
 }
 
 @media (max-width: 768px) {
-  /* O Botão Fixo perfeitamente alinhado na barra de navegação superior (Topbar) */
+  /* Botão legado ocultado em favor do botão oficial integrado ao Topbar (.topbar-btn-menu-mobile) */
   .mobile-menu-btn {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: fixed;
-    top: 8px;
-    left: 12px;
-    width: 40px;
-    height: 40px;
-    z-index: 2000 !important;
-    background: #090e18;
-    color: #c5a059;
-    border: 1px solid rgba(197, 160, 89, 0.35);
-    padding: 0;
-    border-radius: 11px;
-    font-size: 17px;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
-    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
-  }
-
-  .mobile-menu-btn:hover {
-    background: #0f172a;
-    border-color: #dfb76c;
-    color: #dfb76c;
-  }
-
-  .mobile-menu-btn:active {
-    transform: scale(0.92);
+    display: none !important;
   }
 
   /* A Película Escura SÓ APARECE QUANDO VOCÊ CLICA NO MENU (.active) */
@@ -1069,7 +1042,7 @@ main,
     position: fixed !important;
     inset: 0 !important;
     background: rgba(5, 8, 15, 0.75) !important;
-    z-index: 2100 !important; 
+    z-index: 999990 !important; 
     backdrop-filter: blur(6px) !important;
     -webkit-backdrop-filter: blur(6px) !important;
   }
@@ -1756,9 +1729,19 @@ main,
   gap: 16px;
   position: sticky;
   top: 0;
-  z-index: 10000;
+  z-index: 1005;
   box-shadow: 0 4px 18px rgba(0, 0, 0, 0.35);
   animation: slideDownBannerCelebre 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Quando o menu lateral mobile está aberto, o banner fica garantidamente no fundo sem interceptar toques */
+body.sidebar-mobile-open {
+  overflow: hidden !important;
+}
+
+body.sidebar-mobile-open .celebre-support-mode-banner {
+  z-index: 10 !important;
+  pointer-events: none !important;
 }
 
 @keyframes slideDownBannerCelebre {

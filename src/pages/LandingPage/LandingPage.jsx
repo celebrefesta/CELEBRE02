@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { db } from '../../firebaseConfig';
+import { Link, useNavigate } from 'react-router-dom';
+import { onAuthStateChanged } from 'firebase/auth';
+import { auth, db } from '../../firebaseConfig';
 // Importamos o 'where' para filtrar apenas quem paga
 import { collection, getDocs, query, orderBy, limit, where } from 'firebase/firestore';
 import './LandingPage.css';
@@ -9,6 +10,22 @@ import logoImage from '../../assets/LOGO_CELEBRE.png';
 import dashboardReal from '../../assets/landingpage.png'; 
 
 const LandingPage = () => {
+  const navigate = useNavigate();
+
+  // 🚀 Se o usuário já estiver logado no aparelho, pula a Landing Page e entra direto no sistema (estilo Instagram/Facebook)
+  useEffect(() => {
+    if (auth.currentUser) {
+      navigate('/dashboard', { replace: true });
+      return;
+    }
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user) {
+        navigate('/dashboard', { replace: true });
+      }
+    });
+    return () => unsubscribe();
+  }, [navigate]);
+
   const [modalContatoAberto, setModalContatoAberto] = useState(false);
   const [planos, setPlanos] = useState([]);
   const [loadingPlanos, setLoadingPlanos] = useState(true);
