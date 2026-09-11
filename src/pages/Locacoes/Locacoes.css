@@ -1811,9 +1811,9 @@
     box-sizing: border-box !important;
   }
 
-  .locacoes-container .header-actions button,
-  .locacoes-container .header-actions .btn-primary-celebre,
-  .locacoes-container .header-actions .btn-secondary-celebre,
+  .locacoes-container .header-actions > button,
+  .locacoes-container .header-actions > .btn-primary-celebre,
+  .locacoes-container .header-actions > .btn-secondary-celebre,
   .locacoes-container .btn-primary-celebre,
   .locacoes-container .btn-secondary-celebre { 
     width: 100% !important; 
@@ -1892,9 +1892,9 @@
     box-sizing: border-box !important;
   }
 
-  .locacoes-container .header-actions button,
-  .locacoes-container .header-actions .btn-primary-celebre,
-  .locacoes-container .header-actions .btn-secondary-celebre,
+  .locacoes-container .header-actions > button,
+  .locacoes-container .header-actions > .btn-primary-celebre,
+  .locacoes-container .header-actions > .btn-secondary-celebre,
   .locacoes-container .btn-primary-celebre,
   .locacoes-container .btn-secondary-celebre { 
     display: flex !important;

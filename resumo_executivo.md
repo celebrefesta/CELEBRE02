@@ -3,7 +3,7 @@
 > **Plataforma SaaS Multi-Tenant Especializada em Gestão de Locação de Acervo, Decoração e Pegue & Monte**  
 > *Documento Executivo e Técnico Definitivo cobrindo Arquitetura, Módulos, Segurança, Workflows Operacionais, Blindagem de UI/UX e Histórico de Evolução.*  
 > **Tecnologias**: React 19 / 18 + Vite 7 · Firebase Firestore & Auth · Mercado Pago SDK · Vanilla CSS Luxury Design System (`#c5a059`, Glassmorphism, Dark/Light Mode)  
-> **Data de Referência**: 09 de Setembro / 2026  
+> **Data de Referência**: 11 de Setembro / 2026  
 
 ---
 
@@ -151,7 +151,17 @@ graph TD
   - **Modalidade Pegue e Monte vs Decoração Completa**: Seleção rápida que ajusta regras operacionais e taxas de frete/entregas.
   - **Desconto Flexível**: Alternância entre valor em Reais (**`R$`**) e Porcentagem (**`%`**).
   - **Catálogo Modal Luxury**: Modal visual estilo e-commerce para inclusão de peças ao pedido com 1 clique.
-- **Matriz de Disponibilidade & Timeline Gantt (`ModalCalendarioDisponibilidade.jsx`)**:
+- **Página Matriz de Disponibilidade (`Disponibilidade.jsx`, `Disponibilidade.css`)**:
+  - **Sincronia Milimétrica de Altura e Espaçamento com Locações**: Paddings equalizados (`12px 10px 80px 10px` mobile / `28px 36px` desktop) e botões superiores calibrados com `height: 42px !important;` e `font-size: 0.80rem !important;`, garantindo transição sem saltos verticais ("pulos") entre `/locacoes` e `/disponibilidade`.
+  - **Navegador Mensal Estável**: Remoção do botão `[ Hoje ]` do centro, utilizando exclusivamente setas `<` e `>` para navegação, mantendo o título do mês permanentemente centralizado no mobile e desktop.
+  - **Menu de Exportação Segmentado**: Dropdown estruturado em dois blocos (`1. MAPA DO ACERVO` e `2. ROMANEIO POR PEDIDO`), com títulos em linha única permanente (`white-space: nowrap !important;`), subtítulos recuados e contenção total dentro do card flutuante.
+- **Motor Industrial de Mapa de Separação & Romaneio em PDF (`gerarMapaSeparacaoPDF.js`)**:
+  - **Dois Modos de Exportação**: Emissão em Paisagem A4 agrupada **por Peça** (com caixas de conferência `[ ]`) ou **por Pedido** (romaneio completo de carga com cliente, horários de entrega e devolução).
+  - **QR Code Dinâmico do Pedido**: Cada pedido do Romaneio possui QR Code gerado em tempo real para bipagem com leitor de código de barras ou smartphone pelo expedidor/motorista.
+  - **Endereçamento Físico no Galpão**: Identificação de `[Local: Galpão | Prateleira | Setor]` junto a cada item.
+  - **Protocolo Oficial de Assinaturas**: Rodapé com 3 colunas formais de inspeção e assinatura (`Separado por`, `Conferido por`, `Retirado por`).
+  - **Compatibilidade 100% jsPDF**: Eliminação de caracteres corrompidos (`'þ`, `'`) através de codificação pura WinAnsi/Latin-1.
+- **Matriz de Disponibilidade Modal & Timeline Gantt (`ModalCalendarioDisponibilidade.jsx`)**:
   - **Visão Quinzena no Mobile**: Divisão do mês em 1ª Quinzena (1-15) e 2ª Quinzena (16-fim), dobrando a largura útil de toque no celular.
   - **Seletor Compacto de Reservas (`📌 RESERVAS (X)`)**: Dropdown que agrupa clientes e pedidos do mês sob o card da peça sem poluir a tela.
   - **Navegação Direta 1-Click**: Botão `🔗 Abrir Pedido ➔` para saltar direto para a edição da locação.
@@ -314,6 +324,29 @@ O projeto possui regras de layout estritas e ativas para garantir estabilidade v
 ---
 
 ## 📅 9. HISTÓRICO DE SESSÕES DE DESENVOLVIMENTO
+
+### 🗓️ Sessão: 11/09/2026 — 16h30 às 18h00 (BRT)
+- ✅ **📐 Repaginação da Matriz de Disponibilidade & Sincronia de Altura com Locações (`Disponibilidade.jsx`, `Disponibilidade.css`)**:
+  - **Transição de Telas Sem Saltos Visuais**: Equalização milimétrica de paddings com `Locacoes.css` (`12px 10px 80px 10px` mobile e `28px 36px` desktop) e botões superiores com `height: 42px !important;` e `font-size: 0.80rem !important;`.
+  - **Subtítulo Canônico em 1 Linha**: Ajustado para `"Consulte o estoque disponível e reservas."` (41 caracteres, sem quebras no mobile).
+  - **Navegador Mensal Estável**: Remoção do botão `[ Hoje ]` do centro, utilizando exclusivamente setas `<` e `>` para navegação, mantendo o título do mês permanentemente centralizado.
+- ✅ **🚀 Upgrade Industrial do Mapa de Separação em PDF (`gerarMapaSeparacaoPDF.js`)**:
+  - Implementação dos **6 pilares de logística industrial e galpão de eventos**:
+    1. **Tratamento Profissional de Estado Vazio**: Mensagem executiva sem reservas no período sem quebrar tabelas.
+    2. **Endereçamento Físico no Galpão**: Identificação de `[Local: Galpão | Prateleira | Setor]` em cada item.
+    3. **Protocolo Oficial de Assinaturas e Conferência**: Rodapé nobre com 3 colunas pontilhadas formais com data e hora (`Separado por`, `Conferido por`, `Retirado por`).
+    4. **Identificação da Modalidade de Saída**: Badges visuais indicando `[BALCÃO: PEGUE & MONTE]` e `[CARREGAMENTO: DECORAÇÃO COMPLETA]`.
+    5. **Dois Modos de Exportação Segmentados**: **1. Mapa do Acervo (por Peça)** e **2. Romaneio de Carga (por Pedido / Festa)**.
+    6. **QR Code Dinâmico do Pedido**: Cada pedido do Romaneio recebe QR Code gerado em tempo real (`qrcode`) para bipagem e abertura rápida no smartphone pelo motorista/separador.
+- ✅ **🎨 Otimização Tipográfica e Quebra de Escrita no Menu Suspenso de Exportação (`Disponibilidade.jsx`, `Disponibilidade.css`)**:
+  - Reestruturação em dois blocos organizados (`1. MAPA DO ACERVO` e `2. ROMANEIO POR PEDIDO`).
+  - Títulos em linha única permanente (`white-space: nowrap !important;`), eliminando quebras feias de parênteses como `(com` e `(Imediato)`.
+  - Subtítulo descritivo fluido posicionado na 2ª linha com recuo harmônico de `22px`.
+  - Isolamento estrito de seletores (`.header-actions > button` em `Disponibilidade.css` e `Locacoes.css`) para impedir contaminação de estilos.
+- ✅ **🔤 Correção de Codificação no jsPDF (Eliminação de Emojis Corrompidos)**:
+  - Substituição de emojis Unicode 4-byte (`✍️`, `✓`, `📍`, `📦`, `✨`, `🚚`, `📅`, `↩`, `➔`) por marcações executivas limpas (`[ OK ]`, `Local:`, `->`, `SAÍDA:`, `DEVOLUÇÃO:`), eliminando caracteres estranhos (`'þ`, `'`) na impressão.
+- ✅ **🛠️ Auditoria de Build de Produção**:
+  - `npm run build` executado com sucesso e **zero erros** (`built in 16.11s - 17.43s`).
 
 ### 🗓️ Sessão: 09/09/2026 — 10h15 às 14h35 (BRT)
 - ✅ **💎 Centralização & Redesign Luxury dos Estados Vazios (Empty States) em Clientes (`Clientes.jsx`, `Clientes.css`, `design-lock.css`)**:

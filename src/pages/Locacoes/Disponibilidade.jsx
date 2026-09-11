@@ -29,6 +29,8 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
   const [fotoAmpliada, setFotoAmpliada] = useState(null);
   const [apenasAlugados, setApenasAlugados] = useState(false);
   const [apenasManutencao, setApenasManutencao] = useState(false);
+  const [apenasLivres, setApenasLivres] = useState(false);
+  const [ordenacaoPecas, setOrdenacaoPecas] = useState('nome');
   const [pecaParaSubstituir, setPecaParaSubstituir] = useState(null);
   const [menuExportAberto, setMenuExportAberto] = useState(false);
 
@@ -337,22 +339,88 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
     return { porItem: mapa, porDiaGeral: mapaDiaGeral };
   }, [locacoes, diasDoMes, listaPecasEfetiva]);
 
-  // Filtro de peças
+  // Contadores para os chips rápidos de status (padrão Gestão de Locações)
+  const { pecasOcupadasCount, pecasReformaCount, pecasLivresCount } = useMemo(() => {
+    let ocupadas = 0;
+    let reforma = 0;
+    let livres = 0;
+
+    listaPecasEfetiva.forEach(item => {
+      const mapaItem = mapaOcupacao.porItem[item.id] || {};
+      let temReserva = false;
+      let temMaint = false;
+
+      diasDoMes.forEach(({ dataStr }) => {
+        if ((mapaItem[dataStr]?.alugados || 0) > 0) temReserva = true;
+        if (obterManutencaoNoDia(item, dataStr) > 0) temMaint = true;
+      });
+
+      if (temReserva) ocupadas++;
+      if (temMaint) reforma++;
+      if (!temReserva && !temMaint) livres++;
+    });
+
+    return {
+      pecasOcupadasCount: ocupadas,
+      pecasReformaCount: reforma,
+      pecasLivresCount: livres
+    };
+  }, [listaPecasEfetiva, mapaOcupacao, diasDoMes]);
+
+  // Filtro e Ordenação de peças do acervo
   const estoqueFiltrado = useMemo(() => {
-    return listaPecasEfetiva.filter(item => {
-      const bateNome = (item.nome || '').toLowerCase().includes(busca.toLowerCase()) ||
-                       (item.codigo || '').toLowerCase().includes(busca.toLowerCase());
+    const filtrados = listaPecasEfetiva.filter(item => {
+      const buscaNorm = busca.toLowerCase().trim();
+      const bateNome = !buscaNorm || 
+                       (item.nome || '').toLowerCase().includes(buscaNorm) ||
+                       (item.codigo || '').toLowerCase().includes(buscaNorm) ||
+                       (item.categoria || '').toLowerCase().includes(buscaNorm);
       const bateCat = categoria === 'Todas' || (item.categoria || 'Geral') === categoria;
       const batePecaEspecifica = itemSelecionadoId === 'todos' || String(item.id) === String(itemSelecionadoId);
       
-      if (apenasManutencao) {
-        const emMaint = item.qtdManutencao !== undefined ? Number(item.qtdManutencao) : (item.status === 'manutencao' ? Number(item.quantidade || 1) : 0);
-        if (emMaint <= 0) return false;
-      }
+      const mapaItem = mapaOcupacao.porItem[item.id] || {};
+      let totalDiasAlugados = 0;
+      let totalDiasMaint = 0;
+
+      diasDoMes.forEach(({ dataStr }) => {
+        if ((mapaItem[dataStr]?.alugados || 0) > 0) totalDiasAlugados++;
+        if (obterManutencaoNoDia(item, dataStr) > 0) totalDiasMaint++;
+      });
+
+      if (apenasAlugados && totalDiasAlugados === 0) return false;
+      if (apenasManutencao && totalDiasMaint === 0) return false;
+      if (apenasLivres && (totalDiasAlugados > 0 || totalDiasMaint > 0)) return false;
 
       return bateNome && bateCat && batePecaEspecifica;
     });
-  }, [listaPecasEfetiva, busca, categoria, itemSelecionadoId, apenasManutencao]);
+
+    // Ordenação dinâmica
+    filtrados.sort((a, b) => {
+      if (ordenacaoPecas === 'nome') {
+        return (a.nome || '').localeCompare(b.nome || '');
+      }
+      if (ordenacaoPecas === 'maiorQtd') {
+        return Number(b.quantidade || 1) - Number(a.quantidade || 1);
+      }
+      if (ordenacaoPecas === 'menorQtd') {
+        return Number(a.quantidade || 1) - Number(b.quantidade || 1);
+      }
+      if (ordenacaoPecas === 'maisReservadas') {
+        const mapaA = mapaOcupacao.porItem[a.id] || {};
+        const mapaB = mapaOcupacao.porItem[b.id] || {};
+        let resA = 0;
+        let resB = 0;
+        diasDoMes.forEach(({ dataStr }) => {
+          if ((mapaA[dataStr]?.alugados || 0) > 0) resA++;
+          if ((mapaB[dataStr]?.alugados || 0) > 0) resB++;
+        });
+        return resB - resA;
+      }
+      return 0;
+    });
+
+    return filtrados;
+  }, [listaPecasEfetiva, busca, categoria, itemSelecionadoId, apenasAlugados, apenasManutencao, apenasLivres, ordenacaoPecas, mapaOcupacao, diasDoMes]);
 
   // KPIs do mês
   const kpisMes = useMemo(() => {
@@ -432,7 +500,7 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
     setDataAtual(new Date());
   };
 
-  const handleExportarPDFComFiltro = (tipo = 'mes') => {
+  const handleExportarPDFComFiltro = (tipo = 'mes', modo = 'acervo') => {
     const hoje = new Date();
     const hojeIsoStr = hoje.toISOString().split('T')[0];
     let tituloPeriodo = `Mês de ${MESES[mesIndex]}`;
@@ -471,6 +539,8 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
       kpisMes,
       dadosEmpresa,
       {
+        modoRelatorio: modo,
+        locacoes: locacoes,
         tituloPeriodo,
         dataInicio,
         dataFim,
@@ -494,21 +564,12 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
             </span>
             <div>
               <h1>Matriz de Disponibilidade</h1>
-              <p>Consulte em tempo real o estoque disponível e reservas peça por peça.</p>
+              <p>Consulte o estoque disponível e reservas.</p>
             </div>
           </div>
         </div>
 
         <div className="header-actions">
-          <button 
-            type="button"
-            className="btn-secondary-celebre" 
-            onClick={() => navigate('/locacoes')}
-            title="Voltar para a listagem de locações"
-          >
-            <i className="fas fa-arrow-left"></i> Locações
-          </button>
-          
           <div className="disp-export-wrapper" ref={exportMenuRef}>
             <button
               type="button"
@@ -516,26 +577,88 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
               onClick={() => setMenuExportAberto(prev => !prev)}
               title="Exportar Mapa de Separação em PDF"
             >
-              <i className="fas fa-file-pdf"></i> Mapa PDF <i className="fas fa-chevron-down" style={{ fontSize: '9px', marginLeft: '3px' }}></i>
+              <i className="fas fa-file-pdf"></i> MAPA PDF <i className="fas fa-chevron-down" style={{ fontSize: '9px', marginLeft: '4px' }}></i>
             </button>
 
             {menuExportAberto && (
               <div className="disp-export-dropdown-menu">
-                <button type="button" onClick={() => { handleExportarPDFComFiltro('mes'); setMenuExportAberto(false); }}>
-                  🗓️ Mês Inteiro (com Checkbox [ ])
+                <div className="disp-export-section-title">
+                  <i className="fas fa-boxes"></i> 1. MAPA DO ACERVO (POR PEÇA)
+                </div>
+                <button 
+                  type="button" 
+                  className="disp-export-item-btn"
+                  onClick={() => { handleExportarPDFComFiltro('mes', 'acervo'); setMenuExportAberto(false); }}
+                >
+                  <span className="disp-item-title">🗓️ Mês Inteiro</span>
+                  <small className="disp-item-desc">Estoque completo com caixas de conferência</small>
                 </button>
-                <button type="button" onClick={() => { handleExportarPDFComFiltro('3dias'); setMenuExportAberto(false); }}>
-                  ⚡ Próximos 3 Dias (Imediato)
+                <button 
+                  type="button" 
+                  className="disp-export-item-btn"
+                  onClick={() => { handleExportarPDFComFiltro('3dias', 'acervo'); setMenuExportAberto(false); }}
+                >
+                  <span className="disp-item-title">⚡ Próximos 3 Dias</span>
+                  <small className="disp-item-desc">Separação expressa e imediata</small>
                 </button>
-                <button type="button" onClick={() => { handleExportarPDFComFiltro('fimdesemana'); setMenuExportAberto(false); }}>
-                  🎈 Final de Semana (Sex a Dom)
+                <button 
+                  type="button" 
+                  className="disp-export-item-btn"
+                  onClick={() => { handleExportarPDFComFiltro('fimdesemana', 'acervo'); setMenuExportAberto(false); }}
+                >
+                  <span className="disp-item-title">🎈 Final de Semana</span>
+                  <small className="disp-item-desc">Eventos de sexta a domingo</small>
                 </button>
-                <button type="button" onClick={() => { handleExportarPDFComFiltro('apenas_reservados'); setMenuExportAberto(false); }}>
-                  📦 Somente Peças com Reserva
+                <button 
+                  type="button" 
+                  className="disp-export-item-btn"
+                  onClick={() => { handleExportarPDFComFiltro('apenas_reservados', 'acervo'); setMenuExportAberto(false); }}
+                >
+                  <span className="disp-item-title">📦 Somente c/ Reserva</span>
+                  <small className="disp-item-desc">Apenas peças alugadas no mês</small>
+                </button>
+
+                <div className="disp-export-section-divider"></div>
+
+                <div className="disp-export-section-title highlight">
+                  <i className="fas fa-truck-loading"></i> 2. ROMANEIO POR PEDIDO (QR CODE)
+                </div>
+                <button 
+                  type="button" 
+                  className="disp-export-item-btn btn-romaneio-action" 
+                  onClick={() => { handleExportarPDFComFiltro('mes', 'romaneio'); setMenuExportAberto(false); }}
+                >
+                  <span className="disp-item-title">🚚 Romaneio do Mês</span>
+                  <small className="disp-item-desc">Festa a festa com QR Code e assinaturas</small>
+                </button>
+                <button 
+                  type="button" 
+                  className="disp-export-item-btn btn-romaneio-action" 
+                  onClick={() => { handleExportarPDFComFiltro('3dias', 'romaneio'); setMenuExportAberto(false); }}
+                >
+                  <span className="disp-item-title">⚡ Expedição 3 Dias</span>
+                  <small className="disp-item-desc">Saídas e coletas imediatas por pedido</small>
+                </button>
+                <button 
+                  type="button" 
+                  className="disp-export-item-btn btn-romaneio-action" 
+                  onClick={() => { handleExportarPDFComFiltro('fimdesemana', 'romaneio'); setMenuExportAberto(false); }}
+                >
+                  <span className="disp-item-title">🎈 Expedição Fim de Semana</span>
+                  <small className="disp-item-desc">Cargas agrupadas de sexta a domingo</small>
                 </button>
               </div>
             )}
           </div>
+
+          <button 
+            type="button"
+            className="btn-secondary-celebre" 
+            onClick={() => navigate('/locacoes')}
+            title="Voltar para a listagem de locações"
+          >
+            <i className="fas fa-arrow-left"></i> LOCAÇÕES
+          </button>
         </div>
       </header>
 
@@ -617,85 +740,119 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
         </div>
       </div>
 
-      {/* 🔍 PAINEL UNIFICADO DE FILTROS SLIM & SOFISTICADO */}
-      <div className="disp-filter-panel">
+      {/* 🔍 PAINEL DE FILTROS E BUSCA AVANÇADA (PADRÃO GESTÃO DE LOCAÇÕES) */}
+      <div className="advanced-filter-bar disp-filter-bar">
         
-        {/* LINHA 1: BUSCA E SELETOR DE CATEGORIA (2 COLUNAS LADO A LADO) */}
-        <div className="disp-filter-row-top">
-          <div className="disp-search-box">
-            <i className="fas fa-search disp-search-icon"></i>
-            <input
-              type="text"
-              className="disp-search-input"
-              placeholder="Buscar peça ou cód..."
-              value={busca}
-              onChange={e => setBusca(e.target.value)}
-            />
-            {busca && (
-              <button className="disp-btn-clear" onClick={() => setBusca('')} title="Limpar busca">
-                <i className="fas fa-times"></i>
-              </button>
-            )}
-          </div>
+        {/* NÍVEL 1: CHIPS OPERACIONAIS DE STATUS (TOPO - IGUAL AO PRINT DE LOCAÇÕES) */}
+        <div className="operacao-chips-grid disp-chips-grid">
+          <button 
+            type="button" 
+            className={`chip-operacao gold ${apenasAlugados ? 'active' : ''}`}
+            onClick={() => {
+              setApenasAlugados(prev => !prev);
+              if (!apenasAlugados) { setApenasLivres(false); setApenasManutencao(false); }
+            }}
+            title="Filtrar peças que possuem reservas no mês"
+          >
+            👁️ OCUPADOS <span className="chip-badge gold">{pecasOcupadasCount}</span>
+          </button>
 
-          <div className="disp-cat-box">
-            <select
-              className="disp-select-cat"
-              value={categoria}
-              onChange={e => setCategoria(e.target.value)}
+          <button 
+            type="button" 
+            className={`chip-operacao rose ${apenasManutencao ? 'active' : ''}`}
+            onClick={() => {
+              setApenasManutencao(prev => !prev);
+              if (!apenasManutencao) { setApenasAlugados(false); setApenasLivres(false); }
+            }}
+            title="Filtrar peças em manutenção ou reforma"
+          >
+            🛠️ REFORMA <span className="chip-badge rose">{pecasReformaCount}</span>
+          </button>
+
+          <button 
+            type="button" 
+            className={`chip-operacao emerald ${apenasLivres ? 'active' : ''}`}
+            onClick={() => {
+              setApenasLivres(prev => !prev);
+              if (!apenasLivres) { setApenasAlugados(false); setApenasManutencao(false); }
+            }}
+            title="Filtrar peças 100% livres no mês"
+          >
+            🟢 LIVRES <span className="chip-badge emerald">{pecasLivresCount}</span>
+          </button>
+
+          {(apenasAlugados || apenasManutencao || apenasLivres || busca || categoria !== 'Todas') && (
+            <button 
+              type="button" 
+              className="chip-operacao-limpar"
+              onClick={() => {
+                setApenasAlugados(false);
+                setApenasManutencao(false);
+                setApenasLivres(false);
+                setBusca('');
+                setCategoria('Todas');
+              }}
+              title="Limpar todos os filtros"
             >
-              {categorias.map(cat => (
-                <option key={cat} value={cat}>{cat === 'Todas' ? 'Todas Categorias' : cat}</option>
-              ))}
-            </select>
-          </div>
+              ✕ Ver Todos
+            </button>
+          )}
         </div>
 
-        {/* LINHA 2: NAVEGADOR DO MÊS, CHIPS E LEGENDA */}
-        <div className="disp-filter-row-bottom">
+        {/* NÍVEL 2: CAIXA DE BUSCA PROMINENTE (LARGURA TOTAL) */}
+        <div className="search-input-box">
+          <i className="fas fa-search search-box-icon"></i>
+          <input 
+            type="text" 
+            placeholder="Buscar por peça, código ou categoria..." 
+            value={busca} 
+            onChange={e => setBusca(e.target.value)} 
+            className="search-input-field"
+          />
+          {busca && (
+            <button type="button" className="btn-clear-input" onClick={() => setBusca('')} title="Limpar busca">
+              <i className="fas fa-times"></i>
+            </button>
+          )}
+        </div>
+
+        {/* NÍVEL 3: NAVEGADOR DE MÊS E ANO */}
+        <div className="disp-month-bar">
           <div className="disp-month-navigator">
-            <button className="btn-nav-month" onClick={() => navegarMes(-1)} title="Mês anterior">
+            <button type="button" className="btn-nav-month" onClick={() => navegarMes(-1)} title="Mês anterior">
               <i className="fas fa-chevron-left"></i>
             </button>
             <span className="current-month-display">
               {MESES[mesIndex]} <span className="current-year-accent">{ano}</span>
             </span>
-            <button className="btn-nav-month" onClick={() => navegarMes(1)} title="Próximo mês">
+            <button type="button" className="btn-nav-month" onClick={() => navegarMes(1)} title="Próximo mês">
               <i className="fas fa-chevron-right"></i>
             </button>
-            {(mesIndex !== new Date().getMonth() || ano !== new Date().getFullYear()) && (
-              <button className="btn-today-pill" onClick={irParaMesAtual} title="Ir para o mês atual">
-                Hoje
-              </button>
-            )}
           </div>
+        </div>
 
-          <div className="disp-action-chips">
-            <button 
-              type="button"
-              className={`chip-operacao gold ${apenasAlugados ? 'active' : ''}`}
-              onClick={() => setApenasAlugados(prev => !prev)}
-              title="Ocultar/Esmaecer dias sem agendamentos"
-            >
-              <span>{apenasAlugados ? '✨ Ocupados' : '👁️ Ocupados'}</span>
-            </button>
+        {/* NÍVEL 4: SUB-FILTROS EM 2 COLUNAS (CATEGORIA E ORDENAÇÃO) */}
+        <div className="filter-sub-grid disp-sub-grid">
+          <select value={categoria} onChange={e => setCategoria(e.target.value)} className="select-pill-filter">
+            {categorias.map(cat => (
+              <option key={cat} value={cat}>{cat === 'Todas' ? '🏷️ Categoria: Todas' : `🏷️ ${cat}`}</option>
+            ))}
+          </select>
 
-            <button 
-              type="button"
-              className={`chip-operacao red ${apenasManutencao ? 'active' : ''}`}
-              onClick={() => setApenasManutencao(prev => !prev)}
-              title="Filtrar peças em manutenção"
-            >
-              <span>{apenasManutencao ? '🛠️ Reforma' : '🛠️ Reforma'}</span>
-            </button>
-          </div>
+          <select value={ordenacaoPecas} onChange={e => setOrdenacaoPecas(e.target.value)} className="select-pill-filter">
+            <option value="nome">🌟 Ordenar: Nome (A-Z)</option>
+            <option value="maisReservadas">🔥 Mais Reservadas</option>
+            <option value="maiorQtd">📦 Maior Quantidade</option>
+            <option value="menorQtd">📉 Menor Quantidade</option>
+          </select>
+        </div>
 
-          <div className="disp-legend-strip">
-            <div className="disp-legend-pill"><span className="legend-dot dot-green"></span> Livre</div>
-            <div className="disp-legend-pill"><span className="legend-dot dot-yellow"></span> Parcial</div>
-            <div className="disp-legend-pill"><span className="legend-dot dot-red"></span> Esgotado</div>
-            <div className="disp-legend-pill"><span className="legend-dot dot-darkred"></span> Reforma</div>
-          </div>
+        {/* NÍVEL 5: LEGENDA VISUAL DEDICADA */}
+        <div className="disp-legend-strip">
+          <div className="disp-legend-pill"><span className="legend-dot dot-green"></span> Livre</div>
+          <div className="disp-legend-pill"><span className="legend-dot dot-yellow"></span> Parcial</div>
+          <div className="disp-legend-pill"><span className="legend-dot dot-red"></span> Esgotado</div>
+          <div className="disp-legend-pill"><span className="legend-dot dot-darkred"></span> Reforma</div>
         </div>
 
       </div>
@@ -703,26 +860,21 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
       {/* 📦 MATRIZ DE DISPONIBILIDADE DO ACERVO */}
       <div className="disp-matrix-list">
         {loading ? (
-          <div className="disp-empty-state-card">
-            <i className="fas fa-spinner fa-spin disp-loading-spinner"></i>
-            <h3>Carregando Matriz do Acervo...</h3>
-            <p>Sincronizando acervo e reservas em tempo real.</p>
+          <div className="disp-empty-state-card-clean">
+            <i className="fas fa-spinner fa-spin disp-loading-spinner" style={{ fontSize: '1.4rem', color: '#c5a059', marginBottom: '8px' }}></i>
+            <p>Carregando matriz do acervo e reservas...</p>
           </div>
         ) : estoqueFiltrado.length === 0 ? (
-          <div className="disp-empty-state-card">
-            <div className="disp-empty-icon-circle">
-              <i className="fas fa-boxes"></i>
-            </div>
-            <h3>Nenhuma peça encontrada</h3>
-            <p>Não encontramos itens no acervo que correspondam aos filtros selecionados.</p>
-            {(busca || categoria !== 'Todas' || apenasManutencao) && (
+          <div className="disp-empty-state-card-clean">
+            <p>Nenhuma peça encontrada nesta filtragem.</p>
+            {(busca || categoria !== 'Todas' || apenasManutencao || apenasAlugados || apenasLivres) && (
               <button 
                 type="button" 
-                className="btn-secondary-celebre" 
-                onClick={() => { setBusca(''); setCategoria('Todas'); setApenasManutencao(false); }}
-                style={{ marginTop: '12px' }}
+                className="chip-operacao-limpar" 
+                onClick={() => { setBusca(''); setCategoria('Todas'); setApenasManutencao(false); setApenasAlugados(false); setApenasLivres(false); }}
+                style={{ marginTop: '8px', fontSize: '0.80rem' }}
               >
-                <i className="fas fa-undo"></i> Limpar Filtros
+                ✕ Limpar Filtros
               </button>
             )}
           </div>

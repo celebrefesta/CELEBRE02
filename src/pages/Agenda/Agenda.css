@@ -1702,8 +1702,8 @@
   box-sizing: border-box !important;
 }
 
-.agenda-modal-overlay .form-row-2col > *,
-.agenda-container .form-row-2col > *,
+.agenda-modal-overlay .form-row-2col>*,
+.agenda-container .form-row-2col>*,
 .agenda-modal-overlay .form-group,
 .agenda-container .form-group {
   display: flex !important;

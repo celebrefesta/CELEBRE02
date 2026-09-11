@@ -1,5 +1,5 @@
 # 🔒 CELEBRE SYSTEM — RESUMO EXECUTIVO DETALHADO DO SISTEMA
-**Data de Atualização:** 10 de Setembro de 2026  
+**Data de Atualização:** 11 de Setembro de 2026  
 **Status Geral:** 🟢 100% Estável, Build de Produção Limpo (Zero Erros) e Publicado em Produção  
 **Domínio Oficial Autenticado:** `celebrefesta.com.br`  
 **Google Play Package:** `br.com.celebrefesta.app` (Versão 2 / 1.0.1 - Ativo em 177 países)  
@@ -9,21 +9,68 @@
 ---
 
 ## 📑 ÍNDICE DETALHADO
-1. [Evolução Recente: Sincronização Multi-Tenant, Controle Geral Mobile, Barra Sutil de CRM e Aniversariantes no Dashboard (10/09/2026)](#1-evolução-recente-sincronização-multi-tenant-controle-geral-mobile-barra-sutil-de-crm-e-aniversariantes-no-dashboard-10092026)
-2. [Evolução Visual: Repaginação, Empty States Luxury & Design Lock de Clientes, Novo Cliente e Agenda (09/09/2026)](#2-evolução-visual-repaginação-empty-states-luxury--design-lock-de-clientes-novo-cliente-e-agenda-09092026)
-3. [Moodboard Studio 2D/3D & Cenografia Virtual (Alta Performance & UX Mobile)](#3-moodboard-studio-2d3d--cenografia-virtual-alta-performance--ux-mobile)
-4. [Nova Barra Lateral / Menu de Navegação VIP](#4-nova-barra-lateral--menu-de-navegação-vip)
-5. [Reestruturação Completa da Página de Planos](#5-reestruturação-completa-da-página-de-planos)
-6. [Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)](#6-diagnóstico--solução-da-tela-opaca-conflito-dark-mode-vs-fundo-claro)
-7. [Publicação no Google Play Console & Distribuição Mobile](#7-publicação-no-google-play-console--distribuição-mobile)
-8. [Infraestrutura Transacional de E-mails (Resend + Hostinger)](#8-infraestrutura-transacional-de-e-mails-resend--hostinger)
-9. [Conformidade Legal LGPD (Art. 18) & Exclusão de Contas](#9-conformidade-legal-lgpd-art-18--exclusão-de-contas)
-10. [Inventário de Módulos & Blindagem de Layout (AGENTS.md)](#10-inventário-de-módulos--blindagem-de-layout-agentsmd)
-11. [Auditoria de Build e Qualidade de Código](#11-auditoria-de-build-e-qualidade-de-código)
+1. [Evolução Recente: Repaginação da Matriz de Disponibilidade, Alinhamento com Locações & Upgrade Industrial do Mapa de Separação em PDF (11/09/2026)](#1-evolução-recente-repaginação-da-matriz-de-disponibilidade-alinhamento-com-locações--upgrade-industrial-do-mapa-de-separação-em-pdf-11092026)
+2. [Evolução Multi-Tenant: Sincronização Google Auth, Controle Geral Mobile, Barra Sutil de CRM e Aniversariantes no Dashboard (10/09/2026)](#2-evolução-multi-tenant-sincronização-google-auth-controle-geral-mobile-barra-sutil-de-crm-e-aniversariantes-no-dashboard-10092026)
+3. [Evolução Visual: Repaginação, Empty States Luxury & Design Lock de Clientes, Novo Cliente e Agenda (09/09/2026)](#3-evolução-visual-repaginação-empty-states-luxury--design-lock-de-clientes-novo-cliente-e-agenda-09092026)
+4. [Moodboard Studio 2D/3D & Cenografia Virtual (Alta Performance & UX Mobile)](#4-moodboard-studio-2d3d--cenografia-virtual-alta-performance--ux-mobile)
+5. [Nova Barra Lateral / Menu de Navegação VIP](#5-nova-barra-lateral--menu-de-navegação-vip)
+6. [Reestruturação Completa da Página de Planos](#6-reestruturação-completa-da-página-de-planos)
+7. [Diagnóstico & Solução da Tela Opaca (Conflito Dark Mode vs Fundo Claro)](#7-diagnóstico--solução-da-tela-opaca-conflito-dark-mode-vs-fundo-claro)
+8. [Publicação no Google Play Console & Distribuição Mobile](#8-publicação-no-google-play-console--distribuição-mobile)
+9. [Infraestrutura Transacional de E-mails (Resend + Hostinger)](#9-infraestrutura-transacional-de-e-mails-resend--hostinger)
+10. [Conformidade Legal LGPD (Art. 18) & Exclusão de Contas](#10-conformidade-legal-lgpd-art-18--exclusão-de-contas)
+11. [Inventário de Módulos & Blindagem de Layout (AGENTS.md)](#11-inventário-de-módulos--blindagem-de-layout-agentsmd)
+12. [Auditoria de Build e Qualidade de Código](#12-auditoria-de-build-e-qualidade-de-código)
 
 ---
 
-## 1. 🚀 Evolução Recente: Sincronização Multi-Tenant, Controle Geral Mobile, Barra Sutil de CRM e Aniversariantes no Dashboard (10/09/2026)
+## 1. 🚀 Evolução Recente: Repaginação da Matriz de Disponibilidade, Alinhamento com Locações & Upgrade Industrial do Mapa de Separação em PDF (11/09/2026)
+
+### 1.1. Sincronia e Alinhamento Milimétrico entre Disponibilidade e Locações
+- **Eliminação de Saltos Visuais ("Pulos") na Transição de Telas**:
+  - `Disponibilidade.css` e `Disponibilidade.jsx` foram milimetricamente equalizados com `Locacoes.css`.
+  - **Paddings Universais**: `padding: 12px 10px 80px 10px !important;` no mobile e `padding: 28px 36px !important;` no desktop.
+  - **Remoção de Gaps Parasitas**: Extinção de margens e gaps residuais no container principal, mantendo os títulos, botões e elementos na mesma altura exata da linha de visão ao alternar entre `/locacoes` e `/disponibilidade`.
+- **Subtítulo Canônico em 1 Linha**:
+  - Subtítulo ajustado para `"Consulte o estoque disponível e reservas."` (exatos 41 caracteres, idêntico a Locações, eliminando quebra para segunda linha em smartphones).
+  - Ícone de cabeçalho unificado com `38px x 38px`, flex centralizado e sombra suave.
+  - Botões de ação do topo (`MAPA PDF` e `LOCAÇÕES`) calibrados com `height: 42px !important;` e `font-size: 0.80rem !important;`.
+- **Navegador Mensal Limpo e Estável**:
+  - Remoção do botão `[ Hoje ]` do meio da barra de navegação mensal.
+  - A navegação entre meses agora é feita exclusivamente pelas setas `<` e `>`, mantendo o nome do mês e ano permanentemente centralizados sem trepidação de layout.
+
+### 1.2. Upgrade Industrial do Mapa de Separação em PDF (`gerarMapaSeparacaoPDF.js`)
+O gerador de PDF em formato paisagem A4 foi elevado a um padrão de expedição industrial, integrando os **6 pilares de logística de eventos**:
+1. **Tratamento Profissional de Estado Vazio**: Quando o período selecionado não possui reservas, o documento emite um comunicado formal e elegante (`NENHUMA RESERVA AGENDADA NESTE PERÍODO • Todo o acervo do galpão encontra-se 100% livre`), evitando tabelas em branco ou páginas desconfiguradas.
+2. **Endereçamento Físico no Galpão**: Exibição da localização física detalhada (`[Local: Galpão Principal | Prat. 2 | Setor A]`) junto a cada item para otimizar o tempo de separação física da equipe de estoque.
+3. **Protocolo Oficial de Assinaturas e Conferência**: Bloco nobre no rodapé com 3 colunas pontilhadas formais com data e hora:
+   - `1. SEPARADO POR (GALPÃO)`
+   - `2. CONFERIDO POR (SUPERVISOR)`
+   - `3. RETIRADO POR (CLIENTE / MOTORISTA)`
+4. **Identificação da Modalidade de Saída**: Badges de destaque operacional identificando pedidos de balcão (`[BALCÃO: PEGUE & MONTE]`) e eventos de montagem externa (`[CARREGAMENTO: DECORAÇÃO COMPLETA]`).
+5. **Dois Modos de Exportação Segmentados**:
+   - **Modo 1: Mapa do Acervo (por Peça)**: Agrupado por item do acervo, com caixas de seleção `[ ]` para conferência geral de estoque e reservas do mês.
+   - **Modo 2: Romaneio de Carga (por Pedido / Festa)**: Agrupado festa por festa, com cliente, telefone, endereço/evento, horários de saída/devolução e lista individual de itens solicitados.
+6. **QR Code Dinâmico do Pedido**: Cada pedido do Romaneio recebe um QR Code gerado em tempo real com link direto para o pedido no Celebre, permitindo que motoristas e separadores bipem a folha impressa usando a câmera do smartphone ou leitor coletor.
+
+### 1.3. Otimização Tipográfica e Quebra de Escrita no Menu Suspenso
+- **Menu Categorizado em 2 Grupos Executivos**:
+  - `1. MAPA DO ACERVO (POR PEÇA)`: Mês Inteiro, Próximos 3 Dias, Final de Semana, Somente c/ Reserva.
+  - `2. ROMANEIO POR PEDIDO (QR CODE)`: Romaneio do Mês, Expedição 3 Dias, Expedição Fim de Semana.
+- **Títulos em Linha Única Permanente (`white-space: nowrap !important;`)**:
+  - Títulos reformulados para serem concisos e expressivos, eliminando quebras desajeitadas de parênteses como `(com` ou `(Imediato)`.
+- **Subtítulo Descritivo com Recuo Harmônico**:
+  - As descrições operacionais ficam na 2ª linha com recuo de `22px`, alinhadas perfeitamente sob a primeira letra do título.
+- **Blindagem de Seletores CSS**:
+  - Isolamento estrito de seletores (`.header-actions > button` em `Disponibilidade.css` e `Locacoes.css`), impedindo que regras de botão de cabeçalho forçassem os botões do menu em 2 colunas espremidas.
+
+### 1.4. Tratamento de Codificação no jsPDF (Eliminação de Emojis Corrompidos)
+- **Diagnóstico**: Emojis Unicode de 4 bytes (como `✍️`, `✓`, `📍`, `📦`, `✨`, `🚚`, `📅`, `↩`, `➔`) sofriam incompatibilidade com a codificação nativa WinAnsi/Latin-1 do jsPDF, gerando caracteres estranhos (`'þ`, `'`) na impressão.
+- **Engenharia de Solução**: Substituição integral por marcações executivas limpas e nítidas (`[ OK ]`, `[Local: ...]`, `->`, `*`, `SAÍDA:`, `DEVOLUÇÃO:`), garantindo 100% de clareza, nitidez e compatibilidade em qualquer visualizador de PDF ou impressora térmica/A4.
+
+---
+
+## 2. 🚀 Evolução Multi-Tenant: Sincronização Google Auth, Controle Geral Mobile, Barra Sutil de CRM e Aniversariantes no Dashboard (10/09/2026)
 
 ### 1.1. Sincronização Multi-Tenant Completa (Caso Thiago / thidovi12@gmail.com)
 - **Diagnóstico da Causa Raiz:**
@@ -194,12 +241,14 @@ O módulo de cenografia virtual e propostas visuais (`Moodboard.jsx` e `Moodboar
 
 ---
 
-## 10. 🔒 Inventário de Módulos & Blindagem de Layout (AGENTS.md)
+## 11. 🔒 Inventário de Módulos & Blindagem de Layout (AGENTS.md)
 
 Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS e a regra de ouro dos cards de KPI (1 linha no Desktop / 2 colunas no Mobile):
 
 | Módulo / Funcionalidade | Arquivos Principais | Status de Blindagem |
 | :--- | :--- | :---: |
+| 📅 **Matriz de Disponibilidade & PDF** | `Disponibilidade.jsx`, `gerarMapaSeparacaoPDF.js` | 🟢 Alinhamento Locações • Romaneio c/ QR Code • Live |
+| 📅 **Locações & Bipagem QR/Barras** | `Locacoes.jsx`, `Locacoes.css` | 🔒 CONGELADA / Estável |
 | 👑 **Controle Geral (Admin Super)** | `ControleGeral.jsx`, `ControleGeral.css` | 🟢 2 Linhas Mobile • React Portal Modal OK • Live |
 | 👥 **Clientes & Auto-Cadastro** | `Clientes.jsx`, `CadastroCliente.jsx` | 🟢 Barra Sutil CRM • Multi-Tenant OK • Live |
 | 🏠 **Dashboard Principal** | `Dashboard.jsx`, `Dashboard.css` | 🟢 Aniversariantes do Mês • Multi-Tenant OK • Live |
@@ -207,7 +256,6 @@ Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS 
 | 🧭 **Menu Lateral & Navegação** | `Navbar.jsx`, `Navbar.css` | 🟢 Modo Suporte Adaptativo VIP |
 | 💎 **Planos & Assinaturas SaaS** | `Planos.jsx`, `Planos.css` | 🟢 Responsivo & Dark/Light OK |
 | 🛍️ **Catálogo Boutique de Luxo** | `Catalago.jsx`, `Catalago.css` | 🔒 CONGELADA / Estável |
-| 📅 **Locações & Bipagem QR/Barras** | `Locacoes.jsx`, `Locacoes.css` | 🔒 CONGELADA / Estável |
 | 🚚 **Logística & Kanban Galpão** | `Logistica.jsx`, `Logistica.css` | 🔒 CONGELADA / Estável |
 | 📦 **Estoque & Cadastro de Acervo** | `Estoque.jsx`, `CadastroEstoque.jsx` | 🔒 CONGELADA / Estável |
 | 💰 **Financeiro & Lançamentos** | `Financeiro.jsx`, `NovoLancamento.jsx` | 🔒 CONGELADA / Estável |
@@ -220,9 +268,9 @@ Todos os módulos do sistema respeitam o regramento de isolamento de escopo CSS 
 
 ---
 
-## 11. 🛠️ Auditoria de Build e Qualidade de Código
+## 12. 🛠️ Auditoria de Build e Qualidade de Código
 
-- **Build de Produção (Vite 7):** Validado com sucesso via `npm run build` em **15.26 segundos**.
+- **Build de Produção (Vite 7):** Validado com sucesso via `npm run build` em **16.11 - 17.43 segundos**.
 - **Deploy de Produção:** Publicado com sucesso via Firebase Hosting no domínio `celebrefesta.com.br` (`celebre-9f5c9`).
 - **Módulos Compilados:** 1.176 módulos transformados com **ZERO ERROS** de empacotamento, JSX ou lint.
 - **Isolamento de Estilos:** Conformidade estrita com as Regras 1, 2, 5 e 6 do `AGENTS.md` (todos os estilos escopados em suas respectivas classes raízes sem vazamento global).
