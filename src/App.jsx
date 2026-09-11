@@ -43,6 +43,7 @@ const NovaLocacao = lazy(() => import('./pages/Locacoes/NovaLocacao'));
 const EditarLocacao = lazy(() => import('./pages/Locacoes/EditarLocacao'));
 const CheckinPage = lazy(() => import('./pages/Locacoes/CheckinPage'));
 const CheckoutPage = lazy(() => import('./pages/Locacoes/CheckoutPage'));
+const Disponibilidade = lazy(() => import('./pages/Locacoes/Disponibilidade'));
 
 // --- FINANCEIRO & COMPRAS ---
 const Fornecedores = lazy(() => import('./pages/Fornecedores/Fornecedores'));
@@ -657,6 +658,7 @@ const AppContent = () => {
             {/* 👥 CLIENTES */}
             <Route path="/clientes" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><Clientes /></TravaSeguranca></RotaPrivada>} />
             <Route path="/cadastro-cliente" element={<RotaPrivada><TravaSeguranca modulo="Clientes" recursoExigido="Gestão Clientes"><CadastroCliente /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/novo-cliente" element={<Navigate to="/cadastro-cliente" replace />} />
             
             {/* 📦 ESTOQUE */}
             <Route path="/estoque" element={<RotaPrivada><TravaSeguranca modulo="Estoque" recursoExigido="Estoque"><Estoque /></TravaSeguranca></RotaPrivada>} />
@@ -668,6 +670,8 @@ const AppContent = () => {
             <Route path="/locacoes/editar/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><EditarLocacao /></TravaSeguranca></RotaPrivada>} />
             <Route path="/checkin/:id/:modo?" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckinPage /></TravaSeguranca></RotaPrivada>} />
             <Route path="/checkout/:id" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><CheckoutPage /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/disponibilidade" element={<RotaPrivada><TravaSeguranca modulo="Locacoes" recursoExigido="Gestão de Pedidos"><Disponibilidade /></TravaSeguranca></RotaPrivada>} />
+            <Route path="/locacoes/disponibilidade" element={<Navigate to="/disponibilidade" replace />} />
             
             {/* 🤝 FORNECEDORES E COMPRAS */}
             <Route path="/fornecedores" element={<RotaPrivada><TravaSeguranca modulo="Compras" recursoExigido="Gestão Fornecedores"><Fornecedores /></TravaSeguranca></RotaPrivada>} />

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, getDoc, query, where, serverTimestamp } from 'firebase/firestore';
@@ -60,6 +61,14 @@ const isoParaDMA = (iso) => {
 const dmaParaISO = (dia, mes, ano) =>
   `${ano}-${String(mes + 1).padStart(2, '0')}-${String(dia).padStart(2, '0')}`;
 
+const formatarTelefone = (tel) => {
+  if (!tel) return '';
+  const limpo = String(tel).replace(/\D/g, '');
+  if (limpo.length === 11) return `(${limpo.slice(0, 2)}) ${limpo.slice(2, 7)}-${limpo.slice(7)}`;
+  if (limpo.length === 10) return `(${limpo.slice(0, 2)}) ${limpo.slice(2, 6)}-${limpo.slice(6)}`;
+  return tel;
+};
+
 const Agenda = () => {
   const navigate = useNavigate();
   
@@ -87,8 +96,33 @@ const Agenda = () => {
   const [busca, setBusca] = useState('');
   const [buscaClienteModal, setBuscaClienteModal] = useState('');
   const [mostrarDropdownModal, setMostrarDropdownModal] = useState(false);
+  const [modoClienteModal, setModoClienteModal] = useState('cadastrado'); // 'cadastrado' | 'avulso'
+
+  // 📱 CONTROLE DE EXIBIÇÃO OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR)
+  const [mostrarKpiMobile, setMostrarKpiMobile] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_agenda_show_kpi_mobile');
+      return salvo !== null ? JSON.parse(salvo) : false;
+    } catch {
+      return false;
+    }
+  });
+
+  const toggleKpiMobile = () => {
+    setMostrarKpiMobile(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('celebre_agenda_show_kpi_mobile', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
 
   const [modalFormAberto, setModalFormAberto] = useState(false);
+  const [modalBloqueioAberto, setModalBloqueioAberto] = useState(false);
+  const [bloqueioData, setBloqueioData] = useState({ id: null, dataInicioISO: '', dataFimISO: '', motivo: '', observacoes: '', grupoId: null });
   const [eventoSelecionado, setEventoSelecionado] = useState(null);
   const [formData, setFormData] = useState(FORM_VAZIO);
 
@@ -319,44 +353,267 @@ const Agenda = () => {
   };
 
   const abrirModalForm = (dia, ev = null) => {
+    if (ev && ev.tipo === 'bloqueio') {
+      abrirModalBloqueio(dia, ev);
+      return;
+    }
     const d = dia || diaSelecionado || new Date().getDate();
     if (ev) {
       setEventoSelecionado(ev);
       const anoEv = ev.ano || dataAtual.getFullYear();
       const mesEv = ev.mes !== undefined ? ev.mes : dataAtual.getMonth();
       setFormData({ ...FORM_VAZIO, ...ev, dataISO: dmaParaISO(ev.dia, mesEv, anoEv) });
-      setBuscaClienteModal(ev.clienteNome || ''); 
+      setBuscaClienteModal(ev.clienteNome || '');
+      if (ev.clienteId) {
+        setModoClienteModal('cadastrado');
+      } else if (ev.clienteNome) {
+        setModoClienteModal('avulso');
+      } else {
+        setModoClienteModal('cadastrado');
+      }
     } else {
       setEventoSelecionado(null);
       setFormData({ ...FORM_VAZIO, dataISO: dmaParaISO(d, dataAtual.getMonth(), dataAtual.getFullYear()) });
       setBuscaClienteModal('');
+      setModoClienteModal('cadastrado');
     }
     setModalFormAberto(true);
   };
 
-  const abrirModalBloqueio = (dia) => {
-    setEventoSelecionado(null);
-    const d = dia || diaSelecionado || new Date().getDate();
-    setFormData({
-      ...FORM_VAZIO,
-      tipo: 'bloqueio',
-      titulo: 'Bloqueio de Data',
-      dataISO: dmaParaISO(d, dataAtual.getMonth(), dataAtual.getFullYear())
-    });
-    setBuscaClienteModal('');
-    setModalFormAberto(true);
+  const abrirModalBloqueio = (dia, ev = null) => {
+    if (ev) {
+      setEventoSelecionado(ev);
+      const anoEv = ev.ano || dataAtual.getFullYear();
+      const mesEv = ev.mes !== undefined ? ev.mes : dataAtual.getMonth();
+      const diaEv = ev.dia || dia || 1;
+      const iso = dmaParaISO(diaEv, mesEv, anoEv);
+      setBloqueioData({
+        id: ev.id,
+        dataInicioISO: ev.dataInicioISO || iso,
+        dataFimISO: ev.dataFimISO || iso,
+        motivo: ev.titulo || '',
+        observacoes: ev.observacoes || '',
+        grupoId: ev.grupoBloqueioId || null
+      });
+    } else {
+      setEventoSelecionado(null);
+      const d = dia || diaSelecionado || new Date().getDate();
+      const iso = dmaParaISO(d, dataAtual.getMonth(), dataAtual.getFullYear());
+      setBloqueioData({
+        id: null,
+        dataInicioISO: iso,
+        dataFimISO: iso,
+        motivo: '',
+        observacoes: '',
+        grupoId: null
+      });
+    }
+    setModalBloqueioAberto(true);
+  };
+
+  const salvarBloqueio = async (e) => {
+    e?.preventDefault();
+    if (!bloqueioData.motivo.trim()) {
+      mostrarToast('⚠️ Informe o motivo do bloqueio.');
+      return;
+    }
+
+    const dInicioStr = bloqueioData.dataInicioISO;
+    const dFimStr = bloqueioData.dataFimISO || bloqueioData.dataInicioISO;
+
+    if (!dInicioStr) {
+      mostrarToast('⚠️ Selecione a data inicial.');
+      return;
+    }
+
+    const dtInicio = new Date(dInicioStr + 'T00:00:00');
+    const dtFim = new Date(dFimStr + 'T00:00:00');
+
+    if (dtFim < dtInicio) {
+      mostrarToast('⚠️ A data final não pode ser anterior à data inicial.');
+      return;
+    }
+
+    const diffDays = Math.round((dtFim - dtInicio) / (1000 * 3600 * 24)) + 1;
+    if (diffDays > 90) {
+      mostrarToast('⚠️ O período máximo para um bloqueio contínuo é de 90 dias.');
+      return;
+    }
+
+    setSalvando(true);
+
+    try {
+      if (bloqueioData.id) {
+        // Se estiver editando um bloqueio existente
+        const [anoStr, mesStr, diaStr] = dInicioStr.split('-');
+        const evBloqueio = {
+          titulo: bloqueioData.motivo.trim(),
+          tipo: 'bloqueio',
+          horario: '',
+          local: '',
+          status: 'pendente',
+          observacoes: bloqueioData.observacoes || '',
+          origem: 'manual',
+          dia: parseInt(diaStr),
+          mes: parseInt(mesStr) - 1,
+          ano: parseInt(anoStr),
+          userId: tenantId,
+          clienteId: '',
+          clienteNome: '',
+          dataInicioISO: dInicioStr,
+          dataFimISO: dFimStr,
+          grupoBloqueioId: bloqueioData.grupoId || null
+        };
+
+        const docRef = doc(db, 'agenda_eventos', bloqueioData.id);
+        await updateDoc(docRef, evBloqueio);
+        setEventosManual(prev => prev.map(x => x.id === bloqueioData.id ? { id: bloqueioData.id, ...evBloqueio } : x));
+        await registrarLog("EDIÇÃO DE BLOQUEIO NA AGENDA", `Atualizou o bloqueio: "${evBloqueio.titulo}".`);
+        mostrarToast('🔒 Bloqueio de data atualizado!');
+      } else {
+        // Novo bloqueio (pode ser 1 dia ou um intervalo de múltiplos dias)
+        const grupoBloqueioId = diffDays > 1 ? `bg_${Date.now()}` : null;
+        const novosBloqueios = [];
+        const cur = new Date(dtInicio);
+
+        while (cur <= dtFim) {
+          const ano = cur.getFullYear();
+          const mes = cur.getMonth();
+          const dia = cur.getDate();
+
+          const evBloqueio = {
+            titulo: bloqueioData.motivo.trim(),
+            tipo: 'bloqueio',
+            horario: '',
+            local: '',
+            status: 'pendente',
+            observacoes: bloqueioData.observacoes || '',
+            origem: 'manual',
+            dia,
+            mes,
+            ano,
+            userId: tenantId,
+            clienteId: '',
+            clienteNome: '',
+            dataInicioISO: dInicioStr,
+            dataFimISO: dFimStr,
+            grupoBloqueioId
+          };
+
+          const docRef = await addDoc(collection(db, 'agenda_eventos'), evBloqueio);
+          novosBloqueios.push({ id: docRef.id, ...evBloqueio });
+
+          cur.setDate(cur.getDate() + 1);
+        }
+
+        setEventosManual(prev => [...prev, ...novosBloqueios]);
+        await registrarLog("BLOQUEIO DE DATA NA AGENDA", `Bloqueou ${diffDays} dia(s): "${bloqueioData.motivo.trim()}" (de ${dInicioStr} até ${dFimStr}).`);
+        mostrarToast(diffDays > 1 ? `🔒 ${diffDays} dias bloqueados com sucesso!` : '🔒 Data bloqueada com sucesso!');
+      }
+      setModalBloqueioAberto(false);
+    } catch (err) {
+      console.error(err);
+      mostrarToast('⚠️ Erro ao salvar bloqueio. Verifique a conexão.');
+      setModalBloqueioAberto(false);
+    } finally {
+      setSalvando(false);
+    }
+  };
+
+  const excluirBloqueio = async () => {
+    if (!bloqueioData.id) return;
+
+    const grupoId = bloqueioData.grupoId;
+    const eventosDoGrupo = grupoId ? eventosManual.filter(x => x.grupoBloqueioId === grupoId) : [];
+
+    let excluirGrupo = false;
+    if (eventosDoGrupo.length > 1) {
+      const resp = window.confirm(
+        `Este bloqueio faz parte de um período de ${eventosDoGrupo.length} dias ("${bloqueioData.motivo}").\n\n` +
+        `• Clique em [OK] para desbloquear TODO O PERÍODO (${eventosDoGrupo.length} dias).\n` +
+        `• Clique em [Cancelar] se não deseja remover o período inteiro.`
+      );
+      if (!resp) return;
+      excluirGrupo = true;
+    } else {
+      if (!window.confirm('Desbloquear esta data? O bloqueio será removido da agenda.')) {
+        return;
+      }
+    }
+
+    setSalvando(true);
+    try {
+      if (excluirGrupo && grupoId) {
+        for (const ev of eventosDoGrupo) {
+          try {
+            await deleteDoc(doc(db, 'agenda_eventos', ev.id));
+          } catch (e) {
+            console.error('Erro ao deletar item do grupo:', e);
+          }
+        }
+        await registrarLog("DESBLOQUEIO DE PERÍODO NA AGENDA", `Removeu período de ${eventosDoGrupo.length} dias de bloqueio: "${bloqueioData.motivo}".`);
+        setEventosManual(prev => prev.filter(x => x.grupoBloqueioId !== grupoId));
+        mostrarToast(`🔓 Período de ${eventosDoGrupo.length} dias desbloqueado!`);
+      } else {
+        await deleteDoc(doc(db, 'agenda_eventos', bloqueioData.id));
+        await registrarLog("DESBLOQUEIO DE DATA NA AGENDA", `Removeu bloqueio: "${bloqueioData.motivo}".`);
+        setEventosManual(prev => prev.filter(x => x.id !== bloqueioData.id));
+        mostrarToast('🔓 Data desbloqueada com sucesso!');
+      }
+      setModalBloqueioAberto(false);
+    } catch (err) {
+      console.error(err);
+      if (excluirGrupo && grupoId) {
+        setEventosManual(prev => prev.filter(x => x.grupoBloqueioId !== grupoId));
+      } else {
+        setEventosManual(prev => prev.filter(x => x.id !== bloqueioData.id));
+      }
+      mostrarToast('🔓 Desbloqueado offline.');
+      setModalBloqueioAberto(false);
+    } finally {
+      setSalvando(false);
+    }
   };
 
   const salvarEvento = async (e) => {
     e.preventDefault();
     setSalvando(true);
     const [anoStr, mesStr, diaStr] = formData.dataISO.split('-');
-    const cli = clientes.find(c => c.id === formData.clienteId || (c.nome || c.nomeFantasia) === buscaClienteModal);
+    
+    let cliIdFinal = '';
+    let cliNomeFinal = '';
+    let isLeadFinal = false;
+
+    if (modoClienteModal === 'cadastrado') {
+      if (formData.clienteId) {
+        const cli = clientes.find(c => c.id === formData.clienteId);
+        cliIdFinal = cli ? cli.id : formData.clienteId;
+        cliNomeFinal = cli ? (cli.nome || cli.nomeFantasia) : (formData.clienteNome || buscaClienteModal);
+        isLeadFinal = false;
+      } else if (buscaClienteModal.trim()) {
+        const termo = buscaClienteModal.trim().toLowerCase();
+        const cli = clientes.find(c => (c.nome || c.nomeFantasia || c.razaoSocial || '').toLowerCase() === termo);
+        if (cli) {
+          cliIdFinal = cli.id;
+          cliNomeFinal = cli.nome || cli.nomeFantasia || cli.razaoSocial;
+          isLeadFinal = false;
+        } else {
+          cliIdFinal = '';
+          cliNomeFinal = buscaClienteModal.trim();
+          isLeadFinal = true;
+        }
+      }
+    } else {
+      cliIdFinal = '';
+      cliNomeFinal = (formData.clienteNome || buscaClienteModal || '').trim();
+      isLeadFinal = Boolean(cliNomeFinal);
+    }
 
     const evParaSalvar = {
       titulo: formData.titulo, 
-      clienteId: cli ? cli.id : '', 
-      clienteNome: cli ? (cli.nome || cli.nomeFantasia) : buscaClienteModal,
+      clienteId: cliIdFinal, 
+      clienteNome: cliNomeFinal,
+      isLead: isLeadFinal,
       tipo: formData.tipo, 
       horario: formData.horario, 
       local: formData.local || '', 
@@ -717,6 +974,15 @@ const Agenda = () => {
                         key={ev.id}
                         className={`cal-event-pill type-${ev.tipo}${ev.origem === 'locacao' ? ' from-locacao' : ''}`}
                         title={`${ev.horario ? ev.horario + ' - ' : ''}${ev.titulo}`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDiaClick(dia);
+                          if (ev.tipo === 'bloqueio') {
+                            abrirModalBloqueio(dia, ev);
+                          } else {
+                            abrirModalForm(dia, ev);
+                          }
+                        }}
                       >
                         {ev.tipo === 'bloqueio' && <i className="fas fa-lock pill-lock-icon"></i>}
                         <span className="pill-text">{ev.titulo}</span>
@@ -1127,9 +1393,10 @@ const Agenda = () => {
   const renderModalForm = () => {
     const ehLocacao = formData.origem === 'locacao';
     const saldo = ehLocacao ? Number(formData.valorTotal || 0) - Number(formData.valorPago || 0) : 0;
+    const clienteVinculado = formData.clienteId ? clientes.find(c => c.id === formData.clienteId) : null;
     
-    return (
-      <div className="modal-overlay" onClick={() => !salvando && setModalFormAberto(false)}>
+    return createPortal(
+      <div className="agenda-container modal-overlay agenda-modal-overlay" onClick={() => !salvando && setModalFormAberto(false)}>
         <div className="modal-content modal-form-content" onClick={e => e.stopPropagation()}>
           
           <div className="modal-header">
@@ -1225,7 +1492,7 @@ const Agenda = () => {
             </div>
           ) : (
             <form onSubmit={salvarEvento} className="modal-form">
-              <div className="form-row-2col">
+              <div className="form-row-2col form-row-data-hora">
                 <div className="form-group">
                   <label className="form-label-clean">📅 DATA *</label>
                   <input 
@@ -1294,41 +1561,169 @@ const Agenda = () => {
               </div>
 
               <div className="form-row-2col">
-                <div className="form-group">
-                  <label className="form-label-clean">👤 CLIENTE <span className="label-hint-inline">(opcional)</span></label>
-                  <div className="custom-autocomplete-container">
-                    <input
-                      type="text"
-                      placeholder="Buscar cliente..."
-                      value={buscaClienteModal}
-                      onFocus={() => setMostrarDropdownModal(true)}
-                      onChange={(e) => {
-                        setBuscaClienteModal(e.target.value);
-                        if (e.target.value === '') setFormData({...formData, clienteId: ''});
-                      }}
-                      disabled={salvando}
-                    />
-                    {mostrarDropdownModal && buscaClienteModal.length > 0 && (
-                      <ul className="autocomplete-results" style={{maxHeight: '150px'}}>
-                        {clientes
-                          .filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase()))
-                          .sort((a, b) => (a.nome || a.nomeFantasia || '').localeCompare(b.nome || b.nomeFantasia || ''))
-                          .map(c => (
-                            <li key={c.id} onClick={() => {
-                              setFormData({...formData, clienteId: c.id});
-                              setBuscaClienteModal(c.nome || c.nomeFantasia);
-                              setMostrarDropdownModal(false);
-                            }}>
-                              {c.nome || c.nomeFantasia}
-                            </li>
-                          ))}
-                         {clientes.filter(c => (c.nome || c.nomeFantasia || '').toLowerCase().includes(buscaClienteModal.toLowerCase())).length === 0 && (
-                            <li style={{ color: 'var(--texto-secundario)', cursor: 'default' }}>Usar nome avulso: "{buscaClienteModal}"</li>
-                          )}
-                      </ul>
-                    )}
-                    {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
+                <div className="form-group cliente-form-group">
+                  <div className="cliente-label-header">
+                    <label className="form-label-clean">👤 CLIENTE <span className="label-hint-inline">(opcional)</span></label>
+                    <div className="cliente-mode-segmented">
+                      <button
+                        type="button"
+                        className={`btn-cli-seg ${modoClienteModal === 'cadastrado' ? 'active' : ''}`}
+                        onClick={() => setModoClienteModal('cadastrado')}
+                        title="Buscar cliente salvo no cadastro (gera histórico)"
+                      >
+                        <i className="fas fa-user-check"></i> Cadastrado
+                      </button>
+                      <button
+                        type="button"
+                        className={`btn-cli-seg ${modoClienteModal === 'avulso' ? 'active' : ''}`}
+                        onClick={() => {
+                          setModoClienteModal('avulso');
+                          setFormData(prev => ({ ...prev, clienteId: '' }));
+                        }}
+                        title="Registrar possível cliente / contato avulso"
+                      >
+                        <i className="fas fa-sparkles"></i> Lead / Avulso
+                      </button>
+                    </div>
                   </div>
+
+                  {modoClienteModal === 'cadastrado' ? (
+                    formData.clienteId ? (
+                      <div className="cliente-vinculado-card">
+                        <div className="cli-vinc-info">
+                          <span className="cli-vinc-status-pill">
+                            <i className="fas fa-check-circle"></i> Vinculado ao Sistema
+                          </span>
+                          <strong className="cli-vinc-nome">
+                            {clienteVinculado?.nome || clienteVinculado?.nomeFantasia || clienteVinculado?.razaoSocial || formData.clienteNome || 'Cliente Vinculado'}
+                          </strong>
+                          {(clienteVinculado?.celular || clienteVinculado?.telefone || clienteVinculado?.whatsapp) && (
+                            <span className="cli-vinc-sub">
+                              <i className="fab fa-whatsapp"></i> {formatarTelefone(clienteVinculado?.celular || clienteVinculado?.telefone || clienteVinculado?.whatsapp)}
+                            </span>
+                          )}
+                          {clienteVinculado && (clienteVinculado.logradouro || clienteVinculado.endereco) && (
+                            <span className="cli-vinc-sub">
+                              <i className="fas fa-map-marker-alt"></i> {[clienteVinculado.logradouro ? `${clienteVinculado.logradouro}${clienteVinculado.numero ? ', ' + clienteVinculado.numero : ''}` : clienteVinculado.endereco, clienteVinculado.bairro, clienteVinculado.cidade].filter(Boolean).join(' - ')}
+                            </span>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className="btn-desvincular-cli"
+                          title="Trocar cliente"
+                          onClick={() => {
+                            setFormData(prev => ({ ...prev, clienteId: '', clienteNome: '' }));
+                            setBuscaClienteModal('');
+                          }}
+                        >
+                          <i className="fas fa-sync-alt"></i> Trocar
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="custom-autocomplete-container">
+                        <input
+                          type="text"
+                          placeholder="Buscar por nome, WhatsApp ou CPF..."
+                          value={buscaClienteModal}
+                          onFocus={() => setMostrarDropdownModal(true)}
+                          onChange={(e) => {
+                            setBuscaClienteModal(e.target.value);
+                            if (e.target.value === '') setFormData(prev => ({ ...prev, clienteId: '', clienteNome: '' }));
+                          }}
+                          disabled={salvando}
+                        />
+                        {mostrarDropdownModal && (
+                          <ul className="autocomplete-results">
+                            {clientes
+                              .filter(c => {
+                                const termo = buscaClienteModal.toLowerCase().trim();
+                                if (!termo) return true;
+                                const nome = (c.nome || c.nomeFantasia || c.razaoSocial || '').toLowerCase();
+                                const tel = String(c.celular || c.telefone || c.whatsapp || '').replace(/\D/g, '');
+                                const docNum = String(c.cpf || c.cnpj || c.cpfCnpj || '').replace(/\D/g, '');
+                                const termoNum = termo.replace(/\D/g, '');
+                                return nome.includes(termo) || (termoNum && (tel.includes(termoNum) || docNum.includes(termoNum)));
+                              })
+                              .slice(0, 15)
+                              .map(c => {
+                                const endCli = c.logradouro
+                                  ? `${c.logradouro}${c.numero ? ', ' + c.numero : ''}${c.bairro ? ' - ' + c.bairro : ''}${c.cidade ? ' (' + c.cidade + ')' : ''}`
+                                  : (c.endereco || '');
+
+                                return (
+                                  <li
+                                    key={c.id}
+                                    className="autocomplete-item-pro"
+                                    onClick={() => {
+                                      setFormData(prev => ({
+                                        ...prev,
+                                        clienteId: c.id,
+                                        clienteNome: c.nome || c.nomeFantasia || c.razaoSocial,
+                                        local: prev.local ? prev.local : endCli
+                                      }));
+                                      setBuscaClienteModal(c.nome || c.nomeFantasia || c.razaoSocial);
+                                      setMostrarDropdownModal(false);
+                                    }}
+                                  >
+                                    <div className="auto-item-main">
+                                      <span className="auto-item-nome">{c.nome || c.nomeFantasia || c.razaoSocial}</span>
+                                      {(c.celular || c.telefone || c.whatsapp) && (
+                                        <span className="auto-item-sub">
+                                          <i className="fab fa-whatsapp"></i> {formatarTelefone(c.celular || c.telefone || c.whatsapp)}
+                                        </span>
+                                      )}
+                                      {endCli && (
+                                        <span className="auto-item-sub">
+                                          <i className="fas fa-map-marker-alt"></i> {endCli}
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="auto-item-badge">Cadastrado</span>
+                                  </li>
+                                );
+                              })}
+
+                            {buscaClienteModal.trim().length > 0 && (
+                              <li
+                                className="autocomplete-lead-action"
+                                onClick={() => {
+                                  setModoClienteModal('avulso');
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    clienteId: '',
+                                    clienteNome: buscaClienteModal.trim()
+                                  }));
+                                  setMostrarDropdownModal(false);
+                                }}
+                              >
+                                <div className="auto-lead-content">
+                                  <i className="fas fa-magic"></i>
+                                  <span>Usar "<strong>{buscaClienteModal.trim()}</strong>" como Possível Cliente</span>
+                                </div>
+                                <span className="auto-lead-tag">Lead</span>
+                              </li>
+                            )}
+                          </ul>
+                        )}
+                        {mostrarDropdownModal && <div className="autocomplete-overlay" onClick={() => setMostrarDropdownModal(false)} />}
+                      </div>
+                    )
+                  ) : (
+                    <div className="lead-input-container">
+                      <input
+                        type="text"
+                        placeholder="Ex: Mariana Noiva (Instagram / WhatsApp)"
+                        value={formData.clienteNome || ''}
+                        onChange={(e) => setFormData(prev => ({ ...prev, clienteNome: e.target.value, clienteId: '' }))}
+                        disabled={salvando}
+                        className="input-lead-agenda"
+                      />
+                      <div className="lead-hint-tag">
+                        <i className="fas fa-info-circle"></i> <span>Possível cliente (não cadastrado). Ficará registrado neste compromisso.</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="form-group">
@@ -1375,7 +1770,183 @@ const Agenda = () => {
             </form>
           )}
         </div>
-      </div>
+      </div>,
+      document.body
+    );
+  };
+
+  // 🔒 RENDER DO MODAL DEDICADO DE BLOQUEIO DE DATA (RÁPIDO, SIMPLES E COM SUPORTE A PERÍODO)
+  const renderModalBloqueio = () => {
+    const isEdicao = Boolean(bloqueioData.id);
+
+    let diasCount = 1;
+    if (bloqueioData.dataInicioISO && bloqueioData.dataFimISO) {
+      const ini = new Date(bloqueioData.dataInicioISO + 'T00:00:00');
+      const fim = new Date(bloqueioData.dataFimISO + 'T00:00:00');
+      if (!isNaN(ini) && !isNaN(fim) && fim >= ini) {
+        diasCount = Math.round((fim - ini) / (1000 * 3600 * 24)) + 1;
+      }
+    }
+
+    let dataLegivel = '';
+    if (bloqueioData.dataInicioISO) {
+      const [anoI, mesI, diaI] = bloqueioData.dataInicioISO.split('-');
+      if (diasCount > 1 && bloqueioData.dataFimISO) {
+        const [anoF, mesF, diaF] = bloqueioData.dataFimISO.split('-');
+        dataLegivel = `${diaI}/${mesI}/${anoI} até ${diaF}/${mesF}/${anoF} (${diasCount} dias)`;
+      } else if (diaI && mesI && anoI) {
+        dataLegivel = `${diaI}/${mesI}/${anoI}`;
+      }
+    }
+
+    return createPortal(
+      <div 
+        className="agenda-container modal-overlay agenda-modal-overlay" 
+        onClick={() => !salvando && setModalBloqueioAberto(false)}
+      >
+        <div 
+          className="modal-content modal-bloqueio-content" 
+          onClick={e => e.stopPropagation()}
+        >
+          {/* Cabeçalho Visual */}
+          <div className="modal-header modal-header-bloqueio">
+            <div className="bloqueio-header-title-wrap">
+              <span className="bloqueio-icon-badge">
+                <i className="fas fa-lock"></i>
+              </span>
+              <div>
+                <h3 className="bloqueio-modal-title">{isEdicao ? 'Editar Bloqueio' : 'Bloquear Data(s)'}</h3>
+                <p className="bloqueio-header-sub">
+                  {dataLegivel ? `Período: ${dataLegivel}` : 'Impeça novos compromissos ou saídas nestas datas'}
+                </p>
+              </div>
+            </div>
+            <button 
+              type="button" 
+              className="btn-close" 
+              onClick={() => !salvando && setModalBloqueioAberto(false)}
+              disabled={salvando}
+              title="Fechar"
+            >
+              ×
+            </button>
+          </div>
+
+          <form onSubmit={salvarBloqueio} className="modal-form modal-bloqueio-form">
+            {/* Campo 1: Período de Datas (Início e Término lado a lado) */}
+            <div className="form-row-2col">
+              <div className="form-group">
+                <label className="form-label-clean">
+                  📅 DATA INÍCIO *
+                </label>
+                <input
+                  type="date"
+                  value={bloqueioData.dataInicioISO}
+                  onChange={e => {
+                    const val = e.target.value;
+                    setBloqueioData(prev => ({
+                      ...prev,
+                      dataInicioISO: val,
+                      dataFimISO: (!prev.dataFimISO || prev.dataFimISO < val) ? val : prev.dataFimISO
+                    }));
+                  }}
+                  required
+                  disabled={salvando}
+                  className="input-bloqueio-data"
+                />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label-clean">
+                  📅 DATA TÉRMINO <span className="label-hint-inline">(opcional)</span>
+                </label>
+                <input
+                  type="date"
+                  value={bloqueioData.dataFimISO}
+                  min={bloqueioData.dataInicioISO}
+                  onChange={e => setBloqueioData(prev => ({ ...prev, dataFimISO: e.target.value }))}
+                  disabled={salvando}
+                  className="input-bloqueio-data"
+                />
+              </div>
+            </div>
+
+            {/* Aviso de período múltiplo */}
+            {diasCount > 1 && (
+              <div className="bloqueio-periodo-badge">
+                <i className="fas fa-calendar-check"></i>
+                <span>Período de <strong>{diasCount} dias</strong> contínuos selecionados para bloqueio (férias, reformas, etc).</span>
+              </div>
+            )}
+
+            {/* Campo 2: Motivo do Bloqueio */}
+            <div className="form-group">
+              <label className="form-label-clean">
+                🔒 POR QUE ESTÁ BLOQUEANDO? *
+              </label>
+              <input
+                type="text"
+                autoFocus
+                placeholder="Ex: Férias coletivas, Reforma no galpão, Folga da equipe..."
+                value={bloqueioData.motivo}
+                onChange={e => setBloqueioData(prev => ({ ...prev, motivo: e.target.value }))}
+                required
+                disabled={salvando}
+                className="input-bloqueio-motivo"
+              />
+            </div>
+
+            {/* Campo 3: Observações adicionais (opcional) */}
+            <div className="form-group">
+              <label className="form-label-clean">
+                📝 OBSERVAÇÕES <span className="label-hint-inline">(opcional)</span>
+              </label>
+              <textarea
+                placeholder="Detalhes adicionais ou recado para a equipe..."
+                value={bloqueioData.observacoes}
+                onChange={e => setBloqueioData(prev => ({ ...prev, observacoes: e.target.value }))}
+                rows={2}
+                disabled={salvando}
+                className="textarea-bloqueio-obs"
+              />
+            </div>
+
+            {/* Ações do Modal */}
+            <div className="modal-actions modal-actions-bloqueio">
+              {isEdicao ? (
+                <button
+                  type="button"
+                  className="btn-desbloquear-modal"
+                  onClick={excluirBloqueio}
+                  disabled={salvando}
+                  title="Remover bloqueio e liberar data"
+                >
+                  <i className="fas fa-unlock-alt"></i> Desbloquear
+                </button>
+              ) : <div />}
+              <div className="modal-actions-right">
+                <button
+                  type="button"
+                  className="btn-cancelar-modal"
+                  onClick={() => setModalBloqueioAberto(false)}
+                  disabled={salvando}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  className="btn-salvar-bloqueio"
+                  disabled={salvando}
+                >
+                  <i className="fas fa-lock"></i>
+                  {salvando ? 'Salvando...' : (isEdicao ? 'Atualizar Bloqueio' : (diasCount > 1 ? `Bloquear ${diasCount} Dias` : 'Confirmar Bloqueio'))}
+                </button>
+              </div>
+            </div>
+          </form>
+        </div>
+      </div>,
+      document.body
     );
   };
 
@@ -1429,8 +2000,37 @@ const Agenda = () => {
         </div>
       </header>
 
+      {/* 📱 CONTROLE OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR) */}
+      <div className="kpi-mobile-toggle-wrapper">
+        <button 
+          type="button" 
+          className={`btn-toggle-kpi-mobile ${!mostrarKpiMobile ? 'is-collapsed' : ''}`}
+          onClick={toggleKpiMobile}
+          aria-expanded={mostrarKpiMobile}
+          title={mostrarKpiMobile ? "Recolher cards de indicadores no celular" : "Expandir cards de indicadores no celular"}
+        >
+          <div className="toggle-kpi-left">
+            <span className="toggle-kpi-icon">📊</span>
+            {mostrarKpiMobile ? (
+              <span className="toggle-kpi-title">Resumo Operacional da Agenda</span>
+            ) : (
+              <span className="toggle-kpi-summary">
+                <strong>{contadores.entrega}</strong> saídas • <strong>{contadores.devolucao}</strong> retornos • <strong>{(contadores.visita || 0) + (contadores.reuniao || 0)}</strong> atendimentos {statsKPI.conflitos > 0 ? `• ⚠️ ${statsKPI.conflitos} conflito(s)` : ''}
+              </span>
+            )}
+          </div>
+          <span className="toggle-kpi-badge">
+            {mostrarKpiMobile ? (
+              <>Ocultar <i className="fas fa-chevron-up"></i></>
+            ) : (
+              <>Expandir <i className="fas fa-chevron-down"></i></>
+            )}
+          </span>
+        </button>
+      </div>
+
       {/* ── CARDS DE DASHBOARD KPI (PADRÃO OFICIAL CELEBRE - OPERAÇÃO LOGÍSTICA) ── */}
-      <div className="clientes-stats-grid">
+      <div className={`clientes-stats-grid ${!mostrarKpiMobile ? 'kpi-hidden-mobile' : ''}`}>
         <div className="stat-card-pro border-blue">
           <div className="stat-icon-wrapper icon-blue">
             <i className="fas fa-truck"></i>
@@ -1502,14 +2102,16 @@ const Agenda = () => {
                 className={`btn-view-toggle ${viewPrincipal === 'calendario' ? 'active' : ''}`}
                 onClick={() => setViewPrincipal('calendario')}
               >
-                📅 Calendário
+                <span className="toggle-view-icon">📅</span>
+                <span className="toggle-view-text">Calendário</span>
               </button>
               <button
                 type="button"
                 className={`btn-view-toggle ${viewPrincipal === 'lista' ? 'active' : ''}`}
                 onClick={() => setViewPrincipal('lista')}
               >
-                📋 Lista
+                <span className="toggle-view-icon">📋</span>
+                <span className="toggle-view-text">Lista</span>
               </button>
             </div>
           </div>
@@ -1631,6 +2233,9 @@ const Agenda = () => {
 
       {/* MODAL DE NOVO / EDITAR EVENTO */}
       {modalFormAberto && renderModalForm()}
+
+      {/* 🔒 MODAL DEDICADO DE BLOQUEIO DE DATA */}
+      {modalBloqueioAberto && renderModalBloqueio()}
     </div>
   );
 };

@@ -1395,7 +1395,7 @@
     box-sizing: border-box !important;
   }
 
-  .stat-card-pro {
+  .estoque-container .stat-card-pro {
     grid-column: auto !important;
     min-width: 0 !important;
     width: 100% !important;
@@ -1407,14 +1407,14 @@
     align-items: center !important;
   }
 
-  /* 5º Card ocupa 1 coluna uniforme ou 2 colunas centralizadas */
-  .stat-card-pro:nth-child(5) {
+  /* 5º Card ocupa 1 coluna uniforme ou 2 colunas centralizadas apenas no Estoque */
+  .estoque-container .stat-card-pro:nth-child(5):last-child {
     grid-column: span 2 !important;
     justify-content: center !important;
     padding: 10px 14px !important;
   }
 
-  .stat-icon-wrapper {
+  .estoque-container .stat-icon-wrapper {
     width: 36px !important;
     height: 36px !important;
     font-size: 16px !important;
@@ -1422,14 +1422,14 @@
     flex-shrink: 0 !important;
   }
 
-  .stat-content {
+  .estoque-container .stat-content {
     display: flex !important;
     flex-direction: column !important;
     min-width: 0 !important;
     overflow: hidden !important;
   }
 
-  .stat-title {
+  .estoque-container .stat-title {
     font-size: 0.65rem !important;
     font-weight: 800 !important;
     letter-spacing: 0.3px !important;
@@ -1439,7 +1439,7 @@
     line-height: 1.2 !important;
   }
 
-  .stat-number {
+  .estoque-container .stat-number {
     font-size: 1.15rem !important;
     font-weight: 850 !important;
     margin: 1px 0 !important;
@@ -1447,8 +1447,8 @@
     line-height: 1.2 !important;
   }
 
-  .stat-desc,
-  .stat-content small {
+  .estoque-container .stat-desc,
+  .estoque-container .stat-content small {
     font-size: 0.68rem !important;
     font-weight: 600 !important;
     white-space: nowrap !important;

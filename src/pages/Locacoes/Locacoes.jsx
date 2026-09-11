@@ -899,7 +899,7 @@ const Locacoes = () => {
           <button 
             type="button"
             className="btn-secondary-celebre" 
-            onClick={() => setModalCalendarioAberto(true)}
+            onClick={() => navigate('/disponibilidade')}
             title="Ver Matriz de Disponibilidade do Acervo"
           >
             <i className="far fa-calendar-alt"></i> DISPONIBILIDADE
@@ -1202,7 +1202,7 @@ const Locacoes = () => {
 
             {!loading && filtrados.length === 0 && (
               <tr>
-                <td colSpan="7" style={{ textAlign: "center", padding: "40px", color: "#94a3b8" }}>
+                <td colSpan="7" style={{ textAlign: "center", padding: "40px", color: "var(--texto-secundario, #475569)", fontWeight: 600, fontSize: "0.85rem" }}>
                   Nenhum pedido encontrado nesta filtragem.
                 </td>
               </tr>

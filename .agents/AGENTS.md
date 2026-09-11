@@ -75,3 +75,19 @@
 - **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
   - O arquivo `Catalago.css` está **BLINDADO E CONGELADO**. Nenhuma regra de layout, responsividade ou posicionamento pode ser alterada sem autorização expressa do usuário.
 
+## 9. 🔒 Blindagem Específica do Dashboard (`Dashboard.css`, `Dashboard.jsx`, `design-lock.css`)
+- **Cards de KPI Executivos (`.stats-wide-row`)**:
+  - **Desktop (`> 900px`)**: Grid de **6 Colunas em 1 Linha Única Horizontal** (`grid-template-columns: repeat(6, 1fr) !important;`).
+  - **Mobile (`<= 900px`)**: Grid de **2 Colunas Simétricas** (`grid-template-columns: repeat(2, 1fr) !important;`) com 3 linhas de 2 cards cada, sem nenhum card isolado embaixo.
+  - Cada card opera estritamente em **Estrutura Vertical de 3 Linhas**:
+    1. **Linha 1 (Topo):** Título em largura total (`.stat-title`), sem quebra de linha (`white-space: nowrap !important;`).
+    2. **Linha 2 (Meio):** Ícone compacto (`28px` desktop / `22px` mobile) + Valor em destaque com formatação fina de moeda (`.stat-cur` para `R$`).
+    3. **Linha 3 (Base):** Subtítulo em formato de micro-badge translúcido com bordas suaves (`.stat-sub`), calibrado para nunca cortar texto com reticências.
+- **Termômetro de Meta Financeira (`.dash-meta-card`)**:
+  - Medallion com ícone de 40px, badge pill dourada, botão de meta e track de progresso de 8px blindados.
+- **BI por Categoria (`.bi-chips-grid`)**:
+  - Grid simétrico de **3 Colunas x 2 Linhas** (6 categorias) com porcentagem alinhada ao valor.
+- **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
+  - Os arquivos `Dashboard.css` e seu bloco em `design-lock.css` estão **BLINDADOS E CONGELADOS**. Nenhuma regra de layout, espaçamento, proporção ou tipografia pode ser alterada sem instrução explícita do usuário.
+
+

@@ -148,7 +148,7 @@ const Dashboard = () => {
   const [statusChart, setStatusChart] = useState({ orcamento: 0, confirmado: 0, preparacao: 0, entregue: 0, finalizado: 0, total: 0 });
   const [valoresPorStatus, setValoresPorStatus] = useState({ orcamento: 0, confirmado: 0 });
   const [topPecas, setTopPecas] = useState([]);
-  const [categoriaBreakdown, setCategoriaBreakdown] = useState({ locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0 });
+  const [categoriaBreakdown, setCategoriaBreakdown] = useState({ locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0, outros: 0 });
   const [cobrancasAtrasadas, setCobrancasAtrasadas] = useState([]);
   const [aniversariantesDoMes, setAniversariantesDoMes] = useState([]);
   const [aniversariantesProximos, setAniversariantesProximos] = useState([]);
@@ -159,6 +159,28 @@ const Dashboard = () => {
   // 🎨 PROJETOS DO MOODBOARD NO DASHBOARD
   const [projetosMoodboard, setProjetosMoodboard] = useState([]);
   const [moodboardStats, setMoodboardStats] = useState({ total: 0, aprovados: 0, emAnalise: 0, rascunhos: 0 });
+
+  // 📱 CONTROLE DE EXIBIÇÃO DE CARDS KPI NO DASHBOARD (RECOLHER / EXPANDIR)
+  const [mostrarKpiDash, setMostrarKpiDash] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_dash_show_kpi');
+      return salvo !== null ? JSON.parse(salvo) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleKpiDash = () => {
+    setMostrarKpiDash(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('celebre_dash_show_kpi', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  };
 
   // 🎯 META DE FATURAMENTO MENSAL NO DASHBOARD
   const [metaMensal, setMetaMensal] = useState(() => {
@@ -711,7 +733,7 @@ const Dashboard = () => {
             .slice(0, 5);
             
         // CÁLCULO DE CATEGORIA BREAKDOWN DE ENTRADAS E SAÍDAS PARA O BI NO DASHBOARD
-        let catBreak = { locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0 };
+        let catBreak = { locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0, outros: 0 };
         
         confirmadasNoPeriodo.forEach(l => {
           catBreak.locacao += Number(l.valorTotal || l.total || 0);
@@ -732,14 +754,16 @@ const Dashboard = () => {
           const catLower = (l.categoria || '').toLowerCase();
           if (catLower.includes('manutenç') || catLower.includes('reparo')) {
             catBreak.manutencao += val;
-          } else if (catLower.includes('fixa') || catLower.includes('aluguel') || catLower.includes('luz')) {
+          } else if (catLower.includes('fixa') || catLower.includes('aluguel') || catLower.includes('luz') || catLower.includes('infra')) {
             catBreak.fixo += val;
-          } else if (catLower.includes('equipe') || catLower.includes('salário')) {
+          } else if (catLower.includes('equipe') || catLower.includes('salário') || catLower.includes('pessoal')) {
             catBreak.equipe += val;
-          } else if (catLower.includes('estoque') || catLower.includes('acervo')) {
+          } else if (catLower.includes('estoque') || catLower.includes('acervo') || catLower.includes('compra')) {
             catBreak.estoque += val;
           } else if (catLower.includes('locaç') || catLower.includes('evento')) {
             catBreak.locacao += val;
+          } else {
+            catBreak.outros += val;
           }
         });
 
@@ -960,62 +984,99 @@ const Dashboard = () => {
         </div>
       </header>
 
-      {/* 6 KPI CARDS COMPACTOS */}
-      <div className="stats-wide-row">
-        <div className="stat-card-pro border-gold">
-          <div className="stat-icon-wrapper icon-gold"><i className="fas fa-boxes"></i></div>
-          <div className="stat-content">
+      {/* 📱 CONTROLE DE RECOLHER / EXPANDIR CARDS KPI */}
+      <div className="kpi-dash-toggle-wrapper">
+        <button 
+          type="button" 
+          className={`btn-toggle-kpi-dash ${!mostrarKpiDash ? 'is-collapsed' : ''}`}
+          onClick={toggleKpiDash}
+          aria-expanded={mostrarKpiDash}
+          title={mostrarKpiDash ? "Recolher cards de indicadores" : "Expandir cards de indicadores"}
+        >
+          <div className="toggle-kpi-left">
+            <span className="toggle-kpi-icon">📊</span>
+            {mostrarKpiDash ? (
+              <span className="toggle-kpi-title">Resumo de Indicadores da Empresa</span>
+            ) : (
+              <span className="toggle-kpi-summary">
+                <strong>{estatisticas.acervo}</strong> peças • <strong>{estatisticas.ativas}</strong> ativas • <strong>R$ {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong> a receber
+              </span>
+            )}
+          </div>
+          <span className="toggle-kpi-badge">
+            {mostrarKpiDash ? (
+              <>Ocultar <i className="fas fa-chevron-up"></i></>
+            ) : (
+              <>Expandir <i className="fas fa-chevron-down"></i></>
+            )}
+          </span>
+        </button>
+      </div>
+
+      {/* 6 KPI CARDS COMPACTOS (1 LINHA NO DESKTOP / 2 COLUNAS NO MOBILE) */}
+      {mostrarKpiDash && (
+        <div className="stats-wide-row fade-in">
+          <div className="stat-card-pro border-gold">
             <span className="stat-title">Acervo Total</span>
-            <strong className="stat-value">{estatisticas.acervo}</strong>
+            <div className="stat-value-row">
+              <div className="stat-icon-wrapper icon-gold"><i className="fas fa-boxes"></i></div>
+              <strong className="stat-value">{estatisticas.acervo}</strong>
+            </div>
             <span className="stat-sub">📦 Peças</span>
           </div>
-        </div>
 
-        <div className="stat-card-pro border-blue">
-          <div className="stat-icon-wrapper icon-blue"><i className="fas fa-shopping-bag"></i></div>
-          <div className="stat-content">
+          <div className="stat-card-pro border-blue">
             <span className="stat-title">Locações Ativas</span>
-            <strong className="stat-value">{estatisticas.ativas}</strong>
+            <div className="stat-value-row">
+              <div className="stat-icon-wrapper icon-blue"><i className="fas fa-shopping-bag"></i></div>
+              <strong className="stat-value">{estatisticas.ativas}</strong>
+            </div>
             <span className="stat-sub">⚡ Andamento</span>
           </div>
-        </div>
 
-        <div className="stat-card-pro border-green">
-          <div className="stat-icon-wrapper icon-green"><i className="fas fa-calendar-check"></i></div>
-          <div className="stat-content">
-            <span className="stat-title">Próximos Eventos</span>
-            <strong className="stat-value">{estatisticas.eventos}</strong>
+          <div className="stat-card-pro border-green">
+            <span className="stat-title">Próx. Eventos</span>
+            <div className="stat-value-row">
+              <div className="stat-icon-wrapper icon-green"><i className="fas fa-calendar-check"></i></div>
+              <strong className="stat-value">{estatisticas.eventos}</strong>
+            </div>
             <span className="stat-sub">📅 7 dias</span>
           </div>
-        </div>
 
-        <div className="stat-card-pro border-purple">
-          <div className="stat-icon-wrapper icon-purple"><i className="fas fa-chart-line"></i></div>
-          <div className="stat-content">
+          <div className="stat-card-pro border-purple">
             <span className="stat-title">Ticket Médio</span>
-            <strong className="stat-value">R$ {estatisticas.ticketMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <div className="stat-value-row">
+              <div className="stat-icon-wrapper icon-purple"><i className="fas fa-chart-line"></i></div>
+              <strong className="stat-value">
+                <span className="stat-cur">R$</span> {estatisticas.ticketMedio.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+            </div>
             <span className="stat-sub">▲ Por pedido</span>
           </div>
-        </div>
 
-        <div className="stat-card-pro border-amber">
-          <div className="stat-icon-wrapper icon-amber"><i className="fas fa-file-invoice-dollar"></i></div>
-          <div className="stat-content">
-            <span className="stat-title">Em Orçamento</span>
-            <strong className="stat-value">R$ {(estatisticas.emOrcamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+          <div className="stat-card-pro border-amber">
+            <span className="stat-title">Orçamentos</span>
+            <div className="stat-value-row">
+              <div className="stat-icon-wrapper icon-amber"><i className="fas fa-file-invoice-dollar"></i></div>
+              <strong className="stat-value">
+                <span className="stat-cur">R$</span> {(estatisticas.emOrcamento || 0).toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+            </div>
             <span className="stat-sub">📋 Pipeline</span>
           </div>
-        </div>
 
-        <div className="stat-card-pro border-red">
-          <div className="stat-icon-wrapper icon-red"><i className="fas fa-exclamation-circle"></i></div>
-          <div className="stat-content">
+          <div className="stat-card-pro border-red">
             <span className="stat-title">A Receber</span>
-            <strong className="stat-value">R$ {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}</strong>
+            <div className="stat-value-row">
+              <div className="stat-icon-wrapper icon-red"><i className="fas fa-exclamation-circle"></i></div>
+              <strong className="stat-value">
+                <span className="stat-cur">R$</span> {estatisticas.aReceber.toLocaleString('pt-BR', {minimumFractionDigits: 2})}
+              </strong>
+            </div>
             <span className="stat-sub">{estatisticas.aReceber > 0 ? '⚠️ Pendente' : '🟢 Adimplente'}</span>
           </div>
         </div>
-      </div>
+      )}
 
       {/* 🎯 TERMÔMETRO DE META FINANCEIRA MENSAL NO DASHBOARD */}
       {(() => {
@@ -1033,9 +1094,15 @@ const Dashboard = () => {
                 <div>
                   <h4 className="dash-meta-title">Meta de Faturamento Mensal</h4>
                   <p className="dash-meta-sub">
-                    {metaBatida 
-                      ? '🏆 Parabéns! Meta de faturamento alcançada!' 
-                      : `Faturamento atual: R$ ${fatMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })} • Faltam R$ ${faltaMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+                    {metaBatida ? (
+                      <span className="meta-sub-success">🏆 Parabéns! Meta de faturamento alcançada!</span>
+                    ) : (
+                      <>
+                        <span>Faturamento atual: <strong>R$ {fatMes.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+                        <span className="dash-meta-bullet">•</span>
+                        <span>Faltam <strong>R$ {faltaMeta.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</strong></span>
+                      </>
+                    )}
                   </p>
                 </div>
               </div>
@@ -1050,7 +1117,7 @@ const Dashboard = () => {
                   onClick={() => { setNovaMetaInput(String(metaAlvo)); setModalMetaAberto(true); }}
                   title="Alterar valor da meta mensal"
                 >
-                  ⚙️ Meta: R$ {metaAlvo.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
+                  <i className="fas fa-cog"></i> Meta: R$ {metaAlvo.toLocaleString('pt-BR', { minimumFractionDigits: 0 })}
                 </button>
               </div>
             </div>
@@ -1355,34 +1422,45 @@ const Dashboard = () => {
               </button>
             </div>
             {(() => {
-              const totalGeral = (categoriaBreakdown.locacao || 0) + (categoriaBreakdown.estoque || 0) + (categoriaBreakdown.manutencao || 0) + (categoriaBreakdown.fixo || 0) + (categoriaBreakdown.equipe || 0);
+              const totalGeral = (categoriaBreakdown.locacao || 0) + 
+                                 (categoriaBreakdown.estoque || 0) + 
+                                 (categoriaBreakdown.manutencao || 0) + 
+                                 (categoriaBreakdown.fixo || 0) + 
+                                 (categoriaBreakdown.equipe || 0) + 
+                                 (categoriaBreakdown.outros || 0);
+
               const itensBreakdown = [
                 { id: 'locacao', icon: '🎉', label: 'Locações', valor: categoriaBreakdown.locacao || 0, cor: '#10b981' },
                 { id: 'estoque', icon: '📦', label: 'Acervo', valor: categoriaBreakdown.estoque || 0, cor: '#3b82f6' },
                 { id: 'manutencao', icon: '🛠️', label: 'Manutenção', valor: categoriaBreakdown.manutencao || 0, cor: '#f59e0b' },
                 { id: 'fixo', icon: '🏢', label: 'Fixos', valor: categoriaBreakdown.fixo || 0, cor: '#64748b' },
                 { id: 'equipe', icon: '👥', label: 'Equipe', valor: categoriaBreakdown.equipe || 0, cor: '#8b5cf6' },
+                { id: 'outros', icon: '🚚', label: 'Outros', valor: categoriaBreakdown.outros || 0, cor: '#ec4899' },
               ];
 
               return (
                 <div className="bi-stacked-bar-wrapper">
                   {/* BARRA EMPILHADA DE DISTRIBUIÇÃO */}
                   <div className="bi-stacked-bar">
-                    {itensBreakdown.map(item => {
-                      const pct = totalGeral > 0 ? Math.round((item.valor / totalGeral) * 100) : 0;
-                      if (pct <= 0) return null;
-                      return (
-                        <div
-                          key={item.id}
-                          className="bi-stacked-segment"
-                          style={{ width: `${pct}%`, background: item.cor }}
-                          title={`${item.label}: R$ ${item.valor.toLocaleString('pt-BR')} (${pct}%)`}
-                        />
-                      );
-                    })}
+                    {totalGeral > 0 ? (
+                      itensBreakdown.map(item => {
+                        const pct = Math.round((item.valor / totalGeral) * 100);
+                        if (pct <= 0) return null;
+                        return (
+                          <div
+                            key={item.id}
+                            className="bi-stacked-segment"
+                            style={{ width: `${pct}%`, background: item.cor }}
+                            title={`${item.label}: R$ ${item.valor.toLocaleString('pt-BR')} (${pct}%)`}
+                          />
+                        );
+                      })
+                    ) : (
+                      <div className="bi-stacked-empty-pulse" title="Sem movimentações no período selecionado" />
+                    )}
                   </div>
 
-                  {/* CHIPS DE TODAS AS 5 CATEGORIAS */}
+                  {/* CHIPS DE TODAS AS 6 CATEGORIAS (3 COLUNAS - 3 CARDS POR LINHA) */}
                   <div className="bi-chips-grid">
                     {itensBreakdown.map(item => {
                       const pct = totalGeral > 0 ? Math.round((item.valor / totalGeral) * 100) : 0;
@@ -1391,12 +1469,12 @@ const Dashboard = () => {
                           <div className="bi-chip-top-row">
                             <span className="bi-chip-dot" style={{ background: item.cor }}></span>
                             <span className="bi-chip-label">{item.icon} {item.label}</span>
-                            <span className="bi-chip-pct" style={{ color: item.cor }}>{pct}%</span>
                           </div>
                           <div className="bi-chip-bottom-row">
                             <strong className="bi-chip-val">
                               R$ {item.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
                             </strong>
+                            <span className="bi-chip-pct" style={{ color: item.cor }}>{pct}%</span>
                           </div>
                         </div>
                       );

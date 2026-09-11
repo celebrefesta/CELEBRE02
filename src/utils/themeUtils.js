@@ -100,7 +100,13 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .btn-bv-criar-locacao,
     .clientes-container .btn-primary-celebre,
     .cadastro-cliente-container .btn-primary-celebre,
+    .agenda-container .btn-primary-celebre,
+    .agenda-container .header-actions .btn-primary-celebre,
+    .agenda-container .header-actions button.btn-primary-celebre,
+    .clientes-container .header-actions .btn-primary-celebre,
+    .clientes-container .header-actions button.btn-primary-celebre,
     .header-actions .btn-primary-celebre,
+    .header-actions button.btn-primary-celebre,
     a.btn-primary-celebre {
       background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
       border-color: ${accentColor} !important;

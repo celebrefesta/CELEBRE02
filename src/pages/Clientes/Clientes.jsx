@@ -75,6 +75,7 @@ const Clientes = () => {
 
   const [menuAberto, setMenuAberto] = useState(null); 
   const [allLocacoes, setAllLocacoes] = useState([]); 
+  const [allEventosAgenda, setAllEventosAgenda] = useState([]);
   const [modalAberto, setModalAberto] = useState(false);
   const [detalhesDivida, setDetalhesDivida] = useState({ cliente: '', pendencias: [] });
   const [modalTravaLocacao, setModalTravaLocacao] = useState(null); // { cliente, pendencias, valorDevido }
@@ -180,22 +181,27 @@ const Clientes = () => {
 
       const mapClientes = new Map();
       const mapLocacoes = new Map();
+      const mapAgenda = new Map();
 
       for (const uId of uidsAlvoSet) {
-        const [snapCliU, snapCliT, snapLocU, snapLocT] = await Promise.all([
+        const [snapCliU, snapCliT, snapLocU, snapLocT, snapAgeU, snapAgeT] = await Promise.all([
           getDocs(query(collection(db, "clientes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
           getDocs(query(collection(db, "clientes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
           getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
           getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "agenda_eventos"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "agenda_eventos"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
         ]);
 
         [...snapCliU.docs, ...snapCliT.docs].forEach(d => mapClientes.set(d.id, { ...d.data(), id: d.id }));
         [...snapLocU.docs, ...snapLocT.docs].forEach(d => mapLocacoes.set(d.id, { ...d.data(), id: d.id }));
+        [...snapAgeU.docs, ...snapAgeT.docs].forEach(d => mapAgenda.set(d.id, { ...d.data(), id: d.id }));
       }
 
       let listaClientes = Array.from(mapClientes.values());
       const locs = Array.from(mapLocacoes.values());
       setAllLocacoes(locs);
+      setAllEventosAgenda(Array.from(mapAgenda.values()));
 
       const hoje = new Date();
       hoje.setHours(0, 0, 0, 0);
@@ -896,7 +902,8 @@ const Clientes = () => {
             className="btn-secondary-celebre"
             title="Copiar Link de Auto-Cadastro para enviar aos clientes pelo WhatsApp"
           >
-            <i className="fas fa-link"></i> Link Auto-Cadastro
+            <i className="fas fa-link"></i>
+            <span>Link Auto-Cadastro</span>
           </button>
 
           {/* BOTÃO EXPORTAR LISTA */}
@@ -909,8 +916,8 @@ const Clientes = () => {
               title="Exportar lista de clientes"
             >
               {exportandoLista
-                ? <><i className="fas fa-spinner fa-spin"></i> Exportando...</>
-                : <><i className="fas fa-file-export"></i> Exportar</>}
+                ? <><i className="fas fa-spinner fa-spin"></i> <span>Exportando...</span></>
+                : <><i className="fas fa-file-export"></i> <span>Exportar</span></>}
             </button>
             {showExportMenu && (
               <div className="export-dropdown-menu fade-in">
@@ -1064,7 +1071,7 @@ const Clientes = () => {
             <i className="fas fa-search search-box-icon"></i>
             <input 
               type="text" 
-              placeholder="Buscar por Nome, CPF, CNPJ ou E-mail..." 
+              placeholder="Buscar por Nome, CPF..." 
               value={busca} 
               onChange={e => setBusca(e.target.value)} 
               className="search-input-field"
@@ -1094,7 +1101,7 @@ const Clientes = () => {
             <select 
               value={filtroTagCRM} 
               onChange={(e) => setFiltroTagCRM(e.target.value)}
-              className="select-pill-filter"
+              className="select-pill-filter select-tag-crm"
             >
               <option value="todas">🏷️ Tag CRM</option>
               <option value="VIP">👑 VIP</option>
@@ -1112,7 +1119,7 @@ const Clientes = () => {
               <select
                 value={filtroTipoEvento}
                 onChange={(e) => setFiltroTipoEvento(e.target.value)}
-                className="select-pill-filter"
+                className="select-pill-filter desktop-filter-only"
               >
                 <option value="todos">🎭 Evento</option>
                 {tiposEventoUnicos.map(tipo => (
@@ -1157,23 +1164,24 @@ const Clientes = () => {
             className={`pill-btn ${filtroStatus === 'inadimplentes' ? 'active' : ''}`}
             onClick={() => setFiltroStatus('inadimplentes')}
           >
-            Pendências <span className="pill-badge">{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</span>
+            Com Pendências <span className="pill-badge badge-warning">{clientes.filter(c => c.situacaoFinanceira === 'inadimplente').length}</span>
           </button>
           <button 
             type="button"
             className={`pill-btn ${filtroStatus === 'aniversariantes' ? 'active' : ''}`}
             onClick={() => setFiltroStatus('aniversariantes')}
           >
-            🎂 Aniversariantes <span className="pill-badge">{numAniversariantes}</span>
+            🎂 Aniversariantes do Mês <span className="pill-badge badge-aniversario">{numAniversariantes}</span>
           </button>
           <button 
             type="button"
             className={`pill-btn ${filtroStatus === 'vip' ? 'active' : ''}`}
             onClick={() => setFiltroStatus('vip')}
           >
-            👑 VIPs <span className="pill-badge">{clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length}</span>
+            👑 Clientes VIP <span className="pill-badge badge-vip">{clientes.filter(c => (c.tags || '').toUpperCase().includes('VIP')).length}</span>
           </button>
         </div>
+
       </div>
 
       {/* TABELA DE CLIENTES (DESKTOP) & LISTA DE CARDS (MOBILE) */}
@@ -1209,21 +1217,13 @@ const Clientes = () => {
                             ? 'Não encontramos nenhum cliente correspondente aos filtros ou busca aplicados.'
                             : 'Você ainda não possui clientes cadastrados na sua base.'}
                         </p>
-                        {busca || filtroStatus !== 'todos' ? (
+                        {(busca || filtroStatus !== 'todos') && (
                           <button 
                             type="button" 
                             className="btn-clientes-empty-action" 
                             onClick={() => { setBusca(''); setFiltroStatus('todos'); }}
                           >
                             <i className="fas fa-filter-circle-xmark"></i> Limpar Filtros
-                          </button>
-                        ) : (
-                          <button 
-                            type="button" 
-                            className="btn-clientes-empty-action btn-clientes-empty-primary" 
-                            onClick={() => navigate('/novo-cliente')}
-                          >
-                            <i className="fas fa-user-plus"></i> Novo Cliente
                           </button>
                         )}
                       </div>
@@ -1440,21 +1440,13 @@ const Clientes = () => {
                     ? 'Não encontramos resultados para os filtros ou busca informada.'
                     : 'Você ainda não possui clientes cadastrados na sua base.'}
                 </p>
-                {busca || filtroStatus !== 'todos' ? (
+                {(busca || filtroStatus !== 'todos') && (
                   <button 
                     type="button" 
                     className="btn-clientes-empty-action" 
                     onClick={() => { setBusca(''); setFiltroStatus('todos'); }}
                   >
                     <i className="fas fa-filter-circle-xmark"></i> Limpar Filtros
-                  </button>
-                ) : (
-                  <button 
-                    type="button" 
-                    className="btn-clientes-empty-action btn-clientes-empty-primary" 
-                    onClick={() => navigate('/novo-cliente')}
-                  >
-                    <i className="fas fa-user-plus"></i> Novo Cliente
                   </button>
                 )}
               </div>
@@ -1870,19 +1862,38 @@ const Clientes = () => {
                       </div>
                     )}
 
-                    {/* ABA 3: LINHA DO TEMPO & NOTAS CRM */}
+                    {/* ABA 3: LINHA DO TEMPO, AGENDA & CRM */}
                     {abaAtiva === 'timeline' && (() => {
                       const eventosLocacoes = gerarTimelineCompleta(clienteVisualizacao.id);
                       const notasCRM = historicoNotasCliente.map(n => ({
                         ...n,
                         _isNota: true,
+                        _isAgenda: false,
                         data: new Date(n.dataHora)
                       }));
 
-                      // Mesclar eventos de locação + notas CRM, ordenados por data desc
+                      // Compromissos e Agendamentos da Agenda vinculados a este cliente
+                      const eventosAgenda = (allEventosAgenda || [])
+                        .filter(ev => ev.clienteId === clienteVisualizacao.id)
+                        .map(ev => {
+                          let dataObj = new Date();
+                          if (ev.ano && ev.mes !== undefined && ev.dia) {
+                            const [h, m] = (ev.horario || '09:00').split(':');
+                            dataObj = new Date(ev.ano, ev.mes, ev.dia, Number(h) || 9, Number(m) || 0);
+                          }
+                          return {
+                            ...ev,
+                            _isAgenda: true,
+                            _isNota: false,
+                            data: dataObj
+                          };
+                        });
+
+                      // Mesclar eventos de locação + notas CRM + agenda, ordenados por data desc
                       const todasEntradas = [
-                        ...eventosLocacoes.map(e => ({ ...e, _isNota: false })),
-                        ...notasCRM
+                        ...eventosLocacoes.map(e => ({ ...e, _isNota: false, _isAgenda: false })),
+                        ...notasCRM,
+                        ...eventosAgenda
                       ].sort((a, b) => b.data - a.data);
 
                       if (todasEntradas.length === 0) {
@@ -1891,7 +1902,7 @@ const Clientes = () => {
                             <div className="empty-timeline-box" style={{ padding: '24px' }}>
                               <div className="empty-icon-circle"><i className="fas fa-route"></i></div>
                               <h4>Nenhum evento na linha do tempo</h4>
-                              <p>Os marcos das locações e as notas CRM aparecerão aqui automaticamente.</p>
+                              <p>Os marcos das locações, compromissos da agenda e notas CRM aparecerão aqui automaticamente.</p>
                             </div>
                           </div>
                         );
@@ -1901,8 +1912,43 @@ const Clientes = () => {
                         <div className="timeline-wrapper">
                           <div className="timeline-feed-list-v2">
                             {todasEntradas.map((entrada, idx) => (
-                              entrada._isNota ? (
-                                // NOTA CRM
+                              entrada._isAgenda ? (
+                                // 📅 COMPROMISSO DA AGENDA
+                                <div key={`agenda-${entrada.id || idx}`} className="tl-item tl-agenda">
+                                  <div className="tl-dot" style={{ background: '#f59e0b', borderColor: '#d97706', color: '#ffffff' }}>
+                                    {entrada.tipo === 'reuniao' ? '🤝' : entrada.tipo === 'visita' ? '📍' : entrada.tipo === 'pagamento' ? '💰' : entrada.tipo === 'tarefa' ? '📋' : '📅'}
+                                  </div>
+                                  <div className="tl-card tl-card-agenda">
+                                    <div className="tl-card-header">
+                                      <span className="tl-badge" style={{ background: '#fef3c7', color: '#92400e' }}>
+                                        📅 Agenda · {entrada.tipo ? (entrada.tipo.charAt(0).toUpperCase() + entrada.tipo.slice(1)) : 'Compromisso'}
+                                      </span>
+                                      <span className="tl-date">
+                                        {entrada.data.toLocaleDateString('pt-BR')} {entrada.horario ? `às ${entrada.horario}` : ''}
+                                      </span>
+                                    </div>
+                                    <h5 className="tl-title" style={{ margin: '4px 0 2px 0', fontSize: '0.86rem', fontWeight: '700', color: 'var(--texto-principal)' }}>
+                                      {entrada.titulo}
+                                    </h5>
+                                    {entrada.local && (
+                                      <p className="tl-sub" style={{ margin: '2px 0', fontSize: '0.74rem', color: 'var(--texto-secundario)' }}>
+                                        📍 {entrada.local}
+                                      </p>
+                                    )}
+                                    {entrada.observacoes && (
+                                      <p className="tl-text" style={{ marginTop: '4px', fontSize: '0.78rem' }}>
+                                        {entrada.observacoes}
+                                      </p>
+                                    )}
+                                    <div className="tl-footer" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '6px' }}>
+                                      <span className={`status-pill ${entrada.status === 'concluido' ? 'concluido' : entrada.status === 'cancelado' ? 'cancelado' : 'pendente'}`}>
+                                        {entrada.status === 'concluido' ? '✅ Concluído' : entrada.status === 'cancelado' ? '❌ Cancelado' : '⏳ Agendado / Pendente'}
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              ) : entrada._isNota ? (
+                                // 💬 NOTA CRM
                                 <div key={`nota-${entrada.id || idx}`} className="tl-item tl-nota">
                                   <div className="tl-dot" style={{ background: '#8b5cf6', borderColor: '#6d28d9' }}>💬</div>
                                   <div className="tl-card tl-card-nota">
@@ -1917,20 +1963,26 @@ const Clientes = () => {
                                   </div>
                                 </div>
                               ) : (
-                                // EVENTO DE LOCAÇÃO
+                                // 📦 EVENTO DE LOCAÇÃO
                                 <div key={`loc-${entrada.id || idx}`} className="tl-item tl-locacao">
-                                  <div className="tl-dot" style={{ background: '#3b82f6', borderColor: '#1d4ed8' }}>📦</div>
+                                  <div className="tl-dot" style={{ background: entrada.cor || '#3b82f6', borderColor: entrada.cor || '#1d4ed8' }}>
+                                    {entrada.icone || '📦'}
+                                  </div>
                                   <div className="tl-card tl-card-loc">
                                     <div className="tl-card-header">
-                                      <span className="tl-badge" style={{ background: '#eff6ff', color: '#1d4ed8' }}>Pedido #{entrada.numeroPedido || entrada.id?.substring(0,6)}</span>
+                                      <span className="tl-badge" style={{ background: entrada.bg || '#eff6ff', color: entrada.cor || '#1d4ed8' }}>
+                                        {entrada.label || `Pedido #${entrada.numeroPedido || entrada.id?.substring(0,6)}`}
+                                      </span>
                                       <span className="tl-date">{entrada.data.toLocaleDateString('pt-BR')}</span>
                                     </div>
-                                    <h5 className="tl-title">{entrada.titulo}</h5>
-                                    <p className="tl-sub">{entrada.descricao}</p>
-                                    <div className="tl-footer">
-                                      <span className={`status-pill ${entrada.status}`}>{entrada.status}</span>
-                                      <strong className="tl-val">R$ {Number(entrada.valorTotal || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</strong>
-                                    </div>
+                                    <h5 className="tl-title">{entrada.titulo || entrada.label}</h5>
+                                    {(entrada.sub || entrada.descricao) && <p className="tl-sub">{entrada.sub || entrada.descricao}</p>}
+                                    {entrada.valorTotal ? (
+                                      <div className="tl-footer">
+                                        {entrada.status && <span className={`status-pill ${entrada.status}`}>{entrada.status}</span>}
+                                        <strong className="tl-val">R$ {Number(entrada.valorTotal || 0).toLocaleString('pt-BR', {minimumFractionDigits:2})}</strong>
+                                      </div>
+                                    ) : null}
                                   </div>
                                 </div>
                               )
