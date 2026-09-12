@@ -22,11 +22,13 @@
 - **NUNCA** declarar classes utilitárias ou genéricas (ex.: `.form-group`, `.btn-servico-card`, `.span-2`, `.icon-box`) soltas na raiz do CSS global sem o prefixo da página, para **IMPEDIR 100% O VAZAMENTO DE ESTILOS** de uma tela para outra.
 
 ## 6. 🔒 Blindagem Específica do Módulo de Estoque & Acervo (`Estoque.css` e `Estoque.jsx`)
-- **Barra de Filtros Mobile (`<= 900px`)**:
-  - A classe `.estoque-container .table-filter-bar` opera obrigatoriamente em **Grid de 2 Colunas Simétricas**.
-  - O alternador de visualização `.view-toggle-group` (`[ 📋 Lista | ▦ Cards ]`) **DEVE PERMANECER EM LINHA ÚNICA EXCLUSIVA SEPARADA (`grid-column: 1 / -1 !important; width: 100% !important;`)**.
-  - O botão de ordenação `.btn-ordem-estoque` ocupa a base em 100% da largura (`grid-column: 1 / -1 !important;`).
-  - Os filtros de Data, Galpão, Status e Categoria permanecem agrupados em pares de 2 colunas simétricas (`repeat(2, 1fr)`).
+- **Barra de Filtros Mobile (`<= 900px`) — Layout Slim Moderno (12/09/2026)**:
+  - **Linha 1 (Busca & Exibição)**: Campo de Busca elegante com ícone e botão `✕` acoplado lado a lado ao alternador de visualização `.view-toggle-group` (`[ 📋 | ▦ ]`), economizando uma linha inteira de tela.
+  - **Linha 2 (Seletores e Ações em 2 Colunas Simétricas)**:
+    - Par 1: Data (`dd/mm/aaaa`) + Galpão (`Galpão: Todos`).
+    - Par 2: Status (`Status: Todos`) + Categoria (`Categoria: Todas`).
+    - Par 3: Ordenação `[ ⇅ A - Z ]` + Botão Rápido `[ ✕ Limpar Filtros ]`.
+  - Alturas calibradas em 34px-36px, cantos arredondados (9px-10px) e padding reduzido (10px).
 - **Lista/Tabela de Acervo Mobile (`<= 900px`)**:
   - A tabela `.pro-table` no mobile **DEVE PERMANECER EM FORMATO DE CARDS EMPILHADOS (`display: flex !important; flex-direction: column !important;`)**.
   - O cabeçalho tradicional `thead` no mobile **DEVE PERMANECER OCULTO (`display: none !important;`)** para impedir qualquer esmagamento horizontal de colunas e quebra de palavras.
@@ -49,6 +51,7 @@
 - **PÁGINAS ATUALMENTE CONGELADAS (SISTEMA 100% TRANCA GERAL)** (04/09/2026):
   - `🔒 Clientes` (`Clientes.css`, `CadastroCliente.css`)
   - `🔒 Locações` (`Locacoes.css`)
+  - `🔒 Matriz de Disponibilidade` (`Disponibilidade.css`)
   - `🔒 Nova Locação` (`NovaLocacao.css`)
   - `🔒 Estoque & Acervo` (`Estoque.css`, `CadastroEstoque.css`)
   - `🔒 Compras` (`Compras.css`, `NovaCompra.css`)
@@ -89,5 +92,21 @@
   - Grid simétrico de **3 Colunas x 2 Linhas** (6 categorias) com porcentagem alinhada ao valor.
 - **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
   - Os arquivos `Dashboard.css` e seu bloco em `design-lock.css` estão **BLINDADOS E CONGELADOS**. Nenhuma regra de layout, espaçamento, proporção ou tipografia pode ser alterada sem instrução explícita do usuário.
+
+## 10. 🔒 Blindagem Específica da Matriz de Disponibilidade (`Disponibilidade.css`, `Disponibilidade.jsx`, `design-lock.css`)
+- **Cards de KPI**:
+  - **Desktop (`> 900px`)**: 4 cards em **1 Linha Única Horizontal** (`display: flex !important; flex-wrap: nowrap !important;`).
+  - **Mobile (`<= 900px`)**: Grid de **2 Colunas Simétricas** (`grid-template-columns: repeat(2, 1fr) !important;`) com controle de expansão/recolhimento.
+- **Cabeçalho Mobile (`<= 900px`)**:
+  - Botões de Ação (`.header-actions`) em **2 Colunas Simétricas** (`grid-template-columns: repeat(2, 1fr) !important;`): `[ 📄 MAPA PDF ▾ ]` e `[ ← LOCAÇÕES ]` lado a lado na mesma linha (40px).
+- **Barra de Filtros**:
+  - **Desktop (`> 900px`)**: 2 linhas limpas. Linha 1: Busca (`flex: 1`) + Chips Operacionais (`OCUPADOS`, `REFORMA`, `LIVRES`). Linha 2: Navegador de Mês + Seletores de Categoria e Ordenação.
+  - **Mobile (`<= 900px`)**: Busca 100%, Chips em 3 Colunas (`repeat(3, 1fr)`), Mês em linha dedicada, Seletores em 2 Colunas (`repeat(2, 1fr)`).
+- **Legenda Estática Removida**: Proibida a reintrodução de legenda estática duplicada (`.disp-legend-strip`).
+- **Modo Escuro**:
+  - Botão secundário (`← LOCAÇÕES`), barra de toggle e chips calibrados sob o Charcoal Luxury (`#18181b`, `#3f3f46`, `#f4f4f5`), sem nenhum fundo branco vazando.
+- **BLOQUEIO DE ALTERAÇÃO INDEVIDA**:
+  - Os arquivos `Disponibilidade.css`, `Disponibilidade.jsx` e seu bloco em `design-lock.css` estão **BLINDADOS E CONGELADOS**. Nenhuma alteração pode ser realizada sem autorização expressa do usuário.
+
 
 

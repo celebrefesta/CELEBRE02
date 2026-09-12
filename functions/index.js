@@ -102,22 +102,35 @@ exports.limpezaDeContasExpiradas = onSchedule(
     { schedule: "every day 00:00", timeZone: "America/Sao_Paulo" }, 
     async (event) => {
         const hoje = new Date();
-        const limiteDias = 180;
+        const limiteDiasSuspensao = 180; // 6 meses -> Suspensão
+        const limiteDiasExclusaoTotal = 210; // 6 meses + 30 dias de carência -> Exclusão definitiva
         try {
             const usuariosRef = db.collection("usuarios");
             const snapshot = await usuariosRef.where("plano", "!=", "pago").get();
             const promessas = [];
-            snapshot.forEach((doc) => {
-                const userData = doc.data();
-                if (userData.status === 'deletado_definitivamente') return;
+            snapshot.forEach((docSnap) => {
+                const userData = docSnap.data();
+                if (userData.status === 'deletado_definitivamente' || userData.role === 'admin' || userData.email === 'celebrefesta25@gmail.com') return;
                 if (userData.dataCadastro) {
                     const dataCadastro = new Date(userData.dataCadastro);
                     const diffDays = Math.ceil(Math.abs(hoje - dataCadastro) / (1000 * 60 * 60 * 24));
-                    if (diffDays > limiteDias) {
-                        const uid = doc.id;
+                    const uid = docSnap.id;
+
+                    // 1. Aos 180 dias sem plano -> Marca oficialmente como SUSPENSO por inatividade
+                    if (diffDays >= limiteDiasSuspensao && diffDays < limiteDiasExclusaoTotal) {
+                        if (userData.statusConta !== 'suspenso') {
+                            promessas.push(usuariosRef.doc(uid).update({
+                                statusConta: 'suspenso',
+                                dataSuspensao: hoje.toISOString()
+                            }));
+                        }
+                    }
+                    // 2. Após 210 dias (180 dias + 30 dias de carência) -> Exclusão definitiva de segurança
+                    else if (diffDays >= limiteDiasExclusaoTotal) {
                         promessas.push(deletarDadosDoUsuario(uid));
                         promessas.push(usuariosRef.doc(uid).update({
                             status: 'deletado_definitivamente',
+                            statusConta: 'deletado',
                             dataExclusao: hoje.toISOString(),
                             nomeCompleto: 'Usuário Excluído',
                             telefone: ''
@@ -127,7 +140,7 @@ exports.limpezaDeContasExpiradas = onSchedule(
             });
             await Promise.all(promessas);
         } catch (error) {
-            console.error("Erro na limpeza:", error);
+            console.error("Erro na rotina diária de inatividade e suspensão:", error);
         }
 });
 
@@ -650,7 +663,7 @@ exports.enviarLinkRedefinicaoSenha = functions.https.onRequest((req, res) => {
       const urlObj = new URL(resetLink);
       const oobCode = urlObj.searchParams.get('oobCode');
       const linkFinal = oobCode 
-        ? `https://celebre-9f5c9.firebaseapp.com/redefinir-senha?oobCode=${oobCode}`
+        ? `https://celebrefesta.com.br/redefinir-senha?oobCode=${oobCode}`
         : resetLink;
 
       const htmlBody = `
@@ -793,6 +806,122 @@ exports.verificarContaExiste = functions.https.onRequest((req, res) => {
       });
     } catch (e) {
       return res.status(500).send({ error: e.message });
+    }
+  });
+});
+
+// ============================================================================
+// ⚠️ FUNÇÃO 10: ENVIAR AVISO DE SUSPENSÃO / INATIVIDADE VIA RESEND
+// ============================================================================
+exports.enviarAvisoInatividade = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    if (req.method !== "POST") return res.status(405).send("Método não permitido");
+
+    try {
+      const { email, nome, diasCarencia } = req.body;
+      if (!email || !email.includes('@')) {
+        return res.status(400).send({ error: "E-mail inválido ou não fornecido." });
+      }
+
+      const emailLimpo = String(email).trim().toLowerCase();
+      const nomeExibicao = String(nome || '').trim() || 'Cliente Celebre';
+      const carencia = diasCarencia || 30;
+      const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+      const htmlBody = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <title>Aviso de Suspensão por Inatividade • Celebre</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #334155;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 35px 15px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 560px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px 30px; text-align: center; border-bottom: 3px solid #c5a059;">
+                    <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 1px;">CELEBRE</h1>
+                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #c5a059; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Notificação de Segurança</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 35px 30px;">
+                    <div style="display: inline-block; background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 4px 10px; margin-bottom: 16px;">
+                      <span style="color: #b45309; font-size: 11px; font-weight: 800; text-transform: uppercase;">⏸️ Conta Suspensa por Inatividade</span>
+                    </div>
+                    <h2 style="margin: 0 0 14px 0; font-size: 20px; font-weight: 700; color: #0f172a;">Olá, ${nomeExibicao}!</h2>
+                    <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 16px 0;">
+                      Identificamos que sua conta no <strong>Celebre</strong> não registrou atividades ou assinatura nos últimos <strong>6 meses</strong>.
+                    </p>
+                    <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 20px 0;">
+                      Por segurança, o acesso aos recursos foi temporariamente <strong>suspenso</strong>.
+                    </p>
+                    <div style="background-color: #f8fafc; border-left: 4px solid #c5a059; padding: 14px 18px; border-radius: 8px; margin: 20px 0;">
+                      <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.5;">
+                        Seus dados e produtos cadastrados permanecem salvos por mais <strong>${carencia} dias</strong>. Para reativar seu acesso, basta entrar na sua conta.
+                      </p>
+                    </div>
+                    <div style="text-align: center; margin: 28px 0;">
+                      <a href="https://celebrefesta.com.br/conta-suspensa" style="background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%); color: #0f172a; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35);">
+                        Reativar Minha Conta
+                      </a>
+                    </div>
+                    <p style="font-size: 12px; color: #94a3b8; text-align: center;">
+                      Precisa de suporte? Entre em contato pelo WhatsApp de atendimento Celebre.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f8fafc; padding: 18px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">Celebre Gestão • E-mail automático do sistema.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+      `;
+
+      const responseResend = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
+          to: [emailLimpo],
+          reply_to: 'celebrefesta25@gmail.com',
+          subject: '⚠️ Aviso Importante: Sua conta no Celebre está suspensa por inatividade',
+          html: htmlBody
+        })
+      });
+
+      const resData = await responseResend.json();
+      if (!responseResend.ok) {
+        console.error("Erro na API do Resend ao enviar aviso de inatividade:", resData);
+        return res.status(500).send({ error: "Erro ao disparar e-mail via Resend", details: resData });
+      }
+
+      return res.status(200).send({
+        success: true,
+        message: "E-mail de aviso de suspensão enviado com sucesso!",
+        emailId: resData.id
+      });
+    } catch (error) {
+      console.error("Erro interno ao enviar aviso de inatividade:", error);
+      return res.status(500).send({ error: "Erro interno", details: error.message });
     }
   });
 });

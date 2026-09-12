@@ -27,6 +27,12 @@ export const parseDataGenerica = (valor) => {
       const [_, ano, mes, dia] = match;
       return new Date(parseInt(ano, 10), parseInt(mes, 10) - 1, parseInt(dia, 10), 12, 0, 0);
     }
+    // Suporte ao formato brasileiro DD/MM/YYYY (ex: 14/03/2026)
+    const brMatch = limpo.match(/^(\d{2})\/(\d{2})\/(\d{4})/);
+    if (brMatch) {
+      const [_, dia, mes, ano] = brMatch;
+      return new Date(parseInt(ano, 10), parseInt(mes, 10) - 1, parseInt(dia, 10), 12, 0, 0);
+    }
     const d = new Date(limpo);
     return isNaN(d.getTime()) ? null : d;
   }

@@ -53,7 +53,7 @@ const Login = () => {
     try {
       // Busca todos os dados do usuário no banco de dados
       const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-      
+      let isContaSuspensa = false;
       if (userDoc.exists()) {
         let userData = userDoc.data();
         const tenantIdDaEmpresa = userData.tenantId || user.uid;
@@ -61,6 +61,9 @@ const Login = () => {
         localStorage.setItem('tenantId', tenantIdDaEmpresa);
         localStorage.setItem('funcName', userData.nomeExibicao || userData.nomeCompleto || user.displayName || 'Usuário');
         localStorage.setItem('userRole', userData.role || 'owner');
+        if (userData.statusConta === 'suspenso' || userData.status === 'suspenso') {
+          isContaSuspensa = true;
+        }
       } else {
         // Se o documento no /usuarios não existe, vamos checar se ele está cadastrado na equipe
         const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
@@ -189,7 +192,11 @@ const Login = () => {
       localStorage.setItem('celebre_lembrar_acesso', 'false');
     }
 
-    navigate('/dashboard');
+    if (isContaSuspensa) {
+      navigate('/conta-suspensa');
+    } else {
+      navigate('/dashboard');
+    }
   };
 
   const handleLogin = async (e) => {

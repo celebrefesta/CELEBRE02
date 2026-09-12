@@ -894,7 +894,8 @@ const Locacoes = () => {
             className="btn-primary-celebre" 
             onClick={() => navigate('/locacoes/nova')}
           >
-            + NOVA LOCAÇÃO
+            <i className="fas fa-plus"></i>
+            <span>NOVA LOCAÇÃO</span>
           </button>
           <button 
             type="button"
@@ -902,7 +903,8 @@ const Locacoes = () => {
             onClick={() => navigate('/disponibilidade')}
             title="Ver Matriz de Disponibilidade do Acervo"
           >
-            <i className="far fa-calendar-alt"></i> DISPONIBILIDADE
+            <i className="far fa-calendar-alt"></i>
+            <span>DISPONIBILIDADE</span>
           </button>
         </div>
       </header>

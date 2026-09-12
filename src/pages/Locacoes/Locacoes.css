@@ -1882,13 +1882,13 @@
     margin: 0 !important;
   }
 
-  /* BOTÕES: 100% LARGURA EXPANDIDOS */
+  /* 🔘 Linha de 2 botões de ação simétricos de 40px no cabeçalho (+ NOVA LOCAÇÃO / DISPONIBILIDADE) */
   .locacoes-container .header-actions {
     width: 100% !important;
-    display: flex !important;
-    flex-direction: column !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
-    align-items: stretch !important;
+    align-items: center !important;
     box-sizing: border-box !important;
   }
 
@@ -1897,23 +1897,24 @@
   .locacoes-container .header-actions > .btn-secondary-celebre,
   .locacoes-container .btn-primary-celebre,
   .locacoes-container .btn-secondary-celebre { 
-    display: flex !important;
+    grid-column: span 1 !important;
+    order: unset !important;
+    display: inline-flex !important;
     flex-direction: row !important;
     width: 100% !important;
-    min-width: 100% !important;
+    min-width: 0 !important;
     max-width: 100% !important;
-    flex: none !important;
     height: 40px !important;
     align-items: center !important;
     justify-content: center !important;
     text-align: center !important;
-    font-size: 0.78rem !important;
-    font-weight: 850 !important;
-    padding: 0 16px !important;
+    font-size: 0.76rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2px !important;
+    padding: 0 8px !important;
     box-sizing: border-box !important;
     white-space: nowrap !important;
     border-radius: 12px !important;
-    grid-column: 1 / -1 !important;
   }
 
   /* =====================================================

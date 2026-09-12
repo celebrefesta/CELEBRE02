@@ -34,6 +34,28 @@ const Estoque = () => {
   const [localizacaoFiltro, setLocalizacaoFiltro] = useState('');
   const [ordemAlfabetica, setOrdemAlfabetica] = useState('A-Z'); 
 
+  // 📱 CONTROLE DE EXIBIÇÃO OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR)
+  const [mostrarKpiMobile, setMostrarKpiMobile] = useState(() => {
+    try {
+      const salvo = localStorage.getItem('celebre_estoque_show_kpi_mobile');
+      return salvo !== null ? JSON.parse(salvo) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  const toggleKpiMobile = () => {
+    setMostrarKpiMobile(prev => {
+      const next = !prev;
+      try {
+        localStorage.setItem('celebre_estoque_show_kpi_mobile', JSON.stringify(next));
+      } catch (e) {
+        console.error(e);
+      }
+      return next;
+    });
+  }; 
+
   const [imagemAmpliada, setImagemAmpliada] = useState(null);
   const [modalManutencao, setModalManutencao] = useState(false);
   const [itemParaManutencao, setItemParaManutencao] = useState(null);
@@ -816,6 +838,15 @@ const Estoque = () => {
       if (statusFiltro === 'indisponivel') setStatusFiltro('');
   };
 
+  const temFiltrosAtivos = Boolean(busca || dataFiltro || categoriaFiltro || statusFiltro || localizacaoFiltro);
+  const limparTodosFiltros = () => {
+      setBusca('');
+      setDataFiltro('');
+      setCategoriaFiltro('');
+      setStatusFiltro('');
+      setLocalizacaoFiltro('');
+  };
+
   const calcularDisponibilidadeNaData = (item) => {
       const isDeco = item.especificacoes?.isDecoracao || item.categoria === 'Decoração Completa';
       const qtdBase = isDeco ? 1 : (Number(item.quantidade) || 0); 
@@ -1048,13 +1079,13 @@ const Estoque = () => {
           </div>
         </div>
         <div className="header-actions">
-          <button type="button" className="btn-secondary-celebre" onClick={imprimirListaFiltrada}>
-            <i className="fas fa-print"></i>
-            <span>Imprimir Lista</span>
-          </button>
           <button type="button" className="btn-primary-celebre" onClick={() => irParaCadastro()} style={{ opacity: totalItens >= limiteEstoque ? 0.7 : 1 }}>
             <i className="fas fa-plus"></i>
             <span>NOVO ITEM</span>
+          </button>
+          <button type="button" className="btn-secondary-celebre" onClick={imprimirListaFiltrada}>
+            <i className="fas fa-print"></i>
+            <span>Imprimir Lista</span>
           </button>
         </div>
       </div>
@@ -1073,8 +1104,37 @@ const Estoque = () => {
         </div>
       )}
 
+      {/* 📱 CONTROLE OPCIONAL DE CARDS KPI NO CELULAR (RECOLHER / EXPANDIR) */}
+      <div className="kpi-mobile-toggle-wrapper">
+        <button 
+          type="button" 
+          className={`btn-toggle-kpi-mobile ${!mostrarKpiMobile ? 'is-collapsed' : ''}`}
+          onClick={toggleKpiMobile}
+          aria-expanded={mostrarKpiMobile}
+          title={mostrarKpiMobile ? "Recolher cards de indicadores no celular" : "Expandir cards de indicadores no celular"}
+        >
+          <div className="toggle-kpi-left">
+            <span className="toggle-kpi-icon">📊</span>
+            {mostrarKpiMobile ? (
+              <span className="toggle-kpi-title">Indicadores do Acervo</span>
+            ) : (
+              <span className="toggle-kpi-summary">
+                <strong>{totalItens.toLocaleString('pt-BR')}</strong> peças • <strong>R$ {valorAcervo.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong> acervo
+              </span>
+            )}
+          </div>
+          <span className="toggle-kpi-badge">
+            {mostrarKpiMobile ? (
+              <>Ocultar <i className="fas fa-chevron-up"></i></>
+            ) : (
+              <>Expandir <i className="fas fa-chevron-down"></i></>
+            )}
+          </span>
+        </button>
+      </div>
+
       {/* CARDS DE DASHBOARD 4 COLUNAS IDÊNTICOS AO GESTÃO DE CLIENTES */}
-      <div className="clientes-stats-grid">
+      <div className={`clientes-stats-grid ${!mostrarKpiMobile ? 'kpi-hidden-mobile' : ''}`}>
         <div className="stat-card-pro card-purple">
           <div className="stat-icon-wrapper icon-purple">
             <i className="fas fa-boxes-stacked"></i>
@@ -1129,9 +1189,11 @@ const Estoque = () => {
             <i className="fas fa-store"></i>
           </div>
           <div className="stat-content">
-            <span className="stat-title">VISÍVEL CATÁLOGO</span>
+            <div className="stat-text-group">
+              <span className="stat-title">VISÍVEL CATÁLOGO</span>
+              <small className="stat-desc">Disponível no catálogo</small>
+            </div>
             <strong className="stat-number">{percentualVisivel}%</strong>
-            <small className="stat-desc">Disponível no catálogo</small>
           </div>
         </div>
       </div>
@@ -1168,71 +1230,93 @@ const Estoque = () => {
       {/* CONTAINER TABELA E FILTROS IDÊNTICOS AO GESTÃO DE CLIENTES */}
       <div className="table-card-container">
         <div className="table-filter-bar">
-          <div className="search-input-wrapper">
-            <span className="search-icon"><i className="fas fa-magnifying-glass"></i></span>
-            <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
+          {/* 🌟 LINHA 1: BUSCA + TOGGLE (LISTA / CARDS) COMPACTO NA MESMA LINHA */}
+          <div className="filter-row-primary">
+            <div className="search-input-wrapper">
+              <span className="search-icon"><i className="fas fa-magnifying-glass"></i></span>
+              <input type="text" placeholder="Buscar por nome ou código..." value={busca} onChange={e => setBusca(e.target.value)} />
+              {busca && (
+                <button type="button" className="btn-clear-search-estoque" onClick={() => setBusca('')} title="Limpar busca">
+                  ✕
+                </button>
+              )}
+            </div>
+
+            {/* 🔢 Toggle de Visualização (Lista / Cards) Slim */}
+            <div className="view-toggle-group">
+              <button
+                type="button"
+                className={`view-toggle-btn${modoVisualizacao === 'lista' ? ' active' : ''}`}
+                onClick={() => setModoVisualizacao('lista')}
+                title="Visão em Lista"
+              >
+                <i className="fas fa-list"></i>
+                <span className="view-toggle-text">Lista</span>
+              </button>
+              <button
+                type="button"
+                className={`view-toggle-btn${modoVisualizacao === 'grid' ? ' active' : ''}`}
+                onClick={() => setModoVisualizacao('grid')}
+                title="Visão em Cards"
+              >
+                <i className="fas fa-grip"></i>
+                <span className="view-toggle-text">Cards</span>
+              </button>
+            </div>
           </div>
 
-          {/* 🔢 Toggle de Visualização (Lista / Cards) em linha exclusiva no mobile */}
-          <div className="view-toggle-group">
-            <button
-              type="button"
-              className={`view-toggle-btn${modoVisualizacao === 'lista' ? ' active' : ''}`}
-              onClick={() => setModoVisualizacao('lista')}
-              title="Visão em Lista"
-            >
-              <i className="fas fa-list"></i>
-              <span>Lista</span>
+          {/* 🌟 LINHA 2: GRID SIMÉTRICO 2 COLUNAS (DATA, GALPÃO, STATUS, CATEGORIA, ORDEM, LIMPAR) */}
+          <div className="filter-row-secondary">
+            <div className="filter-select-container filter-date-container">
+              <input type="date" className="filter-select" value={dataFiltro} onChange={e => {
+                  setDataFiltro(e.target.value);
+                  if (!e.target.value && statusFiltro === 'indisponivel') setStatusFiltro('');
+              }} />
+              {dataFiltro && <button className="btn-limpar-data" onClick={limparFiltroData} title="Limpar Data">✕</button>}
+            </div>
+
+            <div className="filter-select-container filter-localizacao-container">
+              <select className="filter-select" value={localizacaoFiltro} onChange={e => setLocalizacaoFiltro(e.target.value)}>
+                <option value="">Galpão: Todos</option>
+                {localizacoesUnicas.map(loc => (
+                    <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
+            <div className="filter-select-container filter-status-container">
+              <select className="filter-select" value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}>
+                <option value="">Status: Todos</option>
+                <option value="disponivel">Somente Disponíveis</option>
+                <option value="manutencao">Somente em Manutenção</option>
+                {dataFiltro && <option value="indisponivel">Somente Alugados / Esgotados</option>}
+              </select>
+            </div>
+
+            <div className="filter-select-container filter-categoria-container">
+              <select className="filter-select" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
+                <option value="">Categoria: Todas</option>
+                {categoriasUnicas.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                ))}
+              </select>
+            </div>
+
+            <button className="btn-secondary-celebre btn-ordem-estoque" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} title="Alterar Ordem Alfabética">
+                {ordemAlfabetica === 'A-Z' ? <><i className="fas fa-arrow-down-a-z"></i> A - Z</> : <><i className="fas fa-arrow-up-z-a"></i> Z - A</>}
             </button>
-            <button
-              type="button"
-              className={`view-toggle-btn${modoVisualizacao === 'grid' ? ' active' : ''}`}
-              onClick={() => setModoVisualizacao('grid')}
-              title="Visão em Cards"
+
+            <button 
+              type="button" 
+              className={`btn-secondary-celebre btn-limpar-filtros-estoque${temFiltrosAtivos ? ' has-active' : ''}`}
+              onClick={limparTodosFiltros}
+              disabled={!temFiltrosAtivos}
+              title={temFiltrosAtivos ? "Limpar todos os filtros ativos" : "Nenhum filtro ativo"}
             >
-              <i className="fas fa-grip"></i>
-              <span>Cards</span>
+              <i className="fas fa-filter-circle-xmark"></i>
+              <span>{temFiltrosAtivos ? 'Limpar' : 'Filtros'}</span>
             </button>
           </div>
-
-          <div className="filter-select-container filter-date-container" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <input type="date" className="filter-select" value={dataFiltro} onChange={e => {
-                setDataFiltro(e.target.value);
-                if (!e.target.value && statusFiltro === 'indisponivel') setStatusFiltro('');
-            }} />
-            {dataFiltro && <button className="btn-limpar-data" onClick={limparFiltroData} title="Limpar Data">✕</button>}
-          </div>
-
-          <div className="filter-select-container filter-localizacao-container">
-            <select className="filter-select" value={localizacaoFiltro} onChange={e => setLocalizacaoFiltro(e.target.value)}>
-              <option value="">Galpão: Todos</option>
-              {localizacoesUnicas.map(loc => (
-                  <option key={loc} value={loc}>{loc}</option>
-              ))}
-            </select>
-          </div>
-
-          <div className="filter-select-container filter-status-container">
-            <select className="filter-select" value={statusFiltro} onChange={e => setStatusFiltro(e.target.value)}>
-              <option value="">Status: Todos</option>
-              <option value="disponivel">Somente Disponíveis</option>
-              <option value="manutencao">Somente em Manutenção</option>
-              {dataFiltro && <option value="indisponivel">Somente Alugados / Esgotados</option>}
-            </select>
-          </div>
-
-          <div className="filter-select-container filter-categoria-container">
-            <select className="filter-select" value={categoriaFiltro} onChange={e => setCategoriaFiltro(e.target.value)}>
-              <option value="">Categoria: Todas</option>
-              {categoriasUnicas.map(cat => (
-                  <option key={cat} value={cat}>{cat}</option>
-              ))}
-            </select>
-          </div>
-
-          <button className="btn-secondary-celebre btn-ordem-estoque" onClick={() => setOrdemAlfabetica(prev => prev === 'A-Z' ? 'Z-A' : 'A-Z')} title="Alterar Ordem Alfabética">
-              {ordemAlfabetica === 'A-Z' ? <><i className="fas fa-arrow-down-a-z"></i> A - Z</> : <><i className="fas fa-arrow-up-z-a"></i> Z - A</>}
-          </button>
         </div>
 
         {/* ── BARRA DE SELEÇÃO EM MASSA ── */}
@@ -1354,10 +1438,10 @@ const Estoque = () => {
               );
             })}
             {itensFiltrados.length === 0 && (
-              <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '60px', color: '#64748b' }}>
-                <div style={{ fontSize: '40px', marginBottom: '10px' }}>🕵️‍♀️</div>
-                <strong>Nenhuma peça encontrada com esses filtros!</strong>
-                <p style={{ fontSize: '12px', marginTop: '5px' }}>Tente mudar a categoria, o status ou limpar a data.</p>
+              <div className="estoque-empty-card" style={{ gridColumn: '1/-1' }}>
+                <div className="estoque-empty-icon"><i className="fas fa-boxes-stacked"></i></div>
+                <h4>Nenhuma peça encontrada</h4>
+                <p>Tente ajustar os filtros ou pesquisar por outro termo.</p>
               </div>
             )}
           </div>
@@ -1594,10 +1678,12 @@ const Estoque = () => {
                 })}
                 {itensFiltrados.length === 0 && (
                     <tr>
-                        <td colSpan="7" style={{textAlign:'center', padding:'40px', color:'#64748b'}}>
-                            <div style={{fontSize: '40px', marginBottom: '10px'}}>🕵️‍♀️</div>
-                            <strong>Nenhuma peça encontrada com esses filtros!</strong>
-                            <p style={{fontSize: '12px', marginTop: '5px'}}>Tente mudar a categoria, o status ou limpar a data.</p>
+                        <td colSpan="7" style={{ textAlign: 'center', padding: '36px 16px', border: 'none' }}>
+                            <div className="estoque-empty-card">
+                              <div className="estoque-empty-icon"><i className="fas fa-boxes-stacked"></i></div>
+                              <h4>Nenhuma peça encontrada</h4>
+                              <p>Tente ajustar os filtros ou pesquisar por outro termo.</p>
+                            </div>
                         </td>
                     </tr>
                 )}

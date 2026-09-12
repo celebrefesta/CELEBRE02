@@ -139,6 +139,10 @@
 }
 
 /* 🔒 TRAVA DE SEGURANÇA: CARDS DE DASHBOARD EM 1 SÓ LINHA NO DESKTOP */
+.estoque-container .kpi-mobile-toggle-wrapper {
+  display: none !important;
+}
+
 @media (min-width: 901px) {
   .clientes-stats-grid {
     display: flex !important;
@@ -449,6 +453,65 @@
 .btn-limpar-data:hover {
   background: #ef4444;
   color: #ffffff;
+}
+
+/* 💻 COMPORTAMENTO TRANSPARENTE NO DESKTOP (> 900px) */
+.filter-row-primary,
+.filter-row-secondary {
+  display: contents;
+}
+
+.btn-clear-search-estoque {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.2s ease;
+}
+
+.btn-clear-search-estoque:hover {
+  color: #ef4444;
+  background: #fee2e2;
+}
+
+.btn-limpar-filtros-estoque {
+  height: 46px;
+  border-radius: 30px;
+  padding: 0 16px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1.5px solid var(--borda, #cbd5e1);
+  background: var(--fundo-card, #ffffff);
+  color: var(--texto-secundario, #64748b);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-limpar-filtros-estoque.has-active {
+  color: #b91c1c !important;
+  border-color: #fca5a5 !important;
+  background: #fef2f2 !important;
+}
+
+.btn-limpar-filtros-estoque:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .table-responsive-wrapper {
@@ -1333,7 +1396,8 @@
     word-break: break-word !important;
   }
 
-  /* 🔘 Linha de 2 botões de ação simétricos de 42px no cabeçalho */
+  /* 🔘 Linha de 2 botões de ação simétricos de 40px no cabeçalho */
+  .estoque-container .header-actions,
   .header-actions {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
@@ -1343,18 +1407,22 @@
     box-sizing: border-box !important;
   }
 
+  .estoque-container .header-actions .btn-secondary-celebre,
+  .estoque-container .header-actions .btn-primary-celebre,
   .header-actions .btn-secondary-celebre,
   .header-actions .btn-primary-celebre {
+    grid-column: span 1 !important;
+    order: unset !important;
     width: 100% !important;
-    height: 42px !important;
+    height: 40px !important;
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
     gap: 6px !important;
     padding: 0 8px !important;
-    font-size: 0.80rem !important;
-    font-weight: 750 !important;
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
     border-radius: 12px !important;
     white-space: nowrap !important;
     overflow: hidden !important;
@@ -1385,6 +1453,17 @@
     border-radius: 25px !important;
   }
 
+  /* 📱 CONTROLE DE RECOLHER / EXPANDIR CARDS KPI NO CELULAR */
+  .estoque-container .kpi-mobile-toggle-wrapper {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  .estoque-container .clientes-stats-grid.kpi-hidden-mobile {
+    display: none !important;
+  }
+
   /* 📊 Grid de Estatísticas: 2 Colunas Simétricas com proporções uniformes */
   .clientes-stats-grid {
     display: grid !important;
@@ -1407,11 +1486,69 @@
     align-items: center !important;
   }
 
-  /* 5º Card ocupa 1 coluna uniforme ou 2 colunas centralizadas apenas no Estoque */
-  .estoque-container .stat-card-pro:nth-child(5):last-child {
+  /* 5º Card (Visível Catálogo): Barra executiva horizontal elegante ocupando 2 colunas */
+  .estoque-container .stat-card-pro:nth-child(5):last-child,
+  .estoque-container .stat-card-pro.card-green {
     grid-column: span 2 !important;
-    justify-content: center !important;
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
     padding: 10px 14px !important;
+    min-height: 56px !important;
+    height: 58px !important;
+    gap: 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .estoque-container .stat-card-pro.card-green .stat-content {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+  }
+
+  .estoque-container .stat-card-pro.card-green .stat-text-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1px !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .estoque-container .stat-card-pro.card-green .stat-title {
+    font-size: 0.58rem !important;
+    font-weight: 850 !important;
+    color: #166534 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+    line-height: 1.15 !important;
+    margin: 0 !important;
+  }
+
+  .estoque-container .stat-card-pro.card-green .stat-desc {
+    font-size: 0.65rem !important;
+    font-weight: 600 !important;
+    color: #15803d !important;
+    line-height: 1.15 !important;
+    margin: 0 !important;
+  }
+
+  .estoque-container .stat-card-pro.card-green .stat-number {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 1.15rem !important;
+    font-weight: 900 !important;
+    padding: 3px 12px !important;
+    background: rgba(22, 163, 74, 0.12) !important;
+    color: #166534 !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(22, 163, 74, 0.25) !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    letter-spacing: -0.3px !important;
   }
 
   .estoque-container .stat-icon-wrapper {
@@ -1466,80 +1603,137 @@
     overflow: visible !important;
   }
 
+  /* 📱 REPAGINAÇÃO SLIM MODERNA DOS FILTROS DE ESTOQUE (ULTRA-COMPACTO) */
+  .estoque-container .table-card-container {
+    padding: 10px 10px 14px 10px !important;
+    border-radius: 16px !important;
+  }
+
   .estoque-container .table-filter-bar {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
-    gap: 8px !important;
-    margin-bottom: 14px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    margin-bottom: 10px !important;
     width: 100% !important;
     max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 🌟 LINHA 1: BUSCA + TOGGLE (LISTA / CARDS) EM UMA SÓ LINHA */
+  .estoque-container .filter-row-primary {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
     box-sizing: border-box !important;
   }
 
   .estoque-container .search-input-wrapper {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    max-width: 100% !important;
-    box-sizing: border-box !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    position: relative !important;
+    margin: 0 !important;
+    width: auto !important;
+  }
+
+  .estoque-container .search-input-wrapper .search-icon {
+    left: 11px !important;
+    font-size: 13px !important;
   }
 
   .estoque-container .search-input-wrapper input {
-    height: 42px !important;
-    min-height: 42px !important;
-    font-size: 16px !important;
-    font-weight: 500 !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+    padding-left: 32px !important;
+    padding-right: 28px !important;
+    border-radius: 10px !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+    background: var(--fundo-card, #ffffff) !important;
     width: 100% !important;
-    max-width: 100% !important;
-    border-radius: 12px !important;
     box-sizing: border-box !important;
   }
 
-  /* 🔢 Toggle Lista / Cards em Linha Única Separada (100% Largura no Mobile) */
-  .estoque-container .table-filter-bar .view-toggle-group {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    height: 42px !important;
-    border-radius: 12px !important;
+  .estoque-container .search-input-wrapper .btn-clear-search-estoque {
+    position: absolute !important;
+    right: 8px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    background: transparent !important;
+    border: none !important;
+    color: #94a3b8 !important;
+    font-size: 12px !important;
+    cursor: pointer !important;
+    padding: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+  }
+
+  /* 🔢 Segmented Toggle Lista / Cards Compacto Acoplado à Linha 1 */
+  .estoque-container .view-toggle-group {
+    flex: 0 0 auto !important;
+    width: 86px !important;
+    height: 36px !important;
+    border-radius: 10px !important;
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    padding: 3px !important;
-    gap: 4px !important;
+    padding: 2px !important;
+    gap: 2px !important;
     box-sizing: border-box !important;
-    background: var(--fundo-cinza, #f8fafc) !important;
-    border: 1.5px solid var(--borda, #cbd5e1) !important;
-    margin: 2px 0 4px 0 !important;
+    background: var(--fundo-cinza, #f1f5f9) !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+    margin: 0 !important;
   }
 
-  .estoque-container .table-filter-bar .view-toggle-btn {
+  .estoque-container .view-toggle-btn {
     width: 100% !important;
     height: 100% !important;
     display: inline-flex !important;
     flex-direction: row !important;
     align-items: center !important;
     justify-content: center !important;
-    gap: 6px !important;
-    padding: 0 8px !important;
-    font-size: 0.82rem !important;
+    gap: 4px !important;
+    padding: 0 !important;
+    font-size: 0.70rem !important;
     font-weight: 750 !important;
-    border-radius: 9px !important;
+    border-radius: 8px !important;
+    border: none !important;
+    cursor: pointer !important;
+    color: var(--texto-secundario, #64748b) !important;
+    background: transparent !important;
+    transition: all 0.15s ease !important;
   }
 
-  /* Botão de Ordenação A-Z mobile em linha inteira na base */
-  .estoque-container .table-filter-bar .btn-secondary-celebre,
-  .estoque-container .table-filter-bar .btn-ordem-estoque {
-    grid-column: 1 / -1 !important;
-    width: 100% !important;
-    height: 40px !important;
-    border-radius: 12px !important;
-    display: inline-flex !important;
-    align-items: center !important;
-    justify-content: center !important;
+  .estoque-container .view-toggle-btn.active {
+    background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a4803c) 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 2px 6px rgba(197, 160, 89, 0.3) !important;
+  }
+
+  .estoque-container .view-toggle-text {
+    display: none !important;
+  }
+
+  @media (min-width: 380px) {
+    .estoque-container .view-toggle-group {
+      width: 104px !important;
+    }
+    .estoque-container .view-toggle-text {
+      display: inline !important;
+      font-size: 0.68rem !important;
+    }
+  }
+
+  /* 🌟 LINHA 2: GRID SIMÉTRICO DE 2 COLUNAS PARA OS SELETORES */
+  .estoque-container .filter-row-secondary {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
     gap: 6px !important;
-    font-size: 0.82rem !important;
-    font-weight: 700 !important;
-    padding: 0 8px !important;
+    width: 100% !important;
     box-sizing: border-box !important;
-    margin-top: 2px !important;
   }
 
   .estoque-container .filter-select-container {
@@ -1550,15 +1744,17 @@
     box-sizing: border-box !important;
     position: relative !important;
     grid-column: auto !important;
+    margin: 0 !important;
   }
 
   .estoque-container .filter-select {
-    height: 42px !important;
-    min-height: 42px !important;
-    font-size: 0.78rem !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    font-size: 0.74rem !important;
     font-weight: 600 !important;
-    padding: 0 8px !important;
-    border-radius: 12px !important;
+    padding: 0 6px !important;
+    border-radius: 9px !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
     width: 100% !important;
     min-width: 0 !important;
     max-width: 100% !important;
@@ -1566,34 +1762,46 @@
     text-overflow: ellipsis !important;
     overflow: hidden !important;
     white-space: nowrap !important;
+    background: var(--fundo-card, #ffffff) !important;
+    color: var(--texto-principal, #0f172a) !important;
   }
 
   .estoque-container .filter-select option {
-    font-size: 0.82rem !important;
+    font-size: 0.80rem !important;
     max-width: 100% !important;
     word-break: break-word !important;
   }
 
   .estoque-container .filter-date-container {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
     grid-column: auto !important;
     width: 100% !important;
   }
 
   .estoque-container .filter-date-container input[type="date"] {
     width: 100% !important;
-    height: 42px !important;
-    min-height: 42px !important;
-    font-size: 0.78rem !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    font-size: 0.72rem !important;
     font-weight: 600 !important;
-    border-radius: 12px !important;
+    border-radius: 9px !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
     box-sizing: border-box !important;
-    padding: 0 8px !important;
+    padding: 0 6px !important;
+    background: var(--fundo-card, #ffffff) !important;
+    color: var(--texto-principal, #0f172a) !important;
   }
 
   .estoque-container .filter-date-container .btn-limpar-data {
-    height: 38px !important;
-    width: 38px !important;
-    min-width: 38px !important;
+    height: 30px !important;
+    width: 30px !important;
+    min-width: 30px !important;
+    font-size: 11px !important;
+    border-radius: 7px !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
   }
 
   .estoque-container .filter-localizacao-container {
@@ -1609,6 +1817,39 @@
   .estoque-container .filter-categoria-container {
     grid-column: auto !important;
     width: 100% !important;
+  }
+
+  /* 🔘 Botão A-Z e Limpar Filtros em 2 Colunas */
+  .estoque-container .btn-ordem-estoque,
+  .estoque-container .btn-limpar-filtros-estoque {
+    grid-column: auto !important;
+    width: 100% !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    border-radius: 9px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    font-size: 0.73rem !important;
+    font-weight: 750 !important;
+    padding: 0 6px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+  }
+
+  .estoque-container .btn-limpar-filtros-estoque {
+    background: var(--fundo-cinza, #f8fafc) !important;
+    color: var(--texto-secundario, #64748b) !important;
+    opacity: 0.75 !important;
+  }
+
+  .estoque-container .btn-limpar-filtros-estoque.has-active {
+    background: #fef2f2 !important;
+    color: #b91c1c !important;
+    border-color: #fca5a5 !important;
+    opacity: 1 !important;
   }
 
   /* 🔘 Barra de Seleção em Massa no Mobile (3 Colunas Alinhadas) */
@@ -2179,6 +2420,33 @@
   background-color: var(--fundo-principal) !important;
   border-color: var(--borda) !important;
   color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .filter-date-container input[type="date"] {
+  background-color: var(--fundo-principal) !important;
+  border-color: var(--borda) !important;
+  color: var(--texto-principal) !important;
+}
+
+[data-theme='dark'] .view-toggle-group {
+  background: var(--fundo-principal, #18181b) !important;
+  border-color: var(--borda, #3f3f46) !important;
+}
+
+[data-theme='dark'] .view-toggle-btn {
+  color: var(--texto-secundario, #a1a1aa) !important;
+}
+
+[data-theme='dark'] .btn-limpar-filtros-estoque {
+  background: var(--fundo-card, #18181b) !important;
+  border-color: var(--borda, #3f3f46) !important;
+  color: var(--texto-secundario, #a1a1aa) !important;
+}
+
+[data-theme='dark'] .btn-limpar-filtros-estoque.has-active {
+  background: rgba(185, 28, 28, 0.25) !important;
+  border-color: rgba(239, 68, 68, 0.5) !important;
+  color: #fca5a5 !important;
 }
 
 [data-theme='dark'] .btn-secondary-celebre {
@@ -3571,4 +3839,69 @@
     height: 36px !important;
     font-size: 0.74rem !important;
   }
+}
+
+/* ==========================================================================
+   ✨ EMPTY STATE LUXURY (ESTOQUE E ACERVO)
+   ========================================================================== */
+.estoque-container .estoque-empty-card {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  text-align: center !important;
+  padding: 44px 20px !important;
+  background: var(--fundo-card, #ffffff) !important;
+  border: 1.5px dashed var(--borda, #cbd5e1) !important;
+  border-radius: 18px !important;
+  width: 100% !important;
+  max-width: 480px !important;
+  box-sizing: border-box !important;
+  margin: 20px auto !important;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.03) !important;
+}
+
+.estoque-container .estoque-empty-icon {
+  width: 60px !important;
+  height: 60px !important;
+  border-radius: 50% !important;
+  background: rgba(197, 160, 89, 0.1) !important;
+  border: 1px solid rgba(197, 160, 89, 0.25) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: var(--dourado, #c5a059) !important;
+  font-size: 24px !important;
+  margin-bottom: 14px !important;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.1) !important;
+}
+
+.estoque-container .estoque-empty-card h4 {
+  font-size: 1.05rem !important;
+  font-weight: 750 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  margin: 0 0 6px 0 !important;
+  letter-spacing: -0.2px !important;
+}
+
+.estoque-container .estoque-empty-card p {
+  font-size: 0.82rem !important;
+  font-weight: 500 !important;
+  color: var(--texto-secundario, #64748b) !important;
+  margin: 0 !important;
+  line-height: 1.45 !important;
+  max-width: 320px !important;
+}
+
+[data-theme^='dark'] .estoque-container .estoque-empty-card {
+  background: var(--fundo-card, #1e293b) !important;
+  border-color: var(--borda, #334155) !important;
+}
+
+[data-theme^='dark'] .estoque-container .estoque-empty-card h4 {
+  color: #f1f5f9 !important;
+}
+
+[data-theme^='dark'] .estoque-container .estoque-empty-card p {
+  color: #94a3b8 !important;
 }

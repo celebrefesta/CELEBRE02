@@ -251,8 +251,8 @@ const Dashboard = () => {
                     setAssinaturaAtiva(true);
                 }
 
-                if (dadosEmpresa.statusConta === 'excluido' && !isImpersonating) {
-                    setStatusConta('excluido');
+                if ((dadosEmpresa.statusConta === 'excluido' || dadosEmpresa.statusConta === 'suspenso') && !isImpersonating) {
+                    setStatusConta('suspenso');
                     setLoading(false);
                     return;
                 }
@@ -270,9 +270,9 @@ const Dashboard = () => {
 
                 if (!assinaturaAtiva && !isImpersonating) {
                     if (infoTeste.diasTranscorridos > 180) {
-                        setStatusConta('excluido');
+                        setStatusConta('suspenso');
                         try {
-                            await updateDoc(doc(db, "usuarios", uidParaConsultar), { statusConta: 'excluido' });
+                            await updateDoc(doc(db, "usuarios", uidParaConsultar), { statusConta: 'suspenso' });
                         } catch (eErr) {}
                         setLoading(false);
                         return;
@@ -898,12 +898,12 @@ const Dashboard = () => {
 
   if (loading) return <div className="loading-v3">Atualizando central de comando VIP...</div>;
 
-  if (statusConta === 'excluido') {
+  if (statusConta === 'excluido' || statusConta === 'suspenso') {
       return (
           <div className="dash-wide-container dash-status-screen fade-in">
               <div className="dash-status-card dash-status-card--danger">
-                  <h2>🚫 Conta Desativada</h2>
-                  <p>Seu período de inatividade ultrapassou <strong>6 meses</strong>. Por segurança, a conta foi suspensa.</p>
+                  <h2>⏸️ Conta Suspensa</h2>
+                  <p>Seu período de inatividade ultrapassou <strong>6 meses</strong>. Por segurança, a sua conta foi suspensa.</p>
               </div>
           </div>
       );
@@ -942,7 +942,7 @@ const Dashboard = () => {
 
   return (
     <div className="dash-wide-container fade-in">
-      {!isSuperAdmin && !assinaturaAtiva && statusConta !== 'bloqueado' && statusConta !== 'excluido' && diasRestantes > 0 && (
+      {!isSuperAdmin && !assinaturaAtiva && statusConta !== 'bloqueado' && statusConta !== 'excluido' && statusConta !== 'suspenso' && diasRestantes > 0 && (
         <div className="dash-trial-banner">
           ⏳ Você está no dia {diasTeste} de {totalDiasTeste} do seu teste gratuito ({diasRestantes} {diasRestantes === 1 ? 'dia restante' : 'dias restantes'}). Aproveite!
         </div>

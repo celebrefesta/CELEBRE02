@@ -743,81 +743,82 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
       {/* 🔍 PAINEL DE FILTROS E BUSCA AVANÇADA (PADRÃO GESTÃO DE LOCAÇÕES) */}
       <div className="advanced-filter-bar disp-filter-bar">
         
-        {/* NÍVEL 1: CHIPS OPERACIONAIS DE STATUS (TOPO - IGUAL AO PRINT DE LOCAÇÕES) */}
-        <div className="operacao-chips-grid disp-chips-grid">
-          <button 
-            type="button" 
-            className={`chip-operacao gold ${apenasAlugados ? 'active' : ''}`}
-            onClick={() => {
-              setApenasAlugados(prev => !prev);
-              if (!apenasAlugados) { setApenasLivres(false); setApenasManutencao(false); }
-            }}
-            title="Filtrar peças que possuem reservas no mês"
-          >
-            👁️ OCUPADOS <span className="chip-badge gold">{pecasOcupadasCount}</span>
-          </button>
+        {/* LINHA 1: BUSCA + CHIPS OPERACIONAIS DE STATUS (ALINHADOS EM 1 LINHA NO DESKTOP) */}
+        <div className="filter-row-top disp-filter-row-top">
+          <div className="search-input-box">
+            <i className="fas fa-search search-box-icon"></i>
+            <input 
+              type="text" 
+              placeholder="Buscar por peça, código ou categoria..." 
+              value={busca} 
+              onChange={e => setBusca(e.target.value)} 
+              className="search-input-field"
+            />
+            {busca && (
+              <button type="button" className="btn-clear-input" onClick={() => setBusca('')} title="Limpar busca">
+                <i className="fas fa-times"></i>
+              </button>
+            )}
+          </div>
 
-          <button 
-            type="button" 
-            className={`chip-operacao rose ${apenasManutencao ? 'active' : ''}`}
-            onClick={() => {
-              setApenasManutencao(prev => !prev);
-              if (!apenasManutencao) { setApenasAlugados(false); setApenasLivres(false); }
-            }}
-            title="Filtrar peças em manutenção ou reforma"
-          >
-            🛠️ REFORMA <span className="chip-badge rose">{pecasReformaCount}</span>
-          </button>
-
-          <button 
-            type="button" 
-            className={`chip-operacao emerald ${apenasLivres ? 'active' : ''}`}
-            onClick={() => {
-              setApenasLivres(prev => !prev);
-              if (!apenasLivres) { setApenasAlugados(false); setApenasManutencao(false); }
-            }}
-            title="Filtrar peças 100% livres no mês"
-          >
-            🟢 LIVRES <span className="chip-badge emerald">{pecasLivresCount}</span>
-          </button>
-
-          {(apenasAlugados || apenasManutencao || apenasLivres || busca || categoria !== 'Todas') && (
+          <div className="operacao-chips-grid disp-chips-grid">
             <button 
               type="button" 
-              className="chip-operacao-limpar"
+              className={`chip-operacao gold ${apenasAlugados ? 'active' : ''}`}
               onClick={() => {
-                setApenasAlugados(false);
-                setApenasManutencao(false);
-                setApenasLivres(false);
-                setBusca('');
-                setCategoria('Todas');
+                setApenasAlugados(prev => !prev);
+                if (!apenasAlugados) { setApenasLivres(false); setApenasManutencao(false); }
               }}
-              title="Limpar todos os filtros"
+              title="Filtrar peças que possuem reservas no mês"
             >
-              ✕ Ver Todos
+              👁️ OCUPADOS <span className="chip-badge gold">{pecasOcupadasCount}</span>
             </button>
-          )}
+
+            <button 
+              type="button" 
+              className={`chip-operacao rose ${apenasManutencao ? 'active' : ''}`}
+              onClick={() => {
+                setApenasManutencao(prev => !prev);
+                if (!apenasManutencao) { setApenasAlugados(false); setApenasLivres(false); }
+              }}
+              title="Filtrar peças em manutenção ou reforma"
+            >
+              🛠️ REFORMA <span className="chip-badge rose">{pecasReformaCount}</span>
+            </button>
+
+            <button 
+              type="button" 
+              className={`chip-operacao emerald ${apenasLivres ? 'active' : ''}`}
+              onClick={() => {
+                setApenasLivres(prev => !prev);
+                if (!apenasLivres) { setApenasAlugados(false); setApenasManutencao(false); }
+              }}
+              title="Filtrar peças 100% livres no mês"
+            >
+              🟢 LIVRES <span className="chip-badge emerald">{pecasLivresCount}</span>
+            </button>
+
+            {(apenasAlugados || apenasManutencao || apenasLivres || busca || categoria !== 'Todas') && (
+              <button 
+                type="button" 
+                className="chip-operacao-limpar"
+                onClick={() => {
+                  setApenasAlugados(false);
+                  setApenasManutencao(false);
+                  setApenasLivres(false);
+                  setBusca('');
+                  setCategoria('Todas');
+                }}
+                title="Limpar todos os filtros"
+              >
+                ✕ Ver Todos
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* NÍVEL 2: CAIXA DE BUSCA PROMINENTE (LARGURA TOTAL) */}
-        <div className="search-input-box">
-          <i className="fas fa-search search-box-icon"></i>
-          <input 
-            type="text" 
-            placeholder="Buscar por peça, código ou categoria..." 
-            value={busca} 
-            onChange={e => setBusca(e.target.value)} 
-            className="search-input-field"
-          />
-          {busca && (
-            <button type="button" className="btn-clear-input" onClick={() => setBusca('')} title="Limpar busca">
-              <i className="fas fa-times"></i>
-            </button>
-          )}
-        </div>
-
-        {/* NÍVEL 3: NAVEGADOR DE MÊS E ANO */}
-        <div className="disp-month-bar">
+        {/* LINHA 2: NAVEGADOR DE MÊS + CATEGORIA + ORDENAÇÃO (TUDO EM 1 LINHA NO DESKTOP) */}
+        <div className="disp-filter-row-bottom">
           <div className="disp-month-navigator">
             <button type="button" className="btn-nav-month" onClick={() => navegarMes(-1)} title="Mês anterior">
               <i className="fas fa-chevron-left"></i>
@@ -829,30 +830,25 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
               <i className="fas fa-chevron-right"></i>
             </button>
           </div>
-        </div>
 
-        {/* NÍVEL 4: SUB-FILTROS EM 2 COLUNAS (CATEGORIA E ORDENAÇÃO) */}
-        <div className="filter-sub-grid disp-sub-grid">
-          <select value={categoria} onChange={e => setCategoria(e.target.value)} className="select-pill-filter">
-            {categorias.map(cat => (
-              <option key={cat} value={cat}>{cat === 'Todas' ? '🏷️ Categoria: Todas' : `🏷️ ${cat}`}</option>
-            ))}
-          </select>
+          <div className="disp-selects-pair">
+            <div className="disp-select-wrapper">
+              <select value={categoria} onChange={e => setCategoria(e.target.value)} className="select-pill-filter">
+                {categorias.map(cat => (
+                  <option key={cat} value={cat}>{cat === 'Todas' ? '🏷️ Categoria: Todas' : `🏷️ ${cat}`}</option>
+                ))}
+              </select>
+            </div>
 
-          <select value={ordenacaoPecas} onChange={e => setOrdenacaoPecas(e.target.value)} className="select-pill-filter">
-            <option value="nome">🌟 Ordenar: Nome (A-Z)</option>
-            <option value="maisReservadas">🔥 Mais Reservadas</option>
-            <option value="maiorQtd">📦 Maior Quantidade</option>
-            <option value="menorQtd">📉 Menor Quantidade</option>
-          </select>
-        </div>
-
-        {/* NÍVEL 5: LEGENDA VISUAL DEDICADA */}
-        <div className="disp-legend-strip">
-          <div className="disp-legend-pill"><span className="legend-dot dot-green"></span> Livre</div>
-          <div className="disp-legend-pill"><span className="legend-dot dot-yellow"></span> Parcial</div>
-          <div className="disp-legend-pill"><span className="legend-dot dot-red"></span> Esgotado</div>
-          <div className="disp-legend-pill"><span className="legend-dot dot-darkred"></span> Reforma</div>
+            <div className="disp-select-wrapper">
+              <select value={ordenacaoPecas} onChange={e => setOrdenacaoPecas(e.target.value)} className="select-pill-filter">
+                <option value="nome">🌟 Ordenar: Nome (A-Z)</option>
+                <option value="maisReservadas">🔥 Mais Reservadas</option>
+                <option value="maiorQtd">📦 Maior Quantidade</option>
+                <option value="menorQtd">📉 Menor Quantidade</option>
+              </select>
+            </div>
+          </div>
         </div>
 
       </div>
@@ -866,13 +862,16 @@ const Disponibilidade = ({ estoque: estoqueProp, locacoes: locacoesProp }) => {
           </div>
         ) : estoqueFiltrado.length === 0 ? (
           <div className="disp-empty-state-card-clean">
-            <p>Nenhuma peça encontrada nesta filtragem.</p>
+            <div className="disp-empty-icon-circle">
+              <i className="fas fa-boxes"></i>
+            </div>
+            <h4 className="disp-empty-title">Nenhuma peça encontrada</h4>
+            <p className="disp-empty-desc">Tente ajustar os filtros ou pesquisar por outro termo.</p>
             {(busca || categoria !== 'Todas' || apenasManutencao || apenasAlugados || apenasLivres) && (
               <button 
                 type="button" 
-                className="chip-operacao-limpar" 
+                className="chip-operacao-limpar btn-empty-clear" 
                 onClick={() => { setBusca(''); setCategoria('Todas'); setApenasManutencao(false); setApenasAlugados(false); setApenasLivres(false); }}
-                style={{ marginTop: '8px', fontSize: '0.80rem' }}
               >
                 ✕ Limpar Filtros
               </button>

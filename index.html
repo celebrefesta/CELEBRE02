@@ -2,6 +2,21 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <!-- 🔒 Canonicalização de Domínio: redireciona Firebase para celebrefesta.com.br -->
+    <script>
+      (function() {
+        var hostname = window.location.hostname;
+        var allowedDomains = ['celebrefesta.com.br', 'www.celebrefesta.com.br', 'localhost', '127.0.0.1'];
+        var isAllowed = allowedDomains.some(function(d) { return hostname === d || hostname.endsWith('.' + d); });
+        if (!isAllowed) {
+          // Preserva path, query string e hash ao redirecionar
+          var path = window.location.pathname || '';
+          var search = window.location.search || '';
+          var hash = window.location.hash || '';
+          window.location.replace('https://celebrefesta.com.br' + path + search + hash);
+        }
+      })();
+    </script>
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <link rel="apple-touch-icon" href="/icon-192.png" />
     

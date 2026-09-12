@@ -3,7 +3,10 @@
    Design: Dark Luxury, Clean, Executive & Modern
    =================================================== */
 
-.cg-wrapper {
+:root,
+.cg-wrapper,
+.cg-modal-backdrop,
+.cg-modal-overlay {
   --cg-bg: var(--fundo-principal, #f8fafc);
   --cg-card-bg: #ffffff;
   --cg-card-border: #e2e8f0;
@@ -22,6 +25,9 @@
   --cg-brand: var(--cor-destaque, #c5a059);
 
   font-family: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif !important;
+}
+
+.cg-wrapper {
   width: 100%;
   padding: 28px 36px;
   box-sizing: border-box;
@@ -32,8 +38,14 @@
 }
 
 /* 🌙 SUPORTE OFICIAL A TEMAS ESCUROS (GRAFITE, MIDNIGHT & DARK GLOBAL) */
+[data-theme^='dark'],
+[data-theme='dark'],
 [data-theme^='dark'] .cg-wrapper,
-[data-theme='dark'] .cg-wrapper {
+[data-theme='dark'] .cg-wrapper,
+[data-theme^='dark'] .cg-modal-backdrop,
+[data-theme='dark'] .cg-modal-backdrop,
+[data-theme^='dark'] .cg-modal-overlay,
+[data-theme='dark'] .cg-modal-overlay {
   --cg-bg: var(--fundo-principal, #0f172a);
   --cg-card-bg: #1e293b;
   --cg-card-border: #334155;
@@ -2102,7 +2114,8 @@
 .badge-teste { background: #fef3c7; color: #d97706; }
 .badge-ativo { background: #d1fae5; color: #059669; }
 .badge-bloqueado { background: #fee2e2; color: #dc2626; }
-.badge-excluido { background: #f1f5f9; color: #64748b; }
+.badge-excluido,
+.badge-suspenso { background: #f1f5f9; color: #64748b; border: 1px solid #cbd5e1; }
 
 [data-theme^='dark'] .badge-admin,
 [data-theme='dark'] .badge-admin { background: #0f172a; color: var(--cg-gold); border: 1px solid rgba(197, 160, 89, 0.4); }
@@ -2113,7 +2126,9 @@
 [data-theme^='dark'] .badge-bloqueado,
 [data-theme='dark'] .badge-bloqueado { background: rgba(239, 68, 68, 0.18); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.35); }
 [data-theme^='dark'] .badge-excluido,
-[data-theme='dark'] .badge-excluido { background: rgba(100, 116, 139, 0.18); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.35); }
+[data-theme='dark'] .badge-excluido,
+[data-theme^='dark'] .badge-suspenso,
+[data-theme='dark'] .badge-suspenso { background: rgba(100, 116, 139, 0.18); color: #94a3b8; border: 1px solid rgba(100, 116, 139, 0.35); }
 
 /* 🌟 Badge de Cliente Novo */
 .cg-badge-novo {
@@ -2246,9 +2261,9 @@
   inset: 0 !important;
   width: 100vw !important;
   height: 100vh !important;
-  background: rgba(15, 23, 42, 0.72) !important;
-  backdrop-filter: blur(5px) !important;
-  -webkit-backdrop-filter: blur(5px) !important;
+  background: rgba(15, 23, 42, 0.75) !important;
+  backdrop-filter: blur(6px) !important;
+  -webkit-backdrop-filter: blur(6px) !important;
   display: flex !important;
   align-items: center !important;
   justify-content: center !important;
@@ -2258,16 +2273,23 @@
 }
 
 .cg-modal-content {
-  background: #fff;
+  background: #ffffff !important;
   border-radius: 16px;
   width: 100%;
   max-width: 600px;
   max-height: 90vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.25);
-  border: 1px solid #e2e8f0;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.35);
+  border: 1.5px solid #e2e8f0;
   overflow: hidden;
+  position: relative;
+  z-index: 10;
+}
+[data-theme^='dark'] .cg-modal-content,
+[data-theme='dark'] .cg-modal-content {
+  background: #1e293b !important;
+  border-color: #334155;
 }
 
 .cg-modal-header {
@@ -3428,10 +3450,17 @@
 .cg-client-edit-modal {
   max-width: 1040px !important;
   width: 95% !important;
-  border: 1px solid var(--cg-card-border);
-  border-radius: 16px;
-  background: var(--cg-card-bg) !important;
-  color: var(--cg-text-main) !important;
+  border: 1.5px solid var(--cg-card-border, #cbd5e1) !important;
+  border-radius: 16px !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.45) !important;
+}
+[data-theme^='dark'] .cg-client-edit-modal,
+[data-theme='dark'] .cg-client-edit-modal {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #334155 !important;
 }
 
 .cg-client-modal-two-cols {
@@ -3459,27 +3488,70 @@
   margin-top: 0;
 }
 
+/* Cards da Coluna Direita (Dados Cadastrais & Período de Teste) */
+.cg-right-section-card {
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 16px 18px;
+  margin-bottom: 12px;
+}
+[data-theme^='dark'] .cg-right-section-card,
+[data-theme='dark'] .cg-right-section-card {
+  background: #0f172a;
+  border-color: #334155;
+}
+
 .cg-modal-col-right .cg-form-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
 .cg-modal-col-right .cg-form-group label {
   font-size: 11.5px;
   font-weight: 800;
-  color: var(--cg-text-muted);
-  margin-bottom: 2px;
+  color: #64748b;
+  margin-bottom: 4px;
+}
+[data-theme^='dark'] .cg-modal-col-right .cg-form-group label {
+  color: #94a3b8;
 }
 
 .cg-modal-col-right .cg-form-group input,
 .cg-modal-col-right .cg-form-group select {
-  padding: 8px 12px;
+  padding: 9px 12px;
   font-size: 12.5px;
-  background: var(--cg-input-bg);
-  border: 1.5px solid var(--cg-input-border);
-  color: var(--cg-text-main);
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
   border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+[data-theme^='dark'] .cg-modal-col-right .cg-form-group input,
+[data-theme^='dark'] .cg-modal-col-right .cg-form-group select {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+}
+
+.cg-payment-section select,
+.cg-payment-section input {
+  padding: 9px 12px;
+  font-size: 12.5px;
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  color: #0f172a !important;
+  border-radius: 8px;
+  width: 100%;
+  box-sizing: border-box;
+}
+[data-theme^='dark'] .cg-payment-section select,
+[data-theme^='dark'] .cg-payment-section input {
+  background: #1e293b !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
 }
 
 .cg-modal-header-titles {
@@ -3954,4 +4026,251 @@
     align-items: flex-start;
   }
 }
+
+/* ==========================================================================
+   GESTÃO DE CONTA SUSPENSA POR INATIVIDADE (SUPER ADMIN)
+   ========================================================================== */
+
+.cg-suspended-management-card {
+  background: linear-gradient(145deg, #fffcf0, #fff7ed) !important;
+  border: 1.5px solid #fde68a !important;
+  border-radius: 14px !important;
+  padding: 16px 18px !important;
+  margin-top: 14px !important;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.08) !important;
+  transition: all 0.25s ease !important;
+}
+
+[data-theme^='dark'] .cg-suspended-management-card {
+  background: linear-gradient(145deg, #1e1b18, #241c14) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35) !important;
+}
+
+.cg-suspended-card-header {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+  padding-bottom: 10px !important;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.2) !important;
+}
+
+.cg-suspended-card-header-left {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.cg-suspended-card-header-left i {
+  color: #d97706 !important;
+  font-size: 18px !important;
+}
+
+.cg-suspended-card-header-left h3 {
+  margin: 0 !important;
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: #92400e !important;
+  letter-spacing: -0.2px !important;
+}
+
+[data-theme^='dark'] .cg-suspended-card-header-left h3 {
+  color: #fef3c7 !important;
+}
+
+.cg-suspended-badge-timer {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border: 1px solid #fde68a !important;
+  padding: 3px 8px !important;
+  border-radius: 20px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+}
+
+[data-theme^='dark'] .cg-suspended-badge-timer {
+  background: rgba(245, 158, 11, 0.15) !important;
+  color: #fde68a !important;
+  border-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+.cg-suspended-card-desc {
+  font-size: 12.5px !important;
+  line-height: 1.5 !important;
+  color: #78350f !important;
+  margin: 0 0 14px 0 !important;
+}
+
+[data-theme^='dark'] .cg-suspended-card-desc {
+  color: #fde68a !important;
+  opacity: 0.85 !important;
+}
+
+/* LISTA DE AÇÕES OPERACIONAIS */
+.cg-suspended-actions-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 9px !important;
+}
+
+.cg-btn-suspended-action {
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  width: 100% !important;
+  padding: 11px 14px !important;
+  border-radius: 10px !important;
+  font-family: inherit !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  transition: all 0.2s ease !important;
+  border: 1.5px solid transparent !important;
+}
+
+.cg-btn-suspended-action i {
+  font-size: 17px !important;
+  width: 24px !important;
+  text-align: center !important;
+  flex-shrink: 0 !important;
+}
+
+.cg-btn-suspended-action .cg-action-texts {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1 !important;
+}
+
+.cg-btn-suspended-action strong {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  line-height: 1.2 !important;
+}
+
+.cg-btn-suspended-action small {
+  font-size: 11px !important;
+  line-height: 1.3 !important;
+  opacity: 0.85 !important;
+}
+
+/* Variante 1: Reativar (Verde Esmeralda Dourado) */
+.cg-btn-suspended-action.reactivate {
+  background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;
+  border-color: #6ee7b7 !important;
+  color: #065f46 !important;
+}
+
+.cg-btn-suspended-action.reactivate i {
+  color: #059669 !important;
+}
+
+.cg-btn-suspended-action.reactivate:hover {
+  background: linear-gradient(135deg, #d1fae5, #a7f3d0) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 10px rgba(16, 185, 129, 0.2) !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.reactivate {
+  background: linear-gradient(135deg, #064e3b, #042f2e) !important;
+  border-color: rgba(52, 211, 153, 0.4) !important;
+  color: #ecfdf5 !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.reactivate i {
+  color: #34d399 !important;
+}
+
+/* Variante 2: Enviar Notificação por E-mail (Azul Royal) */
+.cg-btn-suspended-action.notify {
+  background: linear-gradient(135deg, #eff6ff, #dbeafe) !important;
+  border-color: #93c5fd !important;
+  color: #1e40af !important;
+}
+
+.cg-btn-suspended-action.notify i {
+  color: #2563eb !important;
+}
+
+.cg-btn-suspended-action.notify:hover {
+  background: linear-gradient(135deg, #dbeafe, #bfdbfe) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 10px rgba(37, 99, 235, 0.2) !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.notify {
+  background: linear-gradient(135deg, #1e3a5f, #0f172a) !important;
+  border-color: rgba(96, 165, 250, 0.4) !important;
+  color: #eff6ff !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.notify i {
+  color: #60a5fa !important;
+}
+
+/* Variante 3: Exclusão Definitiva (Vermelho Carmim) */
+.cg-btn-suspended-action.delete {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2) !important;
+  border-color: #fca5a5 !important;
+  color: #991b1b !important;
+}
+
+.cg-btn-suspended-action.delete i {
+  color: #dc2626 !important;
+}
+
+.cg-btn-suspended-action.delete:hover {
+  background: linear-gradient(135deg, #fee2e2, #fecaca) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 3px 10px rgba(220, 38, 38, 0.2) !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.delete {
+  background: linear-gradient(135deg, #450a0a, #1f0404) !important;
+  border-color: rgba(248, 113, 113, 0.4) !important;
+  color: #fef2f2 !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.delete i {
+  color: #f87171 !important;
+}
+
+/* BOTÃO DE CONTROLES AVANÇADOS SANFONADOS */
+.cg-suspended-advanced-toggle {
+  margin-top: 12px !important;
+  padding-top: 10px !important;
+  border-top: 1px dashed rgba(245, 158, 11, 0.25) !important;
+  text-align: center !important;
+}
+
+.cg-btn-toggle-advanced {
+  background: none !important;
+  border: none !important;
+  color: #b45309 !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  transition: all 0.2s ease !important;
+  font-family: inherit !important;
+}
+
+.cg-btn-toggle-advanced:hover {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #92400e !important;
+}
+
+[data-theme^='dark'] .cg-btn-toggle-advanced {
+  color: #fbbf24 !important;
+}
+
+[data-theme^='dark'] .cg-btn-toggle-advanced:hover {
+  background: rgba(245, 158, 11, 0.2) !important;
+  color: #fef3c7 !important;
+}
+
 

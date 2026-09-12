@@ -925,8 +925,43 @@ a.btn-primary-celebre {
   }
 }
 
-/* 🔒 Sub-filtros Locações no Mobile: 2x2 Simétrico */
+/* 🔒 Layout Mobile Locações (≤ 900px): Cabeçalho 2 Colunas e Sub-filtros 2x2 */
 @media (max-width: 900px) {
+  /* 🔒 Header actions Locações: 2 colunas simétricas lado a lado (+ NOVA LOCAÇÃO / DISPONIBILIDADE) */
+  .locacoes-container .header-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .locacoes-container .header-actions > button,
+  .locacoes-container .header-actions > .btn-primary-celebre,
+  .locacoes-container .header-actions > .btn-secondary-celebre,
+  .locacoes-container .btn-primary-celebre,
+  .locacoes-container .btn-secondary-celebre {
+    grid-column: span 1 !important;
+    order: unset !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    height: 40px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    text-align: center !important;
+    font-size: 0.76rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2px !important;
+    padding: 0 8px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    border-radius: 12px !important;
+  }
+
   .locacoes-container .filter-sub-grid {
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
@@ -998,28 +1033,283 @@ a.btn-primary-celebre {
   box-sizing: border-box !important;
 }
 
+.estoque-container .kpi-mobile-toggle-wrapper {
+  display: none !important;
+}
+
 @media (max-width: 900px) {
-  .estoque-container .table-filter-bar {
+  /* 📱 CONTROLE DE RECOLHER / EXPANDIR CARDS KPI NO CELULAR */
+  .estoque-container .kpi-mobile-toggle-wrapper {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  .estoque-container .clientes-stats-grid.kpi-hidden-mobile {
+    display: none !important;
+  }
+  /* 🔒 Header actions Estoque: 2 colunas simétricas (Novo Item + Imprimir Lista) */
+  .estoque-container.clientes-container .header-actions,
+  .estoque-container .header-actions {
+    width: 100% !important;
     display: grid !important;
     grid-template-columns: repeat(2, 1fr) !important;
     gap: 8px !important;
-    align-items: start !important;
+    align-items: center !important;
   }
 
-  .estoque-container .table-filter-bar .view-toggle-group {
-    grid-column: 1 / -1 !important;
+  .estoque-container.clientes-container .header-actions .btn-primary-celebre,
+  .estoque-container.clientes-container .header-actions .btn-secondary-celebre,
+  .estoque-container .header-actions .btn-primary-celebre,
+  .estoque-container .header-actions .btn-secondary-celebre {
+    grid-column: span 1 !important;
+    order: unset !important;
     width: 100% !important;
+    height: 40px !important;
+    padding: 0 8px !important;
+    font-size: 0.78rem !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.2px !important;
+    border-radius: 12px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 6px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+  }
+
+  /* 🔒 Card 5 (Visível Catálogo) no Mobile: Barra Executiva Horizontal Elegante */
+  .estoque-container.clientes-container .clientes-stats-grid .stat-card-pro.card-green,
+  .estoque-container .clientes-stats-grid .stat-card-pro.card-green {
+    grid-column: span 2 !important;
     display: flex !important;
     flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding: 10px 14px !important;
+    min-height: 56px !important;
+    height: 58px !important;
+    gap: 12px !important;
+    box-sizing: border-box !important;
   }
 
-  .estoque-container .table-filter-bar .btn-ordem-estoque {
-    grid-column: 1 / -1 !important;
+  .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-content {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
     width: 100% !important;
+    min-width: 0 !important;
+    gap: 10px !important;
+  }
+
+  .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-text-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 1px !important;
+    min-width: 0 !important;
+    text-align: left !important;
+  }
+
+  .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-title {
+    font-size: 0.58rem !important;
+    font-weight: 850 !important;
+    color: #166534 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+    line-height: 1.15 !important;
+    margin: 0 !important;
+  }
+
+  .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-desc {
+    font-size: 0.65rem !important;
+    font-weight: 600 !important;
+    color: #15803d !important;
+    line-height: 1.15 !important;
+    margin: 0 !important;
+  }
+
+  .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-number {
+    font-family: 'Outfit', 'Plus Jakarta Sans', sans-serif !important;
+    font-size: 1.15rem !important;
+    font-weight: 900 !important;
+    padding: 3px 12px !important;
+    background: rgba(22, 163, 74, 0.12) !important;
+    color: #166534 !important;
+    border-radius: 20px !important;
+    border: 1px solid rgba(22, 163, 74, 0.25) !important;
+    flex-shrink: 0 !important;
+    margin: 0 !important;
+    letter-spacing: -0.3px !important;
+  }
+
+  [data-theme^='dark'] .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-title {
+    color: #86efac !important;
+  }
+
+  [data-theme^='dark'] .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-desc {
+    color: #bbf7d0 !important;
+  }
+
+  [data-theme^='dark'] .estoque-container .clientes-stats-grid .stat-card-pro.card-green .stat-number {
+    background: rgba(34, 197, 94, 0.15) !important;
+    color: #4ade80 !important;
+    border-color: rgba(34, 197, 94, 0.3) !important;
+  }
+
+  /* 🔒 Barra de Filtros Mobile Estoque (Novo Layout Slim 2 Linhas - 12/09/2026) */
+  .estoque-container .table-card-container {
+    padding: 10px 10px 14px 10px !important;
+    border-radius: 16px !important;
+  }
+
+  .estoque-container .table-filter-bar {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 6px !important;
+    margin-bottom: 10px !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* 🌟 LINHA 1: BUSCA + TOGGLE (LISTA / CARDS) EM UMA SÓ LINHA */
+  .estoque-container .filter-row-primary {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 6px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .estoque-container .table-filter-bar .search-input-wrapper {
-    grid-column: 1 / -1 !important;
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+    width: auto !important;
+    grid-column: auto !important;
+    margin: 0 !important;
+  }
+
+  .estoque-container .table-filter-bar .search-input-wrapper input {
+    height: 36px !important;
+    min-height: 36px !important;
+    border-radius: 10px !important;
+    padding-left: 32px !important;
+    padding-right: 28px !important;
+    font-size: 0.78rem !important;
+    font-weight: 600 !important;
+  }
+
+  .estoque-container .table-filter-bar .view-toggle-group {
+    flex: 0 0 auto !important;
+    width: 86px !important;
+    height: 36px !important;
+    grid-column: auto !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    border-radius: 10px !important;
+    padding: 2px !important;
+    gap: 2px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+
+  .estoque-container .table-filter-bar .view-toggle-btn {
+    width: 100% !important;
+    height: 100% !important;
+    border-radius: 8px !important;
+    font-size: 0.70rem !important;
+    font-weight: 750 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 4px !important;
+  }
+
+  .estoque-container .view-toggle-text {
+    display: none !important;
+  }
+
+  @media (min-width: 380px) {
+    .estoque-container .table-filter-bar .view-toggle-group {
+      width: 104px !important;
+    }
+    .estoque-container .view-toggle-text {
+      display: inline !important;
+      font-size: 0.68rem !important;
+    }
+  }
+
+  /* 🌟 LINHA 2: GRID SIMÉTRICO DE 2 COLUNAS PARA OS SELETORES */
+  .estoque-container .filter-row-secondary {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .estoque-container .filter-select-container {
+    width: 100% !important;
+    min-width: 0 !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
+  }
+
+  .estoque-container .filter-select {
+    height: 34px !important;
+    min-height: 34px !important;
+    border-radius: 9px !important;
+    font-size: 0.74rem !important;
+    font-weight: 600 !important;
+    padding: 0 6px !important;
+  }
+
+  .estoque-container .filter-date-container {
+    display: flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+
+  .estoque-container .filter-date-container input[type="date"] {
+    height: 34px !important;
+    min-height: 34px !important;
+    border-radius: 9px !important;
+    font-size: 0.72rem !important;
+    font-weight: 600 !important;
+    padding: 0 6px !important;
+    width: 100% !important;
+  }
+
+  .estoque-container .filter-date-container .btn-limpar-data {
+    height: 30px !important;
+    width: 30px !important;
+    min-width: 30px !important;
+    font-size: 11px !important;
+    border-radius: 7px !important;
+    padding: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .estoque-container .table-filter-bar .btn-ordem-estoque,
+  .estoque-container .table-filter-bar .btn-limpar-filtros-estoque {
+    grid-column: auto !important;
+    width: 100% !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    border-radius: 9px !important;
+    font-size: 0.73rem !important;
+    font-weight: 750 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 5px !important;
+    padding: 0 6px !important;
+    box-sizing: border-box !important;
+    margin: 0 !important;
   }
 
   .estoque-container .pro-table {
@@ -2313,10 +2603,293 @@ a.btn-primary-celebre {
 }
 
 /* ============================================================
-   🔒 SISTEMA 100% CONGELADO E BLINDADO (04/09/2026)
+   🔒 MATRIZ DE DISPONIBILIDADE DO ACERVO
+   Status: 🔒 CONGELADA (12/09/2026)
+   Arquivos de Origem: src/pages/Locacoes/Disponibilidade.jsx / .css
+   Propósito: Blindagem total do layout desktop e mobile, 
+   1 linha de KPI no desktop, 2 colunas no mobile, cabeçalho 
+   mobile em 2 colunas, modo escuro e paleta Celebre Gold.
+   ============================================================ */
+
+.disponibilidade-container {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif !important;
+}
+
+/* CABEÇALHO HERO & AÇÕES */
+.disponibilidade-container .clientes-hero-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  margin-bottom: 22px !important;
+  box-sizing: border-box !important;
+}
+
+.disponibilidade-container .header-actions {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.disponibilidade-container .btn-primary-celebre {
+  background: linear-gradient(135deg, var(--dourado, #c5a059) 0%, var(--gold-dark, #a37f3e) 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  font-weight: 850 !important;
+  height: 40px !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 14px rgba(197, 160, 89, 0.38) !important;
+}
+
+.disponibilidade-container .btn-secondary-celebre {
+  background: #ffffff !important;
+  color: var(--texto-principal, #0f172a) !important;
+  border: 1.5px solid var(--borda, #cbd5e1) !important;
+  height: 40px !important;
+  border-radius: 12px !important;
+  font-weight: 750 !important;
+  font-size: 0.80rem !important;
+}
+
+/* 🔒 REGRA #1 DE OURO: CARDS KPI EM 1 LINHA NO DESKTOP (> 900px) */
+@media (min-width: 901px) {
+  .disponibilidade-container {
+    padding: 28px 36px !important;
+  }
+
+  .disponibilidade-container .kpi-mobile-toggle-wrapper {
+    display: none !important;
+  }
+
+  .disponibilidade-container .clientes-stats-grid,
+  .disponibilidade-container .clientes-stats-grid.kpi-hidden-mobile {
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
+    gap: 12px !important;
+    width: 100% !important;
+    margin-bottom: 22px !important;
+  }
+
+  .disponibilidade-container .clientes-stats-grid .stat-card-pro {
+    flex: 1 1 0 !important;
+    min-width: 0 !important;
+    height: 86px !important;
+    box-sizing: border-box !important;
+  }
+
+  .disponibilidade-container .disp-filter-bar {
+    padding: 16px 18px !important;
+    border-radius: 16px !important;
+    gap: 12px !important;
+  }
+
+  .disponibilidade-container .disp-filter-row-top {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+  }
+
+  .disponibilidade-container .disp-filter-row-top .search-input-box {
+    flex: 1 1 auto !important;
+  }
+
+  .disponibilidade-container .disp-filter-row-bottom {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 14px !important;
+  }
+
+  .disponibilidade-container .disp-select-wrapper {
+    flex: 1 1 220px !important;
+    max-width: 320px !important;
+    min-width: 160px !important;
+  }
+}
+
+/* 🔒 REGRA #2 DE OURO: MOBILE (<= 900px) — 2 COLUNAS DE KPIS E CABEÇALHO SIMÉTRICO */
+@media (max-width: 900px) {
+  .disponibilidade-container {
+    padding: 12px 10px 80px 10px !important;
+  }
+
+  .disponibilidade-container .clientes-hero-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .disponibilidade-container .header-actions {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    align-items: center !important;
+    box-sizing: border-box !important;
+  }
+
+  .disponibilidade-container .disp-export-wrapper {
+    width: 100% !important;
+    display: block !important;
+    position: relative !important;
+  }
+
+  .disponibilidade-container .header-actions > .btn-primary-celebre,
+  .disponibilidade-container .header-actions > .btn-secondary-celebre,
+  .disponibilidade-container .header-actions > .disp-export-wrapper > .btn-primary-celebre,
+  .disponibilidade-container .header-actions > .disp-export-wrapper > button,
+  .disponibilidade-container .header-actions > button {
+    display: flex !important;
+    flex-direction: row !important;
+    width: 100% !important;
+    min-width: 0 !important;
+    max-width: 100% !important;
+    flex: 1 1 auto !important;
+    height: 40px !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0.74rem !important;
+    font-weight: 850 !important;
+    padding: 0 10px !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    border-radius: 12px !important;
+  }
+
+  .disponibilidade-container .kpi-mobile-toggle-wrapper {
+    display: block !important;
+    width: 100% !important;
+    margin-bottom: 12px !important;
+  }
+
+  .disponibilidade-container .clientes-stats-grid.kpi-hidden-mobile {
+    display: none !important;
+  }
+
+  .disponibilidade-container .clientes-stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+    width: 100% !important;
+    margin-bottom: 14px !important;
+  }
+
+  .disponibilidade-container .disp-filter-row-top {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+    width: 100% !important;
+  }
+
+  .disponibilidade-container .disp-filter-row-top .operacao-chips-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 4px !important;
+    width: 100% !important;
+  }
+
+  .disponibilidade-container .disp-selects-pair {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 6px !important;
+    width: 100% !important;
+  }
+
+  .disponibilidade-container .disp-days-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+    gap: 3px !important;
+  }
+}
+
+/* 🌙 MODO ESCURO BLINDADO (CHARCOAL LUXURY) */
+[data-theme^='dark'] .disponibilidade-container .btn-secondary-celebre {
+  background: #18181b !important;
+  border-color: #3f3f46 !important;
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .btn-secondary-celebre:hover {
+  background: #27272a !important;
+  border-color: #52525b !important;
+  color: #ffffff !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .btn-toggle-kpi-mobile {
+  background: #18181b !important;
+  border-color: #27272a !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .toggle-kpi-title,
+[data-theme^='dark'] .disponibilidade-container .toggle-kpi-summary strong {
+  color: #f4f4f5 !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .toggle-kpi-badge {
+  background: #27272a !important;
+  color: #a1a1aa !important;
+  border-color: #3f3f46 !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .btn-toggle-kpi-mobile.is-collapsed .toggle-kpi-badge {
+  background: rgba(161, 116, 56, 0.22) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(161, 116, 56, 0.4) !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .chip-operacao.gold {
+  background: rgba(217, 119, 6, 0.18) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .chip-operacao.gold .chip-badge {
+  background: rgba(251, 191, 36, 0.25) !important;
+  color: #fef3c7 !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .chip-operacao.rose {
+  background: rgba(225, 29, 72, 0.18) !important;
+  color: #fb7185 !important;
+  border-color: rgba(225, 29, 72, 0.35) !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .chip-operacao.rose .chip-badge {
+  background: rgba(251, 113, 133, 0.25) !important;
+  color: #ffe4e6 !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .chip-operacao.emerald {
+  background: rgba(34, 197, 94, 0.18) !important;
+  color: #4ade80 !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .chip-operacao.emerald .chip-badge {
+  background: rgba(74, 222, 128, 0.25) !important;
+  color: #dcfce7 !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .disp-empty-state-card-clean {
+  background: #18181b !important;
+  border-color: #27272a !important;
+  color: #a1a1aa !important;
+}
+
+[data-theme^='dark'] .disponibilidade-container .disp-empty-state-card-clean h4 {
+  color: #f4f4f5 !important;
+}
+
+/* ============================================================
+   🔒 SISTEMA 100% CONGELADO E BLINDADO (12/09/2026)
    TODAS AS PÁGINAS PRINCIPAIS ESTÃO COM STATUS CONGELADA:
    ✅ 🔒 Clientes (Clientes.css, CadastroCliente.css)
    ✅ 🔒 Locações (Locacoes.css)
+   ✅ 🔒 Matriz de Disponibilidade (Disponibilidade.css)
    ✅ 🔒 Nova Locação (NovaLocacao.css)
    ✅ 🔒 Estoque & Acervo (Estoque.css, CadastroEstoque.css)
    ✅ 🔒 Compras (Compras.css, NovaCompra.css)

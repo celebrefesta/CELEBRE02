@@ -92,6 +92,13 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                 if (userSnap.exists()) {
                     const dadosUsuario = userSnap.data();
 
+                    // ⏸️ CONTA SUSPENSA POR INATIVIDADE:
+                    // Redireciona diretamente para a tela oficial de reativação de conta
+                    if (dadosUsuario.statusConta === 'suspenso' || dadosUsuario.status === 'suspenso') {
+                        setTemAcesso('suspenso');
+                        return;
+                    }
+
                     const assinaturaAtiva =
                         dadosUsuario.assinaturaAtiva === true || 
                         dadosUsuario.statusAssinatura === 'ativa' ||
@@ -157,6 +164,11 @@ const RotaProtegida = ({ recursoExigido, children }) => {
                 <h3>A validar acesso seguro do Celebre...</h3>
             </div>
         );
+    }
+
+    // ⏸️ Conta Suspensa por Inatividade
+    if (temAcesso === 'suspenso') {
+        return <Navigate to="/conta-suspensa" replace />;
     }
 
     // 🔒 CONGELADO: Envia para a tela de Assinatura/Upgrade

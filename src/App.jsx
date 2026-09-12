@@ -79,6 +79,7 @@ const GestaoASO = lazy(() => import('./Usuarios/GestaoASO'));
 const Planos = lazy(() => import('./pages/Planos/Planos'));
 const AdminPlanos = lazy(() => import('./pages/Planos/AdminPlanos'));
 const PaginaUpgrade = lazy(() => import('./pages/Planos/PaginaUpgrade'));
+const ContaSuspensa = lazy(() => import('./pages/Auth/ContaSuspensa'));
 const ControleGeral = lazy(() => import('./pages/Admin/ControleGeral'));
 
 const parseFirestoreDate = (dateVal) => {
@@ -214,6 +215,14 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
         if (userSnap.exists()) {
             const dadosUsr = userSnap.data();
             
+            // ⏸️ CONTA SUSPENSA POR INATIVIDADE:
+            // Redireciona imediatamente para a tela dedicada de reativação
+            if (dadosUsr.statusConta === 'suspenso' || dadosUsr.status === 'suspenso') {
+                cachePermissoesRotas.set(cacheKey, { status: 'suspenso', timestamp: Date.now() });
+                setStatusAcesso('suspenso');
+                return;
+            }
+
             const assinaturaAtiva = 
                 dadosUsr.assinaturaAtiva === true || 
                 dadosUsr.statusAssinatura === 'ativa' || 
@@ -315,6 +324,10 @@ const TravaSeguranca = ({ children, modulo, recursoExigido }) => {
         Validando segurança da rota...
       </div>
     );
+  }
+
+  if (statusAcesso === 'suspenso') {
+    return <Navigate to="/conta-suspensa" replace />;
   }
 
   // Se não foi permitido, atira de volta para o dashboard
@@ -577,7 +590,7 @@ const AppContent = () => {
     };
   }, [location.pathname]);
 
-  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade', '/excluir-conta'];
+  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade', '/excluir-conta', '/conta-suspensa'];
 
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
@@ -633,6 +646,7 @@ const AppContent = () => {
             <Route path="/termos" element={<TermosDeUso />} />
             <Route path="/privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/excluir-conta" element={<ExcluirConta />} />
+            <Route path="/conta-suspensa" element={<ContaSuspensa />} />
 
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />
