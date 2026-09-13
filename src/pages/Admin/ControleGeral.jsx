@@ -7,6 +7,7 @@ import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
 import { ORNAMENTOS_FESTA } from '../Moodboard/Moodboard';
 import { calcularPeriodoTeste, formatarDataExibicao, formatarDataParaInput, calcularSeEhNovo } from '../../utils/periodoTesteUtils';
 import { enviarAvisoInatividadeEmail } from '../../utils/emailInatividadeService';
+import { enviarConfirmacaoReativacaoEmail } from '../../utils/emailReativacaoService';
 import './ControleGeral.css';
 
 // 🌿 Função auxiliar para renderizar SVG com cor dourada nos cards de admin
@@ -354,6 +355,34 @@ const ControleGeral = () => {
   const [tabSuporteActive, setTabSuporteActive] = useState('resumo');
   const [loadingSuporte, setLoadingSuporte] = useState(false);
   const [dadosSuporte, setDadosSuporte] = useState({ estoque: [], locacoes: [], clientes: [] });
+  const supportTabsRef = React.useRef(null);
+  const [canScrollTabsLeft, setCanScrollTabsLeft] = useState(false);
+  const [canScrollTabsRight, setCanScrollTabsRight] = useState(true);
+
+  const checkSupportTabsScroll = () => {
+    if (supportTabsRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = supportTabsRef.current;
+      setCanScrollTabsLeft(scrollLeft > 6);
+      setCanScrollTabsRight(scrollLeft < scrollWidth - clientWidth - 6);
+    }
+  };
+
+  const scrollSupportTabs = (direction) => {
+    if (supportTabsRef.current) {
+      const scrollAmount = direction === 'left' ? -140 : 140;
+      supportTabsRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      setTimeout(checkSupportTabsScroll, 250);
+    }
+  };
+
+  useEffect(() => {
+    if (modalSuporteAberto) {
+      const timer = setTimeout(() => {
+        checkSupportTabsScroll();
+      }, 150);
+      return () => clearTimeout(timer);
+    }
+  }, [modalSuporteAberto, tabSuporteActive]);
 
   const navigate = useNavigate();
   const auth = getAuth();
@@ -970,6 +999,15 @@ const ControleGeral = () => {
         assinaturaAtiva: false,
         statusAssinatura: 'ativa'
       }));
+
+      // Dispara o e-mail oficial de reativação para o cliente
+      if (membroEdicao.email) {
+        enviarConfirmacaoReativacaoEmail({
+          email: membroEdicao.email,
+          nome: nomeAlvo,
+          nomePlano: 'Cortesia Celebre (+7 Dias)'
+        }).catch(errMail => console.warn("Aviso ao enviar e-mail de reativação via Admin:", errMail));
+      }
 
       alert(`✅ Conta de "${nomeAlvo}" reativada com sucesso com +7 dias de teste!`);
       carregarDados();
@@ -3509,30 +3547,56 @@ const ControleGeral = () => {
                   </button>
                 </div>
 
-                <div className="cg-support-tabs">
+                <div className="cg-support-tabs-wrapper">
                   <button 
-                    className={`cg-support-tab-btn ${tabSuporteActive === 'resumo' ? 'active' : ''}`}
-                    onClick={() => setTabSuporteActive('resumo')}
+                    type="button" 
+                    className={`cg-support-tab-nav-btn prev ${canScrollTabsLeft ? 'is-active' : 'is-disabled'}`}
+                    onClick={() => scrollSupportTabs('left')}
+                    title="Rolar abas para esquerda"
+                    aria-label="Rolar abas para esquerda"
                   >
-                    <i className="fas fa-info-circle"></i> Resumo Perfil
+                    <i className="fas fa-chevron-left"></i>
                   </button>
-                  <button 
-                    className={`cg-support-tab-btn ${tabSuporteActive === 'acervo' ? 'active' : ''}`}
-                    onClick={() => setTabSuporteActive('acervo')}
+
+                  <div 
+                    className="cg-support-tabs"
+                    ref={supportTabsRef}
+                    onScroll={checkSupportTabsScroll}
                   >
-                    <i className="fas fa-boxes"></i> Acervo ({dadosSuporte.estoque.length})
-                  </button>
+                    <button 
+                      className={`cg-support-tab-btn ${tabSuporteActive === 'resumo' ? 'active' : ''}`}
+                      onClick={() => setTabSuporteActive('resumo')}
+                    >
+                      <i className="fas fa-info-circle"></i> Resumo Perfil
+                    </button>
+                    <button 
+                      className={`cg-support-tab-btn ${tabSuporteActive === 'acervo' ? 'active' : ''}`}
+                      onClick={() => setTabSuporteActive('acervo')}
+                    >
+                      <i className="fas fa-boxes"></i> Acervo ({dadosSuporte.estoque.length})
+                    </button>
+                    <button 
+                      className={`cg-support-tab-btn ${tabSuporteActive === 'locacoes' ? 'active' : ''}`}
+                      onClick={() => setTabSuporteActive('locacoes')}
+                    >
+                      <i className="fas fa-calendar-alt"></i> Locações/Pedidos ({dadosSuporte.locacoes.length})
+                    </button>
+                    <button 
+                      className={`cg-support-tab-btn ${tabSuporteActive === 'clientes' ? 'active' : ''}`}
+                      onClick={() => setTabSuporteActive('clientes')}
+                    >
+                      <i className="fas fa-users"></i> Clientes ({dadosSuporte.clientes.length})
+                    </button>
+                  </div>
+
                   <button 
-                    className={`cg-support-tab-btn ${tabSuporteActive === 'locacoes' ? 'active' : ''}`}
-                    onClick={() => setTabSuporteActive('locacoes')}
+                    type="button" 
+                    className={`cg-support-tab-nav-btn next ${canScrollTabsRight ? 'has-more is-active' : 'is-disabled'}`}
+                    onClick={() => scrollSupportTabs('right')}
+                    title="Rolar abas para direita"
+                    aria-label="Rolar abas para direita"
                   >
-                    <i className="fas fa-calendar-alt"></i> Locações/Pedidos ({dadosSuporte.locacoes.length})
-                  </button>
-                  <button 
-                    className={`cg-support-tab-btn ${tabSuporteActive === 'clientes' ? 'active' : ''}`}
-                    onClick={() => setTabSuporteActive('clientes')}
-                  >
-                    <i className="fas fa-users"></i> Clientes ({dadosSuporte.clientes.length})
+                    <i className="fas fa-chevron-right"></i>
                   </button>
                 </div>
 

@@ -82,6 +82,7 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
 
           if (resultado.status === "authorized") {
               await db.collection("usuarios").doc(userId).update({
+                  statusConta: "ativo",
                   plano: "pago",
                   statusAssinatura: "ativa",
                   dataPagamento: new Date().toISOString(),
@@ -97,6 +98,291 @@ exports.processarPagamento = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// ─── AUXILIARES OFICIAIS DE DISPARO DE E-MAIL VIA RESEND ────────────────────
+async function dispararEmailComprovanteExclusao(email, nome, motivo, protoCustom) {
+  if (!email || !email.includes('@')) return null;
+  const emailLimpo = String(email).trim().toLowerCase();
+  const nomeExibicao = String(nome || '').trim() || 'Usuário(a)';
+  const anoAtual = new Date().getFullYear();
+  const protocolo = protoCustom || `CEL-EXCL-${anoAtual}-${Math.floor(10000 + Math.random() * 90000)}`;
+  const dataHoraFormatada = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' });
+  const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+  const htmlBody = `
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <title>Comprovante de Exclusão de Conta • Celebre</title>
+  </head>
+  <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #334155;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 35px 15px;">
+      <tr>
+        <td align="center">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 600px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);">
+            <tr>
+              <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px 30px; text-align: center; border-bottom: 3px solid #c5a059;">
+                <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 1px;">CELEBRE</h1>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #c5a059; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Central de Privacidade & LGPD</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 35px 30px;">
+                <div style="display: inline-block; background-color: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; padding: 4px 12px; margin-bottom: 20px;">
+                  <span style="font-size: 11px; font-weight: 800; color: #991b1b; text-transform: uppercase; letter-spacing: 0.5px;">
+                    ✓ PROTOCOLO OFICIAL DE EXCLUSÃO DEFINITIVA
+                  </span>
+                </div>
+                <h2 style="margin: 0 0 16px 0; font-size: 20px; font-weight: 700; color: #0f172a;">
+                  Comprovante de Exclusão de Conta e Dados Pessoais
+                </h2>
+                <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 18px 0;">
+                  Prezado(a) <strong>${nomeExibicao}</strong>,
+                </p>
+                <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 24px 0;">
+                  Confirmamos formalmente que a sua conta vinculada ao e-mail <strong>${emailLimpo}</strong> e todas as informações associadas foram <strong>permanentemente excluídas</strong> dos servidores de produção da plataforma Celebre.
+                </p>
+                <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #c5a059; border-radius: 8px; margin-bottom: 25px; padding: 18px 20px;">
+                  <tr>
+                    <td>
+                      <table width="100%" cellpadding="4" cellspacing="0" style="font-size: 13px;">
+                        <tr>
+                          <td width="38%" style="color: #64748b; font-weight: 600;">Número de Protocolo:</td>
+                          <td style="color: #0f172a; font-weight: 800; font-family: monospace; font-size: 14px;">${protocolo}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #64748b; font-weight: 600;">Data e Hora:</td>
+                          <td style="color: #0f172a; font-weight: 600;">${dataHoraFormatada}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #64748b; font-weight: 600;">E-mail Titular:</td>
+                          <td style="color: #0f172a; font-weight: 600;">${emailLimpo}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #64748b; font-weight: 600;">Status:</td>
+                          <td style="color: #16a34a; font-weight: 800;">Concluído / Expurgado Definitivamente</td>
+                        </tr>
+                      </table>
+                    </td>
+                  </tr>
+                </table>
+                <h3 style="margin: 0 0 12px 0; font-size: 15px; font-weight: 700; color: #0f172a;">
+                  Dados e registros eliminados:
+                </h3>
+                <ul style="margin: 0 0 24px 0; padding-left: 20px; font-size: 13px; color: #475569; line-height: 1.7;">
+                  <li><strong>Credenciais de Acesso:</strong> E-mail, senha criptografada e autenticação do Firebase.</li>
+                  <li><strong>Acervo & Peças:</strong> Catálogo de itens, temas, móveis e fotos de decorações.</li>
+                  <li><strong>Locações & Contratos:</strong> Orçamentos, pedidos, check-ins e contratos digitais assinados.</li>
+                  <li><strong>Dados Cadastrais da Empresa:</strong> Nome fantasia, CNPJ/CPF, endereços e integrações.</li>
+                </ul>
+                <div style="background-color: #f1f5f9; border-radius: 8px; padding: 14px 18px; margin-bottom: 25px; font-size: 12px; color: #64748b; line-height: 1.5;">
+                  🔒 <strong>Conformidade Legal:</strong> Este procedimento atende integralmente ao Artigo 18 da Lei Geral de Proteção de Dados (Lei nº 13.709/2018 - LGPD) e às Diretrizes de Segurança do Google Play Console.
+                </div>
+                <p style="font-size: 13px; color: #64748b; line-height: 1.5; margin: 0;">
+                  Agradecemos imensamente pelo tempo em que esteve com o Celebre. Se desejar retornar no futuro, nossas portas estarão sempre abertas!
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color: #f8fafc; border-top: 1px solid #e2e8f0; padding: 22px 30px; text-align: center; font-size: 11.5px; color: #94a3b8; line-height: 1.5;">
+                <p style="margin: 0 0 6px 0; font-weight: 600; color: #64748b;">
+                  Celebre Tecnologia e Sistemas LTDA. • CNPJ: 54.839.293/0001-42
+                </p>
+                <p style="margin: 0;">
+                  São Paulo - SP • Brasil • <a href="https://celebrefesta.com.br" style="color: #94a3b8; text-decoration: underline;">celebrefesta.com.br</a>
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+
+  try {
+    const responseResend = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'Celebre Segurança <seguranca@celebrefesta.com.br>',
+        to: [emailLimpo],
+        reply_to: 'celebrefesta25@gmail.com',
+        subject: `Comprovante de Exclusão de Conta • Protocolo ${protocolo}`,
+        html: htmlBody
+      })
+    });
+
+    const resData = await responseResend.json();
+    await db.collection("comprovantes_exclusao").add({
+      email: emailLimpo,
+      nome: nomeExibicao,
+      motivo: motivo || "Não informado",
+      protocolo,
+      resendId: resData?.id || null,
+      dataHora: new Date().toISOString()
+    });
+    return { success: true, protocolo, emailId: resData?.id };
+  } catch (err) {
+    console.warn("Erro no envio de comprovante de exclusão:", err);
+    return null;
+  }
+}
+
+async function dispararEmailReativacaoInterno(email, nome, nomePlano) {
+  if (!email || !email.includes('@')) return null;
+  const emailLimpo = String(email).trim().toLowerCase();
+  const nomeExibicao = String(nome || '').trim() || 'Cliente Celebre';
+  const plano = String(nomePlano || 'Premium').trim();
+  const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+  const htmlBody = `
+  <!DOCTYPE html>
+  <html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8">
+    <title>Sua conta no Celebre foi reativada com sucesso! • Celebre</title>
+  </head>
+  <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #334155;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 35px 15px;">
+      <tr>
+        <td align="center">
+          <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);">
+            <tr>
+              <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px 30px; text-align: center; border-bottom: 3px solid #c5a059;">
+                <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 1px;">CELEBRE</h1>
+                <p style="margin: 4px 0 0 0; font-size: 13px; color: #c5a059; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Gestão Inteligente de Festas & Acervo</p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding: 35px 30px;">
+                <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 4px 12px; margin-bottom: 16px;">
+                  <span style="color: #065f46; font-size: 11px; font-weight: 800; text-transform: uppercase;">✨ ACESSO TOTALMENTE LIBERADO</span>
+                </div>
+                <h2 style="margin: 0 0 14px 0; font-size: 21px; font-weight: 700; color: #0f172a;">Que alegria ter você de volta, ${nomeExibicao}! 🎉</h2>
+                <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 16px 0;">
+                  Sua conta no <strong>Celebre</strong> foi <strong>reativada com sucesso</strong> no <strong>Plano ${plano}</strong>. Seu acesso ao painel já está instantaneamente liberado!
+                </p>
+                <div style="background-color: #fffdf5; border-left: 4px solid #c5a059; padding: 16px 18px; border-radius: 8px; margin: 20px 0; border: 1px solid rgba(197, 160, 89, 0.2);">
+                  <strong style="color: #926f2d; font-size: 13.5px; display: block; margin-bottom: 6px;">📦 Seus dados continuam 100% preservados:</strong>
+                  <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+                    • Itens do acervo com fotos em alta definição<br>
+                    • Cadastros de clientes e CRM<br>
+                    • Histórico de locações, orçamentos e contratos
+                  </p>
+                </div>
+                <div style="text-align: center; margin: 30px 0 20px 0;">
+                  <a href="https://celebrefesta.com.br/dashboard" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 36px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35); text-transform: uppercase; letter-spacing: 0.5px;">
+                    🚀 Acessar Meu Painel Agora
+                  </a>
+                </div>
+                <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+                  Dúvidas ou suporte? Conte com nosso atendimento VIP pelo WhatsApp.
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="background-color: #f8fafc; padding: 18px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                <p style="margin: 0; font-size: 11px; color: #94a3b8;">Celebre Gestão • E-mail automático de confirmação de reativação.</p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+  </html>
+  `;
+
+  try {
+    const responseResend = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'Celebre <seguranca@celebrefesta.com.br>',
+        to: [emailLimpo],
+        reply_to: 'celebrefesta25@gmail.com',
+        subject: '🎉 Sua conta no Celebre foi reativada com sucesso! Seja bem-vindo(a) de volta!',
+        html: htmlBody
+      })
+    });
+
+    const resData = await responseResend.json();
+    await db.collection("notificacoes_reativacao").add({
+      email: emailLimpo,
+      nome: nomeExibicao,
+      nomePlano: plano,
+      resendId: resData?.id || null,
+      dataHora: new Date().toISOString()
+    });
+    return resData;
+  } catch (err) {
+    console.warn("Erro no envio Resend de reativação:", err);
+    return null;
+  }
+}
+
+async function dispararEmailTrialInterno(tipo, email, nome, cupom = 'PRIMEIROACESSO') {
+  const emailLimpo = String(email).trim().toLowerCase();
+  const nomeExibicao = String(nome || '').trim() || 'Cliente Celebre';
+  const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+  let subject = '';
+  let htmlBody = '';
+
+  if (tipo === 'boas_vindas') {
+    subject = '🎉 Bem-vindo(a) ao Celebre! Seus 7 dias gratuitos de acesso VIP começaram';
+    htmlBody = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Bem-vindo(a) ao Celebre</title></head><body style="margin:0;padding:0;background-color:#0b0f19;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#334155;"><table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 15px;"><tr><td align="center"><table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5),0 0 25px rgba(197,160,89,0.2);"><tr><td style="background:linear-gradient(135deg,#090d16 0%,#0f172a 60%,#1e293b 100%);padding:38px 30px;text-align:center;border-bottom:3px solid #c5a059;"><h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:2px;color:#ffffff;">CELEBRE</h1><p style="margin:6px 0 0 0;font-size:12px;color:#c5a059;text-transform:uppercase;letter-spacing:2.5px;font-weight:800;">Gestão Inteligente de Festas & Acervo</p></td></tr><tr><td style="padding:40px 35px;background-color:#ffffff;"><div style="display:inline-block;background-color:#fefce8;border:1px solid #fde047;border-radius:24px;padding:6px 14px;margin-bottom:20px;"><span style="color:#a16207;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;">🎉 SEU TESTE VIP DE 7 DIAS COMEÇOU!</span></div><h2 style="margin:0 0 16px 0;font-size:24px;font-weight:800;color:#0f172a;">Olá, ${nomeExibicao}! Seja muito bem-vindo(a)! ✨</h2><p style="font-size:15px;line-height:1.65;color:#475569;margin:0 0 18px 0;">Você tem <strong>7 dias de degustação gratuita com acesso TOTAL e ILIMITADO</strong> a todas as ferramentas premium do Celebre (acervo com fotos, vitrine boutique, contratos com assinatura digital, calendário de disponibilidade e relatórios financeiros).</p><div style="background-color:#ecfdf5;border:1px solid #a7f3d0;border-radius:10px;padding:14px 18px;margin:20px 0;"><p style="margin:0;font-size:13px;color:#065f46;line-height:1.5;">🛡️ <strong>Sem cartão de crédito:</strong> Você explora tudo com total liberdade e autonomia.</p></div><div style="text-align:center;margin:32px 0 20px 0;"><a href="https://celebrefesta.com.br/dashboard" style="background:linear-gradient(135deg,#c5a059 0%,#dfb76c 100%);color:#0f172a;text-decoration:none;padding:16px 40px;border-radius:12px;font-weight:900;font-size:15px;display:inline-block;box-shadow:0 6px 20px rgba(197,160,89,0.4);text-transform:uppercase;letter-spacing:0.5px;">🚀 Acessar Meu Painel Agora</a></div><p style="font-size:13px;text-align:center;color:#64748b;margin:0 0 16px 0;">Dúvidas? <a href="https://wa.me/5519998564109?text=${encodeURIComponent(`Olá! Acabei de me cadastrar no Celebre (${emailLimpo}) e gostaria de tirar uma dúvida.`)}" style="color:#16a34a;font-weight:700;text-decoration:underline;">Chame nosso WhatsApp</a></p></td></tr><tr><td style="background-color:#f8fafc;padding:22px 30px;text-align:center;border-top:1px solid #e2e8f0;"><p style="margin:0 0 4px 0;font-size:11.5px;font-weight:700;color:#64748b;">Celebre • Gestão Inteligente para Acervos & Festas</p><p style="margin:0;font-size:11px;color:#94a3b8;">Conta: ${emailLimpo} • Período de Teste: 7 dias grátis.</p></td></tr></table></td></tr></table></body></html>`;
+  } else if (tipo === 'aviso_3_dias') {
+    subject = '⏳ Faltam apenas 3 dias do seu período de teste no Celebre';
+    htmlBody = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Faltam 3 Dias de Teste</title></head><body style="margin:0;padding:0;background-color:#0b0f19;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#334155;"><table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 15px;"><tr><td align="center"><table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5),0 0 25px rgba(197,160,89,0.2);"><tr><td style="background:linear-gradient(135deg,#090d16 0%,#0f172a 60%,#1e293b 100%);padding:38px 30px;text-align:center;border-bottom:3px solid #c5a059;"><h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:2px;color:#ffffff;">CELEBRE</h1><p style="margin:6px 0 0 0;font-size:12px;color:#c5a059;text-transform:uppercase;letter-spacing:2.5px;font-weight:800;">Gestão Inteligente de Festas & Acervo</p></td></tr><tr><td style="padding:40px 35px;background-color:#ffffff;"><div style="display:inline-block;background-color:#fff7ed;border:1px solid #fdba74;border-radius:24px;padding:6px 14px;margin-bottom:20px;"><span style="color:#c2410c;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;">⏳ FALTAM APENAS 3 DIAS DE DEGUSTAÇÃO</span></div><h2 style="margin:0 0 16px 0;font-size:23px;font-weight:800;color:#0f172a;">Olá, ${nomeExibicao}! Seu teste gratuito está na reta final.</h2><p style="font-size:15px;line-height:1.65;color:#475569;margin:0 0 18px 0;">Restam apenas <strong>3 dias</strong> para o término da sua degustação de 7 dias no Celebre.</p><div style="background-color:#fffdf5;border:1.5px solid rgba(197,160,89,0.4);border-left:4px solid #c5a059;border-radius:12px;padding:20px;margin:24px 0;"><strong style="color:#926f2d;font-size:14px;display:block;margin-bottom:8px;">📦 Seus dados continuam 100% seguros:</strong><p style="margin:0;color:#475569;font-size:13.5px;line-height:1.6;">Todos os itens do seu acervo, fotos em alta resolução, clientes e orçamentos estão intactos. Ao escolher um plano, nada do que você já fez será perdido!</p></div><div style="text-align:center;margin:30px 0 20px 0;"><a href="https://celebrefesta.com.br/planos" style="background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%);color:#ffffff;text-decoration:none;padding:16px 38px;border-radius:12px;font-weight:900;font-size:15px;display:inline-block;box-shadow:0 6px 20px rgba(15,23,42,0.35);text-transform:uppercase;letter-spacing:0.5px;border:1px solid #c5a059;">💎 Escolher Meu Plano Agora</a></div><p style="font-size:13px;text-align:center;color:#64748b;margin:0 0 16px 0;">Dúvidas? <a href="https://wa.me/5519998564109?text=${encodeURIComponent(`Olá! Faltam 3 dias para acabar meu teste do Celebre (${emailLimpo}) e gostaria de ajuda com planos.`)}" style="color:#16a34a;font-weight:700;text-decoration:underline;">Fale no WhatsApp</a></p></td></tr><tr><td style="background-color:#f8fafc;padding:22px 30px;text-align:center;border-top:1px solid #e2e8f0;"><p style="margin:0 0 4px 0;font-size:11.5px;font-weight:700;color:#64748b;">Celebre • Gestão Inteligente para Festas & Acervo</p><p style="margin:0;font-size:11px;color:#94a3b8;">E-mail: ${emailLimpo} • Aviso de encerramento de teste.</p></td></tr></table></td></tr></table></body></html>`;
+  } else if (tipo === 'aviso_1_dia_cupom') {
+    subject = '🚨 Último dia de teste! Presente VIP: Cupom exclusivo para você continuar no Celebre';
+    htmlBody = `<!DOCTYPE html><html lang="pt-BR"><head><meta charset="UTF-8"><title>Último Dia de Teste - Cupom VIP</title></head><body style="margin:0;padding:0;background-color:#0b0f19;font-family:'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#334155;"><table width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#0b0f19;padding:40px 15px;"><tr><td align="center"><table width="100%" border="0" cellspacing="0" cellpadding="0" style="max-width:600px;background-color:#ffffff;border-radius:20px;overflow:hidden;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5),0 0 30px rgba(220,38,38,0.25);"><tr><td style="background:linear-gradient(135deg,#090d16 0%,#1e1b4b 60%,#0f172a 100%);padding:38px 30px;text-align:center;border-bottom:3px solid #f59e0b;"><h1 style="margin:0;font-size:28px;font-weight:900;letter-spacing:2px;color:#ffffff;">CELEBRE</h1><p style="margin:6px 0 0 0;font-size:12px;color:#f59e0b;text-transform:uppercase;letter-spacing:2.5px;font-weight:800;">Oportunidade Exclusiva de Primeiro Acesso</p></td></tr><tr><td style="padding:40px 35px;background-color:#ffffff;"><div style="display:inline-block;background-color:#fef2f2;border:1px solid #fca5a5;border-radius:24px;padding:6px 14px;margin-bottom:20px;"><span style="color:#b91c1c;font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:0.8px;">🚨 HOJE É SEU ÚLTIMO DIA DE TESTE GRATUITO!</span></div><h2 style="margin:0 0 16px 0;font-size:23px;font-weight:800;color:#0f172a;">Olá, ${nomeExibicao}! Não deixe sua empresa parar. 🎁</h2><p style="font-size:15px;line-height:1.65;color:#475569;margin:0 0 18px 0;">Hoje é o <strong>último dia</strong> do seu período de degustação no Celebre. Amanhã o acesso ao painel será pausado. Preparamos uma condição única para você ativar hoje:</p><div style="background:linear-gradient(135deg,#fffbeb 0%,#fef3c7 100%);border:2px dashed #d97706;border-radius:16px;padding:24px;text-align:center;margin:26px 0;"><span style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#92400e;display:block;margin-bottom:8px;">🏷️ SEU CUPOM EXCLUSIVO DE 20% OFF:</span><div style="display:inline-block;background-color:#0f172a;color:#f5d061;font-size:22px;font-weight:900;letter-spacing:3px;padding:12px 28px;border-radius:10px;border:1.5px solid #f5d061;">${cupom}</div><p style="margin:14px 0 0 0;font-size:13px;color:#78350f;font-weight:700;">⚡ 20% de Desconto na 1ª mensalidade • <u>Válido somente hoje, no último dia de teste!</u></p></div><div style="text-align:center;margin:30px 0 20px 0;"><a href="https://celebrefesta.com.br/checkout?cupom=${cupom}" style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);color:#ffffff;text-decoration:none;padding:17px 42px;border-radius:12px;font-weight:900;font-size:15.5px;display:inline-block;box-shadow:0 6px 22px rgba(16,185,129,0.4);text-transform:uppercase;letter-spacing:0.5px;">🎁 Ativar Assinatura com Desconto Agora</a></div><p style="font-size:13px;text-align:center;color:#64748b;margin:0 0 16px 0;">Dúvidas? <a href="https://wa.me/5519998564109?text=${encodeURIComponent(`Olá! Hoje é meu último dia de teste no Celebre (${emailLimpo}) e gostaria de ativar com o cupom PRIMEIROACESSO.`)}" style="color:#16a34a;font-weight:700;text-decoration:underline;">Fale no WhatsApp</a></p></td></tr><tr><td style="background-color:#f8fafc;padding:22px 30px;text-align:center;border-top:1px solid #e2e8f0;"><p style="margin:0 0 4px 0;font-size:11.5px;font-weight:700;color:#64748b;">Celebre • Gestão Inteligente para Acervos & Festas</p><p style="margin:0;font-size:11px;color:#94a3b8;">E-mail: ${emailLimpo} • Cupom condicionado ao último dia de teste.</p></td></tr></table></td></tr></table></body></html>`;
+  } else {
+    return null;
+  }
+
+  try {
+    const responseResend = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${RESEND_API_KEY}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        from: 'Celebre <seguranca@celebrefesta.com.br>',
+        to: [emailLimpo],
+        reply_to: 'celebrefesta25@gmail.com',
+        subject,
+        html: htmlBody
+      })
+    });
+
+    const resData = await responseResend.json();
+    await db.collection("notificacoes_trial").add({
+      email: emailLimpo,
+      nome: nomeExibicao,
+      tipo,
+      cupom: tipo === 'aviso_1_dia_cupom' ? cupom : null,
+      resendId: resData?.id || null,
+      canal: 'backend_cloud_function',
+      dataHora: new Date().toISOString()
+    });
+    return resData;
+  } catch (err) {
+    console.warn(`Erro no envio Resend trial (${tipo}):`, err);
+    return null;
+  }
+}
 
 exports.limpezaDeContasExpiradas = onSchedule(
     { schedule: "every day 00:00", timeZone: "America/Sao_Paulo" }, 
@@ -135,6 +421,62 @@ exports.limpezaDeContasExpiradas = onSchedule(
                             nomeCompleto: 'Usuário Excluído',
                             telefone: ''
                         }));
+                        if (userData.email) {
+                            promessas.push(dispararEmailComprovanteExclusao(
+                                userData.email,
+                                userData.nomeCompleto || userData.nomeExibicao,
+                                'Expurgo automático após 210 dias de inatividade (180 dias + 30 dias de carência)'
+                            ));
+                        }
+                    }
+
+                    // 3. Monitoramento do Período de Teste VIP (7 dias)
+                    const ehAssinanteAtivo = userData.assinaturaAtiva === true || userData.statusAssinatura === 'ativa' || userData.statusPagamentoVulso === 'pago';
+                    if (!ehAssinanteAtivo && userData.statusConta !== 'suspenso' && userData.email) {
+                        const cadMeia = new Date(dataCadastro);
+                        cadMeia.setHours(0, 0, 0, 0);
+                        const hojeMeia = new Date(hoje);
+                        hojeMeia.setHours(0, 0, 0, 0);
+
+                        let dataFim = null;
+                        if (userData.dataFimTeste) {
+                            dataFim = new Date(userData.dataFimTeste);
+                            dataFim.setHours(0, 0, 0, 0);
+                        } else {
+                            dataFim = new Date(cadMeia);
+                            dataFim.setDate(dataFim.getDate() + 7);
+                        }
+
+                        const diffAteFimMs = dataFim.getTime() - hojeMeia.getTime();
+                        const diasRestantes = Math.round(diffAteFimMs / (1000 * 60 * 60 * 24));
+
+                        // ⏳ Faltam exatamente 3 dias para acabar o teste:
+                        if (diasRestantes === 3 && !userData.emailTeste3DiasEnviado) {
+                            promessas.push(usuariosRef.doc(uid).update({
+                                emailTeste3DiasEnviado: true,
+                                dataEnvioTeste3Dias: hoje.toISOString()
+                            }));
+                            promessas.push(dispararEmailTrialInterno(
+                                'aviso_3_dias',
+                                userData.email,
+                                userData.nomeCompleto || userData.nomeExibicao
+                            ));
+                        }
+
+                        // 🚨 Falta exatamente 1 dia (último dia de teste + cupom PRIMEIROACESSO):
+                        if (diasRestantes === 1 && !userData.emailTeste1DiaEnviado) {
+                            promessas.push(usuariosRef.doc(uid).update({
+                                emailTeste1DiaEnviado: true,
+                                dataEnvioTeste1Dia: hoje.toISOString(),
+                                cupomLiberado: 'PRIMEIROACESSO'
+                            }));
+                            promessas.push(dispararEmailTrialInterno(
+                                'aviso_1_dia_cupom',
+                                userData.email,
+                                userData.nomeCompleto || userData.nomeExibicao,
+                                'PRIMEIROACESSO'
+                            ));
+                        }
                     }
                 }
             });
@@ -182,12 +524,23 @@ exports.webhookMercadoPago = functions.https.onRequest((req, res) => {
 
               if (!snapshot.empty) {
                   const batch = db.batch();
-                  snapshot.docs.forEach((doc) => {
-                      batch.update(doc.ref, {
+                  snapshot.docs.forEach((docSnap) => {
+                      const uData = docSnap.data();
+                      const eraSuspenso = uData.statusConta === 'suspenso' || uData.status === 'suspenso';
+                      batch.update(docSnap.ref, {
+                          statusConta: "ativo",
+                          dataSuspensao: null,
                           plano: "pago",
                           statusPagamentoVulso: "aprovado",
                           dataPagamento: new Date().toISOString()
                       });
+                      if (eraSuspenso && uData.email) {
+                          dispararEmailReativacaoInterno(
+                              uData.email,
+                              uData.nomeCompleto || uData.nomeExibicao,
+                              uData.planoId || 'Premium'
+                          ).catch(e => console.warn("Aviso ao disparar reativação webhook:", e));
+                      }
                   });
                   await batch.commit();
                   console.log("✅ Pagamento aprovado! Acesso liberado.");
@@ -871,7 +1224,7 @@ exports.enviarAvisoInatividade = functions.https.onRequest((req, res) => {
                       </p>
                     </div>
                     <div style="text-align: center; margin: 28px 0;">
-                      <a href="https://celebrefesta.com.br/conta-suspensa" style="background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%); color: #0f172a; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35);">
+                      <a href="https://celebrefesta.com.br/reativar-conta" style="background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%); color: #0f172a; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 14px rgba(197, 160, 89, 0.35);">
                         Reativar Minha Conta
                       </a>
                     </div>
@@ -921,6 +1274,172 @@ exports.enviarAvisoInatividade = functions.https.onRequest((req, res) => {
       });
     } catch (error) {
       console.error("Erro interno ao enviar aviso de inatividade:", error);
+      return res.status(500).send({ error: "Erro interno", details: error.message });
+    }
+  });
+});
+
+// ============================================================================
+// 🎉 FUNÇÃO 11: ENVIAR CONFIRMAÇÃO DE REATIVAÇÃO DE CONTA VIA RESEND
+// ============================================================================
+exports.enviarConfirmacaoReativacao = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    if (req.method !== "POST") return res.status(405).send("Método não permitido");
+
+    try {
+      const { email, nome, nomePlano } = req.body;
+      if (!email || !email.includes('@')) {
+        return res.status(400).send({ error: "E-mail inválido ou não fornecido." });
+      }
+
+      const emailLimpo = String(email).trim().toLowerCase();
+      const nomeExibicao = String(nome || '').trim() || 'Cliente Celebre';
+      const plano = String(nomePlano || 'Premium').trim();
+      const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+      const htmlBody = `
+      <!DOCTYPE html>
+      <html lang="pt-BR">
+      <head>
+        <meta charset="UTF-8">
+        <title>Sua conta no Celebre foi reativada com sucesso! • Celebre</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #0f172a; color: #334155;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #0f172a; padding: 35px 15px;">
+          <tr>
+            <td align="center">
+              <table width="100%" cellpadding="0" cellspacing="0" style="max-width: 580px; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);">
+                <tr>
+                  <td style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 32px 30px; text-align: center; border-bottom: 3px solid #c5a059;">
+                    <h1 style="margin: 0; font-size: 26px; font-weight: 800; color: #ffffff; letter-spacing: 1px;">CELEBRE</h1>
+                    <p style="margin: 4px 0 0 0; font-size: 13px; color: #c5a059; text-transform: uppercase; letter-spacing: 2px; font-weight: 600;">Gestão Inteligente de Festas & Acervo</p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 35px 30px;">
+                    <div style="display: inline-block; background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 6px; padding: 4px 12px; margin-bottom: 16px;">
+                      <span style="color: #065f46; font-size: 11px; font-weight: 800; text-transform: uppercase;">✨ ACESSO TOTALMENTE LIBERADO</span>
+                    </div>
+                    <h2 style="margin: 0 0 14px 0; font-size: 21px; font-weight: 700; color: #0f172a;">Que alegria ter você de volta, ${nomeExibicao}! 🎉</h2>
+                    <p style="font-size: 14px; line-height: 1.6; color: #475569; margin: 0 0 16px 0;">
+                      Sua conta no <strong>Celebre</strong> foi <strong>reativada com sucesso</strong> no <strong>Plano ${plano}</strong>. Seu acesso ao painel já está instantaneamente liberado!
+                    </p>
+                    <div style="background-color: #fffdf5; border-left: 4px solid #c5a059; padding: 16px 18px; border-radius: 8px; margin: 20px 0; border: 1px solid rgba(197, 160, 89, 0.2);">
+                      <strong style="color: #926f2d; font-size: 13.5px; display: block; margin-bottom: 6px;">📦 Seus dados continuam 100% preservados:</strong>
+                      <p style="margin: 0; font-size: 13px; color: #475569; line-height: 1.6;">
+                        • Itens do acervo com fotos em alta definição<br>
+                        • Cadastros de clientes e CRM<br>
+                        • Histórico de locações, orçamentos e contratos
+                      </p>
+                    </div>
+                    <div style="text-align: center; margin: 30px 0 20px 0;">
+                      <a href="https://celebrefesta.com.br/dashboard" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: #ffffff; text-decoration: none; padding: 15px 36px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 16px rgba(16, 185, 129, 0.35); text-transform: uppercase; letter-spacing: 0.5px;">
+                        🚀 Acessar Meu Painel Agora
+                      </a>
+                    </div>
+                    <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+                      Dúvidas ou suporte? Conte com nosso atendimento VIP pelo WhatsApp.
+                    </p>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="background-color: #f8fafc; padding: 18px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
+                    <p style="margin: 0; font-size: 11px; color: #94a3b8;">Celebre Gestão • E-mail automático de confirmação de reativação.</p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+      `;
+
+      const responseResend = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${RESEND_API_KEY}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          from: 'Celebre <seguranca@celebrefesta.com.br>',
+          to: [emailLimpo],
+          reply_to: 'celebrefesta25@gmail.com',
+          subject: '🎉 Sua conta no Celebre foi reativada com sucesso! Seja bem-vindo(a) de volta!',
+          html: htmlBody
+        })
+      });
+
+      const resData = await responseResend.json();
+      if (!responseResend.ok) {
+        console.error("Erro na API do Resend ao enviar confirmação de reativação:", resData);
+        return res.status(500).send({ error: "Erro ao disparar e-mail via Resend", details: resData });
+      }
+
+      await db.collection("notificacoes_reativacao").add({
+        email: emailLimpo,
+        nome: nomeExibicao,
+        nomePlano: plano,
+        resendId: resData.id,
+        dataHora: new Date().toISOString()
+      });
+
+      return res.status(200).send({
+        success: true,
+        message: "E-mail de confirmação de reativação enviado com sucesso!",
+        emailId: resData.id
+      });
+    } catch (error) {
+      console.error("Erro interno ao enviar confirmação de reativação:", error);
+      return res.status(500).send({ error: "Erro interno", details: error.message });
+    }
+  });
+});
+
+// ============================================================================
+// 🎁 FUNÇÃO 12: ENDPOINT HTTPS PARA DISPARO DE E-MAILS DO PERÍODO DE TESTE
+// ============================================================================
+exports.enviarEmailTrial = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    if (req.method !== "POST") return res.status(405).send("Método não permitido");
+
+    try {
+      const { tipo, email, nome, cupom } = req.body;
+      if (!email || !email.includes('@')) {
+        return res.status(400).send({ error: "E-mail inválido ou não informado." });
+      }
+
+      const tiposValidos = ['boas_vindas', 'aviso_3_dias', 'aviso_1_dia_cupom'];
+      if (!tiposValidos.includes(tipo)) {
+        return res.status(400).send({ error: `Tipo inválido. Deve ser um de: ${tiposValidos.join(', ')}` });
+      }
+
+      const resultado = await dispararEmailTrialInterno(tipo, email, nome, cupom || 'PRIMEIROACESSO');
+      if (!resultado) {
+        return res.status(500).send({ error: "Falha ao enviar e-mail via Resend" });
+      }
+
+      return res.status(200).send({
+        success: true,
+        message: `E-mail de teste '${tipo}' enviado com sucesso!`,
+        resendId: resultado.id
+      });
+    } catch (error) {
+      console.error("Erro interno ao enviar e-mail trial:", error);
       return res.status(500).send({ error: "Erro interno", details: error.message });
     }
   });

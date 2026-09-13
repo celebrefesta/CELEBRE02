@@ -80,6 +80,7 @@ const Planos = lazy(() => import('./pages/Planos/Planos'));
 const AdminPlanos = lazy(() => import('./pages/Planos/AdminPlanos'));
 const PaginaUpgrade = lazy(() => import('./pages/Planos/PaginaUpgrade'));
 const ContaSuspensa = lazy(() => import('./pages/Auth/ContaSuspensa'));
+const ReativarConta = lazy(() => import('./pages/Auth/ReativarConta'));
 const ControleGeral = lazy(() => import('./pages/Admin/ControleGeral'));
 
 const parseFirestoreDate = (dateVal) => {
@@ -590,7 +591,7 @@ const AppContent = () => {
     };
   }, [location.pathname]);
 
-  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade', '/excluir-conta', '/conta-suspensa'];
+  const rotasSemMenu = ['/', '/login', '/cadastro', '/redefinir-senha', '/confirmar-email', '/checkout', '/planos', '/upgrade', '/moodboard', '/termos', '/privacidade', '/excluir-conta', '/conta-suspensa', '/reativar-conta'];
 
   const showNavbar = !rotasSemMenu.includes(location.pathname) && 
                      !location.pathname.includes('/assinatura') && 
@@ -647,6 +648,7 @@ const AppContent = () => {
             <Route path="/privacidade" element={<PoliticaPrivacidade />} />
             <Route path="/excluir-conta" element={<ExcluirConta />} />
             <Route path="/conta-suspensa" element={<ContaSuspensa />} />
+            <Route path="/reativar-conta" element={<ReativarConta />} />
 
             <Route path="/login" element={<Login />} />
             <Route path="/cadastro" element={<Cadastro />} />

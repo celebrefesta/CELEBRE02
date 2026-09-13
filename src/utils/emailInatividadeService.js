@@ -79,7 +79,7 @@ export const enviarAvisoInatividadeEmail = async ({ email, nome = '', diasInativ
 
                 <!-- CHAMADA PARA AÇÃO -->
                 <div style="text-align: center; margin: 32px 0 20px 0;">
-                  <a href="https://celebrefesta.com.br/conta-suspensa" style="background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%); color: #0f172a; text-decoration: none; padding: 15px 36px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 16px rgba(197, 160, 89, 0.35); text-transform: uppercase; letter-spacing: 0.5px;">
+                  <a href="https://celebrefesta.com.br/reativar-conta" style="background: linear-gradient(135deg, #c5a059 0%, #dfb76c 100%); color: #0f172a; text-decoration: none; padding: 15px 36px; border-radius: 10px; font-weight: 800; font-size: 15px; display: inline-block; box-shadow: 0 4px 16px rgba(197, 160, 89, 0.35); text-transform: uppercase; letter-spacing: 0.5px;">
                     Reativar Minha Conta Agora
                   </a>
                 </div>

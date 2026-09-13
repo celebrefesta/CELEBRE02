@@ -7,6 +7,7 @@ import { validarCPF, validarCNPJ } from '../../utils/validadores';
 import './Auth.css'; 
 
 import logoImage from '../../assets/LOGO_CELEBRE.png';
+import { enviarEmailBoasVindasTeste } from '../../utils/emailTrialService';
 
 const Cadastro = () => {
   const navigate = useNavigate();
@@ -166,42 +167,11 @@ const Cadastro = () => {
         criadoEm: serverTimestamp()
       });
 
-      // 🔥 E-MAIL DE BOAS-VINDAS PREMIUM
-      await addDoc(collection(db, 'mail'), {
-        to: email,
-        message: {
-          subject: '🎉 Bem-vindo(a) ao Celebre! Seu teste de 7 dias começou.',
-          html: `
-            <div style="font-family: sans-serif; color: #333; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin: 0 auto;">
-              <div style="background-color: #0f172a; padding: 30px; text-align: center;">
-                <h1 style="color: #c5a059; margin: 0; font-size: 28px; font-weight: 800; letter-spacing: -0.5px;">Celebre</h1>
-                <p style="color: #94a3b8; margin: 5px 0 0 0; font-size: 14px;">O seu acervo organizado</p>
-              </div>
-              <div style="padding: 30px; background-color: #ffffff;">
-                <h2 style="color: #0f172a; font-size: 20px; margin-top: 0;">Olá, ${nomeExibicao || nome}! 🎉</h2>
-                <p style="font-size: 16px; line-height: 1.6; color: #475569;">Seja muito bem-vindo(a) ao Celebre. O seu teste gratuito de <strong>7 dias</strong> com acesso TOTAL ao sistema começou!</p>
-                
-                <div style="background-color: #f8fafc; border-left: 4px solid #c5a059; padding: 20px; margin: 25px 0; border-radius: 0 8px 8px 0;">
-                  <p style="margin: 0 0 10px 0; font-weight: bold; color: #0f172a; font-size: 16px;">🔑 Seus dados de acesso:</p>
-                  <p style="margin: 0; font-size: 15px; color: #475569;"><strong>E-mail:</strong> ${email}</p>
-                  <p style="margin: 5px 0 0 0; font-size: 15px; color: #475569;"><strong>Plano de Teste:</strong> 7 Dias VIP</p>
-                </div>
-
-                <p style="font-size: 16px; line-height: 1.6; color: #475569;">Com o Celebre você poderá cadastrar seus itens, gerenciar orçamentos, emitir contratos digitais e acompanhar seu faturamento de forma simples e intuitiva.</p>
-
-                <div style="text-align: center; margin: 30px 0;">
-                  <a href="https://celebrefesta.com.br/login" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: #ffffff; padding: 14px 28px; border-radius: 8px; font-weight: bold; text-decoration: none; display: inline-block; box-shadow: 0 4px 12px rgba(15,23,42,0.15);">Acessar Meu Painel</a>
-                </div>
-
-                <hr style="border: 0; border-top: 1px solid #e2e8f0; margin: 30px 0;" />
-                
-                <p style="font-size: 14px; color: #64748b; line-height: 1.5; margin: 0;">Se tiver alguma dúvida durante o seu teste, basta nos chamar clicando no botão de Suporte diretamente do seu painel corporativo.</p>
-                <p style="margin-top: 25px; font-size: 15px; color: #475569;">Com carinho,<br><strong>Equipe Celebre</strong></p>
-              </div>
-            </div>
-          `
-        }
-      });
+      // 🔥 E-MAIL DE BOAS-VINDAS OFICIAL (7 DIAS VIP VIA RESEND + FIRESTORE)
+      enviarEmailBoasVindasTeste({
+        email: emailLimpo,
+        nome: nomeExibicao || nome
+      }).catch(errEmail => console.warn("Aviso ao enviar e-mail de boas-vindas do teste:", errEmail));
 
       navigate('/dashboard'); 
       

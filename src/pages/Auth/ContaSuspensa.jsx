@@ -39,11 +39,13 @@ const ContaSuspensa = () => {
             if (ehSuspenso) {
               setStatusVerificacao('suspenso');
             } else {
-              setStatusVerificacao('ativo');
+              // Documento ativo: redireciona para o sistema
+              navigate('/dashboard', { replace: true });
+              return;
             }
           } else {
-            // Documento não encontrado, tenta via tenantId se houver
-            setStatusVerificacao('ativo');
+            navigate('/dashboard', { replace: true });
+            return;
           }
         } catch (err) {
           console.error("Erro ao checar status da conta suspensa:", err);
@@ -94,13 +96,18 @@ const ContaSuspensa = () => {
     }
   };
 
-  // 🚪 SAIR DA CONTA / TROCAR DE USUÁRIO
+  // 🚪 SAIR DA CONTA / TROCAR DE USUÁRIO -> VAI PARA O LOGIN NORMAL
   const handleLogout = async () => {
     try {
+      setCarregandoAuth(true);
       await signOut(auth);
-      setStatusVerificacao('deslogado');
     } catch (e) {
-      console.error(e);
+      console.error("Erro ao deslogar:", e);
+    } finally {
+      localStorage.removeItem('tenantId');
+      localStorage.removeItem('funcName');
+      localStorage.removeItem('userRole');
+      navigate('/login', { replace: true });
     }
   };
 
@@ -160,7 +167,7 @@ const ContaSuspensa = () => {
               <button 
                 type="button" 
                 className="cs-btn-reactivate"
-                onClick={() => navigate('/planos')}
+                onClick={() => navigate('/reativar-conta')}
               >
                 <i className="fas fa-crown"></i> Reativar Minha Conta Agora
               </button>
@@ -276,6 +283,12 @@ const ContaSuspensa = () => {
                 )}
               </button>
             </form>
+
+            <div className="cs-card-footer" style={{ marginTop: '20px', justifyContent: 'center' }}>
+              <Link to="/login" className="cs-btn-logout" style={{ textDecoration: 'none' }}>
+                <i className="fas fa-arrow-left"></i> Ir para a tela de Login Normal
+              </Link>
+            </div>
           </div>
         )}
 
@@ -295,9 +308,9 @@ const ContaSuspensa = () => {
               <button 
                 type="button" 
                 className="cs-btn-reactivate"
-                onClick={() => navigate('/planos')}
+                onClick={() => navigate('/reativar-conta')}
               >
-                <i className="fas fa-crown"></i> Ver Planos e Reativar Acesso
+                <i className="fas fa-crown"></i> Ver Opções e Reativar Acesso
               </button>
 
               <a 

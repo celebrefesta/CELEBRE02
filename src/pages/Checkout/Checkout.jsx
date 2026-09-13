@@ -3,7 +3,10 @@ import { initMercadoPago, Payment } from '@mercadopago/sdk-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { getAuth } from 'firebase/auth';
 import { db } from '../../firebaseConfig';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp, doc, updateDoc, getDoc } from 'firebase/firestore';
+import { enviarConfirmacaoReativacaoEmail } from '../../utils/emailReativacaoService';
+import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
+import { CUPOM_OFICIAL_PRIMEIRO_ACESSO } from '../../utils/emailTrialService';
 
 // 🔥 CONFIGURAÇÃO DE PRODUÇÃO MERCADO PAGO 🔥
 initMercadoPago('APP_USR-4c525755-f2c1-4e28-8c9e-020787a172a1', { locale: 'pt-BR' });
@@ -67,13 +70,102 @@ const Checkout = () => {
     }
   };
 
+  const [userData, setUserData] = useState(null);
+  const [infoTeste, setInfoTeste] = useState(null);
+  const [cupomInput, setCupomInput] = useState('');
+  const [cupomAplicado, setCupomAplicado] = useState(null); // { codigo: 'PRIMEIROACESSO', descontoPercent: 20 }
+  const [mensagemCupom, setMensagemCupom] = useState({ texto: '', tipo: '' });
+
+  const validarEAplicarCupom = (codigo, uData = userData, tInfo = infoTeste) => {
+    const codLimpo = String(codigo || '').trim().toUpperCase();
+    if (!codLimpo) {
+      setMensagemCupom({ texto: 'Por favor, informe o código do cupom.', tipo: 'erro' });
+      return;
+    }
+
+    if (codLimpo === CUPOM_OFICIAL_PRIMEIRO_ACESSO) {
+      const jaAssinante = uData?.assinaturaAtiva === true || uData?.statusAssinatura === 'ativa' || uData?.plano === 'pago';
+      if (jaAssinante) {
+        setCupomAplicado(null);
+        setMensagemCupom({
+          texto: 'Este cupom exclusivo é válido apenas para o primeiro acesso / primeira assinatura de novos clientes.',
+          tipo: 'erro'
+        });
+        return;
+      }
+
+      const calcInfo = tInfo || (uData ? calcularPeriodoTeste(uData) : null);
+      const diasRestantes = calcInfo?.diasRestantes ?? 99;
+
+      // Se ainda restam mais de 1 dia de teste (ex: dia 1 ao 5)
+      if (diasRestantes > 1) {
+        setCupomAplicado(null);
+        setMensagemCupom({
+          texto: `O cupom PRIMEIROACESSO é liberado exclusivamente no ÚLTIMO DIA do seu período de teste (restam ${diasRestantes} dias). Aproveite sua degustação!`,
+          tipo: 'alerta'
+        });
+        return;
+      }
+
+      // Válido no último dia de teste (diasRestantes <= 1)
+      setCupomAplicado({
+        codigo: CUPOM_OFICIAL_PRIMEIRO_ACESSO,
+        descontoPercent: 20
+      });
+      setMensagemCupom({
+        texto: '🎉 Cupom PRIMEIROACESSO aplicado com sucesso! 20% de desconto garantido na sua 1ª mensalidade.',
+        tipo: 'sucesso'
+      });
+    } else {
+      setCupomAplicado(null);
+      setMensagemCupom({ texto: 'Cupom inválido ou expirado.', tipo: 'erro' });
+    }
+  };
+
+  const handleRemoverCupom = () => {
+    setCupomAplicado(null);
+    setCupomInput('');
+    setMensagemCupom({ texto: '', tipo: '' });
+  };
+
   useEffect(() => {
-    if (!usuarioLogado) navigate('/login');
-  }, [usuarioLogado, navigate]);
+    if (!usuarioLogado) {
+      navigate('/login');
+      return;
+    }
+
+    const carregarDadosUsuario = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'usuarios', usuarioLogado.uid));
+        if (snap.exists()) {
+          const uData = snap.data();
+          setUserData(uData);
+          const tInfo = calcularPeriodoTeste(uData);
+          setInfoTeste(tInfo);
+
+          const urlParams = new URLSearchParams(location.search);
+          const cupomUrl = urlParams.get('cupom');
+          if (cupomUrl) {
+            const cupomNormalizado = cupomUrl.toUpperCase().trim();
+            setCupomInput(cupomNormalizado);
+            validarEAplicarCupom(cupomNormalizado, uData, tInfo);
+          }
+        }
+      } catch (err) {
+        console.warn("Erro ao buscar dados do usuário no checkout:", err);
+      }
+    };
+
+    carregarDadosUsuario();
+  }, [usuarioLogado, navigate, location.search]);
 
   if (!usuarioLogado) return null; 
 
-  const valorPlano = parseFloat(planoSelecionado.preco.toString().replace('.', '').replace(',', '.'));
+  const valorPlanoOriginal = parseFloat(planoSelecionado.preco.toString().replace('.', '').replace(',', '.'));
+  const descontoPercent = cupomAplicado ? cupomAplicado.descontoPercent : 0;
+  const valorComDesconto = descontoPercent > 0 ? (valorPlanoOriginal * (1 - (descontoPercent / 100))) : valorPlanoOriginal;
+  const valorPlano = Math.round(valorComDesconto * 100) / 100;
+  const valorEconomizado = Math.round((valorPlanoOriginal - valorPlano) * 100) / 100;
   
   const initialization = {
     amount: valorPlano,
@@ -104,7 +196,10 @@ const Checkout = () => {
         const payload = {
             ...formData,
             userId: usuarioLogado.uid,
-            planoId: planoSelecionado.id
+            planoId: planoSelecionado.id,
+            cupomUtilizado: cupomAplicado?.codigo || null,
+            valorOriginal: valorPlanoOriginal,
+            valorCobrado: valorPlano
         };
 
         const resposta = await fetch(URL_DO_SEU_ROBO, {
@@ -116,15 +211,39 @@ const Checkout = () => {
         const resultado = await resposta.json();
         
         if (resultado.status === 'authorized' || resultado.status === 'approved' || resultado.status === 'in_process') {
+          try {
+            const userRef = doc(db, 'usuarios', usuarioLogado.uid);
+            await updateDoc(userRef, {
+              statusConta: 'ativo',
+              dataSuspensao: null,
+              plano: 'pago',
+              statusAssinatura: 'ativa',
+              planoId: planoSelecionado.id,
+              cupomUtilizado: cupomAplicado?.codigo || null,
+              valorAssinatura: valorPlano
+            });
+
+            // Dispara e-mail de reativação caso a conta estivesse suspensa ou fluxo de reativação
+            if (location.state?.isReativacao || usuarioLogado?.email) {
+              enviarConfirmacaoReativacaoEmail({
+                email: usuarioLogado.email,
+                nome: usuarioLogado.displayName || '',
+                nomePlano: planoSelecionado?.nome || 'Premium'
+              }).catch(e => console.warn("Aviso ao enviar e-mail de reativação pós-checkout:", e));
+            }
+          } catch (errReativar) {
+            console.warn("Aviso ao reativar conta pós-checkout:", errReativar);
+          }
+
           setMensagem('🎉 Pagamento Aprovado com Sucesso! Sua assinatura já está ativa.');
           setTipoMensagem('sucesso');
-          await registrarLog("ASSINATURA APROVADA", `Pagamento de assinatura processado com sucesso via Cartão. Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
+          await registrarLog("ASSINATURA APROVADA", `Pagamento de assinatura processado com sucesso via Cartão. Plano: ${planoSelecionado.nome} (R$ ${valorPlano.toFixed(2).replace('.', ',')}${cupomAplicado ? ` com cupom ${cupomAplicado.codigo}` : ''}).`);
           resolve();
           setTimeout(() => navigate('/dashboard'), 2500);
         } else {
           setMensagem('❌ Pagamento Recusado. Verifique os dados do cartão ou tente outro método.');
           setTipoMensagem('erro');
-          await registrarLog("FALHA NO PAGAMENTO", `Tentativa de assinatura recusada via Cartão. Plano: ${planoSelecionado.nome} (R$ ${planoSelecionado.preco}).`);
+          await registrarLog("FALHA NO PAGAMENTO", `Tentativa de assinatura recusada via Cartão. Plano: ${planoSelecionado.nome} (R$ ${valorPlano.toFixed(2).replace('.', ',')}).`);
           resolve(); 
         }
       } catch (erro) {
@@ -340,17 +459,38 @@ const Checkout = () => {
               {planoSelecionado.nome}
             </h2>
 
-            {/* PREÇO COM BRILHO DOURADO */}
+            {/* PREÇO COM BRILHO DOURADO E CUPOM */}
             <div style={{
               display: 'flex',
               flexDirection: 'column',
               gap: '6px',
-              margin: '20px 0 24px 0',
+              margin: '20px 0 16px 0',
               padding: '18px 20px',
-              background: 'linear-gradient(135deg, rgba(197, 160, 89, 0.14) 0%, rgba(245, 208, 97, 0.05) 100%)',
+              background: cupomAplicado 
+                ? 'linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(245, 208, 97, 0.08) 100%)' 
+                : 'linear-gradient(135deg, rgba(197, 160, 89, 0.14) 0%, rgba(245, 208, 97, 0.05) 100%)',
               borderRadius: '14px',
-              border: '1.5px solid rgba(197, 160, 89, 0.4)'
+              border: cupomAplicado ? '1.5px solid rgba(16, 185, 129, 0.6)' : '1.5px solid rgba(197, 160, 89, 0.4)'
             }}>
+              {cupomAplicado && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '2px' }}>
+                  <span style={{ fontSize: '13px', color: '#94a3b8', textDecoration: 'line-through' }}>
+                    De: R$ {planoSelecionado.preco}
+                  </span>
+                  <span style={{
+                    fontSize: '11px',
+                    fontWeight: '900',
+                    background: 'linear-gradient(135deg, #10b981, #059669)',
+                    color: '#ffffff',
+                    padding: '2px 8px',
+                    borderRadius: '6px',
+                    textTransform: 'uppercase'
+                  }}>
+                    20% OFF 1º MÊS
+                  </span>
+                </div>
+              )}
+
               <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px' }}>
                 <span style={{ fontSize: '18px', color: '#f5d061', fontWeight: '800' }}>R$</span>
                 <span style={{
@@ -361,25 +501,126 @@ const Checkout = () => {
                   WebkitTextFillColor: 'transparent',
                   letterSpacing: '-1px'
                 }}>
-                  {planoSelecionado.preco}
+                  {valorPlano.toFixed(2).replace('.', ',')}
                 </span>
                 <span style={{ fontSize: '14px', color: '#cbd5e1', fontWeight: '600' }}>
                   {planoSelecionado.id?.includes('anual') ? '/ano (À vista)' : '/mês'}
                 </span>
               </div>
 
-              {planoSelecionado.id?.includes('anual') ? (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
-                  <div style={{ fontSize: '13px', color: '#f5d061', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="fas fa-tag"></i> Equivalente a R$ 79,90/mês (2 Meses Grátis)
-                  </div>
-                  <div style={{ fontSize: '11.5px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <i className="fas fa-credit-card"></i> Parcelamento em até 12x no cartão via Mercado Pago
-                  </div>
+              {cupomAplicado ? (
+                <div style={{ fontSize: '12px', color: '#34d399', fontWeight: '800', marginTop: '2px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fas fa-check-circle"></i> Economia de R$ {valorEconomizado.toFixed(2).replace('.', ',')} com o cupom {cupomAplicado.codigo}!
                 </div>
               ) : (
-                <div style={{ fontSize: '12px', color: '#34d399', fontWeight: '700', marginTop: '2px' }}>
-                  ✓ Assinatura Mensal sem fidelidade
+                planoSelecionado.id?.includes('anual') ? (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', marginTop: '4px' }}>
+                    <div style={{ fontSize: '13px', color: '#f5d061', fontWeight: '800', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-tag"></i> Equivalente a R$ 79,90/mês (2 Meses Grátis)
+                    </div>
+                    <div style={{ fontSize: '11.5px', color: '#94a3b8', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <i className="fas fa-credit-card"></i> Parcelamento em até 12x no cartão via Mercado Pago
+                    </div>
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '12px', color: '#34d399', fontWeight: '700', marginTop: '2px' }}>
+                    ✓ Assinatura Mensal sem fidelidade
+                  </div>
+                )
+              )}
+            </div>
+
+            {/* BOX DE CUPOM DE DESCONTO VIP */}
+            <div style={{
+              background: 'rgba(255, 255, 255, 0.03)',
+              border: '1px dashed rgba(197, 160, 89, 0.45)',
+              borderRadius: '12px',
+              padding: '14px 16px',
+              marginBottom: '20px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                <span style={{ fontSize: '12px', fontWeight: '800', color: '#f5d061', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <i className="fas fa-ticket-alt"></i> Cupom de Desconto
+                </span>
+                {cupomAplicado && (
+                  <button 
+                    type="button" 
+                    onClick={handleRemoverCupom}
+                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                  >
+                    ✕ Remover
+                  </button>
+                )}
+              </div>
+
+              {!cupomAplicado ? (
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <input 
+                    type="text" 
+                    placeholder="Código (ex: PRIMEIROACESSO)"
+                    value={cupomInput}
+                    onChange={(e) => {
+                      setCupomInput(e.target.value.toUpperCase());
+                      if (mensagemCupom.texto) setMensagemCupom({ texto: '', tipo: '' });
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        validarEAplicarCupom(cupomInput);
+                      }
+                    }}
+                    style={{
+                      flex: 1,
+                      background: 'rgba(15, 23, 42, 0.8)',
+                      border: '1px solid rgba(197, 160, 89, 0.3)',
+                      borderRadius: '8px',
+                      padding: '8px 12px',
+                      color: '#ffffff',
+                      fontSize: '12.5px',
+                      fontWeight: '700',
+                      letterSpacing: '1px',
+                      textTransform: 'uppercase',
+                      outline: 'none'
+                    }}
+                  />
+                  <button 
+                    type="button" 
+                    onClick={() => validarEAplicarCupom(cupomInput)}
+                    style={{
+                      background: 'linear-gradient(135deg, #c5a059 0%, #dfb76c 100%)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      padding: '8px 16px',
+                      color: '#0f172a',
+                      fontWeight: '800',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      boxShadow: '0 2px 8px rgba(197, 160, 89, 0.3)'
+                    }}
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '8px 12px' }}>
+                  <span style={{ fontSize: '12.5px', color: '#34d399', fontWeight: '800' }}>
+                    ✓ Cupom <strong>{cupomAplicado.codigo}</strong> aplicado (-20%)
+                  </span>
+                  <span style={{ fontSize: '11.5px', color: '#f5d061', fontWeight: '700' }}>
+                    -R$ {valorEconomizado.toFixed(2).replace('.', ',')}
+                  </span>
+                </div>
+              )}
+
+              {mensagemCupom.texto && (
+                <div style={{
+                  marginTop: '8px',
+                  fontSize: '11.5px',
+                  fontWeight: '700',
+                  lineHeight: '1.4',
+                  color: mensagemCupom.tipo === 'sucesso' ? '#34d399' : (mensagemCupom.tipo === 'alerta' ? '#fbbf24' : '#f87171')
+                }}>
+                  {mensagemCupom.texto}
                 </div>
               )}
             </div>
@@ -613,7 +854,12 @@ const Checkout = () => {
                   </span>
                 </div>
 
-                <Payment initialization={initialization} customization={customization} onSubmit={onSubmit} />
+                <Payment 
+                  key={`${planoSelecionado.id}-${valorPlano}`} 
+                  initialization={initialization} 
+                  customization={customization} 
+                  onSubmit={onSubmit} 
+                />
               </div>
             )}
 

@@ -14,6 +14,7 @@ import { auth, db } from '../../firebaseConfig';
 import './Auth.css'; 
 
 import logoImage from '../../assets/LOGO_CELEBRE.png';
+import { enviarEmailBoasVindasTeste } from '../../utils/emailTrialService';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -50,10 +51,12 @@ const Login = () => {
 
   // 🔥 A MÁGICA ACONTECE AQUI: LÓGICA INTELIGENTE DE TENANT (EMPRESA)
   const finalizarLogin = async (user) => {
+    let isContaSuspensa = false;
+    const emailLimpo = user?.email ? user.email.toLowerCase().trim() : '';
+
     try {
       // Busca todos os dados do usuário no banco de dados
       const userDoc = await getDoc(doc(db, 'usuarios', user.uid));
-      let isContaSuspensa = false;
       if (userDoc.exists()) {
         let userData = userDoc.data();
         const tenantIdDaEmpresa = userData.tenantId || user.uid;
@@ -63,10 +66,21 @@ const Login = () => {
         localStorage.setItem('userRole', userData.role || 'owner');
         if (userData.statusConta === 'suspenso' || userData.status === 'suspenso') {
           isContaSuspensa = true;
+        } else if (tenantIdDaEmpresa !== user.uid) {
+          try {
+            const tenantSnap = await getDoc(doc(db, 'usuarios', tenantIdDaEmpresa));
+            if (tenantSnap.exists()) {
+              const tData = tenantSnap.data();
+              if (tData.statusConta === 'suspenso' || tData.status === 'suspenso') {
+                isContaSuspensa = true;
+              }
+            }
+          } catch (eTenant) {
+            console.warn("Erro ao checar status do tenant:", eTenant);
+          }
         }
       } else {
         // Se o documento no /usuarios não existe, vamos checar se ele está cadastrado na equipe
-        const emailLimpo = user.email ? user.email.toLowerCase().trim() : '';
         const qFunc = query(collection(db, "equipe"), where("email", "==", emailLimpo));
         const snapFunc = await getDocs(qFunc);
         
@@ -152,6 +166,12 @@ const Login = () => {
 
           await setDoc(doc(db, "usuarios", user.uid), novoUsuarioDoc, { merge: true });
           
+          // 🔥 Dispara e-mail oficial de boas-vindas (7 dias VIP) para o novo usuário Google
+          enviarEmailBoasVindasTeste({
+            email: emailLimpo,
+            nome: nomePadrao
+          }).catch(errE => console.warn("Aviso ao enviar e-mail de boas-vindas Google:", errE));
+
           localStorage.setItem('tenantId', tenantIdParaSalvar);
           localStorage.setItem('funcName', nomePadrao);
           localStorage.setItem('userRole', roleParaSalvar);
