@@ -4260,6 +4260,90 @@
   opacity: 0.85 !important;
 }
 
+/* Variante VIP: Reativar com Assinatura Paga Oficial (Dourado Celebre) */
+.cg-suspended-plan-picker {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  background: rgba(255, 255, 255, 0.7) !important;
+  border: 1.5px solid #fde68a !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  margin-bottom: 4px !important;
+}
+
+[data-theme^='dark'] .cg-suspended-plan-picker {
+  background: rgba(0, 0, 0, 0.3) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+.cg-suspended-plan-label {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  font-size: 11.5px !important;
+  font-weight: 800 !important;
+  color: #92400e !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+}
+
+[data-theme^='dark'] .cg-suspended-plan-label {
+  color: #fde68a !important;
+}
+
+.cg-select-plano-reativacao {
+  width: 100% !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  border: 1.5px solid #fde68a !important;
+  background: #ffffff !important;
+  color: #1e293b !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  font-family: inherit !important;
+  outline: none !important;
+  transition: all 0.2s ease !important;
+}
+
+.cg-select-plano-reativacao:focus {
+  border-color: #d97706 !important;
+  box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.15) !important;
+}
+
+[data-theme^='dark'] .cg-select-plano-reativacao {
+  background: #18181b !important;
+  color: #f4f4f5 !important;
+  border-color: rgba(245, 158, 11, 0.4) !important;
+}
+
+.cg-btn-suspended-action.reactivate-vip {
+  background: linear-gradient(135deg, #fffbeb, #fef3c7) !important;
+  border-color: #fcd34d !important;
+  color: #92400e !important;
+  box-shadow: 0 2px 8px rgba(217, 119, 6, 0.12) !important;
+}
+
+.cg-btn-suspended-action.reactivate-vip i {
+  color: #d97706 !important;
+}
+
+.cg-btn-suspended-action.reactivate-vip:hover {
+  background: linear-gradient(135deg, #fef3c7, #fde68a) !important;
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.25) !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.reactivate-vip {
+  background: linear-gradient(135deg, #451a03, #291205) !important;
+  border-color: rgba(245, 158, 11, 0.45) !important;
+  color: #fef3c7 !important;
+}
+
+[data-theme^='dark'] .cg-btn-suspended-action.reactivate-vip i {
+  color: #fbbf24 !important;
+}
+
 /* Variante 1: Reativar (Verde Esmeralda Dourado) */
 .cg-btn-suspended-action.reactivate {
   background: linear-gradient(135deg, #ecfdf5, #d1fae5) !important;

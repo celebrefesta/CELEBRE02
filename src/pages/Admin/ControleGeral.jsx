@@ -1019,6 +1019,74 @@ const ControleGeral = () => {
     }
   };
 
+  // 👑 REATIVAR CONTA SUSPENSA COM PLANO PAGO (ASSINATURA MANUAL VIP)
+  const handleReativarComPlanoPago = async () => {
+    if (!membroEdicao || !membroEdicao.uid) return;
+
+    const idPlano = membroEdicao.planoId || 'plano_basico';
+    const infoPlano = planos[idPlano] || { nome: idPlano };
+    const nomeAlvo = membroEdicao.nomeExibicao || membroEdicao.nomeCompleto || membroEdicao.email;
+
+    if (!window.confirm(`Deseja reativar "${nomeAlvo}" com ${infoPlano.nome || 'Plano Pago'} como Assinatura Ativa (Passe VIP)?\n\nA suspensão por inatividade será removida e o acesso da empresa será totalmente liberado sem expiração de teste.`)) {
+      return;
+    }
+
+    setSalvando(true);
+    try {
+      const userRef = doc(db, 'usuarios', membroEdicao.uid);
+      const updatePayload = {
+        statusConta: 'ativo',
+        status: 'ativo',
+        assinaturaAtiva: true,
+        planoId: idPlano,
+        plano: 'pago',
+        statusAssinatura: 'ativa',
+        statusPagamentoVulso: 'pago'
+      };
+
+      await updateDoc(userRef, updatePayload);
+
+      // Sincroniza contas duplicadas com o mesmo e-mail caso existam
+      if (membroEdicao.email) {
+        try {
+          const emailBusca = membroEdicao.email.toLowerCase().trim();
+          const qDuplicados = query(collection(db, 'usuarios'), where('email', '==', emailBusca));
+          const snapDuplicados = await getDocs(qDuplicados);
+          for (const docDup of snapDuplicados.docs) {
+            if (docDup.id !== membroEdicao.uid) {
+              await updateDoc(doc(db, 'usuarios', docDup.id), updatePayload).catch(() => {});
+            }
+          }
+        } catch (errSync) {
+          console.warn("Aviso na sincronia de duplicatas:", errSync);
+        }
+      }
+
+      setMembroEdicao(prev => ({
+        ...prev,
+        ...updatePayload,
+        status: 'ativo'
+      }));
+
+      // Dispara o e-mail oficial de reativação para o cliente
+      if (membroEdicao.email) {
+        enviarConfirmacaoReativacaoEmail({
+          email: membroEdicao.email,
+          nome: nomeAlvo,
+          nomePlano: infoPlano.nome || 'Assinatura Oficial'
+        }).catch(errMail => console.warn("Aviso ao enviar e-mail de reativação via Admin:", errMail));
+      }
+
+      alert(`✅ Conta de "${nomeAlvo}" reativada com sucesso com ${infoPlano.nome || 'Plano Pago'} ativo!`);
+      await carregarDados();
+    } catch (err) {
+      console.error("Erro ao reativar conta com plano pago:", err);
+      alert("Falha ao reativar a conta. Tente novamente.");
+    } finally {
+      setSalvando(false);
+    }
+  };
+
   // ✉️ ENVIAR E-MAIL OFICIAL DE AVISO DE SUSPENSÃO POR INATIVIDADE
   const handleEnviarAvisoSuspensao = async () => {
     if (!membroEdicao || !membroEdicao.email) return;
@@ -3118,6 +3186,48 @@ const ControleGeral = () => {
                           )}
 
                           <div className="cg-suspended-actions-list">
+                            {/* 👑 AÇÃO 1: REATIVAR COM ASSINATURA PAGA MANUAL */}
+                            <div className="cg-suspended-plan-picker">
+                              <div className="cg-suspended-plan-label">
+                                <span><i className="fas fa-crown" style={{ color: '#d97706' }}></i> Reativação com Plano Pago (Manual / Pix):</span>
+                                <small>Acordo Celebre</small>
+                              </div>
+                              <select
+                                value={membroEdicao.planoId || 'plano_basico'}
+                                onChange={e => setMembroEdicao({ ...membroEdicao, planoId: e.target.value })}
+                                className="cg-select-plano-reativacao"
+                              >
+                                {Object.keys(planos).length > 0 ? (
+                                  Object.entries(planos).map(([id, p]) => (
+                                    <option key={id} value={id}>
+                                      {p.nome || id} {p.preco ? `(R$ ${p.preco}/mês)` : ''}
+                                    </option>
+                                  ))
+                                ) : (
+                                  <>
+                                    <option value="plano_basico">Plano Básico (R$ 49,90/mês)</option>
+                                    <option value="plano_premium">Plano Premium (R$ 99,90/mês)</option>
+                                    <option value="plano_plus">Plano Plus (R$ 159,90/mês)</option>
+                                  </>
+                                )}
+                              </select>
+
+                              <button
+                                type="button"
+                                className="cg-btn-suspended-action reactivate-vip"
+                                onClick={handleReativarComPlanoPago}
+                                disabled={salvando}
+                                title="Reativar imediatamente e liberar acesso com plano pago"
+                              >
+                                <i className="fas fa-crown"></i>
+                                <div className="cg-action-texts">
+                                  <strong>Reativar com Plano Pago (Acesso Imediato)</strong>
+                                  <small>Remove a suspensão e libera acesso irrestrito no plano selecionado</small>
+                                </div>
+                              </button>
+                            </div>
+
+                            {/* ⏳ AÇÃO 2: REATIVAR COM DEGUSTAÇÃO (+7 DIAS) */}
                             <button
                               type="button"
                               className="cg-btn-suspended-action reactivate"
@@ -3127,11 +3237,12 @@ const ControleGeral = () => {
                             >
                               <i className="fas fa-redo-alt"></i>
                               <div className="cg-action-texts">
-                                <strong>Reativar Conta & Degustação (+7 Dias)</strong>
-                                <small>Restaura status ativo e libera acesso completo por mais 7 dias de teste</small>
+                                <strong>Reativar com Nova Degustação (+7 Dias)</strong>
+                                <small>Restaura status ativo e libera 7 dias de avaliação para o cliente</small>
                               </div>
                             </button>
 
+                            {/* ✉️ AÇÃO 3: ENVIAR AVISO OFICIAL POR E-MAIL */}
                             <button
                               type="button"
                               className="cg-btn-suspended-action notify"
@@ -3150,6 +3261,7 @@ const ControleGeral = () => {
                               </div>
                             </button>
 
+                            {/* 🗑️ AÇÃO 4: EXCLUIR DEFINITIVAMENTE */}
                             <button
                               type="button"
                               className="cg-btn-suspended-action delete"
@@ -3163,110 +3275,6 @@ const ControleGeral = () => {
                               </div>
                             </button>
                           </div>
-
-                          <div className="cg-suspended-advanced-toggle">
-                            <button
-                              type="button"
-                              className="cg-btn-toggle-advanced"
-                              onClick={() => setMostrarControlesAvancadosAssinatura(prev => !prev)}
-                            >
-                              {mostrarControlesAvancadosAssinatura ? (
-                                <><i className="fas fa-chevron-up"></i> Ocultar Controles Manuais de Assinatura</>
-                              ) : (
-                                <><i className="fas fa-sliders-h"></i> Exibir Controles Manuais Avançados de Assinatura</>
-                              )}
-                            </button>
-                          </div>
-
-                          {mostrarControlesAvancadosAssinatura && (
-                            <div className="cg-payment-section" style={{ marginTop: '14px', borderTop: '1px dashed rgba(245, 158, 11, 0.3)', paddingTop: '14px' }}>
-                              <div className="cg-payment-header">
-                                <h3><i className="fas fa-credit-card"></i> Controle Manual de Assinatura</h3>
-                                <span className="cg-payment-header-hint">Presets rápidos de 1 clique ou ajuste manual</span>
-                              </div>
-
-                              {/* PRESETS DE 1-CLIQUE */}
-                              <div className="cg-preset-pills-row">
-                                <button 
-                                  type="button" 
-                                  className={`cg-preset-pill vip ${membroEdicao.assinaturaAtiva ? 'active' : ''}`}
-                                  onClick={aplicarPresetVip}
-                                  title="Liberar acesso total irrestrito"
-                                >
-                                  <i className="fas fa-crown"></i> 🌟 Liberar VIP Total
-                                </button>
-
-                                <button 
-                                  type="button" 
-                                  className={`cg-preset-pill teste ${!membroEdicao.assinaturaAtiva && membroEdicao.statusAssinatura === 'ativa' ? 'active' : ''}`}
-                                  onClick={aplicarPresetTeste}
-                                  title="Manter como teste grátis (7 dias)"
-                                >
-                                  <i className="fas fa-hourglass-start"></i> ⏳ Modo Teste (7d)
-                                </button>
-
-                                <button 
-                                  type="button" 
-                                  className={`cg-preset-pill block ${membroEdicao.statusAssinatura === 'cancelada' ? 'active' : ''}`}
-                                  onClick={aplicarPresetBloquear}
-                                  title="Bloquear imediatamente o acesso da empresa"
-                                >
-                                  <i className="fas fa-ban"></i> 🚫 Bloquear Acesso
-                                </button>
-                              </div>
-
-                              {/* AJUSTES MANUAIS DETALHADOS */}
-                              <div className="cg-form-grid" style={{ marginTop: '12px' }}>
-                                <div className="cg-form-group">
-                                  <label>Assinatura Ativa (Passe VIP)</label>
-                                  <select 
-                                    value={String(membroEdicao.assinaturaAtiva)} 
-                                    onChange={e => setMembroEdicao({ ...membroEdicao, assinaturaAtiva: e.target.value === 'true' })}
-                                  >
-                                    <option value="false">Não (Bloquear se teste expirar)</option>
-                                    <option value="true">Sim (Acesso irrestrito pago)</option>
-                                  </select>
-                                </div>
-
-                                <div className="cg-form-group">
-                                  <label>Status do Plano</label>
-                                  <select 
-                                    value={membroEdicao.plano || ''} 
-                                    onChange={e => setMembroEdicao({ ...membroEdicao, plano: e.target.value })}
-                                  >
-                                    <option value="">Sem plano</option>
-                                    <option value="pago">Pago</option>
-                                    <option value="gratis">Grátis</option>
-                                  </select>
-                                </div>
-
-                                <div className="cg-form-group">
-                                  <label>Pagamento Avulso</label>
-                                  <select 
-                                    value={membroEdicao.statusPagamentoVulso || ''} 
-                                    onChange={e => setMembroEdicao({ ...membroEdicao, statusPagamentoVulso: e.target.value })}
-                                  >
-                                    <option value="">Nenhum</option>
-                                    <option value="pago">Pago</option>
-                                    <option value="pendente">Pendente</option>
-                                  </select>
-                                </div>
-
-                                <div className="cg-form-group">
-                                  <label>Status da Assinatura</label>
-                                  <select 
-                                    value={membroEdicao.statusAssinatura || ''} 
-                                    onChange={e => setMembroEdicao({ ...membroEdicao, statusAssinatura: e.target.value })}
-                                  >
-                                    <option value="">Sem assinatura</option>
-                                    <option value="ativa">Ativa</option>
-                                    <option value="cancelada">Cancelada</option>
-                                    <option value="pendente">Pendente</option>
-                                  </select>
-                                </div>
-                              </div>
-                            </div>
-                          )}
                         </div>
                       ) : (
                         /* CONTROLE DE ASSINATURA REGULAR */
@@ -3419,7 +3427,14 @@ const ControleGeral = () => {
                           </div>
 
                           <div className="cg-form-group">
-                            <label>Plano Vinculado</label>
+                            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                              <span>Plano Vinculado</span>
+                              {(membroEdicao.status === 'suspenso' || membroEdicao.statusConta === 'suspenso') && (
+                                <span style={{ color: '#d97706', fontSize: '10.5px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                  ⏸️ Suspenso
+                                </span>
+                              )}
+                            </label>
                             <select 
                               value={membroEdicao.planoId || ''} 
                               onChange={e => {
@@ -3432,7 +3447,7 @@ const ControleGeral = () => {
                                 });
                               }}
                             >
-                              <option value="">Sem plano / Nenhum</option>
+                              <option value="">{(membroEdicao.status === 'suspenso' || membroEdicao.statusConta === 'suspenso') ? 'Sem plano / Nenhum (Suspenso)' : 'Sem plano / Nenhum'}</option>
                               {Object.keys(planos).length > 0 ? (
                                 Object.entries(planos).map(([id, p]) => (
                                   <option key={id} value={id}>{p.nome || id}</option>

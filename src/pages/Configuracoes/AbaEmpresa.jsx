@@ -153,6 +153,27 @@ const AbaEmpresa = ({
           </div>
         </div>
 
+        {/* 📧 ALERTA E-MAIL: LOGO */}
+        <div style={{
+          display: 'flex', gap: '10px', alignItems: 'flex-start',
+          background: 'linear-gradient(135deg, rgba(197,160,89,0.10) 0%, rgba(197,160,89,0.04) 100%)',
+          border: '1.5px solid rgba(197,160,89,0.4)',
+          borderLeft: '4px solid #c5a059',
+          borderRadius: '10px',
+          padding: '12px 14px',
+          marginTop: '16px'
+        }}>
+          <span style={{ fontSize: '1.25rem', lineHeight: 1, marginTop: '1px' }}>📧</span>
+          <div>
+            <strong style={{ fontSize: '0.82rem', color: 'var(--texto-principal, #0f172a)', display: 'block', marginBottom: '3px' }}>
+              Importante para os E-mails Automáticos
+            </strong>
+            <p style={{ margin: 0, fontSize: '0.77rem', color: 'var(--texto-secundario, #475569)', lineHeight: 1.55 }}>
+              O logotipo cadastrado aqui <strong>aparece no cabeçalho de todos os e-mails</strong> enviados automaticamente pelo sistema (lembretes, contratos, cobranças, boas-vindas). Sem logo, o <strong>nome da empresa</strong> será exibido no lugar.
+            </p>
+          </div>
+        </div>
+
         <div className="f-group" style={{ marginTop: '20px' }}>
           <label><i className="fas fa-building"></i> Razão Social / Nome Fantasia</label>
           <div className="input-with-icon">
@@ -242,6 +263,26 @@ const AbaEmpresa = ({
                 onBlur={(e) => salvarConfigTextual('emailEmpresa', e.target.value)} 
                 placeholder="contato@suaempresa.com.br" 
               />
+            </div>
+            {/* 📧 ALERTA REPLY-TO */}
+            <div style={{
+              display: 'flex', gap: '9px', alignItems: 'flex-start',
+              background: 'rgba(59,130,246,0.07)',
+              border: '1.5px solid rgba(59,130,246,0.3)',
+              borderLeft: '4px solid #3b82f6',
+              borderRadius: '10px',
+              padding: '11px 13px',
+              marginTop: '10px'
+            }}>
+              <span style={{ fontSize: '1.1rem', lineHeight: 1, marginTop: '1px' }}>↩️</span>
+              <div>
+                <strong style={{ fontSize: '0.81rem', color: 'var(--texto-principal, #0f172a)', display: 'block', marginBottom: '2px' }}>
+                  Este e-mail é o <em>Reply-To</em> dos disparos automáticos
+                </strong>
+                <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--texto-secundario, #475569)', lineHeight: 1.55 }}>
+                  Quando um cliente clicar em <strong>"Responder"</strong> em qualquer e-mail enviado pelo sistema (lembrete, contrato, cobrança...), a resposta <strong>chegará neste endereço</strong>. Mantenha-o sempre atualizado para não perder contato de clientes.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -370,6 +411,26 @@ const AbaEmpresa = ({
                 }} 
                 placeholder="00.000.000/0001-00 ou 000.000.000-00" 
               />
+            </div>
+            {/* 📧 ALERTA ANTI-SPAM CNPJ */}
+            <div style={{
+              display: 'flex', gap: '9px', alignItems: 'flex-start',
+              background: 'rgba(239,68,68,0.07)',
+              border: '1.5px solid rgba(239,68,68,0.3)',
+              borderLeft: '4px solid #ef4444',
+              borderRadius: '10px',
+              padding: '11px 13px',
+              marginTop: '10px'
+            }}>
+              <span style={{ fontSize: '1.1rem', lineHeight: 1, marginTop: '1px' }}>🛡️</span>
+              <div>
+                <strong style={{ fontSize: '0.81rem', color: 'var(--texto-principal, #0f172a)', display: 'block', marginBottom: '2px' }}>
+                  Anti-Spam: CNPJ aparece no rodapé dos e-mails
+                </strong>
+                <p style={{ margin: 0, fontSize: '0.76rem', color: 'var(--texto-secundario, #475569)', lineHeight: 1.55 }}>
+                  Provedores de e-mail (Gmail, Hotmail) exigem dados fiscais no rodapé para identificar e-mails <strong>legítimos</strong>. Sem o CNPJ cadastrado, os e-mails têm <strong>maior risco de cair na pasta de Spam</strong> do seu cliente.
+                </p>
+              </div>
             </div>
           </div>
 
@@ -557,7 +618,7 @@ const AbaEmpresa = ({
         <div className="form-grid-2-col">
           <div className="f-group span-2-col">
             <label><i className="fas fa-key" style={{ color: '#c5a059' }}></i> Chave de API do Google Maps (Google Maps API Key)</label>
-            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <div className="google-maps-api-row" style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
               <div className="input-with-icon" style={{ flex: 1 }}>
                 <i className="fas fa-lock input-icon"></i>
                 <input 
@@ -934,7 +995,7 @@ const AbaEmpresa = ({
                   backgroundColor="transparent" 
                 />
               </div>
-              <div style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
+              <div className="assinatura-actions-row" style={{ display: 'flex', gap: '15px', marginTop: '15px' }}>
                 <button type="button" className="btn-outline" style={{ flex: 1 }} onClick={limparAssinatura}>
                   <i className="fas fa-eraser"></i> Apagar Traço
                 </button>
@@ -948,7 +1009,7 @@ const AbaEmpresa = ({
       </div>
 
       {/* ── BOTÃO SALVAR EMPRESA ── */}
-      <div style={{
+      <div className="config-footer-save-card" style={{
         display: 'flex',
         justifyContent: 'flex-end',
         alignItems: 'center',

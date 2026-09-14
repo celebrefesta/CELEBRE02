@@ -137,7 +137,7 @@ const AbaAparencia = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', alignItems: 'stretch' }}>
+        <div className="aparencia-preview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', alignItems: 'stretch' }}>
           
           {/* BOTÕES DE OPÇÃO DE TEMA */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
@@ -283,7 +283,7 @@ const AbaAparencia = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+        <div className="aparencia-colors-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
           {ACCENT_COLORS.map(c => {
             const isSelected = accentColor === c.color;
             return (
@@ -327,7 +327,7 @@ const AbaAparencia = () => {
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+        <div className="aparencia-accessibility-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
           
           {/* SELETOR DE TAMANHO DE FONTE */}
           <div>

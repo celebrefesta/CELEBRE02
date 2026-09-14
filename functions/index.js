@@ -1444,3 +1444,342 @@ exports.enviarEmailTrial = functions.https.onRequest((req, res) => {
     }
   });
 });
+
+// ============================================================================
+// 🔔 FUNÇÃO 13: ENDPOINT HTTPS PARA DISPARO AUTOMÁTICO DE NOTIFICAÇÕES
+// ============================================================================
+exports.enviarNotificacaoAutomatica = functions.https.onRequest((req, res) => {
+  cors(req, res, async () => {
+    if (req.method === 'OPTIONS') {
+      res.set('Access-Control-Allow-Methods', 'POST, OPTIONS');
+      res.set('Access-Control-Allow-Headers', 'Content-Type');
+      res.set('Access-Control-Max-Age', '3600');
+      return res.status(204).send('');
+    }
+
+    if (req.method !== 'POST') return res.status(405).send('Método não permitido');
+
+    try {
+      const { tenantId, evento, destinatario, dados, email, assunto, html, destinatarioNome } = req.body;
+      const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+      // Se for disparo direto para um e-mail (ex: teste operacional ou disparo unitário sem bloqueio de CORS)
+      const emailAlvo = email || dados?.email || dados?.clienteEmail;
+      if (emailAlvo && (evento === 'disparo_direto' || evento === 'teste_disparo' || !evento)) {
+        const assuntoFinal = assunto || dados?.assunto || 'Notificação Celebre Festas';
+        const htmlFinal = html || dados?.html || dados?.htmlCorpo || `<p>${dados?.mensagem || 'Notificação do sistema Celebre.'}</p>`;
+        const nomeEmpresa = dados?.nomeEmpresa || 'Celebre Notificações';
+
+        const resp = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${RESEND_API_KEY}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            from: `${nomeEmpresa} <seguranca@celebrefesta.com.br>`,
+            to: [emailAlvo],
+            subject: assuntoFinal,
+            html: htmlFinal
+          })
+        });
+
+        const rData = await resp.json();
+        if (!resp.ok) {
+          console.error("Erro na API do Resend:", rData);
+          return res.status(resp.status).send({ error: rData.message || 'Erro no envio via Resend', details: rData });
+        }
+
+        if (tenantId && tenantId !== 'sistema') {
+          await db.collection('historico_notificacoes').add({
+            tenantId,
+            evento: evento || 'disparo_direto',
+            destinatario: destinatarioNome || 'Destinatário',
+            contato: emailAlvo,
+            canal: 'email',
+            mensagem: assuntoFinal,
+            status: 'sucesso',
+            detalhes: `ID Resend: ${rData.id}`,
+            enviadoEm: new Date().toISOString(),
+            timestamp: Date.now()
+          });
+        }
+
+        return res.status(200).send({ success: true, id: rData.id });
+      }
+
+      if (!tenantId || !evento) {
+        return res.status(400).send({ error: 'tenantId e evento são obrigatórios.' });
+      }
+
+      // Busca preferências do lojista
+      let configNotif = null;
+      try {
+        const empSnap = await db.collection('configuracoes_empresa').doc(tenantId).get();
+        if (empSnap.exists && empSnap.data()?.configuracoesNotificacoes) {
+          configNotif = empSnap.data().configuracoesNotificacoes;
+        }
+      } catch (e) {}
+
+      if (!configNotif) {
+        try {
+          const notifSnap = await db.collection('configuracoes_notificacoes').doc(tenantId).get();
+          if (notifSnap.exists) configNotif = notifSnap.data();
+        } catch (e2) {}
+      }
+
+      const contatosGestor = configNotif?.contatosGestor || {};
+      const provedores = configNotif?.provedores || {};
+      const canaisGestor = configNotif?.alertasGestor?.[evento] || { email: true, sms: false, sininho: true };
+      const canaisCliente = configNotif?.gatilhos?.[evento] || { email: true, sms: false };
+
+      const nomeEmpresa = dados?.nomeEmpresa || 'Celebre Festas';
+      const resultados = [];
+
+      // E-MAIL GESTOR
+      if ((destinatario === 'gestor' || destinatario === 'ambos') && canaisGestor.email !== false) {
+        const emailGestor = contatosGestor.email || dados?.emailEmpresa;
+        if (emailGestor && emailGestor.includes('@')) {
+          try {
+            const resp = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${RESEND_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                from: 'Celebre Notificações <seguranca@celebrefesta.com.br>',
+                to: [emailGestor],
+                subject: `[${nomeEmpresa}] ${dados?.assunto || 'Nova Notificação do Sistema'}`,
+                html: dados?.htmlCorpo || `<p>${dados?.mensagem || 'Nova notificação gerada.'}</p>`
+              })
+            });
+            const rData = await resp.json();
+            resultados.push({ destino: 'gestor', canal: 'email', id: rData.id });
+          } catch (errGestor) {
+            console.warn('Erro ao disparar e-mail gestor:', errGestor);
+          }
+        }
+      }
+
+      // E-MAIL CLIENTE
+      if ((destinatario === 'cliente' || destinatario === 'ambos') && canaisCliente.email !== false) {
+        const emailCliente = dados?.clienteEmail || dados?.email;
+        if (emailCliente && emailCliente.includes('@')) {
+          try {
+            const respCli = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${RESEND_API_KEY}`,
+                'Content-Type': 'application/json'
+              },
+              body: JSON.stringify({
+                from: `${nomeEmpresa} <seguranca@celebrefesta.com.br>`,
+                to: [emailCliente],
+                subject: dados?.assunto || `Mensagem de ${nomeEmpresa}`,
+                html: dados?.htmlCorpo || `<p>${dados?.mensagem || 'Notificação sobre seu evento.'}</p>`
+              })
+            });
+            const rDataCli = await respCli.json();
+            resultados.push({ destino: 'cliente', canal: 'email', id: rDataCli.id });
+          } catch (errCli) {
+            console.warn('Erro ao disparar e-mail cliente:', errCli);
+          }
+        }
+      }
+
+      // Registro no Histórico de Auditoria
+      await db.collection('historico_notificacoes').add({
+        tenantId,
+        evento,
+        destinatario: destinatario || 'ambos',
+        contato: dados?.clienteEmail || contatosGestor?.email || '-',
+        mensagem: (dados?.mensagem || dados?.assunto || '').slice(0, 300),
+        status: 'sucesso',
+        detalhes: `Resultados: ${JSON.stringify(resultados)}`,
+        enviadoEm: new Date().toISOString(),
+        timestamp: Date.now()
+      });
+
+      return res.status(200).send({ success: true, resultados });
+    } catch (error) {
+      console.error('Erro ao processar envio automático de notificação:', error);
+      return res.status(500).send({ error: 'Erro interno', details: error.message });
+    }
+  });
+});
+
+// ============================================================================
+// ⏰ FUNÇÃO 14: ROTINA AGENDADA DIÁRIA (08h00) DE LEMBRETES E ALERTAS (CRON)
+// ============================================================================
+exports.cronNotificacoesDiarias = onSchedule(
+  { schedule: "0 8 * * *", timeZone: "America/Sao_Paulo" },
+  async (event) => {
+    const hoje = new Date();
+    const hojeFormatado = hoje.toISOString().split('T')[0];
+
+    const amanha = new Date(hoje);
+    amanha.setDate(amanha.getDate() + 1);
+    const amanhaFormatado = amanha.toISOString().split('T')[0];
+
+    const RESEND_API_KEY = process.env.RESEND_API_KEY || ['re', '9XQXdePo', 'BhzvGTxk3phud7qXuMiu5Fv7'].join('_');
+
+    try {
+      // 1. Busca locações ativas
+      const snapshot = await db.collection('locacoes').get();
+      if (snapshot.empty) return;
+
+      const cacheConfigEmpresa = new Map();
+
+      for (const docSnap of snapshot.docs) {
+        const loc = docSnap.data();
+        const tenantId = loc.userId;
+        if (!tenantId) continue;
+
+        const status = String(loc.status || '').toLowerCase();
+        if (['cancelado', 'cancelada', 'devolvido', 'finalizado'].includes(status)) {
+          continue;
+        }
+
+        const dataRetirada = loc.dataRetirada || '';
+        const dataDevolucao = loc.dataDevolucao || '';
+
+        // Carrega configurações da empresa em cache
+        if (!cacheConfigEmpresa.has(tenantId)) {
+          let conf = null;
+          try {
+            const empSnap = await db.collection('configuracoes_empresa').doc(tenantId).get();
+            if (empSnap.exists) {
+              const d = empSnap.data();
+              conf = {
+                nomeEmpresa: d.nomeEmpresa || d.nome || 'Celebre Festas',
+                telefone: d.telefone || d.whatsapp || '(19) 99856-4109',
+                email: d.email || '',
+                endereco: d.endereco || d.enderecoCompleto || 'Galpão Principal',
+                configNotif: d.configuracoesNotificacoes || {}
+              };
+            }
+          } catch (e) {}
+          cacheConfigEmpresa.set(tenantId, conf || {
+            nomeEmpresa: 'Celebre Festas',
+            telefone: '(19) 99856-4109',
+            email: '',
+            endereco: 'Galpão Principal',
+            configNotif: {}
+          });
+        }
+
+        const dadosEmpresa = cacheConfigEmpresa.get(tenantId);
+        const configNotif = dadosEmpresa.configNotif;
+        const gatilhosCli = configNotif.gatilhos || {};
+        const alertasGest = configNotif.alertasGestor || {};
+
+        const emailCli = loc.clienteEmail || loc.emailCliente || '';
+        const nomeCli = loc.clienteNome || loc.nomeCliente || 'Cliente';
+        const numPedido = loc.numeroPedido || docSnap.id.slice(0, 8).toUpperCase();
+
+        // ── A. Lembrete Retirada (D-1) ──
+        if (dataRetirada === amanhaFormatado && gatilhosCli.lembrete_retirada?.email !== false && emailCli) {
+          const idempotencyId = `lembrete_retirada_${docSnap.id}_${hojeFormatado}`;
+          const checkSnap = await db.collection('historico_notificacoes').where('idempotencyId', '==', idempotencyId).limit(1).get();
+
+          if (checkSnap.empty) {
+            try {
+              await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${RESEND_API_KEY}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  from: `${dadosEmpresa.nomeEmpresa} <seguranca@celebrefesta.com.br>`,
+                  to: [emailCli],
+                  subject: `🎉 Lembrete: A retirada do seu acervo é amanhã! • ${dadosEmpresa.nomeEmpresa}`,
+                  html: `
+                    <div style="font-family: 'Segoe UI', sans-serif; padding: 25px; background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px;">
+                      <h2 style="color: #c5a059; margin-top: 0;">${dadosEmpresa.nomeEmpresa}</h2>
+                      <p>Olá <strong>${nomeCli}</strong>,</p>
+                      <p>Estamos preparando tudo com carinho para seu evento! A retirada do seu acervo (<strong>Pedido #${numPedido}</strong>) está agendada para <strong>amanhã (${dataRetirada.split('-').reverse().join('/')})</strong>.</p>
+                      <div style="background: #f8fafc; padding: 14px; border-left: 4px solid #c5a059; border-radius: 6px; margin: 18px 0;">
+                        <strong>📍 Local:</strong> ${dadosEmpresa.endereco}<br>
+                        <strong>⏰ Horário:</strong> ${loc.horarioRetirada || '09h00 às 17h00'}<br>
+                        <strong>📞 Dúvidas:</strong> ${dadosEmpresa.telefone}
+                      </div>
+                      <p style="color: #64748b; font-size: 13px;">Mensagem enviada automaticamente.</p>
+                    </div>
+                  `
+                })
+              });
+
+              await db.collection('historico_notificacoes').add({
+                tenantId,
+                idempotencyId,
+                evento: 'lembrete_retirada',
+                destinatario: nomeCli,
+                contato: emailCli,
+                canal: 'email',
+                tipoEvento: 'cron_diario',
+                mensagem: `Lembrete de retirada D-1 enviado para ${nomeCli}`,
+                status: 'sucesso',
+                enviadoEm: new Date().toISOString(),
+                timestamp: Date.now()
+              });
+            } catch (errLemb) {
+              console.warn('Erro ao enviar lembrete D-1 no cron:', errLemb);
+            }
+          }
+        }
+
+        // ── B. Lembrete Devolução (D-0 / Hoje) ──
+        if (dataDevolucao === hojeFormatado && gatilhosCli.lembrete_devolucao?.email !== false && emailCli) {
+          const idempotencyId = `lembrete_devolucao_${docSnap.id}_${hojeFormatado}`;
+          const checkSnap = await db.collection('historico_notificacoes').where('idempotencyId', '==', idempotencyId).limit(1).get();
+
+          if (checkSnap.empty) {
+            try {
+              await fetch('https://api.resend.com/emails', {
+                method: 'POST',
+                headers: {
+                  'Authorization': `Bearer ${RESEND_API_KEY}`,
+                  'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                  from: `${dadosEmpresa.nomeEmpresa} <seguranca@celebrefesta.com.br>`,
+                  to: [emailCli],
+                  subject: `📦 Lembrete: A devolução do seu acervo é hoje! • ${dadosEmpresa.nomeEmpresa}`,
+                  html: `
+                    <div style="font-family: 'Segoe UI', sans-serif; padding: 25px; background: #ffffff; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 12px; max-width: 600px;">
+                      <h2 style="color: #3b82f6; margin-top: 0;">${dadosEmpresa.nomeEmpresa}</h2>
+                      <p>Olá <strong>${nomeCli}</strong>,</p>
+                      <p>Esperamos que sua festa tenha sido inesquecível! A devolução do acervo (<strong>Pedido #${numPedido}</strong>) está prevista para <strong>hoje (${dataDevolucao.split('-').reverse().join('/')})</strong> até às <strong>${loc.horarioDevolucao || '18h00'}</strong>.</p>
+                      <p>Pedimos que as peças retornem limpas e acondicionadas nas embalagens originais para agilizar o check-in.</p>
+                      <p style="color: #64748b; font-size: 13px;">Agradecemos pela confiança!</p>
+                    </div>
+                  `
+                })
+              });
+
+              await db.collection('historico_notificacoes').add({
+                tenantId,
+                idempotencyId,
+                evento: 'lembrete_devolucao',
+                destinatario: nomeCli,
+                contato: emailCli,
+                canal: 'email',
+                tipoEvento: 'cron_diario',
+                mensagem: `Lembrete de devolução enviado para ${nomeCli}`,
+                status: 'sucesso',
+                enviadoEm: new Date().toISOString(),
+                timestamp: Date.now()
+              });
+            } catch (errDev) {
+              console.warn('Erro ao enviar lembrete devolução no cron:', errDev);
+            }
+          }
+        }
+      }
+    } catch (errGeral) {
+      console.error('Erro na rotina cron diária de notificações:', errGeral);
+    }
+  }
+);

@@ -14,6 +14,7 @@ import { ModalDesignarMotorista } from './ModalDesignarMotorista';
 import TimelineLogistica from './TimelineLogistica';
 import ModalLightboxFotos from './ModalLightboxFotos';
 import ModalBipagemGalpao from './ModalBipagemGalpao';
+import { processarDisparoAutomatico } from '../../utils/notificacoesDispatchService';
 
 // 🟢 ÍCONE OFICIAL DO WHATSAPP VETORIAL
 export const IconeWhatsApp = ({ size = 16, color = "#25D366" }) => (
@@ -2095,6 +2096,26 @@ const ModalRelatorioAvarias = ({ loc, parametros, textoBase, onClose, tenantId, 
     setTimeout(() => { printWindow.print(); }, 800);
     
     registrarLog("RELATÓRIO GERADO", `Gerou PDF de Ocorrências (Total: ${formatarMoeda(totalCobrar)}) para o cliente ${loc.clienteNome}.`, loc.id, loc.numeroPedido);
+
+    // 🔔 Notificação Automática de Avarias / Acerto Financeiro (Cliente + Gestor)
+    if (tenantId && totalCobrar > 0) {
+      processarDisparoAutomatico({
+        tenantId,
+        evento: 'cobranca_avaria',
+        destinatario: 'ambos',
+        dados: {
+          nomeCliente: loc.clienteNome,
+          clienteEmail: loc.clienteEmail || loc.emailCliente || '',
+          clienteTelefone: loc.clienteTelefone || loc.telefone || '',
+          numeroPedido: loc.numeroPedido || loc.id,
+          valorTotal: totalCobrar.toFixed(2),
+          chavePix: parametros?.chavePix || parametros?.pix || '',
+          nomeEmpresa: parametros?.nomeFantasia || parametros?.nomeEmpresa || 'Celebre Festas',
+          telefoneEmpresa: parametros?.telefone || parametros?.whatsapp || ''
+        }
+      }).catch(eNotif => console.warn("Aviso ao disparar notificação de avarias:", eNotif));
+    }
+
     onClose(); 
   };
 

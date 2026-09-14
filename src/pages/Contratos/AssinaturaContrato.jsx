@@ -4,6 +4,7 @@ import { db } from "../../firebaseConfig";
 import { doc, getDoc, updateDoc, collection, addDoc, serverTimestamp } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import SignatureCanvas from "react-signature-canvas";
+import { processarDisparoAutomatico } from "../../utils/notificacoesDispatchService";
 import "./AssinaturaContrato.css";
 
 const AssinaturaContrato = () => {
@@ -178,6 +179,25 @@ const AssinaturaContrato = () => {
         `Assinatura(s) recolhida(s) no documento: ${quemAssinou.join(" e ")}. O contrato de ${contrato?.cliente} agora está no status: ${atualizacao.status || contrato?.status}.`,
         contrato
       );
+
+      // 🔔 Disparo automático de notificação de contrato assinado (Gestor + Cliente)
+      const idTenantAlvo = contrato?.userId || tenantId;
+      if (idTenantAlvo) {
+        processarDisparoAutomatico({
+          tenantId: idTenantAlvo,
+          evento: 'contrato_assinado',
+          destinatario: 'ambos',
+          dados: {
+            nomeCliente: contrato?.cliente || 'Cliente',
+            clienteEmail: contrato?.email || '',
+            clienteTelefone: contrato?.telefone || '',
+            numeroPedido: contrato?.id || id,
+            linkContrato: `${window.location.origin}/assinatura/${id}?external=true`,
+            nomeEmpresa: nomeEmpresa || 'Celebre Festas',
+            telefoneEmpresa: ''
+          }
+        }).catch(eNotif => console.warn("Aviso ao disparar notificação contrato assinado:", eNotif));
+      }
 
       setStatus("sucesso");
       setTimeout(() => {

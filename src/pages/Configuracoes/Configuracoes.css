@@ -83,6 +83,7 @@
 .config-top-tabs button .tab-icon.green { background: #d1fae5; color: #047857; }
 .config-top-tabs button .tab-icon.cyan { background: #cffaff; color: #0e7490; }
 .config-top-tabs button .tab-icon.pink { background: #fce7f3; color: #be185d; }
+.config-top-tabs button .tab-icon.red { background: #fee2e2; color: #b91c1c; }
 
 .config-top-tabs button:hover {
   background: #ffffff;
@@ -1523,81 +1524,92 @@
 }
 
 /* =========================================
-   📱 RESPONSIVIDADE ULTRA-COMPLETA PARA CELULAR (MOBILE-FIRST)
+   ESTILOS BASE DO CABEÇALHO E ESTRUTURA
    ========================================= */
-
-@media (max-width: 900px) {
-  .config-container {
-    padding: 16px 12px !important;
-    overflow-x: hidden !important;
-  }
-
-  .config-header-top {
-    margin-bottom: 16px !important;
-  }
-
-  .header-titles h1 {
-    font-size: 22px !important;
-  }
-
-  .header-titles p {
-    font-size: 13px !important;
-  }
-
-  /* ABAS DE NAVEGAÇÃO DO TOPO */
-  .config-top-tabs {
-    grid-template-columns: repeat(2, 1fr) !important;
-    gap: 6px !important;
-    padding: 6px !important;
-    border-radius: 12px !important;
-    margin-bottom: 20px !important;
-  }
-
-  .config-top-tabs button {
-    padding: 10px 6px !important;
-    font-size: 12px !important;
-    flex-direction: column !important;
-    gap: 4px !important;
-    text-align: center !important;
-  }
-
-  .config-top-tabs button .tab-icon {
-    width: 28px !important;
-    height: 28px !important;
-    font-size: 13px !important;
-  }
-
-  /* FORÇAR TODOS OS GRIDS DAS ABAS A COLAPSAREM EM 1 COLUNA NO CELULAR */
-  .profile-grid-responsive,
-  .config-container div[style*="display: grid"],
-  .config-container div[style*="grid-template-columns"],
-  .config-container div[style*="gridTemplateColumns"],
-  .config-card-grid,
-  .config-grid-2col,
-  .config-grid-3col {
-    grid-template-columns: 1fr !important;
-    gap: 16px !important;
-  }
-
-  .config-card {
-    padding: 16px !important;
-    width: 100% !important;
-    box-sizing: border-box !important;
-  }
-
-  .config-card input,
-  .config-card select,
-  .config-card textarea,
-  .config-card button {
-    max-width: 100% !important;
-    box-sizing: border-box !important;
-  }
+.config-header-top {
+  margin-bottom: 24px;
 }
 
-@media (max-width: 480px) {
-  .config-top-tabs {
-    grid-template-columns: repeat(2, 1fr) !important;
-  }
+.config-header-brand-row {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.config-btn-voltar {
+  padding: 10px 16px;
+  background-color: var(--fundo-card, #ffffff);
+  border: 1px solid var(--borda, #cbd5e1);
+  color: var(--texto-secundario, #334155);
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+  transition: all 0.2s ease;
+}
+
+.config-btn-voltar:hover {
+  background-color: var(--fundo-cinza, #f8fafc);
+  border-color: var(--texto-secundario, #94a3b8);
+  transform: translateY(-1px);
+}
+
+.config-header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.config-header-title {
+  font-size: 24px;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.config-header-subtitle {
+  font-size: 13px;
+  color: var(--texto-secundario, #64748b);
+  margin: 2px 0 0 0;
+}
+
+.profile-grid-responsive {
+  display: grid;
+  grid-template-columns: minmax(280px, 320px) 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+/* Linha de 2 Colunas para Perfil Pessoal */
+.config-container .profile-fields-2col-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 16px;
+  align-items: start;
+}
+
+.config-container .profile-fields-2col-row > div {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  min-width: 0;
+}
+
+.config-container .profile-fields-2col-row label {
+  display: flex !important;
+  align-items: flex-end !important;
+  min-height: 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--texto-secundario);
+  margin-bottom: 6px;
+  line-height: 1.25;
 }
 
 /* =========================================
@@ -3153,6 +3165,605 @@
   }
 }
 
+/* =====================================================================
+   📱 RESPONSIVIDADE MOBILE COMPLETA — CONFIGURAÇÕES (100% BLINDADO)
+   Totalmente escopado sob .config-container (Regra 5 e Regra de Ouro)
+   ===================================================================== */
+
+/* ── TABLET (≤ 1024px) ───────────────────────────────────────────── */
+@media (max-width: 1024px) {
+  .config-container {
+    padding: 24px 16px;
+  }
+
+  .config-container .config-empresa-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .config-container .span-2-col-full {
+    grid-column: 1 / -1;
+  }
+
+  .config-container .config-grid-columns {
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+}
+
+/* ── MOBILE PADRÃO (≤ 768px) ─────────────────────────────────────── */
+@media (max-width: 768px) {
+
+  /* Container Principal */
+  .config-container {
+    padding: 16px 12px !important;
+    overflow-x: hidden !important;
+    max-width: 100vw !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Cabeçalho da Página */
+  .config-container .config-header-top {
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+
+  .config-container .config-header-brand-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+    width: 100% !important;
+  }
+
+  .config-container .config-btn-voltar {
+    width: auto !important;
+    padding: 8px 14px !important;
+    font-size: 12px !important;
+    border-radius: 8px !important;
+  }
+
+  .config-container .config-header-text {
+    width: 100% !important;
+  }
+
+  .config-container .config-header-title {
+    font-size: 20px !important;
+    letter-spacing: -0.3px !important;
+    line-height: 1.25 !important;
+  }
+
+  .config-container .config-header-subtitle {
+    font-size: 12.5px !important;
+    line-height: 1.4 !important;
+  }
+
+  /* 🌟 MENU DE ABAS DE NAVEGAÇÃO — SCROLL HORIZONTAL SLIM 🌟 */
+  .config-container .config-top-tabs {
+    display: flex !important;
+    flex-direction: row !important;
+    overflow-x: auto !important;
+    overflow-y: hidden !important;
+    -webkit-overflow-scrolling: touch !important;
+    scrollbar-width: none !important;
+    padding: 6px 8px !important;
+    gap: 8px !important;
+    border-radius: 14px !important;
+    margin-bottom: 18px !important;
+    flex-wrap: nowrap !important;
+    white-space: nowrap !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    background: var(--fundo-card, #ffffff) !important;
+    border: 1px solid var(--borda, #cbd5e1) !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .config-container .config-top-tabs::-webkit-scrollbar {
+    display: none !important;
+  }
+
+  .config-container .config-top-tabs button {
+    flex: 0 0 auto !important;
+    min-width: auto !important;
+    padding: 9px 13px !important;
+    font-size: 12.5px !important;
+    font-weight: 700 !important;
+    border-radius: 10px !important;
+    display: inline-flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    gap: 8px !important;
+    white-space: nowrap !important;
+    line-height: 1 !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .config-top-tabs button .tab-icon {
+    width: 26px !important;
+    height: 26px !important;
+    font-size: 12px !important;
+    border-radius: 7px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Cards e Contêineres */
+  .config-container .config-card {
+    padding: 16px 14px !important;
+    border-radius: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .config-card.large-padding {
+    padding: 18px 14px !important;
+  }
+
+  .config-container .config-card-header {
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+  }
+
+  .config-container .config-card-header h3 {
+    font-size: 15px !important;
+    line-height: 1.3 !important;
+  }
+
+  .config-container .config-card-header .subtext {
+    font-size: 12px !important;
+    line-height: 1.4 !important;
+  }
+
+  .config-container .card-header-icon {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 15px !important;
+    border-radius: 9px !important;
+    flex-shrink: 0 !important;
+  }
+
+  /* Grids de Formulário — Colapso em 1 Coluna */
+  .config-container .config-grid-columns,
+  .config-container .config-empresa-grid,
+  .config-container .form-grid-2-col,
+  .config-container .form-grid-3-col,
+  .config-container .profile-form-row-2col,
+  .config-container .notif-contacts-grid,
+  .config-container .seguranca-cards-grid,
+  .config-container .aparencia-preview-grid,
+  .config-container .aparencia-accessibility-grid,
+  .config-container .assinatura-usage-grid,
+  .config-container .assinatura-billing-grid,
+  .config-container .assinatura-features-grid,
+  .config-container .backup-actions-row,
+  .config-container .profile-grid-responsive,
+  .config-container .lgpd-status-grid,
+  .config-container .lgpd-tools-grid,
+  .config-container .lgpd-form-row {
+    grid-template-columns: 1fr !important;
+    gap: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .span-2-col,
+  .config-container .span-3-col,
+  .config-container .span-1-col,
+  .config-container .span-2-col-full {
+    grid-column: span 1 !important;
+    width: 100% !important;
+  }
+
+  /* 🌟 Perfil: Linhas de 2 Colunas Mantidas no Mobile (Nome/Sobrenome, CPF/Nascimento, Cargo/Tel) 🌟 */
+  .config-container .profile-fields-2col-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 10px !important;
+    margin-bottom: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .profile-fields-2col-row > div {
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: flex-end !important;
+    min-width: 0 !important;
+  }
+
+  .config-container .profile-fields-2col-row label {
+    display: flex !important;
+    align-items: flex-end !important;
+    min-height: 28px !important;
+    font-size: 11.5px !important;
+    line-height: 1.25 !important;
+    margin-bottom: 5px !important;
+  }
+
+  .config-container .profile-fields-2col-row input {
+    font-size: 13.5px !important;
+    padding: 10px 8px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Inputs, Selects e Textareas */
+  .config-container .f-group {
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .f-group input,
+  .config-container .f-group select,
+  .config-container .config-textarea,
+  .config-container input[type="text"],
+  .config-container input[type="email"],
+  .config-container input[type="password"],
+  .config-container input[type="number"],
+  .config-container select,
+  .config-container textarea {
+    font-size: 16px !important; /* Previne auto-zoom no iOS e Android */
+    padding: 11px 13px !important;
+    max-width: 100% !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 9px !important;
+  }
+
+  .config-container .f-group input.input-with-icon,
+  .config-container .input-with-icon input,
+  .config-container .input-with-icon select {
+    padding-left: 40px !important;
+  }
+
+  .config-container .input-with-icon .input-icon {
+    left: 13px !important;
+    font-size: 14px !important;
+  }
+
+  .config-container .f-group label {
+    font-size: 12px !important;
+    margin-bottom: 5px !important;
+  }
+
+  /* Aba Empresa — Logotipo */
+  .config-container .empresa-id-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 14px !important;
+    padding: 14px !important;
+  }
+
+  .config-container .logo-preview-box {
+    width: 80px !important;
+    height: 80px !important;
+    border-radius: 12px !important;
+  }
+
+  .config-container .logo-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .config-container .logo-actions label,
+  .config-container .logo-actions button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Aba Empresa — Google Maps API Row */
+  .config-container .google-maps-api-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .config-container .google-maps-api-row button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 12px !important;
+  }
+
+  /* Aba Empresa — Assinatura Digital */
+  .config-container .canvas-border {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 170px !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .canvas-border canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .config-container .assinatura-actions-row {
+    flex-direction: column !important;
+    width: 100% !important;
+    gap: 10px !important;
+  }
+
+  .config-container .assinatura-actions-row button {
+    width: 100% !important;
+    flex: none !important;
+    justify-content: center !important;
+  }
+
+  .config-container .assinatura-trancada {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Aba Empresa — Rodapé Salvar Tudo */
+  .config-container .config-footer-save-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: center !important;
+    gap: 14px !important;
+    padding: 16px 14px !important;
+  }
+
+  .config-container .config-footer-save-card button {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 14px !important;
+  }
+
+  /* Aba Meu Perfil */
+  .config-container .profile-submit-wrapper {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .config-container .btn-salvar-perfil {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 14px !important;
+  }
+
+  /* Aba Notificações */
+  .config-container .notif-alert-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 12px !important;
+    padding: 14px !important;
+  }
+
+  .config-container .notif-alert-row > div:first-child {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .config-container .notif-alert-switches {
+    width: 100% !important;
+    justify-content: flex-start !important;
+    gap: 10px 14px !important;
+    flex-wrap: wrap !important;
+    padding-top: 10px !important;
+    border-top: 1px dashed var(--borda) !important;
+  }
+
+  /* Aba Aparência */
+  .config-container .aparencia-colors-grid {
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 10px !important;
+  }
+
+  /* Aba Backup & LGPD */
+  .config-container .backup-hero-card {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 12px !important;
+    padding: 18px 16px !important;
+  }
+
+  .config-container .backup-hero-card .hero-icon-box {
+    margin: 8px auto 0 !important;
+  }
+
+  .config-container .backup-subnav-pills {
+    flex-direction: column !important;
+    gap: 8px !important;
+  }
+
+  .config-container .backup-subnav-pills button {
+    width: 100% !important;
+    justify-content: flex-start !important;
+  }
+
+  .config-container .backup-main-action-card {
+    flex-direction: column !important;
+    text-align: center !important;
+    padding: 18px 14px !important;
+  }
+
+  .config-container .btn-backup-master,
+  .config-container .btn-restore-master {
+    width: 100% !important;
+    justify-content: center !important;
+    padding: 13px !important;
+  }
+
+  .config-container .lgpd-hero-banner {
+    flex-direction: column !important;
+    text-align: center !important;
+    gap: 12px !important;
+    padding: 16px !important;
+  }
+
+  /* Tabelas com Scroll Suave */
+  .config-container table {
+    display: block !important;
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    font-size: 12.5px !important;
+  }
+
+  /* Modais Responsivos */
+  .config-container .modal-card-lgpd {
+    max-width: 95vw !important;
+    width: 100% !important;
+    max-height: 90vh !important;
+    border-radius: 14px !important;
+  }
+
+  .config-container .modal-header-lgpd {
+    padding: 14px 16px !important;
+  }
+
+  .config-container .modal-body-lgpd {
+    padding: 16px 14px !important;
+  }
+
+  .config-container .modal-footer-lgpd {
+    padding: 12px 14px !important;
+    flex-direction: column-reverse !important;
+    gap: 8px !important;
+  }
+
+  .config-container .modal-footer-lgpd button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Regra de Ouro (AGENTS.md): Cards KPI no celular permanecem em 2 Colunas */
+  .config-container .clientes-stats-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    display: grid !important;
+    gap: 10px !important;
+  }
+
+  /* Botão Flutuante Salvar Tudo */
+  .config-container .btn-salvar-tudo-float {
+    width: calc(100% - 24px) !important;
+    left: 12px !important;
+    right: 12px !important;
+    bottom: 12px !important;
+    border-radius: 12px !important;
+    justify-content: center !important;
+  }
+}
+
+/* ── MOBILE PEQUENO (≤ 480px) ────────────────────────────────────── */
+@media (max-width: 480px) {
+
+  .config-container {
+    padding: 12px 8px !important;
+  }
+
+  .config-container .config-header-title {
+    font-size: 18px !important;
+  }
+
+  .config-container .config-top-tabs {
+    padding: 5px 6px !important;
+    gap: 6px !important;
+    border-radius: 12px !important;
+  }
+
+  .config-container .config-top-tabs button {
+    padding: 8px 11px !important;
+    font-size: 11.5px !important;
+    border-radius: 8px !important;
+    gap: 6px !important;
+  }
+
+  .config-container .config-top-tabs button .tab-icon {
+    width: 22px !important;
+    height: 22px !important;
+    font-size: 11px !important;
+  }
+
+  .config-container .config-card {
+    padding: 14px 10px !important;
+    border-radius: 12px !important;
+  }
+
+  .config-container .config-card-header h3 {
+    font-size: 14px !important;
+  }
+
+  .config-container .f-group input,
+  .config-container .f-group select,
+  .config-container .config-textarea {
+    font-size: 16px !important;
+    padding: 10px 11px !important;
+  }
+
+  .config-container .empresa-id-wrapper {
+    padding: 10px !important;
+  }
+
+  .config-container .logo-preview-box {
+    width: 70px !important;
+    height: 70px !important;
+  }
+
+  .config-container .btn-outline,
+  .config-container .btn-danger-outline {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .config-container .aparencia-colors-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .config-container .profile-fields-2col-row {
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .config-container .profile-fields-2col-row label {
+    font-size: 11px !important;
+    min-height: 28px !important;
+    margin-bottom: 4px !important;
+  }
+
+  .config-container .profile-fields-2col-row input {
+    font-size: 13px !important;
+    padding: 9px 7px !important;
+  }
+}
+
+/* ── TELAS ULTRA-PEQUENAS (≤ 360px) ──────────────────────────────── */
+@media (max-width: 360px) {
+  .config-container {
+    padding: 10px 6px !important;
+  }
+
+  .config-container .config-header-title {
+    font-size: 17px !important;
+  }
+
+  .config-container .config-top-tabs button {
+    padding: 7px 10px !important;
+    font-size: 11px !important;
+  }
+
+  .config-container .config-card {
+    padding: 12px 8px !important;
+  }
+
+  .config-container .profile-fields-2col-row {
+    gap: 6px !important;
+  }
+
+  .config-container .profile-fields-2col-row label {
+    font-size: 10px !important;
+    min-height: 26px !important;
+  }
+
+  .config-container .profile-fields-2col-row input {
+    font-size: 12px !important;
+    padding: 8px 5px !important;
+  }
+}
 
 
 

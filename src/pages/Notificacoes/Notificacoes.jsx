@@ -83,7 +83,6 @@ const Notificacoes = () => {
     carregarDados();
   }, [usuarioLogado, navigate, tenantId]);
 
-  // ✅ FIX: Atualiza AMBOS os campos para que Clientes.jsx também reconheça a aprovação
   const aprovarCliente = async (id, nomeCliente) => {
     try {
       await updateDoc(doc(db, "clientes", id), {
@@ -115,9 +114,36 @@ const Notificacoes = () => {
   return (
     <div className="notificacoes-container fade-in">
       <div className="notificacoes-max-width">
-        <div className="notificacoes-header">
-          <h1>Caixa de Entrada 📥</h1>
-          <p>Gerencie novos clientes e pedidos que acabaram de chegar na sua empresa.</p>
+        <div className="notificacoes-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '16px' }}>
+          <div>
+            <h1>Caixa de Entrada 📥</h1>
+            <p>Gerencie novos clientes e pedidos que acabaram de chegar na sua empresa.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => navigate('/configuracoes', { state: { aba: 'notificacoes' } })}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '8px',
+              padding: '10px 18px',
+              borderRadius: '10px',
+              background: '#ffffff',
+              border: '1.5px solid #cbd5e1',
+              color: '#0f172a',
+              fontWeight: 800,
+              fontSize: '13px',
+              cursor: 'pointer',
+              boxShadow: '0 2px 8px rgba(0,0,0,0.04)',
+              transition: 'all 0.2s ease'
+            }}
+            onMouseOver={(e) => { e.currentTarget.style.borderColor = 'var(--dourado)'; e.currentTarget.style.transform = 'translateY(-1px)'; }}
+            onMouseOut={(e) => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.transform = 'translateY(0)'; }}
+          >
+            <i className="fas fa-cog" style={{ color: 'var(--dourado)' }}></i>
+            <span>Gerenciar Notificações do Sistema</span>
+          </button>
         </div>
 
         {loading ? (

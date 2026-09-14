@@ -4,6 +4,7 @@ import { db } from '../../firebaseConfig';
 import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
 import html2canvas from 'html2canvas';
+import { processarDisparoAutomatico } from '../../utils/notificacoesDispatchService';
 import './Catalago.css';
 
 const Catalogo = () => {
@@ -489,6 +490,22 @@ const Catalogo = () => {
       });
 
       await registrarLog("NOVO ORÇAMENTO WEB", `O cliente "${nome}" gerou um orçamento público via Catálogo no valor de R$ ${total.toFixed(2)} com ${carrinho.length} itens para a data ${dataFesta}.`);
+
+      // 🔔 Disparo automático em segundo plano (Respeita preferências de E-mail/SMS configuradas)
+      processarDisparoAutomatico({
+        tenantId,
+        evento: 'novo_orcamento_web',
+        destinatario: 'ambos',
+        dados: {
+          nomeCliente: nome,
+          clienteEmail: dadosCliente.email || '',
+          clienteTelefone: whats,
+          valorTotal: total,
+          dataEvento: dataFesta ? dataFesta.split('-').reverse().join('/') : '',
+          nomeEmpresa: empresa.nome || 'Celebre Festas',
+          telefoneEmpresa: empresa.whats || ''
+        }
+      }).catch(eNotif => console.warn("Aviso ao disparar notificação automática:", eNotif));
 
       dispararPixel('Lead', { value: total, currency: 'BRL' });
 

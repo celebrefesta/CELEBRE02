@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, doc, getDoc, setDoc, updateDoc, arrayUnion, arrayRemove, query, getDocs, where, writeBatch, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
@@ -13,10 +13,12 @@ import AbaAssinaturaUso from './AbaAssinaturaUso';
 import AbaSeguranca from './AbaSeguranca';
 import AbaAparencia from './AbaAparencia';
 import AbaBackup from './AbaBackup';
+import AbaNotificacoes from './AbaNotificacoes';
 import { calcularPeriodoTeste, formatarDataExibicao } from '../../utils/periodoTesteUtils';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   const tenantId = localStorage.getItem('tenantId') || usuarioLogado?.uid;
@@ -24,9 +26,15 @@ const Configuracoes = () => {
   const isOwner = tenantId === usuarioLogado?.uid;
   const isCollaborator = !isSuperAdmin && !isOwner;
 
-  const [abaAtiva, setAbaAtiva] = useState('meu_perfil'); 
+  const [abaAtiva, setAbaAtiva] = useState(location.state?.aba || 'meu_perfil'); 
   const [loading, setLoading] = useState(true);
   const [dataCriacaoConta, setDataCriacaoConta] = useState('');
+
+  useEffect(() => {
+    if (location.state?.aba) {
+      setAbaAtiva(location.state.aba);
+    }
+  }, [location.state]);
   const [isContaExpirada, setIsContaExpirada] = useState(false);
 
   // ==========================================
@@ -314,33 +322,19 @@ const Configuracoes = () => {
 
   return (
     <div className="config-container fade-in">
-      <header className="config-header-top" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px', flexWrap: 'wrap', gap: '15px' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
+      <header className="config-header-top">
+        <div className="config-header-brand-row">
           <button 
             type="button" 
             onClick={() => navigate('/dashboard')}
-            style={{
-              padding: '10px 16px',
-              backgroundColor: '#ffffff',
-              border: '1px solid #cbd5e1',
-              color: '#334155',
-              borderRadius: '8px',
-              fontWeight: '700',
-              fontSize: '13px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.04)',
-              transition: 'all 0.2s ease'
-            }}
+            className="config-btn-voltar"
           >
             <i className="fas fa-arrow-left"></i> Voltar ao Painel
           </button>
 
-          <div>
-            <h1 style={{ fontSize: '24px', fontWeight: '800', color: '#0f172a', margin: 0 }}>Painel de Controle Central</h1>
-            <p style={{ fontSize: '13px', color: '#64748b', margin: '2px 0 0 0' }}>Gerencie todos os aspectos do seu sistema em um único lugar.</p>
+          <div className="config-header-text">
+            <h1 className="config-header-title">Painel de Controle Central</h1>
+            <p className="config-header-subtitle">Gerencie todos os aspectos do seu sistema em um único lugar.</p>
           </div>
         </div>
       </header>
@@ -383,6 +377,14 @@ const Configuracoes = () => {
             <span>Assinatura e Uso</span>
           </button>
         )}
+
+        <button 
+          className={abaAtiva === 'notificacoes' ? 'active' : ''} 
+          onClick={() => setAbaAtiva('notificacoes')}
+        >
+          <span className="tab-icon red"><i className="fas fa-bell"></i></span>
+          <span>Notificações</span>
+        </button>
 
         <button 
           className={abaAtiva === 'seguranca' ? 'active' : ''} 
@@ -466,6 +468,14 @@ const Configuracoes = () => {
             cancelando={cancelando}
             handleCancelarAssinatura={handleCancelarAssinatura}
             dataCriacaoConta={dataCriacaoConta}
+          />
+        )}
+
+        {abaAtiva === 'notificacoes' && (
+          <AbaNotificacoes 
+            tenantId={tenantId}
+            usuarioLogado={usuarioLogado}
+            registrarLog={registrarLog}
           />
         )}
 

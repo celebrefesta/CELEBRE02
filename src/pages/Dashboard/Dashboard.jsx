@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import './Dashboard.css';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, query, where, doc, getDoc, updateDoc, addDoc, serverTimestamp } from 'firebase/firestore';
-import { getAuth } from 'firebase/auth'; 
+import { getAuth, signOut } from 'firebase/auth'; 
 import AuditoriaEstoque from './AuditoriaEstoque';
 import { calcularPeriodoTeste } from '../../utils/periodoTesteUtils';
+import { verificarLembretesAgendadosHoje } from '../../utils/notificacoesDispatchService';
 import {
   ResponsiveContainer,
   AreaChart,
@@ -341,6 +342,11 @@ const Dashboard = () => {
         const estSnap = { docs: estoqueDocs.map(d => ({ data: () => d })), size: estoqueDocs.length };
         const locs = Array.from(mapLocacoes.values());
         setTodasLocacoes(locs);
+
+        // 🔔 Varredura diária automática de lembretes de retirada, devolução e atrasos (com bloqueio idempotente diário)
+        if (idDaEmpresaCorreta) {
+          verificarLembretesAgendadosHoje(idDaEmpresaCorreta).catch(() => {});
+        }
 
         // BUSCA MULTI-TENANT DE COMPRAS (lista_compras) E LANÇAMENTOS (financeiro_lancamentos)
         let comprasDocs = [];
@@ -896,14 +902,77 @@ const Dashboard = () => {
   };
 
 
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      localStorage.removeItem('tenantId');
+      localStorage.removeItem('funcName');
+      localStorage.removeItem('userRole');
+      localStorage.removeItem('userPermissions');
+      localStorage.removeItem('impersonatingTenant');
+      navigate('/login', { replace: true });
+    } catch (e) {
+      console.error("Erro ao deslogar:", e);
+      navigate('/login', { replace: true });
+    }
+  };
+
   if (loading) return <div className="loading-v3">Atualizando central de comando VIP...</div>;
 
   if (statusConta === 'excluido' || statusConta === 'suspenso') {
+      const emailExibicao = usuarioLogado?.email || '';
+      const whatsappMsg = encodeURIComponent(`Olá! Minha conta (${emailExibicao}) no Celebre está suspensa por inatividade e gostaria de ajuda para regularizar.`);
+
       return (
           <div className="dash-wide-container dash-status-screen fade-in">
               <div className="dash-status-card dash-status-card--danger">
-                  <h2>⏸️ Conta Suspensa</h2>
-                  <p>Seu período de inatividade ultrapassou <strong>6 meses</strong>. Por segurança, a sua conta foi suspensa.</p>
+                  <div className="dash-status-badge dash-status-badge--danger">
+                      <i className="fas fa-pause-circle"></i> Conta Suspensa por Inatividade
+                  </div>
+
+                  <h2>Olá, {nomeUsuario}!</h2>
+                  <p className="dash-status-lead">
+                      Seu período de inatividade ultrapassou <strong>6 meses</strong>. Por segurança e conformidade operacional, o acesso às funções do sistema foi temporariamente suspenso.
+                  </p>
+
+                  <div className="dash-status-preserved-box">
+                      <div className="dash-status-preserved-icon">
+                          <i className="fas fa-shield-alt"></i>
+                      </div>
+                      <div className="dash-status-preserved-text">
+                          <strong>📦 Seus dados continuam salvos e protegidos</strong>
+                          <span>Seu acervo de produtos, fotos, clientes e contratos cadastrados estão preservados por mais <strong>30 dias</strong> para você regularizar sua conta sem perda de informações.</span>
+                      </div>
+                  </div>
+
+                  <div className="dash-status-actions">
+                      <button 
+                          type="button" 
+                          className="dash-status-btn dash-status-btn--gold"
+                          onClick={() => navigate('/reativar-conta')}
+                      >
+                          <i className="fas fa-crown"></i> Reativar Minha Conta Agora
+                      </button>
+
+                      <a 
+                          href={`https://wa.me/5519998564109?text=${whatsappMsg}`}
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="dash-status-btn-whatsapp"
+                      >
+                          <i className="fab fa-whatsapp"></i> Conversar com a Equipe no WhatsApp
+                      </a>
+                  </div>
+
+                  <div className="dash-status-footer-actions">
+                      <button type="button" className="dash-status-btn-logout" onClick={handleLogout}>
+                          <i className="fas fa-sign-out-alt"></i> Sair / Trocar de Conta
+                      </button>
+                      <span className="dash-status-footer-divider">•</span>
+                      <Link to="/excluir-conta" className="dash-status-link-delete">
+                          Solicitar Exclusão Definitiva
+                      </Link>
+                  </div>
               </div>
           </div>
       );

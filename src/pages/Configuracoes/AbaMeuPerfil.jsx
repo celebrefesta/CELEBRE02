@@ -3,6 +3,7 @@ import { db } from '../../firebaseConfig';
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { formatarDataExibicao } from '../../utils/periodoTesteUtils';
+import './Configuracoes.css';
 
 // 🔤 Helper: Capitaliza primeira letra de cada palavra (Title Case)
 const capitalize = (str) => {
@@ -35,22 +36,26 @@ const formatTelefone = (value) => {
   }
   return digits
     .replace(/(\d{2})(\d)/, '($1) $2')
-    .replace(/(\d{5})(\d)/, '$1-$2');
+    .replace(/(\d{5})(\d{4})$/, '$1-$2');
 };
 
-// 📮 Helper: Máscara de CEP (00000-000)
+// 🏠 Helper: Máscara de CEP (00000-000)
 const formatCEP = (value) => {
   if (!value) return '';
   const digits = value.replace(/\D/g, '').slice(0, 8);
-  return digits.replace(/(\d{5})(\d)/, '$1-$2');
+  return digits.replace(/(\d{5})(\d{1,3})$/, '$1-$2');
 };
 
 const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, nomeEmpresa, registrarLog, dataCriacaoConta }) => {
+  const [carregando, setCarregando] = useState(true);
+  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
+  const [uploadingFoto, setUploadingFoto] = useState(false);
+
   const [dadosPerfil, setDadosPerfil] = useState({
-    nome: '', 
-    sobrenome: '', 
-    cpf: '', 
-    telefone: '', 
+    nome: '',
+    sobrenome: '',
+    cpf: '',
+    telefone: '',
     cargo: '',
     aniversario: '',
     dataCriacao: '',
@@ -63,20 +68,31 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
     cidade: '',
     uf: '',
     email: '',
-    asoStatus: 'Pendente', 
-    asoTipo: 'Admissional', 
-    asoDataExame: '', 
-    asoValidade: '', 
+    asoStatus: '',
+    asoTipo: '',
+    asoDataExame: '',
+    asoValidade: '',
     asoObservacoes: ''
   });
-  
-  const [salvandoPerfil, setSalvandoPerfil] = useState(false);
-  const [carregando, setCarregando] = useState(true);
-  const [uploadingFoto, setUploadingFoto] = useState(false);
 
+  // Auto-ajuste de segurança: se nome contiver sobrenome junto, separa automaticamente
+  useEffect(() => {
+    if (dadosPerfil.nome && dadosPerfil.nome.trim().includes(' ')) {
+      const partes = dadosPerfil.nome.trim().split(/\s+/);
+      if (partes.length > 1) {
+        setDadosPerfil(prev => ({
+          ...prev,
+          nome: capitalize(partes[0]),
+          sobrenome: prev.sobrenome ? prev.sobrenome : capitalize(partes.slice(1).join(' '))
+        }));
+      }
+    }
+  }, [dadosPerfil.nome]);
+
+  // Carrega os dados reais do Firestore
   useEffect(() => {
     const carregarDadosUsuario = async () => {
-      if (!usuarioLogado) return;
+      if (!usuarioLogado?.uid) return;
       try {
         const userRef = doc(db, 'usuarios', usuarioLogado.uid);
         const userSnap = await getDoc(userRef);
@@ -87,10 +103,26 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
           const rawCad = uData.dataCadastro || uData.criadoEm || usuarioLogado.metadata?.creationTime;
           dataCriacaoFinal = formatarDataExibicao(rawCad) || dataCriacaoFinal || '—';
 
+          let rawSobrenome = (uData.sobrenome || '').trim();
+          let rawNome = (uData.nome || uData.nomeCompleto || uData.nomeExibicao || usuarioLogado.displayName || '').trim();
+
+          let nomeInicial = '';
+          let sobrenomeInicial = capitalize(rawSobrenome);
+
+          if (rawNome) {
+            const partes = rawNome.split(/\s+/);
+            nomeInicial = capitalize(partes[0]); // Garante APENAS o primeiro nome no card Nome
+            if (!sobrenomeInicial && partes.length > 1) {
+              sobrenomeInicial = capitalize(partes.slice(1).join(' ')); // O restante vai para Sobrenome
+            }
+          } else {
+            nomeInicial = isCollaborator ? 'Colaborador' : 'Admin';
+          }
+
           setDadosPerfil(prev => ({
             ...prev,
-            nome: capitalize(uData.nomeCompleto || uData.nomeExibicao || usuarioLogado.displayName || (isCollaborator ? 'Colaborador' : 'Admin')),
-            sobrenome: capitalize(uData.sobrenome || ''),
+            nome: nomeInicial,
+            sobrenome: sobrenomeInicial,
             cpf: formatCPF(uData.cpf || uData.documento || ''),
             telefone: formatTelefone(uData.telefone || ''),
             cargo: capitalize(uData.cargo || (isSuperAdmin ? 'Administrador Geral' : (isOwner ? 'Proprietário(a)' : 'Gestor(a)'))),
@@ -231,10 +263,13 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
 
       const enderecoCompleto = `${ruaFormatada}${dadosPerfil.numero ? ', ' + dadosPerfil.numero : ''}${bairroFormatado ? ' - ' + bairroFormatado : ''}${cidadeFormatada ? ' (' + cidadeFormatada + '/' + ufFormatada + ')' : ''}`;
 
-      await updateProfile(usuarioLogado, { displayName: nomeFormatado });
+      const nomeCompletoCombinado = sobrenomeFormatado ? `${nomeFormatado} ${sobrenomeFormatado}` : nomeFormatado;
+
+      await updateProfile(usuarioLogado, { displayName: nomeCompletoCombinado });
       const userRef = doc(db, 'usuarios', usuarioLogado.uid);
       await updateDoc(userRef, {
-        nomeCompleto: nomeFormatado, 
+        nome: nomeFormatado,
+        nomeCompleto: nomeCompletoCombinado, 
         sobrenome: sobrenomeFormatado,
         cpf: dadosPerfil.cpf, 
         telefone: dadosPerfil.telefone, 
@@ -281,7 +316,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
       
-      <div className="profile-grid-responsive" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', gap: '24px', alignItems: 'start' }}>
+      <div className="profile-grid-responsive">
         
         {/* COLUNA ESQUERDA: CRACHÁ DIGITAL & FOTO PESSOAL */}
         <div style={{
@@ -442,24 +477,48 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               <i className="fas fa-id-card" style={{ color: '#3b82f6', marginRight: '6px' }}></i> Identificação Pessoal
             </h4>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                  Nome Completo *
+            {/* LINHA 1: NOME E SOBRENOME (2 COLUNAS NA MESMA LINHA) */}
+            <div 
+              className="profile-fields-2col-row" 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: '16px', 
+                marginBottom: '16px', 
+                width: '100%', 
+                boxSizing: 'border-box' 
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  Nome *
                 </label>
                 <input 
                   type="text" 
                   value={dadosPerfil.nome} 
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, nome: e.target.value })} 
-                  onBlur={(e) => setDadosPerfil({ ...dadosPerfil, nome: capitalize(e.target.value) })}
-                  placeholder="Seu nome"
+                  onBlur={(e) => {
+                    const val = e.target.value.trim();
+                    if (!val) return;
+                    const partes = val.split(/\s+/);
+                    if (partes.length > 1 && !dadosPerfil.sobrenome?.trim()) {
+                      setDadosPerfil(prev => ({
+                        ...prev,
+                        nome: capitalize(partes[0]),
+                        sobrenome: capitalize(partes.slice(1).join(' '))
+                      }));
+                    } else {
+                      setDadosPerfil(prev => ({ ...prev, nome: capitalize(partes[0] || val) }));
+                    }
+                  }}
+                  placeholder="Seu primeiro nome"
                   required
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Sobrenome / Apelido
                 </label>
                 <input 
@@ -468,39 +527,25 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, sobrenome: e.target.value })} 
                   onBlur={(e) => setDadosPerfil({ ...dadosPerfil, sobrenome: capitalize(e.target.value) })}
                   placeholder="Seu sobrenome"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
                 />
               </div>
+            </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                  Cargo / Função na Empresa
-                </label>
-                <input 
-                  type="text" 
-                  value={isCollaborator ? 'Colaborador' : 'Administrador'} 
-                  readOnly
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontWeight: '800', cursor: 'not-allowed', fontSize: '14px', boxSizing: 'border-box' }}
-                  title="Cargo definido pelo nível de assinatura da conta"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                  Telefone / WhatsApp Pessoal
-                </label>
-                <input 
-                  type="text" 
-                  value={dadosPerfil.telefone} 
-                  onChange={(e) => setDadosPerfil({ ...dadosPerfil, telefone: formatTelefone(e.target.value) })} 
-                  placeholder="(00) 00000-0000"
-                  maxLength="15"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+            {/* LINHA 2: CPF E DATA DE NASCIMENTO (2 COLUNAS NA MESMA LINHA) */}
+            <div 
+              className="profile-fields-2col-row" 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: '16px', 
+                marginBottom: '16px', 
+                width: '100%', 
+                boxSizing: 'border-box' 
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
                   CPF do Titular
                 </label>
                 <input 
@@ -509,19 +554,59 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, cpf: formatCPF(e.target.value) })} 
                   placeholder="000.000.000-00"
                   maxLength="14"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Data de Nascimento / Aniversário
                 </label>
                 <input 
                   type="date" 
                   value={dadosPerfil.aniversario} 
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, aniversario: e.target.value })} 
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                />
+              </div>
+            </div>
+
+            {/* LINHA 3: CARGO E TELEFONE (2 COLUNAS NA MESMA LINHA) */}
+            <div 
+              className="profile-fields-2col-row" 
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(2, 1fr)', 
+                gap: '16px', 
+                marginBottom: '16px', 
+                width: '100%', 
+                boxSizing: 'border-box' 
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  Cargo / Função na Empresa
+                </label>
+                <input 
+                  type="text" 
+                  value={isCollaborator ? 'Colaborador' : 'Administrador'} 
+                  readOnly
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontWeight: '800', cursor: 'not-allowed', fontSize: '14px', boxSizing: 'border-box' }}
+                  title="Cargo definido pelo nível de assinatura da conta"
+                />
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  Telefone / WhatsApp Pessoal
+                </label>
+                <input 
+                  type="text" 
+                  value={dadosPerfil.telefone} 
+                  onChange={(e) => setDadosPerfil({ ...dadosPerfil, telefone: formatTelefone(e.target.value) })} 
+                  placeholder="(00) 00000-0000"
+                  maxLength="15"
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
             </div>
@@ -535,7 +620,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               <i className="fas fa-map-marker-alt" style={{ color: '#10b981', marginRight: '6px' }}></i> Endereço Residencial
             </h4>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+            <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
               <div>
                 <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
                   CEP
@@ -656,9 +741,10 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
           </div>
 
           {/* ÚNICO BOTÃO PRINCIPAL DE SALVAR DADOS DO PERFIL */}
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+          <div className="profile-submit-wrapper" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
             <button 
               type="submit" 
+              className="btn-salvar-perfil"
               disabled={salvandoPerfil} 
               style={{
                 background: 'var(--dourado)',

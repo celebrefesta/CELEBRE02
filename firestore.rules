@@ -74,6 +74,18 @@ service cloud.firestore {
       allow write: if isSuperAdmin() || (logado() && request.auth.uid == tenantId);
     }
 
+    // configuracoes_notificacoes/{tenantId}
+    match /configuracoes_notificacoes/{tenantId} {
+      allow read, write: if isSuperAdmin() || souDonoOuFuncionario(tenantId);
+    }
+
+    // historico_notificacoes/{docId}
+    match /historico_notificacoes/{docId} {
+      allow read: if isSuperAdmin() || (logado() && resource.data.tenantId == request.auth.uid) || souDonoOuFuncionario(resource.data.tenantId);
+      allow create: if isSuperAdmin() || logado();
+      allow update, delete: if isSuperAdmin() || (logado() && resource.data.tenantId == request.auth.uid);
+    }
+
     // logs_atividades/{docId}
     match /logs_atividades/{docId} {
       allow create: if logado();

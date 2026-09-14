@@ -4,6 +4,7 @@ import { db } from '../../firebaseConfig';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth';
 import { validarCPF, validarCNPJ } from '../../utils/validadores';
+import { processarDisparoAutomatico } from '../../utils/notificacoesDispatchService';
 import './AutoCadastro.css';
 
 const AutoCadastro = () => {
@@ -173,38 +174,35 @@ const AutoCadastro = () => {
         });
       }
 
-      // 3. E-mail de boas-vindas
-      try {
-        await addDoc(collection(db, 'mail'), {
-          to: form.email,
-          message: {
-            subject: `Sua ficha foi criada com sucesso na ${empresa.nome || 'Celebre'}! 🎉`,
-            html: `
-              <div style="font-family: sans-serif; color: #333; max-width: 600px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin: 0 auto;">
-                <div style="background-color: #0f172a; padding: 25px; text-align: center;">
-                  <h1 style="color: #c5a059; margin: 0; font-size: 24px;">${empresa.nome || 'Celebre Decorações'}</h1>
-                </div>
-                <div style="padding: 30px;">
-                  <h2 style="color: #0f172a; font-size: 20px;">Olá, ${form.nome.split(' ')[0]}!</h2>
-                  <p style="font-size: 16px; line-height: 1.5;">Que alegria ter você por aqui! O seu cadastro foi concluído com sucesso e já está no nosso sistema.</p>
-                  
-                  ${carrinho.length > 0 ? `
-                    <div style="background-color: #f8fafc; border-left: 4px solid #c5a059; padding: 15px; margin: 25px 0; border-radius: 0 8px 8px 0;">
-                      <p style="margin: 0; font-weight: bold; color: #1e40af;">🛍️ Seu pedido de orçamento:</p>
-                      <p style="margin: 8px 0 0 0; font-size: 15px; color: #1e3a8a;">Recebemos a sua seleção de ${carrinho.length} itens. Em breve, entraremos em contato pelo seu WhatsApp para confirmar a disponibilidade para a data do evento e finalizar a locação!</p>
-                    </div>
-                  ` : ''}
+      // 3. Disparo Automático de Notificações (Gestor + Boas-Vindas Cliente)
+      processarDisparoAutomatico({
+        tenantId: idDaLoja,
+        evento: 'novo_cadastro_cliente',
+        destinatario: 'gestor',
+        dados: {
+          nomeCliente: form.nome,
+          clienteEmail: form.email,
+          clienteTelefone: form.contato,
+          documento: form.documento,
+          cidade: form.cidade,
+          nomeEmpresa: empresa.nome || 'Celebre Festas',
+          telefoneEmpresa: empresa.whats || ''
+        }
+      }).catch(e => console.warn("Aviso ao notificar gestor sobre novo cadastro:", e));
 
-                  <p style="font-size: 16px; line-height: 1.5;">Se tiver qualquer dúvida, basta falar com a nossa equipe.</p>
-                  <p style="margin-top: 30px; font-size: 16px;">Com carinho,<br><strong>Equipe ${empresa.nome || 'Celebre'}</strong></p>
-                </div>
-              </div>
-            `
-          }
-        });
-      } catch (errMail) {
-        console.warn("Aviso envio email:", errMail);
-      }
+      processarDisparoAutomatico({
+        tenantId: idDaLoja,
+        evento: 'boas_vindas_catalogo',
+        destinatario: 'cliente',
+        dados: {
+          nomeCliente: form.nome,
+          clienteEmail: form.email,
+          clienteTelefone: form.contato,
+          dataEvento: form.dataEvento ? form.dataEvento.split('-').reverse().join('/') : '',
+          nomeEmpresa: empresa.nome || 'Celebre Festas',
+          telefoneEmpresa: empresa.whats || ''
+        }
+      }).catch(e => console.warn("Aviso ao enviar boas-vindas ao cliente:", e));
 
       // Audit Log
       try {

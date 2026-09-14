@@ -298,7 +298,7 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
       </div>
 
       {/* GRID DE CARDS PRINCIPAIS */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '25px' }}>
+      <div className="seguranca-cards-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '25px' }}>
 
         {/* CARD 1: TROCAR SENHA POR E-MAIL SEGURO */}
         <div className="config-card" style={{ margin: 0, display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>

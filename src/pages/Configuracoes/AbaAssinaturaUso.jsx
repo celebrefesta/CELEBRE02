@@ -314,7 +314,7 @@ const AbaAssinaturaUso = ({
       </div>
 
       {/* 📊 PAINEL DE CONSUMO E LIMITES (USAGE KPI CARDS) */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+      <div className="assinatura-usage-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
         <div style={{ background: 'var(--branco)', padding: '20px', borderRadius: '12px', border: '1px solid var(--borda)', boxShadow: '0 2px 8px rgba(0,0,0,0.02)' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
             <span style={{ fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)' }}>
@@ -398,7 +398,7 @@ const AbaAssinaturaUso = ({
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
+        <div className="assinatura-billing-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '14px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px', background: 'var(--fundo-cinza)', borderRadius: '8px', border: '1px solid var(--borda)' }}>
             <div>
               <span style={{ fontSize: '11px', fontWeight: '700', color: 'var(--texto-secundario)', textTransform: 'uppercase', display: 'block' }}>Forma de Pagamento</span>
@@ -584,7 +584,7 @@ const AbaAssinaturaUso = ({
           </span>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
+        <div className="assinatura-features-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px' }}>
           {[
             { icon: 'fas fa-users', color: '#3b82f6', title: 'Gestão de Clientes', desc: 'CRM completo e histórico de clientes' },
             { icon: 'fas fa-boxes', color: '#10b981', title: 'Gestão de Estoque', desc: 'Acervo com controle de peças e valores' },

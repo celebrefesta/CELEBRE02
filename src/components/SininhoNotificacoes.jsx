@@ -33,10 +33,12 @@ const SininhoNotificacoes = () => {
   useEffect(() => {
     if (!usuarioLogado) return; // 🔥 Só permite a busca se o utilizador estiver logado
 
+    const tenantId = localStorage.getItem('tenantId') || usuarioLogado.uid;
+
     // 🔥 BLINDAGEM: Busca apenas os clientes da SUA loja
     const qClientes = query(
         collection(db, "clientes"), 
-        where("userId", "==", usuarioLogado.uid),
+        where("userId", "==", tenantId),
         where("situacaoFinanceira", "==", "pendente")
     );
     
@@ -48,7 +50,7 @@ const SininhoNotificacoes = () => {
     // 🔥 BLINDAGEM: Busca apenas os orçamentos da SUA loja
     const qPedidos = query(
         collection(db, "locacoes"), 
-        where("userId", "==", usuarioLogado.uid),
+        where("userId", "==", tenantId),
         where("origem", "==", "catalogo_publico"), 
         where("status", "==", "orcamento")
     );
