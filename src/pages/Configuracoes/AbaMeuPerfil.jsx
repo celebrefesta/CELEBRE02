@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { db } from '../../firebaseConfig'; 
 import { doc, getDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { updateProfile } from 'firebase/auth';
 import { formatarDataExibicao } from '../../utils/periodoTesteUtils';
+import { validarCPF, validarDataNascimento } from '../../utils/validadores';
 import './Configuracoes.css';
 
 // 🔤 Helper: Capitaliza primeira letra de cada palavra (Title Case)
@@ -47,6 +49,7 @@ const formatCEP = (value) => {
 };
 
 const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, nomeEmpresa, registrarLog, dataCriacaoConta }) => {
+  const navigate = useNavigate();
   const [carregando, setCarregando] = useState(true);
   const [salvandoPerfil, setSalvandoPerfil] = useState(false);
   const [uploadingFoto, setUploadingFoto] = useState(false);
@@ -64,6 +67,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
     cep: '',
     rua: '',
     numero: '',
+    complemento: '',
     bairro: '',
     cidade: '',
     uf: '',
@@ -133,6 +137,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
             cep: formatCEP(uData.cep || ''),
             rua: capitalize(uData.rua || uData.endereco || ''),
             numero: uData.numero || '',
+            complemento: uData.complemento || '',
             bairro: capitalize(uData.bairro || ''),
             cidade: capitalize(uData.cidade || ''),
             uf: (uData.uf || '').toUpperCase(),
@@ -146,6 +151,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               const equipeData = snapEquipe.docs[0].data();
               setDadosPerfil(prev => ({
                 ...prev,
+                cargo: capitalize(equipeData.cargo || prev.cargo || 'Colaborador'),
                 asoStatus: equipeData.asoStatus || 'Pendente',
                 asoTipo: equipeData.asoTipo || 'Admissional',
                 asoDataExame: equipeData.asoDataExame || '',
@@ -253,6 +259,20 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
     e.preventDefault();
     setSalvandoPerfil(true);
     try {
+      const cpfLimpo = (dadosPerfil.cpf || '').replace(/\D/g, '');
+      if (cpfLimpo.length > 0 && (cpfLimpo.length !== 11 || !validarCPF(cpfLimpo))) {
+        alert('⚠️ O CPF informado é inválido. Por favor, verifique os dígitos antes de salvar.');
+        setSalvandoPerfil(false);
+        return;
+      }
+
+      const checagemData = validarDataNascimento(dadosPerfil.aniversario);
+      if (!checagemData.valido) {
+        alert('⚠️ A data de nascimento é inválida. Informe uma data de até 100 anos atrás e que não seja futura.');
+        setSalvandoPerfil(false);
+        return;
+      }
+
       const nomeFormatado = capitalize(dadosPerfil.nome);
       const sobrenomeFormatado = capitalize(dadosPerfil.sobrenome);
       const cargoFormatado = capitalize(dadosPerfil.cargo);
@@ -261,7 +281,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
       const cidadeFormatada = capitalize(dadosPerfil.cidade);
       const ufFormatada = (dadosPerfil.uf || '').toUpperCase();
 
-      const enderecoCompleto = `${ruaFormatada}${dadosPerfil.numero ? ', ' + dadosPerfil.numero : ''}${bairroFormatado ? ' - ' + bairroFormatado : ''}${cidadeFormatada ? ' (' + cidadeFormatada + '/' + ufFormatada + ')' : ''}`;
+      const enderecoCompleto = `${ruaFormatada}${dadosPerfil.numero ? ', ' + dadosPerfil.numero : ''}${dadosPerfil.complemento ? ' - ' + dadosPerfil.complemento : ''}${bairroFormatado ? ' - ' + bairroFormatado : ''}${cidadeFormatada ? ' (' + cidadeFormatada + '/' + ufFormatada + ')' : ''}`;
 
       const nomeCompletoCombinado = sobrenomeFormatado ? `${nomeFormatado} ${sobrenomeFormatado}` : nomeFormatado;
 
@@ -279,6 +299,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
         cep: dadosPerfil.cep,
         rua: ruaFormatada,
         numero: dadosPerfil.numero,
+        complemento: dadosPerfil.complemento || '',
         bairro: bairroFormatado,
         cidade: cidadeFormatada,
         uf: ufFormatada,
@@ -319,146 +340,98 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
       <div className="profile-grid-responsive">
         
         {/* COLUNA ESQUERDA: CRACHÁ DIGITAL & FOTO PESSOAL */}
-        <div style={{
-          background: '#ffffff',
-          borderRadius: '16px',
-          padding: '32px 20px',
-          border: '1px solid #e2e8f0',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          textAlign: 'center',
-          position: 'relative'
-        }}>
+        <div className="profile-cracha-card">
           
-          {/* CONTAINER DA FOTO COM UPLOAD OVERLAY - ALINHAMENTO PERFEITO */}
-          <div style={{ position: 'relative', width: '130px', height: '130px', margin: '0 auto 20px' }}>
-            <div style={{
-              width: '130px',
-              height: '130px',
-              borderRadius: '50%',
-              overflow: 'hidden',
-              background: isSuperAdmin ? 'linear-gradient(135deg, #c5a059, #a37c3f)' : 'linear-gradient(135deg, #0f172a, #1e293b)',
-              color: '#ffffff',
-              fontSize: '52px',
-              fontWeight: '900',
-              display: 'flex',
-              alignItems: 'center',
-              justify: 'center',
-              textAlign: 'center',
-              border: '4px solid #ffffff',
-              boxShadow: '0 10px 25px rgba(0,0,0,0.12)',
-              boxSizing: 'border-box'
-            }}>
-              {dadosPerfil.fotoUrl ? (
-                <img src={dadosPerfil.fotoUrl} alt="Foto de Perfil" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />
-              ) : (
-                <span style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', lineHeight: '1', textAlign: 'center' }}>
-                  {dadosPerfil.nome ? dadosPerfil.nome.charAt(0).toUpperCase() : 'U'}
-                </span>
-              )}
+          {/* CONTAINER DA FOTO COM UPLOAD OVERLAY */}
+          <div className="profile-cracha-avatar-col">
+            <div className="profile-cracha-avatar-wrap">
+              <div className="profile-cracha-avatar">
+                {dadosPerfil.fotoUrl ? (
+                  <img src={dadosPerfil.fotoUrl} alt="Foto de Perfil" />
+                ) : (
+                  <span>
+                    {dadosPerfil.nome ? dadosPerfil.nome.charAt(0).toUpperCase() : 'U'}
+                  </span>
+                )}
+              </div>
+
+              {/* BOTÃO DA CÂMERA DE UPLOAD DE FOTO PESSOAL */}
+              <label 
+                htmlFor="upload-foto-perfil-input"
+                className="profile-cracha-cam-btn"
+                title="Alterar Foto de Perfil"
+              >
+                <i className="fas fa-camera"></i>
+              </label>
+
+              <input 
+                type="file" 
+                id="upload-foto-perfil-input" 
+                accept="image/*" 
+                onChange={handleUploadFoto} 
+                style={{ display: 'none' }} 
+              />
             </div>
 
-            {/* BOTÃO DA CÂMERA DE UPLOAD DE FOTO PESSOAL */}
-            <label 
-              htmlFor="upload-foto-perfil-input"
-              style={{
-                position: 'absolute',
-                bottom: '0px',
-                right: '0px',
-                width: '38px',
-                height: '38px',
-                borderRadius: '50%',
-                background: '#0f172a',
-                color: '#ffffff',
-                display: 'flex',
-                alignItems: 'center',
-                justify: 'center',
-                cursor: 'pointer',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.25)',
-                border: '2.5px solid #ffffff',
-                transition: 'all 0.2s ease',
-                zIndex: 10,
-                padding: 0,
-                lineHeight: 1
-              }}
-              title="Upar Foto Pessoal"
-            >
-              <i className="fas fa-camera" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', margin: 0, padding: 0, lineHeight: 1, textAlign: 'center', fontSize: '15px' }}></i>
-            </label>
+            {/* BOTÃO REMOVER FOTO (SE TIVER) */}
+            {dadosPerfil.fotoUrl && (
+              <button
+                type="button"
+                onClick={handleRemoverFoto}
+                disabled={uploadingFoto}
+                className="profile-cracha-remove-btn"
+              >
+                Remover Foto
+              </button>
+            )}
 
-            <input 
-              type="file" 
-              id="upload-foto-perfil-input" 
-              accept="image/*" 
-              onChange={handleUploadFoto} 
-              style={{ display: 'none' }} 
-            />
+            {uploadingFoto && (
+              <span className="profile-cracha-uploading">
+                <i className="fas fa-spinner fa-spin"></i> Atualizando...
+              </span>
+            )}
           </div>
 
-          {/* BOTÃO REMOVER FOTO (SE TIVER) */}
-          {dadosPerfil.fotoUrl && (
-            <button
-              type="button"
-              onClick={handleRemoverFoto}
-              disabled={uploadingFoto}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#ef4444',
-                fontSize: '12px',
-                fontWeight: '700',
-                cursor: 'pointer',
-                marginBottom: '14px',
-                textDecoration: 'underline'
-              }}
-            >
-              Remover Foto
-            </button>
-          )}
+          {/* INFORMAÇÕES PESSOAIS (AO LADO NO MOBILE, ABAIXO NO DESKTOP) */}
+          <div className="profile-cracha-info-col">
+            <div className="profile-cracha-header-row">
+              <h2 className="profile-cracha-name">
+                {capitalize(dadosPerfil.nome) || 'Usuário'} {capitalize(dadosPerfil.sobrenome)}
+              </h2>
 
-          {uploadingFoto && (
-            <span style={{ fontSize: '12px', color: '#3b82f6', fontWeight: 'bold', marginBottom: '10px' }}>
-              <i className="fas fa-spinner fa-spin"></i> Atualizando foto...
-            </span>
-          )}
+              <span className="profile-cracha-role-badge">
+                {isCollaborator ? 'Colaborador(a)' : 'Administrador'}
+              </span>
+            </div>
 
-          <h2 style={{ fontSize: '20px', color: 'var(--texto-principal)', margin: '0 0 4px 0', fontWeight: '800', textTransform: 'capitalize' }}>
-            {capitalize(dadosPerfil.nome) || 'Usuário'} {capitalize(dadosPerfil.sobrenome)}
-          </h2>
+            <div className="profile-cracha-details-box">
+              <p className="profile-cracha-detail-item">
+                <i className="fas fa-envelope"></i>
+                <span className="detail-val" title={dadosPerfil.email}>{dadosPerfil.email}</span>
+              </p>
 
-          <span style={{ fontSize: '13.5px', color: 'var(--dourado)', fontWeight: '800', marginBottom: '20px', display: 'inline-block' }}>
-            {isCollaborator ? 'Colaborador(a)' : 'Administrador'}
-          </span>
+              <p className="profile-cracha-detail-item">
+                <i className="fas fa-building"></i>
+                <span>Empresa: <strong>{nomeEmpresa || 'Sua Empresa'}</strong></span>
+              </p>
 
-          <div style={{ width: '100%', textAlign: 'left', background: 'var(--fundo-cinza)', padding: '16px', borderRadius: '12px', border: '1px solid var(--borda)' }}>
-            <p style={{ fontSize: '12.5px', color: 'var(--texto-secundario)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="fas fa-envelope" style={{ color: 'var(--texto-secundario)' }}></i> {dadosPerfil.email}
-            </p>
-            <p style={{ fontSize: '12.5px', color: 'var(--texto-secundario)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="fas fa-calendar-alt" style={{ color: '#c5a059' }}></i> Criação da Conta: <strong style={{ color: 'var(--texto-principal)' }}>{dadosPerfil.dataCriacao || dataCriacaoConta || '—'}</strong>
-            </p>
-            <p style={{ fontSize: '12.5px', color: 'var(--texto-secundario)', margin: '0 0 8px 0', display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="fas fa-check-circle" style={{ color: '#10b981' }}></i> Status: <strong style={{ color: 'var(--texto-principal)' }}>Conta Ativa</strong>
-            </p>
-            <p style={{ fontSize: '12.5px', color: 'var(--texto-secundario)', margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <i className="fas fa-building" style={{ color: '#3b82f6' }}></i> Empresa: <strong style={{ color: 'var(--texto-principal)' }}>{nomeEmpresa || 'Sua Empresa'}</strong>
-            </p>
+              <div className="profile-cracha-meta-row">
+                <p className="profile-cracha-detail-item meta-status">
+                  <i className="fas fa-check-circle"></i>
+                  <span>Status: <strong>Conta Ativa</strong></span>
+                </p>
+
+                <p className="profile-cracha-detail-item meta-date">
+                  <i className="fas fa-calendar-alt"></i>
+                  <span>Criação: <strong>{dadosPerfil.dataCriacao || dataCriacaoConta || '—'}</strong></span>
+                </p>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* COLUNA DIREITA: FORMULÁRIO COMPLETO EM 2 COLUNAS ESPAÇOSAS */}
-        <form onSubmit={handleSalvarPerfil} style={{
-          background: 'var(--branco)',
-          borderRadius: '16px',
-          padding: '32px',
-          border: '1px solid var(--borda)',
-          boxShadow: '0 4px 14px rgba(0,0,0,0.03)',
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '24px'
-        }}>
+        <form onSubmit={handleSalvarPerfil} className="profile-form-card">
           
           <div>
             <h3 style={{ margin: 0, fontSize: '20px', fontWeight: '800', color: 'var(--texto-principal)', display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -490,7 +463,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Nome *
                 </label>
                 <input 
@@ -518,7 +491,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Sobrenome / Apelido
                 </label>
                 <input 
@@ -545,8 +518,30 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
-                  CPF do Titular
+                <label style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  <span>CPF do Titular</span>
+                  {(() => {
+                    const cpfLimpo = (dadosPerfil.cpf || '').replace(/\D/g, '');
+                    if (cpfLimpo.length === 11) {
+                      return validarCPF(cpfLimpo) ? (
+                        <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <i className="fas fa-check-circle"></i> VÁLIDO
+                        </span>
+                      ) : (
+                        <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <i className="fas fa-times-circle"></i> INVÁLIDO
+                        </span>
+                      );
+                    }
+                    if (cpfLimpo.length > 0 && cpfLimpo.length < 11) {
+                      return (
+                        <span style={{ color: '#f59e0b', fontWeight: '700', fontSize: '10px' }}>
+                          {11 - cpfLimpo.length} {11 - cpfLimpo.length === 1 ? 'dígito restante' : 'dígitos restantes'}
+                        </span>
+                      );
+                    }
+                    return null;
+                  })()}
                 </label>
                 <input 
                   type="text" 
@@ -554,19 +549,83 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, cpf: formatCPF(e.target.value) })} 
                   placeholder="000.000.000-00"
                   maxLength="14"
-                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ 
+                    width: '100%', 
+                    minWidth: 0, 
+                    padding: '13px 16px', 
+                    borderRadius: '8px', 
+                    border: (() => {
+                      const cpfLimpo = (dadosPerfil.cpf || '').replace(/\D/g, '');
+                      if (cpfLimpo.length === 11) {
+                        return validarCPF(cpfLimpo) ? '1px solid #16a34a' : '1px solid #ef4444';
+                      }
+                      return '1px solid var(--borda)';
+                    })(), 
+                    background: (() => {
+                      const cpfLimpo = (dadosPerfil.cpf || '').replace(/\D/g, '');
+                      if (cpfLimpo.length === 11 && !validarCPF(cpfLimpo)) {
+                        return 'rgba(239, 68, 68, 0.05)';
+                      }
+                      return 'var(--fundo-cinza)';
+                    })(), 
+                    color: 'var(--texto-principal)', 
+                    fontSize: '14px', 
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s, background-color 0.2s'
+                  }}
                 />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
-                  Data de Nascimento / Aniversário
+                <label style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  <span>Data de Nascimento / Aniversário</span>
+                  {(() => {
+                    if (!dadosPerfil.aniversario) return null;
+                    const res = validarDataNascimento(dadosPerfil.aniversario);
+                    if (!res.valido) {
+                      return (
+                        <span style={{ color: '#ef4444', fontWeight: '800', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                          <i className="fas fa-times-circle"></i> INVÁLIDO
+                        </span>
+                      );
+                    }
+                    return (
+                      <span style={{ color: '#16a34a', fontWeight: '800', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px' }}>
+                        <i className="fas fa-check-circle"></i> VÁLIDO
+                      </span>
+                    );
+                  })()}
                 </label>
                 <input 
                   type="date" 
                   value={dadosPerfil.aniversario} 
+                  max={new Date().toISOString().split('T')[0]}
+                  min={(() => {
+                    const d = new Date();
+                    d.setFullYear(d.getFullYear() - 100);
+                    return d.toISOString().split('T')[0];
+                  })()}
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, aniversario: e.target.value })} 
-                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ 
+                    width: '100%', 
+                    minWidth: 0, 
+                    padding: '13px 16px', 
+                    borderRadius: '8px', 
+                    border: (() => {
+                      if (!dadosPerfil.aniversario) return '1px solid var(--borda)';
+                      const res = validarDataNascimento(dadosPerfil.aniversario);
+                      return res.valido ? '1px solid #16a34a' : '1px solid #ef4444';
+                    })(), 
+                    background: (() => {
+                      if (!dadosPerfil.aniversario) return 'var(--fundo-cinza)';
+                      const res = validarDataNascimento(dadosPerfil.aniversario);
+                      return res.valido ? 'var(--fundo-cinza)' : 'rgba(239, 68, 68, 0.05)';
+                    })(), 
+                    color: 'var(--texto-principal)', 
+                    fontSize: '14px', 
+                    boxSizing: 'border-box',
+                    transition: 'border-color 0.2s, background-color 0.2s'
+                  }}
                 />
               </div>
             </div>
@@ -584,20 +643,32 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               }}
             >
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Cargo / Função na Empresa
                 </label>
                 <input 
                   type="text" 
-                  value={isCollaborator ? 'Colaborador' : 'Administrador'} 
+                  value={dadosPerfil.cargo || (isCollaborator ? 'Colaborador' : 'Administrador Geral')} 
                   readOnly
-                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontWeight: '800', cursor: 'not-allowed', fontSize: '14px', boxSizing: 'border-box' }}
-                  title="Cargo definido pelo nível de assinatura da conta"
+                  style={{ 
+                    width: '100%', 
+                    minWidth: 0, 
+                    padding: '13px 16px', 
+                    borderRadius: '8px', 
+                    border: '1px solid var(--borda)', 
+                    background: 'var(--fundo-cinza)', 
+                    color: 'var(--texto-principal)', 
+                    fontWeight: '800', 
+                    cursor: 'default', 
+                    fontSize: '14px', 
+                    boxSizing: 'border-box' 
+                  }}
+                  title="Cargo definido na página de Equipe e Acessos"
                 />
               </div>
 
               <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px', lineHeight: 1.2 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Telefone / WhatsApp Pessoal
                 </label>
                 <input 
@@ -620,9 +691,10 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
               <i className="fas fa-map-marker-alt" style={{ color: '#10b981', marginRight: '6px' }}></i> Endereço Residencial
             </h4>
 
-            <div className="profile-form-row-2col" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+            {/* LINHA 1: CEP E ESTADO (UF) EM 2 COLUNAS */}
+            <div className="profile-fields-2col-row">
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   CEP
                 </label>
                 <input 
@@ -635,12 +707,39 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   }} 
                   placeholder="00000-000"
                   maxLength="9"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  Estado (UF)
+                </label>
+                <input 
+                  type="text" 
+                  value={dadosPerfil.uf} 
+                  onChange={(e) => setDadosPerfil({ ...dadosPerfil, uf: e.target.value.toUpperCase() })} 
+                  placeholder="UF (ex: SP)"
+                  maxLength="2"
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'uppercase' }}
+                />
+              </div>
+            </div>
+
+            {/* LINHA 2: LOGRADOURO / RUA E NÚMERO (RUA MAIOR QUE NÚMERO) */}
+            <div 
+              className="profile-fields-2col-row profile-fields-rua-num"
+              style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '2.5fr 1fr', 
+                gap: '16px', 
+                marginBottom: '16px', 
+                width: '100%', 
+                boxSizing: 'border-box' 
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Logradouro / Rua
                 </label>
                 <input 
@@ -649,25 +748,28 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, rua: e.target.value })} 
                   onBlur={(e) => setDadosPerfil({ ...dadosPerfil, rua: capitalize(e.target.value) })}
                   placeholder="Av. Paulista, Rua Flores..."
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                  Número e Complemento
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
+                  Número
                 </label>
                 <input 
                   type="text" 
                   value={dadosPerfil.numero} 
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, numero: e.target.value })} 
-                  placeholder="Ex: 100, Apto 42, Bloco B"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+                  placeholder="Ex: 100"
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
                 />
               </div>
+            </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+            {/* LINHA 3: BAIRRO E CIDADE EM 2 COLUNAS */}
+            <div className="profile-fields-2col-row">
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Bairro
                 </label>
                 <input 
@@ -676,12 +778,12 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, bairro: e.target.value })} 
                   onBlur={(e) => setDadosPerfil({ ...dadosPerfil, bairro: capitalize(e.target.value) })}
                   placeholder="Seu bairro"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
                 />
               </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
+              <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                   Cidade
                 </label>
                 <input 
@@ -690,54 +792,40 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
                   onChange={(e) => setDadosPerfil({ ...dadosPerfil, cidade: e.target.value })} 
                   onBlur={(e) => setDadosPerfil({ ...dadosPerfil, cidade: capitalize(e.target.value) })}
                   placeholder="Sua cidade"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
+                  style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'capitalize' }}
                 />
               </div>
+            </div>
 
-              <div>
-                <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                  Estado (UF)
-                </label>
-                <input 
-                  type="text" 
-                  value={dadosPerfil.uf} 
-                  onChange={(e) => setDadosPerfil({ ...dadosPerfil, uf: e.target.value.toUpperCase() })} 
-                  placeholder="UF (ex: SP, RJ, MG)"
-                  maxLength="2"
-                  style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', textTransform: 'uppercase' }}
-                />
-              </div>
+            {/* LINHA 4: COMPLEMENTO (ABAIXO DE BAIRRO E CIDADE) */}
+            <div className="profile-field-full" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, marginTop: '2px' }}>
+              <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
+                Complemento (Opcional)
+              </label>
+              <input 
+                type="text" 
+                value={dadosPerfil.complemento} 
+                onChange={(e) => setDadosPerfil({ ...dadosPerfil, complemento: e.target.value })} 
+                placeholder="Ex: Apto 42, Bloco B, Sala 3, etc."
+                style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box' }}
+              />
             </div>
           </div>
 
           <hr style={{ borderColor: 'var(--borda)', margin: 0 }} />
 
-          {/* SEÇÃO 3: MINI BIO & E-MAIL */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                Mini Bio / Apresentação Profissional (Exibida nos Contratos e Orçamentos)
-              </label>
-              <textarea 
-                rows="3"
-                value={dadosPerfil.bio} 
-                onChange={(e) => setDadosPerfil({ ...dadosPerfil, bio: e.target.value })} 
-                placeholder="Escreva uma breve apresentação sobre sua carreira e atuação..."
-                style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-principal)', fontSize: '14px', boxSizing: 'border-box', fontFamily: 'inherit', resize: 'vertical' }}
-              />
-            </div>
-
-            <div>
-              <label style={{ display: 'block', fontSize: '13px', fontWeight: '700', color: 'var(--texto-secundario)', marginBottom: '6px' }}>
-                E-mail de Login (Acesso ao Sistema)
-              </label>
-              <input 
-                type="email" 
-                value={dadosPerfil.email} 
-                readOnly 
-                style={{ width: '100%', padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-secundario)', cursor: 'not-allowed', fontSize: '14px', boxSizing: 'border-box' }} 
-              />
-            </div>
+          {/* SEÇÃO 3: CREDENCIAIS DE ACESSO */}
+          <div className="profile-field-full" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+            <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
+              E-mail de Login (Acesso ao Sistema)
+            </label>
+            <input 
+              type="email" 
+              value={dadosPerfil.email} 
+              readOnly 
+              style={{ width: '100%', minWidth: 0, padding: '13px 16px', borderRadius: '8px', border: '1px solid var(--borda)', background: 'var(--fundo-cinza)', color: 'var(--texto-secundario)', cursor: 'not-allowed', fontSize: '14px', boxSizing: 'border-box', fontWeight: '600' }} 
+              title="E-mail de login cadastrado e autenticado"
+            />
           </div>
 
           {/* ÚNICO BOTÃO PRINCIPAL DE SALVAR DADOS DO PERFIL */}

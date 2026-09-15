@@ -29,6 +29,34 @@ const Usuarios = () => {
     asoStatus: 'Pendente', asoTipo: 'Admissional', asoDataExame: '', asoValidade: '', asoObservacoes: ''
   });
 
+  const [dadosAdmin, setDadosAdmin] = useState({
+    nome: 'Você (Admin)',
+    cargo: 'Administração Geral'
+  });
+  const [modalAdminAberto, setModalAdminAberto] = useState(false);
+  const [cargoAdminTemp, setCargoAdminTemp] = useState('');
+  const [cargoAdminOutro, setCargoAdminOutro] = useState('');
+  const [salvandoAdmin, setSalvandoAdmin] = useState(false);
+
+  const CARGOS_TITULAR = [
+    'Proprietário(a)',
+    'Dono(a)',
+    'Diretor(a) Geral',
+    'Gerente Geral',
+    'Administrador(a)',
+    'Decorador(a) Chefe'
+  ];
+
+  const CARGOS_EQUIPE = [
+    'Atendimento / Recepção',
+    'Decorador(a) / Designer',
+    'Logística / Motorista',
+    'Gerente Operacional',
+    'Estoquista / Separador',
+    'Montador(a) / Apoio',
+    'Financeiro / Administrativo'
+  ];
+
   const registrarLog = async (acao, detalhes) => {
     try {
       const nomeEquipe = localStorage.getItem('funcName') || usuarioLogado?.displayName || usuarioLogado?.email || "Admin";
@@ -62,6 +90,10 @@ const Usuarios = () => {
 
       if (userSnap.exists()) {
         const userData = userSnap.data();
+        setDadosAdmin({
+          nome: userData.nomeCompleto || userData.nome || usuarioLogado?.displayName || 'Você (Admin)',
+          cargo: userData.cargo || 'Administrador Geral'
+        });
         const infoT = calcularPeriodoTeste(userData);
         const testeAtivo = infoT.emTeste;
         const assinaturaAtiva = userData.plano === 'pago' || userData.statusPagamentoVulso === 'pago' || userData.statusAssinatura === 'ativa';
@@ -117,7 +149,7 @@ const Usuarios = () => {
   const abrirModalCriacao = () => {
     setEditandoId(null);
     setNovoUsuario({
-      nome: '', cpf: '', telefone: '', cargo: 'Atendimento', email: '', senhaTemp: '', monitorarAtividade: true, 
+      nome: '', cpf: '', telefone: '', cargo: 'Atendimento / Recepção', email: '', senhaTemp: '', monitorarAtividade: true, 
       permissoes: { agenda: false, clientes: false, locacoes: false, estoque: false, compras: false, logistica: false, contratos: false, moodboard: false, catalogo: false, acessoFinanceiro: false },
       asoStatus: 'Pendente', asoTipo: 'Admissional', asoDataExame: '', asoValidade: '', asoObservacoes: ''
     });
@@ -127,11 +159,43 @@ const Usuarios = () => {
   const abrirModalEdicao = (membro) => {
     setEditandoId(membro.id);
     setNovoUsuario({
-      nome: membro.nome || '', cpf: membro.cpf || '', telefone: membro.telefone || '', cargo: membro.cargo || 'Atendimento', email: membro.email || '', senhaTemp: membro.senhaTemporaria || '', monitorarAtividade: membro.monitorarAtividade ?? true,
+      nome: membro.nome || '', cpf: membro.cpf || '', telefone: membro.telefone || '', cargo: membro.cargo || 'Atendimento / Recepção', email: membro.email || '', senhaTemp: membro.senhaTemporaria || '', monitorarAtividade: membro.monitorarAtividade ?? true,
       permissoes: membro.permissoes || { agenda: false, clientes: false, locacoes: false, estoque: false, compras: false, logistica: false, contratos: false, moodboard: false, catalogo: false, acessoFinanceiro: false },
       asoStatus: membro.asoStatus || 'Pendente', asoTipo: membro.asoTipo || 'Admissional', asoDataExame: membro.asoDataExame || '', asoValidade: membro.asoValidade || '', asoObservacoes: membro.asoObservacoes || ''
     });
     setModalAberto(true);
+  };
+
+  const abrirModalEdicaoAdmin = () => {
+    const cargoAtual = dadosAdmin.cargo || 'Administrador Geral';
+    if (CARGOS_TITULAR.includes(cargoAtual)) {
+      setCargoAdminTemp(cargoAtual);
+      setCargoAdminOutro('');
+    } else {
+      setCargoAdminTemp('Outro');
+      setCargoAdminOutro(cargoAtual);
+    }
+    setModalAdminAberto(true);
+  };
+
+  const salvarCargoAdmin = async (e) => {
+    e.preventDefault();
+    const cargoFinal = (cargoAdminTemp === 'Outro' ? cargoAdminOutro : cargoAdminTemp).trim() || 'Administrador Geral';
+    setSalvandoAdmin(true);
+    try {
+      await updateDoc(doc(db, 'usuarios', tenantId), {
+        cargo: cargoFinal
+      });
+      setDadosAdmin(prev => ({ ...prev, cargo: cargoFinal }));
+      await registrarLog("EDIÇÃO DE CARGO", `Atualizou o cargo do titular para "${cargoFinal}".`);
+      setModalAdminAberto(false);
+      alert("✅ Cargo do titular atualizado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao salvar cargo do titular:", error);
+      alert("Ocorreu um erro ao atualizar o cargo.");
+    } finally {
+      setSalvandoAdmin(false);
+    }
   };
 
   const salvarNovoUsuario = async (e) => {
@@ -289,21 +353,29 @@ const Usuarios = () => {
             <tr className="table-row-hover">
               <td>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
-                  <div style={{ width: '40px', height: '40px', backgroundColor: '#c5a059', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>AD</div>
+                  <div style={{ width: '40px', height: '40px', backgroundColor: '#c5a059', color: '#fff', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>
+                    {dadosAdmin.nome ? dadosAdmin.nome.charAt(0).toUpperCase() : 'AD'}
+                  </div>
                   <div>
-                    <strong style={{ color: 'var(--texto-principal)', display: 'block' }}>Você (Admin)</strong>
-                    <span style={{ fontSize: '11px', color: 'var(--texto-secundario)' }}>{usuarioLogado.email}</span>
+                    <strong style={{ color: 'var(--texto-principal)', display: 'block' }}>{dadosAdmin.nome} (Você)</strong>
+                    <span style={{ fontSize: '11px', color: 'var(--texto-secundario)' }}>{usuarioLogado?.email}</span>
                   </div>
                 </div>
               </td>
-              <td style={{ fontSize: '13px', color: 'var(--texto-principal)', fontWeight: 'bold' }}>Administração Geral</td>
+              <td style={{ fontSize: '13px', color: 'var(--texto-principal)', fontWeight: 'bold' }}>
+                <span>{dadosAdmin.cargo || 'Administrador Geral'}</span>
+              </td>
               <td>
                   <div className="permissoes-container">
                       <span className="perm-badge financeiro">Acesso Total + Financeiro</span>
                   </div>
               </td>
               <td className="td-acoes">
-                  <span className="badge-inalteravel">Inalterável</span>
+                  <div className="acoes-tabela">
+                    <button onClick={abrirModalEdicaoAdmin} className="btn-action edit" title="Editar seu Cargo/Função">
+                      Editar Cargo
+                    </button>
+                  </div>
               </td>
             </tr>
 
@@ -450,13 +522,36 @@ const Usuarios = () => {
                             <h4 className="modal-section-title"><i className="fas fa-briefcase" style={{ color: 'var(--dourado)' }}></i> RH & Atividades</h4>
                             <div style={{ marginBottom: '15px' }}>
                                 <label className="input-label">CARGO / FUNÇÃO</label>
-                                <select value={novoUsuario.cargo} onChange={e => setNovoUsuario({...novoUsuario, cargo: e.target.value})} className="input-field">
-                                    <option value="Atendimento">Atendimento</option>
-                                    <option value="Decorador(a)">Decorador(a)</option>
-                                    <option value="Logística">Logística / Motorista</option>
-                                    <option value="Gerente">Gerente</option>
+                                <select 
+                                  value={CARGOS_EQUIPE.includes(novoUsuario.cargo) ? novoUsuario.cargo : 'Outro'} 
+                                  onChange={e => {
+                                    if (e.target.value === 'Outro') {
+                                      setNovoUsuario({...novoUsuario, cargo: ''});
+                                    } else {
+                                      setNovoUsuario({...novoUsuario, cargo: e.target.value});
+                                    }
+                                  }} 
+                                  className="input-field"
+                                >
+                                    {CARGOS_EQUIPE.map(c => (
+                                      <option key={c} value={c}>{c}</option>
+                                    ))}
+                                    <option value="Outro">Outro (Digitar personalizado...)</option>
                                 </select>
                             </div>
+                            {!CARGOS_EQUIPE.includes(novoUsuario.cargo) && (
+                              <div style={{ marginBottom: '15px' }}>
+                                <label className="input-label">DIGITE O CARGO / FUNÇÃO PERSONALIZADO</label>
+                                <input 
+                                  type="text" 
+                                  placeholder="Ex: Designer Floral, Auxiliar de Montagem..." 
+                                  value={novoUsuario.cargo} 
+                                  onChange={e => setNovoUsuario({...novoUsuario, cargo: e.target.value})} 
+                                  className="input-field" 
+                                  required
+                                />
+                              </div>
+                            )}
                             <label className="checkbox-card" style={{ background: novoUsuario.monitorarAtividade ? 'rgba(16, 185, 129, 0.15)' : 'var(--fundo-cinza)', borderColor: novoUsuario.monitorarAtividade ? 'rgba(16, 185, 129, 0.3)' : 'var(--borda)' }}>
                                 <input type="checkbox" checked={novoUsuario.monitorarAtividade} onChange={e => setNovoUsuario({...novoUsuario, monitorarAtividade: e.target.checked})} style={{ width: '18px', height: '18px', accentColor: '#10b981', marginTop: '2px', cursor: 'pointer' }} />
                                 <div>
@@ -512,6 +607,88 @@ const Usuarios = () => {
                   </div>
                 </form>
             </div>
+          </div>
+        </div>
+      )}
+      {modalAdminAberto && (
+        <div className="modal-overlay-blur">
+          <div className="modal-card-custom" style={{ maxWidth: '480px' }}>
+            <div className="modal-header">
+              <div>
+                <h3 style={{ margin: 0, color: 'var(--texto-principal)', fontSize: '18px' }}>
+                  <i className="fas fa-user-shield" style={{ color: 'var(--dourado)', marginRight: '8px' }}></i>
+                  Cargo do Titular / Gestor
+                </h3>
+                <p style={{ margin: '4px 0 0', fontSize: '12px', color: 'var(--texto-secundario)' }}>
+                  Defina o cargo ou função que representará você na empresa e no sistema.
+                </p>
+              </div>
+              <button onClick={() => setModalAdminAberto(false)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer', color: 'var(--texto-secundario)' }}>×</button>
+            </div>
+
+            <form onSubmit={salvarCargoAdmin} className="modal-body" style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div>
+                <label className="input-label">NOME / TITULAR</label>
+                <input 
+                  type="text" 
+                  value={dadosAdmin.nome} 
+                  disabled 
+                  className="input-field" 
+                  style={{ background: 'var(--fundo-cinza)', cursor: 'not-allowed', fontWeight: 'bold' }} 
+                />
+              </div>
+
+              <div>
+                <label className="input-label">CARGO / FUNÇÃO NA EMPRESA *</label>
+                <select 
+                  value={cargoAdminTemp} 
+                  onChange={e => setCargoAdminTemp(e.target.value)} 
+                  className="input-field"
+                >
+                  {CARGOS_TITULAR.map(c => (
+                    <option key={c} value={c}>{c}</option>
+                  ))}
+                  <option value="Outro">Outro (Digitar personalizado...)</option>
+                </select>
+              </div>
+
+              {cargoAdminTemp === 'Outro' && (
+                <div>
+                  <label className="input-label">DIGITE SEU CARGO / TÍTULO</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Designer de Eventos & Gestor" 
+                    value={cargoAdminOutro} 
+                    onChange={e => setCargoAdminOutro(e.target.value)} 
+                    required 
+                    className="input-field" 
+                    autoFocus
+                  />
+                </div>
+              )}
+
+              <div style={{ background: 'rgba(197, 160, 89, 0.08)', border: '1px solid rgba(197, 160, 89, 0.25)', borderRadius: '8px', padding: '12px 14px', fontSize: '12px', color: 'var(--texto-secundario)', lineHeight: 1.4 }}>
+                <i className="fas fa-info-circle" style={{ color: 'var(--dourado)', marginRight: '6px' }}></i>
+                Seus privilégios continuarão sendo de <strong>Acesso Total & Financeiro</strong>. Esse cargo será sincronizado na aba <strong>Meu Perfil</strong>, relatórios e fichas internas.
+              </div>
+
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '10px', marginTop: '10px' }}>
+                <button 
+                  type="button" 
+                  onClick={() => setModalAdminAberto(false)} 
+                  className="btn-cancel"
+                >
+                  Cancelar
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={salvandoAdmin} 
+                  className="btn-submit"
+                >
+                  {salvandoAdmin ? 'Salvando...' : 'Salvar Cargo'}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

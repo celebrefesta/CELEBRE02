@@ -56,6 +56,63 @@ const Configuracoes = () => {
     nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '', endereco: '', cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', instagram: '', logotipo: '', slogan: '', site: '', assinatura: '', pixelFacebook: '' 
   });
 
+  // ==========================================
+  // CONTROLE DE ROLAGEM E FLECHAS LATERAIS DAS ABAS
+  // ==========================================
+  const tabsNavRef = useRef(null);
+  const [podeRolarEsquerda, setPodeRolarEsquerda] = useState(false);
+  const [podeRolarDireita, setPodeRolarDireita] = useState(false);
+
+  const verificarScrollAbas = () => {
+    const el = tabsNavRef.current;
+    if (!el) return;
+    const { scrollLeft, scrollWidth, clientWidth } = el;
+    // Margem de segurança de 4px
+    setPodeRolarEsquerda(scrollLeft > 4);
+    setPodeRolarDireita(scrollLeft + clientWidth < scrollWidth - 4);
+  };
+
+  useEffect(() => {
+    verificarScrollAbas();
+    const t1 = setTimeout(verificarScrollAbas, 80);
+    const t2 = setTimeout(verificarScrollAbas, 350);
+
+    let resizeObserver;
+    if (typeof window !== 'undefined' && window.ResizeObserver && tabsNavRef.current) {
+      resizeObserver = new ResizeObserver(() => {
+        verificarScrollAbas();
+      });
+      resizeObserver.observe(tabsNavRef.current);
+    }
+    window.addEventListener('resize', verificarScrollAbas);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener('resize', verificarScrollAbas);
+      if (resizeObserver) resizeObserver.disconnect();
+    };
+  }, [abaAtiva, isCollaborator]);
+
+  // Centralizar suavemente a aba selecionada na viewport ao alternar
+  useEffect(() => {
+    const el = tabsNavRef.current;
+    if (!el) return;
+    const btnAtivo = el.querySelector('button.active');
+    if (btnAtivo) {
+      btnAtivo.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      setTimeout(verificarScrollAbas, 350);
+    }
+  }, [abaAtiva]);
+
+  const rolarAbas = (direcao) => {
+    const el = tabsNavRef.current;
+    if (!el) return;
+    const deslocamento = direcao === 'direita' ? 220 : -220;
+    el.scrollBy({ left: deslocamento, behavior: 'smooth' });
+    setTimeout(verificarScrollAbas, 350);
+  };
+
 
 
   const registrarLog = async (acao, detalhes) => {
@@ -339,79 +396,113 @@ const Configuracoes = () => {
         </div>
       </header>
 
-      <nav className="config-top-tabs">
-        <button 
-          className={abaAtiva === 'meu_perfil' ? 'active' : ''} 
-          onClick={() => setAbaAtiva('meu_perfil')}
-        >
-          <span className="tab-icon purple"><i className="fas fa-user"></i></span>
-          <span>Meu Perfil</span>
-        </button>
-
-        {!isCollaborator && (
-          <button 
-            className={abaAtiva === 'empresa' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('empresa')}
-          >
-            <span className="tab-icon blue"><i className="fas fa-building"></i></span>
-            <span>Empresa</span>
-          </button>
+      <div className="config-tabs-nav-wrapper">
+        {podeRolarEsquerda && (
+          <div className="config-tabs-arrow-wrapper-left">
+            <button 
+              type="button" 
+              className="config-tabs-arrow-btn left"
+              onClick={() => rolarAbas('esquerda')}
+              aria-label="Rolar abas para a esquerda"
+              title="Ver abas anteriores"
+            >
+              <i className="fas fa-chevron-left"></i>
+            </button>
+          </div>
         )}
 
-        {!isCollaborator && (
-          <button 
-            className={abaAtiva === 'listas' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('listas')}
-          >
-            <span className="tab-icon amber"><i className="fas fa-boxes"></i></span>
-            <span>Catálogo e Estoque</span>
-          </button>
-        )}
-
-        {!isCollaborator && (
-          <button 
-            className={abaAtiva === 'assinatura' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('assinatura')}
-          >
-            <span className="tab-icon green"><i className="fas fa-credit-card"></i></span>
-            <span>Assinatura e Uso</span>
-          </button>
-        )}
-
-        <button 
-          className={abaAtiva === 'notificacoes' ? 'active' : ''} 
-          onClick={() => setAbaAtiva('notificacoes')}
+        <nav 
+          className="config-top-tabs"
+          ref={tabsNavRef}
+          onScroll={verificarScrollAbas}
         >
-          <span className="tab-icon red"><i className="fas fa-bell"></i></span>
-          <span>Notificações</span>
-        </button>
-
-        <button 
-          className={abaAtiva === 'seguranca' ? 'active' : ''} 
-          onClick={() => setAbaAtiva('seguranca')}
-        >
-          <span className="tab-icon cyan"><i className="fas fa-shield-alt"></i></span>
-          <span>Segurança</span>
-        </button>
-
-        <button 
-          className={abaAtiva === 'aparencia' ? 'active' : ''} 
-          onClick={() => setAbaAtiva('aparencia')}
-        >
-          <span className="tab-icon pink"><i className="fas fa-palette"></i></span>
-          <span>Aparência</span>
-        </button>
-
-        {!isCollaborator && (
           <button 
-            className={abaAtiva === 'backup' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('backup')}
+            className={abaAtiva === 'meu_perfil' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('meu_perfil')}
           >
-            <span className="tab-icon indigo"><i className="fas fa-database"></i></span>
-            <span>Backup & LGPD</span>
+            <span className="tab-icon purple"><i className="fas fa-user"></i></span>
+            <span>Meu Perfil</span>
           </button>
+
+          {!isCollaborator && (
+            <button 
+              className={abaAtiva === 'empresa' ? 'active' : ''} 
+              onClick={() => setAbaAtiva('empresa')}
+            >
+              <span className="tab-icon blue"><i className="fas fa-building"></i></span>
+              <span>Empresa</span>
+            </button>
+          )}
+
+          {!isCollaborator && (
+            <button 
+              className={abaAtiva === 'listas' ? 'active' : ''} 
+              onClick={() => setAbaAtiva('listas')}
+            >
+              <span className="tab-icon amber"><i className="fas fa-boxes"></i></span>
+              <span>Catálogo e Estoque</span>
+            </button>
+          )}
+
+          {!isCollaborator && (
+            <button 
+              className={abaAtiva === 'assinatura' ? 'active' : ''} 
+              onClick={() => setAbaAtiva('assinatura')}
+            >
+              <span className="tab-icon green"><i className="fas fa-credit-card"></i></span>
+              <span>Assinatura e Uso</span>
+            </button>
+          )}
+
+          <button 
+            className={abaAtiva === 'notificacoes' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('notificacoes')}
+          >
+            <span className="tab-icon red"><i className="fas fa-bell"></i></span>
+            <span>Notificações</span>
+          </button>
+
+          <button 
+            className={abaAtiva === 'seguranca' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('seguranca')}
+          >
+            <span className="tab-icon cyan"><i className="fas fa-shield-alt"></i></span>
+            <span>Segurança</span>
+          </button>
+
+          <button 
+            className={abaAtiva === 'aparencia' ? 'active' : ''} 
+            onClick={() => setAbaAtiva('aparencia')}
+          >
+            <span className="tab-icon pink"><i className="fas fa-palette"></i></span>
+            <span>Aparência</span>
+          </button>
+
+          {!isCollaborator && (
+            <button 
+              className={abaAtiva === 'backup' ? 'active' : ''} 
+              onClick={() => setAbaAtiva('backup')}
+            >
+              <span className="tab-icon indigo"><i className="fas fa-database"></i></span>
+              <span>Backup & LGPD</span>
+            </button>
+          )}
+        </nav>
+
+        {podeRolarDireita && (
+          <div className="config-tabs-arrow-wrapper-right">
+            <button 
+              type="button" 
+              className="config-tabs-arrow-btn right"
+              onClick={() => rolarAbas('direita')}
+              aria-label="Rolar abas para a direita"
+              title="Ver mais abas de configurações"
+            >
+              <i className="fas fa-chevron-right"></i>
+            </button>
+          </div>
         )}
-      </nav>
+      </div>
 
 
 

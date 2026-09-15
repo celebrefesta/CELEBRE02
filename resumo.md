@@ -24,14 +24,31 @@ Modernizar e tornar 100% responsiva para dispositivos móveis a página de **Con
 * **Layout em 2 Colunas na Mesma Linha:**
   - **Linha 1:** `Nome *` + `Sobrenome / Apelido` em grid de 2 colunas simétricas (`repeat(2, 1fr)`).
   - **Linha 2:** `CPF do Titular` + `Data de Nascimento / Aniversário` em grid de 2 colunas simétricas (`repeat(2, 1fr)`).
+  - **Validações em Tempo Real (CPF e Data de Nascimento):**
+    - **CPF:** Validação matemática da Receita Federal com indicador dinâmico `✓ VÁLIDO` / `⮿ INVÁLIDO` e bordas dinâmicas.
+    - **Data de Nascimento:** Validação com bloqueio de datas futuras (dias inexistentes), anos com mais de 4 dígitos (ex: 84255) e limitação de idade máxima em 100 anos. Exibe badge `✓ VÁLIDO` ou `⮿ INVÁLIDO` e atributos HTML5 `min`/`max` sincronizados.
+    - **Salvamento Protegido:** Bloqueio preventivo em `handleSalvarPerfil` se houver CPF ou Data de Nascimento inválidos.
   - **Linha 3:** `Cargo / Função na Empresa` + `Telefone / WhatsApp Pessoal` em grid de 2 colunas simétricas (`repeat(2, 1fr)`).
+  - **Sincronização com Gestão de Equipe e Acessos (`/usuarios`):**
+    - O campo de Cargo no Perfil reflete automaticamente o cargo oficial cadastrado na página central de Equipe (para Administrador e Colaboradores).
+    - Para o Administrador/Dono, foi inserido um atalho rápido `[ ↗ Equipe ]` no campo, direcionando para a gestão centralizada.
+    - Na tela de **Equipe e Acessos**, o Titular/Admin agora conta com o botão **"Editar Cargo"** para definir seu título real (*Proprietário(a)*, *Diretor(a) Geral*, *Gerente Geral*, etc.), mantendo suas permissões administrativas intactas.
+    - O cadastro de colaboradores em Equipe foi expandido para suportar os cargos operacionais padrão e cargos personalizados (*Outro*).
   - **Alinhamento de Linha Base:** Rótulos com `display: flex; align-items: flex-end; min-height: 26px` para assegurar que os inputs fiquem perfeitamente nivelados na horizontal, mesmo quando o texto de um rótulo quebra em mais linhas que o outro.
   - **Blindagem contra Overflow:** Aplicação de `min-width: 0` em cada coluna e `<input>` (incluindo `input[type="date"]`) para impedir qualquer quebra para uma única coluna.
-* **Crachá Digital e Foto Pessoal:**
-  - Avatar centralizado com moldura de status (Administrador/Colaborador).
-  - Botão de câmera para upload direto e opção para remover foto existente.
-* **Endereço Residencial e Mini Bio:**
-  - Consulta automática de CEP via ViaCEP com autopreenchimento de Logradouro, Bairro, Cidade e UF.
+* **Crachá Digital Horizontal no Celular (Economia de Espaço Vertical):**
+  - **Layout Mobile (`≤ 768px`, `≤ 480px`):** Foto/Avatar posicionada à esquerda (`74px` / `66px`), acompanhada do botão de câmera touch e link sutil de remoção.
+  - **Informações Pessoais à Direita:** Nome em destaque, badge do cargo (*Administrador* / *Colaborador*), e-mail de acesso, empresa, status da conta e data de criação agrupados em bloco compacto de alta densidade informativa.
+  - **Otimização de Espaço:** Redução de mais de 240px na altura do bloco no celular, garantindo que os campos editáveis do formulário fiquem imediatamente visíveis sem necessidade de rolagem excessiva.
+  - **Desktop (`> 768px`):** Mantém a apresentação vertical clássica e elegante na coluna lateral dedicada.
+* **Endereço Residencial em 2 Colunas Simétricas no Mobile:**
+  - **Linha 1:** `CEP` + `Estado (UF)` lado a lado na mesma linha (`profile-fields-2col-row`).
+  - **Linha 2:** `Logradouro / Rua` + `Número e Complemento` lado a lado na mesma linha.
+  - **Linha 3:** `Bairro` + `Cidade` lado a lado na mesma linha.
+  - Consulta automática de CEP via ViaCEP com autopreenchimento dinâmico.
+* **Ampliação Lateral dos Cards (Aproveitamento Máximo de Tela):**
+  - Eliminação de paddings excessivos no formulário (`padding: 32px` inline removido e substituído pela classe `.profile-form-card` com `12px/14px` no mobile).
+  - Redução do padding externo do container (`.config-container` calibrado para `6px/4px` de respiro lateral no celular), permitindo que os cards se expandam até as extremidades úteis da tela.
 
 ---
 

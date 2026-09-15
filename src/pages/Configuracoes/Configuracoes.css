@@ -3,7 +3,7 @@
    ========================================= */
 .config-container {
   width: 100%;
-  padding: 30px 24px; 
+  padding: 24px 16px; 
   background-color: var(--fundo-cinza);
   min-height: 100vh;
   box-sizing: border-box;
@@ -31,8 +31,120 @@
 }
 
 /* =========================================
-   🌟 MENU DE NAVEGAÇÃO DE ABAS ENTERPRISE 🌟
+   🌟 MENU DE NAVEGAÇÃO DE ABAS ENTERPRISE COM FLECHAS LATERAIS 🌟
    ========================================= */
+.config-container .config-tabs-nav-wrapper {
+  position: relative;
+  width: 100%;
+  margin-bottom: 24px;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+}
+
+.config-container .config-tabs-nav-wrapper .config-top-tabs {
+  margin-bottom: 0 !important;
+  width: 100%;
+  scroll-behavior: smooth;
+}
+
+/* GRADIENTES E CONTÊINERES DAS FLECHAS LATERAIS */
+.config-container .config-tabs-arrow-wrapper-left,
+.config-container .config-tabs-arrow-wrapper-right {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 68px;
+  display: flex;
+  align-items: center;
+  pointer-events: none;
+  z-index: 10;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.config-container .config-tabs-arrow-wrapper-left {
+  left: 0;
+  justify-content: flex-start;
+  padding-left: 6px;
+  background: linear-gradient(to right, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.88) 45%, rgba(255, 255, 255, 0) 100%);
+  border-top-left-radius: 16px;
+  border-bottom-left-radius: 16px;
+}
+
+.config-container .config-tabs-arrow-wrapper-right {
+  right: 0;
+  justify-content: flex-end;
+  padding-right: 6px;
+  background: linear-gradient(to left, rgba(255, 255, 255, 0.98) 0%, rgba(255, 255, 255, 0.88) 45%, rgba(255, 255, 255, 0) 100%);
+  border-top-right-radius: 16px;
+  border-bottom-right-radius: 16px;
+}
+
+/* BOTÃO ELEGANTE DA FLECHA (CHEVRON) */
+.config-container .config-tabs-arrow-btn {
+  pointer-events: auto;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  border: 2px solid #ffffff;
+  box-shadow: 0 4px 14px rgba(15, 23, 42, 0.32), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 13px;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: celebreArrowPulse 2.4s infinite ease-in-out;
+  flex-shrink: 0;
+  outline: none;
+}
+
+.config-container .config-tabs-arrow-btn:hover {
+  background: var(--dourado, #c5a059);
+  color: #0f172a;
+  transform: scale(1.12);
+  box-shadow: 0 6px 20px rgba(197, 160, 89, 0.5);
+  border-color: #ffffff;
+}
+
+.config-container .config-tabs-arrow-btn:active {
+  transform: scale(0.92);
+}
+
+@keyframes celebreArrowPulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.32);
+  }
+  50% {
+    transform: scale(1.09);
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.45);
+  }
+}
+
+/* TEMA ESCURO DAS FLECHAS */
+[data-theme='dark'] .config-container .config-tabs-arrow-wrapper-left {
+  background: linear-gradient(to right, rgba(24, 24, 27, 0.98) 0%, rgba(24, 24, 27, 0.88) 45%, rgba(24, 24, 27, 0) 100%) !important;
+}
+
+[data-theme='dark'] .config-container .config-tabs-arrow-wrapper-right {
+  background: linear-gradient(to left, rgba(24, 24, 27, 0.98) 0%, rgba(24, 24, 27, 0.88) 45%, rgba(24, 24, 27, 0) 100%) !important;
+}
+
+[data-theme='dark'] .config-container .config-tabs-arrow-btn {
+  background: var(--dourado, #c5a059) !important;
+  color: #0f172a !important;
+  border-color: #27272a !important;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6) !important;
+}
+
+[data-theme='dark'] .config-container .config-tabs-arrow-btn:hover {
+  background: #ffffff !important;
+  color: #0f172a !important;
+}
+
 .config-top-tabs {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
@@ -1585,6 +1697,226 @@
   align-items: start;
 }
 
+/* =========================================
+   CRACHÁ DE PERFIL PESSOAL (DESKTOP)
+   ========================================= */
+.config-container .profile-cracha-card {
+  background: var(--branco, #ffffff);
+  border-radius: 16px;
+  padding: 32px 20px;
+  border: 1px solid var(--borda, #e2e8f0);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.config-container .profile-cracha-avatar-col {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.config-container .profile-cracha-avatar-wrap {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  margin: 0 auto 16px;
+}
+
+.config-container .profile-cracha-avatar {
+  width: 130px;
+  height: 130px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: linear-gradient(135deg, #0f172a, #1e293b);
+  color: #ffffff;
+  font-size: 52px;
+  font-weight: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 4px solid #ffffff;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  box-sizing: border-box;
+}
+
+.config-container .profile-cracha-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.config-container .profile-cracha-avatar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  line-height: 1;
+  text-align: center;
+}
+
+.config-container .profile-cracha-cam-btn {
+  position: absolute;
+  bottom: 0px;
+  right: 0px;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  background: #0f172a;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  border: 2.5px solid #ffffff;
+  transition: all 0.2s ease;
+  z-index: 10;
+  padding: 0;
+  line-height: 1;
+}
+
+.config-container .profile-cracha-cam-btn:hover {
+  background: var(--dourado, #c5a059);
+  color: #0f172a;
+  transform: scale(1.08);
+}
+
+.config-container .profile-cracha-cam-btn i {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+}
+
+.config-container .profile-cracha-remove-btn {
+  background: none;
+  border: none;
+  color: #ef4444;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 14px;
+  text-decoration: underline;
+  transition: opacity 0.2s ease;
+}
+
+.config-container .profile-cracha-remove-btn:hover {
+  opacity: 0.8;
+}
+
+.config-container .profile-cracha-uploading {
+  font-size: 12px;
+  color: #3b82f6;
+  font-weight: bold;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.config-container .profile-cracha-info-col {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.config-container .profile-cracha-header-row {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.config-container .profile-cracha-name {
+  font-size: 20px;
+  color: var(--texto-principal);
+  margin: 0 0 4px 0;
+  font-weight: 800;
+  text-transform: capitalize;
+  line-height: 1.25;
+}
+
+.config-container .profile-cracha-role-badge {
+  font-size: 13.5px;
+  color: var(--dourado, #c5a059);
+  font-weight: 800;
+  display: inline-block;
+}
+
+.config-container .profile-cracha-details-box {
+  width: 100%;
+  text-align: left;
+  background: var(--fundo-cinza, #f8fafc);
+  padding: 16px;
+  border-radius: 12px;
+  border: 1px solid var(--borda, #e2e8f0);
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.config-container .profile-cracha-detail-item {
+  font-size: 12.5px;
+  color: var(--texto-secundario);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  line-height: 1.35;
+}
+
+.config-container .profile-cracha-detail-item i {
+  width: 14px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.config-container .profile-cracha-detail-item i.fa-envelope { color: var(--texto-secundario); }
+.config-container .profile-cracha-detail-item i.fa-building { color: #3b82f6; }
+.config-container .profile-cracha-detail-item i.fa-check-circle { color: #10b981; }
+.config-container .profile-cracha-detail-item i.fa-calendar-alt { color: var(--dourado, #c5a059); }
+
+.config-container .profile-cracha-detail-item .detail-val {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.config-container .profile-cracha-detail-item strong {
+  color: var(--texto-principal);
+}
+
+.config-container .profile-cracha-meta-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Card do Formulário de Perfil */
+.config-container .profile-form-card {
+  background: var(--branco, #ffffff);
+  border-radius: 16px;
+  padding: 28px 24px;
+  border: 1px solid var(--borda, #e2e8f0);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
 /* Linha de 2 Colunas para Perfil Pessoal */
 .config-container .profile-fields-2col-row {
   display: grid;
@@ -1594,22 +1926,54 @@
   align-items: start;
 }
 
-.config-container .profile-fields-2col-row > div {
+.config-container .profile-fields-rua-num {
+  grid-template-columns: 2.5fr 1fr !important;
+}
+
+.config-container .profile-fields-2col-row > div,
+.config-container .profile-field-full {
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
   min-width: 0;
+  width: 100%;
+  box-sizing: border-box;
 }
 
-.config-container .profile-fields-2col-row label {
+.config-container .profile-field-full {
+  margin-bottom: 16px;
+}
+
+/* Rótulos de Perfil 100% Padronizados e de Alto Contraste */
+.config-container .profile-form-card label,
+.config-container .profile-fields-2col-row label,
+.config-container .profile-field-full label {
   display: flex !important;
   align-items: flex-end !important;
-  min-height: 24px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--texto-secundario);
-  margin-bottom: 6px;
-  line-height: 1.25;
+  min-height: 24px !important;
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--texto-principal) !important;
+  margin-bottom: 6px !important;
+  line-height: 1.25 !important;
+}
+
+/* Inputs de Perfil 100% Padronizados em Tamanho, Altura e Fonte */
+.config-container .profile-form-card input,
+.config-container .profile-form-card input[type="text"],
+.config-container .profile-form-card input[type="date"],
+.config-container .profile-form-card input[type="email"],
+.config-container .profile-fields-2col-row input,
+.config-container .profile-field-full input {
+  font-size: 14px !important;
+  padding: 12px 14px !important;
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--borda) !important;
+  background: var(--fundo-cinza) !important;
+  color: var(--texto-principal) !important;
 }
 
 /* =========================================
@@ -3195,7 +3559,7 @@
 
   /* Container Principal */
   .config-container {
-    padding: 16px 12px !important;
+    padding: 12px 6px !important;
     overflow-x: hidden !important;
     max-width: 100vw !important;
     box-sizing: border-box !important;
@@ -3236,7 +3600,23 @@
     line-height: 1.4 !important;
   }
 
-  /* 🌟 MENU DE ABAS DE NAVEGAÇÃO — SCROLL HORIZONTAL SLIM 🌟 */
+  /* 🌟 MENU DE ABAS DE NAVEGAÇÃO — SCROLL HORIZONTAL SLIM COM FLECHAS LATERAIS 🌟 */
+  .config-container .config-tabs-nav-wrapper {
+    margin-bottom: 16px !important;
+  }
+
+  .config-container .config-tabs-arrow-wrapper-left,
+  .config-container .config-tabs-arrow-wrapper-right {
+    width: 52px !important;
+    border-radius: 14px !important;
+  }
+
+  .config-container .config-tabs-arrow-btn {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 11.5px !important;
+  }
+
   .config-container .config-top-tabs {
     display: flex !important;
     flex-direction: row !important;
@@ -3247,7 +3627,7 @@
     padding: 6px 8px !important;
     gap: 8px !important;
     border-radius: 14px !important;
-    margin-bottom: 18px !important;
+    margin-bottom: 0 !important;
     flex-wrap: nowrap !important;
     white-space: nowrap !important;
     width: 100% !important;
@@ -3352,41 +3732,207 @@
     width: 100% !important;
   }
 
-  /* 🌟 Perfil: Linhas de 2 Colunas Mantidas no Mobile (Nome/Sobrenome, CPF/Nascimento, Cargo/Tel) 🌟 */
-  .config-container .profile-fields-2col-row {
-    display: grid !important;
-    grid-template-columns: 1fr 1fr !important;
+  /* 🌟 CRACHÁ DIGITAL HORIZONTAL COMPACTO NO MOBILE (FOTO À ESQUERDA, DADOS À DIREITA) 🌟 */
+  .config-container .profile-cracha-card {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    text-align: left !important;
+    padding: 12px 14px !important;
+    gap: 14px !important;
+    border-radius: 14px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
+  }
+
+  .config-container .profile-cracha-avatar-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    flex-shrink: 0 !important;
+  }
+
+  .config-container .profile-cracha-avatar-wrap {
+    width: 74px !important;
+    height: 74px !important;
+    margin: 0 !important;
+    flex-shrink: 0 !important;
+  }
+
+  .config-container .profile-cracha-avatar {
+    width: 74px !important;
+    height: 74px !important;
+    font-size: 28px !important;
+    border-width: 3px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+  }
+
+  .config-container .profile-cracha-cam-btn {
+    width: 25px !important;
+    height: 25px !important;
+    border-width: 2px !important;
+    bottom: -2px !important;
+    right: -2px !important;
+  }
+
+  .config-container .profile-cracha-cam-btn i {
+    font-size: 10.5px !important;
+  }
+
+  .config-container .profile-cracha-remove-btn {
+    margin-top: 4px !important;
+    margin-bottom: 0 !important;
+    font-size: 10px !important;
+  }
+
+  .config-container .profile-cracha-uploading {
+    font-size: 10px !important;
+    margin-bottom: 0 !important;
+    margin-top: 2px !important;
+  }
+
+  .config-container .profile-cracha-info-col {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    justify-content: center !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    gap: 4px !important;
+  }
+
+  .config-container .profile-cracha-header-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 2px !important;
+    width: 100% !important;
+  }
+
+  .config-container .profile-cracha-name {
+    font-size: 15.5px !important;
+    line-height: 1.2 !important;
+    margin: 0 !important;
+    color: var(--texto-principal) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    max-width: 180px !important;
+  }
+
+  .config-container .profile-cracha-role-badge {
+    font-size: 10.5px !important;
+    line-height: 1 !important;
+    padding: 3px 7px !important;
+    background: rgba(197, 160, 89, 0.14) !important;
+    color: var(--dourado, #c5a059) !important;
+    border-radius: 6px !important;
+    font-weight: 800 !important;
+    margin: 0 !important;
+  }
+
+  .config-container .profile-cracha-details-box {
+    padding: 7px 9px !important;
+    border-radius: 10px !important;
+    gap: 3px !important;
+    width: 100% !important;
+    background: var(--fundo-cinza, #f8fafc) !important;
+    border: 1px solid var(--borda, #e2e8f0) !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .profile-cracha-detail-item {
+    font-size: 11.5px !important;
+    margin: 0 !important;
+    line-height: 1.35 !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    gap: 6px !important;
+  }
+
+  .config-container .profile-cracha-detail-item i {
+    width: 13px !important;
+    font-size: 11px !important;
+  }
+
+  .config-container .profile-cracha-meta-row {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
     gap: 10px !important;
-    margin-bottom: 14px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .config-container .profile-form-card {
+    padding: 16px 12px !important;
+    gap: 18px !important;
+    border-radius: 14px !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
-  .config-container .profile-fields-2col-row > div {
+  /* 🌟 Perfil: Linhas de 2 Colunas Mantidas no Mobile (Nome/Sobrenome, CPF/Nascimento, Cargo/Tel, CEP/UF, Rua/Num, Bairro/Cidade) 🌟 */
+  .config-container .profile-fields-2col-row {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 8px !important;
+    margin-bottom: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  /* Logradouro/Rua maior que Número no celular e tablet */
+  .config-container .profile-fields-rua-num {
+    grid-template-columns: 2.3fr 1fr !important;
+  }
+
+  .config-container .profile-fields-2col-row > div,
+  .config-container .profile-field-full {
     display: flex !important;
     flex-direction: column !important;
     justify-content: flex-end !important;
     min-width: 0 !important;
-  }
-
-  .config-container .profile-fields-2col-row label {
-    display: flex !important;
-    align-items: flex-end !important;
-    min-height: 28px !important;
-    font-size: 11.5px !important;
-    line-height: 1.25 !important;
-    margin-bottom: 5px !important;
-  }
-
-  .config-container .profile-fields-2col-row input {
-    font-size: 13.5px !important;
-    padding: 10px 8px !important;
-    min-width: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
 
-  /* Inputs, Selects e Textareas */
+  .config-container .profile-field-full {
+    margin-bottom: 12px !important;
+  }
+
+  .config-container .profile-form-card label,
+  .config-container .profile-fields-2col-row label,
+  .config-container .profile-field-full label {
+    display: flex !important;
+    align-items: flex-end !important;
+    min-height: 26px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    color: var(--texto-principal) !important;
+    line-height: 1.25 !important;
+    margin-bottom: 5px !important;
+  }
+
+  .config-container .profile-form-card input,
+  .config-container .profile-form-card input[type="text"],
+  .config-container .profile-form-card input[type="date"],
+  .config-container .profile-form-card input[type="email"],
+  .config-container .profile-fields-2col-row input,
+  .config-container .profile-field-full input {
+    font-size: 13.5px !important;
+    padding: 10px 10px !important;
+    min-width: 0 !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
+  }
+
+  /* Inputs, Selects e Textareas das outras abas (Empresa, Notificações, etc.) */
   .config-container .f-group {
     width: 100% !important;
     box-sizing: border-box !important;
@@ -3395,18 +3941,31 @@
   .config-container .f-group input,
   .config-container .f-group select,
   .config-container .config-textarea,
-  .config-container input[type="text"],
-  .config-container input[type="email"],
-  .config-container input[type="password"],
-  .config-container input[type="number"],
-  .config-container select,
-  .config-container textarea {
+  .config-container .f-group input[type="text"],
+  .config-container .f-group input[type="email"],
+  .config-container .f-group input[type="password"],
+  .config-container .f-group input[type="number"],
+  .config-container .f-group select,
+  .config-container .f-group textarea {
     font-size: 16px !important; /* Previne auto-zoom no iOS e Android */
     padding: 11px 13px !important;
     max-width: 100% !important;
     width: 100% !important;
     box-sizing: border-box !important;
     border-radius: 9px !important;
+  }
+
+  /* Garantia Suprema: Perfil Rigorosamente Padronizado contra qualquer vazamento */
+  .config-container .profile-form-card input,
+  .config-container .profile-form-card input[type="text"],
+  .config-container .profile-form-card input[type="date"],
+  .config-container .profile-form-card input[type="email"],
+  .config-container .profile-fields-2col-row input,
+  .config-container .profile-field-full input {
+    font-size: 13.5px !important;
+    padding: 10px 10px !important;
+    box-sizing: border-box !important;
+    border-radius: 8px !important;
   }
 
   .config-container .f-group input.input-with-icon,
@@ -3652,11 +4211,23 @@
 @media (max-width: 480px) {
 
   .config-container {
-    padding: 12px 8px !important;
+    padding: 10px 4px !important;
   }
 
   .config-container .config-header-title {
     font-size: 18px !important;
+  }
+
+  .config-container .config-tabs-arrow-wrapper-left,
+  .config-container .config-tabs-arrow-wrapper-right {
+    width: 46px !important;
+    border-radius: 12px !important;
+  }
+
+  .config-container .config-tabs-arrow-btn {
+    width: 29px !important;
+    height: 29px !important;
+    font-size: 10.5px !important;
   }
 
   .config-container .config-top-tabs {
@@ -3676,6 +4247,53 @@
     width: 22px !important;
     height: 22px !important;
     font-size: 11px !important;
+  }
+
+  .config-container .profile-cracha-card {
+    padding: 10px 12px !important;
+    gap: 12px !important;
+  }
+
+  .config-container .profile-cracha-avatar-wrap {
+    width: 66px !important;
+    height: 66px !important;
+  }
+
+  .config-container .profile-cracha-avatar {
+    width: 66px !important;
+    height: 66px !important;
+    font-size: 25px !important;
+  }
+
+  .config-container .profile-cracha-cam-btn {
+    width: 23px !important;
+    height: 23px !important;
+  }
+
+  .config-container .profile-cracha-cam-btn i {
+    font-size: 9.5px !important;
+  }
+
+  .config-container .profile-cracha-name {
+    font-size: 14.5px !important;
+    max-width: 140px !important;
+  }
+
+  .config-container .profile-cracha-details-box {
+    padding: 6px 8px !important;
+    gap: 2.5px !important;
+  }
+
+  .config-container .profile-cracha-detail-item {
+    font-size: 11px !important;
+  }
+
+  .config-container .profile-form-card {
+    padding: 12px 8px !important;
+    gap: 14px !important;
+    border-radius: 12px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
   }
 
   .config-container .config-card {
@@ -3715,19 +4333,33 @@
   }
 
   .config-container .profile-fields-2col-row {
-    gap: 8px !important;
-    margin-bottom: 12px !important;
+    gap: 6px !important;
+    margin-bottom: 10px !important;
   }
 
-  .config-container .profile-fields-2col-row label {
-    font-size: 11px !important;
-    min-height: 28px !important;
+  .config-container .profile-field-full {
+    margin-bottom: 10px !important;
+  }
+
+  .config-container .profile-form-card label,
+  .config-container .profile-fields-2col-row label,
+  .config-container .profile-field-full label {
+    font-size: 11.5px !important;
+    min-height: 24px !important;
     margin-bottom: 4px !important;
+    font-weight: 800 !important;
+    color: var(--texto-principal) !important;
   }
 
-  .config-container .profile-fields-2col-row input {
+  .config-container .profile-form-card input,
+  .config-container .profile-form-card input[type="text"],
+  .config-container .profile-form-card input[type="date"],
+  .config-container .profile-form-card input[type="email"],
+  .config-container .profile-fields-2col-row input,
+  .config-container .profile-field-full input {
     font-size: 13px !important;
-    padding: 9px 7px !important;
+    padding: 9px 8px !important;
+    border-radius: 8px !important;
   }
 }
 
@@ -3751,17 +4383,32 @@
   }
 
   .config-container .profile-fields-2col-row {
-    gap: 6px !important;
+    gap: 5px !important;
+    margin-bottom: 8px !important;
   }
 
-  .config-container .profile-fields-2col-row label {
-    font-size: 10px !important;
-    min-height: 26px !important;
+  .config-container .profile-field-full {
+    margin-bottom: 8px !important;
   }
 
-  .config-container .profile-fields-2col-row input {
+  .config-container .profile-form-card label,
+  .config-container .profile-fields-2col-row label,
+  .config-container .profile-field-full label {
+    font-size: 10.5px !important;
+    min-height: 22px !important;
+    font-weight: 800 !important;
+    color: var(--texto-principal) !important;
+  }
+
+  .config-container .profile-form-card input,
+  .config-container .profile-form-card input[type="text"],
+  .config-container .profile-form-card input[type="date"],
+  .config-container .profile-form-card input[type="email"],
+  .config-container .profile-fields-2col-row input,
+  .config-container .profile-field-full input {
     font-size: 12px !important;
-    padding: 8px 5px !important;
+    padding: 7px 6px !important;
+    border-radius: 8px !important;
   }
 }
 
