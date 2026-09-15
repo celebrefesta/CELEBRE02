@@ -798,7 +798,7 @@ const AbaMeuPerfil = ({ usuarioLogado, isCollaborator, isSuperAdmin, isOwner, no
             </div>
 
             {/* LINHA 4: COMPLEMENTO (ABAIXO DE BAIRRO E CIDADE) */}
-            <div className="profile-field-full" style={{ display: 'flex', flexDirection: 'column', minWidth: 0, marginTop: '2px' }}>
+            <div className="profile-field-full" style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
               <label style={{ display: 'flex', alignItems: 'flex-end', minHeight: '26px', fontSize: '13px', fontWeight: '800', color: 'var(--texto-principal)', marginBottom: '6px', lineHeight: 1.2 }}>
                 Complemento (Opcional)
               </label>

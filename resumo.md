@@ -1,102 +1,102 @@
-# 📱 RESUMO EXECUTIVO — REFATORAÇÃO E RESPONSIVIDADE MOBILE DA PÁGINA DE CONFIGURAÇÕES
+# 📱 RESUMO EXECUTIVO — REFATORAÇÃO, VALIDAÇÕES E PADRONIZAÇÃO DO PERFIL E CONFIGURAÇÕES
 **Sistema:** Celebre Gestão de Festas & Eventos  
-**Módulo:** Configurações (`/configuracoes`)  
-**Data:** 14/09/2026  
-**Status:** ✅ Concluído e Validado (`npm run build` OK)
+**Módulo:** Configurações (`/configuracoes`) & Equipe (`/usuarios`)  
+**Data da Última Atualização:** 15/09/2026  
+**Status:** ✅ Concluído e Validado (`npm run build` OK - 0 erros)
 
 ---
 
-## 1. 🎯 Objetivo da Intervenção
-Modernizar e tornar 100% responsiva para dispositivos móveis a página de **Configurações**, garantindo usabilidade ergonômica, layout de toque sem quebras visuais e correção estrutural e semântica no formulário de dados cadastrais e identificação pessoal.
+## 1. 🎯 Objetivo Geral da Intervenção
+Aprimorar a experiência do usuário, a segurança cadastral e o alinhamento visual das páginas de **Configurações** (em especial a aba **Meu Perfil**) e **Equipe e Acessos**, implementando:
+- Validação algorítmica em tempo real de CPF e Data de Nascimento;
+- Governança centralizada de Cargos/Funções com interface limpa;
+- Proporção dinâmica ergonômica entre Logradouro/Rua e Número;
+- Padronização matemática e tipográfica de todos os inputs (incluindo Complemento e Login) e rótulos com alto contraste;
+- Limpeza de campos obsoletos (remoção da Mini Bio);
+- Navegação fluida por carrossel nas abas superiores com setas assistidas.
 
 ---
 
-## 2. 🏛️ Arquitetura das Alterações
+## 2. 🏛️ Detalhamento das Alterações Realizadas
 
 ### 2.1. Aba "Meu Perfil" (`AbaMeuPerfil.jsx`)
-* **Correção Semântica e Separação de Nome e Sobrenome:**
-  - **Problema anterior:** O primeiro campo era rotulado como *"Nome Completo \*"* e recebia o nome inteiro (ex: *"Celebre Festa"*), enquanto o campo *"Sobrenome / Apelido"* ficava em branco ou causava redundância.
-  - **Solução implementada:** 
-    - Rótulo corrigido para **"Nome \*"** (com placeholder *"Seu primeiro nome"*).
-    - Segundo campo mantido como **"Sobrenome / Apelido"** (com placeholder *"Seu sobrenome"*).
-    - **Algoritmo de separação inteligente:** Ao carregar os dados ou ao preencher o campo, o sistema detecta se o nome contém sobrenome composto e divide automaticamente: primeiro nome no campo **Nome** e o restante no campo **Sobrenome**.
-    - Foi adicionado um `useEffect` de auto-sanitização em tempo real para tratar estados legados sem necessidade de intervenção manual.
-* **Layout em 2 Colunas na Mesma Linha:**
-  - **Linha 1:** `Nome *` + `Sobrenome / Apelido` em grid de 2 colunas simétricas (`repeat(2, 1fr)`).
-  - **Linha 2:** `CPF do Titular` + `Data de Nascimento / Aniversário` em grid de 2 colunas simétricas (`repeat(2, 1fr)`).
-  - **Validações em Tempo Real (CPF e Data de Nascimento):**
-    - **CPF:** Validação matemática da Receita Federal com indicador dinâmico `✓ VÁLIDO` / `⮿ INVÁLIDO` e bordas dinâmicas.
-    - **Data de Nascimento:** Validação com bloqueio de datas futuras (dias inexistentes), anos com mais de 4 dígitos (ex: 84255) e limitação de idade máxima em 100 anos. Exibe badge `✓ VÁLIDO` ou `⮿ INVÁLIDO` e atributos HTML5 `min`/`max` sincronizados.
-    - **Salvamento Protegido:** Bloqueio preventivo em `handleSalvarPerfil` se houver CPF ou Data de Nascimento inválidos.
-  - **Linha 3:** `Cargo / Função na Empresa` + `Telefone / WhatsApp Pessoal` em grid de 2 colunas simétricas (`repeat(2, 1fr)`).
-  - **Sincronização com Gestão de Equipe e Acessos (`/usuarios`):**
-    - O campo de Cargo no Perfil reflete automaticamente o cargo oficial cadastrado na página central de Equipe (para Administrador e Colaboradores).
-    - Para o Administrador/Dono, foi inserido um atalho rápido `[ ↗ Equipe ]` no campo, direcionando para a gestão centralizada.
-    - Na tela de **Equipe e Acessos**, o Titular/Admin agora conta com o botão **"Editar Cargo"** para definir seu título real (*Proprietário(a)*, *Diretor(a) Geral*, *Gerente Geral*, etc.), mantendo suas permissões administrativas intactas.
-    - O cadastro de colaboradores em Equipe foi expandido para suportar os cargos operacionais padrão e cargos personalizados (*Outro*).
-  - **Alinhamento de Linha Base:** Rótulos com `display: flex; align-items: flex-end; min-height: 26px` para assegurar que os inputs fiquem perfeitamente nivelados na horizontal, mesmo quando o texto de um rótulo quebra em mais linhas que o outro.
-  - **Blindagem contra Overflow:** Aplicação de `min-width: 0` em cada coluna e `<input>` (incluindo `input[type="date"]`) para impedir qualquer quebra para uma única coluna.
-* **Crachá Digital Horizontal no Celular (Economia de Espaço Vertical):**
-  - **Layout Mobile (`≤ 768px`, `≤ 480px`):** Foto/Avatar posicionada à esquerda (`74px` / `66px`), acompanhada do botão de câmera touch e link sutil de remoção.
-  - **Informações Pessoais à Direita:** Nome em destaque, badge do cargo (*Administrador* / *Colaborador*), e-mail de acesso, empresa, status da conta e data de criação agrupados em bloco compacto de alta densidade informativa.
-  - **Otimização de Espaço:** Redução de mais de 240px na altura do bloco no celular, garantindo que os campos editáveis do formulário fiquem imediatamente visíveis sem necessidade de rolagem excessiva.
-  - **Desktop (`> 768px`):** Mantém a apresentação vertical clássica e elegante na coluna lateral dedicada.
-* **Endereço Residencial em 2 Colunas Simétricas no Mobile:**
-  - **Linha 1:** `CEP` + `Estado (UF)` lado a lado na mesma linha (`profile-fields-2col-row`).
-  - **Linha 2:** `Logradouro / Rua` + `Número e Complemento` lado a lado na mesma linha.
-  - **Linha 3:** `Bairro` + `Cidade` lado a lado na mesma linha.
-  - Consulta automática de CEP via ViaCEP com autopreenchimento dinâmico.
-* **Ampliação Lateral dos Cards (Aproveitamento Máximo de Tela):**
-  - Eliminação de paddings excessivos no formulário (`padding: 32px` inline removido e substituído pela classe `.profile-form-card` com `12px/14px` no mobile).
-  - Redução do padding externo do container (`.config-container` calibrado para `6px/4px` de respiro lateral no celular), permitindo que os cards se expandam até as extremidades úteis da tela.
+
+1. **Validação de CPF em Tempo Real:**
+   - Algoritmo oficial de verificação dos dois dígitos verificadores da Receita Federal implementado em `src/utils/validadores.js`.
+   - Feedback visual limpo com badge `✓ VÁLIDO` (verde) ou `⮿ INVÁLIDO` (vermelho) posicionado no cabeçalho do campo, sem textos excessivos.
+   - Borda e fundo com micro-interações dinâmicas e bloqueio do salvamento se o CPF estiver incorreto.
+
+2. **Validação de Data de Nascimento em Tempo Real:**
+   - Função utilitária dedicada `validarDataNascimento(data)` com regras rigorosas:
+     - Ano estritamente com 4 dígitos (bloqueia digitações anômalas como anos de 5 dígitos);
+     - Bloqueio de datas futuras e dias inexistentes no calendário;
+     - Limite máximo de idade humana (< 100 anos).
+   - Atributos HTML5 `min` e `max` sincronizados no `<input type="date">`.
+   - Feedback visual idêntico ao CPF (`✓ VÁLIDO` / `⮿ INVÁLIDO`) e bloqueio no submit caso a data seja inválida.
+
+3. **Governança de Cargo / Função (Sem poluição visual):**
+   - Campo exibido no Perfil em modo somente leitura (`readOnly`) com tipografia limpa e padronizada.
+   - Removidos badges intrusivos ("Definido em Equipe") e botões flutuantes sobrepostos que atrapalhavam a leitura.
+   - O cargo oficial é gerido de forma centralizada e segura dentro da tela de **Equipe e Acessos**.
+
+4. **Proporção Dinâmica de Endereço (Logradouro/Rua vs Número):**
+   - Substituição do grid simétrico 50%/50% pela classe dedicada `.profile-fields-rua-num`.
+   - **Logradouro / Rua** agora ocupa **~72% da largura**, enquanto o **Número** ocupa **~28%** tanto no desktop (`2.5fr 1fr`) quanto no mobile (`2.3fr 1fr`).
+   - Evita o esmagamento de nomes longos de vias urbanas e elimina o espaço ocioso no campo de número.
+
+5. **Padronização Absoluta do Campo "Complemento":**
+   - **Diagnóstico da falha anterior:** Uma regra global descontrolada (`.config-container input[type="text"]`) forçava fonte de `16px !important` e padding de `11px 13px` nos inputs avulsos, e as media queries do mobile só atingiam `.profile-fields-2col-row`. O campo de Complemento ficava com fonte desproporcionalmente maior que Bairro e Cidade.
+   - **Correção:** Regra geral de 16px foi escopada estritamente para `.f-group` (outras abas). Criada a classe `.profile-field-full` e aplicadas regras idênticas para todos os inputs e rótulos do formulário (`13.5px / 13px` no mobile, `14px` no desktop, com altura e paddings idênticos).
+
+6. **Alto Contraste e Uniformidade em Rótulos (`labels`):**
+   - Todos os rótulos do formulário agora utilizam a cor semântica `var(--texto-principal)` com peso tipográfico em negrito destacado **`font-weight: 800 !important`** e alinhamento `align-items: flex-end`, garantindo nivelamento perfeito na horizontal.
+
+7. **Remoção da "Mini Bio":**
+   - Auditoria completa no código comprovou que a propriedade `dadosPerfil.bio` não era utilizada em contratos, propostas comerciais, orçamentos, ordens de serviço ou relatórios.
+   - O campo foi 100% removido, economizando espaço vertical e tornando o formulário mais profissional e direto ao ponto.
 
 ---
 
-### 2.2. Aba "Empresa" (`AbaEmpresa.jsx`)
-* **Aviso de Importância dos Dados Cadastrais:**
-  - Inserção de banner alertando o gestor sobre a criticidade dos dados cadastrais (Razão Social, E-mail de Contato, Telefone e Endereço) para o disparo e conformidade dos e-mails transacionais automáticos.
-* **Assinatura Digital Global:**
-  - Canvas de assinatura responsivo (`width: 100%`), com altura calibrada (`170px` no mobile) e botões de limpar, salvar e remover em layout vertical ergonômico.
-* **Upload e Gestão do Logotipo:**
-  - Área de upload de logotipo com visualizador prévio responsivo (`70px` a `80px` no celular) e compressão em base64.
+### 2.2. Gestão de Equipe e Acessos (`src/Usuarios/Usuarios.jsx`)
+
+1. **Edição do Cargo do Administrador Geral / Dono da Conta:**
+   - A linha do Administrador na listagem de usuários agora exibe seu cargo real dinâmico em vez de um texto estático inalterável.
+   - Adicionado botão **`[ Editar Cargo ]`** na linha do titular, acionando modal seguro para seleção de títulos executivos padrão (*Proprietário(a)*, *Diretor(a) Geral*, *Sócio-Administrador*, etc.) ou definição de título personalizado (*Outro*).
+   - Persistência direta no documento mestre do usuário no Firestore (`usuarios/{tenantId}.cargo`).
+
+2. **Expansão de Cargos para Colaboradores:**
+   - Dropdown de cargos na criação e edição de membros da equipe expandido com nomenclaturas típicas do mercado de eventos e suporte a preenchimento livre.
 
 ---
 
-### 2.3. Aba "Notificações" (`AbaNotificacoes.jsx`)
-* **Regras de Disparo e Automação:**
-  - Configuração ajustada para envio assistido/por Enter no WhatsApp (adiando automações pagas de APIs externas como Z-API/Twilio para controle de custos).
-  - Switches de ativação para E-mail, WhatsApp e SMS com alinhamento flexível e sem sobreposição em telas estreitas.
+### 2.3. Carrossel e Navegação das Abas de Configurações (`Configuracoes.jsx` e `Configuracoes.css`)
+
+1. **Setas de Navegação Assistida:**
+   - Implementadas setas laterais com micro-animação e gradiente translúcido (`.config-tabs-arrow-wrapper-left`, `.config-tabs-arrow-wrapper-right`, `.config-tabs-arrow-btn`) para rolagem suave do menu de abas por clique.
+2. **Auto-Centralização Inteligente:**
+   - Ao trocar de aba, o carrossel rola suavemente para posicionar a aba selecionada no centro visual da tela (`scrollIntoView({ behavior: 'smooth', inline: 'center' })`).
 
 ---
 
-### 2.4. Design & Estilização Global Responsiva (`Configuracoes.css`)
-* **Navegação Superior por Abas (`.config-top-tabs`):**
-  - Transformada em carrossel horizontal por toque (`overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none`).
-  - Abas compactas com ícones calibrados (22px a 26px) e paddings ergonômicos.
-* **Breakpoints Calibrados:**
-  - **Tablet e Mobile Geral (`≤ 768px`):** Padding da página reduzido para `16px 12px`, grids gerais colapsados em 1 coluna onde necessário, preservando estritamente os pares simétricos de 2 colunas (`.profile-fields-2col-row`).
-  - **Mobile Pequeno (`≤ 480px`):** Paddings reduzidos (`12px 8px`), tipografia refinada e botões em 100% de largura.
-  - **Mobile Ultra-Compacto (`≤ 360px`):** Ajustes finos de gap (6px a 8px) e fontes (11px a 13px) impedindo qualquer barra de rolagem horizontal indesejada.
-* **Prevenção de Auto-Zoom no Mobile:**
-  - Inputs com tamanhos calibrados para prevenir auto-zoom intrusivo no iOS Safari e Android Chrome.
-* **Escopo e Isolamento Total (Regra 5 do AGENTS.md):**
-  - Todos os seletores mantidos sob o prefixo `.config-container`, blindando as demais páginas da aplicação contra vazamento de CSS.
+## 3. 🧪 Matriz de Testes e Validação Técnica
 
----
-
-## 3. 🧪 Verificação e Validação
-
-| Teste / Validação | Resultado | Detalhes |
+| Item Verificado | Status | Comportamento Observado |
 | :--- | :---: | :--- |
-| **Build de Produção (`vite build`)** | ✅ Aprovado | 0 erros, tempo de build ~17s, chunks gerados com sucesso. |
-| **Sintaxe JSX e React State** | ✅ Aprovado | `dadosPerfil` higienizado com auto-split de nomes. |
-| **Grid 2 Colunas Mobile (`≤ 768px`, `≤ 480px`)** | ✅ Aprovado | Nome/Sobrenome, CPF/Nascimento e Cargo/Telefone alinhados em 2 colunas. |
-| **Alinhamento de Labels** | ✅ Aprovado | `align-items: flex-end` previne desnível entre campos. |
-| **Prevenção de Rolagem Horizontal** | ✅ Aprovado | `overflow-x: hidden; max-width: 100vw` garantidos no contêiner raiz. |
+| **Build de Produção (`npm run build`)** | ✅ Aprovado | Compilação em 13s sem erros (`0 errors, 0 lint warnings`). |
+| **Validação de CPF** | ✅ Aprovado | Bloqueia sequências inválidas, aceita CPFs matematicamente válidos. |
+| **Validação de Nascimento** | ✅ Aprovado | Bloqueia datas futuras, anos com mais de 4 dígitos e maiores de 100 anos. |
+| **Proporção Rua vs Número** | ✅ Aprovado | Rua (~72%) visivelmente mais larga que Número (~28%) em todas as resoluções. |
+| **Simetria do Complemento** | ✅ Aprovado | Tipografia, padding e altura idênticos a Bairro, Cidade e demais campos. |
+| **Contraste dos Rótulos** | ✅ Aprovado | `font-weight: 800` com `var(--texto-principal)` nítido em tema claro e escuro. |
+| **Isolamento de CSS (Regra 5 AGENTS.md)** | ✅ Aprovado | Todas as regras restritas a `.config-container` e `.usuarios-container`. |
 
 ---
 
-## 4. 📂 Arquivos Modificados
-- [`src/pages/Configuracoes/AbaMeuPerfil.jsx`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/pages/Configuracoes/AbaMeuPerfil.jsx)
-- [`src/pages/Configuracoes/Configuracoes.css`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/pages/Configuracoes/Configuracoes.css)
-- [`src/pages/Configuracoes/AbaEmpresa.jsx`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/pages/Configuracoes/AbaEmpresa.jsx)
+## 4. 📂 Arquivos Modificados no Projeto
+
+1. [`src/pages/Configuracoes/AbaMeuPerfil.jsx`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/pages/Configuracoes/AbaMeuPerfil.jsx)
+2. [`src/pages/Configuracoes/Configuracoes.css`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/pages/Configuracoes/Configuracoes.css)
+3. [`src/pages/Configuracoes/Configuracoes.jsx`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/pages/Configuracoes/Configuracoes.jsx)
+4. [`src/Usuarios/Usuarios.jsx`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/Usuarios/Usuarios.jsx)
+5. [`src/utils/validadores.js`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/src/utils/validadores.js)
+6. [`resumo.md`](file:///c:/Users/camil/Desktop/APLICATIVOS%20SISTEMAS/CELEBRE02/resumo.md)
