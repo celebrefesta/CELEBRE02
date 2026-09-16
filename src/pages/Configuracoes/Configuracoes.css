@@ -272,10 +272,11 @@
 }
 
 /* --- 🌟 NOVO GRID DA EMPRESA (2 COLUNAS LARGAS) 🌟 --- */
+/* --- 🌟 NOVO GRID DA EMPRESA (2 COLUNAS SIMÉTRICAS E COMPACTAS) 🌟 --- */
 .config-empresa-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 24px;
+  gap: 16px;
   align-items: start;
   width: 100%;
 }
@@ -283,6 +284,7 @@
 @media (max-width: 900px) {
   .config-empresa-grid {
     grid-template-columns: 1fr;
+    gap: 12px;
   }
 }
 
@@ -291,51 +293,53 @@
 }
 
 .config-card {
-  background: var(--branco);
-  border-radius: 16px;
-  border: 1px solid var(--borda);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.02);
-  padding: 30px; 
+  background: var(--branco, #ffffff);
+  border-radius: 14px;
+  border: 1px solid var(--borda, #e2e8f0);
+  box-shadow: 0 4px 14px rgba(0,0,0,0.03);
+  padding: 20px 22px; 
   position: relative;
   overflow: hidden;
-  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.3s ease;
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, border-color 0.2s ease;
 }
 
 .config-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 16px 36px rgba(0,0,0,0.05);
+  box-shadow: 0 10px 26px rgba(0,0,0,0.05);
 }
 
 .config-card.large-padding {
-  padding: 35px;
+  padding: 24px 26px;
 }
 
 /* Barrinhas coloridas no topo de cada card para dar charme */
 .card-top-bar {
   position: absolute;
   top: 0; left: 0; right: 0;
-  height: 5px;
+  height: 4px;
 }
 .blue-bar { background: linear-gradient(90deg, #3b82f6, #60a5fa); }
-.gold-bar { background: linear-gradient(90deg, #c5a059, #e5c07b); }
+.gold-bar { background: linear-gradient(90deg, var(--cor-destaque, #c5a059), var(--gold-dark, #e5c07b)); }
 .gray-bar { background: linear-gradient(90deg, #94a3b8, #cbd5e1); }
 .green-bar { background: linear-gradient(90deg, #10b981, #34d399); } 
 
 .config-card h3 {
-  margin: 0 0 8px 0;
-  font-size: 18px;
-  color: var(--texto-principal);
-  font-weight: 800;
+  margin: 0 0 4px 0;
+  font-size: 16.5px;
+  color: var(--texto-principal, #0f172a);
+  font-weight: 600;
   display: flex;
   align-items: center;
   gap: 8px;
+  letter-spacing: -0.2px;
 }
 
 .subtext {
-  color: var(--texto-secundario);
-  font-size: 13.5px;
+  color: var(--texto-secundario, #64748b);
+  font-size: 12.5px;
   margin-top: 0;
-  margin-bottom: 25px;
+  margin-bottom: 14px;
+  line-height: 1.4;
 }
 
 /* =========================================
@@ -438,8 +442,8 @@
 }
 
 .card-header-icon.gold {
-  background: rgba(197, 160, 89, 0.14);
-  color: #b48a3c;
+  background: color-mix(in srgb, var(--cor-destaque, #c5a059) 15%, transparent);
+  color: var(--cor-destaque, #c5a059);
 }
 
 .card-header-icon.blue {
@@ -459,29 +463,409 @@
 
 .config-card-header h3 {
   margin: 0 !important;
-  font-size: 18px;
-  font-weight: 800;
-  color: var(--texto-principal);
+  font-size: 16.5px;
+  font-weight: 600;
+  color: var(--texto-principal, #0f172a);
   letter-spacing: -0.2px;
 }
 
 .config-card-header .subtext {
   margin: 2px 0 0 0 !important;
-  font-size: 13px;
-  color: var(--texto-secundario);
+  font-size: 12.5px;
+  color: var(--texto-secundario, #64748b);
+  line-height: 1.35;
 }
 
 /* =========================================
-   NOVO FORMULÁRIO DA EMPRESA E LOGO
+   🌟 ABA EMPRESA: DESIGN EXECUTIVO, ALTO CONTRASTE SEM NEGRITO & ERGONOMIA 🌟
+   ========================================= */
+.config-container .config-empresa-grid .config-card-header h3,
+.config-container .config-empresa-grid .config-card h3 {
+  font-size: 16.5px !important;
+  font-weight: 600 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  letter-spacing: -0.25px !important;
+  margin: 0 !important;
+  line-height: 1.25 !important;
+}
+
+.config-container .config-empresa-grid .subtext,
+.config-container .config-empresa-grid .config-card-header .subtext {
+  font-size: 12.5px !important;
+  color: var(--texto-secundario, #64748b) !important;
+  margin: 2px 0 0 0 !important;
+  line-height: 1.35 !important;
+}
+
+/* Rótulos dos Campos na Aba Empresa: Alto Contraste Sem Negrito */
+.config-container .config-empresa-grid .f-group label,
+.config-container .config-empresa-grid label {
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  letter-spacing: 0.1px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 4px !important;
+  line-height: 1.25 !important;
+}
+
+.config-container .config-empresa-grid .f-group label i {
+  font-size: 12.5px !important;
+  opacity: 0.85 !important;
+}
+
+.config-container .config-empresa-grid strong {
+  font-weight: 600 !important;
+  color: var(--texto-principal, #0f172a);
+}
+
+/* Inputs, Selects e Textareas na Aba Empresa */
+.config-container .config-empresa-grid .f-group input,
+.config-container .config-empresa-grid .f-group select,
+.config-container .config-empresa-grid .input-with-icon input,
+.config-container .config-empresa-grid .input-with-icon select {
+  height: 38px !important;
+  padding: 8px 12px !important;
+  border-radius: 8px !important;
+  border: 1px solid var(--borda, #e2e8f0) !important;
+  background: var(--fundo-cinza, #f8fafc) !important;
+  color: var(--texto-principal, #0f172a) !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  transition: all 0.2s ease !important;
+}
+
+.config-container .config-empresa-grid .input-with-icon input,
+.config-container .config-empresa-grid .input-with-icon select {
+  padding-left: 38px !important;
+}
+
+.config-container .config-empresa-grid .input-with-icon .input-icon {
+  left: 12px !important;
+  font-size: 13.5px !important;
+}
+
+.config-container .config-empresa-grid .f-group input:focus,
+.config-container .config-empresa-grid .f-group select:focus {
+  border-color: var(--dourado, #c5a059) !important;
+  background: var(--branco, #ffffff) !important;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15) !important;
+  outline: none !important;
+}
+
+/* Card / Campo do Slogan Expandido (Aba Empresa) */
+.config-container .config-empresa-grid .slogan-textarea {
+  min-height: 84px !important;
+  height: 84px !important;
+  padding: 10px 14px 10px 38px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  font-family: inherit !important;
+  line-height: 1.5 !important;
+  border-radius: 10px !important;
+  border: 1px solid var(--borda, #e2e8f0) !important;
+  background: var(--fundo-cinza, #f8fafc) !important;
+  color: var(--texto-principal, #0f172a) !important;
+  resize: vertical !important;
+  box-sizing: border-box !important;
+  width: 100% !important;
+  transition: all 0.2s ease !important;
+}
+
+.config-container .config-empresa-grid .slogan-textarea:focus {
+  border-color: var(--dourado, #c5a059) !important;
+  background: var(--branco, #ffffff) !important;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.15) !important;
+  outline: none !important;
+}
+
+.config-container .config-empresa-grid .input-with-icon .textarea-icon {
+  top: 13px !important;
+  transform: none !important;
+}
+
+/* Área de Upload do Logotipo */
+.config-container .config-empresa-grid .empresa-id-wrapper {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 12px;
+  background: var(--fundo-cinza, #f8fafc);
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid var(--borda, #e2e8f0);
+}
+
+.config-container .config-empresa-grid .logo-preview-box {
+  width: 88px;
+  height: 88px;
+  border-radius: 12px;
+  border: 2px dashed rgba(197, 160, 89, 0.38);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--branco, #ffffff);
+  overflow: hidden;
+  color: var(--texto-secundario, #64748b);
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.config-container .config-empresa-grid .logo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.config-container .config-empresa-grid .btn-upload,
+.config-container .config-empresa-grid .btn-outline {
+  padding: 8px 16px !important;
+  border-radius: 8px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+}
+
+.config-container .config-empresa-grid .logo-actions small {
+  color: var(--texto-secundario, #64748b);
+  font-size: 11.5px;
+  line-height: 1.4;
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+/* Grids Internos de 2 e 3 Colunas na Aba Empresa */
+.config-container .config-empresa-grid .form-grid-2-col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.config-container .config-empresa-grid .form-grid-3-col {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+
+.config-container .config-empresa-grid .f-group {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+/* Grid Atendimento e Redes: WhatsApp e Instagram (Sempre na Mesma Linha em 2 Colunas) */
+.config-container .config-empresa-grid .atendimento-redes-2col {
+  display: grid !important;
+  grid-template-columns: repeat(2, 1fr) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 480px) {
+  .config-container .config-empresa-grid .atendimento-redes-2col {
+    gap: 8px !important;
+  }
+  .config-container .config-empresa-grid .atendimento-redes-2col label {
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+/* Grid Parâmetros de Frete: Pares em 2 Colunas Simétricas na Mesma Linha */
+.config-container .config-empresa-grid .frete-params-2col-row {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .config-empresa-grid .frete-params-2col-row > div {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .config-empresa-grid .frete-params-2col-row label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  line-height: 1.25 !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  min-height: 28px !important;
+}
+
+@media (max-width: 480px) {
+  .config-container .config-empresa-grid .frete-params-2col-row {
+    gap: 8px !important;
+  }
+  .config-container .config-empresa-grid .frete-params-2col-row label {
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    white-space: normal !important;
+    word-break: normal !important;
+    min-height: 26px !important;
+  }
+}
+
+/* Grids Proporcionais de Endereço na Aba Empresa */
+/* 1. Logradouro MAIOR que Número (2.5fr vs 1fr) */
+.config-container .config-empresa-grid .endereco-rua-num-row {
+  display: grid !important;
+  grid-template-columns: 2.5fr 1fr !important;
+  gap: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 2. Cidade MAIOR que Estado (2.5fr vs 1fr) */
+.config-container .config-empresa-grid .endereco-cidade-uf-row {
+  display: grid !important;
+  grid-template-columns: 2.5fr 1fr !important;
+  gap: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* 3. Bairro MAIOR que CEP (1.6fr vs 1fr) */
+.config-container .config-empresa-grid .endereco-bairro-cep-row {
+  display: grid !important;
+  grid-template-columns: 1.6fr 1fr !important;
+  gap: 12px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .config-empresa-grid .endereco-rua-num-row > div,
+.config-container .config-empresa-grid .endereco-cidade-uf-row > div,
+.config-container .config-empresa-grid .endereco-bairro-cep-row > div {
+  min-width: 0 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+@media (max-width: 480px) {
+  .config-container .config-empresa-grid .endereco-rua-num-row {
+    grid-template-columns: 2.3fr 1fr !important;
+    gap: 8px !important;
+  }
+  .config-container .config-empresa-grid .endereco-cidade-uf-row {
+    grid-template-columns: 2.3fr 1fr !important;
+    gap: 8px !important;
+  }
+  .config-container .config-empresa-grid .endereco-bairro-cep-row {
+    grid-template-columns: 1.5fr 1fr !important;
+    gap: 8px !important;
+  }
+  .config-container .config-empresa-grid .endereco-rua-num-row label,
+  .config-container .config-empresa-grid .endereco-cidade-uf-row label,
+  .config-container .config-empresa-grid .endereco-bairro-cep-row label {
+    font-size: 11.5px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+}
+
+/* Grid Tipo de Local de Origem (3 Colunas Sempre na Mesma Linha) */
+.config-container .config-empresa-grid .tipo-local-origem-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 6px !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin-top: 6px !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .config-empresa-grid .btn-tipo-local-origem {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 1px !important;
+  padding: 6px 3px !important;
+  border-radius: 9px !important;
+  border: 1.5px solid var(--borda, #e2e8f0) !important;
+  background: var(--fundo-card, #ffffff) !important;
+  color: var(--texto-secundario, #64748b) !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  text-align: center !important;
+  box-sizing: border-box !important;
+  overflow: hidden !important;
+}
+
+.config-container .config-empresa-grid .btn-tipo-local-origem i {
+  font-size: 0.95rem !important;
+  margin-bottom: 2px !important;
+}
+
+.config-container .config-empresa-grid .btn-tipo-local-origem .local-label {
+  font-size: 0.76rem !important;
+  font-weight: 600 !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+.config-container .config-empresa-grid .btn-tipo-local-origem .local-desc {
+  font-size: 0.63rem !important;
+  opacity: 0.8 !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  line-height: 1.2 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  max-width: 100% !important;
+}
+
+.config-container .config-empresa-grid .btn-tipo-local-origem:hover {
+  border-color: color-mix(in srgb, var(--cor-destaque, #c5a059) 50%, transparent) !important;
+}
+
+.config-container .config-empresa-grid .btn-tipo-local-origem.ativo,
+.config-container .config-empresa-grid .btn-tipo-local-origem.active {
+  border: 2px solid var(--cor-destaque, #c5a059) !important;
+  background: color-mix(in srgb, var(--cor-destaque, #c5a059) 14%, transparent) !important;
+  color: var(--cor-destaque, #c5a059) !important;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--cor-destaque, #c5a059) 20%, transparent) !important;
+}
+
+.config-container .config-empresa-grid .btn-tipo-local-origem.ativo .local-label,
+.config-container .config-empresa-grid .btn-tipo-local-origem.ativo .local-desc,
+.config-container .config-empresa-grid .btn-tipo-local-origem.active .local-label,
+.config-container .config-empresa-grid .btn-tipo-local-origem.active .local-desc {
+  color: var(--cor-destaque, #c5a059) !important;
+}
+
+/* =========================================
+   NOVO FORMULÁRIO DA EMPRESA E LOGO (BASE)
    ========================================= */
 .empresa-id-wrapper {
   display: flex;
-  gap: 20px;
+  gap: 16px;
   align-items: center;
-  margin-bottom: 25px;
+  margin-bottom: 16px;
   background: rgba(248, 250, 252, 0.6);
-  padding: 18px;
-  border-radius: 14px;
+  padding: 16px;
+  border-radius: 12px;
   border: 1px solid var(--borda);
 }
 
@@ -490,7 +874,7 @@
 }
 
 .logo-preview-box {
-  width: 105px; height: 105px; border-radius: 14px;
+  width: 90px; height: 90px; border-radius: 12px;
   border: 2px dashed var(--borda); display: flex; align-items: center; justify-content: center;
   background: var(--branco); overflow: hidden; color: var(--texto-secundario); flex-shrink: 0;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
@@ -504,15 +888,15 @@
   gap: 6px;
   color: #94a3b8;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .logo-icon-empty {
-  font-size: 26px;
+  font-size: 24px;
   opacity: 0.6;
 }
 
-.logo-actions { display: flex; flex-direction: column; gap: 10px; align-items: flex-start; justify-content: center; }
+.logo-actions { display: flex; flex-direction: column; gap: 8px; align-items: flex-start; justify-content: center; }
 .logo-actions small { color: var(--texto-secundario); font-size: 11.5px; max-width: 240px; line-height: 1.45; display: flex; gap: 5px; align-items: flex-start; }
 
 .btn-upload {
@@ -522,8 +906,8 @@
 }
 
 .btn-outline {
-  border: 1.5px solid var(--borda); background: var(--branco); padding: 10px 18px;
-  border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 13px; transition: all 0.2s ease; color: var(--texto-principal);
+  border: 1.5px solid var(--borda); background: var(--branco); padding: 8px 16px;
+  border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12.5px; transition: all 0.2s ease; color: var(--texto-principal);
   box-shadow: 0 2px 4px rgba(0,0,0,0.02);
   display: inline-flex; align-items: center; gap: 8px;
 }
@@ -536,16 +920,16 @@
 
 .btn-danger-outline {
   border: 1px solid transparent; background: transparent; color: #ef4444; padding: 6px 12px;
-  border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 12px; transition: all 0.2s ease; text-decoration: none;
+  border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 12px; transition: all 0.2s ease; text-decoration: none;
   display: inline-flex; align-items: center; gap: 6px;
 }
 .btn-danger-outline:hover { background: #fff1f2; }
 
 .form-grid-2-col {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
 }
 .form-grid-3-col {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
 }
 .span-2-col { grid-column: span 2; }
 .span-3-col { grid-column: span 3; }
@@ -814,6 +1198,629 @@
 .aba-listas-wrapper .btn-add { padding: 0 12px !important; font-size: 11px !important; border-radius: 6px !important; height: 32px !important; }
 .aba-listas-wrapper .config-list li { padding: 6px 10px !important; font-size: 12px !important; margin-bottom: 5px !important; border-radius: 6px !important; min-height: 32px !important; }
 .aba-listas-wrapper .del-icon { width: 22px !important; height: 22px !important; font-size: 12px !important; border-radius: 4px !important; }
+
+/* =========================================
+   SEÇÃO 1: PRATELEIRAS & ENDEREÇAMENTO GALPÃO (BOUTIQUE EXECUTIVE)
+   ========================================= */
+.config-container .aba-listas-wrapper .galpao-card-master {
+  padding: 18px 20px !important;
+  border-radius: 14px !important;
+  background: var(--card-bg, #ffffff) !important;
+  border: 1.5px solid var(--border-color, #e2e8f0) !important;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.04) !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-card-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  margin-bottom: 16px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-card-title {
+  margin: 0 !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-toolbar {
+  display: flex !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 8px !important;
+}
+
+.config-container .aba-listas-wrapper .btn-galpao-toolbar {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  padding: 7px 14px !important;
+  border-radius: 8px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.2s ease !important;
+  line-height: 1.2 !important;
+}
+
+.config-container .aba-listas-wrapper .btn-galpao-toolbar.pdf {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1.5px solid #cbd5e1 !important;
+}
+.config-container .aba-listas-wrapper .btn-galpao-toolbar.pdf:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+  transform: translateY(-1px) !important;
+}
+
+.config-container .aba-listas-wrapper .btn-galpao-toolbar.etiquetas {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border: 1.5px solid #bfdbfe !important;
+}
+.config-container .aba-listas-wrapper .btn-galpao-toolbar.etiquetas:hover {
+  background: #dbeafe !important;
+  border-color: #93c5fd !important;
+  transform: translateY(-1px) !important;
+}
+
+.config-container .aba-listas-wrapper .btn-galpao-toolbar.alerta {
+  background: #fffbeb !important;
+  color: #b45309 !important;
+  border: 1.5px solid #fde68a !important;
+  animation: pulseSemLocal 2.5s infinite ease-in-out !important;
+}
+@keyframes pulseSemLocal {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.25); }
+  50% { box-shadow: 0 0 0 5px rgba(217, 119, 6, 0.12); }
+}
+
+/* Construtor de Endereço */
+.config-container .aba-listas-wrapper .galpao-builder-card {
+  background: #f8fafc !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 16px 18px !important;
+  margin-bottom: 20px !important;
+  margin-top: 6px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-builder-title {
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  margin-bottom: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-builder-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, 1fr) !important;
+  gap: 12px !important;
+  margin-bottom: 14px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-field-group label {
+  font-size: 0.72rem !important;
+  font-weight: 800 !important;
+  color: #475569 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  margin-bottom: 6px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-field-group .galpao-input {
+  width: 100% !important;
+  height: 42px !important;
+  padding: 0 14px !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  font-size: 0.88rem !important;
+  outline: none !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  font-weight: 500 !important;
+  box-sizing: border-box !important;
+  transition: border-color 0.2s, box-shadow 0.2s !important;
+}
+.config-container .aba-listas-wrapper .galpao-field-group .galpao-input:focus {
+  border-color: #c5a059 !important;
+  box-shadow: 0 0 0 3px rgba(197, 160, 89, 0.2) !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-builder-footer {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 12px !important;
+  padding-top: 14px !important;
+  border-top: 1px dashed #cbd5e1 !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-preview-wrap {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+}
+
+.config-container .aba-listas-wrapper .preview-label {
+  color: #64748b !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.4px !important;
+  text-transform: uppercase !important;
+}
+
+.config-container .aba-listas-wrapper .preview-badge-val {
+  color: #92400e !important;
+  background: #fef3c7 !important;
+  border: 1px solid #fde68a !important;
+  padding: 5px 14px !important;
+  border-radius: 18px !important;
+  font-size: 0.84rem !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  letter-spacing: 0.2px !important;
+}
+
+.config-container .aba-listas-wrapper .preview-empty {
+  color: #94a3b8 !important;
+  font-size: 0.8rem !important;
+  font-style: italic !important;
+}
+
+.config-container .aba-listas-wrapper .btn-add-endereco {
+  padding: 9px 22px !important;
+  border-radius: 26px !important;
+  font-weight: 800 !important;
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 0.78rem !important;
+  box-shadow: 0 4px 12px rgba(197, 160, 89, 0.3) !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.5px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+}
+.config-container .aba-listas-wrapper .btn-add-endereco:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(197, 160, 89, 0.4) !important;
+}
+
+/* Cabeçalho da Lista de Prateleiras */
+.config-container .aba-listas-wrapper .galpao-shelf-list-header {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-list-title {
+  font-size: 0.78rem !important;
+  font-weight: 800 !important;
+  color: #475569 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-count-badge {
+  background: #dbeafe !important;
+  color: #1d4ed8 !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+  font-size: 0.74rem !important;
+  font-weight: 800 !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-search-wrap {
+  position: relative !important;
+  display: inline-flex !important;
+  align-items: center !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-search-icon {
+  position: absolute !important;
+  left: 10px !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  pointer-events: none !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-search-input {
+  height: 32px !important;
+  padding: 0 24px 0 28px !important;
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  font-size: 0.8rem !important;
+  outline: none !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  width: 170px !important;
+  transition: width 0.2s, border-color 0.2s !important;
+}
+.config-container .aba-listas-wrapper .galpao-search-input:focus {
+  width: 210px !important;
+  border-color: #3b82f6 !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-search-clear {
+  position: absolute !important;
+  right: 8px !important;
+  background: transparent !important;
+  border: none !important;
+  font-size: 11px !important;
+  color: #94a3b8 !important;
+  cursor: pointer !important;
+  padding: 0 !important;
+}
+
+/* Lista de Prateleiras */
+.config-container .aba-listas-wrapper .galpao-shelf-list {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  max-height: 300px !important;
+  overflow-y: auto !important;
+  padding-right: 4px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-shelf-card {
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 9px 13px !important;
+  gap: 10px !important;
+  transition: all 0.15s ease !important;
+}
+.config-container .aba-listas-wrapper .galpao-shelf-card:hover {
+  background: #ffffff !important;
+  border-color: #cbd5e1 !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-info-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  min-width: 0 !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-icon-badge {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 7px !important;
+  background: #eff6ff !important;
+  color: #3b82f6 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 12px !important;
+  flex-shrink: 0 !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-details {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  flex-wrap: wrap !important;
+  min-width: 0 !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-name {
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  letter-spacing: 0.1px !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-count-pill {
+  font-size: 11px !important;
+  color: #2563eb !important;
+  background: #dbeafe !important;
+  border: 1px solid #bfdbfe !important;
+  padding: 2px 8px !important;
+  border-radius: 12px !important;
+  font-weight: 800 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  white-space: nowrap !important;
+}
+
+.config-container .aba-listas-wrapper .shelf-actions-group {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-shrink: 0 !important;
+}
+
+.config-container .aba-listas-wrapper .btn-shelf-action {
+  cursor: pointer !important;
+  font-size: 11.5px !important;
+  border-radius: 6px !important;
+  font-weight: 700 !important;
+  padding: 5px 11px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  transition: all 0.15s ease !important;
+  border: 1px solid transparent !important;
+  line-height: 1.2 !important;
+}
+
+.config-container .aba-listas-wrapper .btn-shelf-action.vincular {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #bfdbfe !important;
+}
+.config-container .aba-listas-wrapper .btn-shelf-action.vincular:hover {
+  background: #dbeafe !important;
+  border-color: #93c5fd !important;
+}
+
+.config-container .aba-listas-wrapper .btn-shelf-action.etiqueta {
+  background: #f8fafc !important;
+  color: #334155 !important;
+  border-color: #cbd5e1 !important;
+}
+.config-container .aba-listas-wrapper .btn-shelf-action.etiqueta:hover {
+  background: #f1f5f9 !important;
+  border-color: #94a3b8 !important;
+}
+
+.config-container .aba-listas-wrapper .btn-shelf-icon {
+  width: 28px !important;
+  height: 28px !important;
+  border-radius: 6px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border: 1px solid transparent !important;
+  cursor: pointer !important;
+  font-size: 11px !important;
+  transition: all 0.15s ease !important;
+  padding: 0 !important;
+}
+
+.config-container .aba-listas-wrapper .btn-shelf-icon.edit {
+  background: #f1f5f9 !important;
+  color: #475569 !important;
+  border-color: #e2e8f0 !important;
+}
+.config-container .aba-listas-wrapper .btn-shelf-icon.edit:hover {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.config-container .aba-listas-wrapper .btn-shelf-icon.delete {
+  background: #fef2f2 !important;
+  color: #ef4444 !important;
+  border-color: #fee2e2 !important;
+}
+.config-container .aba-listas-wrapper .btn-shelf-icon.delete:hover {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-empty-state {
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 24px 16px !important;
+  text-align: center !important;
+  background: #f8fafc !important;
+  border: 1.5px dashed #cbd5e1 !important;
+  border-radius: 10px !important;
+  gap: 8px !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-empty-icon {
+  font-size: 24px !important;
+  color: #94a3b8 !important;
+}
+
+.config-container .aba-listas-wrapper .galpao-empty-text {
+  font-size: 12px !important;
+  color: #64748b !important;
+  margin: 0 !important;
+  max-width: 380px !important;
+}
+
+/* Responsividade Mobile (<= 768px) */
+@media (max-width: 768px) {
+  .config-container .aba-listas-wrapper .galpao-card-master {
+    padding: 14px 10px !important;
+  }
+
+  .config-container .aba-listas-wrapper .galpao-card-header {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .config-container .aba-listas-wrapper .galpao-toolbar {
+    width: 100% !important;
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 8px !important;
+  }
+
+  .config-container .aba-listas-wrapper .btn-galpao-toolbar {
+    justify-content: center !important;
+    width: 100% !important;
+    padding: 8px 6px !important;
+    font-size: 11.5px !important;
+  }
+
+  .config-container .aba-listas-wrapper .btn-galpao-toolbar.alerta {
+    grid-column: span 2 !important;
+  }
+
+  .config-container .aba-listas-wrapper .galpao-builder-grid {
+    grid-template-columns: 1fr !important;
+    gap: 10px !important;
+  }
+
+  .config-container .aba-listas-wrapper .galpao-builder-footer {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  .config-container .aba-listas-wrapper .btn-add-endereco {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .config-container .aba-listas-wrapper .galpao-shelf-card {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 8px !important;
+    padding: 10px 10px !important;
+  }
+
+  .config-container .aba-listas-wrapper .shelf-actions-group {
+    justify-content: flex-end !important;
+    width: 100% !important;
+    border-top: 1px dashed #e2e8f0 !important;
+    padding-top: 6px !important;
+  }
+
+  .config-container .aba-listas-wrapper .galpao-search-input {
+    width: 130px !important;
+  }
+  .config-container .aba-listas-wrapper .galpao-search-input:focus {
+    width: 160px !important;
+  }
+}
+
+/* =========================================
+   BARRA DE CONFIRMAÇÃO & SALVAMENTO GERAL (CATÁLOGO & ESTOQUE)
+   ========================================= */
+.config-container .aba-listas-wrapper .catalogo-save-bar {
+  margin-top: 10px !important;
+  padding: 16px 20px !important;
+  background: var(--card-bg, #ffffff) !important;
+  border: 1.5px solid var(--border-color, #e2e8f0) !important;
+  border-radius: 12px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 14px !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04) !important;
+}
+
+.config-container .aba-listas-wrapper .catalogo-save-info {
+  display: flex !important;
+  align-items: center !important;
+  gap: 14px !important;
+  flex: 1 !important;
+  min-width: 260px !important;
+}
+
+.config-container .aba-listas-wrapper .catalogo-save-icon {
+  width: 42px !important;
+  height: 42px !important;
+  border-radius: 10px !important;
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 18px !important;
+  flex-shrink: 0 !important;
+}
+
+.config-container .aba-listas-wrapper .catalogo-save-title {
+  font-size: 14px !important;
+  font-weight: 800 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  margin-bottom: 2px !important;
+}
+
+.config-container .aba-listas-wrapper .catalogo-save-desc {
+  margin: 0 !important;
+  font-size: 12.5px !important;
+  color: var(--texto-secundario, #64748b) !important;
+  line-height: 1.4 !important;
+}
+
+.config-container .aba-listas-wrapper .catalogo-save-desc .highlight {
+  font-weight: 700 !important;
+  color: var(--texto-principal, #0f172a) !important;
+}
+
+.config-container .aba-listas-wrapper .btn-salvar-catalogo-destaque {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  padding: 10px 24px !important;
+  background: linear-gradient(135deg, var(--cor-destaque, #c5a059) 0%, var(--gold-dark, #a38038) 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--cor-destaque, #c5a059) 35%, transparent) !important;
+  transition: all 0.2s ease !important;
+  white-space: nowrap !important;
+}
+.config-container .aba-listas-wrapper .btn-salvar-catalogo-destaque:hover:not(:disabled) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px color-mix(in srgb, var(--cor-destaque, #c5a059) 45%, transparent) !important;
+}
+.config-container .aba-listas-wrapper .btn-salvar-catalogo-destaque:disabled {
+  opacity: 0.7 !important;
+  cursor: not-allowed !important;
+}
+.config-container .aba-listas-wrapper .btn-salvar-catalogo-destaque.sucesso {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%) !important;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35) !important;
+}
+
+@media (max-width: 768px) {
+  .config-container .aba-listas-wrapper .catalogo-save-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+  }
+  .config-container .aba-listas-wrapper .btn-salvar-catalogo-destaque {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
 
 /* =========================================
    ESTILOS DE RESPONSIVIDADE E CORREÇÕES
@@ -1273,63 +2280,139 @@
 /* =========================================
    KPI CARDS DO GALPÃO & CATÁLOGO
    ========================================= */
-.kpi-galpao-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 16px;
-  margin-bottom: 5px;
+/* =========================================
+   KPI CARDS DO GALPÃO & CATÁLOGO (3 COLUNAS)
+   ========================================= */
+.config-container .kpi-galpao-grid {
+  display: grid !important;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  gap: 14px !important;
+  margin-bottom: 5px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
 }
 
-.kpi-galpao-card {
-  background: var(--branco);
-  border: 1.5px solid var(--borda);
+.config-container .kpi-galpao-card {
+  background: var(--fundo-card, #ffffff);
+  border: 1.5px solid var(--borda, #e2e8f0);
   border-radius: 14px;
-  padding: 16px 18px;
+  padding: 14px 16px;
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.03);
   transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
-.kpi-galpao-card:hover {
+.config-container .kpi-galpao-card:hover {
   transform: translateY(-3px);
   box-shadow: 0 10px 25px rgba(0,0,0,0.08);
-  border-color: #3b82f6;
+  border-color: var(--cor-destaque, #c5a059);
 }
 
-.kpi-galpao-icon {
-  width: 46px;
-  height: 46px;
+.config-container .kpi-galpao-card-alerta {
+  cursor: pointer;
+}
+
+.config-container .kpi-galpao-icon {
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 20px;
+  font-size: 19px;
   flex-shrink: 0;
 }
 
-.kpi-galpao-icon.blue { background: rgba(37, 99, 235, 0.1); color: #2563eb; }
-.kpi-galpao-icon.green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
-.kpi-galpao-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
-.kpi-galpao-icon.purple { background: rgba(147, 51, 234, 0.1); color: #9333ea; }
+.config-container .kpi-galpao-icon.blue { background: rgba(37, 99, 235, 0.1); color: #2563eb; }
+.config-container .kpi-galpao-icon.green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+.config-container .kpi-galpao-icon.amber { background: rgba(245, 158, 11, 0.12); color: #d97706; }
+.config-container .kpi-galpao-icon.purple { background: rgba(147, 51, 234, 0.1); color: #9333ea; }
 
-.kpi-galpao-val {
-  font-size: 24px;
+.config-container .kpi-galpao-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.config-container .kpi-galpao-val {
+  font-size: 22px;
   font-weight: 900;
   color: var(--texto-principal);
   line-height: 1.1;
 }
 
-.kpi-galpao-title {
+.config-container .kpi-galpao-title {
   font-size: 11.5px;
   font-weight: 700;
   color: var(--texto-secundario);
   margin-top: 2px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.config-container .kpi-seta-icon {
+  font-size: 10px;
+  transition: transform 0.2s ease;
+}
+
+.config-container .kpi-galpao-card-alerta:hover .kpi-seta-icon {
+  transform: translateX(3px);
+}
+
+@media (max-width: 768px) {
+  .config-container .kpi-galpao-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 8px !important;
+  }
+  .config-container .kpi-galpao-card {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    padding: 12px 6px !important;
+    gap: 6px !important;
+    border-radius: 12px !important;
+  }
+  .config-container .kpi-galpao-icon {
+    width: 32px !important;
+    height: 32px !important;
+    border-radius: 9px !important;
+    font-size: 14px !important;
+    margin: 0 auto !important;
+  }
+  .config-container .kpi-galpao-info {
+    align-items: center !important;
+    text-align: center !important;
+    width: 100% !important;
+  }
+  .config-container .kpi-galpao-val {
+    font-size: 18px !important;
+    font-weight: 900 !important;
+    line-height: 1 !important;
+  }
+  .config-container .kpi-galpao-title {
+    font-size: 9.5px !important;
+    font-weight: 700 !important;
+    line-height: 1.2 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.1px !important;
+    word-break: break-word !important;
+    white-space: normal !important;
+    text-align: center !important;
+    justify-content: center !important;
+    margin-top: 2px !important;
+  }
 }
 
 /* CARDS DE ETIQUETAS */
@@ -1551,56 +2634,492 @@
     color: #000000 !important;
   }
 }
-.ajuda-cat-banner {
-  background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%);
-  border: 1.5px solid #bae6fd;
-  border-radius: 14px;
-  padding: 18px 20px;
-  color: #0369a1;
-  margin-bottom: 10px;
+/* =========================================
+   GUIA VISUAL DE ORGANIZAÇÃO DO GALPÃO & CATÁLOGO
+   ========================================= */
+.config-container .ajuda-cat-banner {
+  background: linear-gradient(135deg, rgba(248, 250, 252, 0.95) 0%, rgba(241, 245, 249, 0.85) 100%);
+  border: 1.5px solid var(--borda, #e2e8f0);
+  border-radius: 16px;
+  padding: 18px 22px;
+  margin-bottom: 15px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.03);
   transition: all 0.3s ease;
 }
 
-[data-theme='dark'] .ajuda-cat-banner {
-  background: linear-gradient(135deg, rgba(30, 58, 138, 0.3) 0%, rgba(15, 23, 42, 0.4) 100%);
-  border-color: rgba(59, 130, 246, 0.3);
-  color: #93c5fd;
+[data-theme='dark'] .config-container .ajuda-cat-banner {
+  background: linear-gradient(135deg, rgba(24, 24, 27, 0.95) 0%, rgba(39, 39, 42, 0.85) 100%);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
-.ajuda-cards-grid {
+.config-container .ajuda-banner-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+}
+
+.config-container .ajuda-banner-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.config-container .ajuda-banner-icon-box {
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.12);
+  color: #d97706;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 19px;
+  flex-shrink: 0;
+  border: 1px solid rgba(245, 158, 11, 0.25);
+}
+
+[data-theme='dark'] .config-container .ajuda-banner-icon-box {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+.config-container .ajuda-banner-text h4 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+  letter-spacing: -0.2px;
+}
+
+.config-container .ajuda-banner-text p {
+  margin: 3px 0 0 0;
+  font-size: 12.5px;
+  color: var(--texto-secundario, #64748b);
+  line-height: 1.4;
+}
+
+.config-container .btn-toggle-guia {
+  background: var(--branco, #ffffff);
+  border: 1.5px solid var(--borda, #cbd5e1);
+  color: var(--texto-principal, #0f172a);
+  border-radius: 20px;
+  padding: 7px 15px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.config-container .btn-toggle-guia:hover {
+  border-color: var(--cor-destaque, #c5a059);
+  color: var(--cor-destaque, #c5a059);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.15);
+}
+
+[data-theme='dark'] .config-container .btn-toggle-guia {
+  background: #27272a;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #f4f4f5;
+}
+
+.config-container .ajuda-cards-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 16px;
-  margin-top: 14px;
+  margin-top: 16px;
 }
 
-@media (max-width: 768px) {
-  .ajuda-cards-grid {
-    grid-template-columns: 1fr;
-  }
+.config-container .ajuda-card-galpao,
+.config-container .ajuda-card-vitrine {
+  background: var(--fundo-card, #ffffff);
+  border-radius: 14px;
+  padding: 16px 18px;
+  border: 1.5px solid var(--borda, #e2e8f0);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.2s ease;
 }
 
-.ajuda-mini-card {
-  background: var(--branco);
+.config-container .ajuda-card-galpao {
+  border-left: 4px solid #2563eb;
+}
+
+.config-container .ajuda-card-vitrine {
+  border-left: 4px solid var(--cor-destaque, #c5a059);
+}
+
+[data-theme='dark'] .config-container .ajuda-card-galpao,
+[data-theme='dark'] .config-container .ajuda-card-vitrine {
+  background: #18181b;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+[data-theme='dark'] .config-container .ajuda-card-galpao { border-left-color: #3b82f6; }
+[data-theme='dark'] .config-container .ajuda-card-vitrine { border-left-color: #fbbf24; }
+
+.config-container .ajuda-card-top-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
   border-radius: 12px;
-  padding: 14px 16px;
-  border: 1px solid var(--borda);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  font-size: 10.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  width: fit-content;
 }
 
-.caminho-ativo-bar {
-  background: rgba(197, 160, 89, 0.08);
-  border: 1px dashed var(--dourado);
-  border-radius: 10px;
-  padding: 12px 16px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--texto-principal);
+.config-container .ajuda-card-top-tag.blue {
+  background: #eff6ff;
+  color: #1d4ed8;
+  border: 1px solid #bfdbfe;
+}
+[data-theme='dark'] .config-container .ajuda-card-top-tag.blue {
+  background: rgba(37, 99, 235, 0.2);
+  color: #60a5fa;
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.config-container .ajuda-card-top-tag.gold {
+  background: #fef3c7;
+  color: #92400e;
+  border: 1px solid #fde68a;
+}
+[data-theme='dark'] .config-container .ajuda-card-top-tag.gold {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.config-container .ajuda-card-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--texto-principal, #0f172a);
+  margin: 0;
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-bottom: 15px;
-  flex-wrap: wrap;
+}
+
+.config-container .ajuda-card-desc {
+  font-size: 12px;
+  color: var(--texto-secundario, #64748b);
+  margin: 0;
+  line-height: 1.45;
+}
+
+.config-container .ajuda-card-features {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.config-container .ajuda-card-features li {
+  font-size: 12px;
+  color: var(--texto-principal, #334155);
+  line-height: 1.45;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.config-container .ajuda-card-features li strong {
+  color: var(--texto-principal, #0f172a);
+}
+
+.config-container .ajuda-card-features li i {
+  font-size: 13px;
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.config-container .ajuda-exemplo-pratico {
+  margin-top: 14px;
+  background: color-mix(in srgb, var(--cor-destaque, #c5a059) 10%, transparent);
+  border: 1.5px dashed color-mix(in srgb, var(--cor-destaque, #c5a059) 45%, transparent);
+  border-radius: 12px;
+  padding: 13px 16px;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.config-container .ajuda-exemplo-icone {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--cor-destaque, #c5a059);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.config-container .ajuda-exemplo-conteudo strong {
+  font-size: 12.5px;
+  color: var(--texto-principal, #0f172a);
+  display: block;
+  margin-bottom: 2px;
+}
+
+.config-container .ajuda-exemplo-conteudo p {
+  margin: 0;
+  font-size: 12px;
+  color: var(--texto-secundario, #475569);
+  line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+  .config-container .ajuda-cat-banner {
+    padding: 16px 14px !important;
+  }
+  .config-container .ajuda-banner-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+  .config-container .btn-toggle-guia {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+  .config-container .ajuda-cards-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+}
+
+/* =========================================
+   TRILHA DE NAVEGAÇÃO ATIVA DA VITRINE (BREADCRUMB BOUTIQUE)
+   ========================================= */
+.trilha-vitrine-card,
+.config-container .aba-listas-wrapper .trilha-vitrine-card,
+.caminho-ativo-bar {
+  background: var(--card-bg, #ffffff) !important;
+  border: 1.5px solid var(--border-color, #e2e8f0) !important;
+  border-radius: 12px !important;
+  padding: 12px 16px !important;
+  margin-bottom: 18px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+  transition: all 0.2s ease !important;
+}
+
+.trilha-vitrine-top {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  flex-wrap: wrap !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+  padding-bottom: 9px !important;
+  border-bottom: 1px dashed var(--border-color, #e2e8f0) !important;
+}
+
+.trilha-header-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+}
+
+.trilha-icon-box {
+  width: 32px !important;
+  height: 32px !important;
+  border-radius: 8px !important;
+  background: rgba(197, 160, 89, 0.12) !important;
+  color: var(--cor-destaque, #c5a059) !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 14px !important;
+  flex-shrink: 0 !important;
+}
+
+.trilha-label {
+  font-size: 13px !important;
+  font-weight: 800 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  display: block !important;
+  letter-spacing: 0.2px !important;
+}
+
+.trilha-sublabel {
+  font-size: 11.5px !important;
+  color: var(--texto-secundario, #64748b) !important;
+  display: block !important;
+}
+
+.btn-limpar-trilha {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #64748b !important;
+  font-size: 11.5px !important;
+  font-weight: 700 !important;
+  padding: 4px 10px !important;
+  border-radius: 6px !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 5px !important;
+  transition: all 0.2s ease !important;
+}
+.btn-limpar-trilha:hover {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+  border-color: #fca5a5 !important;
+}
+
+.trilha-grid-2x2 {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.trilha-pair-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  width: 100% !important;
+}
+
+.trilha-pair-row .trilha-step-pill {
+  flex: 1 !important;
+  min-width: 0 !important;
+}
+
+.trilha-arrow-icon {
+  font-size: 10px !important;
+  color: #94a3b8 !important;
+  flex-shrink: 0 !important;
+}
+
+.trilha-step-pill {
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 7px !important;
+  padding: 6px 12px !important;
+  border-radius: 20px !important;
+  font-size: 12.5px !important;
+  font-weight: 600 !important;
+  transition: all 0.2s ease !important;
+  user-select: none !important;
+  overflow: hidden !important;
+}
+
+.trilha-step-pill .step-text-val {
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.trilha-step-pill.pendente {
+  background: #f1f5f9 !important;
+  color: #94a3b8 !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+.trilha-step-pill.pendente .step-badge-num {
+  background: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.trilha-step-pill.ativo {
+  background: rgba(197, 160, 89, 0.12) !important;
+  color: #855c1b !important;
+  border: 1.5px solid rgba(197, 160, 89, 0.35) !important;
+  cursor: pointer !important;
+  font-weight: 700 !important;
+  box-shadow: 0 1px 4px rgba(197, 160, 89, 0.12) !important;
+}
+
+.trilha-step-pill.ativo:hover {
+  transform: translateY(-1px) !important;
+  border-color: #c5a059 !important;
+  box-shadow: 0 3px 8px rgba(197, 160, 89, 0.25) !important;
+}
+
+.trilha-step-pill.ativo .step-badge-num {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+}
+
+.trilha-step-pill.gold-highlight {
+  background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%) !important;
+  border-color: #f59e0b !important;
+  color: #92400e !important;
+}
+
+.step-badge-num {
+  width: 18px !important;
+  height: 18px !important;
+  border-radius: 50% !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 10px !important;
+  font-weight: 800 !important;
+  line-height: 1 !important;
+}
+
+.step-text-val {
+  white-space: nowrap !important;
+}
+
+.step-check-icon {
+  font-size: 10px !important;
+  color: #16a34a !important;
+}
+
+.step-star-icon {
+  font-size: 10px !important;
+  color: #d97706 !important;
+}
+
+@media (max-width: 768px) {
+  .trilha-vitrine-card,
+  .config-container .aba-listas-wrapper .trilha-vitrine-card {
+    padding: 10px 12px !important;
+  }
+
+  .trilha-grid-2x2 {
+    gap: 6px !important;
+  }
+
+  .trilha-pair-row {
+    gap: 6px !important;
+  }
+
+  .trilha-step-pill {
+    padding: 5px 9px !important;
+    font-size: 11.5px !important;
+    gap: 5px !important;
+  }
+
+  .step-badge-num {
+    width: 16px !important;
+    height: 16px !important;
+    font-size: 9px !important;
+  }
+
+  .trilha-arrow-icon {
+    font-size: 8px !important;
+  }
 }
 
 .step-title-badge {
@@ -1690,11 +3209,12 @@
   margin: 2px 0 0 0;
 }
 
+.config-container .profile-grid-responsive,
 .profile-grid-responsive {
   display: grid;
-  grid-template-columns: minmax(280px, 320px) 1fr;
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: minmax(260px, 300px) 1fr;
+  gap: 16px;
+  align-items: stretch;
 }
 
 /* =========================================
@@ -1702,8 +3222,8 @@
    ========================================= */
 .config-container .profile-cracha-card {
   background: var(--branco, #ffffff);
-  border-radius: 16px;
-  padding: 32px 20px;
+  border-radius: 14px;
+  padding: 20px 18px;
   border: 1px solid var(--borda, #e2e8f0);
   box-shadow: 0 4px 14px rgba(0,0,0,0.03);
   display: flex;
@@ -1723,26 +3243,26 @@
 
 .config-container .profile-cracha-avatar-wrap {
   position: relative;
-  width: 130px;
-  height: 130px;
-  margin: 0 auto 16px;
+  width: 108px;
+  height: 108px;
+  margin: 0 auto 10px;
 }
 
 .config-container .profile-cracha-avatar {
-  width: 130px;
-  height: 130px;
+  width: 108px;
+  height: 108px;
   border-radius: 50%;
   overflow: hidden;
   background: linear-gradient(135deg, #0f172a, #1e293b);
   color: #ffffff;
-  font-size: 52px;
+  font-size: 42px;
   font-weight: 900;
   display: flex;
   align-items: center;
   justify-content: center;
   text-align: center;
-  border: 4px solid #ffffff;
-  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  border: 3px solid #ffffff;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
   box-sizing: border-box;
 }
 
@@ -1834,36 +3354,60 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 10px;
 }
 
 .config-container .profile-cracha-name {
-  font-size: 20px;
+  font-size: 18px;
   color: var(--texto-principal);
-  margin: 0 0 4px 0;
+  margin: 0 0 3px 0;
   font-weight: 800;
   text-transform: capitalize;
   line-height: 1.25;
 }
 
 .config-container .profile-cracha-role-badge {
-  font-size: 13.5px;
-  color: var(--dourado, #c5a059);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 11.5px;
   font-weight: 800;
-  display: inline-block;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.16) 0%, rgba(197, 160, 89, 0.08) 100%);
+  color: var(--dourado, #c5a059);
+  border: 1px solid rgba(197, 160, 89, 0.38);
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.12);
+  margin-top: 4px;
+  line-height: 1.2;
+  transition: all 0.2s ease;
+}
+
+.config-container .profile-cracha-role-badge:hover {
+  background: rgba(197, 160, 89, 0.22);
+  border-color: var(--dourado, #c5a059);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(197, 160, 89, 0.2);
+}
+
+.config-container .profile-cracha-role-badge i {
+  font-size: 10.5px;
+  color: var(--dourado, #c5a059);
 }
 
 .config-container .profile-cracha-details-box {
   width: 100%;
   text-align: left;
   background: var(--fundo-cinza, #f8fafc);
-  padding: 16px;
-  border-radius: 12px;
+  padding: 12px;
+  border-radius: 10px;
   border: 1px solid var(--borda, #e2e8f0);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .config-container .profile-cracha-detail-item {
@@ -1906,13 +3450,13 @@
 /* Card do Formulário de Perfil */
 .config-container .profile-form-card {
   background: var(--branco, #ffffff);
-  border-radius: 16px;
-  padding: 28px 24px;
+  border-radius: 14px;
+  padding: 18px 20px;
   border: 1px solid var(--borda, #e2e8f0);
   box-shadow: 0 4px 14px rgba(0,0,0,0.03);
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 10px;
   width: 100%;
   box-sizing: border-box;
 }
@@ -1921,8 +3465,8 @@
 .config-container .profile-fields-2col-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 10px;
+  margin-bottom: 7px;
   align-items: start;
 }
 
@@ -1941,21 +3485,27 @@
 }
 
 .config-container .profile-field-full {
-  margin-bottom: 16px;
+  margin-bottom: 7px;
 }
 
-/* Rótulos de Perfil 100% Padronizados e de Alto Contraste */
+/* Rótulos de Perfil 100% Padronizados, Sem Negrito e de Alto Contraste */
 .config-container .profile-form-card label,
 .config-container .profile-fields-2col-row label,
 .config-container .profile-field-full label {
   display: flex !important;
-  align-items: flex-end !important;
-  min-height: 24px !important;
-  font-size: 13px !important;
-  font-weight: 800 !important;
-  color: var(--texto-principal) !important;
-  margin-bottom: 6px !important;
-  line-height: 1.25 !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  font-size: 13.5px !important;
+  font-weight: 500 !important;
+  color: var(--texto-principal, #0f172a) !important;
+  margin-bottom: 3px !important;
+  line-height: 20px !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
 }
 
 /* Inputs de Perfil 100% Padronizados em Tamanho, Altura e Fonte */
@@ -1965,8 +3515,9 @@
 .config-container .profile-form-card input[type="email"],
 .config-container .profile-fields-2col-row input,
 .config-container .profile-field-full input {
-  font-size: 14px !important;
-  padding: 12px 14px !important;
+  font-size: 13.5px !important;
+  padding: 8px 12px !important;
+  height: 38px !important;
   min-width: 0 !important;
   width: 100% !important;
   box-sizing: border-box !important;
@@ -1974,6 +3525,7 @@
   border: 1px solid var(--borda) !important;
   background: var(--fundo-cinza) !important;
   color: var(--texto-principal) !important;
+  font-weight: 500 !important;
 }
 
 /* =========================================
@@ -3738,9 +5290,9 @@
     flex-direction: row !important;
     align-items: center !important;
     text-align: left !important;
-    padding: 12px 14px !important;
-    gap: 14px !important;
-    border-radius: 14px !important;
+    padding: 10px 14px !important;
+    gap: 12px !important;
+    border-radius: 12px !important;
     width: 100% !important;
     box-sizing: border-box !important;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04) !important;
@@ -3825,14 +5377,27 @@
   }
 
   .config-container .profile-cracha-role-badge {
-    font-size: 10.5px !important;
-    line-height: 1 !important;
-    padding: 3px 7px !important;
-    background: rgba(197, 160, 89, 0.14) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 5px !important;
+    font-size: 11px !important;
+    line-height: 1.2 !important;
+    padding: 3.5px 9px !important;
+    background: linear-gradient(135deg, rgba(197, 160, 89, 0.18) 0%, rgba(197, 160, 89, 0.08) 100%) !important;
     color: var(--dourado, #c5a059) !important;
-    border-radius: 6px !important;
+    border: 1px solid rgba(197, 160, 89, 0.38) !important;
+    border-radius: 16px !important;
     font-weight: 800 !important;
+    letter-spacing: 0.3px !important;
+    text-transform: uppercase !important;
+    box-shadow: 0 2px 5px rgba(197, 160, 89, 0.12) !important;
     margin: 0 !important;
+    white-space: nowrap !important;
+  }
+
+  .config-container .profile-cracha-role-badge i {
+    font-size: 10px !important;
+    color: var(--dourado, #c5a059) !important;
   }
 
   .config-container .profile-cracha-details-box {
@@ -3869,9 +5434,9 @@
   }
 
   .config-container .profile-form-card {
-    padding: 16px 12px !important;
-    gap: 18px !important;
-    border-radius: 14px !important;
+    padding: 12px 14px !important;
+    gap: 8px !important;
+    border-radius: 12px !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
@@ -3881,7 +5446,7 @@
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
     gap: 8px !important;
-    margin-bottom: 12px !important;
+    margin-bottom: 6px !important;
     width: 100% !important;
     box-sizing: border-box !important;
   }
@@ -3902,20 +5467,26 @@
   }
 
   .config-container .profile-field-full {
-    margin-bottom: 12px !important;
+    margin-bottom: 6px !important;
   }
 
   .config-container .profile-form-card label,
   .config-container .profile-fields-2col-row label,
   .config-container .profile-field-full label {
     display: flex !important;
-    align-items: flex-end !important;
-    min-height: 26px !important;
-    font-size: 12px !important;
-    font-weight: 800 !important;
-    color: var(--texto-principal) !important;
-    line-height: 1.25 !important;
-    margin-bottom: 5px !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    height: 20px !important;
+    min-height: 20px !important;
+    max-height: 20px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--texto-principal, #0f172a) !important;
+    line-height: 20px !important;
+    margin-bottom: 3px !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .config-container .profile-form-card input,
@@ -3925,11 +5496,14 @@
   .config-container .profile-fields-2col-row input,
   .config-container .profile-field-full input {
     font-size: 13.5px !important;
-    padding: 10px 10px !important;
+    padding: 7px 10px !important;
+    height: 36px !important;
     min-width: 0 !important;
     width: 100% !important;
     box-sizing: border-box !important;
     border-radius: 8px !important;
+    font-weight: 500 !important;
+    color: var(--texto-principal) !important;
   }
 
   /* Inputs, Selects e Textareas das outras abas (Empresa, Notificações, etc.) */
@@ -3963,7 +5537,8 @@
   .config-container .profile-fields-2col-row input,
   .config-container .profile-field-full input {
     font-size: 13.5px !important;
-    padding: 10px 10px !important;
+    padding: 7px 10px !important;
+    height: 36px !important;
     box-sizing: border-box !important;
     border-radius: 8px !important;
   }
@@ -3979,23 +5554,134 @@
     font-size: 14px !important;
   }
 
-  .config-container .f-group label {
-    font-size: 12px !important;
-    margin-bottom: 5px !important;
+  /* Aba Empresa — Mobile (Alto Contraste Sem Negrito & Compactação) */
+  .config-container .config-empresa-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
   }
 
-  /* Aba Empresa — Logotipo */
+  .config-container .config-empresa-grid .config-card {
+    padding: 14px 14px !important;
+    border-radius: 12px !important;
+  }
+
+  .config-container .config-empresa-grid .config-card-header {
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .config-container .config-empresa-grid .config-card-header h3,
+  .config-container .config-empresa-grid .config-card h3 {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    color: var(--texto-principal, #0f172a) !important;
+  }
+
+  .config-container .config-empresa-grid .f-group label,
+  .config-container .config-empresa-grid label {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: var(--texto-principal, #0f172a) !important;
+    margin-bottom: 3px !important;
+  }
+
+  .config-container .config-empresa-grid .f-group input,
+  .config-container .config-empresa-grid .f-group select,
+  .config-container .config-empresa-grid .input-with-icon input,
+  .config-container .config-empresa-grid .input-with-icon select {
+    font-size: 13.5px !important;
+    height: 36px !important;
+    padding: 7px 10px !important;
+    padding-left: 36px !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    color: var(--texto-principal, #0f172a) !important;
+  }
+
+  .config-container .config-empresa-grid .slogan-textarea {
+    min-height: 80px !important;
+    height: 80px !important;
+    padding: 10px 12px 10px 36px !important;
+    font-size: 13px !important;
+  }
+
+  .config-container .config-empresa-grid .tipo-local-origem-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    gap: 4px !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+  }
+
+  .config-container .config-empresa-grid .btn-tipo-local-origem {
+    padding: 5px 2px !important;
+    border-radius: 8px !important;
+    min-width: 0 !important;
+    overflow: hidden !important;
+  }
+
+  .config-container .config-empresa-grid .btn-tipo-local-origem i {
+    font-size: 0.88rem !important;
+    margin-bottom: 1px !important;
+  }
+
+  .config-container .config-empresa-grid .btn-tipo-local-origem .local-label {
+    font-size: 0.69rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .config-container .config-empresa-grid .btn-tipo-local-origem .local-desc {
+    font-size: 0.58rem !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+  }
+
+  .config-container .config-empresa-grid .empresa-id-wrapper {
+    flex-direction: column !important;
+    align-items: center !important;
+    text-align: center !important;
+    gap: 12px !important;
+    padding: 12px 14px !important;
+  }
+
+  .config-container .config-empresa-grid .logo-preview-box {
+    width: 76px !important;
+    height: 76px !important;
+  }
+
+  .config-container .config-empresa-grid .logo-actions {
+    width: 100% !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    gap: 6px !important;
+  }
+
+  .config-container .config-empresa-grid .btn-upload,
+  .config-container .config-empresa-grid .btn-outline {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  .config-container .f-group label {
+    font-size: 12.5px !important;
+    margin-bottom: 4px !important;
+  }
+
+  /* Aba Empresa — Logotipo Base */
   .config-container .empresa-id-wrapper {
     flex-direction: column !important;
     align-items: center !important;
     text-align: center !important;
-    gap: 14px !important;
-    padding: 14px !important;
+    gap: 12px !important;
+    padding: 12px !important;
   }
 
   .config-container .logo-preview-box {
-    width: 80px !important;
-    height: 80px !important;
+    width: 76px !important;
+    height: 76px !important;
     border-radius: 12px !important;
   }
 
@@ -4003,7 +5689,7 @@
     width: 100% !important;
     display: flex !important;
     flex-direction: column !important;
-    gap: 8px !important;
+    gap: 6px !important;
   }
 
   .config-container .logo-actions label,
@@ -4334,21 +6020,27 @@
 
   .config-container .profile-fields-2col-row {
     gap: 6px !important;
-    margin-bottom: 10px !important;
+    margin-bottom: 6px !important;
   }
 
   .config-container .profile-field-full {
-    margin-bottom: 10px !important;
+    margin-bottom: 6px !important;
   }
 
   .config-container .profile-form-card label,
   .config-container .profile-fields-2col-row label,
   .config-container .profile-field-full label {
-    font-size: 11.5px !important;
-    min-height: 24px !important;
-    margin-bottom: 4px !important;
-    font-weight: 800 !important;
-    color: var(--texto-principal) !important;
+    font-size: 12.5px !important;
+    height: 19px !important;
+    min-height: 19px !important;
+    max-height: 19px !important;
+    margin-bottom: 2px !important;
+    font-weight: 500 !important;
+    line-height: 19px !important;
+    color: var(--texto-principal, #0f172a) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .config-container .profile-form-card input,
@@ -4358,8 +6050,11 @@
   .config-container .profile-fields-2col-row input,
   .config-container .profile-field-full input {
     font-size: 13px !important;
-    padding: 9px 8px !important;
+    padding: 6px 8px !important;
+    height: 35px !important;
     border-radius: 8px !important;
+    font-weight: 500 !important;
+    color: var(--texto-principal) !important;
   }
 }
 
@@ -4384,20 +6079,27 @@
 
   .config-container .profile-fields-2col-row {
     gap: 5px !important;
-    margin-bottom: 8px !important;
+    margin-bottom: 5px !important;
   }
 
   .config-container .profile-field-full {
-    margin-bottom: 8px !important;
+    margin-bottom: 5px !important;
   }
 
   .config-container .profile-form-card label,
   .config-container .profile-fields-2col-row label,
   .config-container .profile-field-full label {
-    font-size: 10.5px !important;
-    min-height: 22px !important;
-    font-weight: 800 !important;
-    color: var(--texto-principal) !important;
+    font-size: 12px !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
+    margin-bottom: 2px !important;
+    font-weight: 500 !important;
+    line-height: 18px !important;
+    color: var(--texto-principal, #0f172a) !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
   }
 
   .config-container .profile-form-card input,
@@ -4406,11 +6108,947 @@
   .config-container .profile-form-card input[type="email"],
   .config-container .profile-fields-2col-row input,
   .config-container .profile-field-full input {
-    font-size: 12px !important;
-    padding: 7px 6px !important;
+    font-size: 12.5px !important;
+    padding: 5px 6px !important;
+    height: 33px !important;
     border-radius: 8px !important;
+    font-weight: 500 !important;
+    color: var(--texto-principal) !important;
   }
 }
+
+/* ==========================================================================
+   🔒 ABA MARKETING, RASTREAMENTO & CONVERSÃO (100% ESCOPADA)
+   ========================================================================== */
+
+/* ── HERO BANNER ── */
+.config-container .aba-marketing-container .marketing-hero-banner {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 16px !important;
+  padding: 24px 28px !important;
+  margin-bottom: 24px !important;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.25) !important;
+  position: relative !important;
+  overflow: hidden !important;
+}
+
+.config-container .aba-marketing-container .marketing-hero-banner::after {
+  content: '' !important;
+  position: absolute !important;
+  top: -60px !important;
+  right: -60px !important;
+  width: 220px !important;
+  height: 220px !important;
+  background: radial-gradient(circle, rgba(197, 160, 89, 0.18) 0%, rgba(197, 160, 89, 0) 70%) !important;
+  pointer-events: none !important;
+}
+
+.config-container .aba-marketing-container .marketing-hero-tag-row {
+  display: flex !important;
+  align-items: center !important;
+  gap: 10px !important;
+  margin-bottom: 12px !important;
+  flex-wrap: wrap !important;
+}
+
+.config-container .aba-marketing-container .marketing-badge-glow {
+  background: linear-gradient(135deg, #c5a059 0%, #d4af37 100%) !important;
+  color: #ffffff !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.6px !important;
+  padding: 4px 12px !important;
+  border-radius: 20px !important;
+  box-shadow: 0 2px 10px rgba(197, 160, 89, 0.4) !important;
+}
+
+.config-container .aba-marketing-container .marketing-badge-sub {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  padding: 4px 12px !important;
+  border-radius: 20px !important;
+  font-size: 11.5px !important;
+  font-weight: 600 !important;
+}
+
+.config-container .aba-marketing-container .marketing-hero-title {
+  font-size: 24px !important;
+  font-weight: 800 !important;
+  color: #ffffff !important;
+  letter-spacing: -0.5px !important;
+  margin: 0 0 8px 0 !important;
+}
+
+.config-container .aba-marketing-container .marketing-hero-desc {
+  font-size: 14px !important;
+  color: #94a3b8 !important;
+  line-height: 1.55 !important;
+  max-width: 820px !important;
+  margin: 0 0 22px 0 !important;
+}
+
+/* ── COCKPIT DE CONECTIVIDADE (4 CANAIS) ── */
+.config-container .aba-marketing-container .marketing-cockpit-grid {
+  display: grid !important;
+  grid-template-columns: repeat(4, 1fr) !important;
+  gap: 12px !important;
+  position: relative !important;
+  z-index: 1 !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  border-radius: 12px !important;
+  padding: 12px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  transition: all 0.25s ease !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card.ativo {
+  background: rgba(34, 197, 94, 0.1) !important;
+  border-color: rgba(34, 197, 94, 0.35) !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card.inativo {
+  opacity: 0.72 !important;
+}
+
+.config-container .aba-marketing-container .cockpit-icon {
+  width: 36px !important;
+  height: 36px !important;
+  border-radius: 10px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+.config-container .aba-marketing-container .cockpit-icon.meta {
+  background: rgba(24, 119, 242, 0.2) !important;
+  color: #1877F2 !important;
+}
+
+.config-container .aba-marketing-container .cockpit-icon.ga4 {
+  background: rgba(234, 67, 53, 0.2) !important;
+  color: #EA4335 !important;
+}
+
+.config-container .aba-marketing-container .cockpit-icon.gads {
+  background: rgba(66, 133, 244, 0.2) !important;
+  color: #4285F4 !important;
+}
+
+.config-container .aba-marketing-container .cockpit-icon.tiktok {
+  background: rgba(255, 255, 255, 0.16) !important;
+  color: #ffffff !important;
+}
+
+.config-container .aba-marketing-container .cockpit-info {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  overflow: hidden !important;
+}
+
+.config-container .aba-marketing-container .cockpit-label {
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #e2e8f0 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status {
+  font-size: 11px !important;
+  font-weight: 600 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card.ativo .cockpit-status {
+  color: #4ade80 !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card.inativo .cockpit-status {
+  color: #94a3b8 !important;
+}
+
+.config-container .aba-marketing-container .status-dot {
+  width: 7px !important;
+  height: 7px !important;
+  border-radius: 50% !important;
+  display: inline-block !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card.ativo .status-dot {
+  background: #22c55e !important;
+  box-shadow: 0 0 8px #22c55e !important;
+}
+
+.config-container .aba-marketing-container .cockpit-status-card.inativo .status-dot {
+  background: #64748b !important;
+}
+
+/* ── STATUS BADGES & HELP TEXT ── */
+.config-container .aba-marketing-container .badge-sucesso-conexao {
+  background: rgba(34, 197, 94, 0.12) !important;
+  color: #16a34a !important;
+  border: 1px solid rgba(34, 197, 94, 0.25) !important;
+  padding: 3px 8px !important;
+  border-radius: 12px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.config-container .aba-marketing-container .field-help-text {
+  font-size: 12px !important;
+  color: #64748b !important;
+  line-height: 1.4 !important;
+  margin-top: 4px !important;
+  display: block !important;
+}
+
+.config-container .aba-marketing-container .field-help-text code {
+  background: #f1f5f9 !important;
+  padding: 2px 6px !important;
+  border-radius: 4px !important;
+  font-family: monospace !important;
+  font-size: 11px !important;
+  color: #0f172a !important;
+  border: 1px solid #e2e8f0 !important;
+}
+
+/* ── GUIA RÁPIDO ACCORDION / TABS ── */
+.config-container .aba-marketing-container .marketing-help-accordion {
+  margin-top: 18px !important;
+  padding-top: 14px !important;
+  border-top: 1px dashed #e2e8f0 !important;
+}
+
+.config-container .aba-marketing-container .help-tabs-row {
+  display: flex !important;
+  gap: 10px !important;
+  margin-bottom: 10px !important;
+  flex-wrap: wrap !important;
+}
+
+.config-container .aba-marketing-container .btn-help-tab {
+  background: #f8fafc !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 8px !important;
+  padding: 6px 14px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+}
+
+.config-container .aba-marketing-container .btn-help-tab:hover {
+  background: #f1f5f9 !important;
+  border-color: #cbd5e1 !important;
+}
+
+.config-container .aba-marketing-container .btn-help-tab.active.meta {
+  background: rgba(24, 119, 242, 0.08) !important;
+  border-color: #1877F2 !important;
+  color: #1877F2 !important;
+}
+
+.config-container .aba-marketing-container .btn-help-tab.active.ga4 {
+  background: rgba(234, 67, 53, 0.08) !important;
+  border-color: #EA4335 !important;
+  color: #EA4335 !important;
+}
+
+.config-container .aba-marketing-container .help-tab-content {
+  background: #f8fafc !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 12px 16px !important;
+  font-size: 12.5px !important;
+  color: #334155 !important;
+  line-height: 1.6 !important;
+  margin: 0 !important;
+}
+
+/* ── GERADOR DE UTMS & CANAIS ── */
+.config-container .aba-marketing-container .section-step-label {
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin-bottom: 8px !important;
+  display: block !important;
+}
+
+.config-container .aba-marketing-container .utm-channels-grid {
+  display: grid !important;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)) !important;
+  gap: 10px !important;
+  margin-bottom: 14px !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-channel {
+  background: #ffffff !important;
+  border: 1.5px solid #e2e8f0 !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  cursor: pointer !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #334155 !important;
+  transition: all 0.2s ease !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-channel:hover {
+  border-color: #c5a059 !important;
+  background: #faf8f5 !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-channel.ativo {
+  border-color: #c5a059 !important;
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.08) 0%, rgba(197, 160, 89, 0.18) 100%) !important;
+  color: #92400e !important;
+  font-weight: 800 !important;
+  box-shadow: 0 2px 8px rgba(197, 160, 89, 0.2) !important;
+}
+
+.config-container .aba-marketing-container .channel-check {
+  color: #c5a059 !important;
+  font-size: 14px !important;
+}
+
+/* ── PAINEL DE SAÍDA: LINK + QR CODE ── */
+.config-container .aba-marketing-container .utm-output-panel {
+  display: grid !important;
+  grid-template-columns: 1.3fr 1fr !important;
+  gap: 20px !important;
+  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 14px !important;
+  padding: 20px !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .aba-marketing-container .utm-col-title {
+  font-size: 12.5px !important;
+  font-weight: 800 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  color: #475569 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  margin-bottom: 10px !important;
+}
+
+.config-container .aba-marketing-container .utm-link-display {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 10px !important;
+  padding: 12px 14px !important;
+  font-family: 'JetBrains Mono', 'Fira Code', monospace !important;
+  font-size: 12px !important;
+  color: #0f172a !important;
+  word-break: break-all !important;
+  line-height: 1.5 !important;
+  min-height: 56px !important;
+  display: flex !important;
+  align-items: center !important;
+  box-shadow: inset 0 1px 3px rgba(0,0,0,0.04) !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action {
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 10px 18px !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  transition: all 0.2s ease !important;
+  text-decoration: none !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action.primary {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.2) !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action.primary:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25) !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action.secondary {
+  background: #ffffff !important;
+  color: #334155 !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action.secondary:hover {
+  background: #f8fafc !important;
+  border-color: #94a3b8 !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action.sucesso {
+  background: #16a34a !important;
+  color: #ffffff !important;
+}
+
+.config-container .aba-marketing-container .utm-qr-card {
+  background: #ffffff !important;
+  border: 1px solid #e2e8f0 !important;
+  border-radius: 12px !important;
+  padding: 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04) !important;
+}
+
+.config-container .aba-marketing-container .qr-image-wrapper {
+  width: 104px !important;
+  height: 104px !important;
+  border-radius: 8px !important;
+  border: 1px solid #e2e8f0 !important;
+  padding: 6px !important;
+  background: #ffffff !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex-shrink: 0 !important;
+}
+
+.config-container .aba-marketing-container .qr-image-wrapper img {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: contain !important;
+}
+
+.config-container .aba-marketing-container .qr-actions-buttons {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+  flex: 1 !important;
+}
+
+.config-container .aba-marketing-container .btn-qr-action {
+  border: 1px solid #cbd5e1 !important;
+  border-radius: 8px !important;
+  padding: 8px 12px !important;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  background: #ffffff !important;
+  color: #1e293b !important;
+  cursor: pointer !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 6px !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .aba-marketing-container .btn-qr-action:hover {
+  background: #f8fafc !important;
+  border-color: #c5a059 !important;
+  color: #92400e !important;
+}
+
+.config-container .aba-marketing-container .btn-qr-action.print {
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.1) 0%, rgba(197, 160, 89, 0.2) 100%) !important;
+  border-color: #c5a059 !important;
+  color: #92400e !important;
+}
+
+/* ── WHATSAPP CARD & PRÉVIA AO VIVO ── */
+.config-container .aba-marketing-container .whatsapp-preview-grid {
+  display: grid !important;
+  grid-template-columns: 1.15fr 0.85fr !important;
+  gap: 24px !important;
+  align-items: start !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-form-col {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
+.config-container .aba-marketing-container .btn-testar-whats-ao-vivo {
+  background: linear-gradient(135deg, #25D366 0%, #128C7E 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 10px !important;
+  padding: 12px 20px !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 8px !important;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.35) !important;
+  transition: all 0.2s ease !important;
+  width: 100% !important;
+}
+
+.config-container .aba-marketing-container .btn-testar-whats-ao-vivo:hover {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 6px 18px rgba(37, 211, 102, 0.45) !important;
+}
+
+.config-container .aba-marketing-container .mockup-header-title {
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  color: #475569 !important;
+  margin-bottom: 8px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-phone-screen {
+  background: #efeae2 !important;
+  background-image: radial-gradient(#d5cdc4 1px, transparent 1px) !important;
+  background-size: 16px 16px !important;
+  border-radius: 16px !important;
+  padding: 16px !important;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08) !important;
+  border: 2px solid #cbd5e1 !important;
+  min-height: 240px !important;
+  display: flex !important;
+  align-items: flex-end !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-bubble {
+  background: #ffffff !important;
+  border-radius: 12px 12px 2px 12px !important;
+  padding: 8px 10px !important;
+  max-width: 100% !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15) !important;
+  position: relative !important;
+  margin-left: auto !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-link-preview-box {
+  background: #f0f2f5 !important;
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  border: 1px solid #e2e8f0 !important;
+  margin-bottom: 6px !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-link-cover {
+  height: 90px !important;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 8px !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-cover-logo {
+  max-height: 56px !important;
+  max-width: 85% !important;
+  object-fit: contain !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-cover-fallback {
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-link-body {
+  padding: 8px 10px !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-preview-title {
+  display: block !important;
+  font-size: 13px !important;
+  font-weight: 700 !important;
+  color: #0f172a !important;
+  margin-bottom: 3px !important;
+  line-height: 1.3 !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-preview-desc {
+  font-size: 11.5px !important;
+  color: #64748b !important;
+  margin: 0 0 4px 0 !important;
+  line-height: 1.35 !important;
+  display: -webkit-box !important;
+  -webkit-line-clamp: 2 !important;
+  -webkit-box-orient: vertical !important;
+  overflow: hidden !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-preview-host {
+  font-size: 10.5px !important;
+  color: #94a3b8 !important;
+  text-transform: lowercase !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-link-url {
+  font-size: 12px !important;
+  color: #0284c7 !important;
+  text-decoration: underline !important;
+  word-break: break-all !important;
+  margin-bottom: 4px !important;
+}
+
+.config-container .aba-marketing-container .whatsapp-timestamp {
+  font-size: 10px !important;
+  color: #94a3b8 !important;
+  text-align: right !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-end !important;
+  gap: 3px !important;
+}
+
+.config-container .aba-marketing-container .blue-ticks {
+  color: #34b7f1 !important;
+  font-weight: bold !important;
+}
+
+/* ── MENSAGEM PADRÃO & TAGS RÁPIDAS ── */
+.config-container .aba-marketing-container .mensagem-tags-bar {
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  flex-wrap: wrap !important;
+}
+
+.config-container .aba-marketing-container .tags-label {
+  font-size: 11.5px !important;
+  color: #64748b !important;
+  font-weight: 600 !important;
+}
+
+.config-container .aba-marketing-container .btn-var-tag {
+  background: rgba(139, 92, 246, 0.1) !important;
+  color: #7c3aed !important;
+  border: 1px solid rgba(139, 92, 246, 0.25) !important;
+  border-radius: 6px !important;
+  padding: 2px 8px !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  cursor: pointer !important;
+  transition: all 0.15s ease !important;
+}
+
+.config-container .aba-marketing-container .btn-var-tag:hover {
+  background: #7c3aed !important;
+  color: #ffffff !important;
+}
+
+/* ── BARRA EXECUTIVA DE SALVAMENTO NO RODAPÉ ── */
+.config-container .aba-marketing-container .marketing-save-bar {
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%) !important;
+  border: 1px solid rgba(197, 160, 89, 0.4) !important;
+  border-radius: 16px !important;
+  padding: 20px 24px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  gap: 20px !important;
+  box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.25) !important;
+  margin-top: 24px !important;
+  box-sizing: border-box !important;
+}
+
+.config-container .aba-marketing-container .marketing-save-info {
+  display: flex !important;
+  align-items: center !important;
+  gap: 16px !important;
+}
+
+.config-container .aba-marketing-container .marketing-save-icon {
+  width: 46px !important;
+  height: 46px !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.2) 0%, rgba(197, 160, 89, 0.35) 100%) !important;
+  border: 1px solid rgba(197, 160, 89, 0.5) !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  color: #c5a059 !important;
+  font-size: 20px !important;
+  flex-shrink: 0 !important;
+}
+
+.config-container .aba-marketing-container .marketing-save-title {
+  color: #ffffff !important;
+  font-size: 15px !important;
+  font-weight: 800 !important;
+  margin-bottom: 4px !important;
+  letter-spacing: -0.2px !important;
+}
+
+.config-container .aba-marketing-container .marketing-save-desc {
+  color: #94a3b8 !important;
+  font-size: 12.5px !important;
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.config-container .aba-marketing-container .marketing-save-desc .highlight {
+  color: #fbbf24 !important;
+  font-weight: 700 !important;
+}
+
+.config-container .aba-marketing-container .btn-salvar-marketing-destaque {
+  background: linear-gradient(135deg, #c5a059 0%, #a4803c 100%) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  border-radius: 12px !important;
+  padding: 14px 26px !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  cursor: pointer !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 10px !important;
+  white-space: nowrap !important;
+  box-shadow: 0 4px 16px rgba(197, 160, 89, 0.4) !important;
+  transition: all 0.25s ease !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.4px !important;
+  flex-shrink: 0 !important;
+}
+
+.config-container .aba-marketing-container .btn-salvar-marketing-destaque:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 6px 22px rgba(197, 160, 89, 0.55) !important;
+}
+
+.config-container .aba-marketing-container .btn-salvar-marketing-destaque.sucesso {
+  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%) !important;
+  box-shadow: 0 4px 16px rgba(22, 163, 74, 0.4) !important;
+}
+
+.config-container .aba-marketing-container .btn-salvar-marketing-destaque.loading {
+  opacity: 0.8 !important;
+  cursor: wait !important;
+}
+
+/* ── BANNER DE SELEÇÃO DE AMBIENTE / DOMÍNIO ── */
+.config-container .aba-marketing-container .marketing-ambiente-banner {
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.04) 0%, rgba(197, 160, 89, 0.08) 100%) !important;
+  border: 1.5px solid rgba(197, 160, 89, 0.35) !important;
+  border-radius: 14px !important;
+  padding: 16px 18px !important;
+  margin-bottom: 18px !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 14px !important;
+}
+
+.config-container .aba-marketing-container .ambiente-banner-header {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 4px !important;
+}
+
+.config-container .aba-marketing-container .ambiente-banner-title {
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  color: #0f172a !important;
+}
+
+.config-container .aba-marketing-container .badge-ambiente-dev {
+  background: #fef3c7 !important;
+  color: #b45309 !important;
+  border: 1px solid #fde68a !important;
+  border-radius: 12px !important;
+  font-size: 11px !important;
+  font-weight: 800 !important;
+  padding: 2px 8px !important;
+  text-transform: uppercase !important;
+}
+
+.config-container .aba-marketing-container .ambiente-banner-desc {
+  font-size: 12.5px !important;
+  color: #64748b !important;
+  margin: 0 !important;
+  line-height: 1.45 !important;
+}
+
+.config-container .aba-marketing-container .ambiente-toggle-pills {
+  display: grid !important;
+  grid-template-columns: 1fr 1fr !important;
+  gap: 10px !important;
+}
+
+.config-container .aba-marketing-container .btn-pill-ambiente {
+  background: #ffffff !important;
+  border: 1.5px solid #cbd5e1 !important;
+  border-radius: 12px !important;
+  padding: 10px 14px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  transition: all 0.2s ease !important;
+}
+
+.config-container .aba-marketing-container .btn-pill-ambiente:hover {
+  border-color: #c5a059 !important;
+  background: #faf8f5 !important;
+}
+
+.config-container .aba-marketing-container .btn-pill-ambiente.ativo {
+  border-color: #c5a059 !important;
+  background: linear-gradient(135deg, rgba(197, 160, 89, 0.12) 0%, rgba(197, 160, 89, 0.22) 100%) !important;
+  box-shadow: 0 3px 10px rgba(197, 160, 89, 0.25) !important;
+}
+
+.config-container .aba-marketing-container .btn-pill-ambiente i {
+  font-size: 18px !important;
+  color: #c5a059 !important;
+}
+
+.config-container .aba-marketing-container .btn-pill-text {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 2px !important;
+  flex: 1 !important;
+}
+
+.config-container .aba-marketing-container .btn-pill-text strong {
+  font-size: 12.5px !important;
+  color: #0f172a !important;
+}
+
+.config-container .aba-marketing-container .btn-pill-text span {
+  font-size: 11px !important;
+  color: #64748b !important;
+  font-family: monospace !important;
+}
+
+.config-container .aba-marketing-container .pill-check {
+  font-size: 16px !important;
+  color: #c5a059 !important;
+}
+
+.config-container .aba-marketing-container .utm-mode-badge {
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  padding: 3px 8px !important;
+  border-radius: 12px !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.3px !important;
+}
+
+.config-container .aba-marketing-container .utm-mode-badge.producao {
+  background: rgba(34, 197, 94, 0.12) !important;
+  color: #16a34a !important;
+  border: 1px solid rgba(34, 197, 94, 0.3) !important;
+}
+
+.config-container .aba-marketing-container .utm-mode-badge.local {
+  background: rgba(245, 158, 11, 0.12) !important;
+  color: #d97706 !important;
+  border: 1px solid rgba(245, 158, 11, 0.3) !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action.local-outline {
+  background: #ffffff !important;
+  color: #0284c7 !important;
+  border: 1.5px solid #0284c7 !important;
+}
+
+.config-container .aba-marketing-container .btn-utm-action.local-outline:hover {
+  background: rgba(2, 132, 199, 0.08) !important;
+}
+
+/* ── RESPONSIVIDADE ABA MARKETING (≤ 900px e ≤ 768px) ── */
+@media (max-width: 900px) {
+  .config-container .aba-marketing-container .ambiente-toggle-pills {
+    grid-template-columns: 1fr !important;
+  }
+
+  .config-container .aba-marketing-container .marketing-cockpit-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .config-container .aba-marketing-container .utm-output-panel {
+    grid-template-columns: 1fr !important;
+  }
+
+  .config-container .aba-marketing-container .whatsapp-preview-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  .config-container .aba-marketing-container .marketing-save-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    text-align: left !important;
+  }
+
+  .config-container .aba-marketing-container .btn-salvar-marketing-destaque {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .config-container .aba-marketing-container .marketing-hero-banner {
+    padding: 18px 16px !important;
+  }
+
+  .config-container .aba-marketing-container .marketing-hero-title {
+    font-size: 20px !important;
+  }
+
+  .config-container .aba-marketing-container .utm-qr-card {
+    flex-direction: column !important;
+    text-align: center !important;
+  }
+
+  .config-container .aba-marketing-container .qr-actions-buttons {
+    width: 100% !important;
+  }
+}
+
 
 
 

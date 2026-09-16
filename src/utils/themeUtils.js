@@ -297,5 +297,50 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .progress-fill.fill-ida {
       background: linear-gradient(90deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
     }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       🎯 ABA EMPRESA E CONFIGURAÇÕES DINÂMICAS (COR DA MARCA)
+       ══════════════════════════════════════════════════════════════════════ */
+    .gold-bar,
+    .config-card .gold-bar,
+    .card-top-bar.gold-bar {
+      background: linear-gradient(90deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
+    }
+
+    .card-header-icon.gold {
+      background: color-mix(in srgb, ${accentColor} 16%, transparent) !important;
+      color: ${accentColor} !important;
+    }
+
+    .btn-tipo-local-origem.ativo {
+      border-color: ${accentColor} !important;
+      background: color-mix(in srgb, ${accentColor} 15%, transparent) !important;
+      color: ${accentColor} !important;
+      box-shadow: 0 2px 8px color-mix(in srgb, ${accentColor} 20%, transparent) !important;
+    }
+
+    .btn-tipo-local-origem.ativo .local-label,
+    .btn-tipo-local-origem.ativo .local-desc {
+      color: ${accentColor} !important;
+    }
+
+    .btn-testar-google-maps {
+      background: ${accentColor} !important;
+      box-shadow: 0 2px 6px color-mix(in srgb, ${accentColor} 35%, transparent) !important;
+    }
+
+    .btn-salvar-empresa-destaque {
+      background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
+      box-shadow: 0 4px 14px color-mix(in srgb, ${accentColor} 35%, transparent) !important;
+    }
+
+    .ouro-border {
+      border-color: ${accentColor} !important;
+    }
+
+    .selo-ok {
+      color: ${accentColor} !important;
+      background: color-mix(in srgb, ${accentColor} 14%, transparent) !important;
+    }
   `;
 };

@@ -8,6 +8,7 @@ import './Configuracoes.css';
 import { CATALOGO_TEMAS, CATEGORIAS_FISICAS } from '../../catalogoDeTemas';
 import AbaMeuPerfil from './AbaMeuPerfil'; 
 import AbaEmpresa from './AbaEmpresa'; // 🔥 IMPORTÁMOS A ABA EMPRESA
+import AbaMarketing from './AbaMarketing';
 import AbaCatalogoEstoque from './AbaCatalogoEstoque';
 import AbaAssinaturaUso from './AbaAssinaturaUso';
 import AbaSeguranca from './AbaSeguranca';
@@ -15,6 +16,7 @@ import AbaAparencia from './AbaAparencia';
 import AbaBackup from './AbaBackup';
 import AbaNotificacoes from './AbaNotificacoes';
 import { calcularPeriodoTeste, formatarDataExibicao } from '../../utils/periodoTesteUtils';
+import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 
 const Configuracoes = () => {
   const navigate = useNavigate();
@@ -29,6 +31,20 @@ const Configuracoes = () => {
   const [abaAtiva, setAbaAtiva] = useState(location.state?.aba || 'meu_perfil'); 
   const [loading, setLoading] = useState(true);
   const [dataCriacaoConta, setDataCriacaoConta] = useState('');
+
+  // 🎨 Sincronização em tempo real da Cor de Destaque da Marca (Aparência)
+  useEffect(() => {
+    const savedAccent = localStorage.getItem('accentColor') || '#c5a059';
+    aplicarCorDestaqueGlobal(savedAccent);
+
+    const handleThemeChange = () => {
+      const currentAccent = localStorage.getItem('accentColor') || '#c5a059';
+      aplicarCorDestaqueGlobal(currentAccent);
+    };
+
+    window.addEventListener('theme-change', handleThemeChange);
+    return () => window.removeEventListener('theme-change', handleThemeChange);
+  }, []);
 
   useEffect(() => {
     if (location.state?.aba) {
@@ -53,7 +69,8 @@ const Configuracoes = () => {
   const sigGlobal = useRef({});
   const [config, setConfig] = useState({
     localizacoes: [], categoriasFisicas: [], subcategoriasFisicas: {}, tamanhosPorCategoria: {}, catalogoVitrine: {}, 
-    nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '', endereco: '', cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', instagram: '', logotipo: '', slogan: '', site: '', assinatura: '', pixelFacebook: '' 
+    nomeEmpresa: '', cnpj: '', telefone: '', emailEmpresa: '', endereco: '', cep: '', rua: '', numero: '', complemento: '', bairro: '', cidade: '', uf: '', instagram: '', logotipo: '', slogan: '', site: '', assinatura: '', pixelFacebook: '',
+    googleAnalyticsId: '', googleAdsId: '', tiktokPixelId: '', ogTitulo: '', ogDescricao: '', msgPadraoWhats: '', chavePix: '', linkPagamento: '' 
   });
 
   // ==========================================
@@ -275,7 +292,11 @@ const Configuracoes = () => {
         if (campo === 'nomeEmpresa') {
           localStorage.setItem('nomeEmpresa', valor);
         }
-        const nomesAmigaveis = { nomeEmpresa: 'Nome da Empresa', cnpj: 'CNPJ / CPF', telefone: 'WhatsApp / Telefone', emailEmpresa: 'E-mail', endereco: 'Endereço Completo', instagram: 'Instagram', slogan: 'Slogan', site: 'Site / Link', pixelFacebook: 'Pixel do Facebook' };
+        const nomesAmigaveis = { 
+          nomeEmpresa: 'Nome da Empresa', cnpj: 'CNPJ / CPF', telefone: 'WhatsApp / Telefone', emailEmpresa: 'E-mail', endereco: 'Endereço Completo', instagram: 'Instagram', slogan: 'Slogan', site: 'Site / Link', pixelFacebook: 'Pixel do Facebook',
+          googleAnalyticsId: 'Google Analytics 4', googleAdsId: 'Google Ads', tiktokPixelId: 'TikTok Pixel', ogTitulo: 'Título do Catálogo WhatsApp', ogDescricao: 'Descrição do Catálogo WhatsApp', msgPadraoWhats: 'Mensagem Padrão WhatsApp',
+          chavePix: 'Chave PIX', linkPagamento: 'Link de Pagamento / Cartão'
+        };
         await registrarLog("ALTERAÇÃO DE CONFIGURAÇÃO", `Atualizou o campo "${nomesAmigaveis[campo] || campo}" da empresa para: "${valor}".`);
     } catch (e) { console.error(e); }
   };
@@ -446,6 +467,16 @@ const Configuracoes = () => {
 
           {!isCollaborator && (
             <button 
+              className={abaAtiva === 'marketing' ? 'active' : ''} 
+              onClick={() => setAbaAtiva('marketing')}
+            >
+              <span className="tab-icon cyan" style={{ background: 'rgba(6, 182, 212, 0.12)', color: '#0891b2' }}><i className="fas fa-chart-line"></i></span>
+              <span>Marketing & Rastreamento</span>
+            </button>
+          )}
+
+          {!isCollaborator && (
+            <button 
               className={abaAtiva === 'assinatura' ? 'active' : ''} 
               onClick={() => setAbaAtiva('assinatura')}
             >
@@ -548,6 +579,21 @@ const Configuracoes = () => {
             carregarConfiguracoesGerais={carregarConfiguracoesGerais}
             tenantId={tenantId}
             usuarioLogado={usuarioLogado}
+          />
+        )}
+
+        {/* ========================================== */}
+        {/* ABA: MARKETING & RASTREAMENTO */}
+        {/* ========================================== */}
+        {abaAtiva === 'marketing' && (
+          <AbaMarketing 
+            config={config}
+            handleConfigChange={handleConfigChange}
+            salvarConfigTextual={salvarConfigTextual}
+            tenantId={tenantId}
+            nomeEmpresa={config.nomeEmpresa}
+            salvarTudo={salvarConfiguracoesCompletas}
+            salvandoTudo={salvandoTudo}
           />
         )}
 

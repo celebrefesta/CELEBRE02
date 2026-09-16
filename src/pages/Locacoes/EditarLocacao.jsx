@@ -752,7 +752,8 @@ const EditarLocacao = () => {
       const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || 'Cliente Celebre') : 'Cliente Celebre';
 
       const mpToken = configEmpresa?.mpAccessToken;
-      const mpLinkEmpresa = configEmpresa?.linkMercadoPago;
+      const mpLinkEmpresa = configEmpresa?.linkPagamento || configEmpresa?.linkMercadoPago;
+      const chavePixEmpresa = configEmpresa?.chavePix;
 
       let linkFinal = "";
 
@@ -786,7 +787,7 @@ const EditarLocacao = () => {
             linkFinal = data.init_point || data.sandbox_init_point;
           }
         } catch (errApi) {
-          console.warn("Aviso API MP Empresa:", errApi);
+          console.warn("Aviso API Pagamento Empresa:", errApi);
         }
       }
 
@@ -794,17 +795,16 @@ const EditarLocacao = () => {
         linkFinal = mpLinkEmpresa.includes('http') ? mpLinkEmpresa : `https://${mpLinkEmpresa}`;
       }
 
-      if (!linkFinal) {
-        // Link fixo da empresa Celebre como fallback seguro
-        linkFinal = `https://link.mercadopago.com.br/celebresistema`;
+      if (!linkFinal && chavePixEmpresa) {
+        linkFinal = chavePixEmpresa;
       }
 
       setLinkMercadoPago(linkFinal);
-      setFormaPagtoSinal('Mercado Pago');
-      alert("✅ Link de Pagamento configurado com sucesso para a SUA conta!");
+      setFormaPagtoSinal('Link de Pagamento');
+      alert("✅ Cobrança / Meio de pagamento configurado com sucesso para a SUA empresa!");
 
     } catch (e) {
-      console.error("Erro MP Preference:", e);
+      console.error("Erro Pagamento Preference:", e);
     } finally {
       setGerandoLinkMP(false);
     }
@@ -820,10 +820,10 @@ const EditarLocacao = () => {
       
       let texto = `Olá, *${nomeClienteVIP}*! 🎉\n\nSua reserva para o tema *${temaFesta || 'Festas'}* no valor de *R$ ${vTotal}* foi registrada!\n\nPara confirmarmos a data (*${datas.retirada || 'a combinar'}*), o valor da entrada é de *R$ ${vSinalFormatado}*.\n\n`;
 
-      if (linkMercadoPago) {
-        texto += `💳 *Link de Pagamento Automático (Pix / Cartão Mercado Pago):*\n${linkMercadoPago}\n\n`;
-      } else if (chavePixEmpresa) {
-        texto += `💳 *Chave PIX da Empresa:*\n${chavePixEmpresa}\n\n`;
+      if (linkMercadoPago && (linkMercadoPago.startsWith('http') || linkMercadoPago.includes('.'))) {
+        texto += `💳 *Link de Pagamento (Cartão / Pix):*\n${linkMercadoPago}\n\n`;
+      } else if (chavePixEmpresa || linkMercadoPago) {
+        texto += `💳 *Chave PIX da Empresa:*\n${chavePixEmpresa || linkMercadoPago}\n\n`;
       } else {
         texto += `💳 *Pagamento via PIX:*\nSolicite nossa chave por aqui!\n\n`;
       }

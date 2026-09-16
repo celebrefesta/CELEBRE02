@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useLocation } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
 import { collection, getDocs, addDoc, doc, getDoc, serverTimestamp, query, where } from 'firebase/firestore';
 import { getAuth } from 'firebase/auth'; 
@@ -10,16 +10,20 @@ import './Catalago.css';
 const Catalogo = () => {
   const navigate = useNavigate();
   const { idEmpresa } = useParams();
+  const location = useLocation();
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
   
-  const tenantId = idEmpresa || (usuarioLogado ? usuarioLogado.uid : null);
+  // Extrai tenantId do path (/catalogo/:idEmpresa), da query string (?t=... ou ?idEmpresa=...), do usuário logado ou do cache local
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const queryTenantId = queryParams.get('t') || queryParams.get('idEmpresa') || queryParams.get('empresa') || queryParams.get('tenantId');
+  const tenantId = idEmpresa || queryTenantId || (usuarioLogado ? usuarioLogado.uid : localStorage.getItem('tenantId'));
 
   const [estoque, setEstoque] = useState([]);
   const [locacoes, setLocacoes] = useState([]);
   const [empresa, setEmpresa] = useState({ 
-    nome: 'CELEBRE FESTAS', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '', capa: '' 
+    nome: 'CELEBRE FESTAS', logo: '', whats: '', endereco: '', insta: '', pixelFacebook: '', capa: '', googleAnalyticsId: '', msgPadraoWhats: '' 
   });
 
   const [loading, setLoading] = useState(true);
@@ -112,7 +116,9 @@ const Catalogo = () => {
             endereco: d.endereco || '',
             insta: d.instagram || '',
             capa: d.bannerUrl || d.capaUrl || '',
-            pixelFacebook: d.pixelFacebook || d.pixel || '' 
+            pixelFacebook: d.pixelFacebook || d.pixel || '',
+            googleAnalyticsId: d.googleAnalyticsId || '',
+            msgPadraoWhats: d.msgPadraoWhats || '' 
           });
         }
 
@@ -141,7 +147,7 @@ const Catalogo = () => {
     inicializar();
   }, [tenantId]);
 
-  // Pixel Facebook
+  // Pixel Facebook & Instagram
   useEffect(() => {
     if (empresa.pixelFacebook) {
       !function(f,b,e,v,n,t,s)
@@ -158,9 +164,31 @@ const Catalogo = () => {
     }
   }, [empresa.pixelFacebook]);
 
+  // Google Analytics 4 (GA4)
+  useEffect(() => {
+    if (empresa.googleAnalyticsId && empresa.googleAnalyticsId.startsWith('G-')) {
+      if (!document.getElementById('ga4-script-tag')) {
+        const s = document.createElement('script');
+        s.id = 'ga4-script-tag';
+        s.async = true;
+        s.src = `https://www.googletagmanager.com/gtag/js?id=${empresa.googleAnalyticsId}`;
+        document.head.appendChild(s);
+
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ window.dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', empresa.googleAnalyticsId);
+        window.gtag = gtag;
+      }
+    }
+  }, [empresa.googleAnalyticsId]);
+
   const dispararPixel = (nomeEvento, dados = {}) => {
     if (window.fbq && empresa.pixelFacebook) {
       window.fbq('track', nomeEvento, dados);
+    }
+    if (window.gtag && empresa.googleAnalyticsId) {
+      window.gtag('event', nomeEvento, dados);
     }
   };
 
@@ -520,7 +548,10 @@ const Catalogo = () => {
       if (economiaTotal > 0) {
         texto += `🎁 *Economia em Pacotes:* R$ ${economiaTotal.toFixed(2)}\n`;
       }
-      texto += `\nOlá! Vi essas peças no catálogo online e gostaria de verificar a disponibilidade para minha festa nesta data e fechar a locação! ✨`;
+      const msgFechamento = empresa.msgPadraoWhats 
+        ? empresa.msgPadraoWhats 
+        : 'Olá! Vi essas peças no catálogo online e gostaria de verificar a disponibilidade para minha festa nesta data e fechar a locação! ✨';
+      texto += `\n${msgFechamento}`;
 
       window.open(`https://wa.me/${whatsDestino}?text=${encodeURIComponent(texto)}`, '_blank');
       setCartDrawerAberto(false);

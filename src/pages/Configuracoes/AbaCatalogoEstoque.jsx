@@ -28,6 +28,9 @@ const AbaCatalogoEstoque = ({
   const [inputPrateleira, setInputPrateleira] = useState('');
   const [inputBandeja, setInputBandeja] = useState('');
   const [inputTam, setInputTam] = useState('');
+  const [buscaPrateleira, setBuscaPrateleira] = useState('');
+  const [salvandoCatalogo, setSalvandoCatalogo] = useState(false);
+  const [salvoComSucesso, setSalvoComSucesso] = useState(false);
 
   const [mostrarGuia, setMostrarGuia] = useState(true);
 
@@ -686,13 +689,13 @@ const AbaCatalogoEstoque = ({
     if (inputCorredor.trim()) partes.push(inputCorredor.trim().toUpperCase().startsWith('CORREDOR') ? inputCorredor.trim() : `Corredor ${inputCorredor.trim()}`);
     if (inputPrateleira.trim()) partes.push(inputPrateleira.trim().toUpperCase().startsWith('PRATELEIRA') || inputPrateleira.trim().toUpperCase().startsWith('ESTANTE') ? inputPrateleira.trim() : `Prateleira ${inputPrateleira.trim()}`);
     if (inputBandeja.trim()) partes.push(inputBandeja.trim().toUpperCase().startsWith('BANDEJA') || inputBandeja.trim().toUpperCase().startsWith('CAIXOTÃO') || inputBandeja.trim().toUpperCase().startsWith('NICHO') ? inputBandeja.trim() : `Bandeja ${inputBandeja.trim()}`);
-    if (partes.length === 0) return 'Preencha o Corredor, Prateleira ou Bandeja acima...';
+    if (partes.length === 0) return '';
     return partes.join(' - ');
   };
 
   const salvarNovoEnderecado = () => {
     const endereco = gerarPreviewEndereco();
-    if (endereco === 'Preencha o Corredor, Prateleira ou Bandeja acima...') {
+    if (!endereco) {
       alert("Preencha pelo menos o Corredor ou a Prateleira.");
       return;
     }
@@ -728,16 +731,40 @@ const AbaCatalogoEstoque = ({
   const gruposVitrineArr = (catVitrineSelecionada && subCatVitrineSelecionada) ? Object.keys(config.catalogoVitrine[catVitrineSelecionada][subCatVitrineSelecionada] || {}) : [];
   const temasVitrineArr = (catVitrineSelecionada && subCatVitrineSelecionada && grupoVitrineSelecionado) ? (config.catalogoVitrine[catVitrineSelecionada][subCatVitrineSelecionada][grupoVitrineSelecionado] || []) : [];
 
+  const salvarConfiguracoesCatalogoGeral = async () => {
+    if (!usuarioLogado || !tenantId) return;
+    setSalvandoCatalogo(true);
+    try {
+      const docRef = getDocConfigRef();
+      await updateDoc(docRef, {
+        localizacoes: config.localizacoes || [],
+        catalogoVitrine: config.catalogoVitrine || {},
+        ultimaAtualizacaoCatalogo: new Date().toISOString()
+      });
+      if (carregarConfiguracoesGerais) {
+        await carregarConfiguracoesGerais();
+      }
+      await carregarKpis();
+      setSalvoComSucesso(true);
+      setTimeout(() => setSalvoComSucesso(false), 3500);
+    } catch (e) {
+      console.error("Erro ao sincronizar catálogo e galpão:", e);
+      alert("Ocorreu um erro ao sincronizar os dados na nuvem. Tente novamente.");
+    } finally {
+      setSalvandoCatalogo(false);
+    }
+  };
+
   return (
     <div className="aba-listas-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
       
-      {/* 📊 PAINEL EXECUTIVO DE INDICADORES (KPIS) */}
+      {/* 📊 PAINEL EXECUTIVO DE INDICADORES (KPIS) - 3 CARDS EM 3 COLUNAS */}
       <div className="kpi-galpao-grid">
         <div className="kpi-galpao-card">
           <div className="kpi-galpao-icon blue">
             <i className="fas fa-cubes"></i>
           </div>
-          <div>
+          <div className="kpi-galpao-info">
             <div className="kpi-galpao-val">{kpiStats.totalPrateleiras}</div>
             <div className="kpi-galpao-title">Prateleiras Mapeadas</div>
           </div>
@@ -747,230 +774,397 @@ const AbaCatalogoEstoque = ({
           <div className="kpi-galpao-icon green">
             <i className="fas fa-boxes"></i>
           </div>
-          <div>
+          <div className="kpi-galpao-info">
             <div className="kpi-galpao-val">{kpiStats.totalItensComLocal}</div>
             <div className="kpi-galpao-title">Peças Mapeadas</div>
           </div>
         </div>
 
         <div 
-          className="kpi-galpao-card" 
+          className="kpi-galpao-card kpi-galpao-card-alerta" 
           onClick={() => abrirVincularPecas('Sem Prateleira')}
-          style={{ cursor: 'pointer' }}
           title="Clique para organizar as peças sem localização"
         >
           <div className="kpi-galpao-icon amber">
             <i className="fas fa-exclamation-triangle"></i>
           </div>
-          <div>
+          <div className="kpi-galpao-info">
             <div className="kpi-galpao-val" style={{ color: kpiStats.totalItensSemLocal > 0 ? '#d97706' : 'inherit' }}>
               {kpiStats.totalItensSemLocal}
             </div>
-            <div className="kpi-galpao-title" style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-              Sem Prateleira <i className="fas fa-arrow-right" style={{ fontSize: '10px' }}></i>
+            <div className="kpi-galpao-title">
+              Sem Prateleira <i className="fas fa-arrow-right kpi-seta-icon"></i>
             </div>
           </div>
         </div>
       </div>
 
-      {/* BANNER GUIA EXPLICATIVO INTERATIVO */}
+      {/* BANNER GUIA EXPLICATIVO INTERATIVO (DESIGN MODERNO & DIDÁTICO) */}
       <div className="ajuda-cat-banner">
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-            <span style={{ fontSize: '20px' }}>💡</span>
-            <div>
-              <strong style={{ fontSize: '15px' }}>Como Funciona a Organização do Galpão e do Catálogo</strong>
-              <p style={{ margin: '2px 0 0 0', fontSize: '12.5px', opacity: 0.9 }}>
-                Entenda a separação simples entre o seu Galpão Físico e as Categorias do seu Site.
+        <div className="ajuda-banner-header">
+          <div className="ajuda-banner-brand">
+            <div className="ajuda-banner-icon-box">
+              <i className="fas fa-lightbulb"></i>
+            </div>
+            <div className="ajuda-banner-text">
+              <h4>Como Funciona a Organização: Galpão Físico vs. Catálogo Vitrine</h4>
+              <p>
+                Entenda a separação simples entre a logística interna do seu armazém e a vitrine comercial onde seus clientes montam orçamentos.
               </p>
             </div>
           </div>
           <button 
             type="button" 
+            className="btn-toggle-guia"
             onClick={() => setMostrarGuia(!mostrarGuia)}
-            style={{ background: 'transparent', border: '1px solid currentColor', borderRadius: '8px', padding: '5px 12px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', color: 'inherit' }}
           >
-            {mostrarGuia ? 'Esconder Exemplo ▲' : 'Ver Exemplo ▼'}
+            {mostrarGuia ? (
+              <><i className="fas fa-chevron-up"></i> Esconder Guia</>
+            ) : (
+              <><i className="fas fa-chevron-down"></i> Ver Guia Completo</>
+            )}
           </button>
         </div>
 
         {mostrarGuia && (
-          <div className="ajuda-cards-grid">
-            <div className="ajuda-mini-card">
-              <strong style={{ color: '#2563eb', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <i className="fas fa-boxes"></i> 1. PRATELEIRAS DO GALPÃO (Físico)
-              </strong>
-              <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: 'var(--texto-secundario)', lineHeight: '1.45' }}>
-                Onde você cadastra suas <strong>prateleiras reais</strong>, escolhe em <strong>"📦 Selecionar Peças"</strong> o que guarda em cada uma e gera as <strong>🏷️ Etiquetas com QR Code</strong>.
-              </p>
+          <div className="ajuda-guia-conteudo">
+            <div className="ajuda-cards-grid">
+              {/* CARD 1: GALPÃO FÍSICO */}
+              <div className="ajuda-card-galpao">
+                <div className="ajuda-card-top-tag blue">
+                  <i className="fas fa-warehouse"></i> 1. MUNDO FÍSICO • USO INTERNO
+                </div>
+                <h5 className="ajuda-card-title">
+                  <i className="fas fa-dolly-flatbed" style={{ color: '#2563eb' }}></i> Prateleiras e Endereçamento do Galpão
+                </h5>
+                <p className="ajuda-card-desc">
+                  Onde as peças físicas realmente moram no seu armazém, loja física ou depósito residencial.
+                </p>
+                <ul className="ajuda-card-features">
+                  <li>
+                    <i className="fas fa-map-marker-alt" style={{ color: '#ef4444' }}></i>
+                    <span><strong>Endereço Real:</strong> <em>Corredor ➔ Estante / Prateleira ➔ Gaveta / Caixa</em>.</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-boxes" style={{ color: '#2563eb' }}></i>
+                    <span><strong>Vincular Peças:</strong> Defina quais itens do estoque ficam guardados em cada prateleira.</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-qrcode" style={{ color: '#10b981' }}></i>
+                    <span><strong>Etiquetas com QR Code:</strong> Imprima e cole nas prateleiras para bipagem rápida na separação e devolução.</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-lock" style={{ color: '#64748b' }}></i>
+                    <span><strong>Visibilidade:</strong> 100% interno da equipe. Os clientes nunca veem essas localizações no site.</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* CARD 2: CATÁLOGO VITRINE */}
+              <div className="ajuda-card-vitrine">
+                <div className="ajuda-card-top-tag gold">
+                  <i className="fas fa-gem"></i> 2. VITRINE PÚBLICA • CLIENTES
+                </div>
+                <h5 className="ajuda-card-title">
+                  <i className="fas fa-store" style={{ color: '#d97706' }}></i> Catálogo Vitrine & Árvore de Festas
+                </h5>
+                <p className="ajuda-card-desc">
+                  Como seus clientes navegam para conhecer seu acervo, se apaixonar pelos temas e pedir orçamento.
+                </p>
+                <ul className="ajuda-card-features">
+                  <li>
+                    <i className="fas fa-sitemap" style={{ color: '#d97706' }}></i>
+                    <span><strong>Árvore em 4 Níveis:</strong> <em>Festa ➔ Público ➔ Coleção ➔ Tema</em> (Ex: Infantil ➔ Meninos ➔ Heróis ➔ Homem Aranha).</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-shopping-cart" style={{ color: '#10b981' }}></i>
+                    <span><strong>Orçamentos Online:</strong> O cliente escolhe os itens e envia o pedido pronto para o seu WhatsApp.</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-share-alt" style={{ color: '#8b5cf6' }}></i>
+                    <span><strong>Link na Bio:</strong> Compartilhe temas prontos nas redes sociais e em conversas comerciais.</span>
+                  </li>
+                  <li>
+                    <i className="fas fa-globe" style={{ color: '#3b82f6' }}></i>
+                    <span><strong>Visibilidade:</strong> 100% público. É a vitrine de luxo aberta 24 horas por dia para seus clientes.</span>
+                  </li>
+                </ul>
+              </div>
             </div>
 
-            <div className="ajuda-mini-card">
-              <strong style={{ color: '#b48a3c', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                <i className="fas fa-globe"></i> 2. CATÁLOGO ONLINE & FESTAS (Estoque e Site)
-              </strong>
-              <p style={{ margin: '6px 0 0 0', fontSize: '12px', color: 'var(--texto-secundario)', lineHeight: '1.45' }}>
-                Onde você organiza os Temas de Festas em 4 passos <em>(Infantil ➔ Meninos ➔ Heróis ➔ Homem Aranha)</em> para seus clientes navegarem e montarem orçamentos no site.
-              </p>
+            {/* EXEMPLO PRÁTICO CONECTANDO OS DOIS MUNDOS */}
+            <div className="ajuda-exemplo-pratico">
+              <div className="ajuda-exemplo-icone">
+                <i className="fas fa-star"></i>
+              </div>
+              <div className="ajuda-exemplo-conteudo">
+                <strong>💡 O Exemplo que Explica Tudo:</strong>
+                <p>
+                  Uma mesma <strong>Bandeja Redonda Dourada</strong> fica fisicamente guardada no seu galpão na <strong>Prateleira A-02</strong> (para sua equipe achar rápido na hora de separar). Porém, no <strong>Catálogo Online</strong>, você pode usar essa mesma bandeja em dezenas de festas ao mesmo tempo: <em>Casamento Clássico</em>, <em>15 Anos</em>, <em>Batizado</em>, <em>Realeza</em> e <em>Safári</em>!
+                </p>
+              </div>
             </div>
           </div>
         )}
       </div>
 
       {/* SEÇÃO 1: PRATELEIRAS DO GALPÃO & SELEÇÃO DE PEÇAS (FÍSICO) */}
-      <div>
+      <div className="secao-galpao-container">
         <div className="step-title-badge">
           <span className="step-num blue">1</span>
-          <span>🏬 Prateleiras & Endereçamento do Galpão (Seu Espaço Físico)</span>
+          <span>
+            <i className="fas fa-warehouse" style={{ color: '#3b82f6', marginRight: '6px' }}></i>
+            Prateleiras & Endereçamento do Galpão (Seu Espaço Físico)
+          </span>
         </div>
         <p className="subtext" style={{ marginBottom: '15px' }}>
           Cadastre suas prateleiras, selecione quais peças do acervo estão guardadas em cada uma e imprima as etiquetas.
         </p>
 
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '15px' }}>
-            <div className="config-card" style={{ margin: 0 }}>
-              <div className="card-top-bar blue-bar"></div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '4px' }}>
-                <h3 style={{ margin: 0 }}><i className="fas fa-map-marker-alt" style={{ color: '#3b82f6' }}></i> Prateleiras e Locais de Armazenagem</h3>
-                
-                <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                  {kpiStats.totalItensSemLocal > 0 && (
-                    <button 
-                      type="button" 
-                      onClick={() => abrirVincularPecas('Sem Prateleira')}
-                      style={{ background: '#fffbeb', color: '#b45309', border: '1px solid #fde68a', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                    >
-                      <i className="fas fa-exclamation-triangle"></i> ⚠️ Peças Sem Local ({kpiStats.totalItensSemLocal})
-                    </button>
-                  )}
+        <div className="config-card galpao-card-master" style={{ margin: 0 }}>
+          <div className="card-top-bar blue-bar"></div>
+          
+          <div className="galpao-card-header">
+            <h3 className="galpao-card-title">
+              <i className="fas fa-map-marker-alt" style={{ color: '#3b82f6' }}></i>
+              Prateleiras e Locais de Armazenagem
+            </h3>
+            
+            <div className="galpao-toolbar">
+              {kpiStats.totalItensSemLocal > 0 && (
+                <button 
+                  type="button" 
+                  className="btn-galpao-toolbar alerta"
+                  onClick={() => abrirVincularPecas('Sem Prateleira')}
+                  title="Peças cadastradas sem prateleira vinculada"
+                >
+                  <i className="fas fa-exclamation-triangle"></i>
+                  <span>Peças Sem Local ({kpiStats.totalItensSemLocal})</span>
+                </button>
+              )}
 
+              <button 
+                type="button" 
+                className="btn-galpao-toolbar pdf"
+                onClick={gerarPdfMapaGalpao}
+                title="Gerar relatório completo do galpão em PDF"
+              >
+                <i className="fas fa-file-pdf" style={{ color: '#ef4444' }}></i>
+                <span>Mapa em PDF</span>
+              </button>
+
+              <button 
+                type="button" 
+                className="btn-galpao-toolbar etiquetas"
+                onClick={() => abrirGeradorEtiquetas('TODAS')}
+                title="Imprimir etiquetas de identificação de todas as prateleiras"
+              >
+                <i className="fas fa-barcode"></i>
+                <span>Etiquetas do Galpão</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CONSTRUTOR DE ENDEREÇO */}
+          <div className="galpao-builder-card">
+            <div className="galpao-builder-title">
+              <i className="fas fa-layer-group" style={{ color: '#c5a059' }}></i>
+              <span>Construtor de Endereço (Corredor ➔ Prateleira ➔ Bandeja / Caixotão)</span>
+            </div>
+
+            <div className="galpao-builder-grid">
+              <div className="galpao-field-group">
+                <label>
+                  <i className="fas fa-door-open" style={{ color: '#64748b' }}></i>
+                  CORREDOR
+                </label>
+                <input 
+                  type="text" 
+                  className="galpao-input"
+                  placeholder="Ex: Corredor A" 
+                  value={inputCorredor} 
+                  onChange={(e) => setInputCorredor(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
+                />
+              </div>
+
+              <div className="galpao-field-group">
+                <label>
+                  <i className="fas fa-cubes" style={{ color: '#64748b' }}></i>
+                  PRATELEIRA / ESTANTE
+                </label>
+                <input 
+                  type="text" 
+                  className="galpao-input"
+                  placeholder="Ex: Prateleira 01" 
+                  value={inputPrateleira} 
+                  onChange={(e) => setInputPrateleira(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
+                />
+              </div>
+
+              <div className="galpao-field-group">
+                <label>
+                  <i className="fas fa-inbox" style={{ color: '#64748b' }}></i>
+                  BANDEJA / CAIXOTÃO / NICHO
+                </label>
+                <input 
+                  type="text" 
+                  className="galpao-input"
+                  placeholder="Ex: Bandeja 02 (Opcional)" 
+                  value={inputBandeja} 
+                  onChange={(e) => setInputBandeja(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
+                />
+              </div>
+            </div>
+
+            <div className="galpao-builder-footer">
+              <div className="galpao-preview-wrap">
+                <span className="preview-label">PRÉ-VISUALIZAÇÃO DO ENDEREÇO:</span>
+                {gerarPreviewEndereco() ? (
+                  <span className="preview-badge-val">
+                    <i className="fas fa-tag"></i>
+                    {gerarPreviewEndereco()}
+                  </span>
+                ) : (
+                  <span className="preview-empty">Preencha o Corredor, Prateleira ou Bandeja acima...</span>
+                )}
+              </div>
+
+              <button 
+                type="button"
+                className="btn-add-endereco"
+                onClick={salvarNovoEnderecado}
+              >
+                <i className="fas fa-plus-circle"></i>
+                <span>Adicionar Endereço</span>
+              </button>
+            </div>
+          </div>
+
+          {/* CABEÇALHO DA LISTA DE PRATELEIRAS */}
+          <div className="galpao-shelf-list-header">
+            <div className="shelf-list-title">
+              <i className="fas fa-map-pin" style={{ color: '#3b82f6' }}></i>
+              <span>Locais Cadastrados no Galpão</span>
+              <span className="shelf-count-badge">{config.localizacoes?.length || 0}</span>
+            </div>
+
+            {(config.localizacoes?.length || 0) > 4 && (
+              <div className="galpao-search-wrap">
+                <i className="fas fa-search galpao-search-icon"></i>
+                <input 
+                  type="text"
+                  className="galpao-search-input"
+                  placeholder="Filtrar locais..."
+                  value={buscaPrateleira}
+                  onChange={(e) => setBuscaPrateleira(e.target.value)}
+                />
+                {buscaPrateleira && (
                   <button 
                     type="button" 
-                    onClick={gerarPdfMapaGalpao}
-                    style={{ background: '#f8fafc', color: '#0f172a', border: '1px solid #cbd5e1', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
+                    className="galpao-search-clear" 
+                    onClick={() => setBuscaPrateleira('')}
                   >
-                    <i className="fas fa-file-pdf" style={{ color: '#ef4444' }}></i> 📊 Mapa em PDF
+                    ✕
                   </button>
-
-                  <button 
-                    type="button" 
-                    onClick={() => abrirGeradorEtiquetas('TODAS')}
-                    style={{ background: '#eff6ff', color: '#2563eb', border: '1px solid #bfdbfe', padding: '6px 14px', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '6px' }}
-                  >
-                    <i className="fas fa-print"></i> 🖨️ Etiquetas do Galpão
-                  </button>
-                </div>
+                )}
               </div>
-              <div style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0', borderRadius: '14px', padding: '18px', marginBottom: '20px', marginTop: '10px' }}>
-                <div style={{ fontSize: '0.78rem', fontWeight: '800', color: '#475569', textTransform: 'uppercase', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  <i className="fas fa-cubes" style={{ color: '#c5a059' }}></i>
-                  <span>CONSTRUTOR DE ENDEREÇO (CORREDOR ➔ PRATELEIRA ➔ BANDEJA / CAIXOTÃO)</span>
-                </div>
+            )}
+          </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '12px', marginBottom: '14px' }}>
-                  <div>
-                    <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>🚪 CORREDOR</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: Corredor A" 
-                      value={inputCorredor} 
-                      onChange={(e) => setInputCorredor(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
-                      style={{ width: '100%', height: '42px', padding: '0 14px', border: '1.5px solid #cbd5e1', borderRadius: '10px', fontSize: '0.88rem', outline: 'none', background: '#ffffff', fontWeight: '500' }}
-                    />
+          {/* LISTA DE PRATELEIRAS */}
+          {(!config.localizacoes || config.localizacoes.length === 0) ? (
+            <div className="galpao-empty-state">
+              <i className="fas fa-warehouse galpao-empty-icon"></i>
+              <p className="galpao-empty-text">
+                Nenhum local cadastrado ainda. Utilize o construtor acima para adicionar o primeiro endereço do seu galpão!
+              </p>
+            </div>
+          ) : (
+            (() => {
+              const filtradas = config.localizacoes.filter(loc => {
+                if (!buscaPrateleira.trim()) return true;
+                return loc.toLowerCase().includes(buscaPrateleira.toLowerCase());
+              });
+
+              if (filtradas.length === 0) {
+                return (
+                  <div className="galpao-empty-state">
+                    <i className="fas fa-search galpao-empty-icon"></i>
+                    <p className="galpao-empty-text">
+                      Nenhum local encontrado com o termo "<strong>{buscaPrateleira}</strong>".
+                    </p>
                   </div>
+                );
+              }
 
-                  <div>
-                    <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>🧱 PRATELEIRA / ESTANTE</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: Prateleira 01" 
-                      value={inputPrateleira} 
-                      onChange={(e) => setInputPrateleira(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
-                      style={{ width: '100%', height: '42px', padding: '0 14px', border: '1.5px solid #cbd5e1', borderRadius: '10px', fontSize: '0.88rem', outline: 'none', background: '#ffffff', fontWeight: '500' }}
-                    />
-                  </div>
+              return (
+                <div className="galpao-shelf-list">
+                  {filtradas.map(loc => {
+                    const qtdNaPrateleira = kpiStats.contagemPorPrateleira[loc] || 0;
+                    return (
+                      <div key={loc} className="galpao-shelf-card">
+                        <div className="shelf-info-group">
+                          <div className="shelf-icon-badge">
+                            <i className="fas fa-layer-group"></i>
+                          </div>
+                          <div className="shelf-details">
+                            <strong className="shelf-name">{loc}</strong>
+                            <span className="shelf-count-pill" title={`${qtdNaPrateleira} peças guardadas aqui`}>
+                              <i className="fas fa-boxes"></i>
+                              {qtdNaPrateleira} {qtdNaPrateleira === 1 ? 'peça' : 'peças'}
+                            </span>
+                          </div>
+                        </div>
 
-                  <div>
-                    <label style={{ fontSize: '0.72rem', fontWeight: '800', color: '#475569', display: 'block', marginBottom: '4px' }}>📥 BANDEJA / CAIXOTÃO / NICHO</label>
-                    <input 
-                      type="text" 
-                      placeholder="Ex: Bandeja 02 (Opcional)" 
-                      value={inputBandeja} 
-                      onChange={(e) => setInputBandeja(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && salvarNovoEnderecado()}
-                      style={{ width: '100%', height: '42px', padding: '0 14px', border: '1.5px solid #cbd5e1', borderRadius: '10px', fontSize: '0.88rem', outline: 'none', background: '#ffffff', fontWeight: '500' }}
-                    />
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px', paddingTop: '12px', borderTop: '1px dashed #cbd5e1' }}>
-                  <div style={{ fontSize: '0.82rem', color: '#0f172a' }}>
-                    <span style={{ color: '#64748b', fontSize: '0.75rem', fontWeight: '700' }}>PRÉ-VISUALIZAÇÃO DO ENDEREÇO: </span>
-                    <strong style={{ color: '#b48a3c', background: '#fef3c7', padding: '4px 10px', borderRadius: '12px', border: '1px solid #fde68a' }}>{gerarPreviewEndereco()}</strong>
-                  </div>
-                  <button 
-                    type="button"
-                    onClick={salvarNovoEnderecado}
-                    style={{ padding: '10px 22px', borderRadius: '30px', fontWeight: '800', background: 'linear-gradient(135deg, #c5a059 0%, #a4803c 100%)', color: '#ffffff', border: 'none', cursor: 'pointer', fontSize: '0.78rem', boxShadow: '0 4px 12px rgba(197, 160, 89, 0.3)', textTransform: 'uppercase', letterSpacing: '0.5px' }}
-                  >
-                    + ADICIONAR ENDEREÇO
-                  </button>
-                </div>
-              </div>
-
-              <div style={{ marginBottom: '10px', fontSize: '0.75rem', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>
-                📍 ENDEREÇOS E PRATELEIRAS JÁ CADASTRADAS NO GALPÃO:
-              </div>
-
-              <ul className="config-list" style={{ maxHeight: '250px' }}>
-                {config.localizacoes?.map(loc => {
-                  const qtdNaPrateleira = kpiStats.contagemPorPrateleira[loc] || 0;
-                  return (
-                    <li key={loc} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <strong style={{ fontSize: '14px', color: '#0f172a' }}>{loc}</strong>
-                        <span style={{ fontSize: '11px', color: '#2563eb', background: '#dbeafe', padding: '2px 8px', borderRadius: '12px', fontWeight: 800 }}>
-                          📦 {qtdNaPrateleira} peça(s)
-                        </span>
-                      </div>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="shelf-actions-group">
                           <button
                             type="button"
+                            className="btn-shelf-action vincular"
                             onClick={() => abrirVincularPecas(loc)}
                             title="Selecionar quais peças do estoque ficam nesta prateleira"
-                            style={{
-                              cursor: 'pointer',
-                              fontSize: '11.5px',
-                              background: '#eff6ff',
-                              color: '#2563eb',
-                              padding: '4px 10px',
-                              borderRadius: '6px',
-                              fontWeight: '700',
-                              border: '1px solid #bfdbfe',
-                              display: 'flex',
-                              alignItems: 'center',
-                              gap: '4px'
-                            }}
                           >
-                            <i className="fas fa-boxes"></i> 📦 Selecionar Peças
+                            <i className="fas fa-boxes"></i>
+                            <span>Vincular Peças</span>
                           </button>
-                          <span 
-                            style={{ cursor: 'pointer', fontSize: '11.5px', background: '#f8fafc', color: '#0f172a', padding: '4px 10px', borderRadius: '6px', fontWeight: '700', border: '1px solid #cbd5e1' }} 
+
+                          <button 
+                            type="button"
+                            className="btn-shelf-action etiqueta"
                             onClick={() => abrirGeradorEtiquetas(loc)} 
-                            title="Gerar Etiqueta desta prateleira"
+                            title="Gerar e imprimir etiqueta desta prateleira"
                           >
-                            🏷️ Etiqueta
-                          </span>
-                          <span style={{ cursor: 'pointer', fontSize: '13px' }} onClick={() => editarLocalizacao(loc)} title="Editar Nome">✏️</span>
-                          <span className="del-icon" onClick={() => removerLocalizacao(loc)} title="Excluir">✕</span>
+                            <i className="fas fa-barcode"></i>
+                            <span>Etiqueta</span>
+                          </button>
+
+                          <button 
+                            type="button"
+                            className="btn-shelf-icon edit"
+                            onClick={() => editarLocalizacao(loc)} 
+                            title="Renomear Local"
+                          >
+                            <i className="fas fa-pen"></i>
+                          </button>
+
+                          <button 
+                            type="button"
+                            className="btn-shelf-icon delete"
+                            onClick={() => removerLocalizacao(loc)} 
+                            title="Excluir Local"
+                          >
+                            <i className="fas fa-trash-alt"></i>
+                          </button>
+                        </div>
                       </div>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+                    );
+                  })}
+                </div>
+              );
+            })()
+          )}
         </div>
       </div>
 
@@ -984,26 +1178,116 @@ const AbaCatalogoEstoque = ({
           Estrutura em 4 passos para organizar os temas no catálogo online onde seus clientes navegam e montam orçamentos.
         </p>
 
-        {/* TRILHA DE NAVEGAÇÃO ATIVA */}
-        <div className="caminho-ativo-bar">
-            <i className="fas fa-sitemap" style={{ color: 'var(--dourado)', fontSize: '15px' }}></i>
-            <span>Caminho Selecionado:</span>
-            <span style={{ color: catVitrineSelecionada ? 'var(--dourado)' : '#94a3b8' }}>
-              {catVitrineSelecionada || '[1. Ocasião]'}
-            </span>
-            <span>➔</span>
-            <span style={{ color: subCatVitrineSelecionada ? 'var(--dourado)' : '#94a3b8' }}>
-              {subCatVitrineSelecionada || '[2. Público]'}
-            </span>
-            <span>➔</span>
-            <span style={{ color: grupoVitrineSelecionado ? 'var(--dourado)' : '#94a3b8' }}>
-              {grupoVitrineSelecionado || '[3. Coleção]'}
-            </span>
-            <span>➔</span>
-            <span style={{ color: temaVitrineSelecionado ? 'var(--dourado)' : '#94a3b8' }}>
-              {temaVitrineSelecionado || '[4. Tema]'}
-            </span>
+        {/* TRILHA DE NAVEGAÇÃO ATIVA (BREADCRUMB BOUTIQUE INTERATIVO) */}
+        <div className="trilha-vitrine-card">
+          <div className="trilha-vitrine-top">
+            <div className="trilha-header-title">
+              <div className="trilha-icon-box">
+                <i className="fas fa-sitemap"></i>
+              </div>
+              <div>
+                <span className="trilha-label">Trilha de Navegação Ativa</span>
+                <span className="trilha-sublabel">
+                  {temaVitrineSelecionado
+                    ? '4 de 4 níveis selecionados (Tema ativo)'
+                    : grupoVitrineSelecionado
+                    ? '3 de 4 níveis selecionados (Coleção ativa)'
+                    : subCatVitrineSelecionada
+                    ? '2 de 4 níveis selecionados (Público ativo)'
+                    : catVitrineSelecionada
+                    ? '1 de 4 níveis selecionados (Ocasião ativa)'
+                    : 'Nenhum nível selecionado ainda'}
+                </span>
+              </div>
+            </div>
+
+            {catVitrineSelecionada && (
+              <button 
+                type="button" 
+                className="btn-limpar-trilha"
+                onClick={() => {
+                  setCatVitrineSelecionada('');
+                  setSubCatVitrineSelecionada('');
+                  setGrupoVitrineSelecionado('');
+                  setTemaVitrineSelecionado('');
+                }}
+                title="Limpar toda a seleção da trilha"
+              >
+                <i className="fas fa-undo-alt"></i> Limpar Seleção
+              </button>
+            )}
           </div>
+
+          <div className="trilha-grid-2x2">
+            {/* LINHA 1: OCASIÃO E PÚBLICO */}
+            <div className="trilha-pair-row">
+              {/* PASSO 1 */}
+              <div 
+                className={`trilha-step-pill ${catVitrineSelecionada ? 'ativo' : 'pendente'}`}
+                onClick={() => {
+                  if (catVitrineSelecionada) {
+                    setSubCatVitrineSelecionada('');
+                    setGrupoVitrineSelecionado('');
+                    setTemaVitrineSelecionado('');
+                  }
+                }}
+                title={catVitrineSelecionada ? 'Clique para manter apenas este nível' : 'Aguardando seleção no Passo 1'}
+              >
+                <span className="step-badge-num">1</span>
+                <span className="step-text-val">{catVitrineSelecionada || 'Ocasião'}</span>
+                {catVitrineSelecionada && <i className="fas fa-check step-check-icon"></i>}
+              </div>
+
+              <i className="fas fa-arrow-right trilha-arrow-icon"></i>
+
+              {/* PASSO 2 */}
+              <div 
+                className={`trilha-step-pill ${subCatVitrineSelecionada ? 'ativo' : 'pendente'}`}
+                onClick={() => {
+                  if (subCatVitrineSelecionada) {
+                    setGrupoVitrineSelecionado('');
+                    setTemaVitrineSelecionado('');
+                  }
+                }}
+                title={subCatVitrineSelecionada ? 'Clique para manter até este nível' : 'Aguardando seleção no Passo 2'}
+              >
+                <span className="step-badge-num">2</span>
+                <span className="step-text-val">{subCatVitrineSelecionada || 'Público'}</span>
+                {subCatVitrineSelecionada && <i className="fas fa-check step-check-icon"></i>}
+              </div>
+            </div>
+
+            {/* LINHA 2: COLEÇÃO E TEMA */}
+            <div className="trilha-pair-row">
+              {/* PASSO 3 */}
+              <div 
+                className={`trilha-step-pill ${grupoVitrineSelecionado ? 'ativo' : 'pendente'}`}
+                onClick={() => {
+                  if (grupoVitrineSelecionado) {
+                    setTemaVitrineSelecionado('');
+                  }
+                }}
+                title={grupoVitrineSelecionado ? 'Clique para manter até este nível' : 'Aguardando seleção no Passo 3'}
+              >
+                <span className="step-badge-num">3</span>
+                <span className="step-text-val">{grupoVitrineSelecionado || 'Coleção'}</span>
+                {grupoVitrineSelecionado && <i className="fas fa-check step-check-icon"></i>}
+              </div>
+
+              <i className="fas fa-arrow-right trilha-arrow-icon"></i>
+
+              {/* PASSO 4 */}
+              <div 
+                className={`trilha-step-pill ${temaVitrineSelecionado ? 'ativo gold-highlight' : 'pendente'}`}
+                title={temaVitrineSelecionado ? 'Tema selecionado' : 'Aguardando seleção no Passo 4'}
+              >
+                <span className="step-badge-num">4</span>
+                <span className="step-text-val">{temaVitrineSelecionado || 'Tema'}</span>
+                {temaVitrineSelecionado && <i className="fas fa-star step-star-icon"></i>}
+              </div>
+            </div>
+          </div>
+        </div>
 
           {/* STEPPER EM 4 COLUNAS */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '14px' }}>
@@ -1152,6 +1436,36 @@ const AbaCatalogoEstoque = ({
                 )}
           </div>
         </div>
+      </div>
+
+      {/* 💾 BARRA DE CONFIRMAÇÃO & SINCRONIZAÇÃO GERAL DO CATÁLOGO E ESTOQUE */}
+      <div className="catalogo-save-bar">
+        <div className="catalogo-save-info">
+          <div className="catalogo-save-icon">
+            <i className="fas fa-cloud-upload-alt"></i>
+          </div>
+          <div>
+            <div className="catalogo-save-title">Sincronização em Nuvem em Tempo Real</div>
+            <p className="catalogo-save-desc">
+              Prateleiras, endereços e a árvore de temas são salvos automaticamente no banco a cada adição. Use este botão para <span className="highlight">confirmar e forçar a validação geral</span> de todos os dados.
+            </p>
+          </div>
+        </div>
+
+        <button
+          type="button"
+          className={`btn-salvar-catalogo-destaque ${salvoComSucesso ? 'sucesso' : ''}`}
+          onClick={salvarConfiguracoesCatalogoGeral}
+          disabled={salvandoCatalogo}
+        >
+          {salvandoCatalogo ? (
+            <><i className="fas fa-spinner fa-spin"></i> Sincronizando com a Nuvem...</>
+          ) : salvoComSucesso ? (
+            <><i className="fas fa-check-circle"></i> Catálogo e Galpão 100% Salvos!</>
+          ) : (
+            <><i className="fas fa-save"></i> Salvar & Sincronizar Tudo</>
+          )}
+        </button>
       </div>
 
       {/* MODAL IMPRESSOR DE ETIQUETAS DA PRATELEIRA (Portal no body) */}

@@ -876,7 +876,7 @@ const NovaLocacao = () => {
 
       // 🌟 1. PRIORIDADE MÁXIMA: GOOGLE MAPS API OFICIAL (SE CONFIGURADO)
       const apiKeyGoogle = (conf.googleMapsApiKey || '').trim();
-      if (apiKeyGoogle) {
+      if (apiKeyGoogle && apiKeyGoogle.startsWith('AIzaSy')) {
         try {
           const resGoogle = await calcularDistanciaGoogleMaps(endOrigem, endDestino, apiKeyGoogle);
           if (resGoogle && resGoogle.km > 0) {
@@ -1311,7 +1311,7 @@ const NovaLocacao = () => {
       const nomeClienteVIP = clienteEncontrado ? (clienteEncontrado.nome || clienteEncontrado.nomeFantasia || 'Cliente Celebre') : 'Cliente Celebre';
 
       const mpToken = configEmpresa?.mpAccessToken;
-      const mpLinkEmpresa = configEmpresa?.linkMercadoPago;
+      const mpLinkEmpresa = configEmpresa?.linkPagamento || configEmpresa?.linkMercadoPago;
       const chavePixEmpresa = configEmpresa?.chavePix;
 
       let linkFinal = "";
@@ -1346,7 +1346,7 @@ const NovaLocacao = () => {
             linkFinal = data.init_point || data.sandbox_init_point;
           }
         } catch (errApi) {
-          console.warn("Aviso API MP Empresa:", errApi);
+          console.warn("Aviso API Pagamento Empresa:", errApi);
         }
       }
 
@@ -1355,21 +1355,16 @@ const NovaLocacao = () => {
       }
 
       if (!linkFinal && chavePixEmpresa) {
-        linkFinal = `Chave Pix: ${chavePixEmpresa}`;
-      }
-
-      if (!linkFinal) {
-        // Link fixo da empresa Celebre como fallback seguro
-        linkFinal = `https://link.mercadopago.com.br/celebresistema`;
+        linkFinal = chavePixEmpresa;
       }
 
       setLinkMercadoPago(linkFinal);
-      setFormaPagtoSinal('Mercado Pago');
-      alert("✅ Cobrança gerada com sucesso para a SUA conta! Você pode editar o link no campo abaixo se desejar.");
+      setFormaPagtoSinal('Link de Pagamento');
+      alert("✅ Cobrança / Meio de pagamento configurado com sucesso para a SUA empresa!");
 
     } catch (e) {
-      console.error("Erro MP Preference:", e);
-      alert("❌ Erro ao gerar cobrança. Verifique suas configurações de pagamento em Configurações > Empresa.");
+      console.error("Erro Pagamento Preference:", e);
+      alert("❌ Erro ao preparar cobrança. Verifique suas configurações de pagamento em Configurações > Empresa.");
     } finally {
       setGerandoLinkMP(false);
     }
@@ -1385,10 +1380,10 @@ const NovaLocacao = () => {
       
       let texto = `Olá, *${nomeClienteVIP}*! 🎉\n\nSua reserva para o tema *${temaFesta || 'Festas'}* no valor de *R$ ${vTotal}* foi registrada!\n\nPara confirmarmos a data (*${datas.retirada || 'a combinar'}*), o valor da entrada é de *R$ ${vSinalFormatado}*.\n\n`;
 
-      if (linkMercadoPago) {
-        texto += `💳 *Link de Pagamento Automático (Pix / Cartão Mercado Pago):*\n${linkMercadoPago}\n\n`;
-      } else if (chavePixEmpresa) {
-        texto += `💳 *Chave PIX da Empresa:*\n${chavePixEmpresa}\n\n`;
+      if (linkMercadoPago && (linkMercadoPago.startsWith('http') || linkMercadoPago.includes('.'))) {
+        texto += `💳 *Link de Pagamento (Cartão / Pix):*\n${linkMercadoPago}\n\n`;
+      } else if (chavePixEmpresa || linkMercadoPago) {
+        texto += `💳 *Chave PIX da Empresa:*\n${chavePixEmpresa || linkMercadoPago}\n\n`;
       } else {
         texto += `💳 *Pagamento via PIX:*\nSolicite nossa chave por aqui!\n\n`;
       }
