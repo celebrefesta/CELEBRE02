@@ -338,6 +338,7 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
 
           <button 
             type="button" 
+            className="btn-seguranca-reset"
             onClick={handleSolicitarResetSenha}
             disabled={enviandoReset}
             style={{
@@ -358,7 +359,7 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
             }}
           >
             {enviandoReset ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-envelope"></i>}
-            {enviandoReset ? 'ENVIANDO LINK SEGURO...' : 'ENVIAR LINK PARA TROCAR SENHA POR E-MAIL'}
+            <span>{enviandoReset ? 'ENVIANDO LINK SEGURO...' : 'ENVIAR LINK PARA TROCAR SENHA POR E-MAIL'}</span>
           </button>
         </div>
 
@@ -392,6 +393,7 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
 
           <button 
             type="button" 
+            className="btn-seguranca-email"
             onClick={() => { setNovoEmail(''); setSenhaConfirmar(''); setEmailTrocaSucesso(false); setModalEmailAberto(true); }}
             style={{
               width: '100%',
@@ -410,7 +412,7 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
               transition: 'all 0.2s ease'
             }}
           >
-            <i className="fas fa-paper-plane"></i> SOLICITAR TROCA DE E-MAIL POR E-MAIL
+            <i className="fas fa-paper-plane"></i> <span>SOLICITAR TROCA DE E-MAIL POR E-MAIL</span>
           </button>
         </div>
 
@@ -491,10 +493,11 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
             </p>
           </div>
 
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="seguranca-perigo-actions" style={{ display: 'flex', flexWrap: 'wrap', gap: '12px', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div className="seguranca-perigo-btns" style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
               <button
                 type="button"
+                className="btn-seguranca-desativar"
                 onClick={() => setModalDesativarAberto(true)}
                 style={{
                   background: 'var(--fundo-cinza)',
@@ -512,11 +515,12 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
                 }}
               >
                 <i className="fas fa-pause-circle" style={{ color: '#f59e0b' }}></i>
-                Desativar Conta Temporariamente
+                <span>Desativar Conta Temporariamente</span>
               </button>
 
               <button
                 type="button"
+                className="btn-seguranca-excluir"
                 onClick={() => {
                   setSenhaExclusao('');
                   setConfirmacaoTexto('');
@@ -540,7 +544,7 @@ const AbaSeguranca = ({ usuarioLogado, registrarLog }) => {
                 }}
               >
                 <i className="fas fa-trash-can"></i>
-                Excluir Minha Conta Definitivamente
+                <span>Excluir Minha Conta Definitivamente</span>
               </button>
             </div>
 

@@ -71,6 +71,13 @@ const Checkout = () => {
   };
 
   const [userData, setUserData] = useState(null);
+  const isUpgrade = Boolean(
+    location.state?.isUpgrade || 
+    planoSelecionado.id?.includes('anual') || 
+    userData?.assinaturaAtiva === true || 
+    userData?.statusAssinatura === 'ativa' || 
+    userData?.plano === 'pago'
+  );
   const [infoTeste, setInfoTeste] = useState(null);
   const [cupomInput, setCupomInput] = useState('');
   const [cupomAplicado, setCupomAplicado] = useState(null); // { codigo: 'PRIMEIROACESSO', descontoPercent: 20 }
@@ -145,7 +152,7 @@ const Checkout = () => {
 
           const urlParams = new URLSearchParams(location.search);
           const cupomUrl = urlParams.get('cupom');
-          if (cupomUrl) {
+          if (cupomUrl && !isUpgrade) {
             const cupomNormalizado = cupomUrl.toUpperCase().trim();
             setCupomInput(cupomNormalizado);
             validarEAplicarCupom(cupomNormalizado, uData, tInfo);
@@ -178,6 +185,10 @@ const Checkout = () => {
   };
 
   const handleVoltar = () => {
+    if (location.state?.from) {
+      navigate(location.state.from);
+      return;
+    }
     if (window.history.length > 1) {
       navigate(-1);
     } else {
@@ -239,7 +250,13 @@ const Checkout = () => {
           setTipoMensagem('sucesso');
           await registrarLog("ASSINATURA APROVADA", `Pagamento de assinatura processado com sucesso via Cartão. Plano: ${planoSelecionado.nome} (R$ ${valorPlano.toFixed(2).replace('.', ',')}${cupomAplicado ? ` com cupom ${cupomAplicado.codigo}` : ''}).`);
           resolve();
-          setTimeout(() => navigate('/dashboard'), 2500);
+          setTimeout(() => {
+            if (location.state?.from) {
+              navigate(location.state.from);
+            } else {
+              navigate('/dashboard');
+            }
+          }, 2500);
         } else {
           setMensagem('❌ Pagamento Recusado. Verifique os dados do cartão ou tente outro método.');
           setTipoMensagem('erro');
@@ -397,7 +414,7 @@ const Checkout = () => {
             fontWeight: '900',
             letterSpacing: '1px'
           }}>
-            CHECKOUT VIP PREMIER
+            {isUpgrade ? 'MIGRAÇÃO VIP ANUAL' : 'CHECKOUT VIP PREMIER'}
           </span>
         </div>
 
@@ -439,7 +456,7 @@ const Checkout = () => {
               alignItems: 'center',
               gap: '4px'
             }}>
-              <i className="fas fa-crown" style={{ fontSize: '10px' }}></i> PLANO ATIVO
+              <i className="fas fa-crown" style={{ fontSize: '10px' }}></i> {isUpgrade ? 'UPGRADE ANUAL' : 'PLANO ATIVO'}
             </div>
 
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
@@ -451,7 +468,7 @@ const Checkout = () => {
                 color: '#f5d061',
                 textTransform: 'uppercase'
               }}>
-                ASSINATURA PREMIUM CELEBRE
+                {isUpgrade ? 'MIGRAÇÃO PARA LICENÇA ANUAL' : 'ASSINATURA PREMIUM CELEBRE'}
               </span>
             </div>
 
@@ -530,116 +547,136 @@ const Checkout = () => {
               )}
             </div>
 
-            {/* BOX DE CUPOM DE DESCONTO VIP */}
-            <div style={{
-              background: 'rgba(255, 255, 255, 0.03)',
-              border: '1px dashed rgba(197, 160, 89, 0.45)',
-              borderRadius: '12px',
-              padding: '14px 16px',
-              marginBottom: '20px'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
-                <span style={{ fontSize: '12px', fontWeight: '800', color: '#f5d061', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
-                  <i className="fas fa-ticket-alt"></i> Cupom de Desconto
-                </span>
-                {cupomAplicado && (
-                  <button 
-                    type="button" 
-                    onClick={handleRemoverCupom}
-                    style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
-                  >
-                    ✕ Remover
-                  </button>
+            {/* BOX DE CUPOM DE DESCONTO VIP (Apenas para primeira assinatura, oculto em upgrade) */}
+            {!isUpgrade && (
+              <div style={{
+                background: 'rgba(255, 255, 255, 0.03)',
+                border: '1px dashed rgba(197, 160, 89, 0.45)',
+                borderRadius: '12px',
+                padding: '14px 16px',
+                marginBottom: '20px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '800', color: '#f5d061', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <i className="fas fa-ticket-alt"></i> Cupom de Desconto
+                  </span>
+                  {cupomAplicado && (
+                    <button 
+                      type="button" 
+                      onClick={handleRemoverCupom}
+                      style={{ background: 'none', border: 'none', color: '#ef4444', fontSize: '11px', fontWeight: '700', cursor: 'pointer', padding: 0 }}
+                    >
+                      ✕ Remover
+                    </button>
+                  )}
+                </div>
+
+                {!cupomAplicado ? (
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <input 
+                      type="text" 
+                      placeholder="Código (ex: PRIMEIROACESSO)"
+                      value={cupomInput}
+                      onChange={(e) => {
+                        setCupomInput(e.target.value.toUpperCase());
+                        if (mensagemCupom.texto) setMensagemCupom({ texto: '', tipo: '' });
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          validarEAplicarCupom(cupomInput);
+                        }
+                      }}
+                      style={{
+                        flex: 1,
+                        background: 'rgba(15, 23, 42, 0.8)',
+                        border: '1px solid rgba(197, 160, 89, 0.3)',
+                        borderRadius: '8px',
+                        padding: '8px 12px',
+                        color: '#ffffff',
+                        fontSize: '12.5px',
+                        fontWeight: '700',
+                        letterSpacing: '1px',
+                        textTransform: 'uppercase',
+                        outline: 'none'
+                      }}
+                    />
+                    <button 
+                      type="button" 
+                      onClick={() => validarEAplicarCupom(cupomInput)}
+                      style={{
+                        background: 'linear-gradient(135deg, #c5a059 0%, #dfb76c 100%)',
+                        border: 'none',
+                        borderRadius: '8px',
+                        padding: '8px 16px',
+                        color: '#0f172a',
+                        fontWeight: '800',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(197, 160, 89, 0.3)'
+                      }}
+                    >
+                      Aplicar
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '8px 12px' }}>
+                    <span style={{ fontSize: '12.5px', color: '#34d399', fontWeight: '800' }}>
+                      ✓ Cupom <strong>{cupomAplicado.codigo}</strong> aplicado (-20%)
+                    </span>
+                    <span style={{ fontSize: '11.5px', color: '#f5d061', fontWeight: '700' }}>
+                      -R$ {valorEconomizado.toFixed(2).replace('.', ',')}
+                    </span>
+                  </div>
+                )}
+
+                {mensagemCupom.texto && (
+                  <div style={{
+                    marginTop: '8px',
+                    fontSize: '11.5px',
+                    fontWeight: '700',
+                    lineHeight: '1.4',
+                    color: mensagemCupom.tipo === 'sucesso' ? '#34d399' : (mensagemCupom.tipo === 'alerta' ? '#fbbf24' : '#f87171')
+                  }}>
+                    {mensagemCupom.texto}
+                  </div>
                 )}
               </div>
+            )}
 
-              {!cupomAplicado ? (
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  <input 
-                    type="text" 
-                    placeholder="Código (ex: PRIMEIROACESSO)"
-                    value={cupomInput}
-                    onChange={(e) => {
-                      setCupomInput(e.target.value.toUpperCase());
-                      if (mensagemCupom.texto) setMensagemCupom({ texto: '', tipo: '' });
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        validarEAplicarCupom(cupomInput);
-                      }
-                    }}
-                    style={{
-                      flex: 1,
-                      background: 'rgba(15, 23, 42, 0.8)',
-                      border: '1px solid rgba(197, 160, 89, 0.3)',
-                      borderRadius: '8px',
-                      padding: '8px 12px',
-                      color: '#ffffff',
-                      fontSize: '12.5px',
-                      fontWeight: '700',
-                      letterSpacing: '1px',
-                      textTransform: 'uppercase',
-                      outline: 'none'
-                    }}
-                  />
-                  <button 
-                    type="button" 
-                    onClick={() => validarEAplicarCupom(cupomInput)}
-                    style={{
-                      background: 'linear-gradient(135deg, #c5a059 0%, #dfb76c 100%)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      padding: '8px 16px',
-                      color: '#0f172a',
-                      fontWeight: '800',
-                      fontSize: '12px',
-                      cursor: 'pointer',
-                      boxShadow: '0 2px 8px rgba(197, 160, 89, 0.3)'
-                    }}
-                  >
-                    Aplicar
-                  </button>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', padding: '8px 12px' }}>
-                  <span style={{ fontSize: '12.5px', color: '#34d399', fontWeight: '800' }}>
-                    ✓ Cupom <strong>{cupomAplicado.codigo}</strong> aplicado (-20%)
-                  </span>
-                  <span style={{ fontSize: '11.5px', color: '#f5d061', fontWeight: '700' }}>
-                    -R$ {valorEconomizado.toFixed(2).replace('.', ',')}
-                  </span>
-                </div>
-              )}
-
-              {mensagemCupom.texto && (
-                <div style={{
-                  marginTop: '8px',
-                  fontSize: '11.5px',
-                  fontWeight: '700',
-                  lineHeight: '1.4',
-                  color: mensagemCupom.tipo === 'sucesso' ? '#34d399' : (mensagemCupom.tipo === 'alerta' ? '#fbbf24' : '#f87171')
-                }}>
-                  {mensagemCupom.texto}
-                </div>
-              )}
-            </div>
-
-            <div style={{
-              padding: '12px 16px',
-              background: 'rgba(16, 185, 129, 0.1)',
-              borderRadius: '10px',
-              border: '1px solid rgba(16, 185, 129, 0.3)',
-              marginBottom: '28px',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '10px'
-            }}>
-              <i className="fas fa-check-double" style={{ color: '#34d399', fontSize: '16px' }}></i>
-              <span style={{ fontSize: '12.5px', color: '#34d399', fontWeight: '700' }}>
-                7 Dias de Garantia Incondicional • Cancele quando quiser
-              </span>
-            </div>
+            {!isUpgrade ? (
+              <div style={{
+                padding: '12px 16px',
+                background: 'rgba(16, 185, 129, 0.1)',
+                borderRadius: '10px',
+                border: '1px solid rgba(16, 185, 129, 0.3)',
+                marginBottom: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <i className="fas fa-check-double" style={{ color: '#34d399', fontSize: '16px' }}></i>
+                <span style={{ fontSize: '12.5px', color: '#34d399', fontWeight: '700' }}>
+                  7 Dias de Garantia Incondicional • Cancele quando quiser
+                </span>
+              </div>
+            ) : (
+              <div style={{
+                padding: '12px 16px',
+                background: 'rgba(197, 160, 89, 0.12)',
+                borderRadius: '10px',
+                border: '1px solid rgba(197, 160, 89, 0.35)',
+                marginBottom: '28px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px'
+              }}>
+                <i className="fas fa-crown" style={{ color: '#f5d061', fontSize: '16px' }}></i>
+                <span style={{ fontSize: '12.5px', color: '#f5d061', fontWeight: '700' }}>
+                  Migração Anual • 365 Dias de Acesso Garantidos com 20% de Desconto
+                </span>
+              </div>
+            )}
 
             <h4 style={{
               fontSize: '13px',
@@ -652,7 +689,7 @@ const Checkout = () => {
               alignItems: 'center',
               gap: '8px'
             }}>
-              <i className="fas fa-gem" style={{ color: '#f5d061' }}></i> TUDO O QUE VOCÊ RECEBE:
+              <i className="fas fa-gem" style={{ color: '#f5d061' }}></i> {isUpgrade ? 'BENEFÍCIOS DA SUA ANUIDADE VIP:' : 'TUDO O QUE VOCÊ RECEBE:'}
             </h4>
 
             {/* LISTA COMPLETA E IMPRESSIONANTE DE 9 RECURSOS */}
@@ -738,12 +775,14 @@ const Checkout = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '6px' }}>
               <i className="fas fa-lock" style={{ color: '#c5a059', fontSize: '18px' }}></i>
               <h3 style={{ fontSize: '22px', fontWeight: '900', margin: 0, color: '#0f172a' }}>
-                Finalizar Pagamento
+                {isUpgrade ? 'Efetivar Migração Anual' : 'Finalizar Pagamento'}
               </h3>
             </div>
 
             <p style={{ fontSize: '13.5px', color: '#64748b', margin: '0 0 24px 0' }}>
-              Escolha abaixo seu método de preferência para ativação imediata.
+              {isUpgrade 
+                ? 'Escolha a forma de pagamento abaixo para ativar seu plano anual com 2 meses grátis.' 
+                : 'Escolha abaixo seu método de preferência para ativação imediata.'}
             </p>
 
             {/* NAV TABS PILLS ELEGANTES */}

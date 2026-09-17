@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { db } from '../../firebaseConfig';
-import { collection, getDocs, query, orderBy, addDoc, serverTimestamp } from 'firebase/firestore'; 
+import { collection, getDocs, query, orderBy, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore'; 
 import { getAuth } from 'firebase/auth';
 import Navbar from '../../components/Navbar'; 
 import './Planos.css';
@@ -13,8 +13,29 @@ const Planos = () => {
   const [faqAberto, setFaqAberto] = useState(null);
   const [mostrarTabelaDetalhada, setMostrarTabelaDetalhada] = useState(true);
   const [planoAtivoIdx, setPlanoAtivoIdx] = useState(1);
+  const [planoAtualId, setPlanoAtualId] = useState(null);
+  const [planoAtualNome, setPlanoAtualNome] = useState(null);
+  const [usuarioAssinante, setUsuarioAssinante] = useState(false);
   const cardsScrollRef = React.useRef(null);
   const navigate = useNavigate();
+  const location = useLocation();
+
+  const handleVoltar = () => {
+    if (location.state?.from) {
+      const destino = location.state.from;
+      const aba = location.state.aba;
+      const urlFinal = destino.includes('?') 
+        ? destino 
+        : (aba ? `${destino}?tab=${aba}` : destino);
+      navigate(urlFinal, { state: { aba } });
+      return;
+    }
+    if (window.history.length > 1) {
+      navigate(-1);
+    } else {
+      navigate('/dashboard');
+    }
+  };
 
   const auth = getAuth();
   const usuarioLogado = auth.currentUser;
@@ -113,6 +134,25 @@ const Planos = () => {
   ];
 
   useEffect(() => {
+    const carregarAssinaturaUsuario = async () => {
+      if (!usuarioLogado) return;
+      try {
+        const snap = await getDoc(doc(db, 'usuarios', tenantId));
+        if (snap.exists()) {
+          const d = snap.data();
+          const ativa = d.assinaturaAtiva === true || d.statusAssinatura === 'ativa' || d.plano === 'pago';
+          setUsuarioAssinante(ativa);
+          setPlanoAtualId(d.planoId || null);
+          setPlanoAtualNome(d.planoNome || null);
+        }
+      } catch (err) {
+        console.warn("Erro ao buscar plano atual:", err);
+      }
+    };
+    carregarAssinaturaUsuario();
+  }, [usuarioLogado, tenantId]);
+
+  useEffect(() => {
     const buscarPlanos = async () => {
       try {
         const q = query(collection(db, "planos"), orderBy("ordem", "asc"));
@@ -185,7 +225,13 @@ const Planos = () => {
   const handleSelecionarPlano = async (planoSelecionado) => {
     if (usuarioLogado) {
       await registrarLog("TENTATIVA DE ASSINATURA", `Iniciou o processo de checkout para o plano: "${planoSelecionado.nome}".`);
-      navigate('/checkout', { state: { plano: planoSelecionado } });
+      navigate('/checkout', { 
+        state: { 
+          plano: planoSelecionado,
+          isUpgrade: usuarioAssinante || Boolean(planoAtualId),
+          from: location.state?.from || '/configuracoes?tab=assinatura'
+        } 
+      });
     } else {
       navigate(`/cadastro?plano=${planoSelecionado.id}`);
     }
@@ -213,9 +259,13 @@ const Planos = () => {
         {/* HERO SECTION PREMIUM */}
         <header className="planos-hero">
           {usuarioLogado && (
-            <button onClick={() => navigate('/dashboard')} className="btn-voltar-painel">
+            <button onClick={handleVoltar} className="btn-voltar-painel" title="Retornar à tela anterior">
               <i className="fas fa-arrow-left"></i>
-              <span>Voltar ao Painel</span>
+              <span>
+                {location.state?.from?.includes('/configuracoes') 
+                  ? 'Voltar às Configurações' 
+                  : 'Voltar ao Painel'}
+              </span>
             </button>
           )}
 
@@ -338,22 +388,31 @@ const Planos = () => {
           {planos.map((p, idx) => {
             const isDestaque = String(p.destaque) === "true";
             const isSelected = planoAtivoIdx === idx;
+            const isPlanoAtual = usuarioAssinante && (
+              (planoAtualId && p.id === planoAtualId) ||
+              (planoAtualNome && p.nome?.toLowerCase() === planoAtualNome?.toLowerCase()) ||
+              (!planoAtualId && !planoAtualNome && p.nome?.toLowerCase().includes('premium'))
+            );
 
             return (
               <div 
                 key={p.id} 
-                className={`plano-card ${isDestaque ? 'is-destaque' : ''} ${isSelected ? 'is-active-mobile' : ''}`}
+                className={`plano-card ${isDestaque ? 'is-destaque' : ''} ${isSelected ? 'is-active-mobile' : ''} ${isPlanoAtual ? 'is-plano-atual' : ''}`}
                 onClick={() => setPlanoAtivoIdx(idx)}
               >
-                {isDestaque && (
+                {isPlanoAtual ? (
+                  <div className="plano-card-ribbon" style={{ background: '#10b981', color: '#ffffff' }}>
+                    <i className="fas fa-check-circle"></i> SEU PLANO ATUAL
+                  </div>
+                ) : (isDestaque && (
                   <div className="plano-card-ribbon">
                     <i className="fas fa-star"></i> MAIS ESCOLHIDO
                   </div>
-                )}
+                ))}
 
                 <div className="plano-card-header">
                   <span className="plano-card-tipo">
-                    {isDestaque ? 'Custo-Benefício VIP' : 'Assinatura Mensal'}
+                    {isPlanoAtual ? 'Plano Ativo' : (isDestaque ? 'Custo-Benefício VIP' : 'Assinatura Mensal')}
                   </span>
                   <h3 className="plano-card-nome">{p.nome}</h3>
                 </div>
@@ -364,14 +423,36 @@ const Planos = () => {
                   <span className="periodo">/mês</span>
                 </div>
 
-                <button 
-                  type="button"
-                  className={`btn-card-assinar ${isDestaque ? 'btn-destaque' : ''}`}
-                  onClick={() => handleSelecionarPlano(p)}
-                >
-                  <span>{usuarioLogado ? 'Assinar Este Plano' : 'Começar Agora'}</span>
-                  <i className="fas fa-arrow-right"></i>
-                </button>
+                {isPlanoAtual ? (
+                  <button 
+                    type="button"
+                    disabled
+                    className="btn-card-assinar"
+                    style={{ 
+                      background: 'rgba(16, 185, 129, 0.15)', 
+                      border: '1.5px solid rgba(16, 185, 129, 0.4)', 
+                      color: '#10b981',
+                      cursor: 'default',
+                      boxShadow: 'none'
+                    }}
+                  >
+                    <i className="fas fa-check-circle"></i>
+                    <span>Plano Atual Ativo</span>
+                  </button>
+                ) : (
+                  <button 
+                    type="button"
+                    className={`btn-card-assinar ${isDestaque ? 'btn-destaque' : ''}`}
+                    onClick={() => handleSelecionarPlano(p)}
+                  >
+                    <span>
+                      {usuarioAssinante 
+                        ? `Mudar para ${p.nome} 🚀` 
+                        : (usuarioLogado ? 'Assinar Este Plano' : 'Começar Agora')}
+                    </span>
+                    <i className="fas fa-arrow-right"></i>
+                  </button>
+                )}
               </div>
             );
           })}

@@ -477,7 +477,7 @@ const AbaNotificacoes = ({ tenantId, usuarioLogado, registrarLog }) => {
                 <div className="notif-alert-switches" style={{ display: 'flex', alignItems: 'center', gap: '16px', flexWrap: 'wrap' }}>
                   {/* Sininho / Sistema */}
                   <label style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', cursor: 'pointer', fontSize: '12px', fontWeight: 700, color: 'var(--texto-secundario)' }}>
-                    <i className="fas fa-bell" style={{ color: '#c5a059' }}></i>
+                    <i className="fas fa-bell" style={{ color: 'var(--cor-destaque, #c5a059)' }}></i>
                     <span>Sininho</span>
                     <input 
                       type="checkbox"
@@ -858,6 +858,7 @@ const AbaNotificacoes = ({ tenantId, usuarioLogado, registrarLog }) => {
 
           <button
             type="button"
+            className="btn-teste-notificacao"
             onClick={handleDispararTeste}
             disabled={testando}
             style={{
@@ -898,9 +899,10 @@ const AbaNotificacoes = ({ tenantId, usuarioLogado, registrarLog }) => {
       </div>
 
       {/* BOTÃO FINAL DE SALVAR */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+      <div className="notificacoes-save-bar" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
         <button
           type="button"
+          className="btn-salvar-notificacao"
           onClick={handleSalvar}
           disabled={salvando}
           style={{
@@ -920,7 +922,7 @@ const AbaNotificacoes = ({ tenantId, usuarioLogado, registrarLog }) => {
           }}
         >
           {salvoFeedback ? <i className="fas fa-check"></i> : <i className="fas fa-save"></i>}
-          {salvoFeedback ? 'PREFERÊNCIAS SALVAS COM SUCESSO!' : (salvando ? 'SALVANDO...' : 'SALVAR PREFERÊNCIAS DE NOTIFICAÇÃO')}
+          <span>{salvoFeedback ? 'PREFERÊNCIAS SALVAS COM SUCESSO!' : (salvando ? 'SALVANDO...' : 'SALVAR PREFERÊNCIAS DE NOTIFICAÇÃO')}</span>
         </button>
       </div>
 

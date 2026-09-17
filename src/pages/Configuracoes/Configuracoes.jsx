@@ -28,7 +28,8 @@ const Configuracoes = () => {
   const isOwner = tenantId === usuarioLogado?.uid;
   const isCollaborator = !isSuperAdmin && !isOwner;
 
-  const [abaAtiva, setAbaAtiva] = useState(location.state?.aba || 'meu_perfil'); 
+  const queryTab = new URLSearchParams(location.search).get('tab');
+  const [abaAtiva, setAbaAtiva] = useState(queryTab || location.state?.aba || 'meu_perfil'); 
   const [loading, setLoading] = useState(true);
   const [dataCriacaoConta, setDataCriacaoConta] = useState('');
 
@@ -47,10 +48,18 @@ const Configuracoes = () => {
   }, []);
 
   useEffect(() => {
+    const qTab = new URLSearchParams(location.search).get('tab');
     if (location.state?.aba) {
       setAbaAtiva(location.state.aba);
+    } else if (qTab) {
+      setAbaAtiva(qTab);
     }
-  }, [location.state]);
+  }, [location.state, location.search]);
+
+  const trocarAba = (novaAba) => {
+    setAbaAtiva(novaAba);
+    navigate(`/configuracoes?tab=${novaAba}`, { replace: true, state: { aba: novaAba } });
+  };
   const [isContaExpirada, setIsContaExpirada] = useState(false);
 
   // ==========================================
@@ -167,6 +176,19 @@ const Configuracoes = () => {
         const docRef = getDocConfigRef();
         const docSnap = await getDoc(docRef);
         let dadosConf = docSnap.exists() ? docSnap.data() : {};
+
+        // 🎨 Sincroniza tema e cor da marca salvos no Firestore
+        if (dadosConf.accentColor) {
+          localStorage.setItem('accentColor', dadosConf.accentColor);
+          aplicarCorDestaqueGlobal(dadosConf.accentColor);
+        }
+        if (dadosConf.theme) {
+          localStorage.setItem('theme', dadosConf.theme);
+        }
+        if (dadosConf.highContrast !== undefined) {
+          localStorage.setItem('highContrast', dadosConf.highContrast);
+          document.documentElement.setAttribute('data-contrast', dadosConf.highContrast ? 'high' : 'normal');
+        }
 
         let dbCatFis = dadosConf.categoriasFisicas || [];
         let dbSubCatFis = dadosConf.subcategoriasFisicas || {};
@@ -388,7 +410,7 @@ const Configuracoes = () => {
           </p>
           <button 
             type="button" 
-            onClick={() => navigate('/planos')} 
+            onClick={() => navigate('/planos', { state: { from: '/configuracoes', aba: 'assinatura' } })} 
             style={{ width: '100%', padding: '14px', background: 'var(--dourado)', color: '#0f172a', border: 'none', borderRadius: '10px', fontWeight: '800', fontSize: '15px', cursor: 'pointer', boxShadow: '0 4px 14px rgba(197, 160, 89, 0.4)' }}
           >
             Ver Planos e Assinar
@@ -439,7 +461,7 @@ const Configuracoes = () => {
         >
           <button 
             className={abaAtiva === 'meu_perfil' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('meu_perfil')}
+            onClick={() => trocarAba('meu_perfil')}
           >
             <span className="tab-icon purple"><i className="fas fa-user"></i></span>
             <span>Meu Perfil</span>
@@ -448,7 +470,7 @@ const Configuracoes = () => {
           {!isCollaborator && (
             <button 
               className={abaAtiva === 'empresa' ? 'active' : ''} 
-              onClick={() => setAbaAtiva('empresa')}
+              onClick={() => trocarAba('empresa')}
             >
               <span className="tab-icon blue"><i className="fas fa-building"></i></span>
               <span>Empresa</span>
@@ -458,7 +480,7 @@ const Configuracoes = () => {
           {!isCollaborator && (
             <button 
               className={abaAtiva === 'listas' ? 'active' : ''} 
-              onClick={() => setAbaAtiva('listas')}
+              onClick={() => trocarAba('listas')}
             >
               <span className="tab-icon amber"><i className="fas fa-boxes"></i></span>
               <span>Catálogo e Estoque</span>
@@ -468,7 +490,7 @@ const Configuracoes = () => {
           {!isCollaborator && (
             <button 
               className={abaAtiva === 'marketing' ? 'active' : ''} 
-              onClick={() => setAbaAtiva('marketing')}
+              onClick={() => trocarAba('marketing')}
             >
               <span className="tab-icon cyan" style={{ background: 'rgba(6, 182, 212, 0.12)', color: '#0891b2' }}><i className="fas fa-chart-line"></i></span>
               <span>Marketing & Rastreamento</span>
@@ -478,7 +500,7 @@ const Configuracoes = () => {
           {!isCollaborator && (
             <button 
               className={abaAtiva === 'assinatura' ? 'active' : ''} 
-              onClick={() => setAbaAtiva('assinatura')}
+              onClick={() => trocarAba('assinatura')}
             >
               <span className="tab-icon green"><i className="fas fa-credit-card"></i></span>
               <span>Assinatura e Uso</span>
@@ -487,7 +509,7 @@ const Configuracoes = () => {
 
           <button 
             className={abaAtiva === 'notificacoes' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('notificacoes')}
+            onClick={() => trocarAba('notificacoes')}
           >
             <span className="tab-icon red"><i className="fas fa-bell"></i></span>
             <span>Notificações</span>
@@ -495,7 +517,7 @@ const Configuracoes = () => {
 
           <button 
             className={abaAtiva === 'seguranca' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('seguranca')}
+            onClick={() => trocarAba('seguranca')}
           >
             <span className="tab-icon cyan"><i className="fas fa-shield-alt"></i></span>
             <span>Segurança</span>
@@ -503,7 +525,7 @@ const Configuracoes = () => {
 
           <button 
             className={abaAtiva === 'aparencia' ? 'active' : ''} 
-            onClick={() => setAbaAtiva('aparencia')}
+            onClick={() => trocarAba('aparencia')}
           >
             <span className="tab-icon pink"><i className="fas fa-palette"></i></span>
             <span>Aparência</span>
@@ -512,7 +534,7 @@ const Configuracoes = () => {
           {!isCollaborator && (
             <button 
               className={abaAtiva === 'backup' ? 'active' : ''} 
-              onClick={() => setAbaAtiva('backup')}
+              onClick={() => trocarAba('backup')}
             >
               <span className="tab-icon indigo"><i className="fas fa-database"></i></span>
               <span>Backup & LGPD</span>

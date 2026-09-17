@@ -13,38 +13,28 @@ const AbaMarketing = ({
   const [canalUtm, setCanalUtm] = useState('insta_bio');
   const [nomeCampanhaCustom, setNomeCampanhaCustom] = useState('');
   const [copiadoUtm, setCopiadoUtm] = useState(false);
-  const [abaDicas, setAbaDicas] = useState('meta');
+  const [abaDicas, setAbaDicas] = useState(null);
   const [salvoMarketingLocal, setSalvoMarketingLocal] = useState(false);
-
-  // Detecta se o sistema está sendo executado em desenvolvimento local (localhost)
-  const isLocalhost = typeof window !== 'undefined' && (
-    window.location.hostname === 'localhost' ||
-    window.location.hostname === '127.0.0.1' ||
-    window.location.hostname.includes('192.168.')
-  );
-
-  // 'producao' = https://celebrefesta.com.br (ou domínio oficial da empresa)
-  // 'local' = http://localhost:5173
-  const [modoAmbiente, setModoAmbiente] = useState('producao');
-
-  const dominioProducaoOficial = config.dominioOficial || 'https://celebrefesta.com.br';
-  const dominioLocal = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:5173';
-  const dominioEscolhido = (!isLocalhost || modoAmbiente === 'producao') ? dominioProducaoOficial : dominioLocal;
 
   // Garante a recuperação segura do tenantId da loja
   const idLojaResolvido = tenantId || (typeof localStorage !== 'undefined' ? localStorage.getItem('tenantId') : '') || '';
 
-  // URL Base do Catálogo Online (Rota padrão oficial: /catalogo/:idEmpresa)
+  // Domínio de Produção Oficial (celebrefesta.com.br ou domínio em que a aplicação está hospedada)
+  const dominioProducaoOficial = useMemo(() => {
+    if (typeof window !== 'undefined') {
+      const { hostname, origin } = window.location;
+      if (!hostname.includes('localhost') && !hostname.includes('127.0.0.1') && !hostname.includes('192.168.')) {
+        return origin;
+      }
+    }
+    return config.dominioOficial || 'https://celebrefesta.com.br';
+  }, [config.dominioOficial]);
+
+  // URL Base do Catálogo Online Oficial (Rota padrão: /catalogo/:idEmpresa)
   const urlCatalogoBase = useMemo(() => {
     if (!idLojaResolvido) return '';
-    return `${dominioEscolhido}/catalogo/${idLojaResolvido}`;
-  }, [dominioEscolhido, idLojaResolvido]);
-
-  // URL do Catálogo Local (para teste direto na máquina do desenvolvedor)
-  const urlCatalogoLocalDireto = useMemo(() => {
-    if (!idLojaResolvido) return '';
-    return `${dominioLocal}/catalogo/${idLojaResolvido}`;
-  }, [dominioLocal, idLojaResolvido]);
+    return `${dominioProducaoOficial}/catalogo/${idLojaResolvido}`;
+  }, [dominioProducaoOficial, idLojaResolvido]);
 
   // Canais predefinidos de UTM
   const canaisDisponiveis = [
@@ -58,7 +48,7 @@ const AbaMarketing = ({
 
   // Cálculo da URL rastreada com UTM
   const canalSelecionado = canaisDisponiveis.find(c => c.id === canalUtm) || canaisDisponiveis[0];
-  const campanhaFinal = (nomeCampanhaCustom || canalSelecionado.defaultCamp)
+  const campanhaSanitizada = (nomeCampanhaCustom || '')
     .trim()
     .toLowerCase()
     .replace(/\s+/g, '_')
@@ -66,21 +56,18 @@ const AbaMarketing = ({
 
   const urlRastreadaFinal = useMemo(() => {
     if (!urlCatalogoBase) return '';
-    return `${urlCatalogoBase}?utm_source=${canalSelecionado.source}&utm_medium=${canalSelecionado.medium}&utm_campaign=${campanhaFinal}`;
-  }, [urlCatalogoBase, canalSelecionado, campanhaFinal]);
+    const params = [`utm_source=${canalSelecionado.source}`, `utm_medium=${canalSelecionado.medium}`];
+    if (campanhaSanitizada) {
+      params.push(`utm_campaign=${campanhaSanitizada}`);
+    }
+    return `${urlCatalogoBase}?${params.join('&')}`;
+  }, [urlCatalogoBase, canalSelecionado, campanhaSanitizada]);
 
-  const urlRastreadaLocal = useMemo(() => {
-    if (!urlCatalogoLocalDireto) return '';
-    return `${urlCatalogoLocalDireto}?utm_source=${canalSelecionado.source}&utm_medium=${canalSelecionado.medium}&utm_campaign=${campanhaFinal}`;
-  }, [urlCatalogoLocalDireto, canalSelecionado, campanhaFinal]);
-
-  // URL do QR Code Dinâmico (Sempre apontando para o link de Produção para ser escaneável por celulares)
+  // URL do QR Code Dinâmico Oficial
   const urlQrCodeAtual = useMemo(() => {
-    const urlFinalParaQr = (modoAmbiente === 'local')
-      ? urlRastreadaFinal
-      : `${dominioProducaoOficial}/catalogo/${idLojaResolvido}?utm_source=${canalSelecionado.source}&utm_medium=${canalSelecionado.medium}&utm_campaign=${campanhaFinal}`;
-    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(urlFinalParaQr || 'https://celebrefesta.com.br')}`;
-  }, [urlRastreadaFinal, modoAmbiente, dominioProducaoOficial, idLojaResolvido, canalSelecionado, campanhaFinal]);
+    if (!urlRastreadaFinal) return '';
+    return `https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(urlRastreadaFinal)}`;
+  }, [urlRastreadaFinal]);
 
   const copiarLinkRastreado = async () => {
     if (!urlRastreadaFinal) return;
@@ -100,7 +87,7 @@ const AbaMarketing = ({
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `qrcode-${canalSelecionado.source}-${campanhaFinal}.png`;
+      a.download = `qrcode-${canalSelecionado.source}${campanhaSanitizada ? `-${campanhaSanitizada}` : ''}.png`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -110,9 +97,9 @@ const AbaMarketing = ({
     }
   };
 
-  const empresaNomeExibicao = config.nomeEmpresa || nomeEmpresa || 'Celebre Decorações';
-  const ogTituloExibicao = config.ogTitulo || `${empresaNomeExibicao} • Catálogo Oficial de Festas`;
-  const ogDescExibicao = config.ogDescricao || `Confira nosso acervo completo de móveis, suportes e kits Pegue & Monte para transformar a sua festa.`;
+  const empresaNomeExibicao = config.nomeEmpresa || nomeEmpresa || '';
+  const ogTituloExibicao = config.ogTitulo || (empresaNomeExibicao ? `${empresaNomeExibicao} • Catálogo Oficial` : 'Catálogo Oficial de Peças & Decoração');
+  const ogDescExibicao = config.ogDescricao || 'Confira nosso acervo completo e monte seu orçamento de peças para festas.';
 
   // Função para imprimir plaquinha de balcão para feiras/loja
   const imprimirPlaquinhaBalcao = () => {
@@ -198,7 +185,7 @@ const AbaMarketing = ({
             <div>
               <p class="instructions">📱 Aponte a câmera do celular</p>
               <p class="subtext">Acesse nosso catálogo digital e monte sua seleção de peças e orçamentos em tempo real!</p>
-              <p class="footer-channel">Origem Rastreada: ${canalSelecionado.label} • Celebre Sistema</p>
+              <p class="footer-channel">Origem Rastreada: ${canalSelecionado.label} • Catálogo Online</p>
             </div>
           </div>
         </body>
@@ -213,11 +200,8 @@ const AbaMarketing = ({
 
   // Botão de testar no WhatsApp
   const testarNoWhatsApp = () => {
-    const urlWhats = (modoAmbiente === 'local')
-      ? urlRastreadaFinal
-      : `${dominioProducaoOficial}/catalogo/${idLojaResolvido}?utm_source=whatsapp&utm_medium=chat&utm_campaign=teste_ao_vivo`;
-    if (!urlWhats) return;
-    const msg = `${ogTituloExibicao}\n\n${ogDescExibicao}\n\n${urlWhats}`;
+    if (!urlRastreadaFinal) return;
+    const msg = `${ogTituloExibicao}\n\n${ogDescExibicao}\n\n${urlRastreadaFinal}`;
     const link = `https://api.whatsapp.com/send?text=${encodeURIComponent(msg)}`;
     window.open(link, '_blank');
   };
@@ -322,9 +306,9 @@ const AbaMarketing = ({
 
       {/* ── CARD 1: PIXELS E TAGS DE CONVERSÃO (TRÁFEGO PAGO) ── */}
       <div className="config-card span-2-col-full marketing-card">
-        <div className="card-top-bar blue-bar" style={{ background: 'linear-gradient(90deg, #1877F2 0%, #8b5cf6 100%)' }}></div>
+        <div className="card-top-bar gold-bar"></div>
         <div className="config-card-header">
-          <div className="card-header-icon blue" style={{ background: 'rgba(24, 119, 242, 0.1)', color: '#1877F2' }}>
+          <div className="card-header-icon gold">
             <i className="fas fa-bullseye"></i>
           </div>
           <div>
@@ -335,7 +319,7 @@ const AbaMarketing = ({
           </div>
         </div>
 
-        <div className="form-grid-2-col" style={{ gap: '16px' }}>
+        <div className="form-grid-2-col" style={{ gap: '10px' }}>
           
           {/* 1.1 META PIXEL */}
           <div className="f-group" style={{ margin: 0 }}>
@@ -355,11 +339,11 @@ const AbaMarketing = ({
                 value={config.pixelFacebook || ''} 
                 onChange={(e) => handleConfigChange('pixelFacebook', e.target.value.replace(/\D/g, ''))} 
                 onBlur={(e) => salvarConfigTextual('pixelFacebook', e.target.value.trim())} 
-                placeholder="Ex: 123456789012345 (Apenas números)" 
+                placeholder="" 
               />
             </div>
             <small className="field-help-text">
-              Dispara automaticamente os eventos <strong>PageView</strong>, <strong>ViewContent</strong> e <strong>AddToCart</strong> na vitrine.
+              Exemplo: <code>123456789012345</code> • Dispara eventos <strong>PageView</strong>, <strong>ViewContent</strong> e <strong>AddToCart</strong> na vitrine.
             </small>
           </div>
 
@@ -381,11 +365,11 @@ const AbaMarketing = ({
                 value={config.googleAnalyticsId || ''} 
                 onChange={(e) => handleConfigChange('googleAnalyticsId', e.target.value.toUpperCase().trim())} 
                 onBlur={(e) => salvarConfigTextual('googleAnalyticsId', e.target.value.toUpperCase().trim())} 
-                placeholder="Ex: G-XXXXXXXXXX" 
+                placeholder="" 
               />
             </div>
             <small className="field-help-text">
-              Mede número de visitantes, cidades de acesso e peças mais visualizadas do acervo.
+              Exemplo: <code>G-XXXXXXXXXX</code> • Mede número de visitantes, cidades e peças mais visualizadas.
             </small>
           </div>
 
@@ -407,11 +391,11 @@ const AbaMarketing = ({
                 value={config.googleAdsId || ''} 
                 onChange={(e) => handleConfigChange('googleAdsId', e.target.value.toUpperCase().trim())} 
                 onBlur={(e) => salvarConfigTextual('googleAdsId', e.target.value.toUpperCase().trim())} 
-                placeholder="Ex: AW-123456789" 
+                placeholder="" 
               />
             </div>
             <small className="field-help-text">
-              Para campanhas de busca paga ("aluguel de peças decorativas na sua cidade").
+              Exemplo: <code>AW-123456789</code> • Para campanhas de busca paga ("aluguel de peças decorativas").
             </small>
           </div>
 
@@ -433,11 +417,11 @@ const AbaMarketing = ({
                 value={config.tiktokPixelId || ''} 
                 onChange={(e) => handleConfigChange('tiktokPixelId', e.target.value.trim())} 
                 onBlur={(e) => salvarConfigTextual('tiktokPixelId', e.target.value.trim())} 
-                placeholder="Ex: C1234567890ABCDE" 
+                placeholder="" 
               />
             </div>
             <small className="field-help-text">
-              Otimize anúncios em vídeo de montagem de mesas e acervo no TikTok.
+              Exemplo: <code>C1234567890ABCDE</code> • Para anúncios em vídeo de montagem de mesas e acervo.
             </small>
           </div>
 
@@ -449,16 +433,18 @@ const AbaMarketing = ({
             <button
               type="button"
               className={`btn-help-tab ${abaDicas === 'meta' ? 'active meta' : ''}`}
-              onClick={() => setAbaDicas('meta')}
+              onClick={() => setAbaDicas(prev => prev === 'meta' ? null : 'meta')}
             >
-              <i className="fab fa-facebook"></i> Como pegar o Meta Pixel
+              <i className="fab fa-facebook" style={{ color: abaDicas === 'meta' ? 'inherit' : '#1877F2' }}></i>
+              <span>Como pegar o Meta Pixel</span>
             </button>
             <button
               type="button"
               className={`btn-help-tab ${abaDicas === 'ga4' ? 'active ga4' : ''}`}
-              onClick={() => setAbaDicas('ga4')}
+              onClick={() => setAbaDicas(prev => prev === 'ga4' ? null : 'ga4')}
             >
-              <i className="fab fa-google"></i> Como pegar o Google Analytics
+              <i className="fab fa-google" style={{ color: abaDicas === 'ga4' ? 'inherit' : '#EA4335' }}></i>
+              <span>Como pegar o Google Analytics</span>
             </button>
           </div>
 
@@ -482,9 +468,9 @@ const AbaMarketing = ({
 
       {/* ── CARD 2: GERADOR DE LINKS RASTREADOS & QR CODE DINÂMICO ── */}
       <div className="config-card span-2-col-full marketing-card">
-        <div className="card-top-bar amber-bar" style={{ background: 'linear-gradient(90deg, #f59e0b 0%, #d97706 100%)' }}></div>
+        <div className="card-top-bar gold-bar"></div>
         <div className="config-card-header">
-          <div className="card-header-icon amber" style={{ background: 'rgba(245, 158, 11, 0.1)', color: '#d97706' }}>
+          <div className="card-header-icon gold">
             <i className="fas fa-qrcode"></i>
           </div>
           <div>
@@ -496,7 +482,7 @@ const AbaMarketing = ({
         </div>
 
         {/* SELETOR DE CANAIS */}
-        <div style={{ marginBottom: '16px' }}>
+        <div style={{ marginBottom: '10px' }}>
           <label className="section-step-label">
             1. Onde você vai divulgar esse link ou colocar o QR Code?
           </label>
@@ -507,10 +493,7 @@ const AbaMarketing = ({
                 <button
                   key={c.id}
                   type="button"
-                  onClick={() => {
-                    setCanalUtm(c.id);
-                    if (!nomeCampanhaCustom) setNomeCampanhaCustom(c.defaultCamp);
-                  }}
+                  onClick={() => setCanalUtm(c.id)}
                   className={`btn-utm-channel ${isSelected ? 'ativo' : ''}`}
                 >
                   <span className="channel-label">{c.label}</span>
@@ -522,7 +505,7 @@ const AbaMarketing = ({
         </div>
 
         {/* NOME DA CAMPANHA */}
-        <div className="f-group" style={{ marginBottom: '18px' }}>
+        <div className="f-group" style={{ marginBottom: '10px' }}>
           <label className="section-step-label">
             2. Nome da Campanha, Evento ou Buffet Parceiro (Opcional)
           </label>
@@ -530,57 +513,13 @@ const AbaMarketing = ({
             type="text" 
             value={nomeCampanhaCustom} 
             onChange={(e) => setNomeCampanhaCustom(e.target.value)} 
-            placeholder={`Ex: ${canalSelecionado.defaultCamp}`}
+            placeholder="" 
             style={{ maxWidth: '480px' }}
           />
           <small className="field-help-text">
-            Identifique promoções ou locais físicos (ex: <code>feira_noivas_2026</code>, <code>buffet_villa_real</code>, <code>display_balcao</code>).
+            Opcional. Use para identificar ações específicas (ex: <code>feira_noivas_2026</code>, <code>buffet_villa_real</code>, <code>display_balcao</code>). Se não preencher, o link funciona normalmente.
           </small>
         </div>
-
-        {/* SELETOR DE DOMÍNIO / AMBIENTE (QUANDO EM LOCALHOST) */}
-        {isLocalhost && (
-          <div className="marketing-ambiente-banner">
-            <div className="ambiente-banner-header">
-              <div className="ambiente-banner-title">
-                <i className="fas fa-network-wired" style={{ color: '#c5a059' }}></i>
-                <span>Destino do Link & QR Code</span>
-                <span className="badge-ambiente-dev">Modo Desenvolvimento</span>
-              </div>
-              <p className="ambiente-banner-desc">
-                O endereço <code>localhost</code> só funciona neste computador. Para clientes no WhatsApp ou QR Code impresso no balcão, utilize <strong>Produção Oficial</strong>.
-              </p>
-            </div>
-
-            <div className="ambiente-toggle-pills">
-              <button
-                type="button"
-                className={`btn-pill-ambiente ${modoAmbiente === 'producao' ? 'ativo' : ''}`}
-                onClick={() => setModoAmbiente('producao')}
-              >
-                <i className="fas fa-globe"></i>
-                <div className="btn-pill-text">
-                  <strong>🌐 Produção Oficial (celebrefesta.com.br)</strong>
-                  <span>Recomendado para QR Code & WhatsApp</span>
-                </div>
-                {modoAmbiente === 'producao' && <i className="fas fa-check-circle pill-check"></i>}
-              </button>
-
-              <button
-                type="button"
-                className={`btn-pill-ambiente ${modoAmbiente === 'local' ? 'ativo' : ''}`}
-                onClick={() => setModoAmbiente('local')}
-              >
-                <i className="fas fa-laptop-code"></i>
-                <div className="btn-pill-text">
-                  <strong>💻 Localhost ({window.location.host})</strong>
-                  <span>Para testar neste mesmo navegador</span>
-                </div>
-                {modoAmbiente === 'local' && <i className="fas fa-check-circle pill-check"></i>}
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* CAIXA INTEGRADA: LINK RASTREADO + QR CODE DINÂMICO */}
         <div className="utm-output-panel">
@@ -589,10 +528,10 @@ const AbaMarketing = ({
           <div className="utm-text-col">
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
               <span className="utm-col-title" style={{ margin: 0 }}>
-                <i className="fas fa-link"></i> Link Rastreado Pronto:
+                <i className="fas fa-link"></i> Link Rastreado Oficial:
               </span>
-              <span className={`utm-mode-badge ${modoAmbiente}`}>
-                {modoAmbiente === 'producao' ? '🌐 Link Oficial Web' : '💻 Link Local'}
+              <span className="utm-mode-badge producao">
+                🌐 Link Oficial
               </span>
             </div>
             <div className="utm-link-display">
@@ -617,21 +556,8 @@ const AbaMarketing = ({
                 title="Abrir o catálogo em nova aba para testar os parâmetros"
               >
                 <i className="fas fa-external-link-alt"></i>
-                <span>{modoAmbiente === 'producao' ? 'Abrir na Web' : 'Testar no Navegador'}</span>
+                <span>Abrir Catálogo</span>
               </a>
-
-              {isLocalhost && modoAmbiente === 'producao' && urlRastreadaLocal && (
-                <a
-                  href={urlRastreadaLocal}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn-utm-action local-outline"
-                  title="Abrir o catálogo no servidor local deste computador"
-                >
-                  <i className="fas fa-laptop"></i>
-                  <span>Testar no Localhost deste PC</span>
-                </a>
-              )}
             </div>
           </div>
 
@@ -673,9 +599,9 @@ const AbaMarketing = ({
 
       {/* ── CARD 3: PRÉVIA NO WHATSAPP (OPEN GRAPH & COMPARTILHAMENTO) ── */}
       <div className="config-card span-2-col-full marketing-card">
-        <div className="card-top-bar green-bar" style={{ background: 'linear-gradient(90deg, #25D366 0%, #128C7E 100%)' }}></div>
+        <div className="card-top-bar gold-bar"></div>
         <div className="config-card-header">
-          <div className="card-header-icon green" style={{ background: 'rgba(37, 211, 102, 0.12)', color: '#25D366' }}>
+          <div className="card-header-icon gold">
             <i className="fab fa-whatsapp"></i>
           </div>
           <div>
@@ -697,10 +623,10 @@ const AbaMarketing = ({
                 value={config.ogTitulo || ''} 
                 onChange={(e) => handleConfigChange('ogTitulo', e.target.value)} 
                 onBlur={(e) => salvarConfigTextual('ogTitulo', e.target.value)} 
-                placeholder={`Ex: ${empresaNomeExibicao} • Catálogo de Festas & Acervo`} 
+                placeholder="" 
               />
               <small className="field-help-text">
-                Aparece em destaque e negrito no topo da mensagem.
+                Exemplo: <em>Nome da sua Empresa • Catálogo de Festas</em> (opcional).
               </small>
             </div>
 
@@ -711,11 +637,11 @@ const AbaMarketing = ({
                 value={config.ogDescricao || ''} 
                 onChange={(e) => handleConfigChange('ogDescricao', e.target.value)} 
                 onBlur={(e) => salvarConfigTextual('ogDescricao', e.target.value)} 
-                placeholder="Ex: Explore nosso acervo completo de peças decorativas, móveis de luxo e kits Pegue & Monte para o seu evento." 
-                style={{ resize: 'vertical', minHeight: '80px', borderRadius: '10px', padding: '10px' }}
+                placeholder="" 
+                style={{ resize: 'vertical', minHeight: '80px', borderRadius: '8px', padding: '8px 10px' }}
               />
               <small className="field-help-text">
-                Frase curta de atração para incentivar a cliente a clicar e navegar pelas peças.
+                Exemplo: <em>Confira nosso acervo completo e monte sua seleção de peças.</em> (opcional).
               </small>
             </div>
 
@@ -730,7 +656,7 @@ const AbaMarketing = ({
                 <span>Testar no Meu WhatsApp ao Vivo</span>
               </button>
               <small className="field-help-text" style={{ marginTop: '6px' }}>
-                Abre o WhatsApp com a mensagem e o link pré-carregados para você testar no seu celular.
+                Abre o WhatsApp com o link para você testar no seu celular.
               </small>
             </div>
           </div>
@@ -751,7 +677,7 @@ const AbaMarketing = ({
                       <img src={config.logotipo} alt="Logo" className="whatsapp-cover-logo" />
                     ) : (
                       <span className="whatsapp-cover-fallback">
-                        ✨ {empresaNomeExibicao}
+                        ✨ {empresaNomeExibicao || 'Sua Empresa'}
                       </span>
                     )}
                   </div>
@@ -760,14 +686,14 @@ const AbaMarketing = ({
                     <strong className="whatsapp-preview-title">{ogTituloExibicao}</strong>
                     <p className="whatsapp-preview-desc">{ogDescExibicao}</p>
                     <span className="whatsapp-preview-host">
-                      {typeof window !== 'undefined' ? window.location.hostname : 'celebrelocacoes.com'}
+                      {typeof window !== 'undefined' && !window.location.hostname.includes('localhost') ? window.location.hostname : 'celebrefesta.com.br'}
                     </span>
                   </div>
                 </div>
 
                 {/* TEXTO DO LINK */}
                 <div className="whatsapp-link-url">
-                  {urlCatalogoBase || 'https://celebrelocacoes.com/catalogo'}
+                  {urlCatalogoBase || 'https://celebrefesta.com.br/catalogo'}
                 </div>
                 
                 <div className="whatsapp-timestamp">
@@ -782,9 +708,9 @@ const AbaMarketing = ({
 
       {/* ── CARD 4: MENSAGEM PADRÃO DO PEDIDO PELO WHATSAPP ── */}
       <div className="config-card span-2-col-full marketing-card">
-        <div className="card-top-bar purple-bar" style={{ background: 'linear-gradient(90deg, #8b5cf6 0%, #6366f1 100%)' }}></div>
+        <div className="card-top-bar gold-bar"></div>
         <div className="config-card-header">
-          <div className="card-header-icon purple" style={{ background: 'rgba(139, 92, 246, 0.1)', color: '#8b5cf6' }}>
+          <div className="card-header-icon gold">
             <i className="fas fa-comment-dots"></i>
           </div>
           <div>
@@ -828,11 +754,11 @@ const AbaMarketing = ({
             value={config.msgPadraoWhats || ''} 
             onChange={(e) => handleConfigChange('msgPadraoWhats', e.target.value)} 
             onBlur={(e) => salvarConfigTextual('msgPadraoWhats', e.target.value)} 
-            placeholder={`Olá! Montei meu pedido no catálogo da ${empresaNomeExibicao} e gostaria de confirmar a disponibilidade para a minha data.`} 
-            style={{ resize: 'vertical', minHeight: '85px', borderRadius: '10px', padding: '12px' }}
+            placeholder="" 
+            style={{ resize: 'vertical', minHeight: '75px', borderRadius: '8px', padding: '8px 10px' }}
           />
           <small className="field-help-text" style={{ marginTop: '5px' }}>
-            As peças escolhidas, as quantidades e o valor estimado serão listados automaticamente pelo sistema logo após esta mensagem.
+            Campo 100% opcional. Se deixar vazio, o catálogo envia automaticamente: <em>"Olá! Vi essas peças no catálogo online e gostaria de verificar a disponibilidade para minha festa..."</em>.
           </small>
         </div>
       </div>

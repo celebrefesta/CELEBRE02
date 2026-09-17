@@ -82,6 +82,7 @@ const PaginaUpgrade = lazy(() => import('./pages/Planos/PaginaUpgrade'));
 const ContaSuspensa = lazy(() => import('./pages/Auth/ContaSuspensa'));
 const ReativarConta = lazy(() => import('./pages/Auth/ReativarConta'));
 const ControleGeral = lazy(() => import('./pages/Admin/ControleGeral'));
+const GerenciarPagamento = lazy(() => import('./pages/Configuracoes/GerenciarPagamento'));
 
 const parseFirestoreDate = (dateVal) => {
   if (!dateVal) return null;
@@ -401,6 +402,19 @@ const AppContent = () => {
           localStorage.setItem('tenantId', user.uid);
           localStorage.setItem('funcName', user.displayName || 'Celebre Festa');
           localStorage.setItem('userRole', 'owner');
+          try {
+            const cfgSnap = await getDoc(doc(db, "configuracoes_empresa", user.uid));
+            if (cfgSnap.exists()) {
+              const cfgData = cfgSnap.data();
+              if (cfgData.accentColor) {
+                localStorage.setItem('accentColor', cfgData.accentColor);
+                aplicarCorDestaqueGlobal(cfgData.accentColor);
+              }
+              if (cfgData.theme) localStorage.setItem('theme', cfgData.theme);
+              if (cfgData.highContrast !== undefined) localStorage.setItem('highContrast', cfgData.highContrast);
+              window.dispatchEvent(new Event('theme-change'));
+            }
+          } catch (eCfg) {}
           return;
         }
 
@@ -509,19 +523,32 @@ const AppContent = () => {
           localStorage.setItem('funcName', nomeExibido);
           localStorage.setItem('userRole', role);
 
+          // Sincroniza preferências salvas de tema e cor da empresa
+          try {
+            const cfgSnap = await getDoc(doc(db, "configuracoes_empresa", tenantId));
+            if (cfgSnap.exists()) {
+              const cfgData = cfgSnap.data();
+              if (cfgData.accentColor) {
+                localStorage.setItem('accentColor', cfgData.accentColor);
+                aplicarCorDestaqueGlobal(cfgData.accentColor);
+              }
+              if (cfgData.theme) localStorage.setItem('theme', cfgData.theme);
+              if (cfgData.highContrast !== undefined) localStorage.setItem('highContrast', cfgData.highContrast);
+              window.dispatchEvent(new Event('theme-change'));
+            }
+          } catch (eCfg) {}
+
           // 🧹 Limpeza silenciosa de mídias de vistoria expiradas em segundo plano (1x por dia)
           verificarELimparMidiasBackground(db, tenantId);
         } catch (error) {
           console.error("Erro ao verificar integridade da conta:", error);
         }
       } else {
-        // 🔒 Usuário deslogado: limpar preferências residuais e restaurar a identidade padrão Celebre
+        // 🔒 Usuário deslogado: limpar credenciais de sessão
         localStorage.removeItem('tenantId');
         localStorage.removeItem('userRole');
         localStorage.removeItem('userPermissions');
         localStorage.removeItem('funcName');
-        localStorage.removeItem('accentColor');
-        aplicarCorDestaqueGlobal('#c5a059');
       }
     });
     return () => unsubscribe();
@@ -531,13 +558,13 @@ const AppContent = () => {
   useEffect(() => {
     const aplicarTemaGlobal = () => {
       const isLanding = location.pathname === '/';
-      const tenantId = localStorage.getItem('tenantId');
 
-      // 🔒 Se for a Landing Page ou se NÃO houver tenant logado, SEMPRE utiliza o Dourado Celebre padrão (#c5a059)
-      const savedTheme = (!isLanding && tenantId) ? (localStorage.getItem('theme') || 'light') : 'light';
-      const savedAccent = (!isLanding && tenantId) ? (localStorage.getItem('accentColor') || '#c5a059') : '#c5a059';
-      const savedFontSize = (!isLanding && tenantId) ? (localStorage.getItem('fontSize') || 'padrao') : 'padrao';
-      const savedContrast = (!isLanding && tenantId) ? (localStorage.getItem('highContrast') === 'true') : false;
+      // 🔒 Na Landing Page (/), mantém o Dourado Celebre padrão (#c5a059).
+      // Em todas as outras páginas do sistema, respeita a cor, tema e contraste do usuário!
+      const savedTheme = !isLanding ? (localStorage.getItem('theme') || 'light') : 'light';
+      const savedAccent = !isLanding ? (localStorage.getItem('accentColor') || '#c5a059') : '#c5a059';
+      const savedFontSize = !isLanding ? (localStorage.getItem('fontSize') || 'padrao') : 'padrao';
+      const savedContrast = !isLanding ? (localStorage.getItem('highContrast') === 'true') : false;
 
       let effectiveTheme = 'light';
       let darkStyle = 'none';
@@ -666,6 +693,7 @@ const AppContent = () => {
             <Route path="/dashboard" element={<RotaPrivada><Dashboard /></RotaPrivada>} />
             <Route path="/planos" element={<RotaPrivada><Planos /></RotaPrivada>} />
             <Route path="/upgrade" element={<RotaPrivada><PaginaUpgrade /></RotaPrivada>} />
+            <Route path="/gerenciar-pagamento" element={<RotaPrivada><GerenciarPagamento /></RotaPrivada>} />
             
             {/* ⚙️ ROTA ADMIN EXCLUSIVA */}
             <Route path="/admin-planos" element={<RotaAdmin><AdminPlanos /></RotaAdmin>} />

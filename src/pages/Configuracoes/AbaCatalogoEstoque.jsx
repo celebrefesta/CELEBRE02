@@ -756,7 +756,7 @@ const AbaCatalogoEstoque = ({
   };
 
   return (
-    <div className="aba-listas-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '25px' }}>
+    <div className="aba-listas-wrapper" style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
       
       {/* 📊 PAINEL EXECUTIVO DE INDICADORES (KPIS) - 3 CARDS EM 3 COLUNAS */}
       <div className="kpi-galpao-grid">
@@ -780,11 +780,7 @@ const AbaCatalogoEstoque = ({
           </div>
         </div>
 
-        <div 
-          className="kpi-galpao-card kpi-galpao-card-alerta" 
-          onClick={() => abrirVincularPecas('Sem Prateleira')}
-          title="Clique para organizar as peças sem localização"
-        >
+        <div className="kpi-galpao-card">
           <div className="kpi-galpao-icon amber">
             <i className="fas fa-exclamation-triangle"></i>
           </div>
@@ -793,7 +789,7 @@ const AbaCatalogoEstoque = ({
               {kpiStats.totalItensSemLocal}
             </div>
             <div className="kpi-galpao-title">
-              Sem Prateleira <i className="fas fa-arrow-right kpi-seta-icon"></i>
+              Sem Prateleira
             </div>
           </div>
         </div>
@@ -807,7 +803,10 @@ const AbaCatalogoEstoque = ({
               <i className="fas fa-lightbulb"></i>
             </div>
             <div className="ajuda-banner-text">
-              <h4>Como Funciona a Organização: Galpão Físico vs. Catálogo Vitrine</h4>
+              <h4>
+                <span className="ajuda-banner-title-main">COMO FUNCIONA A ORGANIZAÇÃO:</span>
+                <span className="ajuda-banner-title-sub">GALPÃO FÍSICO x GALPÃO ONLINE</span>
+              </h4>
               <p>
                 Entenda a separação simples entre a logística interna do seu armazém e a vitrine comercial onde seus clientes montam orçamentos.
               </p>
@@ -912,10 +911,13 @@ const AbaCatalogoEstoque = ({
       <div className="secao-galpao-container">
         <div className="step-title-badge">
           <span className="step-num blue">1</span>
-          <span>
-            <i className="fas fa-warehouse" style={{ color: '#3b82f6', marginRight: '6px' }}></i>
-            Prateleiras & Endereçamento do Galpão (Seu Espaço Físico)
-          </span>
+          <div className="step-title-text-group">
+            <span className="step-title-main">
+              <i className="fas fa-warehouse" style={{ color: '#3b82f6', marginRight: '6px' }}></i>
+              Prateleiras & Endereçamento do Galpão
+            </span>
+            <span className="step-context-tag blue">Seu Espaço Físico</span>
+          </div>
         </div>
         <p className="subtext" style={{ marginBottom: '15px' }}>
           Cadastre suas prateleiras, selecione quais peças do acervo estão guardadas em cada uma e imprima as etiquetas.
@@ -931,17 +933,16 @@ const AbaCatalogoEstoque = ({
             </h3>
             
             <div className="galpao-toolbar">
-              {kpiStats.totalItensSemLocal > 0 && (
-                <button 
-                  type="button" 
-                  className="btn-galpao-toolbar alerta"
-                  onClick={() => abrirVincularPecas('Sem Prateleira')}
-                  title="Peças cadastradas sem prateleira vinculada"
-                >
-                  <i className="fas fa-exclamation-triangle"></i>
-                  <span>Peças Sem Local ({kpiStats.totalItensSemLocal})</span>
-                </button>
-              )}
+              <button 
+                type="button" 
+                className={`btn-galpao-toolbar ${kpiStats.totalItensSemLocal > 0 ? 'alerta' : 'sem-local'}`}
+                onClick={() => abrirVincularPecas('Sem Prateleira')}
+                title="Organizar e alocar peças do acervo que não possuem prateleira definida"
+              >
+                <i className={kpiStats.totalItensSemLocal > 0 ? "fas fa-exclamation-triangle" : "fas fa-boxes"}></i>
+                <span>Sem Prateleira</span>
+                <span className="btn-toolbar-badge">{kpiStats.totalItensSemLocal}</span>
+              </button>
 
               <button 
                 type="button" 
@@ -949,8 +950,8 @@ const AbaCatalogoEstoque = ({
                 onClick={gerarPdfMapaGalpao}
                 title="Gerar relatório completo do galpão em PDF"
               >
-                <i className="fas fa-file-pdf" style={{ color: '#ef4444' }}></i>
-                <span>Mapa em PDF</span>
+                <i className="fas fa-file-pdf"></i>
+                <span>Mapa PDF</span>
               </button>
 
               <button 
@@ -960,7 +961,7 @@ const AbaCatalogoEstoque = ({
                 title="Imprimir etiquetas de identificação de todas as prateleiras"
               >
                 <i className="fas fa-barcode"></i>
-                <span>Etiquetas do Galpão</span>
+                <span>Etiquetas</span>
               </button>
             </div>
           </div>
@@ -968,8 +969,13 @@ const AbaCatalogoEstoque = ({
           {/* CONSTRUTOR DE ENDEREÇO */}
           <div className="galpao-builder-card">
             <div className="galpao-builder-title">
-              <i className="fas fa-layer-group" style={{ color: '#c5a059' }}></i>
-              <span>Construtor de Endereço (Corredor ➔ Prateleira ➔ Bandeja / Caixotão)</span>
+              <div className="builder-title-brand">
+                <i className="fas fa-layer-group" style={{ color: 'var(--cor-destaque, #c5a059)' }}></i>
+                <span>Construtor de Endereço</span>
+              </div>
+              <span className="builder-flow-tag">
+                Corredor ➔ Prateleira ➔ Bandeja / Caixotão
+              </span>
             </div>
 
             <div className="galpao-builder-grid">
@@ -1172,7 +1178,13 @@ const AbaCatalogoEstoque = ({
       <div>
         <div className="step-title-badge">
           <span className="step-num gold">2</span>
-          <span>🌐 Árvore do Catálogo Público & Estoque (Organização da Vitrine e Orçamentos)</span>
+          <div className="step-title-text-group">
+            <span className="step-title-main">
+              <i className="fas fa-globe-americas" style={{ color: 'var(--cor-destaque, #c5a059)', marginRight: '6px' }}></i>
+              Árvore do Catálogo Público & Estoque
+            </span>
+            <span className="step-context-tag gold">Organização da Vitrine e Orçamentos</span>
+          </div>
         </div>
         <p className="subtext" style={{ marginBottom: '15px' }}>
           Estrutura em 4 passos para organizar os temas no catálogo online onde seus clientes navegam e montam orçamentos.

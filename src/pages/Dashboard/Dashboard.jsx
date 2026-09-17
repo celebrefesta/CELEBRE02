@@ -140,26 +140,40 @@ const Dashboard = () => {
   // Quando estiver em Modo Suporte, não opera como Super Admin no Dashboard para adotar a identidade do cliente
   const isSuperAdmin = !isImpersonating && (usuarioLogado?.email === emailAdmin);
   
-  const [estatisticas, setEstatisticas] = useState({ acervo: 0, ativas: 0, eventos: 0, aReceber: 0, ticketMedio: 0 });
-  const [atividades, setAtividades] = useState([]);
-  const [faturamentoData, setFaturamentoData] = useState([0, 0, 0, 0]);
-  const [proximosEventos, setProximosEventos] = useState([]);
-  const [orcamentosPendentes, setOrcamentosPendentes] = useState([]);
-  const [todasLocacoes, setTodasLocacoes] = useState([]);
-  const [statusChart, setStatusChart] = useState({ orcamento: 0, confirmado: 0, preparacao: 0, entregue: 0, finalizado: 0, total: 0 });
-  const [valoresPorStatus, setValoresPorStatus] = useState({ orcamento: 0, confirmado: 0 });
-  const [topPecas, setTopPecas] = useState([]);
-  const [categoriaBreakdown, setCategoriaBreakdown] = useState({ locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0, outros: 0 });
-  const [cobrancasAtrasadas, setCobrancasAtrasadas] = useState([]);
-  const [aniversariantesDoMes, setAniversariantesDoMes] = useState([]);
-  const [aniversariantesProximos, setAniversariantesProximos] = useState([]);
+  // 🚀 CACHE EM SESSÃO PARA CARREGAMENTO INSTANTÂNEO (ZERO ATRASO AO RETORNAR AO DASHBOARD)
+  const cacheInicial = (() => {
+    try {
+      const raw = sessionStorage.getItem(`dash_cache_${tenantIdLocal}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object') {
+          return parsed;
+        }
+      }
+    } catch {}
+    return null;
+  })();
+
+  const [estatisticas, setEstatisticas] = useState(cacheInicial?.estatisticas || { acervo: 0, ativas: 0, eventos: 0, aReceber: 0, ticketMedio: 0 });
+  const [atividades, setAtividades] = useState(cacheInicial?.atividades || []);
+  const [faturamentoData, setFaturamentoData] = useState(cacheInicial?.faturamentoData || [0, 0, 0, 0]);
+  const [proximosEventos, setProximosEventos] = useState(cacheInicial?.proximosEventos || []);
+  const [orcamentosPendentes, setOrcamentosPendentes] = useState(cacheInicial?.orcamentosPendentes || []);
+  const [todasLocacoes, setTodasLocacoes] = useState(cacheInicial?.todasLocacoes || []);
+  const [statusChart, setStatusChart] = useState(cacheInicial?.statusChart || { orcamento: 0, confirmado: 0, preparacao: 0, entregue: 0, finalizado: 0, total: 0 });
+  const [valoresPorStatus, setValoresPorStatus] = useState(cacheInicial?.valoresPorStatus || { orcamento: 0, confirmado: 0 });
+  const [topPecas, setTopPecas] = useState(cacheInicial?.topPecas || []);
+  const [categoriaBreakdown, setCategoriaBreakdown] = useState(cacheInicial?.categoriaBreakdown || { locacao: 0, estoque: 0, manutencao: 0, fixo: 0, equipe: 0, outros: 0 });
+  const [cobrancasAtrasadas, setCobrancasAtrasadas] = useState(cacheInicial?.cobrancasAtrasadas || []);
+  const [aniversariantesDoMes, setAniversariantesDoMes] = useState(cacheInicial?.aniversariantesDoMes || []);
+  const [aniversariantesProximos, setAniversariantesProximos] = useState(cacheInicial?.aniversariantesProximos || []);
   const [modalAniversariantesAberto, setModalAniversariantesAberto] = useState(false);
   const [filtroPeriodo, setFiltroPeriodo] = useState('mes_atual');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!cacheInicial);
 
   // 🎨 PROJETOS DO MOODBOARD NO DASHBOARD
-  const [projetosMoodboard, setProjetosMoodboard] = useState([]);
-  const [moodboardStats, setMoodboardStats] = useState({ total: 0, aprovados: 0, emAnalise: 0, rascunhos: 0 });
+  const [projetosMoodboard, setProjetosMoodboard] = useState(cacheInicial?.projetosMoodboard || []);
+  const [moodboardStats, setMoodboardStats] = useState(cacheInicial?.moodboardStats || { total: 0, aprovados: 0, emAnalise: 0, rascunhos: 0 });
 
   // 📱 CONTROLE DE EXIBIÇÃO DE CARDS KPI NO DASHBOARD (RECOLHER / EXPANDIR)
   const [mostrarKpiDash, setMostrarKpiDash] = useState(() => {
@@ -205,15 +219,19 @@ const Dashboard = () => {
         return;
     }
 
-    const carregarDados = async () => {
+    const carregarDados = async (isSilent = false) => {
       try {
-        setLoading(true);
+        if (!cacheInicial && !isSilent) {
+          setLoading(true);
+        }
         let idDaEmpresaCorreta = impersonatingData?.uid || localStorage.getItem('tenantId') || usuarioLogado?.uid;
+        let userData = null;
+        let snapEmailDocs = [];
 
         if (!isSuperAdmin) {
             const uidParaConsultar = isImpersonating ? impersonatingData.uid : usuarioLogado.uid;
             const snapUserDoc = await getDoc(doc(db, "usuarios", uidParaConsultar));
-            let userData = snapUserDoc.exists() ? snapUserDoc.data() : null;
+            userData = snapUserDoc.exists() ? snapUserDoc.data() : null;
 
             // Se a conta for vinculada a um tenant diferente ou for funcionário/alias, busca os dados mestres
             let dadosEmpresa = userData;
@@ -229,10 +247,10 @@ const Dashboard = () => {
                     console.warn("Erro ao buscar dados da empresa mestre:", eEmp);
                 }
             } else if (userData?.email) {
-                // Caso existam contas com o mesmo e-mail, prioriza a que tiver a dataFimTeste mais atualizada
                 try {
                     const qMesmoEmail = query(collection(db, "usuarios"), where("email", "==", userData.email.toLowerCase().trim()));
                     const snapMesmoEmail = await getDocs(qMesmoEmail);
+                    snapEmailDocs = snapMesmoEmail.docs;
                     if (snapMesmoEmail.size > 1) {
                         snapMesmoEmail.docs.forEach(docE => {
                             const dData = docE.data();
@@ -312,7 +330,12 @@ const Dashboard = () => {
           } catch (e) {}
         }
 
-        if (emailAlvo) {
+        if (snapEmailDocs.length > 0) {
+          snapEmailDocs.forEach(d => {
+            uidsAlvoSet.add(d.id);
+            if (d.data().tenantId) uidsAlvoSet.add(d.data().tenantId);
+          });
+        } else if (emailAlvo) {
           try {
             const emailLimpo = emailAlvo.toLowerCase().trim();
             const qEmail = query(collection(db, "usuarios"), where("email", "==", emailLimpo));
@@ -324,77 +347,124 @@ const Dashboard = () => {
           } catch (e) {}
         }
 
-        // BUSCA ESTOQUE E LOCAÇÕES MULTI-TENANT
-        const mapEstoque = new Map();
-        const mapLocacoes = new Map();
-        for (const uId of uidsAlvoSet) {
-          const [snapEstU, snapEstT, snapLocU, snapLocT] = await Promise.all([
-            getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
-            getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] })),
-            getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
-            getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
-          ]);
-          [...snapEstU.docs, ...snapEstT.docs].forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
-          [...snapLocU.docs, ...snapLocT.docs].forEach(d => mapLocacoes.set(d.id, { id: d.id, ...d.data() }));
-        }
+        const uidsArray = Array.from(uidsAlvoSet);
 
+        // 🚀 MEGA-PARALELIZAÇÃO: Executa TODAS as consultas do Dashboard simultaneamente em lote único
+        const promessasEstoque = uidsArray.flatMap(uId => [
+          getDocs(query(collection(db, "estoque"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "estoque"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+        ]);
+
+        const promessasLocacoes = uidsArray.flatMap(uId => [
+          getDocs(query(collection(db, "locacoes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "locacoes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+        ]);
+
+        const promessasCompras = uidsArray.flatMap(uId => [
+          getDocs(query(collection(db, "lista_compras"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "lista_compras"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+        ]);
+
+        const promessasLanc = uidsArray.flatMap(uId => [
+          getDocs(query(collection(db, "financeiro_lancamentos"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "financeiro_lancamentos"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+        ]);
+
+        const promessasClientes = uidsArray.flatMap(uId => [
+          getDocs(query(collection(db, "clientes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
+          getDocs(query(collection(db, "clientes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
+        ]);
+
+        const promessaMood = getDocs(query(collection(db, "projetos_moodboard"), where("userId", "==", idDaEmpresaCorreta)))
+          .then(async (snap) => {
+            if (snap.empty) {
+              const snapT = await getDocs(query(collection(db, "projetos_moodboard"), where("tenantId", "==", idDaEmpresaCorreta))).catch(() => ({ docs: [] }));
+              return snapT;
+            }
+            return snap;
+          })
+          .catch(() => ({ docs: [] }));
+
+        const promessaConfig = getDocs(query(collection(db, "financeiro_config"), where("userId", "==", idDaEmpresaCorreta)))
+          .catch(() => ({ docs: [], empty: true }));
+
+        const [
+          docsEstoqueAll,
+          docsLocacoesAll,
+          docsComprasAll,
+          docsLancAll,
+          docsClientesAll,
+          moodSnap,
+          snapConfig
+        ] = await Promise.all([
+          Promise.all(promessasEstoque),
+          Promise.all(promessasLocacoes),
+          Promise.all(promessasCompras),
+          Promise.all(promessasLanc),
+          Promise.all(promessasClientes),
+          promessaMood,
+          promessaConfig
+        ]);
+
+        // Mapeia os dados do estoque e locações
+        const mapEstoque = new Map();
+        docsEstoqueAll.forEach(snap => {
+          (snap.docs || []).forEach(d => mapEstoque.set(d.id, { id: d.id, ...d.data() }));
+        });
         const estoqueDocs = Array.from(mapEstoque.values());
         const estSnap = { docs: estoqueDocs.map(d => ({ data: () => d })), size: estoqueDocs.length };
+
+        const mapLocacoes = new Map();
+        docsLocacoesAll.forEach(snap => {
+          (snap.docs || []).forEach(d => mapLocacoes.set(d.id, { id: d.id, ...d.data() }));
+        });
         const locs = Array.from(mapLocacoes.values());
         setTodasLocacoes(locs);
 
-        // 🔔 Varredura diária automática de lembretes de retirada, devolução e atrasos (com bloqueio idempotente diário)
+        // 🔔 Lembretes agendados em segundo plano (não trava o fluxo da tela)
         if (idDaEmpresaCorreta) {
           verificarLembretesAgendadosHoje(idDaEmpresaCorreta).catch(() => {});
         }
 
-        // BUSCA MULTI-TENANT DE COMPRAS (lista_compras) E LANÇAMENTOS (financeiro_lancamentos)
-        let comprasDocs = [];
-        try {
-          const mapCompras = new Map();
-          for (const uId of uidsAlvoSet) {
-            const [snapCompU, snapCompT] = await Promise.all([
-              getDocs(query(collection(db, "lista_compras"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
-              getDocs(query(collection(db, "lista_compras"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
-            ]);
-            [...snapCompU.docs, ...snapCompT.docs].forEach(d => mapCompras.set(d.id, { id: d.id, ...d.data() }));
-          }
-          comprasDocs = Array.from(mapCompras.values());
-        } catch (eComp) {}
+        // Mapeia compras e lançamentos
+        const mapCompras = new Map();
+        docsComprasAll.forEach(snap => {
+          (snap.docs || []).forEach(d => mapCompras.set(d.id, { id: d.id, ...d.data() }));
+        });
+        const comprasDocs = Array.from(mapCompras.values());
 
-        let lancDocs = [];
-        try {
-          const mapLanc = new Map();
-          for (const uId of uidsAlvoSet) {
-            const [snapLancU, snapLancT] = await Promise.all([
-              getDocs(query(collection(db, "financeiro_lancamentos"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
-              getDocs(query(collection(db, "financeiro_lancamentos"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
-            ]);
-            [...snapLancU.docs, ...snapLancT.docs].forEach(d => mapLanc.set(d.id, { id: d.id, ...d.data() }));
-          }
-          lancDocs = Array.from(mapLanc.values());
-        } catch (eLanc) {}
+        const mapLanc = new Map();
+        docsLancAll.forEach(snap => {
+          (snap.docs || []).forEach(d => mapLanc.set(d.id, { id: d.id, ...d.data() }));
+        });
+        const lancDocs = Array.from(mapLanc.values());
 
-        // BUSCA DE PROJETOS DO MOODBOARD
-        try {
-          let qMood = query(collection(db, "projetos_moodboard"), where("userId", "==", idDaEmpresaCorreta));
-          let moodSnap = await getDocs(qMood);
-          if (moodSnap.empty) {
-            const qMoodT = query(collection(db, "projetos_moodboard"), where("tenantId", "==", idDaEmpresaCorreta));
-            const moodSnapT = await getDocs(qMoodT);
-            if (!moodSnapT.empty) moodSnap = moodSnapT;
+        // Mapeia clientes
+        const mapClientesDash = new Map();
+        docsClientesAll.forEach(snap => {
+          (snap.docs || []).forEach(d => mapClientesDash.set(d.id, { ...d.data(), id: d.id }));
+        });
+        const todosClientesDash = Array.from(mapClientesDash.values());
+
+        // Processa projetos do moodboard
+        const moodList = (moodSnap?.docs || []).map(d => ({ id: d.id, ...d.data() }));
+        moodList.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
+        setProjetosMoodboard(moodList);
+        const moodStatsCalc = {
+          total: moodList.length,
+          aprovados: moodList.filter(m => m.status === 'aprovado').length,
+          emAnalise: moodList.filter(m => m.status === 'em_analise').length,
+          rascunhos: moodList.filter(m => (m.status || 'rascunho') === 'rascunho').length
+        };
+        setMoodboardStats(moodStatsCalc);
+
+        // Configuração de meta financeira
+        if (snapConfig && !snapConfig.empty && snapConfig.docs && snapConfig.docs.length > 0) {
+          const dConf = snapConfig.docs[0].data();
+          if (dConf.metaMensal) {
+            setMetaMensal(Number(dConf.metaMensal));
+            localStorage.setItem(`meta_fin_${idDaEmpresaCorreta}`, String(dConf.metaMensal));
           }
-          const moodList = moodSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-          moodList.sort((a, b) => new Date(b.createdAt || 0) - new Date(a.createdAt || 0));
-          setProjetosMoodboard(moodList);
-          setMoodboardStats({
-            total: moodList.length,
-            aprovados: moodList.filter(m => m.status === 'aprovado').length,
-            emAnalise: moodList.filter(m => m.status === 'em_analise').length,
-            rascunhos: moodList.filter(m => (m.status || 'rascunho') === 'rascunho').length
-          });
-        } catch (eMood) {
-          console.warn("Erro ao buscar projetos moodboard no dashboard:", eMood);
         }
 
 
@@ -792,20 +862,8 @@ const Dashboard = () => {
         setCobrancasAtrasadas(atrasados.sort((a, b) => b.valor - a.valor).slice(0, 5));
 
         
-        // BUSCA MULTI-TENANT DE CLIENTES E ANIVERSARIANTES
+        // 🚀 CÁLCULO DE ANIVERSARIANTES OTIMIZADO (SEM CONSULTAS ADICIONAIS)
         try {
-          const mapClientesDash = new Map();
-          for (const uId of uidsAlvoSet) {
-            const [snapCliU, snapCliT] = await Promise.all([
-              getDocs(query(collection(db, "clientes"), where("userId", "==", uId))).catch(() => ({ docs: [] })),
-              getDocs(query(collection(db, "clientes"), where("tenantId", "==", uId))).catch(() => ({ docs: [] }))
-            ]);
-            [...snapCliU.docs, ...snapCliT.docs].forEach(d => {
-              mapClientesDash.set(d.id, { ...d.data(), id: d.id });
-            });
-          }
-          const todosClientesDash = Array.from(mapClientesDash.values());
-
           const hoje = new Date();
           const mesHoje = hoje.getMonth();
           const diaHoje = hoje.getDate();
@@ -838,23 +896,45 @@ const Dashboard = () => {
 
           setAniversariantesDoMes(todosDoMes);
           setAniversariantesProximos(proximosAnivs);
+
+          // 💾 GRAVA SNAPSHOT DE CACHE PARA ABERTURA INSTANTÂNEA NA PRÓXIMA NAVEGAÇÃO
+          try {
+            const cacheData = {
+              estatisticas: {
+                acervo: estSnap.size,
+                ativas: confirmadasNoPeriodo.filter(l => l.status === 'confirmado' || l.status === 'preparacao').length,
+                eventos: proximos.length,
+                aReceber: totalAReceber,
+                ticketMedio: qtdVendasGeral > 0 ? (faturamentoGeral / qtdVendasGeral) : 0,
+                emOrcamento: vOrcamento
+              },
+              faturamentoData: barDataFinal,
+              atividades: recents,
+              proximosEventos: proximos,
+              orcamentosPendentes: orcamentosRecentes,
+              topPecas: rankingPecas,
+              cobrancasAtrasadas: atrasados.sort((a, b) => b.valor - a.valor).slice(0, 5),
+              categoriaBreakdown: catBreak,
+              aniversariantesDoMes: todosDoMes,
+              aniversariantesProximos: proximosAnivs,
+              moodboardStats: moodStatsCalc,
+              projetosMoodboard: moodList,
+              todasLocacoes: locs,
+              statusChart: {
+                orcamento: cOrcamento,
+                confirmado: cConfirmado,
+                preparacao: cPreparacao,
+                entregue: cEntregue,
+                finalizado: cFinalizado,
+                total: locsNoPeriodo.length
+              },
+              valoresPorStatus: { orcamento: vOrcamento, confirmado: vConfirmado },
+              timestamp: Date.now()
+            };
+            sessionStorage.setItem(`dash_cache_${idDaEmpresaCorreta || tenantIdLocal}`, JSON.stringify(cacheData));
+          } catch (eCache) {}
         } catch (errAniv) {
           console.warn("Aviso ao carregar aniversariantes:", errAniv);
-        }
-
-        // 🎯 CARREGA META FINANCEIRA
-        try {
-          const qConfig = query(collection(db, "financeiro_config"), where("userId", "==", idDaEmpresaCorreta));
-          const snapConfig = await getDocs(qConfig);
-          if (!snapConfig.empty) {
-            const dConf = snapConfig.docs[0].data();
-            if (dConf.metaMensal) {
-              setMetaMensal(Number(dConf.metaMensal));
-              localStorage.setItem(`meta_fin_${idDaEmpresaCorreta}`, String(dConf.metaMensal));
-            }
-          }
-        } catch (errConf) {
-          console.warn("Aviso ao carregar meta financeira no dashboard:", errConf);
         }
         
       } catch (e) { 
@@ -865,7 +945,7 @@ const Dashboard = () => {
       }
     };
     
-    carregarDados();
+    carregarDados(Boolean(cacheInicial));
   }, [usuarioLogado?.uid, filtroPeriodo]);
 
   // 🎯 SALVAR META FINANCEIRA DIRETO NO DASHBOARD
@@ -917,7 +997,37 @@ const Dashboard = () => {
     }
   };
 
-  if (loading) return <div className="loading-v3">Atualizando central de comando VIP...</div>;
+  if (loading) {
+    return (
+      <div className="dash-loading-wrapper" style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '65vh',
+        gap: '16px',
+        padding: '30px 20px',
+        color: 'var(--texto-principal, #0f172a)'
+      }}>
+        <div style={{
+          width: '44px',
+          height: '44px',
+          border: '3px solid rgba(197, 160, 89, 0.2)',
+          borderTop: '3px solid var(--dourado, #c5a059)',
+          borderRadius: '50%',
+          animation: 'spin 0.8s linear infinite'
+        }} />
+        <div style={{ textAlign: 'center' }}>
+          <strong style={{ fontSize: '15px', color: 'var(--texto-principal, #0f172a)' }}>
+            Central de Comando VIP
+          </strong>
+          <p style={{ margin: '4px 0 0 0', fontSize: '13px', color: 'var(--texto-secundario, #64748b)' }}>
+            Atualizando faturamento, acervo e agenda...
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (statusConta === 'excluido' || statusConta === 'suspenso') {
       const emailExibicao = usuarioLogado?.email || '';

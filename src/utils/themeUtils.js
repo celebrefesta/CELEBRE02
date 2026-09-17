@@ -107,7 +107,26 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .clientes-container .header-actions button.btn-primary-celebre,
     .header-actions .btn-primary-celebre,
     .header-actions button.btn-primary-celebre,
-    a.btn-primary-celebre {
+    a.btn-primary-celebre,
+    .btn-add-endereco,
+    .config-container .btn-add-endereco,
+    .config-container .aba-listas-wrapper .btn-add-endereco,
+    .btn-salvar-catalogo-destaque,
+    .config-container .btn-salvar-catalogo-destaque,
+    .config-container .aba-listas-wrapper .btn-salvar-catalogo-destaque,
+    .btn-salvar-marketing-destaque,
+    .config-container .btn-salvar-marketing-destaque,
+    .config-container .aba-marketing-container .btn-salvar-marketing-destaque,
+    .btn-salvar-perfil,
+    .config-container .btn-salvar-perfil,
+    .btn-salvar-notificacao,
+    .config-container .btn-salvar-notificacao,
+    .btn-lgpd-save,
+    .config-container .btn-lgpd-save,
+    .btn-salvar-aparencia,
+    .config-container .btn-salvar-aparencia,
+    .btn-salvar-config,
+    .config-container .btn-salvar-config {
       background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
       border-color: ${accentColor} !important;
       color: #ffffff !important;
@@ -124,7 +143,22 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .dash-quick-actions-grid button:hover,
     .btn-log-primary:hover,
     .btn-salvar-celebre-gold:hover,
-    .header-actions .btn-primary-celebre:hover {
+    .header-actions .btn-primary-celebre:hover,
+    .btn-add-endereco:hover,
+    .config-container .btn-add-endereco:hover,
+    .config-container .aba-listas-wrapper .btn-add-endereco:hover,
+    .btn-salvar-catalogo-destaque:hover,
+    .config-container .btn-salvar-catalogo-destaque:hover,
+    .btn-salvar-marketing-destaque:hover,
+    .config-container .btn-salvar-marketing-destaque:hover,
+    .btn-salvar-perfil:hover,
+    .config-container .btn-salvar-perfil:hover,
+    .btn-salvar-notificacao:hover,
+    .config-container .btn-salvar-notificacao:hover,
+    .btn-lgpd-save:hover,
+    .config-container .btn-lgpd-save:hover,
+    .btn-salvar-aparencia:hover,
+    .config-container .btn-salvar-aparencia:hover {
       filter: brightness(1.08) !important;
       box-shadow: 0 6px 18px ${accentColor}55 !important;
     }
@@ -341,6 +375,179 @@ export const aplicarCorDestaqueGlobal = (accentColorParam) => {
     .selo-ok {
       color: ${accentColor} !important;
       background: color-mix(in srgb, ${accentColor} 14%, transparent) !important;
+    }
+
+    /* Construtor de Endereço & Acervo */
+    .builder-title-brand i,
+    .config-container .builder-title-brand i,
+    .config-container .aba-listas-wrapper .builder-title-brand i,
+    .config-container .galpao-builder-title .builder-title-brand i {
+      color: ${accentColor} !important;
+    }
+
+    .config-container .aba-listas-wrapper .preview-badge-val {
+      color: ${accentColor} !important;
+      background: color-mix(in srgb, ${accentColor} 12%, transparent) !important;
+      border-color: color-mix(in srgb, ${accentColor} 35%, transparent) !important;
+    }
+
+    .config-container .aba-listas-wrapper .preview-badge-val i {
+      color: ${accentColor} !important;
+    }
+
+    .config-container .aba-listas-wrapper .galpao-field-group .galpao-input:focus,
+    .config-container .galpao-input:focus {
+      border-color: ${accentColor} !important;
+      box-shadow: 0 0 0 3px color-mix(in srgb, ${accentColor} 20%, transparent) !important;
+    }
+
+    .step-num.gold {
+      background: ${accentColor} !important;
+    }
+
+    .trilha-step-pill.ativo:hover {
+      border-color: ${accentColor} !important;
+      box-shadow: 0 3px 8px color-mix(in srgb, ${accentColor} 25%, transparent) !important;
+    }
+
+    .trilha-step-pill.ativo .step-badge-num {
+      background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
+      color: #ffffff !important;
+    }
+
+    .trilha-step-pill.gold-highlight {
+      background: color-mix(in srgb, ${accentColor} 14%, transparent) !important;
+      border-color: ${accentColor} !important;
+      color: ${accentColor} !important;
+    }
+
+    /* Marketing & Badges */
+    .config-container .aba-marketing-container .marketing-badge-glow {
+      background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
+      box-shadow: 0 2px 10px color-mix(in srgb, ${accentColor} 40%, transparent) !important;
+    }
+
+    .config-container .aba-marketing-container .btn-utm-channel:hover {
+      border-color: ${accentColor} !important;
+      background: color-mix(in srgb, ${accentColor} 8%, transparent) !important;
+    }
+
+    .config-container .aba-marketing-container .btn-utm-channel.ativo {
+      border-color: ${accentColor} !important;
+      background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, color-mix(in srgb, ${accentColor} 22%, transparent) 100%) !important;
+      color: ${accentColor} !important;
+      box-shadow: 0 2px 8px color-mix(in srgb, ${accentColor} 25%, transparent) !important;
+    }
+
+    .config-container .aba-marketing-container .channel-check {
+      color: ${accentColor} !important;
+    }
+
+    .config-container .aba-marketing-container .btn-qr-action:hover {
+      background: color-mix(in srgb, ${accentColor} 8%, transparent) !important;
+      border-color: ${accentColor} !important;
+      color: ${accentColor} !important;
+    }
+
+    .config-container .aba-marketing-container .btn-qr-action.print {
+      background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, color-mix(in srgb, ${accentColor} 22%, transparent) 100%) !important;
+      border-color: ${accentColor} !important;
+      color: ${accentColor} !important;
+    }
+
+    .config-container .aba-marketing-container .btn-pill-ambiente:hover {
+      border-color: ${accentColor} !important;
+      background: color-mix(in srgb, ${accentColor} 6%, transparent) !important;
+    }
+
+    .config-container .aba-marketing-container .btn-pill-ambiente.ativo {
+      border-color: ${accentColor} !important;
+      background: linear-gradient(135deg, color-mix(in srgb, ${accentColor} 12%, transparent) 0%, color-mix(in srgb, ${accentColor} 24%, transparent) 100%) !important;
+      box-shadow: 0 3px 10px color-mix(in srgb, ${accentColor} 25%, transparent) !important;
+    }
+
+    .config-container .aba-marketing-container .btn-pill-ambiente i,
+    .config-container .aba-marketing-container .pill-check {
+      color: ${accentColor} !important;
+    }
+
+    .config-container .aba-marketing-container .btn-help-tab.active {
+      background: color-mix(in srgb, ${accentColor} 14%, transparent) !important;
+      border-color: ${accentColor} !important;
+      color: ${accentColor} !important;
+      box-shadow: 0 2px 8px color-mix(in srgb, ${accentColor} 25%, transparent) !important;
+    }
+
+    .config-container .aba-marketing-container .btn-var-tag {
+      background: color-mix(in srgb, ${accentColor} 12%, transparent) !important;
+      color: ${accentColor} !important;
+      border-color: color-mix(in srgb, ${accentColor} 30%, transparent) !important;
+    }
+
+    .config-container .aba-marketing-container .btn-var-tag:hover {
+      background: ${accentColor} !important;
+      color: #ffffff !important;
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════
+       🎯 ABA ASSINATURA E USO (COR DINÂMICA DA MARCA)
+       ══════════════════════════════════════════════════════════════════════ */
+    .btn-upgrade-plano,
+    .config-container .btn-upgrade-plano,
+    .btn-alterar-cartao,
+    .config-container .btn-alterar-cartao,
+    .btn-migrar-anual,
+    .config-container .btn-migrar-anual {
+      background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
+      color: #ffffff !important;
+      border-color: ${accentColor} !important;
+      box-shadow: 0 4px 14px color-mix(in srgb, ${accentColor} 35%, transparent) !important;
+    }
+
+    .vencimento-banner-icon,
+    .config-container .vencimento-banner-icon {
+      background: linear-gradient(135deg, ${accentColor} 0%, ${darkerAccent} 100%) !important;
+      color: #ffffff !important;
+    }
+
+    .vencimento-data-destaque,
+    .config-container .vencimento-data-destaque {
+      color: ${accentColor} !important;
+      border-color: color-mix(in srgb, ${accentColor} 30%, transparent) !important;
+    }
+
+    .assinatura-vencimento-banner,
+    .config-container .assinatura-vencimento-banner {
+      background: color-mix(in srgb, ${accentColor} 8%, transparent) !important;
+      border-color: color-mix(in srgb, ${accentColor} 30%, transparent) !important;
+    }
+
+    .plano-tipo-badge,
+    .config-container .plano-tipo-badge {
+      background: color-mix(in srgb, ${accentColor} 12%, transparent) !important;
+      color: ${accentColor} !important;
+    }
+
+    .billing-info-box.destaque-vencimento,
+    .config-container .billing-info-box.destaque-vencimento {
+      background: color-mix(in srgb, ${accentColor} 8%, transparent) !important;
+      border-color: color-mix(in srgb, ${accentColor} 30%, transparent) !important;
+    }
+
+    .config-container .billing-info-box .billing-box-val.data-destaque,
+    .billing-info-box .billing-box-val.data-destaque {
+      color: ${accentColor} !important;
+    }
+
+    .config-container .btn-billing-edit-email,
+    .btn-billing-edit-email {
+      color: ${accentColor} !important;
+    }
+
+    .config-container .btn-imprimir-recibo:hover,
+    .btn-imprimir-recibo:hover {
+      border-color: ${accentColor} !important;
+      color: ${accentColor} !important;
     }
   `;
 };

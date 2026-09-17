@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
+import { db, auth } from '../../firebaseConfig';
 import './Configuracoes.css';
 import { aplicarCorDestaqueGlobal } from '../../utils/themeUtils';
 
@@ -20,6 +20,45 @@ const AbaAparencia = () => {
   const [highContrast, setHighContrast] = useState(localStorage.getItem('highContrast') === 'true');
   const [language, setLanguage] = useState(localStorage.getItem('language') || 'pt');
   const [salvoFeedback, setSalvoFeedback] = useState(false);
+
+  // Carrega configurações salvas na nuvem (Firestore) ao montar
+  useEffect(() => {
+    const carregarConfiguracoesFirestore = async () => {
+      try {
+        const tenantId = localStorage.getItem('tenantId') || auth.currentUser?.uid;
+        if (!tenantId) return;
+        const ref = doc(db, "configuracoes_empresa", tenantId);
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const data = snap.data();
+          if (data.accentColor) {
+            setAccentColor(data.accentColor);
+            localStorage.setItem('accentColor', data.accentColor);
+            aplicarCorDestaqueGlobal(data.accentColor);
+          }
+          if (data.theme) {
+            setTheme(data.theme);
+            localStorage.setItem('theme', data.theme);
+          }
+          if (data.fontSize) {
+            setFontSize(data.fontSize);
+            localStorage.setItem('fontSize', data.fontSize);
+          }
+          if (data.highContrast !== undefined) {
+            setHighContrast(data.highContrast);
+            localStorage.setItem('highContrast', data.highContrast);
+          }
+          if (data.language) {
+            setLanguage(data.language);
+            localStorage.setItem('language', data.language);
+          }
+        }
+      } catch (err) {
+        console.warn("Erro ao carregar preferências de aparência:", err);
+      }
+    };
+    carregarConfiguracoesFirestore();
+  }, []);
 
   // Aplicação das variáveis dinâmicas no documento HTML
   useEffect(() => {
@@ -81,6 +120,25 @@ const AbaAparencia = () => {
 
     // Dispara evento global para todos os componentes reagirem na hora
     window.dispatchEvent(new Event('theme-change'));
+
+    // Salva automaticamente no Firestore para garantir persistência total
+    const salvarAutoFirestore = async () => {
+      try {
+        const tenantId = localStorage.getItem('tenantId') || auth.currentUser?.uid;
+        if (tenantId) {
+          const ref = doc(db, "configuracoes_empresa", tenantId);
+          await setDoc(ref, {
+            accentColor,
+            theme,
+            darkStyle,
+            fontSize,
+            highContrast,
+            language
+          }, { merge: true });
+        }
+      } catch (errSilent) {}
+    };
+    salvarAutoFirestore();
   }, [theme, accentColor, fontSize, highContrast, language]);
 
   const handleSalvarPreferencias = async () => {
@@ -123,146 +181,94 @@ const AbaAparencia = () => {
   const previewCardBg = theme === 'dark-gray' ? '#18181b' : (previewIsDark ? '#111827' : '#ffffff');
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '24px', fontFamily: "'Plus Jakarta Sans', sans-serif" }}>
+    <div className="aparencia-container fade-in">
 
       {/* 🖼️ SELEÇÃO DE TEMA + LIVE PREVIEW MOCKUP */}
-      <div style={{ background: 'var(--branco)', borderRadius: '16px', padding: '24px', border: '1px solid var(--borda)', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(37, 99, 235, 0.15)', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+      <div className="aparencia-card">
+        <div className="aparencia-card-header">
+          <div className="aparencia-card-icon blue">
             🖼️
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--texto-principal)' }}>Seletor de Tema & Pré-visualização Interativa</h3>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--texto-secundario)' }}>Escolha a aparência visual do painel Celebre com simulação em tempo real.</p>
+            <h3>Seletor de Tema & Pré-visualização Interativa</h3>
+            <p>Escolha a aparência visual do painel Celebre com simulação em tempo real.</p>
           </div>
         </div>
 
-        <div className="aparencia-preview-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '20px', alignItems: 'stretch' }}>
+        <div className="aparencia-preview-grid">
           
           {/* BOTÕES DE OPÇÃO DE TEMA */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', justifyContent: 'center' }}>
+          <div className="aparencia-theme-options">
             <button 
               type="button" 
+              className={`btn-aparencia-tema ${theme === 'light' ? 'active' : ''}`}
               onClick={() => setTheme('light')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                borderRadius: '12px',
-                border: theme === 'light' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-                background: theme === 'light' ? 'var(--fundo-cinza)' : 'var(--branco)',
-                cursor: 'pointer',
-                fontWeight: 800,
-                fontSize: '14px',
-                color: 'var(--texto-principal)',
-                transition: 'all 0.2s ease'
-              }}
+              style={theme === 'light' ? { borderColor: accentColor } : {}}
             >
               <span>☀️ Modo Claro (Clean Light)</span>
-              {theme === 'light' && <i className="fas fa-check-circle" style={{ color: accentColor, fontSize: '16px' }}></i>}
+              {theme === 'light' && <i className="fas fa-check-circle theme-check-icon" style={{ color: accentColor }}></i>}
             </button>
 
             <button 
               type="button" 
+              className={`btn-aparencia-tema ${theme === 'dark-gray' || theme === 'dark-neutral' ? 'active' : ''}`}
               onClick={() => setTheme('dark-gray')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                borderRadius: '12px',
-                border: (theme === 'dark-gray' || theme === 'dark-neutral') ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-                background: (theme === 'dark-gray' || theme === 'dark-neutral') ? 'var(--fundo-cinza)' : 'var(--branco)',
-                cursor: 'pointer',
-                fontWeight: 800,
-                fontSize: '14px',
-                color: 'var(--texto-principal)',
-                transition: 'all 0.2s ease'
-              }}
+              style={(theme === 'dark-gray' || theme === 'dark-neutral') ? { borderColor: accentColor } : {}}
             >
-              <span>🪨 Modo Escuro (Cinza Grafite Clássico)</span>
-              {(theme === 'dark-gray' || theme === 'dark-neutral') && <i className="fas fa-check-circle" style={{ color: accentColor, fontSize: '16px' }}></i>}
+              <span>🪨 Modo Escuro (Grafite Clássico)</span>
+              {(theme === 'dark-gray' || theme === 'dark-neutral') && <i className="fas fa-check-circle theme-check-icon" style={{ color: accentColor }}></i>}
             </button>
 
             <button 
               type="button" 
+              className={`btn-aparencia-tema ${theme === 'dark-midnight' || theme === 'dark' ? 'active' : ''}`}
               onClick={() => setTheme('dark-midnight')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                borderRadius: '12px',
-                border: (theme === 'dark-midnight' || theme === 'dark') ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-                background: (theme === 'dark-midnight' || theme === 'dark') ? 'var(--fundo-cinza)' : 'var(--branco)',
-                cursor: 'pointer',
-                fontWeight: 800,
-                fontSize: '14px',
-                color: 'var(--texto-principal)',
-                transition: 'all 0.2s ease'
-              }}
+              style={(theme === 'dark-midnight' || theme === 'dark') ? { borderColor: accentColor } : {}}
             >
-              <span>🌙 Modo Escuro (Azul Midnight Vibrante)</span>
-              {(theme === 'dark-midnight' || theme === 'dark') && <i className="fas fa-check-circle" style={{ color: accentColor, fontSize: '16px' }}></i>}
+              <span>🌙 Modo Escuro (Azul Midnight)</span>
+              {(theme === 'dark-midnight' || theme === 'dark') && <i className="fas fa-check-circle theme-check-icon" style={{ color: accentColor }}></i>}
             </button>
 
             <button 
               type="button" 
+              className={`btn-aparencia-tema ${theme === 'auto' ? 'active' : ''}`}
               onClick={() => setTheme('auto')}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                padding: '14px 18px',
-                borderRadius: '12px',
-                border: theme === 'auto' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-                background: theme === 'auto' ? 'var(--fundo-cinza)' : 'var(--branco)',
-                cursor: 'pointer',
-                fontWeight: 800,
-                fontSize: '14px',
-                color: 'var(--texto-principal)',
-                transition: 'all 0.2s ease'
-              }}
+              style={theme === 'auto' ? { borderColor: accentColor } : {}}
             >
               <span>💻 Sincronizado com o Sistema</span>
-              {theme === 'auto' && <i className="fas fa-check-circle" style={{ color: accentColor, fontSize: '16px' }}></i>}
+              {theme === 'auto' && <i className="fas fa-check-circle theme-check-icon" style={{ color: accentColor }}></i>}
             </button>
           </div>
 
           {/* LIVE PREVIEW MOCKUP CARD */}
-          <div style={{
-            background: previewBg,
-            color: previewIsDark ? '#f8fafc' : '#0f172a',
-            border: `2px solid ${accentColor}`,
-            borderRadius: '16px',
-            padding: '20px',
-            boxShadow: '0 8px 24px rgba(0,0,0,0.1)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '12px',
-            transition: 'all 0.3s ease'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1px solid ${previewIsDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}`, paddingBottom: '10px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                <div style={{ width: '24px', height: '24px', borderRadius: '6px', background: accentColor, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: 900 }}>C</div>
-                <strong style={{ fontSize: '13px' }}>Celebre Dashboard</strong>
+          <div 
+            className="aparencia-preview-card"
+            style={{
+              background: previewBg,
+              color: previewIsDark ? '#f8fafc' : '#0f172a',
+              borderColor: accentColor
+            }}
+          >
+            <div className="aparencia-preview-card-header" style={{ borderBottomColor: previewIsDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0' }}>
+              <div className="aparencia-preview-brand">
+                <div className="aparencia-preview-logo-badge" style={{ background: accentColor }}>C</div>
+                <strong>Celebre Dashboard</strong>
               </div>
-              <span style={{ fontSize: '10px', background: accentColor, color: 'white', padding: '2px 8px', borderRadius: '10px', fontWeight: 800 }}>LIVE PREVIEW</span>
+              <span className="aparencia-preview-live-badge" style={{ background: accentColor }}>LIVE PREVIEW</span>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-              <div style={{ background: previewCardBg, padding: '10px', borderRadius: '10px', border: `1px solid ${previewIsDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}` }}>
-                <span style={{ fontSize: '10px', color: previewIsDark ? '#94a3b8' : '#64748b', display: 'block' }}>Locações Mês</span>
-                <strong style={{ fontSize: '15px', color: accentColor }}>R$ 48.500,00</strong>
+            <div className="aparencia-preview-stat-grid">
+              <div className="aparencia-preview-stat-box" style={{ background: previewCardBg, borderColor: previewIsDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0' }}>
+                <span className="stat-box-lbl" style={{ color: previewIsDark ? '#94a3b8' : '#64748b' }}>Locações Mês</span>
+                <strong className="stat-box-val" style={{ color: accentColor }}>R$ 48.500,00</strong>
               </div>
-              <div style={{ background: previewCardBg, padding: '10px', borderRadius: '10px', border: `1px solid ${previewIsDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0'}` }}>
-                <span style={{ fontSize: '10px', color: previewIsDark ? '#94a3b8' : '#64748b', display: 'block' }}>Eventos Ativos</span>
-                <strong style={{ fontSize: '15px', color: previewIsDark ? '#ffffff' : '#0f172a' }}>34 Festas</strong>
+              <div className="aparencia-preview-stat-box" style={{ background: previewCardBg, borderColor: previewIsDark ? 'rgba(255,255,255,0.1)' : '#e2e8f0' }}>
+                <span className="stat-box-lbl" style={{ color: previewIsDark ? '#94a3b8' : '#64748b' }}>Eventos Ativos</span>
+                <strong className="stat-box-val" style={{ color: previewIsDark ? '#ffffff' : '#0f172a' }}>34 Festas</strong>
               </div>
             </div>
 
-            <button type="button" style={{ background: accentColor, color: 'white', border: 'none', padding: '10px', borderRadius: '8px', fontWeight: 800, fontSize: '12px', cursor: 'pointer', textAlign: 'center' }}>
+            <button type="button" className="btn-aparencia-preview-cta" style={{ background: accentColor }}>
               🚀 Botão Exemplo Celebre
             </button>
           </div>
@@ -272,42 +278,32 @@ const AbaAparencia = () => {
 
 
       {/* 🌈 PALETA DE CORES DA MARCA (ACCENT COLORS) */}
-      <div style={{ background: 'var(--branco)', borderRadius: '16px', padding: '24px', border: '1px solid var(--borda)', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(197, 160, 89, 0.15)', color: accentColor, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+      <div className="aparencia-card">
+        <div className="aparencia-card-header">
+          <div className="aparencia-card-icon gold" style={{ color: accentColor }}>
             🌈
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--texto-principal)' }}>Paleta de Cores de Destaque da Marca</h3>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--texto-secundario)' }}>Selecione a cor que destaca os botões, ícones e elementos principais do Celebre.</p>
+            <h3>Paleta de Cores de Destaque da Marca</h3>
+            <p>Selecione a cor que destaca os botões, ícones e elementos principais do Celebre.</p>
           </div>
         </div>
 
-        <div className="aparencia-colors-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px' }}>
+        <div className="aparencia-colors-grid">
           {ACCENT_COLORS.map(c => {
             const isSelected = accentColor === c.color;
             return (
               <button
                 key={c.id}
                 type="button"
+                className={`btn-color-swatch ${isSelected ? 'active' : ''}`}
                 onClick={() => setAccentColor(c.color)}
-                style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  padding: '16px 12px',
-                  borderRadius: '14px',
-                  border: isSelected ? `2.5px solid ${c.color}` : '1.5px solid var(--borda)',
-                  background: isSelected ? 'var(--fundo-cinza)' : 'var(--branco)',
-                  cursor: 'pointer',
-                  transition: 'all 0.2s ease',
-                  boxShadow: isSelected ? `0 4px 14px ${c.color}33` : 'none'
-                }}
+                style={isSelected ? { borderColor: c.color, boxShadow: `0 4px 14px ${c.color}33` } : {}}
               >
-                <div style={{ width: '36px', height: '36px', borderRadius: '50%', background: c.color, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '16px', marginBottom: '8px', boxShadow: '0 4px 10px rgba(0,0,0,0.15)' }}>
+                <div className="color-swatch-circle" style={{ background: c.color }}>
                   {isSelected ? <i className="fas fa-check"></i> : c.icon}
                 </div>
-                <strong style={{ fontSize: '12.5px', color: 'var(--texto-principal)', textAlign: 'center' }}>{c.name}</strong>
+                <strong className="color-swatch-name">{c.name}</strong>
               </button>
             );
           })}
@@ -316,113 +312,68 @@ const AbaAparencia = () => {
 
 
       {/* 🔍 ESCALA DE FONTE & ACESSIBILIDADE */}
-      <div style={{ background: 'var(--branco)', borderRadius: '16px', padding: '24px', border: '1px solid var(--borda)', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(4, 120, 87, 0.15)', color: '#047857', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+      <div className="aparencia-card">
+        <div className="aparencia-card-header">
+          <div className="aparencia-card-icon green">
             🔍
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--texto-principal)' }}>Escala de Fonte & Acessibilidade Visual</h3>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--texto-secundario)' }}>Ajuste o tamanho dos textos e ative modos de alto contraste para leitura confortável.</p>
+            <h3>Escala de Fonte & Acessibilidade Visual</h3>
+            <p>Ajuste o tamanho dos textos e ative modos de alto contraste para leitura confortável.</p>
           </div>
         </div>
 
-        <div className="aparencia-accessibility-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '20px' }}>
+        <div className="aparencia-accessibility-grid">
           
           {/* SELETOR DE TAMANHO DE FONTE */}
-          <div>
-            <label style={{ fontSize: '12px', fontWeight: 800, color: 'var(--texto-secundario)', display: 'block', marginBottom: '8px', textTransform: 'uppercase' }}>
+          <div className="aparencia-font-box">
+            <label className="aparencia-ctrl-label">
               TAMANHO DOS TEXTOS (ZOOM):
             </label>
-            <div style={{ display: 'flex', gap: '8px' }}>
+            <div className="aparencia-font-btns">
               <button
                 type="button"
+                className={`btn-font-zoom ${fontSize === 'pequeno' ? 'active' : ''}`}
                 onClick={() => setFontSize('pequeno')}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  borderRadius: '10px',
-                  border: fontSize === 'pequeno' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-                  background: fontSize === 'pequeno' ? 'var(--fundo-cinza)' : 'var(--branco)',
-                  fontWeight: 800,
-                  fontSize: '12px',
-                  cursor: 'pointer',
-                  color: 'var(--texto-principal)'
-                }}
+                style={fontSize === 'pequeno' ? { borderColor: accentColor } : {}}
               >
-                🔬 Pequeno (90%)
+                <span>🔬 Pequeno (90%)</span>
               </button>
 
               <button
                 type="button"
+                className={`btn-font-zoom ${fontSize === 'padrao' ? 'active' : ''}`}
                 onClick={() => setFontSize('padrao')}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  borderRadius: '10px',
-                  border: fontSize === 'padrao' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-                  background: fontSize === 'padrao' ? 'var(--fundo-cinza)' : 'var(--branco)',
-                  fontWeight: 800,
-                  fontSize: '13px',
-                  cursor: 'pointer',
-                  color: 'var(--texto-principal)'
-                }}
+                style={fontSize === 'padrao' ? { borderColor: accentColor } : {}}
               >
-                👓 Padrão (100%)
+                <span>👓 Padrão (100%)</span>
               </button>
 
               <button
                 type="button"
+                className={`btn-font-zoom ${fontSize === 'ampliado' ? 'active' : ''}`}
                 onClick={() => setFontSize('ampliado')}
-                style={{
-                  flex: 1,
-                  padding: '12px 8px',
-                  borderRadius: '10px',
-                  border: fontSize === 'ampliado' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-                  background: fontSize === 'ampliado' ? 'var(--fundo-cinza)' : 'var(--branco)',
-                  fontWeight: 800,
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  color: 'var(--texto-principal)'
-                }}
+                style={fontSize === 'ampliado' ? { borderColor: accentColor } : {}}
               >
-                🔍 Ampliado (110%)
+                <span>🔍 Ampliado (110%)</span>
               </button>
             </div>
           </div>
 
           {/* CHAVE DE ALTO CONTRASTE */}
-          <div style={{ background: 'var(--fundo-cinza)', border: '1px solid var(--borda)', borderRadius: '12px', padding: '14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <strong style={{ fontSize: '13.5px', color: 'var(--texto-principal)', display: 'block' }}>⚡ Modo Alto Contraste</strong>
-              <span style={{ fontSize: '11.5px', color: 'var(--texto-secundario)' }}>Aumenta o contraste das bordas e textos para leitura clara.</span>
+          <div className="aparencia-contrast-card">
+            <div className="contrast-card-info">
+              <strong>⚡ Modo Alto Contraste</strong>
+              <span>Aumenta o contraste das bordas e textos para leitura clara.</span>
             </div>
             <button
               type="button"
+              className={`btn-contrast-toggle ${highContrast ? 'active' : ''}`}
               onClick={() => setHighContrast(!highContrast)}
-              style={{
-                width: '50px',
-                height: '26px',
-                borderRadius: '13px',
-                background: highContrast ? accentColor : '#cbd5e1',
-                border: 'none',
-                cursor: 'pointer',
-                position: 'relative',
-                transition: 'all 0.2s ease',
-                flexShrink: 0
-              }}
+              style={highContrast ? { background: accentColor } : {}}
+              aria-label="Alternar Modo Alto Contraste"
             >
-              <div style={{
-                width: '20px',
-                height: '20px',
-                borderRadius: '50%',
-                background: 'white',
-                position: 'absolute',
-                top: '3px',
-                left: highContrast ? '26px' : '4px',
-                transition: 'all 0.2s ease',
-                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
-              }} />
+              <div className="contrast-toggle-thumb" />
             </button>
           </div>
 
@@ -431,109 +382,63 @@ const AbaAparencia = () => {
 
 
       {/* 🌐 IDIOMA & MOEDA DA INTERFACE */}
-      <div style={{ background: 'var(--branco)', borderRadius: '16px', padding: '24px', border: '1px solid var(--borda)', boxShadow: '0 4px 14px rgba(0,0,0,0.03)' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px' }}>
-          <div style={{ width: '40px', height: '40px', borderRadius: '12px', background: 'rgba(14, 116, 144, 0.15)', color: '#0e7490', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
+      <div className="aparencia-card">
+        <div className="aparencia-card-header">
+          <div className="aparencia-card-icon cyan">
             🌐
           </div>
           <div>
-            <h3 style={{ margin: 0, fontSize: '17px', fontWeight: 800, color: 'var(--texto-principal)' }}>Idioma & Região do Sistema</h3>
-            <p style={{ margin: 0, fontSize: '13px', color: 'var(--texto-secundario)' }}>Selecione a linguagem e os símbolos de moeda exibidos nos módulos de relatórios e contratos.</p>
+            <h3>Idioma & Região do Sistema</h3>
+            <p>Selecione a linguagem e os símbolos de moeda exibidos nos módulos de relatórios e contratos.</p>
           </div>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px' }}>
+        <div className="aparencia-lang-grid">
           <button 
             type="button" 
-            className={`btn-lang ${language === 'pt' ? 'active' : ''}`} 
+            className={`btn-aparencia-lang ${language === 'pt' ? 'active' : ''}`} 
             onClick={() => handleMudarIdiomaAutomatico('pt')}
-            style={{
-              padding: '14px',
-              borderRadius: '12px',
-              border: language === 'pt' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-              background: language === 'pt' ? 'var(--fundo-cinza)' : 'var(--branco)',
-              fontWeight: 800,
-              fontSize: '13.5px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              color: 'var(--texto-principal)'
-            }}
+            style={language === 'pt' ? { borderColor: accentColor } : {}}
           >
-            <span>🇧🇷 Português (Brasil)</span>
-            <span style={{ fontSize: '11px', background: 'rgba(29, 78, 216, 0.15)', color: '#1d4ed8', padding: '2px 6px', borderRadius: '6px' }}>R$ BRL</span>
+            <span className="lang-name">🇧🇷 Português (Brasil)</span>
+            <span className="lang-curr-pill brl">R$ BRL</span>
           </button>
 
           <button 
             type="button" 
-            className={`btn-lang ${language === 'en' ? 'active' : ''}`} 
+            className={`btn-aparencia-lang ${language === 'en' ? 'active' : ''}`} 
             onClick={() => handleMudarIdiomaAutomatico('en')}
-            style={{
-              padding: '14px',
-              borderRadius: '12px',
-              border: language === 'en' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-              background: language === 'en' ? 'var(--fundo-cinza)' : 'var(--branco)',
-              fontWeight: 800,
-              fontSize: '13.5px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              color: 'var(--texto-principal)'
-            }}
+            style={language === 'en' ? { borderColor: accentColor } : {}}
           >
-            <span>🇺🇸 English (US)</span>
-            <span style={{ fontSize: '11px', background: 'rgba(4, 120, 87, 0.15)', color: '#047857', padding: '2px 6px', borderRadius: '6px' }}>$ USD</span>
+            <span className="lang-name">🇺🇸 English (US)</span>
+            <span className="lang-curr-pill usd">$ USD</span>
           </button>
 
           <button 
             type="button" 
-            className={`btn-lang ${language === 'es' ? 'active' : ''}`} 
+            className={`btn-aparencia-lang ${language === 'es' ? 'active' : ''}`} 
             onClick={() => handleMudarIdiomaAutomatico('es')}
-            style={{
-              padding: '14px',
-              borderRadius: '12px',
-              border: language === 'es' ? `2px solid ${accentColor}` : '1.5px solid var(--borda)',
-              background: language === 'es' ? 'var(--fundo-cinza)' : 'var(--branco)',
-              fontWeight: 800,
-              fontSize: '13.5px',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              color: 'var(--texto-principal)'
-            }}
+            style={language === 'es' ? { borderColor: accentColor } : {}}
           >
-            <span>🇪🇸 Español</span>
-            <span style={{ fontSize: '11px', background: 'rgba(180, 83, 9, 0.15)', color: '#b45309', padding: '2px 6px', borderRadius: '6px' }}>€ EUR</span>
+            <span className="lang-name">🇪🇸 Español</span>
+            <span className="lang-curr-pill eur">€ EUR</span>
           </button>
         </div>
       </div>
 
       {/* BOTÃO DE CONFIRMAÇÃO GLOBAL DE SALVAMENTO */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '10px' }}>
+      <div className="aparencia-save-bar">
         <button
           type="button"
+          className="btn-salvar-aparencia"
           onClick={handleSalvarPreferencias}
           style={{
             background: accentColor,
-            color: 'white',
-            border: 'none',
-            padding: '14px 28px',
-            borderRadius: '12px',
-            fontWeight: 800,
-            fontSize: '14px',
-            cursor: 'pointer',
-            boxShadow: `0 4px 16px ${accentColor}44`,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            transition: 'all 0.2s ease'
+            boxShadow: `0 4px 16px ${accentColor}44`
           }}
         >
           {salvoFeedback ? <i className="fas fa-check"></i> : <i className="fas fa-save"></i>}
-          {salvoFeedback ? 'PREFERÊNCIAS SALVAS COM SUCESSO!' : 'SALVAR PREFERÊNCIAS DE APARÊNCIA'}
+          <span>{salvoFeedback ? 'PREFERÊNCIAS SALVAS COM SUCESSO!' : 'SALVAR PREFERÊNCIAS DE APARÊNCIA'}</span>
         </button>
       </div>
 
